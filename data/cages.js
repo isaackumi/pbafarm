@@ -1,0 +1,42 @@
+export const cages = [
+  {
+    id: 'cage1',
+    name: 'Cage 1',
+    stockingDate: '2025-01-15',
+    initialWeight: 120,
+    initialCount: 3000,
+    status: 'active',
+  },
+  {
+    id: 'cage2',
+    name: 'Cage 2',
+    stockingDate: '2025-01-20',
+    initialWeight: 115,
+    initialCount: 3100,
+    status: 'active',
+  },
+  {
+    id: 'cage3',
+    name: 'Cage 3',
+    stockingDate: '2025-02-05',
+    initialWeight: 122,
+    initialCount: 2950,
+    status: 'active',
+  },
+  {
+    id: 'cage4',
+    name: 'Cage 4',
+    stockingDate: '2025-02-25',
+    initialWeight: 118,
+    initialCount: 3050,
+    status: 'harvested',
+  },
+  {
+    id: 'cage5',
+    name: 'Cage 5',
+    stockingDate: '2025-02-25',
+    initialWeight: 118,
+    initialCount: 3050,
+    status: 'harvested',
+  },
+]
