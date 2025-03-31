@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useRouter } from 'next/router'
 import {
   BarChart,
   AreaChart,
@@ -248,6 +249,9 @@ const calculateMetrics = () => {
 // Dashboard Component
 const Dashboard = () => {
   const { user, userRole, signOut } = useAuth()
+  const router = useRouter()
+
+  const [totalCages, setTotalCages] = useState(0)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [selectedCage, setSelectedCage] = useState(
     cages.length > 0 ? cages[0].id : '',
@@ -262,16 +266,21 @@ const Dashboard = () => {
           <div className="space-y-6">
             {/* Summary Cards - with icons and horizontal grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-blue-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-blue-100 p-3 rounded-full mr-4">
-                  <Droplets className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Total Cages
+              <div
+                className="bg-blue-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow duration-300"
+                onClick={() => router.push('/cages')}
+              >
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-3 rounded-full mr-4">
+                    <Droplets className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="text-2xl font-semibold text-blue-600">
-                    {metrics.totalActiveCages}
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Total Cages
+                    </div>
+                    <div className="text-2xl font-semibold text-blue-600">
+                      {totalCages}
+                    </div>
                   </div>
                 </div>
               </div>
