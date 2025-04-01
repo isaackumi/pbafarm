@@ -1,4 +1,4 @@
-// components/Dashboard.js (Updated)
+// components/Dashboard.js (Fixed)
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Calculator, Scale, AlertTriangle, Droplets } from 'lucide-react'
@@ -482,11 +482,20 @@ const Dashboard = ({ activeTab, selectedCage }) => {
           </div>
         )
       case 'daily':
-        return <DailyEntryForm cageId={selectedCage} />
+        // Use the provided selectedCage, or if it's empty, default to the first cage
+        const dailyCageId =
+          selectedCage || (cages.length > 0 ? cages[0].id : '')
+        return <DailyEntryForm cageId={dailyCageId} />
       case 'biweekly':
-        return <BiweeklyForm cageId={selectedCage} />
+        // Use the provided selectedCage, or if it's empty, default to the first cage
+        const biweeklyCageId =
+          selectedCage || (cages.length > 0 ? cages[0].id : '')
+        return <BiweeklyForm cageId={biweeklyCageId} />
       case 'harvest':
-        return <HarvestForm cageId={selectedCage} />
+        // Use the provided selectedCage, or if it's empty, default to the first cage
+        const harvestCageId =
+          selectedCage || (cages.length > 0 ? cages[0].id : '')
+        return <HarvestForm cageId={harvestCageId} />
       default:
         return (
           <div className="bg-white shadow rounded-lg p-8">
