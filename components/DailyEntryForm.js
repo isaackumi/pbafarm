@@ -18,12 +18,19 @@ const DailyEntryForm = ({ cageId }) => {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
+  console.log('DailyEntryForm rendered with cageId:', cageId) // Debug log
+
   // Fetch cage and recent records
   useEffect(() => {
-    if (!cageId) return
+    if (!cageId) {
+      setLoading(false)
+      return
+    }
 
     async function fetchData() {
       try {
+        console.log('Fetching cage data for id:', cageId) // Debug log
+
         // Fetch cage details
         const { data: cageData, error: cageError } = await supabase
           .from('cages')
@@ -31,7 +38,12 @@ const DailyEntryForm = ({ cageId }) => {
           .eq('id', cageId)
           .single()
 
-        if (cageError) throw cageError
+        if (cageError) {
+          console.error('Error fetching cage:', cageError)
+          throw cageError
+        }
+
+        console.log('Cage data fetched:', cageData) // Debug log
         setCage(cageData)
 
         // Fetch recent records
@@ -140,10 +152,34 @@ const DailyEntryForm = ({ cageId }) => {
     }
   }
 
+  // Fallback to use hardcoded data for demonstration
+  const useFallbackData = () => {
+    if (!cageId && !loading) {
+      // Create a dummy cage for demonstration
+      setCage({
+        id: 'demo-cage',
+        name: 'Demo Cage',
+        status: 'active',
+      })
+      setLoading(false)
+      return true
+    }
+    return false
+  }
+
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
         <p className="text-center text-gray-600">Loading...</p>
+      </div>
+    )
+  }
+
+  // Try to use fallback data if no cage is selected
+  if (!cage && useFallbackData()) {
+    return (
+      <div className="bg-white shadow rounded-lg p-8">
+        <p className="text-center text-gray-600">Using demo data...</p>
       </div>
     )
   }

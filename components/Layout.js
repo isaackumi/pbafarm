@@ -1,19 +1,48 @@
 // components/Layout.js (Updated)
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import { supabase } from '../lib/supabase'
 
 const Layout = ({
   children,
   title: initialTitle = 'Dashboard',
   showCageSelector = false,
-  cages = [],
-  defaultCageId = '',
   onActiveTabChange = () => {},
 }) => {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [selectedCage, setSelectedCage] = useState(defaultCageId)
+  const [selectedCage, setSelectedCage] = useState('')
   const [title, setTitle] = useState(initialTitle)
+  const [cages, setCages] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch cages for selection
+  useEffect(() => {
+    async function fetchCages() {
+      try {
+        const { data, error } = await supabase
+          .from('cages')
+          .select('id, name, status')
+          .order('name')
+
+        if (error) throw error
+
+        setCages(data || [])
+        // Set default cage if none is selected
+        if (!selectedCage && data && data.length > 0) {
+          setSelectedCage(data[0].id)
+        }
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching cages:', error.message)
+        setLoading(false)
+      }
+    }
+
+    fetchCages()
+  }, [])
 
   // When activeTab changes, update title and notify parent
   useEffect(() => {
