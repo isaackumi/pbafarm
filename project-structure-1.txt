@@ -1,0 +1,49 @@
+.
+├── README.md
+├── components
+│   ├── BiweeklyForm.js
+│   ├── DailyEntryForm.js
+│   ├── Dashboard.js
+│   ├── HarvestForm.js
+│   └── ProtectedRoute.js
+├── contexts
+│   └── AuthContext.js
+├── data
+│   ├── biweekly-records.js
+│   ├── cages.js
+│   ├── daily-records.js
+│   ├── harvest-records.js
+│   └── users.js
+├── eslint.config.mjs
+├── jsconfig.json
+├── lib
+│   ├── databaseService.js
+│   └── supabase.js
+├── next.config.mjs
+├── package-lock.json
+├── package.json
+├── pages
+│   ├── _app.js
+│   ├── _document.js
+│   ├── api
+│   │   └── hello.js
+│   ├── cages.js
+│   ├── dashboard.js
+│   ├── index.js
+│   ├── login.js
+│   └── signup.js
+├── postcss.config.mjs
+├── project-structure-1.txt
+├── project-structure.txt
+├── public
+│   ├── favicon.ico
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── styles
+│   └── globals.css
+└── tailwind.config.js
+
+9 directories, 38 files
