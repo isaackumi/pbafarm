@@ -1,4 +1,4 @@
-// components/Dashboard.js (Fixed)
+// components/Dashboard.js (Complete)
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Calculator, Scale, AlertTriangle, Droplets } from 'lucide-react'
@@ -14,15 +14,22 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { cages } from '../data/cages'
-import { dailyRecords } from '../data/daily-records'
-import { biweeklyRecords } from '../data/biweekly-records'
+import { supabase } from '../lib/supabase'
+// Fallback data if database fetch fails
+import { cages as localCages } from '../data/cages'
+import { dailyRecords as localDailyRecords } from '../data/daily-records'
+import { biweeklyRecords as localBiweeklyRecords } from '../data/biweekly-records'
 import BiweeklyForm from './BiweeklyForm'
 import HarvestForm from './HarvestForm'
 import DailyEntryForm from './DailyEntryForm'
 
 const Dashboard = ({ activeTab, selectedCage }) => {
   const router = useRouter()
+  const [cages, setCages] = useState([])
+  const [dailyRecords, setDailyRecords] = useState([])
+  const [biweeklyRecords, setBiweeklyRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [metrics, setMetrics] = useState({
     totalActiveCages: 0,
     totalBiomass: 0,
@@ -30,15 +37,74 @@ const Dashboard = ({ activeTab, selectedCage }) => {
     mortalityRate: '0.0',
   })
 
+  console.log(
+    'Dashboard rendered with activeTab:',
+    activeTab,
+    'selectedCage:',
+    selectedCage,
+  )
+
+  // Fetch data from Supabase
   useEffect(() => {
-    // Calculate metrics when component mounts
-    const calculatedMetrics = calculateMetrics()
-    setMetrics(calculatedMetrics)
+    async function fetchData() {
+      setLoading(true)
+      try {
+        console.log('Fetching data from Supabase...')
+
+        // Fetch cages
+        const { data: cagesData, error: cagesError } = await supabase
+          .from('cages')
+          .select('*')
+
+        if (cagesError) throw cagesError
+        console.log('Fetched cages:', cagesData)
+        setCages(cagesData || localCages)
+
+        // Fetch daily records
+        const { data: dailyData, error: dailyError } = await supabase
+          .from('daily_records')
+          .select('*')
+
+        if (dailyError) throw dailyError
+        console.log('Fetched daily records:', dailyData)
+        setDailyRecords(dailyData || localDailyRecords)
+
+        // Fetch biweekly records
+        const {
+          data: biweeklyData,
+          error: biweeklyError,
+        } = await supabase.from('biweekly_records').select('*')
+
+        if (biweeklyError) throw biweeklyError
+        console.log('Fetched biweekly records:', biweeklyData)
+        setBiweeklyRecords(biweeklyData || localBiweeklyRecords)
+      } catch (error) {
+        console.error('Error fetching data:', error.message)
+        setError(error.message)
+        // Fallback to local data
+        console.log('Using fallback local data due to error')
+        setCages(localCages)
+        setDailyRecords(localDailyRecords)
+        setBiweeklyRecords(localBiweeklyRecords)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
+
+  // Calculate metrics when data is loaded
+  useEffect(() => {
+    if (cages.length > 0 && !loading) {
+      const calculatedMetrics = calculateMetrics()
+      setMetrics(calculatedMetrics)
+    }
+  }, [cages, dailyRecords, biweeklyRecords, loading])
 
   // Process growth data for chart
   const processGrowthData = () => {
-    // Group biweekly records by date and cage
+    // Create a map of cage IDs to cage names
     const cageMap = {}
     cages.forEach((cage) => {
       cageMap[cage.id] = cage.name
@@ -54,8 +120,10 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       if (!groupedByDate[date]) {
         groupedByDate[date] = {}
       }
-      const cageName = cageMap[record.cageId]
-      groupedByDate[date][cageName] = record.averageBodyWeight
+      const cageName =
+        cageMap[record.cage_id] ||
+        `Cage ${record.cage_id?.substr(0, 4) || 'Unknown'}`
+      groupedByDate[date][cageName] = record.average_body_weight
     })
 
     // Convert to array for recharts
@@ -86,9 +154,11 @@ const Dashboard = ({ activeTab, selectedCage }) => {
         groupedByWeek[week] = {}
       }
 
-      const cageName = cageMap[record.cageId]
+      const cageName =
+        cageMap[record.cage_id] ||
+        `Cage ${record.cage_id?.substr(0, 4) || 'Unknown'}`
       groupedByWeek[week][cageName] =
-        (groupedByWeek[week][cageName] || 0) + record.feedAmount
+        (groupedByWeek[week][cageName] || 0) + (record.feed_amount || 0)
     })
 
     return Object.keys(groupedByWeek).map((week) => ({
@@ -99,7 +169,7 @@ const Dashboard = ({ activeTab, selectedCage }) => {
 
   // Calculate summary metrics
   const calculateMetrics = () => {
-    // Total cages (active only)
+    // Total  Active cages (active only)
     const totalActiveCages = cages.filter((cage) => cage.status === 'active')
       .length
 
@@ -109,18 +179,18 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       .filter((cage) => cage.status === 'active')
       .forEach((cage) => {
         const latestRecord = biweeklyRecords
-          .filter((record) => record.cageId === cage.id)
+          .filter((record) => record.cage_id === cage.id)
           .sort((a, b) => new Date(b.date) - new Date(a.date))[0]
 
         if (latestRecord) {
           // Convert from g to kg and multiply by estimated count
           const cageMortality = dailyRecords
-            .filter((record) => record.cageId === cage.id)
-            .reduce((total, record) => total + record.mortality, 0)
+            .filter((record) => record.cage_id === cage.id)
+            .reduce((total, record) => total + (record.mortality || 0), 0)
 
-          const estimatedCount = cage.initialCount - cageMortality
+          const estimatedCount = cage.initial_count - cageMortality
           totalBiomass +=
-            (latestRecord.averageBodyWeight * estimatedCount) / 1000
+            (latestRecord.average_body_weight * estimatedCount) / 1000
         }
       })
 
@@ -131,26 +201,27 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       .filter((cage) => cage.status === 'active')
       .forEach((cage) => {
         const totalFeed = dailyRecords
-          .filter((record) => record.cageId === cage.id)
-          .reduce((total, record) => total + record.feedAmount, 0)
+          .filter((record) => record.cage_id === cage.id)
+          .reduce((total, record) => total + (record.feed_amount || 0), 0)
 
-        const initialBiomass = cage.initialWeight
+        // Use initial_biomass instead of initial_weight based on DB schema
+        const initialBiomass = cage.initial_biomass || 0
 
         const latestRecord = biweeklyRecords
-          .filter((record) => record.cageId === cage.id)
+          .filter((record) => record.cage_id === cage.id)
           .sort((a, b) => new Date(b.date) - new Date(a.date))[0]
 
         if (latestRecord) {
           const cageMortality = dailyRecords
-            .filter((record) => record.cageId === cage.id)
-            .reduce((total, record) => total + record.mortality, 0)
+            .filter((record) => record.cage_id === cage.id)
+            .reduce((total, record) => total + (record.mortality || 0), 0)
 
-          const estimatedCount = cage.initialCount - cageMortality
+          const estimatedCount = cage.initial_count - cageMortality
           const currentBiomass =
-            (latestRecord.averageBodyWeight * estimatedCount) / 1000
+            (latestRecord.average_body_weight * estimatedCount) / 1000
 
           const fcr = totalFeed / (currentBiomass - initialBiomass)
-          if (!isNaN(fcr) && isFinite(fcr)) {
+          if (!isNaN(fcr) && isFinite(fcr) && fcr > 0) {
             totalFCR += fcr
             cageCount++
           }
@@ -161,16 +232,17 @@ const Dashboard = ({ activeTab, selectedCage }) => {
 
     // Mortality rate
     const totalInitialCount = cages.reduce(
-      (total, cage) => total + cage.initialCount,
+      (total, cage) => total + (cage.initial_count || 0),
       0,
     )
     const totalMortality = dailyRecords.reduce(
-      (total, record) => total + record.mortality,
+      (total, record) => total + (record.mortality || 0),
       0,
     )
-    const mortalityRate = ((totalMortality / totalInitialCount) * 100).toFixed(
-      1,
-    )
+    const mortalityRate =
+      totalInitialCount > 0
+        ? ((totalMortality / totalInitialCount) * 100).toFixed(1)
+        : '0.0'
 
     return {
       totalActiveCages,
@@ -200,24 +272,23 @@ const Dashboard = ({ activeTab, selectedCage }) => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey="Cage 1"
-            stroke="#3B82F6"
-            strokeWidth={2}
-          />
-          <Line
-            type="monotone"
-            dataKey="Cage 2"
-            stroke="#EF4444"
-            strokeWidth={2}
-          />
-          <Line
-            type="monotone"
-            dataKey="Cage 3"
-            stroke="#10B981"
-            strokeWidth={2}
-          />
+          {cages.slice(0, 3).map((cage, index) => {
+            const colors = ['#3B82F6', '#EF4444', '#10B981']
+            const cageName = cage.name
+            // Only add a line if there's data for this cage
+            if (growthData.some((item) => item[cageName] !== undefined)) {
+              return (
+                <Line
+                  key={cage.id}
+                  type="monotone"
+                  dataKey={cageName}
+                  stroke={colors[index % colors.length]}
+                  strokeWidth={2}
+                />
+              )
+            }
+            return null
+          })}
         </RechartsLineChart>
       </ResponsiveContainer>
     )
@@ -243,9 +314,21 @@ const Dashboard = ({ activeTab, selectedCage }) => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="Cage 1" fill="#3B82F6" />
-          <Bar dataKey="Cage 2" fill="#EF4444" />
-          <Bar dataKey="Cage 3" fill="#10B981" />
+          {cages.slice(0, 3).map((cage, index) => {
+            const colors = ['#3B82F6', '#EF4444', '#10B981']
+            const cageName = cage.name
+            // Only add a bar if there's data for this cage
+            if (feedData.some((item) => item[cageName] !== undefined)) {
+              return (
+                <Bar
+                  key={cage.id}
+                  dataKey={cageName}
+                  fill={colors[index % colors.length]}
+                />
+              )
+            }
+            return null
+          })}
         </RechartsBarChart>
       </ResponsiveContainer>
     )
@@ -328,7 +411,13 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                   Growth Performance
                 </h2>
                 <div className="h-64">
-                  <GrowthChart />
+                  {loading ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  ) : (
+                    <GrowthChart />
+                  )}
                 </div>
               </div>
 
@@ -337,7 +426,13 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                   Feed Consumption
                 </h2>
                 <div className="h-64">
-                  <FeedChart />
+                  {loading ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  ) : (
+                    <FeedChart />
+                  )}
                 </div>
               </div>
             </div>
@@ -398,83 +493,117 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {cages.map((cage) => {
-                      // Calculate days since stocking
-                      const stockingDate = new Date(cage.stockingDate)
-                      const today = new Date()
-                      const daysSinceStocking = Math.floor(
-                        (today - stockingDate) / (1000 * 60 * 60 * 24),
-                      )
+                    {loading ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center">
+                          <div className="flex justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : cages.length > 0 ? (
+                      cages.map((cage) => {
+                        // Calculate days since stocking
+                        const stockingDate = new Date(cage.stocking_date)
+                        const today = new Date()
+                        const daysSinceStocking = Math.floor(
+                          (today - stockingDate) / (1000 * 60 * 60 * 24),
+                        )
 
-                      // Get latest ABW
-                      const latestRecord = biweeklyRecords
-                        .filter((record) => record.cageId === cage.id)
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+                        // Get latest ABW
+                        const latestRecord = biweeklyRecords
+                          .filter((record) => record.cage_id === cage.id)
+                          .sort(
+                            (a, b) => new Date(b.date) - new Date(a.date),
+                          )[0]
 
-                      // Calculate total feed
-                      const totalFeed = dailyRecords
-                        .filter((record) => record.cageId === cage.id)
-                        .reduce((total, record) => total + record.feedAmount, 0)
-
-                      // Calculate FCR
-                      let fcr = 'N/A'
-                      if (latestRecord) {
-                        const cageMortality = dailyRecords
-                          .filter((record) => record.cageId === cage.id)
+                        // Calculate total feed
+                        const totalFeed = dailyRecords
+                          .filter((record) => record.cage_id === cage.id)
                           .reduce(
-                            (total, record) => total + record.mortality,
+                            (total, record) =>
+                              total + (record.feed_amount || 0),
                             0,
                           )
 
-                        const estimatedCount = cage.initialCount - cageMortality
-                        const currentBiomass =
-                          (latestRecord.averageBodyWeight * estimatedCount) /
-                          1000
-                        const biomassGain = currentBiomass - cage.initialWeight
+                        // Calculate FCR using initial_biomass instead of initial_weight
+                        let fcr = 'N/A'
+                        if (latestRecord) {
+                          const cageMortality = dailyRecords
+                            .filter((record) => record.cage_id === cage.id)
+                            .reduce(
+                              (total, record) =>
+                                total + (record.mortality || 0),
+                              0,
+                            )
 
-                        if (biomassGain > 0) {
-                          fcr = (totalFeed / biomassGain).toFixed(2)
+                          const estimatedCount =
+                            cage.initial_count - cageMortality
+                          const currentBiomass =
+                            (latestRecord.average_body_weight *
+                              estimatedCount) /
+                            1000
+                          const biomassGain =
+                            currentBiomass - (cage.initial_biomass || 0)
+
+                          if (biomassGain > 0 && totalFeed > 0) {
+                            fcr = (totalFeed / biomassGain).toFixed(2)
+                          }
                         }
-                      }
 
-                      return (
-                        <tr key={cage.id}>
-                          <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                            {cage.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {cage.stockingDate}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {daysSinceStocking}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {latestRecord
-                              ? `${latestRecord.averageBodyWeight.toFixed(1)} g`
-                              : '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {fcr}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {totalFeed > 0 ? `${totalFeed.toFixed(1)} kg` : '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                cage.status === 'active'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
-                            >
-                              {cage.status === 'active'
-                                ? 'Active'
-                                : 'Harvested'}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                        return (
+                          <tr key={cage.id}>
+                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                              {cage.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(
+                                cage.stocking_date,
+                              ).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {daysSinceStocking}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {latestRecord
+                                ? `${latestRecord.average_body_weight.toFixed(
+                                    1,
+                                  )} g`
+                                : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {fcr}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {totalFeed > 0
+                                ? `${totalFeed.toFixed(1)} kg`
+                                : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  cage.status === 'active'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}
+                              >
+                                {cage.status.charAt(0).toUpperCase() +
+                                  cage.status.slice(1)}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          No cages found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
