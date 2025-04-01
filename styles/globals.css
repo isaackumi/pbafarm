@@ -6,6 +6,10 @@
   --font-montserrat: 'Montserrat', sans-serif;
   --background: #ffffff;
   --foreground: #171717;
+  --input-text: #333333;
+  --input-bg: #f9fafb;
+  --input-border: #d1d5db;
+  --input-focus: #6366f1;
 }
 
 body {
@@ -14,9 +18,41 @@ body {
   font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
 }
 
+/* Form element styling for better visibility */
+input,
+select,
+textarea {
+  color: var(--input-text);
+  font-weight: 500;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--input-bg);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--input-focus);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --input-text: #e5e7eb;
+    --input-bg: #1f2937;
+    --input-border: #374151;
+    --input-focus: #8183f4;
   }
 }
