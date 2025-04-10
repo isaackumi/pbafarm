@@ -1,4 +1,4 @@
-// components/DailyEntryForm.js
+// components/DailyEntryForm.js (Updated with direct DB access)
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -20,7 +20,7 @@ const DailyEntryForm = ({ cageId }) => {
 
   console.log('DailyEntryForm rendered with cageId:', cageId) // Debug log
 
-  // Fetch cage and recent records
+  // Fetch cage and recent records directly from the database
   useEffect(() => {
     if (!cageId) {
       setLoading(false)
@@ -55,9 +55,21 @@ const DailyEntryForm = ({ cageId }) => {
           .limit(5)
 
         if (recordsError) throw recordsError
+
+        console.log('Recent records fetched:', recordsData) // Debug log
         setRecentRecords(recordsData || [])
+
+        // Set default feed price from the most recent record if available
+        if (recordsData && recordsData.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            feed_price: recordsData[0].feed_price.toString(),
+            feed_type: recordsData[0].feed_type,
+          }))
+        }
       } catch (error) {
         console.error('Error fetching data:', error.message)
+        setError('Failed to load cage data: ' + error.message)
       } finally {
         setLoading(false)
       }
@@ -102,6 +114,31 @@ const DailyEntryForm = ({ cageId }) => {
     setMessage('')
 
     try {
+      // Validate input
+      if (!formData.feed_amount || parseFloat(formData.feed_amount) <= 0) {
+        throw new Error('Please enter a valid feed amount')
+      }
+
+      if (!formData.feed_price || parseFloat(formData.feed_price) <= 0) {
+        throw new Error('Please enter a valid feed price')
+      }
+
+      // Check for duplicate entry on the same date
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('daily_records')
+        .select('id')
+        .eq('cage_id', cageId)
+        .eq('date', formData.date)
+        .maybeSingle()
+
+      if (checkError) throw checkError
+
+      if (existingRecord) {
+        throw new Error(
+          'A record already exists for this date. Please choose a different date or update the existing record.',
+        )
+      }
+
       // Calculate feed cost
       const calculatedFeedCost = calculateFeedCost()
 
@@ -135,7 +172,7 @@ const DailyEntryForm = ({ cageId }) => {
       if (fetchError) throw fetchError
       setRecentRecords(newRecords || [])
 
-      // Reset form (except date and price)
+      // Reset form (except date, feed type and price)
       setFormData({
         date: formData.date,
         feed_amount: '',
@@ -152,34 +189,21 @@ const DailyEntryForm = ({ cageId }) => {
     }
   }
 
-  // Fallback to use hardcoded data for demonstration
-  const useFallbackData = () => {
-    if (!cageId && !loading) {
-      // Create a dummy cage for demonstration
-      setCage({
-        id: 'demo-cage',
-        name: 'Demo Cage',
-        status: 'active',
-      })
-      setLoading(false)
-      return true
-    }
-    return false
-  }
-
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-gray-600">Loading...</p>
+        <div className="flex justify-center items-center h-32">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="ml-2 text-gray-600">Loading...</p>
+        </div>
       </div>
     )
   }
 
-  // Try to use fallback data if no cage is selected
-  if (!cage && useFallbackData()) {
+  if (!cage && !cageId) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-gray-600">Using demo data...</p>
+        <p className="text-center text-gray-600">Please select a cage first</p>
       </div>
     )
   }
@@ -187,7 +211,13 @@ const DailyEntryForm = ({ cageId }) => {
   if (!cage) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-gray-600">Please select a cage first</p>
+        <p className="text-center text-red-600">
+          Cage not found or not accessible
+        </p>
+        <p className="text-center text-gray-600 mt-2">
+          The selected cage might not exist or you don't have permission to
+          access it.
+        </p>
       </div>
     )
   }
@@ -203,6 +233,12 @@ const DailyEntryForm = ({ cageId }) => {
         {error && (
           <div className="mb-4 bg-red-50 text-red-800 p-4 rounded-md">
             {error}
+          </div>
+        )}
+
+        {message && (
+          <div className="mb-4 bg-green-50 text-green-800 p-4 rounded-md">
+            {message}
           </div>
         )}
 
@@ -326,12 +362,6 @@ const DailyEntryForm = ({ cageId }) => {
               {submitting ? 'Saving...' : 'Save Daily Record'}
             </button>
           </div>
-
-          {message && (
-            <div className="bg-green-50 text-green-800 p-4 rounded-md">
-              {message}
-            </div>
-          )}
         </form>
       </div>
 
@@ -389,7 +419,7 @@ const DailyEntryForm = ({ cageId }) => {
                       {record.feed_type}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${record.feed_cost}
+                      ${record.feed_cost.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.mortality}

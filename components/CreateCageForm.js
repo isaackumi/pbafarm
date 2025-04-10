@@ -1,13 +1,16 @@
-// components/CreateCageForm.js
-import React, { useState } from 'react'
+// components/CreateCageForm.js (Fixed)
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { cageService } from '../lib/databaseService'
 
 const CreateCageForm = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [checkingName, setCheckingName] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [existingCages, setExistingCages] = useState([])
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -19,6 +22,48 @@ const CreateCageForm = () => {
     notes: '',
     status: 'empty',
   })
+
+  // Fetch existing cages to check for name uniqueness
+  useEffect(() => {
+    async function fetchExistingCages() {
+      try {
+        // Ensure tables exist and fetch all cages
+        const { data, error } = await cageService.getAllCages()
+
+        if (error) throw error
+
+        setExistingCages(data || [])
+      } catch (error) {
+        console.error('Error fetching existing cages:', error)
+      }
+    }
+
+    fetchExistingCages()
+  }, [])
+
+  // Check if cage name already exists when name field changes
+  useEffect(() => {
+    // Clear previous name error
+    setNameError('')
+
+    // Skip check if name is empty
+    if (!formData.name) return
+
+    // Debounce check to avoid excessive validation
+    const timer = setTimeout(() => {
+      const nameExists = existingCages.some(
+        (cage) => cage.name.toLowerCase() === formData.name.toLowerCase(),
+      )
+
+      if (nameExists) {
+        setNameError(
+          'This cage name already exists. Please choose a unique name.',
+        )
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [formData.name, existingCages])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -37,16 +82,27 @@ const CreateCageForm = () => {
         throw new Error('Cage name is required')
       }
 
+      // Check for name uniqueness
+      const nameExists = existingCages.some(
+        (cage) => cage.name.toLowerCase() === formData.name.toLowerCase(),
+      )
+
+      if (nameExists) {
+        throw new Error(
+          'This cage name already exists. Please choose a unique name.',
+        )
+      }
+
       // Prepare cage data with correct types
       const cageData = {
-        name: formData.name,
-        location: formData.location || null,
+        name: formData.name.trim(),
+        location: formData.location ? formData.location.trim() : null,
         size: formData.size ? parseFloat(formData.size) : null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
-        dimensions: formData.dimensions || null,
-        material: formData.material || null,
+        dimensions: formData.dimensions ? formData.dimensions.trim() : null,
+        material: formData.material ? formData.material.trim() : null,
         installation_date: formData.installation_date || null,
-        notes: formData.notes || null,
+        notes: formData.notes ? formData.notes.trim() : null,
         status: formData.status || 'empty',
       }
 
@@ -120,10 +176,15 @@ const CreateCageForm = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className={`block w-full px-3 py-2 border ${
+                  nameError ? 'border-red-300' : 'border-gray-300'
+                } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                 placeholder="e.g., C1, Cage 2, etc."
                 required
               />
+              {nameError && (
+                <p className="mt-1 text-sm text-red-600">{nameError}</p>
+              )}
             </div>
 
             {/* Location */}
@@ -260,9 +321,11 @@ const CreateCageForm = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || nameError}
               className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                loading || nameError
+                  ? 'bg-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
               } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
             >
               {loading ? 'Creating...' : 'Create Cage'}
