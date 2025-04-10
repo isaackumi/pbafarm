@@ -1,11 +1,11 @@
-// pages/stocking.js
+// pages/create-cage.js
 import React from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import StockingForm from '../components/StockingForm'
+import CreateCageForm from '../components/CreateCageForm'
 
-export default function StockingPage() {
+export default function CreateCagePage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 font-montserrat">
@@ -19,18 +19,19 @@ export default function StockingPage() {
               Back to Cages
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">
-              New Cage Stocking
+              Create New Cage
             </h1>
           </div>
 
           <div className="mb-6">
             <p className="text-gray-600">
-              Fill in the details below to stock a new cage. Required fields are
-              marked with an asterisk (*).
+              Create a new cage by filling out the form below. This creates only
+              the physical cage structure. You'll be able to stock it with fish
+              in a separate step.
             </p>
           </div>
 
-          <StockingForm />
+          <CreateCageForm />
         </div>
       </div>
     </ProtectedRoute>

@@ -1,4 +1,4 @@
-// components/Layout.js (Updated)
+// components/Layout.js (Updated with collapsible sidebar)
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Sidebar from './Sidebar'
@@ -82,10 +82,10 @@ const Layout = ({
 
   return (
     <div className="flex h-screen bg-gray-100 font-montserrat">
-      {/* Sidebar */}
+      {/* Sidebar - now using the collapsible version */}
       <Sidebar activeTab={activeTab} setActiveTab={handleSetActiveTab} />
 
-      {/* Main content */}
+      {/* Main content - adjusted to work with collapsible sidebar */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           title={title}
