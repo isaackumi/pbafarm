@@ -1,18 +1,21 @@
-// components/DailyEntryForm.js (Updated with direct DB access)
+// components/DailyEntryForm.js (Updated with Feed Types support)
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import feedTypeService from '../lib/feedTypeService'
 
 const DailyEntryForm = ({ cageId }) => {
   const [cage, setCage] = useState(null)
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     feed_amount: '',
-    feed_type: 'Starter',
+    feed_type_id: '',
     feed_price: '1.50',
     mortality: '0',
     notes: '',
   })
   const [recentRecords, setRecentRecords] = useState([])
+  const [feedTypes, setFeedTypes] = useState([])
+  const [lastUsedFeedType, setLastUsedFeedType] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
@@ -20,7 +23,7 @@ const DailyEntryForm = ({ cageId }) => {
 
   console.log('DailyEntryForm rendered with cageId:', cageId) // Debug log
 
-  // Fetch cage and recent records directly from the database
+  // Fetch cage, recent records and feed types
   useEffect(() => {
     if (!cageId) {
       setLoading(false)
@@ -29,7 +32,7 @@ const DailyEntryForm = ({ cageId }) => {
 
     async function fetchData() {
       try {
-        console.log('Fetching cage data for id:', cageId) // Debug log
+        console.log('Fetching cage data and feed types for id:', cageId) // Debug log
 
         // Fetch cage details
         const { data: cageData, error: cageError } = await supabase
@@ -49,22 +52,56 @@ const DailyEntryForm = ({ cageId }) => {
         // Fetch recent records
         const { data: recordsData, error: recordsError } = await supabase
           .from('daily_records')
-          .select('*')
+          .select(
+            `
+            *,
+            feed_types(*)
+          `,
+          )
           .eq('cage_id', cageId)
           .order('date', { ascending: false })
-          .limit(5)
+          .limit(10)
 
         if (recordsError) throw recordsError
 
         console.log('Recent records fetched:', recordsData) // Debug log
         setRecentRecords(recordsData || [])
 
+        // Fetch feed types
+        const {
+          data: feedTypesData,
+          error: feedTypesError,
+        } = await feedTypeService.getActiveFeedTypes()
+
+        if (feedTypesError) throw feedTypesError
+
+        console.log('Feed types fetched:', feedTypesData) // Debug log
+        setFeedTypes(feedTypesData || [])
+
+        // Get last used feed type for this cage
+        const lastFeedType = await feedTypeService.getLastUsedFeedType(cageId)
+        console.log('Last used feed type:', lastFeedType) // Debug log
+
         // Set default feed price from the most recent record if available
         if (recordsData && recordsData.length > 0) {
           setFormData((prev) => ({
             ...prev,
             feed_price: recordsData[0].feed_price.toString(),
-            feed_type: recordsData[0].feed_type,
+            feed_type_id: lastFeedType
+              ? lastFeedType.id
+              : feedTypesData && feedTypesData.length > 0
+              ? feedTypesData[0].id
+              : '',
+          }))
+
+          if (lastFeedType) {
+            setLastUsedFeedType(lastFeedType)
+          }
+        } else if (feedTypesData && feedTypesData.length > 0) {
+          // If no recent records, still set a default feed type if available
+          setFormData((prev) => ({
+            ...prev,
+            feed_type_id: feedTypesData[0].id,
           }))
         }
       } catch (error) {
@@ -81,7 +118,7 @@ const DailyEntryForm = ({ cageId }) => {
     setFormData({
       date: new Date().toISOString().split('T')[0],
       feed_amount: '',
-      feed_type: 'Starter',
+      feed_type_id: '',
       feed_price: '1.50',
       mortality: '0',
       notes: '',
@@ -123,6 +160,10 @@ const DailyEntryForm = ({ cageId }) => {
         throw new Error('Please enter a valid feed price')
       }
 
+      if (!formData.feed_type_id) {
+        throw new Error('Please select a feed type')
+      }
+
       // Check for duplicate entry on the same date
       const { data: existingRecord, error: checkError } = await supabase
         .from('daily_records')
@@ -148,7 +189,7 @@ const DailyEntryForm = ({ cageId }) => {
           cage_id: cageId,
           date: formData.date,
           feed_amount: parseFloat(formData.feed_amount),
-          feed_type: formData.feed_type,
+          feed_type_id: formData.feed_type_id,
           feed_price: parseFloat(formData.feed_price),
           feed_cost: parseFloat(calculatedFeedCost),
           mortality: parseInt(formData.mortality),
@@ -164,10 +205,15 @@ const DailyEntryForm = ({ cageId }) => {
       // Refresh recent records
       const { data: newRecords, error: fetchError } = await supabase
         .from('daily_records')
-        .select('*')
+        .select(
+          `
+          *,
+          feed_types(*)
+        `,
+        )
         .eq('cage_id', cageId)
         .order('date', { ascending: false })
-        .limit(5)
+        .limit(10)
 
       if (fetchError) throw fetchError
       setRecentRecords(newRecords || [])
@@ -176,7 +222,7 @@ const DailyEntryForm = ({ cageId }) => {
       setFormData({
         date: formData.date,
         feed_amount: '',
-        feed_type: formData.feed_type,
+        feed_type_id: formData.feed_type_id, // Keep the same feed type for next entry
         feed_price: formData.feed_price,
         mortality: '0',
         notes: '',
@@ -187,6 +233,16 @@ const DailyEntryForm = ({ cageId }) => {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Get feed type name to display in the table
+  const getFeedTypeName = (record) => {
+    if (record.feed_types) {
+      return record.feed_types.name
+    }
+
+    // Fallback for old records without feed_type_id
+    return record.feed_type || 'Unknown'
   }
 
   if (loading) {
@@ -279,17 +335,24 @@ const DailyEntryForm = ({ cageId }) => {
                 Feed Type
               </label>
               <select
-                name="feed_type"
-                value={formData.feed_type}
+                name="feed_type_id"
+                value={formData.feed_type_id}
                 onChange={handleChange}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 required
               >
-                <option value="Starter">Starter</option>
-                <option value="Grower">Grower</option>
-                <option value="Finisher">Finisher</option>
-                <option value="Other">Other</option>
+                <option value="">Select a feed type</option>
+                {feedTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
               </select>
+              {lastUsedFeedType && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Last used: {lastUsedFeedType.name}
+                </p>
+              )}
             </div>
 
             <div>
@@ -389,7 +452,7 @@ const DailyEntryForm = ({ cageId }) => {
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Type
+                  Feed Type
                 </th>
                 <th
                   scope="col"
@@ -416,10 +479,10 @@ const DailyEntryForm = ({ cageId }) => {
                       {record.feed_amount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.feed_type}
+                      {getFeedTypeName(record)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${record.feed_cost.toFixed(2)}
+                      ${(record.feed_cost || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {record.mortality}
