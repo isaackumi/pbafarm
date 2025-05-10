@@ -1,4 +1,4 @@
-// components/CreateCageForm.js (Fixed)
+// /components/CreateCageForm.js
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { cageService } from '../lib/databaseService'
@@ -30,8 +30,12 @@ const CreateCageForm = () => {
         // Ensure tables exist and fetch all cages
         const { data, error } = await cageService.getAllCages()
 
-        if (error) throw error
+        if (error) {
+          console.error('Error fetching existing cages:', error)
+          throw error
+        }
 
+        console.log('Fetched existing cages:', data)
         setExistingCages(data || [])
       } catch (error) {
         console.error('Error fetching existing cages:', error)
@@ -104,6 +108,8 @@ const CreateCageForm = () => {
         installation_date: formData.installation_date || null,
         notes: formData.notes ? formData.notes.trim() : null,
         status: formData.status || 'empty',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }
 
       console.log('Creating cage with data:', cageData)
@@ -114,6 +120,7 @@ const CreateCageForm = () => {
       )
 
       if (createError) {
+        console.error('Detailed create error:', createError)
         throw createError
       }
 

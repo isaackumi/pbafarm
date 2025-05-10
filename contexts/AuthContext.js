@@ -8,7 +8,6 @@ const AuthContext = createContext()
 // Auth provider component
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
 
@@ -31,7 +30,6 @@ export function AuthProvider({ children }) {
         // Set user if session exists
         if (session?.user) {
           setUser(session.user)
-          await fetchUserDetails(session.user)
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -51,10 +49,8 @@ export function AuthProvider({ children }) {
 
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user)
-          await fetchUserDetails(session.user)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
-          setProfile(null)
         } else if (event === 'USER_UPDATED' && session?.user) {
           setUser(session.user)
         }
@@ -68,24 +64,6 @@ export function AuthProvider({ children }) {
       authListener.subscription.unsubscribe()
     }
   }, [])
-
-  // Fetch user profile
-  const fetchUserDetails = async (user) => {
-    try {
-      // Fetch user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) throw profileError
-
-      setProfile(profile)
-    } catch (error) {
-      console.error('Error fetching user details:', error)
-    }
-  }
 
   // Sign in with email and password
   const signInWithEmail = async (email, password) => {
@@ -140,39 +118,67 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  // Update user profile
-  const updateProfile = async (profileData) => {
+  // Update user metadata
+  const updateUserMetadata = async (metadata) => {
     try {
-      // Update profile in database
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(profileData)
-        .eq('id', user.id)
-        .select()
+      const { data, error } = await supabase.auth.updateUser({
+        data: metadata,
+      })
 
       if (error) throw error
 
-      // Update profile in state
-      setProfile(data[0])
+      // Update user in state
+      if (data && data.user) {
+        setUser(data.user)
+        return { data: data.user, error: null }
+      }
 
-      return { data: data[0], error: null }
+      return {
+        data: null,
+        error: new Error('No user data returned after update'),
+      }
     } catch (error) {
-      console.error('Error updating profile:', error)
+      console.error('Error updating user metadata:', error)
       return { data: null, error }
     }
   }
 
+  // Get user role
+  const getUserRole = () => {
+    return user?.user_metadata?.role || 'user'
+  }
+
+  // Check if user has a specific role
+  const hasRole = (role) => {
+    const userRole = getUserRole()
+
+    // Admin roles should include access to lesser roles
+    if (userRole === 'super_admin') return true
+    if (userRole === 'admin' && role !== 'super_admin') return true
+
+    return userRole === role
+  }
+
   const authValue = {
     user,
-    profile,
     loading,
     initialized,
     signInWithEmail,
     signInWithGoogle,
     signUpWithEmail,
     signOut,
-    updateProfile,
-    refreshUserDetails: () => fetchUserDetails(user),
+    updateUserMetadata,
+    getUserRole,
+    hasRole,
+    // For compatibility with code expecting a profile
+    profile: user,
+    refreshUserDetails: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) setUser(user)
+      return user
+    },
   }
 
   return (

@@ -1,4 +1,4 @@
-// components/DailyEntryForm.js (Fixed - Using Database)
+// components/DailyEntryForm.js (Fixed - Using cages_info table)
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import feedTypeService from '../lib/feedTypeService'
@@ -34,12 +34,12 @@ const DailyEntryForm = ({ cageId }) => {
       try {
         console.log('Fetching cage data and feed types for id:', cageId) // Debug log
 
-        // Fetch cage details
+        // Fetch cage details from cages_info table instead of cages
         const { data: cageData, error: cageError } = await supabase
-          .from('cages')
+          .from('cage_info')
           .select('*')
           .eq('id', cageId)
-          .single()
+          .maybeSingle()
 
         if (cageError) {
           console.error('Error fetching cage:', cageError)
