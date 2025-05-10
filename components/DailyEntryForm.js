@@ -1,4 +1,4 @@
-// components/DailyEntryForm.js (Updated with Feed Types support)
+// components/DailyEntryForm.js (Fixed - Using Database)
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import feedTypeService from '../lib/feedTypeService'
@@ -86,7 +86,8 @@ const DailyEntryForm = ({ cageId }) => {
         if (recordsData && recordsData.length > 0) {
           setFormData((prev) => ({
             ...prev,
-            feed_price: recordsData[0].feed_price.toString(),
+            feed_price:
+              recordsData[0].feed_price?.toString() || prev.feed_price,
             feed_type_id: lastFeedType
               ? lastFeedType.id
               : feedTypesData && feedTypesData.length > 0
