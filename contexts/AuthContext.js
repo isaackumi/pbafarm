@@ -1,8 +1,6 @@
 // contexts/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react'
 import { supabase } from '../lib/supabase'
-import permissionService from '../lib/permissionService'
-import companyService from '../lib/companyService'
 
 // Create auth context
 const AuthContext = createContext()
@@ -11,9 +9,6 @@ const AuthContext = createContext()
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [company, setCompany] = useState(null)
-  const [permissions, setPermissions] = useState([])
-  const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
 
@@ -60,9 +55,6 @@ export function AuthProvider({ children }) {
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
-          setCompany(null)
-          setPermissions([])
-          setRoles([])
         } else if (event === 'USER_UPDATED' && session?.user) {
           setUser(session.user)
         }
@@ -77,7 +69,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Fetch user profile, company, and permissions
+  // Fetch user profile
   const fetchUserDetails = async (user) => {
     try {
       // Fetch user profile
@@ -90,29 +82,6 @@ export function AuthProvider({ children }) {
       if (profileError) throw profileError
 
       setProfile(profile)
-
-      // Fetch company details
-      if (profile.company_id) {
-        const {
-          data: company,
-          error: companyError,
-        } = await companyService.getCompanyDetails(profile.company_id)
-
-        if (companyError) throw companyError
-
-        setCompany(company)
-      }
-
-      // Fetch user roles and permissions
-      const {
-        data: permissionsData,
-        error: permissionsError,
-      } = await permissionService.getUserRolesAndPermissions(user.id)
-
-      if (permissionsError) throw permissionsError
-
-      setRoles(permissionsData.roles)
-      setPermissions(permissionsData.permissionCodes)
     } catch (error) {
       console.error('Error fetching user details:', error)
     }
@@ -124,6 +93,11 @@ export function AuthProvider({ children }) {
       email,
       password,
     })
+
+    if (!error) {
+      // Redirect to dashboard after successful login
+      window.location.href = '/dashboard'
+    }
 
     return { data, error }
   }
@@ -151,6 +125,11 @@ export function AuthProvider({ children }) {
         },
       },
     })
+
+    if (!error) {
+      // Redirect to dashboard after successful signup
+      window.location.href = '/dashboard'
+    }
 
     return { data, error }
   }
@@ -183,29 +162,9 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Check if user has a specific permission
-  const hasPermission = (permissionCode) => {
-    return permissionService.hasPermission(permissions, permissionCode)
-  }
-
-  // Check if user has a specific role
-  const hasRole = (roleName) => {
-    return roles.some(
-      (r) => r.role.name.toLowerCase() === roleName.toLowerCase(),
-    )
-  }
-
-  // Check if user is an admin or super admin
-  const isAdmin = () => {
-    return hasRole('admin') || hasRole('super_admin')
-  }
-
   const authValue = {
     user,
     profile,
-    company,
-    roles,
-    permissions,
     loading,
     initialized,
     signInWithEmail,
@@ -213,9 +172,6 @@ export function AuthProvider({ children }) {
     signUpWithEmail,
     signOut,
     updateProfile,
-    hasPermission,
-    hasRole,
-    isAdmin,
     refreshUserDetails: () => fetchUserDetails(user),
   }
 

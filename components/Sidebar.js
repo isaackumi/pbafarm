@@ -1,4 +1,4 @@
-// components/Sidebar.js (Collapsible version)
+// components/Sidebar.js
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -17,14 +17,24 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import LogoutConfirmationModal from './LogoutConfirmationModal'
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed)
+  }
+
+  const handleLogout = async () => {
+    const { error } = await signOut()
+    if (!error) {
+      router.push('/login')
+    }
+    setShowLogoutModal(false)
   }
 
   return (
@@ -55,9 +65,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           <span className="text-indigo-900 font-bold">FM</span>
         </div>
         {!collapsed && (
-          <span className="text-sm font-medium truncate">
-            PBA Farm Management
-          </span>
+          <span className="text-sm font-medium truncate">Farm Management</span>
         )}
       </div>
 
@@ -176,7 +184,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             </Link>
           </li>
           <li>
-            <Link href="/stocking">
+            <Link href="/create-cage">
               <div
                 className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer ${
                   collapsed ? 'justify-center' : ''
@@ -192,7 +200,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
           {!collapsed && (
             <li className="px-3 py-2 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
-              Super Admin
+              User
             </li>
           )}
           {collapsed && (
@@ -223,7 +231,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       >
         {collapsed ? (
           <button
-            onClick={signOut}
+            onClick={() => setShowLogoutModal(true)}
             className="text-indigo-200 hover:text-white"
             title="Logout"
           >
@@ -247,7 +255,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               </div>
             </div>
             <button
-              onClick={signOut}
+              onClick={() => setShowLogoutModal(true)}
               className="text-indigo-200 hover:text-white"
               title="Logout"
             >
@@ -256,6 +264,13 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           </div>
         )}
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+      />
     </div>
   )
 }
