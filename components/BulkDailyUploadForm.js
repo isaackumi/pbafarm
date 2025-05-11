@@ -6,6 +6,26 @@ import BulkUploadModal from './BulkUploadModal'
 import { useToast } from '../hooks/useToast'
 import feedTypeService from '../lib/feedTypeService'
 
+// Excel serial number to YYYY-MM-DD string
+const excelSerialDateToJSDate = (serial) => {
+  const utc_days = Math.floor(serial - 25569)
+  const utc_value = utc_days * 86400
+  const date_info = new Date(utc_value * 1000)
+
+  const fractional_day = serial - Math.floor(serial) + 0.0000001
+  const total_seconds = Math.floor(86400 * fractional_day)
+
+  const seconds = total_seconds % 60
+  const minutes = Math.floor(total_seconds / 60) % 60
+  const hours = Math.floor(total_seconds / 3600)
+
+  date_info.setHours(hours)
+  date_info.setMinutes(minutes)
+  date_info.setSeconds(seconds)
+
+  return date_info.toISOString().split('T')[0]
+}
+
 const BulkDailyUploadForm = () => {
   const [cages, setCages] = useState([])
   const [feedTypes, setFeedTypes] = useState([])
@@ -15,7 +35,6 @@ const BulkDailyUploadForm = () => {
   const [error, setError] = useState('')
   const { showToast } = useToast()
 
-  // Define headers and validation rules for the template
   const templateHeaders = [
     'cage_name',
     'date',
@@ -36,22 +55,19 @@ const BulkDailyUploadForm = () => {
     notes: { required: false },
   }
 
-  // Fetch cages and feed types on component mount
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        // Fetch cages
         const { data: cageData, error: cageError } = await supabase
           .from('cage_info')
           .select('id, name, status')
-          .in('status', ['active'])
+          // .in('status', ['active'])
           .order('name')
 
         if (cageError) throw cageError
         setCages(cageData || [])
 
-        // Fetch feed types
         const {
           data: feedTypesData,
           error: feedTypesError,
@@ -73,10 +89,8 @@ const BulkDailyUploadForm = () => {
 
   const handleUpload = async (parsedData) => {
     try {
-      // Map cage names to IDs and feed type names to IDs
       const processedData = await Promise.all(
         parsedData.map(async (row) => {
-          // Find cage ID by name
           const cage = cages.find(
             (c) => c.name.toLowerCase() === row.cage_name.toLowerCase(),
           )
@@ -84,7 +98,6 @@ const BulkDailyUploadForm = () => {
             throw new Error(`Cage not found: ${row.cage_name}`)
           }
 
-          // Find feed type ID by name
           const feedType = feedTypes.find(
             (ft) => ft.name.toLowerCase() === row.feed_type.toLowerCase(),
           )
@@ -92,17 +105,25 @@ const BulkDailyUploadForm = () => {
             throw new Error(`Feed type not found: ${row.feed_type}`)
           }
 
-          // Calculate feed cost if not provided
           const feedAmount = parseFloat(row.feed_amount)
           const feedPrice = row.feed_price
             ? parseFloat(row.feed_price)
             : feedType.price_per_kg
           const feedCost = feedAmount * feedPrice
 
-          // Prepare record for insertion
+          // Handle different date formats
+          let parsedDate
+          if (row.date instanceof Date) {
+            parsedDate = row.date.toISOString().split('T')[0]
+          } else if (!isNaN(row.date)) {
+            parsedDate = excelSerialDateToJSDate(parseFloat(row.date))
+          } else {
+            parsedDate = new Date(row.date).toISOString().split('T')[0]
+          }
+
           return {
             cage_id: cage.id,
-            date: row.date,
+            date: parsedDate,
             feed_amount: feedAmount,
             feed_type_id: feedType.id,
             feed_price: feedPrice,
@@ -114,7 +135,6 @@ const BulkDailyUploadForm = () => {
         }),
       )
 
-      // Insert records into the database
       const { data, error } = await supabase
         .from('daily_records')
         .insert(processedData)
@@ -207,7 +227,6 @@ const BulkDailyUploadForm = () => {
           </button>
         </div>
 
-        {/* Bulk Upload Modal */}
         <BulkUploadModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
