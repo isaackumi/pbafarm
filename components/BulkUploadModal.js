@@ -18,6 +18,9 @@ const BulkUploadModal = ({
   templateHeaders = [],
   validationRules = {},
   maxRows = 100,
+  templateData = null,
+  cages = [],
+  feedTypes = [],
 }) => {
   const fileInputRef = useRef(null)
   const { showToast } = useToast()
@@ -100,6 +103,7 @@ const BulkUploadModal = ({
     }
 
     setProcessing(true)
+    setValidationErrors([])
 
     try {
       const reader = new FileReader()
@@ -127,14 +131,15 @@ const BulkUploadModal = ({
           }
 
           // Extract headers (first row)
-          const headers = jsonData[0]
+          const headers = jsonData[0].map((h) =>
+            typeof h === 'string'
+              ? h.trim().toLowerCase()
+              : String(h).toLowerCase(),
+          )
 
           // Validate headers against expected template
           const missingHeaders = templateHeaders.filter(
-            (header) =>
-              !headers.some(
-                (h) => h.trim().toLowerCase() === header.trim().toLowerCase(),
-              ),
+            (header) => !headers.some((h) => h === header.toLowerCase()),
           )
 
           if (missingHeaders.length > 0) {
@@ -149,8 +154,7 @@ const BulkUploadModal = ({
             const record = {}
             headers.forEach((header, i) => {
               // Use lowercase header as key
-              const key = header.trim().toLowerCase()
-              record[key] = row[i] || null
+              record[header] = row[i] || null
             })
 
             return record
@@ -250,6 +254,39 @@ const BulkUploadModal = ({
       }
     })
 
+    // Add specific validations for cage_name and feed_type
+    if ('cage_name' in record && record.cage_name) {
+      const cageExists = cages.some(
+        (cage) =>
+          cage.name.toLowerCase().trim() ===
+          record.cage_name.toLowerCase().trim(),
+      )
+
+      if (!cageExists) {
+        errors.push({
+          row: rowNumber,
+          field: 'cage_name',
+          message: `Cage name "${record.cage_name}" does not exist in the system`,
+        })
+      }
+    }
+
+    if ('feed_type' in record && record.feed_type) {
+      const feedTypeExists = feedTypes.some(
+        (ft) =>
+          ft.name.toLowerCase().trim() ===
+          record.feed_type.toLowerCase().trim(),
+      )
+
+      if (!feedTypeExists) {
+        errors.push({
+          row: rowNumber,
+          field: 'feed_type',
+          message: `Feed type "${record.feed_type}" does not exist in the system`,
+        })
+      }
+    }
+
     return errors
   }
 
@@ -287,6 +324,29 @@ const BulkUploadModal = ({
     try {
       // Create worksheet with headers
       const ws = xlsxLib.utils.aoa_to_sheet([templateHeaders])
+
+      // Add sample data if provided
+      if (
+        templateData &&
+        templateData.exampleData &&
+        templateData.exampleData.length > 0
+      ) {
+        xlsxLib.utils.sheet_add_aoa(ws, templateData.exampleData, {
+          origin: 'A2',
+        })
+      } else if (cages.length > 0 && feedTypes.length > 0) {
+        // Fallback: Create example row with actual cage and feed type from the system
+        const exampleRow = [
+          cages[0].name,
+          new Date().toISOString().split('T')[0],
+          '1.5',
+          feedTypes[0].name,
+          feedTypes[0].price_per_kg?.toString() || '1.5',
+          '0',
+          'Sample record',
+        ]
+        xlsxLib.utils.sheet_add_aoa(ws, [exampleRow], { origin: 'A2' })
+      }
 
       // Create workbook and add the worksheet
       const wb = xlsxLib.utils.book_new()
@@ -503,7 +563,7 @@ const BulkUploadModal = ({
                         <ul className="list-disc pl-5">
                           {validationErrors.slice(0, 10).map((error, index) => (
                             <li key={index}>
-                              Row {error.row}: {error.message}
+                              Row {error.row}: {error.field} - {error.message}
                             </li>
                           ))}
                           {validationErrors.length > 10 && (
