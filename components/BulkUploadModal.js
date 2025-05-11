@@ -1,5 +1,5 @@
 // components/BulkUploadModal.js
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Upload,
   X,
@@ -8,7 +8,6 @@ import {
   CheckCircle,
   Download,
 } from 'lucide-react'
-import * as XLSX from 'xlsx'
 import { useToast } from '../hooks/useToast'
 
 const BulkUploadModal = ({
@@ -28,6 +27,29 @@ const BulkUploadModal = ({
   const [validationErrors, setValidationErrors] = useState([])
   const [processing, setProcessing] = useState(false)
   const [step, setStep] = useState(1) // 1: Upload, 2: Preview, 3: Confirm
+  const [xlsxLibLoaded, setXlsxLibLoaded] = useState(false)
+  const [xlsxLib, setXlsxLib] = useState(null)
+
+  // Dynamically import xlsx library
+  useEffect(() => {
+    async function loadXlsx() {
+      try {
+        const XLSX = await import('xlsx')
+        setXlsxLib(XLSX)
+        setXlsxLibLoaded(true)
+      } catch (error) {
+        console.error('Failed to load xlsx library:', error)
+        showToast(
+          'error',
+          'Failed to load Excel parsing library. Please make sure xlsx is installed.',
+        )
+      }
+    }
+
+    if (isOpen) {
+      loadXlsx()
+    }
+  }, [isOpen, showToast])
 
   const resetState = () => {
     setFileData(null)
@@ -69,6 +91,14 @@ const BulkUploadModal = ({
   }
 
   const parseFile = async (file) => {
+    if (!xlsxLibLoaded || !xlsxLib) {
+      showToast(
+        'error',
+        'Excel parsing library not loaded. Please try again or check installation.',
+      )
+      return
+    }
+
     setProcessing(true)
 
     try {
@@ -77,13 +107,13 @@ const BulkUploadModal = ({
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result)
-          const workbook = XLSX.read(data, { type: 'array' })
+          const workbook = xlsxLib.read(data, { type: 'array' })
 
           // Get first sheet
           const worksheet = workbook.Sheets[workbook.SheetNames[0]]
 
           // Convert to JSON with header row
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+          const jsonData = xlsxLib.utils.sheet_to_json(worksheet, { header: 1 })
 
           // Check if file has data
           if (jsonData.length <= 1) {
@@ -246,16 +276,24 @@ const BulkUploadModal = ({
   }
 
   const downloadTemplate = () => {
+    if (!xlsxLibLoaded || !xlsxLib) {
+      showToast(
+        'error',
+        'Excel parsing library not loaded. Please try again or check installation.',
+      )
+      return
+    }
+
     try {
       // Create worksheet with headers
-      const ws = XLSX.utils.aoa_to_sheet([templateHeaders])
+      const ws = xlsxLib.utils.aoa_to_sheet([templateHeaders])
 
       // Create workbook and add the worksheet
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Template')
+      const wb = xlsxLib.utils.book_new()
+      xlsxLib.utils.book_append_sheet(wb, ws, 'Template')
 
       // Generate Excel file and trigger download
-      XLSX.writeFile(wb, `${recordType}_import_template.xlsx`)
+      xlsxLib.writeFile(wb, `${recordType}_import_template.xlsx`)
     } catch (error) {
       console.error('Error generating template:', error)
       showToast('error', 'Error generating template')
@@ -347,6 +385,25 @@ const BulkUploadModal = ({
 
         {/* Content */}
         <div className="p-6">
+          {!xlsxLibLoaded && (
+            <div className="bg-yellow-50 p-4 mb-6 rounded-md">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">
+                    Excel parsing library not loaded
+                  </p>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    The XLSX library required for parsing Excel files is not
+                    installed or failed to load. Please install it using{' '}
+                    <code>npm install xlsx</code> or <code>yarn add xlsx</code>
+                    and restart your application.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {step === 1 && (
             <div className="flex flex-col items-center justify-center py-6">
               <FileText className="h-16 w-16 text-gray-400 mb-4" />
@@ -361,7 +418,7 @@ const BulkUploadModal = ({
               <div className="flex flex-col items-center w-full max-w-md">
                 <div
                   className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => xlsxLibLoaded && fileInputRef.current?.click()}
                 >
                   <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600">
@@ -388,6 +445,7 @@ const BulkUploadModal = ({
                     onChange={handleFileChange}
                     accept=".xlsx,.xls,.csv"
                     className="hidden"
+                    disabled={!xlsxLibLoaded}
                   />
                 </div>
 
@@ -395,7 +453,10 @@ const BulkUploadModal = ({
                   <button
                     type="button"
                     onClick={downloadTemplate}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                    disabled={!xlsxLibLoaded}
+                    className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
+                      !xlsxLibLoaded ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download Template
@@ -404,10 +465,10 @@ const BulkUploadModal = ({
                   <button
                     type="button"
                     onClick={() => fileData && setStep(2)}
-                    disabled={!fileData || processing}
+                    disabled={!fileData || processing || !xlsxLibLoaded}
                     className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                      !fileData || processing
-                        ? 'bg-indigo-400'
+                      !fileData || processing || !xlsxLibLoaded
+                        ? 'bg-indigo-400 cursor-not-allowed'
                         : 'bg-indigo-600 hover:bg-indigo-700'
                     }`}
                   >
