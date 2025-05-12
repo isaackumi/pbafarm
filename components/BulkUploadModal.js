@@ -254,20 +254,37 @@ const BulkUploadModal = ({
       }
     })
 
-    // Add specific validations for cage_name and feed_type
-    if ('cage_name' in record && record.cage_name) {
+    // Add specific validations for cage_code and feed_type
+    if ('cage_code' in record && record.cage_code) {
       const cageExists = cages.some(
-        (cage) =>
-          cage.name.toLowerCase().trim() ===
-          record.cage_name.toLowerCase().trim(),
+        (cage) => cage.code === record.cage_code.trim(),
       )
 
       if (!cageExists) {
         errors.push({
           row: rowNumber,
-          field: 'cage_name',
-          message: `Cage name "${record.cage_name}" does not exist in the system`,
+          field: 'cage_code',
+          message: `Cage code "${record.cage_code}" does not exist in the system`,
         })
+      }
+    }
+
+    // If cage_code is valid and cage_name is provided, verify it matches (warning only)
+    if (
+      'cage_code' in record &&
+      record.cage_code &&
+      'cage_name' in record &&
+      record.cage_name
+    ) {
+      const cage = cages.find((cage) => cage.code === record.cage_code.trim())
+      if (
+        cage &&
+        cage.name.toLowerCase() !== record.cage_name.trim().toLowerCase()
+      ) {
+        console.warn(
+          `Row ${rowNumber}: Provided cage name "${record.cage_name}" doesn't match the name "${cage.name}" for cage code "${record.cage_code}".`,
+        )
+        // This is just a warning, not blocking error
       }
     }
 
@@ -337,7 +354,8 @@ const BulkUploadModal = ({
       } else if (cages.length > 0 && feedTypes.length > 0) {
         // Fallback: Create example row with actual cage and feed type from the system
         const exampleRow = [
-          cages[0].name,
+          cages[0].code, // Add cage code
+          cages[0].name, // Add cage name
           new Date().toISOString().split('T')[0],
           '1.5',
           feedTypes[0].name,

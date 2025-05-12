@@ -1,4 +1,4 @@
-// /components/CreateCageForm.js
+// Modified CreateCageForm.js with auto-generated cage code
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { cageService } from '../lib/databaseService'
@@ -11,8 +11,10 @@ const CreateCageForm = () => {
   const [error, setError] = useState('')
   const [nameError, setNameError] = useState('')
   const [existingCages, setExistingCages] = useState([])
+  const [cageCode, setCageCode] = useState('')
   const [formData, setFormData] = useState({
     name: '',
+    code: '',
     location: '',
     size: '',
     capacity: '',
@@ -23,7 +25,7 @@ const CreateCageForm = () => {
     status: 'empty',
   })
 
-  // Fetch existing cages to check for name uniqueness
+  // Fetch existing cages to check for name uniqueness and generate a code
   useEffect(() => {
     async function fetchExistingCages() {
       try {
@@ -37,6 +39,9 @@ const CreateCageForm = () => {
 
         console.log('Fetched existing cages:', data)
         setExistingCages(data || [])
+
+        // Generate a new cage code
+        generateCageCode(data || [])
       } catch (error) {
         console.error('Error fetching existing cages:', error)
       }
@@ -44,6 +49,31 @@ const CreateCageForm = () => {
 
     fetchExistingCages()
   }, [])
+
+  // Function to generate a new unique cage code
+  const generateCageCode = (existingCages) => {
+    // Find the highest existing code number
+    let maxCodeNumber = 0
+
+    existingCages.forEach((cage) => {
+      if (cage.code && cage.code.startsWith('C')) {
+        const codeNumber = parseInt(cage.code.substring(1), 10)
+        if (!isNaN(codeNumber) && codeNumber > maxCodeNumber) {
+          maxCodeNumber = codeNumber
+        }
+      }
+    })
+
+    // Generate the next code
+    const nextCodeNumber = maxCodeNumber + 1
+    const newCode = `C${nextCodeNumber.toString().padStart(3, '0')}`
+
+    console.log('Generated new cage code:', newCode)
+
+    // Set the code in the form data
+    setCageCode(newCode)
+    setFormData((prev) => ({ ...prev, code: newCode }))
+  }
 
   // Check if cage name already exists when name field changes
   useEffect(() => {
@@ -100,6 +130,7 @@ const CreateCageForm = () => {
       // Prepare cage data with correct types
       const cageData = {
         name: formData.name.trim(),
+        code: formData.code, // Include the auto-generated code
         location: formData.location ? formData.location.trim() : null,
         size: formData.size ? parseFloat(formData.size) : null,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
@@ -130,6 +161,7 @@ const CreateCageForm = () => {
       // Reset form
       setFormData({
         name: '',
+        code: '',
         location: '',
         size: '',
         capacity: '',
@@ -139,6 +171,10 @@ const CreateCageForm = () => {
         notes: '',
         status: 'empty',
       })
+
+      // Generate a new code for the next cage
+      const updatedCages = [...existingCages, data]
+      generateCageCode(updatedCages)
 
       // Navigate to cages page after delay
       setTimeout(() => {
@@ -173,6 +209,24 @@ const CreateCageForm = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Cage Code (Auto-generated, read-only) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cage Code <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="code"
+                value={cageCode}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-700 sm:text-sm"
+                placeholder="Auto-generated"
+                readOnly
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Auto-generated unique code for this cage
+              </p>
+            </div>
+
             {/* Cage Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

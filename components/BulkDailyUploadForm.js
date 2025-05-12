@@ -1,4 +1,4 @@
-// components/BulkDailyUploadForm.js
+// components/BulkDailyUploadForm.js with cage code support
 import React, { useState, useEffect } from 'react'
 import { CloudUpload, Info } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -35,8 +35,10 @@ const BulkDailyUploadForm = () => {
   const [error, setError] = useState('')
   const { showToast } = useToast()
 
+  // Updated template headers to include cage_code as the primary identifier
   const templateHeaders = [
-    'cage_name',
+    'cage_code', // Primary identifier (REQUIRED)
+    'cage_name', // For user reference only (OPTIONAL)
     'date',
     'feed_amount',
     'feed_type',
@@ -45,8 +47,10 @@ const BulkDailyUploadForm = () => {
     'notes',
   ]
 
+  // Updated validation rules
   const validationRules = {
-    cage_name: { required: true },
+    cage_code: { required: true }, // Making cage_code required
+    cage_name: { required: false }, // Making cage_name optional
     date: { required: true, type: 'date' },
     feed_amount: { required: true, type: 'number', min: 0 },
     feed_type: { required: true },
@@ -59,9 +63,10 @@ const BulkDailyUploadForm = () => {
     const fetchData = async () => {
       setLoading(true)
       try {
+        // Fetch cages with code field
         const { data: cageData, error: cageError } = await supabase
-          .from('cage_info')
-          .select('id, name, status')
+          .from('cages')
+          .select('id, name, code, status')
           .order('name')
 
         if (cageError) throw cageError
@@ -95,20 +100,36 @@ const BulkDailyUploadForm = () => {
       // Process each row in the uploaded file
       const processedData = await Promise.all(
         parsedData.map(async (row, rowIndex) => {
-          // Normalize cage name (trim and lowercase for comparison)
-          const cageNameNormalized = row.cage_name.trim().toLowerCase()
+          // First look up the cage by code (primary method)
+          const cageCode = row.cage_code?.trim()
+          if (!cageCode) {
+            throw new Error(`Row ${rowIndex + 2}: Cage code is required.`)
+          }
 
-          // Find matching cage (case-insensitive)
-          const cage = cages.find(
-            (c) => c.name.toLowerCase().trim() === cageNameNormalized,
-          )
+          // Find matching cage by code (exact match)
+          const cage = cages.find((c) => c.code === cageCode)
 
           if (!cage) {
             throw new Error(
-              `Row ${rowIndex + 2}: Cage not found: "${
-                row.cage_name
-              }". Please check the cage name matches exactly with an existing cage.`,
+              `Row ${
+                rowIndex + 2
+              }: Cage not found with code "${cageCode}". Please check the cage code is correct.`,
             )
+          }
+
+          // If cage_name is provided, verify it for user convenience (optional validation)
+          if (row.cage_name && row.cage_name.trim()) {
+            const cageName = row.cage_name.trim()
+            if (cage.name.toLowerCase() !== cageName.toLowerCase()) {
+              // Just a warning, not an error - we'll use the correct cage based on code
+              console.warn(
+                `Row ${
+                  rowIndex + 2
+                }: Provided cage name "${cageName}" doesn't match the name "${
+                  cage.name
+                }" for cage code "${cageCode}". Using cage with code "${cageCode}".`,
+              )
+            }
           }
 
           // Normalize feed type name (trim and lowercase for comparison)
@@ -192,7 +213,7 @@ const BulkDailyUploadForm = () => {
 
           // Return properly formatted record for database insertion
           return {
-            cage_id: cage.id,
+            cage_id: cage.id, // Using the cage ID from the code lookup
             date: parsedDate,
             feed_amount: feedAmount,
             feed_type_id: feedType.id,
@@ -236,9 +257,10 @@ const BulkDailyUploadForm = () => {
     const headers = templateHeaders
     const exampleData = []
 
-    // Add sample data with valid cage names and feed types if available
+    // Add sample data with valid cage codes, names and feed types if available
     if (cages.length > 0 && feedTypes.length > 0) {
       exampleData.push([
+        cages[0].code, // Use actual cage code from database
         cages[0].name, // Use actual cage name from database
         new Date().toISOString().split('T')[0], // Today's date
         '1.5', // Example feed amount
@@ -283,9 +305,9 @@ const BulkDailyUploadForm = () => {
             </h3>
             <ul className="mt-2 list-disc list-inside text-blue-800">
               <li>
-                <strong>cage_name</strong>:{' '}
-                <span className="text-red-600">Must match exactly</span> an
-                existing cage name in the system
+                <strong>cage_code</strong>:{' '}
+                <span className="text-red-600">Must match exactly</span> with an
+                existing cage code in the system
               </li>
               <li>
                 <strong>date</strong>: Date of the record (YYYY-MM-DD format)
@@ -301,6 +323,10 @@ const BulkDailyUploadForm = () => {
             </ul>
             <h3 className="mt-4 text-blue-800 font-medium">Optional Columns</h3>
             <ul className="mt-2 list-disc list-inside text-blue-800">
+              <li>
+                <strong>cage_name</strong>: For reference only (the cage_code
+                will be used to find the cage)
+              </li>
               <li>
                 <strong>feed_price</strong>: Price per kg (defaults to the feed
                 type's price if not provided)
@@ -326,7 +352,7 @@ const BulkDailyUploadForm = () => {
                   key={cage.id}
                   className="bg-gray-200 px-2 py-1 rounded text-sm text-gray-700"
                 >
-                  {cage.name}
+                  {cage.code} - {cage.name}
                 </span>
               ))}
               {cages.length === 0 && (
