@@ -299,18 +299,9 @@ function CagesManagement() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Link
-                href="/dashboard"
-                className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to Dashboard
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Cage Management
-              </h1>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Cage Management
+            </h1>
             <div className="flex space-x-2">
               <Link href="/stocking-management">
                 <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
