@@ -36,9 +36,10 @@ const DailyEntryForm = ({ cageId }) => {
 
         // Fetch cage details from cages_info table instead of cages
         const { data: cageData, error: cageError } = await supabase
-          .from('cages')
+          .from('cage_info')
           .select('*')
           .eq('id', cageId)
+          .eq('status', 'active') // Only fetch active cages
           .maybeSingle()
 
         if (cageError) {
