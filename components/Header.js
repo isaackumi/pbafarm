@@ -96,7 +96,7 @@ const Header = ({
                 </option>
                 {cages.map((cage) => (
                   <option key={cage.id} value={cage.id}>
-                    {cage.name}
+                    {cage.name} ({cage.status})
                   </option>
                 ))}
               </select>
