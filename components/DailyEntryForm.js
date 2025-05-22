@@ -1,7 +1,7 @@
 // components/DailyEntryForm.js (Fixed - Using cages_info table)
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import feedTypeService from '../lib/feedTypeService'
+import { feedTypeService } from '../lib/feedTypeService'
 
 const DailyEntryForm = ({ cageId }) => {
   const [cage, setCage] = useState(null)

@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CloudUpload,
+  Utensils,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
@@ -157,6 +158,20 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                   <CloudUpload className="w-5 h-5" />
                 </span>
                 {!collapsed && <span>Bulk Upload</span>}
+              </div>
+            </Link>
+          </li>
+          <li>
+            <Link href="/feed-management">
+              <div
+                className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer ${
+                  collapsed ? 'justify-center' : ''
+                }`}
+              >
+                <span className={collapsed ? '' : 'mr-3'}>
+                  <Utensils className="w-5 h-5" />
+                </span>
+                {!collapsed && <span>Feed Management</span>}
               </div>
             </Link>
           </li>

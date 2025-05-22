@@ -1,5 +1,5 @@
 // pages/feed-types.js
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import feedTypeService from '../lib/feedTypeService'
+import { feedTypeService } from '../lib/feedTypeService'
 import { supabase } from '../lib/supabase'
 
 export default function FeedTypesPage() {
