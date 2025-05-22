@@ -280,28 +280,35 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       searchable: true,
     },
     {
-      header: 'Date',
+      header: 'Stocking Date',
       accessor: 'stocking_date',
       sortable: true,
       cell: (row) => formatDate(row.stocking_date),
     },
     {
-      header: 'Fish Count',
+      header: 'DOC',
+      accessor: 'stocking_date',
+      cell: (value) => {
+        const stockingDate = new Date(value)
+        const today = new Date()
+        const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+        return `${doc} days`
+      },
+    },
+    {
+      header: 'Initial Count',
       accessor: 'fish_count',
-      sortable: true,
-      cell: (row) => row.fish_count.toLocaleString(),
+      cell: (value) => value?.toLocaleString() || 'N/A',
     },
     {
-      header: 'ABW (g)',
+      header: 'Initial ABW (g)',
       accessor: 'initial_abw',
-      sortable: true,
-      cell: (row) => row.initial_abw.toFixed(1),
+      cell: (value) => value?.toFixed(1) || 'N/A',
     },
     {
-      header: 'Biomass (kg)',
+      header: 'Initial Biomass (kg)',
       accessor: 'initial_biomass',
-      sortable: true,
-      cell: (row) => row.initial_biomass.toFixed(1),
+      cell: (value) => value?.toFixed(1) || 'N/A',
     },
   ]
 
@@ -534,17 +541,79 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                 </Link>
               </div>
 
-              <DataTable
-                data={recentStockings}
-                columns={stockingColumns}
-                loading={loading}
-                pagination={true}
-                recordsPerPage={10}
-                searchable={true}
-                sortable={true}
-                onRowClick={handleViewStocking}
-                emptyMessage="No stocking records found. Create your first stocking to get started."
-              />
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Cage
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Stocking Date
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      DOC
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Initial Count
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Initial ABW (g)
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Initial Biomass (kg)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {cages.map((cage) => {
+                    // Calculate DOC (Days of Culture)
+                    const stockingDate = new Date(cage.stocking_date)
+                    const today = new Date()
+                    const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+
+                    return (
+                      <tr key={cage.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {cage.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(cage.stocking_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {doc} days
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {cage.initial_count?.toLocaleString() || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {cage.initial_abw?.toFixed(1) || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {cage.initial_biomass?.toFixed(1) || 'N/A'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )
