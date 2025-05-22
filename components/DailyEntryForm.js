@@ -129,21 +129,27 @@ const DailyEntryForm = ({ cageId }) => {
     setError('')
   }, [cageId])
 
-  // Calculate feed cost based on amount and price
-  const calculateFeedCost = () => {
-    if (!formData.feed_amount || !formData.feed_price) return 0
-
-    const amount = parseFloat(formData.feed_amount)
-    const price = parseFloat(formData.feed_price)
-
-    return (amount * price).toFixed(2)
-  }
-
-  const feedCost = calculateFeedCost()
-
+  // Add validation for date before stocking date
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => {
+      const newFormData = { ...prev, [name]: value }
+      
+      // Check if the date is before stocking date
+      if (name === 'date' && cage && cage.stocking_date) {
+        const selectedDate = new Date(value)
+        const stockingDate = new Date(cage.stocking_date)
+        
+        if (selectedDate < stockingDate) {
+          setError(`Cannot enter data before stocking date (${cage.stocking_date}). This cage was not active before that date.`)
+          return prev // Keep the old date
+        } else {
+          setError('') // Clear any previous error
+        }
+      }
+      
+      return newFormData
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -164,6 +170,16 @@ const DailyEntryForm = ({ cageId }) => {
 
       if (!formData.feed_type_id) {
         throw new Error('Please select a feed type')
+      }
+
+      // Check if the date is before stocking date
+      if (cage && cage.stocking_date) {
+        const selectedDate = new Date(formData.date)
+        const stockingDate = new Date(cage.stocking_date)
+        
+        if (selectedDate < stockingDate) {
+          throw new Error(`Cannot enter data before stocking date (${cage.stocking_date}). This cage was not active before that date.`)
+        }
       }
 
       // Check for duplicate entry on the same date
@@ -236,6 +252,18 @@ const DailyEntryForm = ({ cageId }) => {
       setSubmitting(false)
     }
   }
+
+  // Calculate feed cost based on amount and price
+  const calculateFeedCost = () => {
+    if (!formData.feed_amount || !formData.feed_price) return 0
+
+    const amount = parseFloat(formData.feed_amount)
+    const price = parseFloat(formData.feed_price)
+
+    return (amount * price).toFixed(2)
+  }
+
+  const feedCost = calculateFeedCost()
 
   // Get feed type name to display in the table
   const getFeedTypeName = (record) => {
