@@ -281,15 +281,21 @@ const BulkUploadModal = ({
 
     // Add specific validations for cage_code and feed_type
     if ('cage_code' in record && record.cage_code) {
-      const cageExists = cages.some(
-        (cage) => cage.code === record.cage_code.trim(),
+      const cage = cages.find(
+        (cage) => cage.code.toLowerCase() === record.cage_code.toLowerCase().trim(),
       )
 
-      if (!cageExists) {
+      if (!cage) {
         errors.push({
           row: rowNumber,
           field: 'cage_code',
           message: `Cage code "${record.cage_code}" does not exist in the system`,
+        })
+      } else if (cage.status !== 'active') {
+        errors.push({
+          row: rowNumber,
+          field: 'cage_code',
+          message: `Cage "${record.cage_code}" is not active. Only active cages are allowed for data entry.`,
         })
       }
     }

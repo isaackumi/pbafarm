@@ -248,10 +248,12 @@ const BulkDailyUploadForm = () => {
     const exampleData = []
 
     // Add sample data with valid cage codes, names and feed types if available
-    if (cages.length > 0 && feedTypes.length > 0) {
+    // Only use active cages for the template
+    const activeCages = cages.filter(cage => cage.status === 'active')
+    if (activeCages.length > 0 && feedTypes.length > 0) {
       exampleData.push([
-        cages[0].code, // Use actual cage code from database
-        cages[0].name, // Use actual cage name from database
+        activeCages[0].code, // Use actual cage code from database
+        activeCages[0].name, // Use actual cage name from database
         new Date().toISOString().split('T')[0], // Today's date
         '1.5', // Example feed amount
         feedTypes[0].name, // Use actual feed type from database
@@ -334,10 +336,10 @@ const BulkDailyUploadForm = () => {
           {/* Display available cages and feed types for reference */}
           <div className="mt-4 bg-gray-50 p-4 rounded-md">
             <h3 className="text-gray-700 font-medium">
-              Available Cages in System:
+              Available Active Cages in System:
             </h3>
             <div className="mt-2 flex flex-wrap gap-2">
-              {cages.map((cage) => (
+              {cages.filter(cage => cage.status === 'active').map((cage) => (
                 <span
                   key={cage.id}
                   className="bg-gray-200 px-2 py-1 rounded text-sm text-gray-700"
@@ -345,8 +347,8 @@ const BulkDailyUploadForm = () => {
                   {cage.code} - {cage.name}
                 </span>
               ))}
-              {cages.length === 0 && (
-                <span className="text-gray-500 text-sm">No cages found</span>
+              {cages.filter(cage => cage.status === 'active').length === 0 && (
+                <span className="text-gray-500 text-sm">No active cages found</span>
               )}
             </div>
 
