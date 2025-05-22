@@ -15,7 +15,7 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useAuth } from '../contexts/AuthContext'
 import stockingService from '../lib/stockingService'
-import { useToast } from '../hooks/useToast'
+import { useToast } from '../components/Toast'
 
 export default function ApprovalsPage() {
   return (

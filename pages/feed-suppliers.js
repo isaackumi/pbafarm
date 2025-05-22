@@ -16,7 +16,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import { useToast } from '../hooks/useToast'
+import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 
 export default function FeedSuppliersPage() {

@@ -16,7 +16,7 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useAuth } from '../contexts/AuthContext'
 import companyService from '../lib/companyService'
-import { useToast } from '../hooks/useToast'
+import { useToast } from '../components/Toast'
 
 export default function CompanySettingsPage() {
   return (

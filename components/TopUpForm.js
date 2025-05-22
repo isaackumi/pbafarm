@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { AlertCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import stockingService from '../lib/stockingService'
-import { useToast } from '../hooks/useToast'
+import { useToast } from './Toast'
 
 const TopUpForm = ({ onComplete }) => {
   const router = useRouter()

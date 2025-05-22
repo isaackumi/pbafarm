@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, FileText } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import BulkDailyUploadForm from '../components/BulkDailyUploadForm'
-import { ToastProvider } from '../hooks/useToast'
+import { ToastProvider } from '../components/Toast'
 
 export default function BulkUploadPage() {
   const [activeTab, setActiveTab] = useState('daily')

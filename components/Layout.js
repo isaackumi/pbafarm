@@ -62,10 +62,6 @@ const Layout = ({
         newTitle = 'Biweekly ABW'
         shouldShowCageSelector = true
         break
-      case 'harvest':
-        newTitle = 'Harvest Data'
-        shouldShowCageSelector = true
-        break
       default:
         newTitle = 'Dashboard'
         shouldShowCageSelector = false

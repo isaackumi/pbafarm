@@ -133,11 +133,7 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       }
     }
 
-    if (
-      activeTab === 'daily' ||
-      activeTab === 'biweekly' ||
-      activeTab === 'harvest'
-    ) {
+    if (activeTab === 'daily' || activeTab === 'biweekly') {
       fetchCageSpecificData()
     }
   }, [selectedCage, activeTab])

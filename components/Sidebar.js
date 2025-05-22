@@ -133,19 +133,18 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             </button>
           </li>
           <li>
-            <button
-              onClick={() => setActiveTab('harvest')}
-              className={`flex items-center w-full px-4 py-2 text-sm font-medium ${
-                activeTab === 'harvest'
-                  ? 'bg-indigo-800 text-white'
-                  : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
-              } ${collapsed ? 'justify-center' : ''}`}
-            >
-              <span className={collapsed ? '' : 'mr-3'}>
-                <PieChart className="w-5 h-5" />
-              </span>
-              {!collapsed && <span>Harvest Data</span>}
-            </button>
+            <Link href="/harvest">
+              <div
+                className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer ${
+                  collapsed ? 'justify-center' : ''
+                }`}
+              >
+                <span className={collapsed ? '' : 'mr-3'}>
+                  <PieChart className="w-5 h-5" />
+                </span>
+                {!collapsed && <span>Harvest Data</span>}
+              </div>
+            </Link>
           </li>
           <li>
             <Link href="/bulk-upload">

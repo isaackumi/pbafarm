@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
-import { ToastProvider } from '../hooks/useToast'
+import { ToastProvider } from '../components/Toast'
 import '../styles/globals.css'
 
 // This HOC (Higher-Order Component) wraps the entire app

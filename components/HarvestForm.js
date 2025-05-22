@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { cages } from '../data/cages'
-import { harvestRecords } from '../data/harvest-records'
 import { dailyRecords } from '../data/daily-records'
 import { biweeklyRecords } from '../data/biweekly-records'
+import { harvestRecordService } from '../lib/databaseService'
+import { useToast } from './Toast'
 
-const HarvestForm = ({ cageId }) => {
+const HarvestForm = ({ cageId, onComplete }) => {
   const [formData, setFormData] = useState({
     harvestDate: new Date().toISOString().split('T')[0],
     averageBodyWeight: '',
@@ -15,13 +16,28 @@ const HarvestForm = ({ cageId }) => {
     sizeBreakdown: [{ range: '', percentage: '' }],
   })
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { showToast } = useToast()
 
   const selectedCage = cages.find((cage) => cage.id === cageId)
 
   // Check if cage has been harvested already
-  const existingHarvest = harvestRecords.find(
-    (record) => record.cageId === cageId,
-  )
+  const [existingHarvest, setExistingHarvest] = useState(null)
+
+  useEffect(() => {
+    const checkExistingHarvest = async () => {
+      try {
+        const { data, error } = await harvestRecordService.getHarvestRecord(cageId)
+        if (error) throw error
+        setExistingHarvest(data)
+      } catch (error) {
+        console.error('Error checking existing harvest:', error)
+        showToast('Error checking existing harvest', 'error')
+      }
+    }
+
+    checkExistingHarvest()
+  }, [cageId])
 
   // Get the most recent ABW for pre-filling
   const latestAbw = biweeklyRecords
@@ -100,15 +116,47 @@ const HarvestForm = ({ cageId }) => {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // In a real app, this would save to the database
-    // For now, just show a success message
-    setMessage('Harvest record saved successfully!')
+    setLoading(true)
 
-    setTimeout(() => {
-      setMessage('')
-    }, 3000)
+    try {
+      // Validate size breakdown percentages sum to 100%
+      const totalPercentage = formData.sizeBreakdown.reduce(
+        (sum, size) => sum + (parseFloat(size.percentage) || 0),
+        0,
+      )
+      if (Math.abs(totalPercentage - 100) > 0.01) {
+        throw new Error('Size breakdown percentages must sum to 100%')
+      }
+
+      const harvestData = {
+        cage_id: cageId,
+        harvest_date: formData.harvestDate,
+        average_body_weight: parseFloat(formData.averageBodyWeight),
+        total_weight: parseFloat(formData.totalWeight),
+        estimated_count: parseInt(formData.estimatedCount),
+        fcr: parseFloat(formData.fcr) || null,
+        notes: formData.notes,
+        size_breakdown: formData.sizeBreakdown.map((size) => ({
+          range: size.range,
+          percentage: parseFloat(size.percentage),
+        })),
+      }
+
+      const { error } = await harvestRecordService.createHarvestRecord(harvestData)
+      if (error) throw error
+
+      showToast('Harvest record saved successfully', 'success')
+      if (onComplete) {
+        onComplete()
+      }
+    } catch (error) {
+      console.error('Error saving harvest record:', error)
+      showToast(error.message || 'Error saving harvest record', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!selectedCage) {
@@ -131,7 +179,7 @@ const HarvestForm = ({ cageId }) => {
           <div className="bg-yellow-50 p-4 rounded-md text-yellow-800 mb-4">
             <p className="font-medium">
               This cage has already been harvested on{' '}
-              {existingHarvest.harvestDate}.
+              {new Date(existingHarvest.harvest_date).toLocaleDateString()}.
             </p>
           </div>
 
@@ -139,7 +187,7 @@ const HarvestForm = ({ cageId }) => {
             <div>
               <p className="text-sm font-medium text-gray-700">Harvest Date</p>
               <p className="mt-1 text-gray-900">
-                {existingHarvest.harvestDate}
+                {new Date(existingHarvest.harvest_date).toLocaleDateString()}
               </p>
             </div>
             <div>
@@ -147,13 +195,13 @@ const HarvestForm = ({ cageId }) => {
                 Average Body Weight
               </p>
               <p className="mt-1 text-gray-900">
-                {existingHarvest.averageBodyWeight} g
+                {existingHarvest.average_body_weight} g
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">Total Weight</p>
               <p className="mt-1 text-gray-900">
-                {existingHarvest.totalWeight} kg
+                {existingHarvest.total_weight} kg
               </p>
             </div>
             <div>
@@ -161,12 +209,14 @@ const HarvestForm = ({ cageId }) => {
                 Estimated Count
               </p>
               <p className="mt-1 text-gray-900">
-                {existingHarvest.estimatedCount}
+                {existingHarvest.estimated_count}
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">FCR</p>
-              <p className="mt-1 text-gray-900">{existingHarvest.fcr}</p>
+              <p className="mt-1 text-gray-900">
+                {existingHarvest.fcr?.toFixed(2) || 'N/A'}
+              </p>
             </div>
           </div>
 
@@ -183,7 +233,7 @@ const HarvestForm = ({ cageId }) => {
                   Percentage
                 </div>
 
-                {existingHarvest.sizeBreakdown.map((size, index) => (
+                {existingHarvest.size_breakdown.map((size, index) => (
                   <React.Fragment key={index}>
                     <div className="text-gray-900">{size.range}</div>
                     <div className="text-gray-900">{size.percentage}%</div>
@@ -311,6 +361,7 @@ const HarvestForm = ({ cageId }) => {
                       }
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       placeholder="e.g. 300-350g"
+                      required
                     />
                   </div>
                   <div className="col-span-2">
@@ -328,6 +379,7 @@ const HarvestForm = ({ cageId }) => {
                       placeholder="%"
                       min="0"
                       max="100"
+                      required
                     />
                   </div>
                   <div className="flex items-center">
@@ -370,9 +422,10 @@ const HarvestForm = ({ cageId }) => {
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              Save Harvest Record
+              {loading ? 'Saving...' : 'Save Harvest Record'}
             </button>
           </div>
 
