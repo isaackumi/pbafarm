@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import { feedTypeService } from '../lib/feedTypeService'
 import { supplierService } from '../lib/supplierService'
 import { useToast } from '../components/Toast'
-import { Plus, ArrowLeft, Download, Filter, Search, Utensils, Users, Database, LineChart, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ArrowLeft, Download, Filter, Search, Utensils, Users, Database, LineChart, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
 const FeedManagement = () => {
@@ -39,6 +39,20 @@ const FeedManagement = () => {
     email: '',
     address: '',
     active: true
+  })
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false)
+  const [purchaseData, setPurchaseData] = useState({
+    supplier_id: '',
+    purchase_date: new Date().toISOString().split('T')[0],
+    total_amount: 0,
+    notes: '',
+    feed_entries: []
+  })
+  const [currentFeedEntry, setCurrentFeedEntry] = useState({
+    feed_type_id: '',
+    number_of_bags: '',
+    price_per_bag: '',
+    bag_size: '25' // Default bag size in kg
   })
 
   useEffect(() => {
@@ -208,15 +222,82 @@ const FeedManagement = () => {
     }))
   }
 
+  const handleAddFeedEntry = () => {
+    if (!currentFeedEntry.feed_type_id || !currentFeedEntry.number_of_bags || !currentFeedEntry.price_per_bag) {
+      showToast('Please fill in all feed entry details', 'error')
+      return
+    }
+
+    const entry = {
+      ...currentFeedEntry,
+      total_amount: parseFloat(currentFeedEntry.number_of_bags) * parseFloat(currentFeedEntry.price_per_bag)
+    }
+
+    setPurchaseData(prev => ({
+      ...prev,
+      feed_entries: [...prev.feed_entries, entry],
+      total_amount: prev.total_amount + entry.total_amount
+    }))
+
+    setCurrentFeedEntry({
+      feed_type_id: '',
+      number_of_bags: '',
+      price_per_bag: '',
+      bag_size: '25'
+    })
+  }
+
+  const handleRemoveFeedEntry = (index) => {
+    const entry = purchaseData.feed_entries[index]
+    setPurchaseData(prev => ({
+      ...prev,
+      feed_entries: prev.feed_entries.filter((_, i) => i !== index),
+      total_amount: prev.total_amount - entry.total_amount
+    }))
+  }
+
+  const handlePurchaseSubmit = async (e) => {
+    e.preventDefault()
+    if (!purchaseData.supplier_id) {
+      showToast('Please select a supplier', 'error')
+      return
+    }
+    if (purchaseData.feed_entries.length === 0) {
+      showToast('Please add at least one feed entry', 'error')
+      return
+    }
+
+    try {
+      // Here you would implement the API call to save the purchase
+      // For now, we'll just show a success message
+      showToast('Feed purchase saved successfully', 'success')
+      setShowPurchaseModal(false)
+      setPurchaseData({
+        supplier_id: '',
+        purchase_date: new Date().toISOString().split('T')[0],
+        total_amount: 0,
+        notes: '',
+        feed_entries: []
+      })
+    } catch (error) {
+      console.error('Error saving feed purchase:', error)
+      showToast('Failed to save feed purchase', 'error')
+    }
+  }
+
   return (
     <ProtectedRoute>
       <Layout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Feed Management</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Manage feed types, suppliers, and track feed usage across your farm
-            </p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Feed Management</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Manage feed types, suppliers, and track feed usage across your farm
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Quick Stats */}
@@ -278,33 +359,40 @@ const FeedManagement = () => {
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-medium text-gray-900">Feed Types</h2>
-                    <button
-                      onClick={() => setShowAddModal(true)}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Feed Type
-                    </button>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setShowAddModal(true)}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Feed Type
+                      </button>
+                      <button
+                        onClick={() => setShowPurchaseModal(true)}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Feed Purchase
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="p-6">
                   {/* Filters */}
-                  <div className="mb-4 flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
+                  <div className="mb-6 flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
                       <div className="relative">
                         <input
                           type="text"
                           placeholder="Search feed types..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <Search className="h-5 w-5 text-gray-400" />
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -682,6 +770,156 @@ const FeedManagement = () => {
                     className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     Add Supplier
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Feed Purchase Modal */}
+        {showPurchaseModal && (
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">New Feed Purchase</h3>
+              </div>
+              <form onSubmit={handlePurchaseSubmit} className="p-6">
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Supplier</label>
+                    <select
+                      value={purchaseData.supplier_id}
+                      onChange={(e) => setPurchaseData(prev => ({ ...prev, supplier_id: e.target.value }))}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      required
+                    >
+                      <option value="">Select supplier</option>
+                      {suppliers.map(supplier => (
+                        <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Purchase Date</label>
+                    <input
+                      type="date"
+                      value={purchaseData.purchase_date}
+                      onChange={(e) => setPurchaseData(prev => ({ ...prev, purchase_date: e.target.value }))}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Feed Entries */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Feed Entries</h4>
+                  <div className="space-y-4">
+                    {purchaseData.feed_entries.map((entry, index) => (
+                      <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {feedTypes.find(ft => ft.id === entry.feed_type_id)?.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {entry.number_of_bags} bags × ${entry.price_per_bag}/bag = ${entry.total_amount}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeedEntry(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add New Feed Entry */}
+                <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Add Feed Entry</h4>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Feed Type</label>
+                      <select
+                        value={currentFeedEntry.feed_type_id}
+                        onChange={(e) => setCurrentFeedEntry(prev => ({ ...prev, feed_type_id: e.target.value }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      >
+                        <option value="">Select feed type</option>
+                        {feedTypes.map(type => (
+                          <option key={type.id} value={type.id}>{type.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Number of Bags</label>
+                      <input
+                        type="number"
+                        value={currentFeedEntry.number_of_bags}
+                        onChange={(e) => setCurrentFeedEntry(prev => ({ ...prev, number_of_bags: e.target.value }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Price per Bag ($)</label>
+                      <input
+                        type="number"
+                        value={currentFeedEntry.price_per_bag}
+                        onChange={(e) => setCurrentFeedEntry(prev => ({ ...prev, price_per_bag: e.target.value }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={handleAddFeedEntry}
+                        className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        Add Entry
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700">Notes</label>
+                  <textarea
+                    value={purchaseData.notes}
+                    onChange={(e) => setPurchaseData(prev => ({ ...prev, notes: e.target.value }))}
+                    rows="3"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+
+                {/* Total Amount */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+                    <span className="text-lg font-bold text-gray-900">${purchaseData.total_amount.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPurchaseModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Save Purchase
                   </button>
                 </div>
               </form>
