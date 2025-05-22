@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { Calculator, Scale, AlertTriangle, Droplets, Plus } from 'lucide-react'
+import { Calculator, Scale, AlertTriangle, Droplets, Plus, TrendingUp, Calendar, DollarSign, Percent } from 'lucide-react'
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -40,6 +40,10 @@ const Dashboard = ({ activeTab, selectedCage }) => {
     totalBiomass: 0,
     averageFCR: 'N/A',
     mortalityRate: '0.0',
+    avgDailyGrowth: 'N/A',
+    daysToHarvest: 'N/A',
+    feedCostPerKg: 'N/A',
+    survivalRate: 'N/A',
   })
 
   console.log(
@@ -169,6 +173,10 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       totalBiomass: Math.round(totalBiomass),
       averageFCR: calculateAverageFCR(cages, dailyRecords, biweeklyRecords),
       mortalityRate: calculateMortalityRate(cages, dailyRecords),
+      avgDailyGrowth: calculateAvgDailyGrowth(cages, dailyRecords, biweeklyRecords),
+      daysToHarvest: calculateDaysToHarvest(cages, dailyRecords, biweeklyRecords),
+      feedCostPerKg: calculateFeedCostPerKg(cages, dailyRecords, biweeklyRecords),
+      survivalRate: calculateSurvivalRate(cages, dailyRecords),
     })
   }
 
@@ -184,69 +192,181 @@ const Dashboard = ({ activeTab, selectedCage }) => {
     return '2.8' // Placeholder
   }
 
+  // Helper function to calculate average daily growth
+  const calculateAvgDailyGrowth = (cages, dailyRecords, biweeklyRecords) => {
+    if (!biweeklyRecords || biweeklyRecords.length < 2) return 'N/A'
+
+    let totalGrowth = 0
+    let count = 0
+
+    // Group records by cage
+    const cageRecords = {}
+    biweeklyRecords.forEach(record => {
+      if (!cageRecords[record.cage_id]) {
+        cageRecords[record.cage_id] = []
+      }
+      cageRecords[record.cage_id].push(record)
+    })
+
+    // Calculate growth rate for each cage
+    Object.values(cageRecords).forEach(records => {
+      if (records.length >= 2) {
+        // Sort by date
+        records.sort((a, b) => new Date(a.date) - new Date(b.date))
+        
+        // Calculate growth between first and last record
+        const firstRecord = records[0]
+        const lastRecord = records[records.length - 1]
+        const daysDiff = Math.floor((new Date(lastRecord.date) - new Date(firstRecord.date)) / (1000 * 60 * 60 * 24))
+        
+        if (daysDiff > 0) {
+          const growth = lastRecord.average_body_weight - firstRecord.average_body_weight
+          const dailyGrowth = growth / daysDiff
+          totalGrowth += dailyGrowth
+          count++
+        }
+      }
+    })
+
+    return count > 0 ? (totalGrowth / count).toFixed(1) : 'N/A'
+  }
+
+  // Helper function to calculate days to harvest
+  const calculateDaysToHarvest = (cages, dailyRecords, biweeklyRecords) => {
+    if (!biweeklyRecords || biweeklyRecords.length < 2) return 'N/A'
+
+    const targetWeight = 500 // Target harvest weight in grams
+    const avgGrowth = parseFloat(calculateAvgDailyGrowth(cages, dailyRecords, biweeklyRecords))
+    
+    if (avgGrowth === 'N/A' || avgGrowth <= 0) return 'N/A'
+
+    // Get current average weight
+    const currentWeight = biweeklyRecords.reduce((sum, record) => sum + record.average_body_weight, 0) / biweeklyRecords.length
+    
+    const remainingGrowth = targetWeight - currentWeight
+    const daysToHarvest = Math.ceil(remainingGrowth / avgGrowth)
+
+    return daysToHarvest > 0 ? daysToHarvest : 'N/A'
+  }
+
+  // Helper function to calculate feed cost per kg
+  const calculateFeedCostPerKg = (cages, dailyRecords, biweeklyRecords) => {
+    if (!dailyRecords || dailyRecords.length === 0) return 'N/A'
+
+    let totalFeedCost = 0
+    let totalFeedAmount = 0
+
+    dailyRecords.forEach(record => {
+      if (record.feed_amount && record.feed_price) {
+        totalFeedCost += record.feed_amount * record.feed_price
+        totalFeedAmount += record.feed_amount
+      }
+    })
+
+    if (totalFeedAmount === 0) return 'N/A'
+
+    const feedCostPerKg = totalFeedCost / totalFeedAmount
+    return feedCostPerKg.toFixed(2)
+  }
+
+  // Helper function to calculate survival rate
+  const calculateSurvivalRate = (cages, dailyRecords) => {
+    if (!cages || cages.length === 0) return 'N/A'
+
+    let totalInitialCount = 0
+    let totalMortality = 0
+
+    cages.forEach(cage => {
+      if (cage.status === 'active') {
+        totalInitialCount += cage.initial_count || 0
+        
+        // Sum up mortalities from daily records
+        const cageMortality = dailyRecords
+          .filter(record => record.cage_id === cage.id)
+          .reduce((sum, record) => sum + (record.mortality || 0), 0)
+        
+        totalMortality += cageMortality
+      }
+    })
+
+    if (totalInitialCount === 0) return 'N/A'
+
+    const survivalRate = ((totalInitialCount - totalMortality) / totalInitialCount) * 100
+    return survivalRate.toFixed(1)
+  }
+
   // Process growth data for chart
   const prepareGrowthData = () => {
-    // Group data by cage and date
-    const groupedByDate = {}
+    if (!biweeklyRecords || biweeklyRecords.length === 0) return []
 
+    // Group data by date and cage
+    const groupedByDate = {}
+    
     biweeklyRecords.forEach((record) => {
-      // Format date
       const date = new Date(record.date).toLocaleDateString('en-US', {
         month: 'short',
         day: '2-digit',
       })
 
       if (!groupedByDate[date]) {
-        groupedByDate[date] = {}
+        groupedByDate[date] = {
+          date,
+          // Initialize with null values for all cages
+          ...cages.reduce((acc, cage) => {
+            acc[cage.name] = null
+            return acc
+          }, {})
+        }
       }
 
       // Find cage name
       const cage = cages.find((c) => c.id === record.cage_id)
-      const cageName = cage
-        ? cage.name
-        : `Cage ${record.cage_id?.substr(0, 4) || 'Unknown'}`
-
-      groupedByDate[date][cageName] = record.average_body_weight
+      if (cage) {
+        groupedByDate[date][cage.name] = record.average_body_weight
+      }
     })
 
-    // Convert to array for recharts
-    return Object.keys(groupedByDate)
-      .sort((a, b) => new Date(a) - new Date(b))
-      .map((date) => ({
-        date,
-        ...groupedByDate[date],
-      }))
+    // Convert to array and sort by date
+    return Object.values(groupedByDate).sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    )
   }
 
   // Process feed data for chart
   const prepareFeedData = () => {
-    // Group by week
-    const groupedByWeek = {}
+    if (!dailyRecords || dailyRecords.length === 0) return []
 
+    // Group by date and cage
+    const groupedByDate = {}
+    
     dailyRecords.forEach((record) => {
-      const date = new Date(record.date)
-      const weekStart = new Date(date)
-      weekStart.setDate(date.getDate() - date.getDay())
-      const week = `Week ${Math.ceil(weekStart.getDate() / 7)}`
+      const date = new Date(record.date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+      })
 
-      if (!groupedByWeek[week]) {
-        groupedByWeek[week] = {}
+      if (!groupedByDate[date]) {
+        groupedByDate[date] = {
+          date,
+          // Initialize with 0 values for all cages
+          ...cages.reduce((acc, cage) => {
+            acc[cage.name] = 0
+            return acc
+          }, {})
+        }
       }
 
       // Find cage name
       const cage = cages.find((c) => c.id === record.cage_id)
-      const cageName = cage
-        ? cage.name
-        : `Cage ${record.cage_id?.substr(0, 4) || 'Unknown'}`
-
-      groupedByWeek[week][cageName] =
-        (groupedByWeek[week][cageName] || 0) + (record.feed_amount || 0)
+      if (cage) {
+        groupedByDate[date][cage.name] += record.feed_amount || 0
+      }
     })
 
-    return Object.keys(groupedByWeek).map((week) => ({
-      week,
-      ...groupedByWeek[week],
-    }))
+    // Convert to array and sort by date
+    return Object.values(groupedByDate).sort((a, b) => 
+      new Date(a.date) - new Date(b.date)
+    )
   }
 
   // Format date in a user-friendly way
@@ -384,6 +504,63 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                   </div>
                 </div>
               </div>
+
+              {/* New Analytics Cards */}
+              <div className="bg-purple-50 rounded-lg shadow p-6 flex items-center">
+                <div className="bg-purple-100 p-3 rounded-full mr-4">
+                  <TrendingUp className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">
+                    Avg. Daily Growth
+                  </div>
+                  <div className="text-2xl font-semibold text-purple-600">
+                    {metrics.avgDailyGrowth} g/day
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-indigo-50 rounded-lg shadow p-6 flex items-center">
+                <div className="bg-indigo-100 p-3 rounded-full mr-4">
+                  <Calendar className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">
+                    Days to Harvest
+                  </div>
+                  <div className="text-2xl font-semibold text-indigo-600">
+                    {metrics.daysToHarvest}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-pink-50 rounded-lg shadow p-6 flex items-center">
+                <div className="bg-pink-100 p-3 rounded-full mr-4">
+                  <DollarSign className="w-6 h-6 text-pink-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">
+                    Feed Cost/kg
+                  </div>
+                  <div className="text-2xl font-semibold text-pink-600">
+                    ${metrics.feedCostPerKg}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-teal-50 rounded-lg shadow p-6 flex items-center">
+                <div className="bg-teal-100 p-3 rounded-full mr-4">
+                  <Percent className="w-6 h-6 text-teal-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">
+                    Survival Rate
+                  </div>
+                  <div className="text-2xl font-semibold text-teal-600">
+                    {metrics.survivalRate}%
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Quick Actions */}
@@ -440,30 +617,39 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                         }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
+                        <XAxis 
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis 
+                          label={{ 
+                            value: 'Weight (g)', 
+                            angle: -90, 
+                            position: 'insideLeft',
+                            style: { textAnchor: 'middle' }
+                          }}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value} g`, 'Weight']}
+                          labelFormatter={(label) => `Date: ${label}`}
+                        />
                         <Legend />
-                        {cages.slice(0, 3).map((cage, index) => {
-                          const colors = ['#3B82F6', '#EF4444', '#10B981']
-                          const cageName = cage.name
-                          // Only add a line if there's data for this cage
-                          if (
-                            growthData.some(
-                              (item) => item[cageName] !== undefined,
-                            )
-                          ) {
-                            return (
-                              <Line
-                                key={cage.id}
-                                type="monotone"
-                                dataKey={cageName}
-                                stroke={colors[index % colors.length]}
-                                strokeWidth={2}
-                              />
-                            )
-                          }
-                          return null
+                        {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+                          return (
+                            <Line
+                              key={cage.id}
+                              type="monotone"
+                              dataKey={cage.name}
+                              stroke={colors[index % colors.length]}
+                              strokeWidth={2}
+                              dot={{ r: 4 }}
+                              activeDot={{ r: 6 }}
+                            />
+                          )
                         })}
                       </RechartsLineChart>
                     </ResponsiveContainer>
@@ -496,28 +682,36 @@ const Dashboard = ({ activeTab, selectedCage }) => {
                         }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="week" />
-                        <YAxis />
-                        <Tooltip />
+                        <XAxis 
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis 
+                          label={{ 
+                            value: 'Feed Amount (kg)', 
+                            angle: -90, 
+                            position: 'insideLeft',
+                            style: { textAnchor: 'middle' }
+                          }}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value} kg`, 'Feed Amount']}
+                          labelFormatter={(label) => `Date: ${label}`}
+                        />
                         <Legend />
-                        {cages.slice(0, 3).map((cage, index) => {
-                          const colors = ['#3B82F6', '#EF4444', '#10B981']
-                          const cageName = cage.name
-                          // Only add a bar if there's data for this cage
-                          if (
-                            feedData.some(
-                              (item) => item[cageName] !== undefined,
-                            )
-                          ) {
-                            return (
-                              <Bar
-                                key={cage.id}
-                                dataKey={cageName}
-                                fill={colors[index % colors.length]}
-                              />
-                            )
-                          }
-                          return null
+                        {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+                          return (
+                            <Bar
+                              key={cage.id}
+                              dataKey={cage.name}
+                              fill={colors[index % colors.length]}
+                              stackId="feed"
+                            />
+                          )
                         })}
                       </RechartsBarChart>
                     </ResponsiveContainer>
