@@ -15,7 +15,6 @@ DROP TABLE IF EXISTS biweekly_records CASCADE;
 DROP TABLE IF EXISTS daily_records CASCADE;
 DROP TABLE IF EXISTS cages CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
-DROP TABLE IF EXISTS companies CASCADE;
 
 -- Drop any existing functions, triggers, and views
 DROP FUNCTION IF EXISTS process_audit_log() CASCADE;
@@ -27,34 +26,18 @@ DROP PROCEDURE IF EXISTS migrate_demo_data() CASCADE;
 -- Create extension for UUID generation if not exists
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Companies table
-CREATE TABLE companies (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  abbreviation TEXT,
-  address TEXT,
-  contact_email TEXT,
-  contact_phone TEXT,
-  logo_url TEXT,
-  settings JSONB DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Profiles table (linked to auth.users)
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
   email TEXT,
   full_name TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin')),
-  company_id UUID REFERENCES companies(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Cages table
 CREATE TABLE cages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID REFERENCES companies(id),
   name TEXT NOT NULL,
   location TEXT,
   size NUMERIC(10, 2),
@@ -78,7 +61,6 @@ CREATE TABLE feed_suppliers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   abbreviation TEXT,
-  company_id UUID REFERENCES companies(id),
   contact_info TEXT,
   website TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -91,7 +73,6 @@ CREATE TABLE feed_types (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   supplier_id UUID REFERENCES feed_suppliers(id),
-  company_id UUID REFERENCES companies(id),
   pellet_size TEXT,
   protein_percentage NUMERIC(5, 2),
   price_per_kg NUMERIC(10, 2) NOT NULL,
@@ -105,7 +86,6 @@ CREATE TABLE feed_types (
 CREATE TABLE daily_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   cage_id UUID REFERENCES cages(id) NOT NULL,
-  company_id UUID REFERENCES companies(id),
   date DATE NOT NULL,
   feed_amount NUMERIC(10, 2) NOT NULL,
   feed_type_id UUID REFERENCES feed_types(id),
@@ -122,7 +102,6 @@ CREATE TABLE daily_records (
 CREATE TABLE biweekly_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   cage_id UUID REFERENCES cages(id) NOT NULL,
-  company_id UUID REFERENCES companies(id),
   date DATE NOT NULL,
   average_body_weight NUMERIC(10, 2) NOT NULL,
   sample_size INTEGER NOT NULL,
@@ -137,7 +116,6 @@ CREATE TABLE biweekly_records (
 CREATE TABLE harvest_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   cage_id UUID REFERENCES cages(id) NOT NULL,
-  company_id UUID REFERENCES companies(id),
   harvest_date DATE NOT NULL,
   average_body_weight NUMERIC(10, 2) NOT NULL,
   total_weight NUMERIC(10, 2) NOT NULL,
@@ -153,7 +131,6 @@ CREATE TABLE harvest_records (
 CREATE TABLE feed_inventory (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   feed_type_id UUID REFERENCES feed_types(id) NOT NULL,
-  company_id UUID REFERENCES companies(id) NOT NULL,
   quantity_kg NUMERIC(10, 2) NOT NULL,
   batch_number TEXT,
   expiry_date DATE,
@@ -166,7 +143,6 @@ CREATE TABLE feed_inventory (
 CREATE TABLE feed_inventory_transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   feed_type_id UUID REFERENCES feed_types(id) NOT NULL,
-  company_id UUID REFERENCES companies(id) NOT NULL,
   transaction_type TEXT NOT NULL CHECK (transaction_type IN ('purchase', 'usage', 'adjustment', 'transfer')),
   quantity_kg NUMERIC(10, 2) NOT NULL,
   transaction_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -179,7 +155,6 @@ CREATE TABLE feed_inventory_transactions (
 -- Stocking history table
 CREATE TABLE stocking_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID REFERENCES companies(id),
   cage_id UUID REFERENCES cages(id) NOT NULL,
   batch_number TEXT NOT NULL,
   stocking_date DATE NOT NULL,
@@ -202,7 +177,6 @@ CREATE TABLE stocking_history (
 -- Top up history table
 CREATE TABLE topup_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID REFERENCES companies(id),
   stocking_id UUID REFERENCES stocking_history(id) NOT NULL,
   topup_date DATE NOT NULL,
   fish_count INTEGER NOT NULL,
@@ -246,17 +220,15 @@ CREATE TABLE role_permissions (
 CREATE TABLE user_roles (
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   role_id UUID REFERENCES roles(id) NOT NULL,
-  company_id UUID REFERENCES companies(id) NOT NULL,
   assigned_by UUID REFERENCES auth.users(id),
   assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  PRIMARY KEY (user_id, role_id, company_id)
+  PRIMARY KEY (user_id, role_id)
 );
 
 -- Audit logs table
 CREATE TABLE audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id),
-  company_id UUID REFERENCES companies(id),
   action_type TEXT NOT NULL,
   table_name TEXT NOT NULL,
   record_id UUID,
@@ -342,28 +314,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION process_audit_log()
 RETURNS TRIGGER AS $$
 DECLARE
-  company_id_val UUID;
 BEGIN
-  -- Try to get company_id from the record
-  company_id_val := CASE
-    WHEN TG_OP = 'DELETE' THEN 
-      CASE 
-        WHEN TG_TABLE_NAME = 'profiles' THEN NULL
-        WHEN OLD.company_id IS NOT NULL THEN OLD.company_id
-        ELSE NULL
-      END
-    ELSE 
-      CASE 
-        WHEN TG_TABLE_NAME = 'profiles' THEN NULL
-        WHEN NEW.company_id IS NOT NULL THEN NEW.company_id
-        ELSE NULL
-      END
-  END;
-
   IF TG_OP = 'INSERT' THEN
     INSERT INTO audit_logs(
       user_id, 
-      company_id, 
       action_type, 
       table_name, 
       record_id, 
@@ -371,7 +325,6 @@ BEGIN
     )
     VALUES (
       auth.uid(), 
-      company_id_val, 
       'insert', 
       TG_TABLE_NAME, 
       NEW.id, 
@@ -381,7 +334,6 @@ BEGIN
   ELSIF TG_OP = 'UPDATE' THEN
     INSERT INTO audit_logs(
       user_id, 
-      company_id, 
       action_type, 
       table_name, 
       record_id, 
@@ -390,7 +342,6 @@ BEGIN
     )
     VALUES (
       auth.uid(), 
-      company_id_val, 
       'update', 
       TG_TABLE_NAME, 
       NEW.id, 
@@ -401,7 +352,6 @@ BEGIN
   ELSIF TG_OP = 'DELETE' THEN
     INSERT INTO audit_logs(
       user_id, 
-      company_id, 
       action_type, 
       table_name, 
       record_id, 
@@ -409,7 +359,6 @@ BEGIN
     )
     VALUES (
       auth.uid(), 
-      company_id_val, 
       'delete', 
       TG_TABLE_NAME, 
       OLD.id, 
@@ -447,36 +396,20 @@ $$;
 CREATE OR REPLACE PROCEDURE migrate_demo_data()
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  default_company_id UUID;
 BEGIN
-  -- Create a default company if none exists
-  INSERT INTO companies (name, abbreviation)
-  VALUES ('Default Fish Farm', 'DFF')
-  ON CONFLICT DO NOTHING;
-  
-  -- Get the default company ID
-  SELECT id INTO default_company_id FROM companies ORDER BY created_at LIMIT 1;
-  
-  -- Only proceed if we have a company
-  IF default_company_id IS NULL THEN
-    RAISE EXCEPTION 'No company found. Create a company first.';
-  END IF;
-  
   -- Insert some demo feed suppliers
-  INSERT INTO feed_suppliers (name, abbreviation, company_id)
+  INSERT INTO feed_suppliers (name, abbreviation)
   VALUES 
-    ('Aqua Feed Solutions', 'AFS', default_company_id),
-    ('Marine Nutrition', 'MN', default_company_id),
-    ('Fish Feed Pro', 'FFP', default_company_id)
+    ('Aqua Feed Solutions', 'AFS'),
+    ('Marine Nutrition', 'MN'),
+    ('Fish Feed Pro', 'FFP')
   ON CONFLICT DO NOTHING;
   
   -- Insert some demo feed types
-  INSERT INTO feed_types (name, supplier_id, company_id, pellet_size, protein_percentage, price_per_kg)
+  INSERT INTO feed_types (name, supplier_id, pellet_size, protein_percentage, price_per_kg)
   SELECT 
     feed_name, 
     (SELECT id FROM feed_suppliers WHERE abbreviation = supplier ORDER BY id LIMIT 1),
-    default_company_id,
     pellet_size,
     protein,
     price
@@ -489,20 +422,20 @@ BEGIN
   ON CONFLICT DO NOTHING;
   
   -- Insert demo cages
-  INSERT INTO cages (name, company_id, location, size, capacity, status, installation_date)
+  INSERT INTO cages (name, location, size, capacity, status, installation_date)
   VALUES
-    ('Cage 1', default_company_id, 'North Pond', 125.0, 3000, 'empty', '2025-01-01'),
-    ('Cage 2', default_company_id, 'North Pond', 125.0, 3000, 'empty', '2025-01-01'),
-    ('Cage 3', default_company_id, 'South Pond', 150.0, 3500, 'empty', '2025-01-15'),
-    ('Cage 4', default_company_id, 'South Pond', 150.0, 3500, 'empty', '2025-01-15'),
-    ('Cage 5', default_company_id, 'East Pond', 100.0, 2500, 'empty', '2025-02-01')
+    ('Cage 1', 'North Pond', 125.0, 3000, 'empty', '2025-01-01'),
+    ('Cage 2', 'North Pond', 125.0, 3000, 'empty', '2025-01-01'),
+    ('Cage 3', 'South Pond', 150.0, 3500, 'empty', '2025-01-15'),
+    ('Cage 4', 'South Pond', 150.0, 3500, 'empty', '2025-01-15'),
+    ('Cage 5', 'East Pond', 100.0, 2500, 'empty', '2025-02-01')
   ON CONFLICT DO NOTHING;
   
   -- Create default roles and permissions
   INSERT INTO roles (name, description)
   VALUES 
     ('super_admin', 'Full system access'),
-    ('admin', 'Company administration'),
+    ('admin', 'System administration'),
     ('manager', 'Farm management'),
     ('user', 'Basic user access')
   ON CONFLICT DO NOTHING;
@@ -549,58 +482,6 @@ BEGIN
 END;
 $$;
 
--- Set up RLS policies
-
--- Companies RLS
-ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own company"
-  ON companies FOR SELECT
-  USING (id IN (
-    SELECT company_id FROM profiles WHERE id = auth.uid()
-  ));
-
-CREATE POLICY "Admins can update their own company"
-  ON companies FOR UPDATE
-  USING (id IN (
-    SELECT company_id FROM profiles WHERE id = auth.uid()
-  ))
-  WITH CHECK (id IN (
-    SELECT company_id FROM profiles 
-    WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
-  ));
-
--- Feed suppliers RLS
-ALTER TABLE feed_suppliers ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their company's feed suppliers"
-  ON feed_suppliers FOR SELECT
-  USING (company_id IN (
-    SELECT company_id FROM profiles WHERE id = auth.uid()
-  ));
-
-CREATE POLICY "Admins can manage their company's feed suppliers"
-  ON feed_suppliers FOR ALL
-  USING (company_id IN (
-    SELECT company_id FROM profiles 
-    WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
-  ));
-
--- Feed types RLS
-ALTER TABLE feed_types ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their company's feed types"
-  ON feed_types FOR SELECT
-  USING (company_id IN (
-    SELECT company_id FROM profiles WHERE id = auth.uid()
-  ));
-
-CREATE POLICY "Admins can manage their company's feed types"
-  ON feed_types FOR ALL
-  USING (company_id IN (
-    SELECT company_id FROM profiles 
-    WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
-  ));
-
--- Apply similar RLS policies to all other tables
--- This is abbreviated for length - apply the pattern to all tables
+ALTER TABLE cages ADD COLUMN code VARCHAR(10) UNIQUE NOT NULL;
+-- Generate sequential codes for existing cages
+UPDATE cages SET code = CONCAT('C', LPAD(id::text, 3, '0')) WHERE code IS NULL;

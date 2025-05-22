@@ -15,6 +15,7 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../hooks/useToast'
 import feedTypeService from '../lib/feedTypeService'
+import { supabase } from '../lib/supabase'
 
 export default function FeedTypesPage() {
   return (
@@ -35,19 +36,21 @@ function FeedTypes() {
   const [editingType, setEditingType] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     price_per_kg: '0.00',
-    protein_content: '',
-    supplier: '',
+    protein_percentage: '',
+    pellet_size: '',
+    supplier_id: '',
     active: true,
   })
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [suppliers, setSuppliers] = useState([])
 
   // Fetch feed types on mount
   useEffect(() => {
     fetchFeedTypes()
+    fetchSuppliers()
   }, [])
 
   const fetchFeedTypes = async () => {
@@ -67,6 +70,19 @@ function FeedTypes() {
     }
   }
 
+  const fetchSuppliers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('feed_suppliers')
+        .select('id, name')
+        .order('name')
+      if (error) throw error
+      setSuppliers(data || [])
+    } catch (error) {
+      showToast('error', 'Failed to load suppliers')
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({
@@ -78,10 +94,10 @@ function FeedTypes() {
   const handleAddFeedType = () => {
     setFormData({
       name: '',
-      description: '',
       price_per_kg: '0.00',
-      protein_content: '',
-      supplier: '',
+      protein_percentage: '',
+      pellet_size: '',
+      supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
       active: true,
     })
     setError('')
@@ -93,14 +109,14 @@ function FeedTypes() {
     setEditingType(feedType)
     setFormData({
       name: feedType.name,
-      description: feedType.description || '',
       price_per_kg: feedType.price_per_kg
         ? feedType.price_per_kg.toString()
         : '0.00',
-      protein_content: feedType.protein_content
-        ? feedType.protein_content.toString()
+      protein_percentage: feedType.protein_percentage
+        ? feedType.protein_percentage.toString()
         : '',
-      supplier: feedType.supplier || '',
+      pellet_size: feedType.pellet_size || '',
+      supplier_id: feedType.supplier_id || (suppliers.length > 0 ? suppliers[0].id : ''),
       active: feedType.active,
     })
     setError('')
@@ -128,39 +144,32 @@ function FeedTypes() {
     e.preventDefault()
     setError('')
     setSuccess('')
-
     try {
-      // Validate inputs
       if (!formData.name.trim()) {
         throw new Error('Feed type name is required')
       }
-
-      // Format data
+      if (!formData.supplier_id) {
+        throw new Error('Supplier is required')
+      }
       const feedTypeData = {
         name: formData.name.trim(),
-        description: formData.description.trim() || null,
         price_per_kg: parseFloat(formData.price_per_kg) || 0,
-        protein_content: formData.protein_content
-          ? parseFloat(formData.protein_content)
+        protein_percentage: formData.protein_percentage
+          ? parseFloat(formData.protein_percentage)
           : null,
-        supplier: formData.supplier.trim() || null,
+        pellet_size: formData.pellet_size.trim() || null,
+        supplier_id: formData.supplier_id,
         active: formData.active,
       }
-
       const { data, error } = await feedTypeService.createFeedType(feedTypeData)
-
       if (error) throw error
-
       setSuccess('Feed type created successfully')
       showToast('success', 'Feed type created successfully')
-
-      // Close modal and refresh after delay
       setTimeout(() => {
         setShowAddModal(false)
         fetchFeedTypes()
       }, 1500)
     } catch (error) {
-      console.error('Error creating feed type:', error)
       setError(error.message)
     }
   }
@@ -169,44 +178,36 @@ function FeedTypes() {
     e.preventDefault()
     setError('')
     setSuccess('')
-
     try {
       if (!editingType) return
-
-      // Validate inputs
       if (!formData.name.trim()) {
         throw new Error('Feed type name is required')
       }
-
-      // Format data
+      if (!formData.supplier_id) {
+        throw new Error('Supplier is required')
+      }
       const feedTypeData = {
         name: formData.name.trim(),
-        description: formData.description.trim() || null,
         price_per_kg: parseFloat(formData.price_per_kg) || 0,
-        protein_content: formData.protein_content
-          ? parseFloat(formData.protein_content)
+        protein_percentage: formData.protein_percentage
+          ? parseFloat(formData.protein_percentage)
           : null,
-        supplier: formData.supplier.trim() || null,
+        pellet_size: formData.pellet_size.trim() || null,
+        supplier_id: formData.supplier_id,
         active: formData.active,
       }
-
       const { data, error } = await feedTypeService.updateFeedType(
         editingType.id,
         feedTypeData,
       )
-
       if (error) throw error
-
       setSuccess('Feed type updated successfully')
       showToast('success', 'Feed type updated successfully')
-
-      // Close modal and refresh after delay
       setTimeout(() => {
         setShowEditModal(false)
         fetchFeedTypes()
       }, 1500)
     } catch (error) {
-      console.error('Error updating feed type:', error)
       setError(error.message)
     }
   }
@@ -275,12 +276,6 @@ function FeedTypes() {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Protein %
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
                     Supplier
                   </th>
                   <th
@@ -305,22 +300,15 @@ function FeedTypes() {
                         <div className="text-sm font-medium text-gray-900">
                           {feedType.name}
                         </div>
-                        {feedType.description && (
-                          <div className="text-sm text-gray-500">
-                            {feedType.description}
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         ${feedType.price_per_kg?.toFixed(2) || '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {feedType.protein_content
-                          ? `${feedType.protein_content}%`
-                          : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {feedType.supplier || '-'}
+                        {(() => {
+                          const supplier = suppliers.find(s => s.id === feedType.supplier_id)
+                          return supplier ? supplier.name : '-'
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -433,19 +421,6 @@ function FeedTypes() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="2"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                ></textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Price per kg ($)
                 </label>
                 <input
@@ -459,34 +434,53 @@ function FeedTypes() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Protein Percentage (%)
+                </label>
+                <input
+                  type="number"
+                  name="protein_percentage"
+                  value={formData.protein_percentage}
+                  onChange={handleChange}
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Pellet Size
+                </label>
+                <input
+                  type="text"
+                  name="pellet_size"
+                  value={formData.pellet_size}
+                  onChange={handleChange}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Protein Content (%)
+                    Supplier <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="protein_content"
-                    value={formData.protein_content}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Supplier
-                  </label>
-                  <input
-                    type="text"
-                    name="supplier"
-                    value={formData.supplier}
+                  <select
+                    name="supplier_id"
+                    value={formData.supplier_id}
                     onChange={handleChange}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                    required
+                  >
+                    <option value="">Select supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -569,19 +563,6 @@ function FeedTypes() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows="2"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                ></textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Price per kg ($)
                 </label>
                 <input
@@ -595,34 +576,53 @@ function FeedTypes() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Protein Percentage (%)
+                </label>
+                <input
+                  type="number"
+                  name="protein_percentage"
+                  value={formData.protein_percentage}
+                  onChange={handleChange}
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Pellet Size
+                </label>
+                <input
+                  type="text"
+                  name="pellet_size"
+                  value={formData.pellet_size}
+                  onChange={handleChange}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Protein Content (%)
+                    Supplier <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="protein_content"
-                    value={formData.protein_content}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Supplier
-                  </label>
-                  <input
-                    type="text"
-                    name="supplier"
-                    value={formData.supplier}
+                  <select
+                    name="supplier_id"
+                    value={formData.supplier_id}
                     onChange={handleChange}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
+                    required
+                  >
+                    <option value="">Select supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
