@@ -51,6 +51,23 @@ const Header = ({
     }
   }, [showCageSelector, propCages, selectedCage, setSelectedCage])
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.altKey) && event.key === 'c') {
+        event.preventDefault();
+        const selectElement = document.getElementById('cage-selector');
+        if (selectElement) {
+          selectElement.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <header className="bg-white shadow">
       <div className="flex justify-between items-center px-6 py-4">
@@ -69,6 +86,7 @@ const Header = ({
               </div>
             ) : cages && cages.length > 0 ? (
               <select
+                id="cage-selector"
                 value={selectedCage || ''}
                 onChange={(e) => setSelectedCage(e.target.value)}
                 className="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
