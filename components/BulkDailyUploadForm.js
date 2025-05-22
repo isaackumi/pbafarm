@@ -95,49 +95,32 @@ const BulkDailyUploadForm = () => {
 
   const handleUpload = async (parsedData) => {
     try {
-      console.log('Processing upload data:', parsedData)
-
-      // Process each row in the uploaded file
+      // Process each row
       const processedData = await Promise.all(
         parsedData.map(async (row, rowIndex) => {
-          // First look up the cage by code (primary method)
-          const cageCode = row.cage_code?.trim()
-          if (!cageCode) {
-            throw new Error(`Row ${rowIndex + 2}: Cage code is required.`)
-          }
+          // Clean string values
+          Object.keys(row).forEach(key => {
+            if (typeof row[key] === 'string') {
+              row[key] = row[key].trim()
+            }
+          })
 
-          // Find matching cage by code (exact match)
-          const cage = cages.find((c) => c.code === cageCode)
+          // First look up the cage by code (primary method)
+          const cage = cages.find(
+            (c) => c.code.toLowerCase() === row.cage_code?.toLowerCase().trim(),
+          )
 
           if (!cage) {
             throw new Error(
-              `Row ${
-                rowIndex + 2
-              }: Cage not found with code "${cageCode}". Please check the cage code is correct.`,
+              `Row ${rowIndex + 2}: Cage not found with code "${
+                row.cage_code
+              }". Please check the cage code matches exactly with an existing cage.`,
             )
           }
 
-          // If cage_name is provided, verify it for user convenience (optional validation)
-          if (row.cage_name && row.cage_name.trim()) {
-            const cageName = row.cage_name.trim()
-            if (cage.name.toLowerCase() !== cageName.toLowerCase()) {
-              // Just a warning, not an error - we'll use the correct cage based on code
-              console.warn(
-                `Row ${
-                  rowIndex + 2
-                }: Provided cage name "${cageName}" doesn't match the name "${
-                  cage.name
-                }" for cage code "${cageCode}". Using cage with code "${cageCode}".`,
-              )
-            }
-          }
-
-          // Normalize feed type name (trim and lowercase for comparison)
-          const feedTypeNormalized = row.feed_type.trim().toLowerCase()
-
-          // Find matching feed type (case-insensitive)
+          // Look up feed type
           const feedType = feedTypes.find(
-            (ft) => ft.name.toLowerCase().trim() === feedTypeNormalized,
+            (ft) => ft.name.toLowerCase() === row.feed_type?.toLowerCase().trim(),
           )
 
           if (!feedType) {
@@ -193,20 +176,27 @@ const BulkDailyUploadForm = () => {
             parsedDate = excelSerialDateToJSDate(parseFloat(row.date))
           } else {
             try {
-              parsedDate = new Date(row.date).toISOString().split('T')[0]
+              // Try parsing DD/MM/YYYY or DD-MM-YYYY format
+              const parts = row.date.split(/[-\/]/)
+              if (parts.length === 3) {
+                const [day, month, year] = parts
+                parsedDate = new Date(year, month - 1, day).toISOString().split('T')[0]
+              } else {
+                parsedDate = new Date(row.date).toISOString().split('T')[0]
+              }
               // Validate if date is valid
               if (parsedDate === 'Invalid Date' || !parsedDate) {
                 throw new Error(
                   `Row ${rowIndex + 2}: Invalid date format: "${
                     row.date
-                  }". Please use YYYY-MM-DD format.`,
+                  }". Please use DD/MM/YYYY or DD-MM-YYYY format.`,
                 )
               }
             } catch (error) {
               throw new Error(
                 `Row ${rowIndex + 2}: Invalid date format: "${
                   row.date
-                }". Please use YYYY-MM-DD format.`,
+                }". Please use DD/MM/YYYY or DD-MM-YYYY format.`,
               )
             }
           }

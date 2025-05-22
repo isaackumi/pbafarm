@@ -153,8 +153,13 @@ const BulkUploadModal = ({
             // Create object with header keys
             const record = {}
             headers.forEach((header, i) => {
+              // Clean and trim string values
+              let value = row[i]
+              if (typeof value === 'string') {
+                value = value.trim()
+              }
               // Use lowercase header as key
-              record[header] = row[i] || null
+              record[header] = value || null
             })
 
             return record
@@ -225,12 +230,32 @@ const BulkUploadModal = ({
             field,
             message: `${field} must be a number`,
           })
-        } else if (rules.type === 'date' && isNaN(Date.parse(value))) {
-          errors.push({
-            row: rowNumber,
-            field,
-            message: `${field} must be a valid date`,
-          })
+        } else if (rules.type === 'date') {
+          // Handle various date formats
+          let parsedDate
+          if (value instanceof Date) {
+            parsedDate = value
+          } else if (!isNaN(value)) {
+            // Handle Excel date format (numeric value)
+            parsedDate = new Date((value - 25569) * 86400 * 1000)
+          } else {
+            // Try parsing DD/MM/YYYY or DD-MM-YYYY format
+            const parts = value.split(/[-\/]/)
+            if (parts.length === 3) {
+              const [day, month, year] = parts
+              parsedDate = new Date(year, month - 1, day)
+            } else {
+              parsedDate = new Date(value)
+            }
+          }
+
+          if (isNaN(parsedDate.getTime())) {
+            errors.push({
+              row: rowNumber,
+              field,
+              message: `${field} must be a valid date (DD/MM/YYYY or DD-MM-YYYY)`,
+            })
+          }
         }
 
         // Min/Max for numbers
@@ -339,42 +364,24 @@ const BulkUploadModal = ({
     }
 
     try {
-      // Create worksheet with headers
-      const ws = xlsxLib.utils.aoa_to_sheet([templateHeaders])
-
-      // Add sample data if provided
-      if (
-        templateData &&
-        templateData.exampleData &&
-        templateData.exampleData.length > 0
-      ) {
-        xlsxLib.utils.sheet_add_aoa(ws, templateData.exampleData, {
-          origin: 'A2',
-        })
-      } else if (cages.length > 0 && feedTypes.length > 0) {
-        // Fallback: Create example row with actual cage and feed type from the system
-        const exampleRow = [
-          cages[0].code, // Add cage code
-          cages[0].name, // Add cage name
-          new Date().toISOString().split('T')[0],
-          '1.5',
-          feedTypes[0].name,
-          feedTypes[0].price_per_kg?.toString() || '1.5',
-          '0',
-          'Sample record',
-        ]
-        xlsxLib.utils.sheet_add_aoa(ws, [exampleRow], { origin: 'A2' })
-      }
-
-      // Create workbook and add the worksheet
+      // Create workbook and worksheet
       const wb = xlsxLib.utils.book_new()
+      const ws = xlsxLib.utils.aoa_to_sheet([
+        templateHeaders,
+        ...(templateData?.exampleData || []),
+      ])
+
+      // Add worksheet to workbook
       xlsxLib.utils.book_append_sheet(wb, ws, 'Template')
 
-      // Generate Excel file and trigger download
-      xlsxLib.writeFile(wb, `${recordType}_import_template.xlsx`)
+      // Generate filename
+      const filename = `${recordType}_template.xlsx`
+
+      // Save file
+      xlsxLib.writeFile(wb, filename)
     } catch (error) {
       console.error('Error generating template:', error)
-      showToast('error', 'Error generating template')
+      showToast('error', 'Error generating template file')
     }
   }
 
