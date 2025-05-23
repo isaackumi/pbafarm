@@ -12,6 +12,7 @@ import {
   Clock,
   Plus,
   ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react'
 import { cageService, analyticsService } from '../lib/databaseService'
 
@@ -235,6 +236,42 @@ function CagesManagement() {
         row.installation_date
           ? new Date(row.installation_date).toLocaleDateString()
           : '-',
+    },
+    {
+      header: 'DOC',
+      accessor: 'stocking_date',
+      sortable: true,
+      cell: (row) => {
+        if (!row.stocking_date) return '-'
+        
+        const stockingDate = new Date(row.stocking_date)
+        const today = new Date()
+        const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+        const daysToHarvest = 120 - doc // 120 days is the harvest threshold
+        
+        if (doc >= 100) {
+          return (
+            <div className="flex items-center space-x-2">
+              <span className="text-red-600 font-medium">{doc} days</span>
+              <div className="flex items-center text-red-600">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                <span className="text-sm">Ready for Harvest</span>
+              </div>
+            </div>
+          )
+        } else if (doc > 0) {
+          return (
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-600">{doc} days</span>
+              <div className="flex items-center text-yellow-600">
+                <Clock className="w-4 h-4 mr-1" />
+                <span className="text-sm">{daysToHarvest} days to harvest</span>
+              </div>
+            </div>
+          )
+        }
+        return `${doc} days`
+      },
     },
     {
       header: 'Status',
