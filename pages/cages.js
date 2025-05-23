@@ -407,6 +407,76 @@ function CagesManagement() {
           </div>
         </div>
 
+        {/* Ready for Harvest Section */}
+        {cages.filter(cage => {
+          if (!cage.stocking_date) return false
+          const stockingDate = new Date(cage.stocking_date)
+          const today = new Date()
+          const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+          return doc >= 100
+        }).length > 0 && (
+          <div className="mb-6">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+                  <h2 className="text-lg font-semibold text-red-800">Cages Ready for Harvest</h2>
+                </div>
+                <span className="text-sm text-red-600 font-medium">
+                  {cages.filter(cage => {
+                    if (!cage.stocking_date) return false
+                    const stockingDate = new Date(cage.stocking_date)
+                    const today = new Date()
+                    const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+                    return doc >= 100
+                  }).length} cages
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {cages
+                  .filter(cage => {
+                    if (!cage.stocking_date) return false
+                    const stockingDate = new Date(cage.stocking_date)
+                    const today = new Date()
+                    const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+                    return doc >= 100
+                  })
+                  .map(cage => {
+                    const stockingDate = new Date(cage.stocking_date)
+                    const today = new Date()
+                    const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+                    const daysOverdue = doc - 120
+
+                    return (
+                      <div
+                        key={cage.id}
+                        className="bg-white rounded-lg shadow p-4 border border-red-200 hover:border-red-400 transition-colors cursor-pointer"
+                        onClick={() => handleViewCage(cage)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-gray-900">{cage.name}</h3>
+                          <span className="text-sm font-medium text-red-600">
+                            DOC: {doc} days
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-500">
+                            Stocked: {new Date(cage.stocking_date).toLocaleDateString()}
+                          </div>
+                          {daysOverdue > 0 && (
+                            <div className="text-sm font-medium text-red-600">
+                              {daysOverdue} days overdue
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="mb-6">
           <Link href="/create-cage">
