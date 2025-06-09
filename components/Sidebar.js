@@ -23,6 +23,7 @@ import {
   Settings,
   Home,
   Bell,
+  Scale,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
@@ -198,6 +199,15 @@ const Sidebar = ({ activeTab }) => {
                   <LineChart className="w-4 h-4 mr-3" />
                   <span>Biweekly ABW</span>
                 </Link>
+              </li>
+              <li className={`relative group ${isActive('/harvest') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/harvest" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/harvest') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Scale className="w-4 h-4 mr-3" />
+                  <span>Harvest Management</span>
+                </Link>
+                <div className={`${isActive('/harvest') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
             </ul>
           )}

@@ -6,6 +6,7 @@ import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
 import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
+import { PlusCircle } from 'lucide-react'
 
 const HarvestPage = () => {
   const [harvestRecords, setHarvestRecords] = useState([])
@@ -144,8 +145,17 @@ const HarvestPage = () => {
     <ProtectedRoute>
       <Layout title="Harvest Management" showCageSelector={false}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Harvest Management</h1>
+            <button
+              onClick={() => router.push('/harvest-sampling')}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition-colors"
+            >
+              <PlusCircle className="w-5 h-5 mr-2" />
+              Harvest Sampling
+            </button>
+          </div>
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900">Harvest Management</h1>
             <div className="flex space-x-4">
               <button
                 onClick={handleExport}
