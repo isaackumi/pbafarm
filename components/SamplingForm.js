@@ -3,14 +3,14 @@ import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from './Toast'
 
 const SIZE_CATEGORIES = [
-  { category: 'S3', range: '50g-100g' },
-  { category: 'S2', range: '100g-200g' },
-  { category: 'S1', range: '200g-300g' },
-  { category: 'M', range: '300g-400g' },
-  { category: 'L', range: '400g-500g' },
-  { category: 'XL', range: '500g-600g' },
-  { category: 'XXL', range: '600g-800g' },
-  { category: 'Rej', range: '>800g' }
+  { category: 'S3', range: '800g above' },
+  { category: 'S2', range: '700g-800g' },
+  { category: 'S1', range: '600g-700g' },
+  { category: 'Reg', range: '500g-600g' },
+  { category: 'Eco', range: '400g-500g' },
+  { category: 'SS', range: '300g-400g' },
+  { category: 'SB', range: '200g-300g' },
+  { category: 'Rej', range: 'less than 200g' }
 ]
 
 const SamplingForm = ({ harvestId, onComplete }) => {

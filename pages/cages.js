@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
 import DataTable from '../components/DataTable'
 import {
   Edit,
@@ -19,7 +20,9 @@ import { cageService, analyticsService } from '../lib/databaseService'
 export default function CagesPage() {
   return (
     <ProtectedRoute>
-      <CagesManagement />
+      <Layout>
+        <CagesManagement />
+      </Layout>
     </ProtectedRoute>
   )
 }

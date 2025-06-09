@@ -26,29 +26,35 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
+import { useToast } from './Toast'
 
-const Sidebar = ({ activeTab, setActiveTab }) => {
+const Sidebar = ({ activeTab }) => {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
-    feed: true,
+    feed: false,
     operations: false,
     admin: false
   })
-  const [notifications, setNotifications] = useState(3) // Example notification count
+  const { showToast } = useToast()
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed)
   }
 
   const handleLogout = async () => {
-    const { error } = await signOut()
-    if (!error) {
+    try {
+      await signOut()
+      showToast('Logged out successfully', 'success')
       router.push('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
+      showToast('Logout failed', 'error')
+    } finally {
+      setShowLogoutModal(false)
     }
-    setShowLogoutModal(false)
   }
 
   const toggleSection = (section) => {
@@ -118,56 +124,29 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         )}
       </div>
 
-      {/* Quick Actions */}
-      {!collapsed && (
-        <div className="px-4 py-2 border-b border-indigo-800">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.push('/notifications')}
-              className="relative p-2 text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg transition-colors"
-            >
-              <Bell className="w-5 h-5" />
-              {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {notifications}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg transition-colors"
-            >
-              <Home className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Navigation Items */}
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
           {/* Dashboard */}
-          <li className="relative group">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center w-full px-4 py-2 text-sm font-medium ${
-                activeTab === 'dashboard'
-                  ? 'bg-indigo-800 text-white'
-                  : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
-              } ${collapsed ? 'justify-center' : ''}`}
-            >
+          <li className={`relative group ${isActive('/dashboard') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+            <Link href="/dashboard" className={`flex items-center w-full px-4 py-2 text-sm font-medium ${
+              activeTab === 'dashboard'
+                ? 'bg-indigo-800 text-white'
+                : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+            } ${collapsed ? 'justify-center' : ''}`}>
               <span className={collapsed ? '' : 'mr-3'}>
                 <BarChart className="w-5 h-5" />
               </span>
               {!collapsed && <span>Dashboard</span>}
-            </button>
+            </Link>
             {renderTooltip('Dashboard')}
+            <div className={`${isActive('/dashboard') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
           </li>
 
           {/* Operations Section */}
           {renderSectionHeader('Operations')}
           {renderSectionDivider()}
-          <li className="relative group">
+          <li className={`relative group ${isActive('/cages') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
             <button
               onClick={() => toggleSection('operations')}
               className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white ${
@@ -189,51 +168,35 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               )}
             </button>
             {renderTooltip('Cage Operations')}
+            <div className={`${isActive('/cages') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
           </li>
           {!collapsed && expandedSections.operations && (
             <ul className="ml-8 space-y-1">
-              <li className="relative group">
-                <Link href="/cages">
-                  <div className={`flex items-center px-4 py-2 text-sm font-medium ${
-                    isActive('/cages') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
-                  } cursor-pointer`}>
-                    <Droplets className="w-4 h-4 mr-3" />
-                    <span>Cages</span>
-                  </div>
+              <li className={`relative group ${isActive('/cages') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/cages" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/cages') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Droplets className="w-4 h-4 mr-3" />
+                  <span>Cages</span>
+                </Link>
+                <div className={`${isActive('/cages') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
+              </li>
+              <li>
+                <Link href="/stocking" className="flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white">
+                  <Package className="w-4 h-4 mr-3" />
+                  <span>Stocking</span>
                 </Link>
               </li>
               <li>
-                <button
-                  onClick={() => setActiveTab('daily')}
-                  className="flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white"
-                >
-                  <AreaChart className="w-4 h-4 mr-3" />
-                  <span>Daily Entry</span>
-                </button>
+                <Link href="/daily-data" className="flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white">
+                  <Utensils className="w-4 h-4 mr-3" />
+                  <span>Daily Data</span>
+                </Link>
               </li>
               <li>
-                <button
-                  onClick={() => setActiveTab('biweekly')}
-                  className="flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white"
-                >
+                <Link href="/biweekly-data" className="flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white">
                   <LineChart className="w-4 h-4 mr-3" />
                   <span>Biweekly ABW</span>
-                </button>
-              </li>
-              <li>
-                <Link href="/harvest">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <PieChart className="w-4 h-4 mr-3" />
-                    <span>Harvest Data</span>
-                  </div>
-                </Link>
-              </li>
-              <li>
-                <Link href="/bulk-upload">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <CloudUpload className="w-4 h-4 mr-3" />
-                    <span>Bulk Upload</span>
-                  </div>
                 </Link>
               </li>
             </ul>
@@ -242,7 +205,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {/* Feed Management Section */}
           {renderSectionHeader('Feed Management')}
           {renderSectionDivider()}
-          <li>
+          <li className={`relative group ${isActive('/feed-management') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
             <button
               onClick={() => toggleSection('feed')}
               className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white ${
@@ -263,40 +226,46 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </div>
               )}
             </button>
+            {renderTooltip('Feed Management')}
+            <div className={`${isActive('/feed-management') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
           </li>
           {!collapsed && expandedSections.feed && (
             <ul className="ml-8 space-y-1">
-              <li>
-                <Link href="/feed-management">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <Package className="w-4 h-4 mr-3" />
-                    <span>Feed Types</span>
-                  </div>
+              <li className={`relative group ${isActive('/feed-management') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/feed-management" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/feed-management') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Package className="w-4 h-4 mr-3" />
+                  <span>Feed Types</span>
                 </Link>
+                <div className={`${isActive('/feed-management') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
-              <li>
-                <Link href="/feed-suppliers">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <Truck className="w-4 h-4 mr-3" />
-                    <span>Suppliers</span>
-                  </div>
+              <li className={`relative group ${isActive('/suppliers') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/suppliers" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/suppliers') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Truck className="w-4 h-4 mr-3" />
+                  <span>Suppliers</span>
                 </Link>
+                <div className={`${isActive('/suppliers') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
-              <li>
-                <Link href="/feed-purchases">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <ShoppingCart className="w-4 h-4 mr-3" />
-                    <span>Purchases</span>
-                  </div>
+              <li className={`relative group ${isActive('/purchases') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/purchases" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/purchases') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <ShoppingCart className="w-4 h-4 mr-3" />
+                  <span>Purchases</span>
                 </Link>
+                <div className={`${isActive('/purchases') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
-              <li>
-                <Link href="/feed-inventory">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <Database className="w-4 h-4 mr-3" />
-                    <span>Inventory</span>
-                  </div>
+              <li className={`relative group ${isActive('/inventory') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/inventory" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/inventory') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Database className="w-4 h-4 mr-3" />
+                  <span>Inventory</span>
                 </Link>
+                <div className={`${isActive('/inventory') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
             </ul>
           )}
@@ -304,7 +273,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {/* Admin Section */}
           {renderSectionHeader('Admin')}
           {renderSectionDivider()}
-          <li>
+          <li className={`relative group ${isActive('/reports') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
             <button
               onClick={() => toggleSection('admin')}
               className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white ${
@@ -325,32 +294,37 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 </div>
               )}
             </button>
+            {renderTooltip('Administration')}
+            <div className={`${isActive('/reports') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
           </li>
           {!collapsed && expandedSections.admin && (
             <ul className="ml-8 space-y-1">
-              <li>
-                <Link href="/reports">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <FileText className="w-4 h-4 mr-3" />
-                    <span>Reports</span>
-                  </div>
+              <li className={`relative group ${isActive('/reports') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/reports" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/reports') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <FileText className="w-4 h-4 mr-3" />
+                  <span>Reports</span>
                 </Link>
+                <div className={`${isActive('/reports') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
-              <li>
-                <Link href="/export">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <Database className="w-4 h-4 mr-3" />
-                    <span>Export Data</span>
-                  </div>
+              <li className={`relative group ${isActive('/export') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/export" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/export') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <Database className="w-4 h-4 mr-3" />
+                  <span>Export Data</span>
                 </Link>
+                <div className={`${isActive('/export') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
-              <li>
-                <Link href="/create-cage">
-                  <div className="flex items-center px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer">
-                    <PlusCircle className="w-4 h-4 mr-3" />
-                    <span>New Cage</span>
-                  </div>
+              <li className={`relative group ${isActive('/new-cage') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+                <Link href="/new-cage" className={`flex items-center px-4 py-2 text-sm font-medium ${
+                  isActive('/new-cage') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                } cursor-pointer`}>
+                  <PlusCircle className="w-4 h-4 mr-3" />
+                  <span>New Cage</span>
                 </Link>
+                <div className={`${isActive('/new-cage') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
               </li>
             </ul>
           )}
@@ -358,67 +332,19 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {/* User Section */}
           {renderSectionHeader('User')}
           {renderSectionDivider()}
-          <li>
-            <Link href="/users">
-              <div
-                className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer ${
-                  collapsed ? 'justify-center' : ''
-                }`}
-              >
-                <span className={collapsed ? '' : 'mr-3'}>
-                  <Users className="w-5 h-5" />
-                </span>
-                {!collapsed && <span>User Management</span>}
-              </div>
+          <li className={`relative group ${isActive('/user-management') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'}`}>
+            <Link href="/user-management" className={`flex items-center w-full px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-800 hover:text-white cursor-pointer ${
+              collapsed ? 'justify-center' : ''
+            }`}>
+              <span className={collapsed ? '' : 'mr-3'}>
+                <Users className="w-5 h-5" />
+              </span>
+              {!collapsed && <span>User Management</span>}
             </Link>
+            <div className={`${isActive('/user-management') ? 'absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r' : ''}`}></div>
           </li>
         </ul>
       </nav>
-
-      {/* User Profile and Logout */}
-      <div
-        className={`p-4 border-t border-indigo-800 ${
-          collapsed ? 'flex justify-center' : ''
-        }`}
-      >
-        {collapsed ? (
-          <div className="relative group">
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="text-indigo-200 hover:text-white transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-            {renderTooltip('Logout')}
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div>
-                <div className="text-sm font-medium truncate max-w-[120px]">
-                  {user?.user_metadata?.full_name || user?.email}
-                </div>
-                <div className="text-xs text-indigo-300">
-                  {user?.role || 'User'}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="text-indigo-200 hover:text-white transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Logout Confirmation Modal */}
       <LogoutConfirmationModal
@@ -426,6 +352,13 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
       />
+
+      {!collapsed && (
+        <div className="px-4 py-2 text-xs text-indigo-300 border-t border-indigo-800 mt-2">
+          Farm Management v1.0.0<br />
+          © 2024 Your Company
+        </div>
+      )}
     </div>
   )
 }

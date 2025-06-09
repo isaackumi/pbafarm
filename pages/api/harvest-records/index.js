@@ -55,9 +55,14 @@ async function createHarvestRecord(req, res, userId) {
     if (
       !recordData.cage_id ||
       !recordData.harvest_date ||
-      recordData.total_weight === undefined
+      !recordData.total_weight ||
+      !recordData.average_body_weight ||
+      !recordData.estimated_count ||
+      !recordData.fcr
     ) {
-      return res.status(400).json({ error: 'Missing required fields' })
+      return res.status(400).json({ 
+        error: 'Missing required fields. Please provide: cage_id, harvest_date, total_weight, average_body_weight, estimated_count, and fcr' 
+      })
     }
 
     // Check if cage already has a harvest record
@@ -83,6 +88,7 @@ async function createHarvestRecord(req, res, userId) {
     const { data, error } = await supabase
       .from('harvest_records')
       .insert([recordData])
+      .select()
 
     if (error) throw error
 

@@ -124,7 +124,19 @@ CREATE TABLE harvest_records (
   size_breakdown JSONB,
   notes TEXT,
   created_by UUID,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  harvest_type TEXT CHECK (harvest_type IN ('complete', 'partial')),
+  status TEXT CHECK (status IN ('completed', 'in_progress'))
+);
+
+-- Harvest sampling table
+CREATE TABLE harvest_sampling (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  harvest_id UUID REFERENCES harvest_records(id) NOT NULL,
+  crate_size NUMERIC(10, 2) NOT NULL,
+  samples JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID
 );
 
 -- Feed inventory table

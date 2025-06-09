@@ -115,19 +115,15 @@ const HarvestPage = () => {
     },
     {
       header: 'Type',
-      accessor: 'harvest_type'
+      accessor: record => record.harvest_type
     },
     {
       header: 'Status',
-      accessor: 'status'
+      accessor: record => record.status
     },
     {
       header: 'Total Weight (kg)',
-      accessor: 'total_weight'
-    },
-    {
-      header: 'Sampling Data',
-      accessor: record => record.harvest_sampling ? 'Yes' : 'No'
+      accessor: record => record.total_weight
     },
     {
       header: 'Actions',
@@ -136,7 +132,6 @@ const HarvestPage = () => {
           <button
             onClick={() => handleAddSampling(record)}
             className="text-indigo-600 hover:text-indigo-900"
-            disabled={record.harvest_sampling}
           >
             Add Sampling
           </button>
@@ -147,7 +142,7 @@ const HarvestPage = () => {
 
   return (
     <ProtectedRoute>
-      <Layout>
+      <Layout title="Harvest Management" showCageSelector={false}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">Harvest Management</h1>

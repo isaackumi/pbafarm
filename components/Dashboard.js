@@ -27,7 +27,7 @@ import DailyEntryForm from './DailyEntryForm'
 import Pagination from './Pagination'
 import DataTable from './DataTable'
 
-const Dashboard = ({ activeTab, selectedCage }) => {
+function Dashboard({ selectedCage }) {
   const router = useRouter()
   const [cages, setCages] = useState([])
   const [dailyRecords, setDailyRecords] = useState([])
@@ -47,9 +47,7 @@ const Dashboard = ({ activeTab, selectedCage }) => {
   })
 
   console.log(
-    'Dashboard rendered with activeTab:',
-    activeTab,
-    'selectedCage:',
+    'Dashboard rendered with selectedCage:',
     selectedCage,
   )
 
@@ -133,10 +131,10 @@ const Dashboard = ({ activeTab, selectedCage }) => {
       }
     }
 
-    if (activeTab === 'daily' || activeTab === 'biweekly') {
+    if (selectedCage) {
       fetchCageSpecificData()
     }
-  }, [selectedCage, activeTab])
+  }, [selectedCage])
 
   // Calculate dashboard metrics
   const updateDashboardMetrics = (cages, stockings) => {
@@ -432,408 +430,378 @@ const Dashboard = ({ activeTab, selectedCage }) => {
     router.push(`/stocking/${stocking.id}`)
   }
 
-  // Render different content based on active tab
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div
-                className="bg-blue-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow duration-300"
-                onClick={() => router.push('/cages')}
-              >
-                <div className="flex items-center">
-                  <div className="bg-blue-100 p-3 rounded-full mr-4">
-                    <Droplets className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">
-                      Active Cages
-                    </div>
-                    <div className="text-2xl font-semibold text-blue-600">
-                      {metrics.totalActiveCages}
-                    </div>
-                  </div>
-                </div>
+  // Remove renderContent and just render the dashboard content directly
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div
+          className="bg-blue-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow duration-300"
+          onClick={() => router.push('/cages')}
+        >
+          <div className="flex items-center">
+            <div className="bg-blue-100 p-3 rounded-full mr-4">
+              <Droplets className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">
+                Active Cages
               </div>
-
-              <div className="bg-red-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-red-100 p-3 rounded-full mr-4">
-                  <Calculator className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Average FCR
-                  </div>
-                  <div className="text-2xl font-semibold text-red-600">
-                    {metrics.averageFCR}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-green-100 p-3 rounded-full mr-4">
-                  <Scale className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Total Biomass
-                  </div>
-                  <div className="text-2xl font-semibold text-green-600">
-                    {metrics.totalBiomass} kg
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-yellow-100 p-3 rounded-full mr-4">
-                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Mortality Rate
-                  </div>
-                  <div className="text-2xl font-semibold text-yellow-600">
-                    {metrics.mortalityRate}%
-                  </div>
-                </div>
-              </div>
-
-              {/* New Analytics Cards */}
-              <div className="bg-purple-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-purple-100 p-3 rounded-full mr-4">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Avg. Daily Growth
-                  </div>
-                  <div className="text-2xl font-semibold text-purple-600">
-                    {metrics.avgDailyGrowth} g/day
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-indigo-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-indigo-100 p-3 rounded-full mr-4">
-                  <Calendar className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Days to Harvest
-                  </div>
-                  <div className="text-2xl font-semibold text-indigo-600">
-                    {metrics.daysToHarvest}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-pink-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-pink-100 p-3 rounded-full mr-4">
-                  <DollarSign className="w-6 h-6 text-pink-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Feed Cost/kg
-                  </div>
-                  <div className="text-2xl font-semibold text-pink-600">
-                    ${metrics.feedCostPerKg}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-teal-50 rounded-lg shadow p-6 flex items-center">
-                <div className="bg-teal-100 p-3 rounded-full mr-4">
-                  <Percent className="w-6 h-6 text-teal-600" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Survival Rate
-                  </div>
-                  <div className="text-2xl font-semibold text-teal-600">
-                    {metrics.survivalRate}%
-                  </div>
-                </div>
+              <div className="text-2xl font-semibold text-blue-600">
+                {metrics.totalActiveCages}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-wrap gap-4">
-              <Link href="/create-cage">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Cage
-                </button>
-              </Link>
-
-              <Link href="/stocking">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Stocking
-                </button>
-              </Link>
-
-              <Link href="/feed-types">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Manage Feed Types
-                </button>
-              </Link>
-
-              <Link href="/feed-suppliers">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Manage Feed Suppliers
-                </button>
-              </Link>
+        <div className="bg-red-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-red-100 p-3 rounded-full mr-4">
+            <Calculator className="w-6 h-6 text-red-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Average FCR
             </div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="font-medium text-gray-700 mb-4">
-                  Growth Performance
-                </h2>
-                <div className="h-64">
-                  {loading ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    </div>
-                  ) : growthData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsLineChart
-                        data={growthData}
-                        margin={{
-                          top: 5,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="date"
-                          tick={{ fontSize: 12 }}
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis 
-                          label={{ 
-                            value: 'Weight (g)', 
-                            angle: -90, 
-                            position: 'insideLeft',
-                            style: { textAnchor: 'middle' }
-                          }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value} g`, 'Weight']}
-                          labelFormatter={(label) => `Date: ${label}`}
-                        />
-                        <Legend />
-                        {cages.filter(cage => cage.status === 'active').map((cage, index) => {
-                          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
-                          return (
-                            <Line
-                              key={cage.id}
-                              type="monotone"
-                              dataKey={cage.name}
-                              stroke={colors[index % colors.length]}
-                              strokeWidth={2}
-                              dot={{ r: 4 }}
-                              activeDot={{ r: 6 }}
-                            />
-                          )
-                        })}
-                      </RechartsLineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500">
-                      No growth data available
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="font-medium text-gray-700 mb-4">
-                  Feed Consumption
-                </h2>
-                <div className="h-64">
-                  {loading ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    </div>
-                  ) : feedData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsBarChart
-                        data={feedData}
-                        margin={{
-                          top: 5,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="date"
-                          tick={{ fontSize: 12 }}
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis 
-                          label={{ 
-                            value: 'Feed Amount (kg)', 
-                            angle: -90, 
-                            position: 'insideLeft',
-                            style: { textAnchor: 'middle' }
-                          }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value} kg`, 'Feed Amount']}
-                          labelFormatter={(label) => `Date: ${label}`}
-                        />
-                        <Legend />
-                        {cages.filter(cage => cage.status === 'active').map((cage, index) => {
-                          const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
-                          return (
-                            <Bar
-                              key={cage.id}
-                              dataKey={cage.name}
-                              fill={colors[index % colors.length]}
-                              stackId="feed"
-                            />
-                          )
-                        })}
-                      </RechartsBarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-gray-500">
-                      No feed data available
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="text-2xl font-semibold text-red-600">
+              {metrics.averageFCR}
             </div>
+          </div>
+        </div>
 
-            {/* Recent Stockings Table */}
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="font-medium text-gray-700">Recent Stockings</h2>
-                <Link href="/stocking-management">
-                  <button className="text-sm text-indigo-600 hover:text-indigo-800">
-                    View All Stockings
-                  </button>
-                </Link>
+        <div className="bg-green-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-green-100 p-3 rounded-full mr-4">
+            <Scale className="w-6 h-6 text-green-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Total Biomass
+            </div>
+            <div className="text-2xl font-semibold text-green-600">
+              {metrics.totalBiomass} kg
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-yellow-100 p-3 rounded-full mr-4">
+            <AlertTriangle className="w-6 h-6 text-yellow-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Mortality Rate
+            </div>
+            <div className="text-2xl font-semibold text-yellow-600">
+              {metrics.mortalityRate}%
+            </div>
+          </div>
+        </div>
+
+        {/* New Analytics Cards */}
+        <div className="bg-purple-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-purple-100 p-3 rounded-full mr-4">
+            <TrendingUp className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Avg. Daily Growth
+            </div>
+            <div className="text-2xl font-semibold text-purple-600">
+              {metrics.avgDailyGrowth} g/day
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-indigo-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-indigo-100 p-3 rounded-full mr-4">
+            <Calendar className="w-6 h-6 text-indigo-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Days to Harvest
+            </div>
+            <div className="text-2xl font-semibold text-indigo-600">
+              {metrics.daysToHarvest}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-pink-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-pink-100 p-3 rounded-full mr-4">
+            <DollarSign className="w-6 h-6 text-pink-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Feed Cost/kg
+            </div>
+            <div className="text-2xl font-semibold text-pink-600">
+              ₵{metrics.feedCostPerKg}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-teal-50 rounded-lg shadow p-6 flex items-center">
+          <div className="bg-teal-100 p-3 rounded-full mr-4">
+            <Percent className="w-6 h-6 text-teal-600" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">
+              Survival Rate
+            </div>
+            <div className="text-2xl font-semibold text-teal-600">
+              {metrics.survivalRate}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-4">
+        <Link href="/create-cage">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="w-4 h-4 mr-2" />
+            New Cage
+          </button>
+        </Link>
+
+        <Link href="/stocking">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+            <Plus className="w-4 h-4 mr-2" />
+            New Stocking
+          </button>
+        </Link>
+
+        <Link href="/feed-types">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Manage Feed Types
+          </button>
+        </Link>
+
+        <Link href="/feed-suppliers">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Manage Feed Suppliers
+          </button>
+        </Link>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="font-medium text-gray-700 mb-4">
+            Growth Performance
+          </h2>
+          <div className="h-64">
+            {loading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
               </div>
-
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Cage
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Stocking Date
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      DOC
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Initial Count
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Initial ABW (g)
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Initial Biomass (kg)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {cages.map((cage) => {
-                    // Calculate DOC (Days of Culture)
-                    const stockingDate = new Date(cage.stocking_date)
-                    const today = new Date()
-                    const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
-
+            ) : growthData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsLineChart
+                  data={growthData}
+                  margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    label={{ 
+                      value: 'Weight (g)', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle' }
+                    }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value} g`, 'Weight']}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend />
+                  {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
                     return (
-                      <tr key={cage.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {cage.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(cage.stocking_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {doc} days
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {cage.initial_count?.toLocaleString() || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {cage.initial_abw?.toFixed(1) || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {cage.initial_biomass?.toFixed(1) || 'N/A'}
-                        </td>
-                      </tr>
+                      <Line
+                        key={cage.id}
+                        type="monotone"
+                        dataKey={cage.name}
+                        stroke={colors[index % colors.length]}
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                No growth data available
+              </div>
+            )}
           </div>
-        )
-      case 'daily':
-        // Use the provided selectedCage, or if it's empty, default to the first cage
-        const dailyCageId =
-          selectedCage || (cages.length > 0 ? cages[0].id : '')
-        return <DailyEntryForm cageId={dailyCageId} />
-      case 'biweekly':
-        // Use the provided selectedCage, or if it's empty, default to the first cage
-        const biweeklyCageId =
-          selectedCage || (cages.length > 0 ? cages[0].id : '')
-        return <BiweeklyForm cageId={biweeklyCageId} />
-      case 'harvest':
-        // Use the provided selectedCage, or if it's empty, default to the first cage
-        const harvestCageId =
-          selectedCage || (cages.length > 0 ? cages[0].id : '')
-        return <HarvestForm cageId={harvestCageId} />
-      default:
-        return (
-          <div className="bg-white shadow rounded-lg p-8">
-            <p className="text-center text-gray-600">
-              Please select a tab from the sidebar
-            </p>
-          </div>
-        )
-    }
-  }
+        </div>
 
-  return renderContent()
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="font-medium text-gray-700 mb-4">
+            Feed Consumption
+          </h2>
+          <div className="h-64">
+            {loading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : feedData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart
+                  data={feedData}
+                  margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    label={{ 
+                      value: 'Feed Amount (kg)', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle' }
+                    }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value} kg`, 'Feed Amount']}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend />
+                  {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+                    return (
+                      <Bar
+                        key={cage.id}
+                        dataKey={cage.name}
+                        fill={colors[index % colors.length]}
+                        stackId="feed"
+                      />
+                    )
+                  })}
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                No feed data available
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Stockings Table */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="font-medium text-gray-700">Recent Stockings</h2>
+          <Link href="/stocking-management">
+            <button className="text-sm text-indigo-600 hover:text-indigo-800">
+              View All Stockings
+            </button>
+          </Link>
+        </div>
+
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Cage
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Stocking Date
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                DOC
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Initial Count
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Initial ABW (g)
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Initial Biomass (kg)
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {cages.map((cage) => {
+              // Calculate DOC (Days of Culture)
+              const stockingDate = new Date(cage.stocking_date)
+              const today = new Date()
+              const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+
+              return (
+                <tr key={cage.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {cage.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(cage.stocking_date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {doc} days
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {cage.initial_count?.toLocaleString() || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {cage.initial_abw?.toFixed(1) || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {cage.initial_biomass?.toFixed(1) || 'N/A'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
 
 export default Dashboard

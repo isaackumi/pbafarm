@@ -3,47 +3,49 @@ import { useState, useEffect } from 'react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import Dashboard from '../components/Dashboard'
-import { cages } from '../data/cages'
+// Removed cages import as Layout fetches cages now
+// import { cages } from '../data/cages'
 
 export default function DashboardPage() {
-  const [title, setTitle] = useState('Dashboard')
-  const [showCageSelector, setShowCageSelector] = useState(false)
+  // Removed local state for title and showCageSelector as Layout manages this
+  // const [title, setTitle] = useState('Dashboard');
+  // const [showCageSelector, setShowCageSelector] = useState(false);
 
-  // Update title based on activeTab
-  const handleActiveTabChange = (tab) => {
-    switch (tab) {
-      case 'dashboard':
-        setTitle('Dashboard')
-        setShowCageSelector(false)
-        break
-      case 'daily':
-        setTitle('Daily Data Entry')
-        setShowCageSelector(true)
-        break
-      case 'biweekly':
-        setTitle('Biweekly ABW')
-        setShowCageSelector(true)
-        break
-      case 'harvest':
-        setTitle('Harvest Data')
-        setShowCageSelector(true)
-        break
-      default:
-        setTitle('Dashboard')
-        setShowCageSelector(false)
-    }
-  }
+  // Removed handleActiveTabChange as Layout no longer passes this
+  // const handleActiveTabChange = (tab) => {
+  //   switch (tab) {
+  //     case 'dashboard':
+  //       setTitle('Dashboard');
+  //       setShowCageSelector(false);
+  //       break;
+  //     case 'daily':
+  //       setTitle('Daily Data Entry');
+  //       setShowCageSelector(true);
+  //       break;
+  //     case 'biweekly':
+  //       setTitle('Biweekly ABW');
+  //       setShowCageSelector(true);
+  //       break;
+  //     case 'harvest':
+  //       setTitle('Harvest Data');
+  //       setShowCageSelector(true);
+  //       break;
+  //     default:
+  //       setTitle('Dashboard');
+  //       setShowCageSelector(false);
+  //   }
+  // };
 
   return (
     <ProtectedRoute>
       <Layout
-        title={title}
-        showCageSelector={showCageSelector}
-        cages={cages}
-        onActiveTabChange={handleActiveTabChange}
+        // title={title} // Layout now determines title based on route
+        // showCageSelector={showCageSelector} // Layout now determines cage selector visibility
+        // cages={cages} // Layout fetches cages internally
+        // onActiveTabChange={handleActiveTabChange} // Removed as Layout doesn't pass this
       >
-        <Dashboard />
+        <Dashboard /> {/* Dashboard component should render its content based on route/context if needed */}
       </Layout>
     </ProtectedRoute>
-  )
+  );
 }
