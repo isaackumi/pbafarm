@@ -49,7 +49,7 @@ CREATE TABLE cages (
   initial_count INTEGER,
   initial_abw NUMERIC(10, 2),
   initial_biomass NUMERIC(10, 2),
-  status TEXT DEFAULT 'empty' CHECK (status IN ('active', 'harvested', 'maintenance', 'fallow', 'empty')),
+  status TEXT DEFAULT 'empty' CHECK (status IN ('active', 'harvested', 'harvesting', 'maintenance', 'fallow', 'empty')),
   notes TEXT,
   created_by UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

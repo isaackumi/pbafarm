@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { feedTypeService } from '../lib/feedTypeService'
 
-const DailyEntryForm = ({ cageId }) => {
-  const [cage, setCage] = useState(null)
+const DailyEntryForm = ({ cage }) => {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     feed_amount: '',
@@ -21,35 +20,24 @@ const DailyEntryForm = ({ cageId }) => {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  console.log('DailyEntryForm rendered with cageId:', cageId) // Debug log
+  // If no cage is provided, show a message
+  if (!cage) {
+    return (
+      <div className="bg-white shadow rounded-lg p-8">
+        <p className="text-center text-gray-600">Please select a cage first</p>
+      </div>
+    )
+  }
 
   // Fetch cage, recent records and feed types
   useEffect(() => {
-    if (!cageId) {
+    if (!cage) {
       setLoading(false)
       return
     }
 
     async function fetchData() {
       try {
-        console.log('Fetching cage data and feed types for id:', cageId) // Debug log
-
-        // Fetch cage details from cages_info table instead of cages
-        const { data: cageData, error: cageError } = await supabase
-          .from('cages')
-          .select('*')
-          .eq('id', cageId)
-          .eq('status', 'active') // Only fetch active cages
-          .maybeSingle()
-
-        if (cageError) {
-          console.error('Error fetching cage:', cageError)
-          throw cageError
-        }
-
-        console.log('Cage data fetched:', cageData) // Debug log
-        setCage(cageData)
-
         // Fetch recent records
         const { data: recordsData, error: recordsError } = await supabase
           .from('daily_records')
@@ -59,13 +47,11 @@ const DailyEntryForm = ({ cageId }) => {
             feed_types(*)
           `,
           )
-          .eq('cage_id', cageId)
+          .eq('cage_id', cage.id)
           .order('date', { ascending: false })
           .limit(10)
 
         if (recordsError) throw recordsError
-
-        console.log('Recent records fetched:', recordsData) // Debug log
         setRecentRecords(recordsData || [])
 
         // Fetch feed types
@@ -75,13 +61,10 @@ const DailyEntryForm = ({ cageId }) => {
         } = await feedTypeService.getActiveFeedTypes()
 
         if (feedTypesError) throw feedTypesError
-
-        console.log('Feed types fetched:', feedTypesData) // Debug log
         setFeedTypes(feedTypesData || [])
 
         // Get last used feed type for this cage
-        const lastFeedType = await feedTypeService.getLastUsedFeedType(cageId)
-        console.log('Last used feed type:', lastFeedType) // Debug log
+        const lastFeedType = await feedTypeService.getLastUsedFeedType(cage.id)
 
         // Set default feed price from the most recent record if available
         if (recordsData && recordsData.length > 0) {
@@ -107,7 +90,6 @@ const DailyEntryForm = ({ cageId }) => {
           }))
         }
       } catch (error) {
-        console.error('Error fetching data:', error.message)
         setError('Failed to load cage data: ' + error.message)
       } finally {
         setLoading(false)
@@ -127,7 +109,7 @@ const DailyEntryForm = ({ cageId }) => {
     })
     setMessage('')
     setError('')
-  }, [cageId])
+  }, [cage])
 
   // Add validation for date before stocking date
   const handleChange = (e) => {
@@ -186,7 +168,7 @@ const DailyEntryForm = ({ cageId }) => {
       const { data: existingRecord, error: checkError } = await supabase
         .from('daily_records')
         .select('id')
-        .eq('cage_id', cageId)
+        .eq('cage_id', cage.id)
         .eq('date', formData.date)
         .maybeSingle()
 
@@ -204,7 +186,7 @@ const DailyEntryForm = ({ cageId }) => {
       // Save to Supabase
       const { data, error } = await supabase.from('daily_records').insert([
         {
-          cage_id: cageId,
+          cage_id: cage.id,
           date: formData.date,
           feed_amount: parseFloat(formData.feed_amount),
           feed_type_id: formData.feed_type_id,
@@ -229,7 +211,7 @@ const DailyEntryForm = ({ cageId }) => {
           feed_types(*)
         `,
         )
-        .eq('cage_id', cageId)
+        .eq('cage_id', cage.id)
         .order('date', { ascending: false })
         .limit(10)
 
@@ -286,34 +268,13 @@ const DailyEntryForm = ({ cageId }) => {
     )
   }
 
-  if (!cage && !cageId) {
-    return (
-      <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-gray-600">Please select a cage first</p>
-      </div>
-    )
-  }
-
-  if (!cage) {
-    return (
-      <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-red-600">
-          Cage not found or not accessible
-        </p>
-        <p className="text-center text-gray-600 mt-2">
-          The selected cage might not exist or you don't have permission to
-          access it.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
         <h2 className="font-medium text-gray-700">
-          Daily Data Entry - {cage.name}
+          Daily Data Entry - {cage.name} <span className="text-xs text-gray-500">({cage.code})</span>
         </h2>
+        <div className="text-xs text-gray-500">Location: {cage.location || 'N/A'} | Capacity: {cage.capacity || 'N/A'}</div>
       </div>
       <div className="p-6">
         {error && (

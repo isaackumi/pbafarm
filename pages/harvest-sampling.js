@@ -127,38 +127,76 @@ export default function HarvestSampling() {
             <div className="text-gray-500">Your harvest sampling data has been saved.</div>
           </div>
         ) : preview ? (
-          <div>
-            <div className="mb-6">
-              <div className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Preview</div>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded p-4 space-y-2">
-                <div><span className="font-medium">Cage:</span> {(() => {
+          <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-gray-800 p-6 shadow-lg">
+            <div className="mb-4 flex items-center gap-2">
+              <Eye className="w-5 h-5 text-green-600" />
+              <span className="text-lg font-bold text-green-700">Harvest Sampling Preview</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Cage</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{(() => {
                   const cage = cages.find(c => c.id === form.cageId)
                   return cage ? `${cage.name} (${cage.status})` : ''
                 })()}</div>
-                <div><span className="font-medium">Date:</span> {form.date}</div>
-                <div><span className="font-medium">DOC:</span> {doc}</div>
-                <div><span className="font-medium">Sample Weight (g):</span> {form.weight}</div>
-                <div><span className="font-medium">Fish Count:</span> {form.fishCount}</div>
-                <div><span className="font-medium">ABW (g):</span> {abw} <span className="text-xs text-gray-400">(Auto-calculated: weight / count)</span></div>
-                <div><span className="font-medium">Size Breakdown:</span>
-                  <ul className="ml-4 list-disc grid grid-cols-2 gap-x-4">
-                    {SIZE_CATEGORIES.map(size => (
-                      <li key={size.category}>{size.category} ({size.range}): {form.sizes[size.category] || 0}</li>
-                    ))}
-                  </ul>
-                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Date</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{form.date}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">DOC</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{doc}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Sample Weight (g)</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{form.weight}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Fish Count</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{form.fishCount}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">ABW (g)</div>
+                <div className="font-semibold text-gray-800 dark:text-gray-100">{abw} <span className="text-xs text-gray-400">(Auto: weight / count)</span></div>
               </div>
             </div>
-            <div className="flex space-x-4">
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4 text-green-600" />
+                <span className="font-semibold text-green-700">Size Breakdown</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border border-green-200 rounded-lg">
+                  <thead className="bg-green-100 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-green-800 dark:text-gray-100">Size</th>
+                      <th className="px-3 py-2 text-left font-semibold text-green-800 dark:text-gray-100">Range</th>
+                      <th className="px-3 py-2 text-left font-semibold text-green-800 dark:text-gray-100">Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SIZE_CATEGORIES.map(size => (
+                      <tr key={size.category} className="odd:bg-white even:bg-green-50 dark:odd:bg-gray-900 dark:even:bg-gray-800">
+                        <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{size.category}</td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{size.range}</td>
+                        <td className="px-3 py-2 text-green-700 dark:text-green-300 font-semibold">{form.sizes[size.category] || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="flex space-x-4 mt-6">
               <button
                 onClick={() => setPreview(false)}
-                className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+                className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold"
               >
                 Edit
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 font-semibold shadow"
                 disabled={!!sizeSumWarning}
               >
                 Confirm & Save
@@ -173,62 +211,78 @@ export default function HarvestSampling() {
           </div>
         ) : (
           <form onSubmit={handlePreview}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cage</label>
-              <select
-                name="cageId"
-                value={form.cageId}
-                onChange={handleChange}
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              >
-                <option value="">Select a cage</option>
-                {cages.map(cage => (
-                  <option key={cage.id} value={cage.id}>{cage.name} ({cage.status})</option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sample Weight (g)</label>
-              <input
-                type="number"
-                name="weight"
-                value={form.weight}
-                onChange={handleChange}
-                min="1"
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fish Count</label>
-              <input
-                type="number"
-                name="fishCount"
-                value={form.fishCount}
-                onChange={handleChange}
-                min="1"
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              />
-            </div>
-            <div className="mb-4">
-              <div className="flex items-center mb-1">
-                <label className="block text-sm font-medium text-gray-700">Size Breakdown</label>
-                <Info className="w-4 h-4 text-gray-400 ml-2" title="Enter the count of fish in each size category. The sum must match the total fish count." />
+            <div className="mb-6">
+              <div className="text-lg font-bold text-green-700 mb-2 flex items-center gap-2">
+                <Info className="w-5 h-5 text-green-600" /> Sample Details
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-50 dark:bg-gray-800 p-4 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cage</label>
+                  <select
+                    name="cageId"
+                    value={form.cageId}
+                    onChange={handleChange}
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  >
+                    <option value="">Select a cage</option>
+                    {cages.map(cage => (
+                      <option key={cage.id} value={cage.id}>{cage.name} ({cage.status})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={form.date}
+                    onChange={handleChange}
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sample Weight (g)</label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={form.weight}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                  <span className="text-xs text-gray-500">Total weight of all sampled fish (in grams).</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fish Count</label>
+                  <input
+                    type="number"
+                    name="fishCount"
+                    value={form.fishCount}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                  <span className="text-xs text-gray-500">Number of fish sampled.</span>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">DOC</label>
+                  <div className="font-semibold text-gray-800 dark:text-gray-100">{doc !== '' ? doc : '-'}</div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">ABW (g)</label>
+                  <div className="font-semibold text-gray-800 dark:text-gray-100">{abw !== '' ? abw : '-'} <span className="text-xs text-gray-400">(Auto: weight / count)</span></div>
+                </div>
+              </div>
+            </div>
+            <div className="mb-6">
+              <div className="text-lg font-bold text-green-700 mb-2 flex items-center gap-2">
+                <Info className="w-5 h-5 text-green-600" /> Size Breakdown
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-green-50 dark:bg-gray-800 p-4 rounded-lg">
                 {SIZE_CATEGORIES.map(size => (
                   <div key={size.category} className="flex flex-col">
                     <span className="text-xs font-semibold text-gray-600 mb-1">{size.category} <span className="text-gray-400">({size.range})</span></span>
@@ -245,24 +299,16 @@ export default function HarvestSampling() {
               </div>
               <p className="text-xs text-gray-500 mt-2">Sum of all size counts must equal the total fish count.</p>
             </div>
-            <div className="mb-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500">DOC</label>
-                <div className="font-semibold text-gray-800 dark:text-gray-100">{doc !== '' ? doc : '-'}</div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500">ABW (g)</label>
-                <div className="font-semibold text-gray-800 dark:text-gray-100">{abw !== '' ? abw : '-'} <span className="text-xs text-gray-400">(Auto: weight / count)</span></div>
-              </div>
+            <div className="sticky bottom-0 bg-white dark:bg-gray-900 py-4 z-10">
+              <button
+                type="submit"
+                className="w-full px-4 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 flex items-center justify-center shadow-lg text-lg"
+                disabled={!!sizeSumWarning}
+              >
+                <Eye className="w-5 h-5 mr-2" />
+                Preview
+              </button>
             </div>
-            <button
-              type="submit"
-              className="w-full mt-4 px-4 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 flex items-center justify-center"
-              disabled={!!sizeSumWarning}
-            >
-              <Eye className="w-5 h-5 mr-2" />
-              Preview
-            </button>
             {sizeSumWarning && (
               <div className="mt-4 flex items-center text-yellow-700 bg-yellow-100 rounded p-2">
                 <AlertTriangle className="w-4 h-4 mr-2" />
