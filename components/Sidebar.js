@@ -105,7 +105,7 @@ const Sidebar = ({ activeTab }) => {
       items: [
         { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { title: 'Daily Records', path: '/daily-entry', icon: Calendar },
-        { title: 'Biweekly ABW', path: '/biweekly-abw', icon: Scale },
+        { title: 'Biweekly ABW', path: '/biweekly-entry', icon: Scale },
         { title: 'Harvest Data', path: '/harvest-data', icon: Fish },
       ],
     },

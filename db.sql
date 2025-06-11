@@ -128,18 +128,33 @@ CREATE TABLE daily_records (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Biweekly records table
+-- Bi-weekly Records Table
 CREATE TABLE biweekly_records (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  cage_id UUID REFERENCES cages(id) NOT NULL,
-  date DATE NOT NULL,
-  average_body_weight NUMERIC(10, 2) NOT NULL,
-  sample_size INTEGER NOT NULL,
-  days_of_culture INTEGER,
-  estimated_biomass NUMERIC(10, 2),
-  notes TEXT,
-  created_by UUID,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    cage_id UUID REFERENCES cages(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    batch_code VARCHAR(20) NOT NULL UNIQUE,
+    average_body_weight DECIMAL(10,2) NOT NULL,
+    total_fish_count INTEGER NOT NULL,
+    total_weight DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES auth.users(id),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES auth.users(id)
+);
+
+-- Bi-weekly Sampling Table
+CREATE TABLE biweekly_sampling (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    biweekly_record_id UUID REFERENCES biweekly_records(id) ON DELETE CASCADE,
+    sampling_number INTEGER NOT NULL,
+    fish_count INTEGER NOT NULL,
+    total_weight DECIMAL(10,2) NOT NULL,
+    average_body_weight DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES auth.users(id),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES auth.users(id)
 );
 
 -- Harvest records table
@@ -288,37 +303,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create view for active cages with their latest biweekly record
+-- Create view for active cages with latest ABW
 CREATE OR REPLACE VIEW active_cages_with_latest_abw AS
 SELECT 
-  c.id AS cage_id,
-  c.name AS cage_name,
-  c.status,
-  c.stocking_date,
-  c.initial_count,
-  c.initial_abw,
-  c.initial_biomass,
-  b.average_body_weight AS latest_abw,
-  b.date AS latest_abw_date,
-  (
-    SELECT SUM(d.mortality)
-    FROM daily_records d
-    WHERE d.cage_id = c.id
-  ) AS total_mortality,
-  (
-    SELECT SUM(d.feed_amount)
-    FROM daily_records d
-    WHERE d.cage_id = c.id
-  ) AS total_feed
-FROM 
-  cages c
+    c.*,
+    br.average_body_weight as latest_abw,
+    br.date as last_biweekly_date
+FROM cages c
 LEFT JOIN LATERAL (
-  SELECT average_body_weight, date
-  FROM biweekly_records
-  WHERE cage_id = c.id
-  ORDER BY date DESC
-  LIMIT 1
-) b ON true
+    SELECT 
+        average_body_weight,
+        date
+    FROM biweekly_records
+    WHERE cage_id = c.id
+    ORDER BY date DESC
+    LIMIT 1
+) br ON true
 WHERE c.status = 'active';
 
 -- Function to get last used feed type for a cage
@@ -616,3 +616,95 @@ CREATE POLICY "Allow insert for authenticated users" ON feed_usage
 
 CREATE POLICY "Allow update for authenticated users" ON feed_usage
     FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Add RLS policies for biweekly_records
+ALTER TABLE biweekly_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view biweekly records"
+    ON biweekly_records FOR SELECT
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager', 'supervisor')
+        )
+    ));
+
+CREATE POLICY "Users can insert biweekly records"
+    ON biweekly_records FOR INSERT
+    WITH CHECK (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager', 'supervisor')
+        )
+    ));
+
+CREATE POLICY "Users can update biweekly records"
+    ON biweekly_records FOR UPDATE
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager')
+        )
+    ));
+
+CREATE POLICY "Users can delete biweekly records"
+    ON biweekly_records FOR DELETE
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager')
+        )
+    ));
+
+-- Add RLS policies for biweekly_sampling
+ALTER TABLE biweekly_sampling ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view biweekly sampling"
+    ON biweekly_sampling FOR SELECT
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager', 'supervisor')
+        )
+    ));
+
+CREATE POLICY "Users can insert biweekly sampling"
+    ON biweekly_sampling FOR INSERT
+    WITH CHECK (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager', 'supervisor')
+        )
+    ));
+
+CREATE POLICY "Users can update biweekly sampling"
+    ON biweekly_sampling FOR UPDATE
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager')
+        )
+    ));
+
+CREATE POLICY "Users can delete biweekly sampling"
+    ON biweekly_sampling FOR DELETE
+    USING (auth.uid() IN (
+        SELECT user_id FROM user_roles
+        WHERE role_id IN (
+            SELECT id FROM roles
+            WHERE name IN ('admin', 'manager')
+        )
+    ));
+
+-- Create indexes for better query performance
+CREATE INDEX idx_biweekly_records_cage_id ON biweekly_records(cage_id);
+CREATE INDEX idx_biweekly_records_date ON biweekly_records(date);
+CREATE INDEX idx_biweekly_records_batch_code ON biweekly_records(batch_code);
+CREATE INDEX idx_biweekly_sampling_record_id ON biweekly_sampling(biweekly_record_id);

@@ -10,10 +10,12 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  RefreshCw
+  RefreshCw,
+  Check
 } from 'lucide-react'
 import DailyEntryForm from './DailyEntryForm'
 import { cageService } from '../lib/databaseService'
+import { supabase } from '../lib/supabase'
 
 const statusColors = {
   active: 'bg-green-100 text-green-800',
@@ -52,10 +54,12 @@ const DailyUploadPage = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [compactView, setCompactView] = useState(false)
   const [page, setPage] = useState(1)
+  const [dailyRecordStatus, setDailyRecordStatus] = useState({})
   const cagesPerPage = 12
 
   useEffect(() => {
     fetchCages()
+    checkDailyRecords()
   }, [])
 
   const fetchCages = async () => {
@@ -63,6 +67,26 @@ const DailyUploadPage = () => {
     const { data, error } = await cageService.getAllCages()
     setCages(data || [])
     setLoading(false)
+  }
+
+  const checkDailyRecords = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('daily_records')
+        .select('cage_id, date')
+        .eq('date', today)
+
+      if (error) throw error
+
+      const statusMap = {}
+      data.forEach(record => {
+        statusMap[record.cage_id] = true
+      })
+      setDailyRecordStatus(statusMap)
+    } catch (error) {
+      console.error('Error checking daily records:', error)
+    }
   }
 
   const filteredCages = cages
@@ -77,10 +101,25 @@ const DailyUploadPage = () => {
       return matchesSearch && matchesStatus
     })
     .sort((a, b) => {
-      const aValue = a[sortBy] || ''
-      const bValue = b[sortBy] || ''
-      const comparison = aValue.localeCompare(bValue)
-      return sortDirection === 'asc' ? comparison : -comparison
+      const aValue = a[sortBy]
+      const bValue = b[sortBy]
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return 1
+      if (bValue === null || bValue === undefined) return -1
+
+      // Handle different data types
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+      }
+
+      // Convert to strings for comparison
+      const aString = String(aValue).toLowerCase()
+      const bString = String(bValue).toLowerCase()
+      
+      return sortDirection === 'asc' 
+        ? aString.localeCompare(bString)
+        : bString.localeCompare(aString)
     })
 
   const paginatedCages = filteredCages.slice(
@@ -300,9 +339,17 @@ const DailyUploadPage = () => {
                       <span className={`font-semibold text-gray-900 ${compactView ? 'text-base' : 'text-lg'}`}>
                         {cage.name}
                       </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[cage.status] || 'bg-gray-100 text-gray-800'}`}>
-                        {cage.status.charAt(0).toUpperCase() + cage.status.slice(1)}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        {dailyRecordStatus[cage.id] && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 flex items-center">
+                            <Check className="w-3 h-3 mr-1" />
+                            Recorded
+                          </span>
+                        )}
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[cage.status] || 'bg-gray-100 text-gray-800'}`}>
+                          {cage.status.charAt(0).toUpperCase() + cage.status.slice(1)}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-sm text-gray-500 mb-1">
                       Code: <span className="font-mono">{cage.code}</span>
@@ -344,6 +391,9 @@ const DailyUploadPage = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Capacity
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Daily Record
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -369,6 +419,18 @@ const DailyUploadPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {cage.capacity || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {dailyRecordStatus[cage.id] ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 flex items-center">
+                              <Check className="w-3 h-3 mr-1" />
+                              Recorded
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                              Pending
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
