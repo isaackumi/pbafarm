@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Bell, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 const dummyNotifications = [
   { id: 1, text: 'New member registered', read: false },
@@ -11,20 +12,15 @@ const dummyNotifications = [
 
 const TopBar = ({ title }) => {
   const { user, signOut } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const fullName = user?.user_metadata?.full_name || user?.email || 'User'
   const role = user?.user_metadata?.role || 'User'
   const email = user?.email || ''
   const avatarLetter = fullName.charAt(0).toUpperCase()
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false)
-  const [theme, setTheme] = useState('light')
   const profileDropdownRef = useRef(null)
   const notifDropdownRef = useRef(null)
-
-  // Theme toggle
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -99,7 +95,7 @@ const TopBar = ({ title }) => {
           <button
             className="p-2 text-gray-500 hover:text-indigo-600 focus:outline-none"
             aria-label="Toggle theme"
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            onClick={toggleTheme}
           >
             {theme === 'light' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
           </button>

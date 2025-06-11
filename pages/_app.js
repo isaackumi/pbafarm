@@ -3,19 +3,34 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
+import { ThemeProvider } from '../contexts/ThemeContext'
+import { SettingsProvider } from '../contexts/SettingsContext'
+import { DataProvider } from '../contexts/DataContext'
+import { NotificationProvider } from '../contexts/NotificationContext'
+import { AnalyticsProvider } from '../contexts/AnalyticsContext'
 import { ToastProvider } from '../components/Toast'
 import '../styles/globals.css'
 
 // This HOC (Higher-Order Component) wraps the entire app
 function AppWrapper({ Component, pageProps }) {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AuthWrapper>
-          <Component {...pageProps} />
-        </AuthWrapper>
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <DataProvider>
+            <ToastProvider>
+              <NotificationProvider>
+                <AnalyticsProvider>
+                  <AuthWrapper>
+                    <Component {...pageProps} />
+                  </AuthWrapper>
+                </AnalyticsProvider>
+              </NotificationProvider>
+            </ToastProvider>
+          </DataProvider>
+        </AuthProvider>
+      </SettingsProvider>
+    </ThemeProvider>
   )
 }
 

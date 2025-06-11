@@ -2,7 +2,12 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { Calculator, Scale, AlertTriangle, Droplets, Plus, TrendingUp, Calendar, DollarSign, Percent } from 'lucide-react'
+import { 
+  Calculator, Scale, AlertTriangle, Droplets, Plus, 
+  TrendingUp, Calendar, DollarSign, Percent, 
+  ArrowUp, ArrowDown, ChevronDown, ChevronUp,
+  Thermometer, Water, Wind, Sun
+} from 'lucide-react'
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -14,6 +19,12 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  SparkLine
 } from 'recharts'
 import {
   cageService,
@@ -45,6 +56,13 @@ function Dashboard({ selectedCage }) {
     feedCostPerKg: 'N/A',
     survivalRate: 'N/A',
   })
+  const [expandedSections, setExpandedSections] = useState({
+    metrics: true,
+    charts: true,
+    stockings: true
+  })
+  const [timeRange, setTimeRange] = useState('30d') // '7d', '30d', '90d', '1y'
+  const [waterQualityData, setWaterQualityData] = useState([])
 
   console.log(
     'Dashboard rendered with selectedCage:',
@@ -430,128 +448,744 @@ function Dashboard({ selectedCage }) {
     router.push(`/stocking/${stocking.id}`)
   }
 
-  // Remove renderContent and just render the dashboard content directly
+  // New function to calculate trend
+  const calculateTrend = (current, previous) => {
+    if (!previous) return { value: 0, direction: 'neutral' }
+    const change = ((current - previous) / previous) * 100
+    return {
+      value: Math.abs(change).toFixed(1),
+      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
+    }
+  }
+
+  // New function to prepare water quality data
+  const prepareWaterQualityData = () => {
+    // Generate sample data for now
+    const data = []
+    const today = new Date()
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      data.push({
+        date: date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+        }),
+        temperature: 28 + Math.random() * 2,
+        oxygen: 6 + Math.random(),
+        ph: 7 + Math.random()
+      })
+    }
+    console.log('Water Quality Data:', data)
+    return data
+  }
+
+  // New function to prepare mortality data
+  const prepareMortalityData = () => {
+    if (!dailyRecords || dailyRecords.length === 0) {
+      // Generate sample data if no records
+      const data = []
+      const today = new Date()
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i)
+        data.push({
+          date: date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+          }),
+          mortality: Math.floor(Math.random() * 10),
+          mortalityRate: Math.random() * 2
+        })
+      }
+      console.log('Sample Mortality Data:', data)
+      return data
+    }
+    
+    const data = dailyRecords.map(record => ({
+      date: new Date(record.date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+      }),
+      mortality: record.mortality || 0,
+      mortalityRate: ((record.mortality || 0) / (cages.find(c => c.id === record.cage_id)?.initial_count || 1)) * 100
+    }))
+    console.log('Mortality Data:', data)
+    return data
+  }
+
+  // New function to prepare feed efficiency data
+  const prepareFeedEfficiencyData = () => {
+    if (!dailyRecords || !biweeklyRecords || dailyRecords.length === 0) {
+      // Generate sample data if no records
+      const data = []
+      const today = new Date()
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i)
+        data.push({
+          date: date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+          }),
+          fcr: 1.5 + Math.random() * 0.5,
+          feedAmount: 100 + Math.random() * 50,
+          weightGain: 50 + Math.random() * 30
+        })
+      }
+      console.log('Sample Feed Efficiency Data:', data)
+      return data
+    }
+    
+    const data = biweeklyRecords.map(record => {
+      const periodStart = new Date(record.date)
+      periodStart.setDate(periodStart.getDate() - 14)
+      
+      const periodRecords = dailyRecords.filter(dr => 
+        new Date(dr.date) >= periodStart && 
+        new Date(dr.date) <= new Date(record.date)
+      )
+      
+      const totalFeed = periodRecords.reduce((sum, r) => sum + (r.feed_amount || 0), 0)
+      const weightGain = record.average_body_weight - (record.previous_weight || 0)
+      
+      return {
+        date: new Date(record.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+        }),
+        fcr: weightGain > 0 ? totalFeed / weightGain : 0,
+        feedAmount: totalFeed,
+        weightGain: weightGain
+      }
+    })
+    console.log('Feed Efficiency Data:', data)
+    return data
+  }
+
+  // New function to prepare biomass projection
+  const prepareBiomassProjection = () => {
+    if (!biweeklyRecords || biweeklyRecords.length < 2) {
+      // Generate sample data if no records
+      const data = []
+      const today = new Date()
+      let currentBiomass = 300
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() + i)
+        currentBiomass += 5 + Math.random() * 3
+        data.push({
+          date: date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+          }),
+          projected: currentBiomass,
+          target: 500
+        })
+      }
+      console.log('Sample Biomass Projection Data:', data)
+      return data
+    }
+    
+    const lastRecord = biweeklyRecords[0]
+    const growthRate = calculateAvgDailyGrowth(cages, dailyRecords, biweeklyRecords)
+    
+    const projection = []
+    let currentDate = new Date()
+    let currentBiomass = lastRecord.average_body_weight
+    
+    for (let i = 0; i < 30; i++) {
+      currentDate.setDate(currentDate.getDate() + 1)
+      currentBiomass += parseFloat(growthRate)
+      
+      projection.push({
+        date: new Date(currentDate).toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+        }),
+        projected: currentBiomass,
+        target: 500
+      })
+    }
+    console.log('Biomass Projection Data:', projection)
+    return projection
+  }
+
+  // Initialize data
+  const mortalityData = prepareMortalityData()
+  const feedEfficiencyData = prepareFeedEfficiencyData()
+  const biomassProjection = prepareBiomassProjection()
+
+  // Add function to generate sparkline data
+  const generateSparklineData = (value, trend) => {
+    const data = []
+    const points = 7
+    const baseValue = value * 0.8
+    const range = value * 0.4
+    
+    for (let i = 0; i < points; i++) {
+      data.push({
+        value: baseValue + (Math.random() * range)
+      })
+    }
+    
+    // Add the current value
+    data.push({ value })
+    return data
+  }
+
+  // Add color mapping
+  const colorMap = {
+    blue: '#2563eb',
+    red: '#dc2626',
+    green: '#16a34a',
+    yellow: '#ca8a04',
+    purple: '#9333ea',
+    indigo: '#4f46e5',
+    pink: '#db2777',
+    teal: '#0d9488'
+  }
+
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
+      {/* Time Range Selector */}
+      <div className="flex justify-end space-x-2">
+        {['7d', '30d', '90d', '1y'].map(range => (
+          <button
+            key={range}
+            onClick={() => setTimeRange(range)}
+            className={`px-3 py-1 rounded-md text-sm ${
+              timeRange === range
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {range}
+          </button>
+        ))}
+      </div>
+
+      {/* Summary Cards with Trends */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div
-          className="bg-blue-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow duration-300"
-          onClick={() => router.push('/cages')}
-        >
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-3 rounded-full mr-4">
-              <Droplets className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">
-                Active Cages
+        {[
+          {
+            title: 'Active Cages',
+            value: metrics.totalActiveCages,
+            icon: Droplets,
+            color: 'blue',
+            trend: calculateTrend(metrics.totalActiveCages, 5),
+            tooltip: 'Number of currently active fish cages',
+            unit: 'cages',
+            description: 'Total active production units'
+          },
+          {
+            title: 'Average FCR',
+            value: metrics.averageFCR,
+            icon: Calculator,
+            color: 'red',
+            trend: calculateTrend(parseFloat(metrics.averageFCR), 1.5),
+            tooltip: 'Feed Conversion Ratio - lower is better',
+            unit: '',
+            description: 'Feed efficiency indicator'
+          },
+          {
+            title: 'Total Biomass',
+            value: metrics.totalBiomass,
+            icon: Scale,
+            color: 'green',
+            trend: calculateTrend(metrics.totalBiomass, 1000),
+            tooltip: 'Total biomass of all fish cages',
+            unit: 'kg',
+            description: 'Current total fish weight'
+          },
+          {
+            title: 'Mortality Rate',
+            value: metrics.mortalityRate,
+            icon: AlertTriangle,
+            color: 'yellow',
+            trend: calculateTrend(parseFloat(metrics.mortalityRate), 2.5),
+            tooltip: 'Percentage of fish that die each day',
+            unit: '%',
+            description: 'Daily mortality percentage'
+          },
+          {
+            title: 'Avg. Daily Growth',
+            value: metrics.avgDailyGrowth,
+            icon: TrendingUp,
+            color: 'purple',
+            trend: calculateTrend(parseFloat(metrics.avgDailyGrowth), 1),
+            tooltip: 'Average daily weight gain',
+            unit: 'g/day',
+            description: 'Daily growth rate'
+          },
+          {
+            title: 'Days to Harvest',
+            value: metrics.daysToHarvest,
+            icon: Calendar,
+            color: 'indigo',
+            trend: calculateTrend(parseFloat(metrics.daysToHarvest), 10),
+            tooltip: 'Time until fish are ready for harvest',
+            unit: 'days',
+            description: 'Time to target weight'
+          },
+          {
+            title: 'Feed Cost/kg',
+            value: metrics.feedCostPerKg,
+            icon: DollarSign,
+            color: 'pink',
+            trend: calculateTrend(parseFloat(metrics.feedCostPerKg), 0.1),
+            tooltip: 'Cost of feed per kilogram of fish',
+            unit: '₵',
+            description: 'Feed cost efficiency'
+          },
+          {
+            title: 'Survival Rate',
+            value: metrics.survivalRate,
+            icon: Percent,
+            color: 'teal',
+            trend: calculateTrend(parseFloat(metrics.survivalRate), 50),
+            tooltip: 'Percentage of fish that survive',
+            unit: '%',
+            description: 'Overall survival rate'
+          },
+        ].map((metric, index) => {
+          const sparklineData = generateSparklineData(
+            parseFloat(metric.value) || 0,
+            metric.trend
+          )
+          
+          return (
+            <div
+              key={index}
+              className={`bg-${metric.color}-50 rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className={`bg-${metric.color}-100 p-3 rounded-full mr-4`}>
+                    <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">
+                      {metric.title}
+                    </div>
+                    <div className="text-2xl font-semibold text-gray-900">
+                      {metric.unit === '₵' ? metric.unit : ''}{metric.value}
+                      {metric.unit !== '₵' ? metric.unit : ''}
+                      {metric.trend && (
+                        <span className={`ml-2 text-sm ${
+                          metric.trend.direction === 'up' ? 'text-green-600' : 
+                          metric.trend.direction === 'down' ? 'text-red-600' : 
+                          'text-gray-600'
+                        }`}>
+                          {metric.trend.direction === 'up' ? <ArrowUp className="inline w-4 h-4" /> : 
+                           metric.trend.direction === 'down' ? <ArrowDown className="inline w-4 h-4" /> : 
+                           ''}
+                          {metric.trend.value}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 cursor-help" title={metric.tooltip}>
+                  ℹ️
+                </div>
               </div>
-              <div className="text-2xl font-semibold text-blue-600">
-                {metrics.totalActiveCages}
+              
+              {/* Mini sparkline chart */}
+              <div className="h-12 mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={sparklineData}>
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke={colorMap[metric.color]}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Description */}
+              <div className="mt-2 text-xs text-gray-500">
+                {metric.description}
+              </div>
+              
+              {/* Additional info based on metric type */}
+              {metric.title === 'Active Cages' && (
+                <div className="mt-2 text-xs text-gray-500">
+                  {cages.filter(c => c.status === 'active').length} currently stocked
+                </div>
+              )}
+              {metric.title === 'Total Biomass' && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Target: 5000 kg
+                </div>
+              )}
+              {metric.title === 'Mortality Rate' && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Target: &lt; 2%
+                </div>
+              )}
+              {metric.title === 'Feed Cost/kg' && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Budget: ₵1.50/kg
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Charts Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-medium text-gray-900">Performance Analytics</h2>
+          <button
+            onClick={() => setExpandedSections(prev => ({...prev, charts: !prev.charts}))}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            {expandedSections.charts ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
+        </div>
+        
+        {expandedSections.charts && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Growth Performance Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Growth Performance</h3>
+              <div className="h-64">
+                {loading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : growthData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLineChart
+                      data={growthData}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date"
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        label={{ 
+                          value: 'Weight (g)', 
+                          angle: -90, 
+                          position: 'insideLeft',
+                          style: { textAnchor: 'middle' }
+                        }}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} g`, 'Weight']}
+                        labelFormatter={(label) => `Date: ${label}`}
+                      />
+                      <Legend />
+                      {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                        const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+                        return (
+                          <Line
+                            key={cage.id}
+                            type="monotone"
+                            dataKey={cage.name}
+                            stroke={colors[index % colors.length]}
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            activeDot={{ r: 6 }}
+                          />
+                        )
+                      })}
+                    </RechartsLineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No growth data available
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Feed Consumption Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Feed Consumption</h3>
+              <div className="h-64">
+                {loading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : feedData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart
+                      data={feedData}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date"
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        label={{ 
+                          value: 'Feed Amount (kg)', 
+                          angle: -90, 
+                          position: 'insideLeft',
+                          style: { textAnchor: 'middle' }
+                        }}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} kg`, 'Feed Amount']}
+                        labelFormatter={(label) => `Date: ${label}`}
+                      />
+                      <Legend />
+                      {cages.filter(cage => cage.status === 'active').map((cage, index) => {
+                        const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+                        return (
+                          <Bar
+                            key={cage.id}
+                            dataKey={cage.name}
+                            fill={colors[index % colors.length]}
+                            stackId="feed"
+                          />
+                        )
+                      })}
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No feed data available
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mortality Trend Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Mortality Trend</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={mortalityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                    <Tooltip />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="mortality"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                      fillOpacity={0.3}
+                    />
+                    <Area
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="mortalityRate"
+                      stroke="#82ca9d"
+                      fill="#82ca9d"
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Feed Efficiency Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Feed Efficiency (FCR)</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={feedEfficiencyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="fcr"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Biomass Projection Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Biomass Projection</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={biomassProjection}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="projected"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      stroke="#82ca9d"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Water Quality Chart */}
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">Water Quality Parameters</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={waterQualityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                    <Tooltip />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="temperature"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="oxygen"
+                      stroke="#82ca9d"
+                      strokeWidth={2}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="bg-red-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-red-100 p-3 rounded-full mr-4">
-            <Calculator className="w-6 h-6 text-red-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Average FCR
-            </div>
-            <div className="text-2xl font-semibold text-red-600">
-              {metrics.averageFCR}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-green-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-green-100 p-3 rounded-full mr-4">
-            <Scale className="w-6 h-6 text-green-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Total Biomass
-            </div>
-            <div className="text-2xl font-semibold text-green-600">
-              {metrics.totalBiomass} kg
-            </div>
+      {/* Recent Stockings Section */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="font-medium text-gray-700">Recent Stockings</h2>
+          <div className="flex items-center space-x-4">
+            <Link href="/stocking-management">
+              <button className="text-sm text-indigo-600 hover:text-indigo-800">
+                View All Stockings
+              </button>
+            </Link>
+            <button
+              onClick={() => setExpandedSections(prev => ({...prev, stockings: !prev.stockings}))}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              {expandedSections.stockings ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
-        <div className="bg-yellow-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-yellow-100 p-3 rounded-full mr-4">
-            <AlertTriangle className="w-6 h-6 text-yellow-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Mortality Rate
-            </div>
-            <div className="text-2xl font-semibold text-yellow-600">
-              {metrics.mortalityRate}%
-            </div>
-          </div>
-        </div>
+        {expandedSections.stockings && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Cage
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Stocking Date
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    DOC
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Initial Count
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Initial ABW (g)
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Initial Biomass (kg)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {cages.map((cage) => {
+                  // Calculate DOC (Days of Culture)
+                  const stockingDate = new Date(cage.stocking_date)
+                  const today = new Date()
+                  const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
 
-        {/* New Analytics Cards */}
-        <div className="bg-purple-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-purple-100 p-3 rounded-full mr-4">
-            <TrendingUp className="w-6 h-6 text-purple-600" />
+                  return (
+                    <tr key={cage.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {cage.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(cage.stocking_date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {doc} days
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cage.initial_count?.toLocaleString() || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cage.initial_abw?.toFixed(1) || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {cage.initial_biomass?.toFixed(1) || 'N/A'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Avg. Daily Growth
-            </div>
-            <div className="text-2xl font-semibold text-purple-600">
-              {metrics.avgDailyGrowth} g/day
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-indigo-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-indigo-100 p-3 rounded-full mr-4">
-            <Calendar className="w-6 h-6 text-indigo-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Days to Harvest
-            </div>
-            <div className="text-2xl font-semibold text-indigo-600">
-              {metrics.daysToHarvest}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-pink-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-pink-100 p-3 rounded-full mr-4">
-            <DollarSign className="w-6 h-6 text-pink-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Feed Cost/kg
-            </div>
-            <div className="text-2xl font-semibold text-pink-600">
-              ₵{metrics.feedCostPerKg}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-teal-50 rounded-lg shadow p-6 flex items-center">
-          <div className="bg-teal-100 p-3 rounded-full mr-4">
-            <Percent className="w-6 h-6 text-teal-600" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-500">
-              Survival Rate
-            </div>
-            <div className="text-2xl font-semibold text-teal-600">
-              {metrics.survivalRate}%
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -583,222 +1217,6 @@ function Dashboard({ selectedCage }) {
             Manage Feed Suppliers
           </button>
         </Link>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="font-medium text-gray-700 mb-4">
-            Growth Performance
-          </h2>
-          <div className="h-64">
-            {loading ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              </div>
-            ) : growthData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsLineChart
-                  data={growthData}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date"
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    label={{ 
-                      value: 'Weight (g)', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      style: { textAnchor: 'middle' }
-                    }}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [`${value} g`, 'Weight']}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Legend />
-                  {cages.filter(cage => cage.status === 'active').map((cage, index) => {
-                    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
-                    return (
-                      <Line
-                        key={cage.id}
-                        type="monotone"
-                        dataKey={cage.name}
-                        stroke={colors[index % colors.length]}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    )
-                  })}
-                </RechartsLineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                No growth data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="font-medium text-gray-700 mb-4">
-            Feed Consumption
-          </h2>
-          <div className="h-64">
-            {loading ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              </div>
-            ) : feedData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                  data={feedData}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date"
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    label={{ 
-                      value: 'Feed Amount (kg)', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      style: { textAnchor: 'middle' }
-                    }}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [`${value} kg`, 'Feed Amount']}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Legend />
-                  {cages.filter(cage => cage.status === 'active').map((cage, index) => {
-                    const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
-                    return (
-                      <Bar
-                        key={cage.id}
-                        dataKey={cage.name}
-                        fill={colors[index % colors.length]}
-                        stackId="feed"
-                      />
-                    )
-                  })}
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                No feed data available
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Stockings Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="font-medium text-gray-700">Recent Stockings</h2>
-          <Link href="/stocking-management">
-            <button className="text-sm text-indigo-600 hover:text-indigo-800">
-              View All Stockings
-            </button>
-          </Link>
-        </div>
-
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Cage
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Stocking Date
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                DOC
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Initial Count
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Initial ABW (g)
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Initial Biomass (kg)
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {cages.map((cage) => {
-              // Calculate DOC (Days of Culture)
-              const stockingDate = new Date(cage.stocking_date)
-              const today = new Date()
-              const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
-
-              return (
-                <tr key={cage.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {cage.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(cage.stocking_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {doc} days
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {cage.initial_count?.toLocaleString() || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {cage.initial_abw?.toFixed(1) || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {cage.initial_biomass?.toFixed(1) || 'N/A'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
       </div>
     </div>
   )

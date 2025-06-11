@@ -71,15 +71,45 @@ CREATE TABLE feed_suppliers (
 -- Feed types table
 CREATE TABLE feed_types (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  current_stock DECIMAL(10,2) DEFAULT 0,
+  minimum_stock DECIMAL(10,2) DEFAULT 0,
+  price_per_kg DECIMAL(10,2) NOT NULL,
   supplier_id UUID REFERENCES feed_suppliers(id),
-  pellet_size TEXT,
-  protein_percentage NUMERIC(5, 2),
-  price_per_kg NUMERIC(10, 2) NOT NULL,
-  active BOOLEAN DEFAULT TRUE,
+  active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+  deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Feed Purchases Table
+CREATE TABLE feed_purchases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    feed_type_id UUID REFERENCES feed_types(id),
+    quantity DECIMAL(10,2) NOT NULL,
+    price_per_kg DECIMAL(10,2) NOT NULL,
+    purchase_date DATE NOT NULL,
+    supplier_id UUID REFERENCES feed_suppliers(id),
+    batch_number VARCHAR(50),
+    expiry_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Feed Usage Table
+CREATE TABLE feed_usage (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    feed_type_id UUID REFERENCES feed_types(id),
+    cage_id UUID REFERENCES cages(id),
+    quantity DECIMAL(10,2) NOT NULL,
+    usage_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Daily records table
@@ -497,3 +527,92 @@ $$;
 ALTER TABLE cages ADD COLUMN code VARCHAR(10) UNIQUE NOT NULL;
 -- Generate sequential codes for existing cages
 UPDATE cages SET code = CONCAT('C', LPAD(id::text, 3, '0')) WHERE code IS NULL;
+
+-- Function to update feed stock on purchase
+CREATE OR REPLACE FUNCTION update_feed_stock_on_purchase()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE feed_types
+    SET current_stock = current_stock + NEW.quantity,
+        updated_at = NOW()
+    WHERE id = NEW.feed_type_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for feed stock update on purchase
+CREATE TRIGGER feed_stock_update_on_purchase
+    AFTER INSERT ON feed_purchases
+    FOR EACH ROW
+    EXECUTE FUNCTION update_feed_stock_on_purchase();
+
+-- Function to update feed stock on usage
+CREATE OR REPLACE FUNCTION update_feed_stock_on_usage()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE feed_types
+    SET current_stock = current_stock - NEW.quantity,
+        updated_at = NOW()
+    WHERE id = NEW.feed_type_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for feed stock update on usage
+CREATE TRIGGER feed_stock_update_on_usage
+    AFTER INSERT ON feed_usage
+    FOR EACH ROW
+    EXECUTE FUNCTION update_feed_stock_on_usage();
+
+-- Function to check for low stock
+CREATE OR REPLACE FUNCTION check_feed_low_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.current_stock < NEW.minimum_stock THEN
+        RAISE NOTICE 'Low stock alert for feed type %: Current stock (%) is below minimum stock (%)',
+            NEW.name, NEW.current_stock, NEW.minimum_stock;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for low stock check
+CREATE TRIGGER feed_low_stock_check
+    AFTER UPDATE OF current_stock ON feed_types
+    FOR EACH ROW
+    EXECUTE FUNCTION check_feed_low_stock();
+
+-- Row Level Security Policies
+ALTER TABLE feed_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feed_purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feed_usage ENABLE ROW LEVEL SECURITY;
+
+-- Feed Types Policies
+CREATE POLICY "Allow read access for all users" ON feed_types
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON feed_types
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow update for authenticated users" ON feed_types
+    FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Feed Purchases Policies
+CREATE POLICY "Allow read access for all users" ON feed_purchases
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON feed_purchases
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow update for authenticated users" ON feed_purchases
+    FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Feed Usage Policies
+CREATE POLICY "Allow read access for all users" ON feed_usage
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON feed_usage
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow update for authenticated users" ON feed_usage
+    FOR UPDATE USING (auth.role() = 'authenticated');
