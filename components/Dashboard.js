@@ -670,83 +670,91 @@ function Dashboard({ selectedCage }) {
         {[
           {
             title: 'Active Cages',
-            value: metrics.totalActiveCages,
+            value: metrics.totalActiveCages || 0,
             icon: Droplets,
             color: 'blue',
-            trend: calculateTrend(metrics.totalActiveCages, 5),
+            trend: calculateTrend(metrics.totalActiveCages || 0, 5),
             tooltip: 'Number of currently active fish cages',
             unit: 'cages',
-            description: 'Total active production units'
-          },
-          {
-            title: 'Average FCR',
-            value: metrics.averageFCR,
-            icon: Calculator,
-            color: 'red',
-            trend: calculateTrend(parseFloat(metrics.averageFCR), 1.5),
-            tooltip: 'Feed Conversion Ratio - lower is better',
-            unit: '',
-            description: 'Feed efficiency indicator'
+            description: 'Total active production units',
+            subtext: `${cages.filter(c => c.status === 'active').length} currently stocked`
           },
           {
             title: 'Total Biomass',
-            value: metrics.totalBiomass,
+            value: metrics.totalBiomass || 0,
             icon: Scale,
             color: 'green',
-            trend: calculateTrend(metrics.totalBiomass, 1000),
+            trend: calculateTrend(metrics.totalBiomass || 0, 1000),
             tooltip: 'Total biomass of all fish cages',
             unit: 'kg',
-            description: 'Current total fish weight'
+            description: 'Current total fish weight',
+            subtext: `Target: ${Math.round((metrics.totalBiomass || 0) * 1.2)} kg`
+          },
+          {
+            title: 'Average FCR',
+            value: metrics.averageFCR === 'N/A' ? 0 : parseFloat(metrics.averageFCR),
+            icon: Calculator,
+            color: 'red',
+            trend: calculateTrend(metrics.averageFCR === 'N/A' ? 0 : parseFloat(metrics.averageFCR), 1.5),
+            tooltip: 'Feed Conversion Ratio - lower is better',
+            unit: '',
+            description: 'Feed efficiency indicator',
+            subtext: 'Target: < 1.5'
           },
           {
             title: 'Mortality Rate',
-            value: metrics.mortalityRate,
+            value: metrics.mortalityRate === 'N/A' ? 0 : parseFloat(metrics.mortalityRate),
             icon: AlertTriangle,
             color: 'yellow',
-            trend: calculateTrend(parseFloat(metrics.mortalityRate), 2.5),
+            trend: calculateTrend(metrics.mortalityRate === 'N/A' ? 0 : parseFloat(metrics.mortalityRate), 2.5),
             tooltip: 'Percentage of fish that die each day',
             unit: '%',
-            description: 'Daily mortality percentage'
+            description: 'Daily mortality percentage',
+            subtext: 'Target: < 2%'
           },
           {
             title: 'Avg. Daily Growth',
-            value: metrics.avgDailyGrowth,
+            value: metrics.avgDailyGrowth === 'N/A' ? 0 : parseFloat(metrics.avgDailyGrowth),
             icon: TrendingUp,
             color: 'purple',
-            trend: calculateTrend(parseFloat(metrics.avgDailyGrowth), 1),
+            trend: calculateTrend(metrics.avgDailyGrowth === 'N/A' ? 0 : parseFloat(metrics.avgDailyGrowth), 1),
             tooltip: 'Average daily weight gain',
             unit: 'g/day',
-            description: 'Daily growth rate'
+            description: 'Daily growth rate',
+            subtext: 'Target: > 2g/day'
           },
           {
             title: 'Days to Harvest',
-            value: metrics.daysToHarvest,
+            value: metrics.daysToHarvest === 'N/A' ? 0 : parseFloat(metrics.daysToHarvest),
             icon: Calendar,
             color: 'indigo',
-            trend: calculateTrend(parseFloat(metrics.daysToHarvest), 10),
+            trend: calculateTrend(metrics.daysToHarvest === 'N/A' ? 0 : parseFloat(metrics.daysToHarvest), 10),
             tooltip: 'Time until fish are ready for harvest',
             unit: 'days',
-            description: 'Time to target weight'
+            description: 'Time to target weight',
+            subtext: 'Target: 180 days'
           },
           {
             title: 'Feed Cost/kg',
-            value: metrics.feedCostPerKg,
+            value: metrics.feedCostPerKg === 'N/A' ? 0 : parseFloat(metrics.feedCostPerKg),
             icon: DollarSign,
             color: 'pink',
-            trend: calculateTrend(parseFloat(metrics.feedCostPerKg), 0.1),
+            trend: calculateTrend(metrics.feedCostPerKg === 'N/A' ? 0 : parseFloat(metrics.feedCostPerKg), 0.1),
             tooltip: 'Cost of feed per kilogram of fish',
             unit: '₵',
-            description: 'Feed cost efficiency'
+            description: 'Feed cost efficiency',
+            subtext: 'Budget: ₵1.50/kg'
           },
           {
             title: 'Survival Rate',
-            value: metrics.survivalRate,
+            value: metrics.survivalRate === 'N/A' ? 0 : parseFloat(metrics.survivalRate),
             icon: Percent,
             color: 'teal',
-            trend: calculateTrend(parseFloat(metrics.survivalRate), 50),
+            trend: calculateTrend(metrics.survivalRate === 'N/A' ? 0 : parseFloat(metrics.survivalRate), 50),
             tooltip: 'Percentage of fish that survive',
             unit: '%',
-            description: 'Overall survival rate'
+            description: 'Overall survival rate',
+            subtext: 'Target: > 95%'
           },
         ].map((metric, index) => {
           const sparklineData = generateSparklineData(
@@ -757,81 +765,58 @@ function Dashboard({ selectedCage }) {
           return (
             <div
               key={index}
-              className={`bg-${metric.color}-50 rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
+              className={`bg-${metric.color}-50 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-${metric.color}-100`}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className={`bg-${metric.color}-100 p-3 rounded-full mr-4`}>
-                    <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-500">
-                      {metric.title}
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className={`p-2 rounded-lg bg-${metric.color}-100 mr-3`}>
+                      <metric.icon className={`w-5 h-5 text-${metric.color}-600`} />
                     </div>
-                    <div className="text-2xl font-semibold text-gray-900">
-                      {metric.unit === '₵' ? metric.unit : ''}{metric.value}
-                      {metric.unit !== '₵' ? metric.unit : ''}
-                      {metric.trend && (
-                        <span className={`ml-2 text-sm ${
-                          metric.trend.direction === 'up' ? 'text-green-600' : 
-                          metric.trend.direction === 'down' ? 'text-red-600' : 
-                          'text-gray-600'
-                        }`}>
-                          {metric.trend.direction === 'up' ? <ArrowUp className="inline w-4 h-4" /> : 
-                           metric.trend.direction === 'down' ? <ArrowDown className="inline w-4 h-4" /> : 
-                           ''}
-                          {metric.trend.value}%
-                        </span>
-                      )}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-600">{metric.title}</h3>
+                      <div className="flex items-baseline">
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {metric.unit === '₵' ? metric.unit : ''}{metric.value.toFixed(metric.unit === '%' ? 1 : 0)}
+                          {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
+                        </p>
+                        {metric.trend && metric.trend.value > 0 && (
+                          <span className={`ml-2 text-sm flex items-center ${
+                            metric.trend.direction === 'up' ? 'text-green-600' : 
+                            metric.trend.direction === 'down' ? 'text-red-600' : 
+                            'text-gray-600'
+                          }`}>
+                            {metric.trend.direction === 'up' ? <ArrowUp className="w-3 h-3 mr-1" /> : 
+                             metric.trend.direction === 'down' ? <ArrowDown className="w-3 h-3 mr-1" /> : 
+                             ''}
+                            {metric.trend.value}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500 cursor-help" title={metric.tooltip}>
-                  ℹ️
+                
+                {/* Mini sparkline chart */}
+                <div className="h-10 mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLineChart data={sparklineData}>
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke={colorMap[metric.color]}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </RechartsLineChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Description and subtext */}
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <p className="text-xs text-gray-600">{metric.subtext}</p>
                 </div>
               </div>
-              
-              {/* Mini sparkline chart */}
-              <div className="h-12 mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsLineChart data={sparklineData}>
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke={colorMap[metric.color]}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </RechartsLineChart>
-                </ResponsiveContainer>
-              </div>
-              
-              {/* Description */}
-              <div className="mt-2 text-xs text-gray-500">
-                {metric.description}
-              </div>
-              
-              {/* Additional info based on metric type */}
-              {metric.title === 'Active Cages' && (
-                <div className="mt-2 text-xs text-gray-500">
-                  {cages.filter(c => c.status === 'active').length} currently stocked
-                </div>
-              )}
-              {metric.title === 'Total Biomass' && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Target: 5000 kg
-                </div>
-              )}
-              {metric.title === 'Mortality Rate' && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Target: &lt; 2%
-                </div>
-              )}
-              {metric.title === 'Feed Cost/kg' && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Budget: ₵1.50/kg
-                </div>
-              )}
             </div>
           )
         })}
