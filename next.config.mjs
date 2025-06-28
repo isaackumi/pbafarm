@@ -16,11 +16,6 @@ const nextConfig = {
     
     return config
   },
-  // Disable experimental features that might cause issues
-  experimental: {
-    // Disable turbo for now to fix chunk loading
-    turbo: false,
-  },
 }
 
 export default nextConfig
