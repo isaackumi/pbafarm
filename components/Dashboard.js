@@ -1189,6 +1189,13 @@ function Dashboard({ selectedCage }) {
           </button>
         </Link>
 
+        <Link href="/biweekly-records">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            <Scale className="w-4 h-4 mr-2" />
+            View Bi-weekly Records
+          </button>
+        </Link>
+
         <Link href="/feed-types">
           <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700">
             <Plus className="w-4 h-4 mr-2" />

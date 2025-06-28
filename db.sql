@@ -620,88 +620,94 @@ CREATE POLICY "Allow update for authenticated users" ON feed_usage
 -- Add RLS policies for biweekly_records
 ALTER TABLE biweekly_records ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view biweekly records"
+-- Create more permissive RLS policies for biweekly_records
+-- Allow all authenticated users to view biweekly records
+CREATE POLICY "Allow authenticated users to view biweekly records"
     ON biweekly_records FOR SELECT
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager', 'supervisor')
-        )
-    ));
+    USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Users can insert biweekly records"
+-- Allow authenticated users to insert biweekly records
+CREATE POLICY "Allow authenticated users to insert biweekly records"
     ON biweekly_records FOR INSERT
-    WITH CHECK (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager', 'supervisor')
-        )
-    ));
+    WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Users can update biweekly records"
+-- Allow users to update their own records or if they have admin/manager roles
+CREATE POLICY "Allow users to update biweekly records"
     ON biweekly_records FOR UPDATE
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager')
+    USING (
+        auth.role() = 'authenticated' AND (
+            created_by = auth.uid() OR
+            auth.uid() IN (
+                SELECT user_id FROM user_roles
+                WHERE role_id IN (
+                    SELECT id FROM roles
+                    WHERE name IN ('admin', 'manager', 'super_admin')
+                )
+            )
         )
-    ));
+    );
 
-CREATE POLICY "Users can delete biweekly records"
+-- Allow users to delete their own records or if they have admin/manager roles
+CREATE POLICY "Allow users to delete biweekly records"
     ON biweekly_records FOR DELETE
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager')
+    USING (
+        auth.role() = 'authenticated' AND (
+            created_by = auth.uid() OR
+            auth.uid() IN (
+                SELECT user_id FROM user_roles
+                WHERE role_id IN (
+                    SELECT id FROM roles
+                    WHERE name IN ('admin', 'manager', 'super_admin')
+                )
+            )
         )
-    ));
+    );
 
 -- Add RLS policies for biweekly_sampling
 ALTER TABLE biweekly_sampling ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view biweekly sampling"
+-- Create more permissive RLS policies for biweekly_sampling
+-- Allow all authenticated users to view biweekly sampling
+CREATE POLICY "Allow authenticated users to view biweekly sampling"
     ON biweekly_sampling FOR SELECT
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager', 'supervisor')
-        )
-    ));
+    USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Users can insert biweekly sampling"
+-- Allow authenticated users to insert biweekly sampling
+CREATE POLICY "Allow authenticated users to insert biweekly sampling"
     ON biweekly_sampling FOR INSERT
-    WITH CHECK (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager', 'supervisor')
-        )
-    ));
+    WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Users can update biweekly sampling"
+-- Allow users to update their own records or if they have admin/manager roles
+CREATE POLICY "Allow users to update biweekly sampling"
     ON biweekly_sampling FOR UPDATE
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager')
+    USING (
+        auth.role() = 'authenticated' AND (
+            created_by = auth.uid() OR
+            auth.uid() IN (
+                SELECT user_id FROM user_roles
+                WHERE role_id IN (
+                    SELECT id FROM roles
+                    WHERE name IN ('admin', 'manager', 'super_admin')
+                )
+            )
         )
-    ));
+    );
 
-CREATE POLICY "Users can delete biweekly sampling"
+-- Allow users to delete their own records or if they have admin/manager roles
+CREATE POLICY "Allow users to delete biweekly sampling"
     ON biweekly_sampling FOR DELETE
-    USING (auth.uid() IN (
-        SELECT user_id FROM user_roles
-        WHERE role_id IN (
-            SELECT id FROM roles
-            WHERE name IN ('admin', 'manager')
+    USING (
+        auth.role() = 'authenticated' AND (
+            created_by = auth.uid() OR
+            auth.uid() IN (
+                SELECT user_id FROM user_roles
+                WHERE role_id IN (
+                    SELECT id FROM roles
+                    WHERE name IN ('admin', 'manager', 'super_admin')
+                )
+            )
         )
-    ));
+    );
 
 -- Create indexes for better query performance
 CREATE INDEX idx_biweekly_records_cage_id ON biweekly_records(cage_id);

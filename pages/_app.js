@@ -9,28 +9,32 @@ import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
 import { AnalyticsProvider } from '../contexts/AnalyticsContext'
 import { ToastProvider } from '../components/Toast'
+import { Provider } from 'react-redux'
+import { store } from '../store'
 import '../styles/globals.css'
 
 // This HOC (Higher-Order Component) wraps the entire app
 function AppWrapper({ Component, pageProps }) {
   return (
-    <ThemeProvider>
-      <SettingsProvider>
-        <AuthProvider>
-          <DataProvider>
-            <ToastProvider>
-              <NotificationProvider>
-                <AnalyticsProvider>
-                  <AuthWrapper>
-                    <Component {...pageProps} />
-                  </AuthWrapper>
-                </AnalyticsProvider>
-              </NotificationProvider>
-            </ToastProvider>
-          </DataProvider>
-        </AuthProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+    <Provider store={store}>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <DataProvider>
+              <ToastProvider>
+                <NotificationProvider>
+                  <AnalyticsProvider>
+                    <AuthWrapper>
+                      <Component {...pageProps} />
+                    </AuthWrapper>
+                  </AnalyticsProvider>
+                </NotificationProvider>
+              </ToastProvider>
+            </DataProvider>
+          </AuthProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </Provider>
   )
 }
 
@@ -73,6 +77,17 @@ function AuthWrapper({ children }) {
 
   // Render children
   return children
+}
+
+// Configure static page generation
+AppWrapper.getInitialProps = async ({ Component, ctx }) => {
+  let pageProps = {}
+
+  if (Component.getInitialProps) {
+    pageProps = await Component.getInitialProps(ctx)
+  }
+
+  return { pageProps }
 }
 
 export default AppWrapper

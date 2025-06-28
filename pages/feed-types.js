@@ -14,8 +14,15 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { feedTypeService } from '../lib/feedTypeService'
 import { supabase } from '../lib/supabase'
+import { useSelector, useDispatch } from 'react-redux'
+import {
+  fetchFeedTypes,
+  createFeedType,
+  updateFeedType,
+  deleteFeedType,
+  clearFeedError
+} from '../store/slices/feedSlice'
 
 export default function FeedTypesPage() {
   return (
@@ -28,9 +35,9 @@ export default function FeedTypesPage() {
 function FeedTypes() {
   const router = useRouter()
   const { showToast } = useToast()
+  const dispatch = useDispatch()
+  const { feedTypes, loading, error } = useSelector(state => state.feed)
 
-  const [feedTypes, setFeedTypes] = useState([])
-  const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingType, setEditingType] = useState(null)
@@ -43,32 +50,20 @@ function FeedTypes() {
     active: true,
   })
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [suppliers, setSuppliers] = useState([])
 
-  // Fetch feed types on mount
+  // Fetch feed types and suppliers on mount
   useEffect(() => {
-    fetchFeedTypes()
+    dispatch(fetchFeedTypes())
     fetchSuppliers()
-  }, [])
+  }, [dispatch])
 
-  const fetchFeedTypes = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await feedTypeService.getAllFeedTypes()
-
-      if (error) throw error
-
-      setFeedTypes(data || [])
-    } catch (error) {
-      console.error('Error fetching feed types:', error)
-      showToast('error', 'Failed to load feed types')
-      setError('Failed to load feed types. Please try again.')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (error) {
+      showToast('error', error)
+      dispatch(clearFeedError())
     }
-  }
+  }, [error, showToast, dispatch])
 
   const fetchSuppliers = async () => {
     try {
@@ -91,125 +86,49 @@ function FeedTypes() {
     }))
   }
 
-  const handleAddFeedType = () => {
+  const handleAdd = async () => {
+    await dispatch(createFeedType(formData))
+    setShowAddModal(false)
     setFormData({
       name: '',
       price_per_kg: '0.00',
       protein_percentage: '',
       pellet_size: '',
-      supplier_id: suppliers.length > 0 ? suppliers[0].id : '',
+      supplier_id: '',
       active: true,
     })
-    setError('')
-    setSuccess('')
-    setShowAddModal(true)
   }
 
-  const handleEditFeedType = (feedType) => {
-    setEditingType(feedType)
+  const handleEdit = (type) => {
+    setEditingType(type)
     setFormData({
-      name: feedType.name,
-      price_per_kg: feedType.price_per_kg
-        ? feedType.price_per_kg.toString()
-        : '0.00',
-      protein_percentage: feedType.protein_percentage
-        ? feedType.protein_percentage.toString()
-        : '',
-      pellet_size: feedType.pellet_size || '',
-      supplier_id: feedType.supplier_id || (suppliers.length > 0 ? suppliers[0].id : ''),
-      active: feedType.active,
+      name: type.name,
+      price_per_kg: type.price_per_kg?.toString() || '0.00',
+      protein_percentage: type.protein_percentage?.toString() || '',
+      pellet_size: type.pellet_size || '',
+      supplier_id: type.supplier_id || '',
+      active: type.active,
     })
-    setError('')
-    setSuccess('')
     setShowEditModal(true)
   }
 
-  const handleDeleteFeedType = async (id) => {
-    try {
-      const { error } = await feedTypeService.deleteFeedType(id)
-
-      if (error) throw error
-
-      showToast('success', 'Feed type deleted successfully')
-      fetchFeedTypes()
-      setDeleteConfirm(null)
-    } catch (error) {
-      console.error('Error deleting feed type:', error)
-      showToast('error', 'Failed to delete feed type')
-      setError('Failed to delete feed type. It may be in use in records.')
-    }
+  const handleUpdate = async () => {
+    await dispatch(updateFeedType({ id: editingType.id, updates: formData }))
+    setShowEditModal(false)
+    setEditingType(null)
+    setFormData({
+      name: '',
+      price_per_kg: '0.00',
+      protein_percentage: '',
+      pellet_size: '',
+      supplier_id: '',
+      active: true,
+    })
   }
 
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    try {
-      if (!formData.name.trim()) {
-        throw new Error('Feed type name is required')
-      }
-      if (!formData.supplier_id) {
-        throw new Error('Supplier is required')
-      }
-      const feedTypeData = {
-        name: formData.name.trim(),
-        price_per_kg: parseFloat(formData.price_per_kg) || 0,
-        protein_percentage: formData.protein_percentage
-          ? parseFloat(formData.protein_percentage)
-          : null,
-        pellet_size: formData.pellet_size.trim() || null,
-        supplier_id: formData.supplier_id,
-        active: formData.active,
-      }
-      const { data, error } = await feedTypeService.createFeedType(feedTypeData)
-      if (error) throw error
-      setSuccess('Feed type created successfully')
-      showToast('success', 'Feed type created successfully')
-      setTimeout(() => {
-        setShowAddModal(false)
-        fetchFeedTypes()
-      }, 1500)
-    } catch (error) {
-      setError(error.message)
-    }
-  }
-
-  const handleSubmitEdit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    try {
-      if (!editingType) return
-      if (!formData.name.trim()) {
-        throw new Error('Feed type name is required')
-      }
-      if (!formData.supplier_id) {
-        throw new Error('Supplier is required')
-      }
-      const feedTypeData = {
-        name: formData.name.trim(),
-        price_per_kg: parseFloat(formData.price_per_kg) || 0,
-        protein_percentage: formData.protein_percentage
-          ? parseFloat(formData.protein_percentage)
-          : null,
-        pellet_size: formData.pellet_size.trim() || null,
-        supplier_id: formData.supplier_id,
-        active: formData.active,
-      }
-      const { data, error } = await feedTypeService.updateFeedType(
-        editingType.id,
-        feedTypeData,
-      )
-      if (error) throw error
-      setSuccess('Feed type updated successfully')
-      showToast('success', 'Feed type updated successfully')
-      setTimeout(() => {
-        setShowEditModal(false)
-        fetchFeedTypes()
-      }, 1500)
-    } catch (error) {
-      setError(error.message)
-    }
+  const handleDelete = async (id) => {
+    await dispatch(deleteFeedType(id))
+    setDeleteConfirm(null)
   }
 
   return (
@@ -230,7 +149,7 @@ function FeedTypes() {
           </div>
 
           <button
-            onClick={handleAddFeedType}
+            onClick={() => setShowAddModal(true)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -294,48 +213,48 @@ function FeedTypes() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {feedTypes.length > 0 ? (
-                  feedTypes.map((feedType) => (
-                    <tr key={feedType.id} className="hover:bg-gray-50">
+                  feedTypes.map((type) => (
+                    <tr key={type.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {feedType.name}
+                          {type.name}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${feedType.price_per_kg?.toFixed(2) || '0.00'}
+                        ${type.price_per_kg?.toFixed(2) || '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {(() => {
-                          const supplier = suppliers.find(s => s.id === feedType.supplier_id)
+                          const supplier = suppliers.find(s => s.id === type.supplier_id)
                           return supplier ? supplier.name : '-'
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            feedType.active
+                            type.active
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {feedType.active ? 'Active' : 'Inactive'}
+                          {type.active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex space-x-3 justify-end">
                           <button
-                            onClick={() => handleEditFeedType(feedType)}
+                            onClick={() => handleEdit(type)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Edit Feed Type"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
 
-                          {deleteConfirm === feedType.id ? (
+                          {deleteConfirm === type.id ? (
                             <>
                               <button
                                 onClick={() =>
-                                  handleDeleteFeedType(feedType.id)
+                                  handleDelete(type.id)
                                 }
                                 className="text-red-600 hover:text-red-800"
                                 title="Confirm Delete"
@@ -352,7 +271,7 @@ function FeedTypes() {
                             </>
                           ) : (
                             <button
-                              onClick={() => setDeleteConfirm(feedType.id)}
+                              onClick={() => setDeleteConfirm(type.id)}
                               className="text-red-600 hover:text-red-800"
                               title="Delete Feed Type"
                             >
@@ -392,19 +311,7 @@ function FeedTypes() {
               Add New Feed Type
             </h3>
 
-            {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
-                {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitAdd} className="space-y-4">
+            <form onSubmit={handleAdd} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name <span className="text-red-500">*</span>
@@ -534,19 +441,7 @@ function FeedTypes() {
               Edit Feed Type
             </h3>
 
-            {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
-                {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitEdit} className="space-y-4">
+            <form onSubmit={handleUpdate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name <span className="text-red-500">*</span>

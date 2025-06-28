@@ -29,23 +29,41 @@ import {
   ChartBar,
   PieChart,
   LineChart,
-  Bell
+  Bell,
+  Layers,
+  LogOut,
+  LayoutGrid,
+  Target,
+  Activity,
+  Shield,
+  Building,
+  FileSpreadsheet,
+  Upload,
+  CheckCircle,
+  Eye,
+  Download,
+  Clock
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
+import { useSelector, useDispatch } from 'react-redux'
+import { signOut } from '../store/slices/authSlice'
 
-const Sidebar = ({ activeTab }) => {
+const Sidebar = () => {
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const dispatch = useDispatch()
   const [collapsed, setCollapsed] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
     production: true,
+    cages: true,
     feed: true,
     inventory: true,
     analytics: true,
-    management: true
+    management: true,
+    admin: true
   })
   const { showToast } = useToast()
 
@@ -55,7 +73,7 @@ const Sidebar = ({ activeTab }) => {
 
   const handleLogout = async () => {
     try {
-      await signOut()
+      await dispatch(signOut())
       showToast('Logged out successfully', 'success')
       router.push('/login')
     } catch (error) {
@@ -104,21 +122,37 @@ const Sidebar = ({ activeTab }) => {
       icon: Fish,
       items: [
         { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { title: 'Daily Records', path: '/daily-entry', icon: Calendar },
-        { title: 'Biweekly ABW', path: '/biweekly-entry', icon: Scale },
-        { title: 'Harvest Data', path: '/harvest-data', icon: Fish },
+        { title: 'Daily Entry', path: '/daily-entry', icon: Calendar },
+        { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale },
+        { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText },
+        { title: 'Harvest Data', path: '/harvest', icon: Package },
+        { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Target },
+        { title: 'Stocking Management', path: '/stocking-management', icon: Activity },
+        { title: 'New Stocking', path: '/stocking', icon: Plus },
       ],
     },
-    feedManagement: {
+    cages: {
+      title: 'Cage Management',
+      icon: LayoutGrid,
+      items: [
+        { title: 'All Cages', path: '/cages', icon: Database },
+        { title: 'Active Cages', path: '/cages/active', icon: Activity },
+        { title: 'Maintenance', path: '/cages/maintenance', icon: AlertTriangle },
+        { title: 'Harvest Ready', path: '/cages/harvest-ready', icon: Target },
+        { title: 'Analytics', path: '/cages/analytics', icon: BarChart2 },
+        { title: 'Settings', path: '/cages/settings', icon: Settings },
+        { title: 'Create Cage', path: '/create-cage', icon: Plus },
+      ],
+    },
+    feed: {
       title: 'Feed Management',
       icon: Package,
       items: [
-        { title: 'Overview', path: '/feed-management/overview', icon: BarChart2 },
-        { title: 'Analytics', path: '/feed-management/analytics', icon: LineChart },
+        { title: 'Overview', path: '/feed-management', icon: BarChart2 },
         { title: 'Feed Types', path: '/feed-types', icon: Package },
         { title: 'Feed Suppliers', path: '/feed-suppliers', icon: Truck },
         { title: 'Feed Purchases', path: '/feed-purchases', icon: ShoppingCart },
-        { title: 'Feed Usage', path: '/feed-usage', icon: Calculator },
+        { title: 'Feed Analytics', path: '/feed-management/analytics', icon: LineChart },
       ],
     },
     inventory: {
@@ -126,34 +160,44 @@ const Sidebar = ({ activeTab }) => {
       icon: Database,
       items: [
         { title: 'Overview', path: '/inventory/overview', icon: BarChart2 },
-        { title: 'Analytics', path: '/inventory/analytics', icon: LineChart },
         { title: 'Stock Levels', path: '/stock-levels', icon: Package },
         { title: 'Alerts', path: '/inventory-alerts', icon: AlertTriangle },
         { title: 'Transactions', path: '/inventory-transactions', icon: FileText },
+        { title: 'Analytics', path: '/inventory/analytics', icon: LineChart },
       ],
     },
     analytics: {
-      title: 'Analytics',
+      title: 'Reports & Analytics',
       icon: BarChart2,
       items: [
-        { title: 'Production Analytics', path: '/analytics/production', icon: ChartBar },
-        { title: 'Financial Analytics', path: '/analytics/financial', icon: DollarSign },
-        { title: 'Performance Metrics', path: '/analytics/performance', icon: TrendingUp },
+        { title: 'Production Report', path: '/report', icon: FileSpreadsheet },
+        { title: 'Export Data', path: '/export', icon: Download },
+        { title: 'Audit Logs', path: '/audit-logs', icon: Eye },
       ],
     },
     management: {
       title: 'Management',
       icon: Settings,
       items: [
-        { title: 'Cage Management', path: '/cage-management', icon: Database },
-        { title: 'User Management', path: '/user-management', icon: Users },
-        { title: 'Settings', path: '/settings', icon: Settings },
+        { title: 'User Management', path: '/users', icon: Users },
+        { title: 'Company Settings', path: '/company-settings', icon: Building },
+        { title: 'Approvals', path: '/approvals', icon: CheckCircle },
+        { title: 'Pending Approval', path: '/pending-approval', icon: Clock },
+        { title: 'Bulk Upload', path: '/bulk-upload', icon: Upload },
+      ],
+    },
+    admin: {
+      title: 'Admin',
+      icon: Shield,
+      items: [
+        { title: 'Admin Dashboard', path: '/admin/admin', icon: LayoutDashboard },
+        { title: 'Company Registrations', path: '/admin/company-registrations', icon: Building },
       ],
     },
   }
 
   return (
-    <div className="h-screen w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+    <div className="fixed top-0 left-0 h-screen w-64 bg-gray-900 border-r border-gray-800 flex flex-col z-40">
       {/* Logo and Brand */}
       <div className="p-4 border-b border-gray-800">
         <Link href="/dashboard" className="flex items-center space-x-2">
@@ -205,16 +249,38 @@ const Sidebar = ({ activeTab }) => {
 
       {/* User Section */}
       <div className="p-4 border-t border-gray-800 bg-gray-800">
-        <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
-            <Users className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-white">
+                {user?.email?.split('@')[0] || 'Admin User'}
+              </p>
+              <p className="text-xs text-gray-400">
+                {user?.email || 'admin@fishfarm.com'}
+              </p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">Admin User</p>
-            <p className="text-xs text-gray-400">admin@fishfarm.com</p>
-          </div>
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            className="text-gray-400 hover:text-white"
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <LogoutConfirmationModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleLogout}
+        />
+      )}
     </div>
   )
 }

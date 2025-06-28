@@ -7,8 +7,12 @@ import {
   AlertCircle,
   CheckCircle,
   Download,
+  Eye,
+  EyeOff,
+  Loader,
 } from 'lucide-react'
 import { useToast } from './Toast'
+import * as XLSX from 'xlsx'
 
 const BulkUploadModal = ({
   isOpen,
@@ -30,29 +34,13 @@ const BulkUploadModal = ({
   const [validationErrors, setValidationErrors] = useState([])
   const [processing, setProcessing] = useState(false)
   const [step, setStep] = useState(1) // 1: Upload, 2: Preview, 3: Confirm
-  const [xlsxLibLoaded, setXlsxLibLoaded] = useState(false)
-  const [xlsxLib, setXlsxLib] = useState(null)
+  const [showErrors, setShowErrors] = useState(false)
+  const [xlsxLibLoaded, setXlsxLibLoaded] = useState(true) // Set to true since we're using static import
 
-  // Dynamically import xlsx library
+  // Set XLSX library as loaded since we're using static import
   useEffect(() => {
-    async function loadXlsx() {
-      try {
-        const XLSX = await import('xlsx')
-        setXlsxLib(XLSX)
-        setXlsxLibLoaded(true)
-      } catch (error) {
-        console.error('Failed to load xlsx library:', error)
-        showToast(
-          'error',
-          'Failed to load Excel parsing library. Please make sure xlsx is installed.',
-        )
-      }
-    }
-
-    if (isOpen) {
-      loadXlsx()
-    }
-  }, [isOpen, showToast])
+    setXlsxLibLoaded(true)
+  }, [])
 
   const resetState = () => {
     setFileData(null)
@@ -94,7 +82,7 @@ const BulkUploadModal = ({
   }
 
   const parseFile = async (file) => {
-    if (!xlsxLibLoaded || !xlsxLib) {
+    if (!xlsxLibLoaded) {
       showToast(
         'error',
         'Excel parsing library not loaded. Please try again or check installation.',
@@ -111,13 +99,13 @@ const BulkUploadModal = ({
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result)
-          const workbook = xlsxLib.read(data, { type: 'array' })
+          const workbook = XLSX.read(data, { type: 'array' })
 
           // Get first sheet
           const worksheet = workbook.Sheets[workbook.SheetNames[0]]
 
           // Convert to JSON with header row
-          const jsonData = xlsxLib.utils.sheet_to_json(worksheet, { header: 1 })
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
           // Check if file has data
           if (jsonData.length <= 1) {
@@ -361,7 +349,7 @@ const BulkUploadModal = ({
   }
 
   const downloadTemplate = () => {
-    if (!xlsxLibLoaded || !xlsxLib) {
+    if (!xlsxLibLoaded) {
       showToast(
         'error',
         'Excel parsing library not loaded. Please try again or check installation.',
@@ -371,20 +359,20 @@ const BulkUploadModal = ({
 
     try {
       // Create workbook and worksheet
-      const wb = xlsxLib.utils.book_new()
-      const ws = xlsxLib.utils.aoa_to_sheet([
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet([
         templateHeaders,
         ...(templateData?.exampleData || []),
       ])
 
       // Add worksheet to workbook
-      xlsxLib.utils.book_append_sheet(wb, ws, 'Template')
+      XLSX.utils.book_append_sheet(wb, ws, 'Template')
 
       // Generate filename
       const filename = `${recordType}_template.xlsx`
 
       // Save file
-      xlsxLib.writeFile(wb, filename)
+      XLSX.writeFile(wb, filename)
     } catch (error) {
       console.error('Error generating template:', error)
       showToast('error', 'Error generating template file')
