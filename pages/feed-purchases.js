@@ -26,7 +26,6 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
 import { feedTypeService } from '../lib/feedTypeService'
 import { feedService } from '../lib/feedService'
 import { feedTrackingService } from '../lib/feedTrackingService'

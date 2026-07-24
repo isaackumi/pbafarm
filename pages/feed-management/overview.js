@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { useToast } from '../../components/Toast'
-import { supabase } from '../../lib/supabase'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
   LineChart,
   Line,
@@ -67,29 +67,16 @@ function FeedManagementOverview() {
   const fetchData = async () => {
     setLoading(true)
     try {
+      const client = getConvexHttpClient()
+      
       // Fetch feed types with current stock
-      const { data: feedTypesData, error: feedTypesError } = await supabase
-        .from('feed_types')
-        .select(`
-          *,
-          supplier:feed_suppliers(name)
-        `)
-        .eq('active', true)
-
-      if (feedTypesError) throw feedTypesError
+      const feedTypesData = await client.query(api.feed.listFeedTypes, {})
       setFeedTypes(feedTypesData || [])
 
       // Fetch recent feed usage
-      const { data: usageData, error: usageError } = await supabase
-        .from('feed_usage')
-        .select(`
-          *,
-          feed_type:feed_types(name)
-        `)
-        .gte('usage_date', new Date(new Date().setDate(new Date().getDate() - 30)).toISOString())
-        .order('usage_date', { ascending: false })
-
-      if (usageError) throw usageError
+      const usageData = await client.query(api.feed.listUsage, {
+        days: 30
+      })
 
       // Calculate metrics
       const totalStock = feedTypesData.reduce((sum, type) => sum + (type.current_stock || 0), 0)

@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { createSelector } from '@reduxjs/toolkit'
-import cageService from '../../lib/cageService'
+import { cageService } from '../../lib/cageService'
 
 // Async thunks
 export const fetchCages = createAsyncThunk(
   'cages/fetchCages',
   async ({ page = 1, pageSize = 50 }, { rejectWithValue }) => {
     try {
-      const response = await cageService.getAllCages(page, pageSize)
+      const response = await cageService.getAllCages()
       if (response.error) throw response.error
       return response
     } catch (error) {
@@ -37,9 +37,9 @@ export const fetchHarvestReadyCages = createAsyncThunk(
       if (response.error) throw response.error
       // Filter cages that are ready for harvest based on growth metrics
       const harvestReadyCages = response.data.filter(cage => {
-        const daysOfCulture = cage.stocking_date ? 
-          Math.floor((new Date() - new Date(cage.stocking_date)) / (1000 * 60 * 60 * 24)) : 0
-        return daysOfCulture >= 180 && cage.growth_rate >= 80 // Example criteria
+        const daysOfCulture = cage.stockingDate ? 
+          Math.floor((new Date() - new Date(cage.stockingDate)) / (1000 * 60 * 60 * 24)) : 0
+        return daysOfCulture >= 180 && cage.growthRate >= 80 // Example criteria
       })
       return harvestReadyCages
     } catch (error) {
@@ -56,9 +56,9 @@ export const fetchMaintenanceCages = createAsyncThunk(
       if (response.error) throw response.error
       // Filter cages that need maintenance
       const maintenanceCages = response.data.filter(cage => {
-        if (!cage.last_maintenance_date) return true
+        if (!cage.lastMaintenanceDate) return true
         const daysSinceMaintenance = Math.floor(
-          (new Date() - new Date(cage.last_maintenance_date)) / (1000 * 60 * 60 * 24)
+          (new Date() - new Date(cage.lastMaintenanceDate)) / (1000 * 60 * 60 * 24)
         )
         return daysSinceMaintenance >= 30 // Example: maintenance needed every 30 days
       })
@@ -73,7 +73,7 @@ export const updateCageMetrics = createAsyncThunk(
   'cages/updateCageMetrics',
   async ({ cageId, metrics }, { rejectWithValue }) => {
     try {
-      const response = await cageService.updateCageMetrics(cageId, metrics)
+      const response = await cageService.updateCage(cageId, metrics)
       if (response.error) throw response.error
       return response.data
     } catch (error) {
@@ -86,7 +86,7 @@ export const calculateGrowthMetrics = createAsyncThunk(
   'cages/calculateGrowthMetrics',
   async (cageId, { rejectWithValue }) => {
     try {
-      const response = await cageService.calculateGrowthMetrics(cageId)
+      const response = await cageService.getCageById(cageId)
       if (response.error) throw response.error
       return response.data
     } catch (error) {
@@ -194,16 +194,16 @@ const cagesSlice = createSlice({
         const updatedCage = action.payload
         // Update in all relevant arrays
         state.cages = state.cages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.activeCages = state.activeCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.harvestReadyCages = state.harvestReadyCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.maintenanceCages = state.maintenanceCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
       })
       // Calculate growth metrics
@@ -211,25 +211,25 @@ const cagesSlice = createSlice({
         const updatedCage = action.payload
         // Update in all relevant arrays
         state.cages = state.cages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.activeCages = state.activeCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.harvestReadyCages = state.harvestReadyCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         state.maintenanceCages = state.maintenanceCages.map(cage => 
-          cage.id === updatedCage.id ? updatedCage : cage
+          cage._id === updatedCage._id ? updatedCage : cage
         )
         // Update analytics
         const activeCages = state.activeCages
         if (activeCages.length > 0) {
           state.analytics.averageGrowthRate = activeCages.reduce(
-            (sum, cage) => sum + (parseFloat(cage.growth_rate) || 0), 0
+            (sum, cage) => sum + (parseFloat(cage.growthRate) || 0), 0
           ) / activeCages.length
           state.analytics.averageMortalityRate = activeCages.reduce(
-            (sum, cage) => sum + (parseFloat(cage.mortality_rate) || 0), 0
+            (sum, cage) => sum + (parseFloat(cage.mortalityRate) || 0), 0
           ) / activeCages.length
         }
       })

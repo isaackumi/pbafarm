@@ -51,6 +51,13 @@ function CagesManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    const filter = router.query.filter
+    if (typeof filter === 'string' && filter.length > 0) {
+      setStatusFilter(filter)
+    }
+  }, [router.query.filter])
   const [localLoading, setLocalLoading] = useState(true)
   const [localError, setLocalError] = useState(null)
   const [analyticsData, setAnalyticsData] = useState({
@@ -451,6 +458,7 @@ function CagesManagement() {
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="maintenance">Maintenance</option>
+                <option value="ready_to_harvest">Harvest Ready</option>
                 <option value="harvested">Harvested</option>
                 <option value="fallow">Fallow</option>
                 <option value="empty">Empty</option>

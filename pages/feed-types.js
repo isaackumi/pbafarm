@@ -14,8 +14,8 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
 import { useSelector, useDispatch } from 'react-redux'
+import { supplierService } from '../lib/supplierService'
 import {
   fetchFeedTypes,
   createFeedType,
@@ -67,10 +67,7 @@ function FeedTypes() {
 
   const fetchSuppliers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .select('id, name')
-        .order('name')
+      const { data, error } = await supplierService.getAllSuppliers()
       if (error) throw error
       setSuppliers(data || [])
     } catch (error) {

@@ -1,27 +1,21 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
-import { fetchUser } from '../store/slices/authSlice'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter()
-  const dispatch = useDispatch()
-  const { user, loading } = useSelector((state) => state.auth)
+  const { user, loading, initialized } = useAuth()
 
   useEffect(() => {
-    dispatch(fetchUser())
-  }, [dispatch])
-
-  useEffect(() => {
-    if (!loading && !user) {
+    if (initialized && !loading && !user) {
       router.push('/login')
     }
-  }, [loading, user, router])
+  }, [initialized, loading, user, router])
 
-  if (loading) {
+  if (loading || !initialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-foam">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800" />
       </div>
     )
   }

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import notificationService from '../lib/notificationService'
 import { useToast } from '../components/Toast'
+import { useAuth } from './AuthContext'
 
 const NotificationContext = createContext()
 
@@ -9,32 +10,21 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
+  const { user } = useAuth()
 
   useEffect(() => {
-    // Load initial notifications
-    loadNotifications()
-
-    // Subscribe to real-time notifications
-    const subscription = supabase
-      .channel('notifications')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications'
-      }, (payload) => {
-        handleNotificationChange(payload)
-      })
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
+    if (user) {
+      loadNotifications()
+    } else {
+      setNotifications([])
+      setUnreadCount(0)
+      setLoading(false)
     }
-  }, [])
+  }, [user])
 
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         setNotifications([])
@@ -42,22 +32,14 @@ export function NotificationProvider({ children }) {
         return
       }
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
+      const { data, error } = await notificationService.getNotifications(user.id, 50)
 
       if (error) {
-        if (error.code === '42P01') {
-          // Table doesn't exist yet, this is expected
-          console.log('Notifications table not created yet')
-          setNotifications([])
-          setUnreadCount(0)
-          return
-        }
-        throw error
+        console.error('Error loading notifications:', error)
+        showToast('error', 'Failed to load notifications')
+        setNotifications([])
+        setUnreadCount(0)
+        return
       }
 
       setNotifications(data || [])
@@ -70,58 +52,21 @@ export function NotificationProvider({ children }) {
     }
   }
 
-  const handleNotificationChange = async (payload) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) return
-
-      // Only process notifications for the current user
-      if (payload.new?.user_id !== user.id) return
-
-      if (payload.eventType === 'INSERT') {
-        const newNotification = payload.new
-        setNotifications(prev => [newNotification, ...prev])
-        setUnreadCount(prev => prev + 1)
-        
-        // Show toast for new notification
-        showToast('info', newNotification.message)
-      } else if (payload.eventType === 'UPDATE') {
-        setNotifications(prev =>
-          prev.map(n => n.id === payload.new.id ? payload.new : n)
-        )
-        if (payload.new.read) {
-          setUnreadCount(prev => Math.max(0, prev - 1))
-        }
-      } else if (payload.eventType === 'DELETE') {
-        setNotifications(prev =>
-          prev.filter(n => n.id !== payload.old.id)
-        )
-        if (!payload.old.read) {
-          setUnreadCount(prev => Math.max(0, prev - 1))
-        }
-      }
-    } catch (error) {
-      console.error('Error handling notification change:', error)
-    }
-  }
 
   const markAsRead = async (id) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) return
 
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
-        .eq('user_id', user.id)
+      const { error } = await notificationService.markAsRead(id)
       
-      if (error) throw error
+      if (error) {
+        console.error('Error marking notification as read:', error)
+        showToast('error', 'Failed to mark notification as read')
+        return
+      }
 
       setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, read: true } : n)
+        prev.map(n => n._id === id ? { ...n, read: true } : n)
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (error) {
@@ -132,17 +77,15 @@ export function NotificationProvider({ children }) {
 
   const markAllAsRead = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) return
 
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false)
+      const { error } = await notificationService.markAllAsRead(user._id)
       
-      if (error) throw error
+      if (error) {
+        console.error('Error marking all notifications as read:', error)
+        showToast('error', 'Failed to mark all notifications as read')
+        return
+      }
 
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
@@ -156,23 +99,21 @@ export function NotificationProvider({ children }) {
 
   const deleteNotification = async (id) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) return
 
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
+      const { error } = await notificationService.deleteNotification(id)
       
-      if (error) throw error
+      if (error) {
+        console.error('Error deleting notification:', error)
+        showToast('error', 'Failed to delete notification')
+        return
+      }
 
       setNotifications(prev =>
-        prev.filter(n => n.id !== id)
+        prev.filter(n => n._id !== id)
       )
       setUnreadCount(prev =>
-        notifications.find(n => n.id === id)?.read ? prev : Math.max(0, prev - 1)
+        notifications.find(n => n._id === id)?.read ? prev : Math.max(0, prev - 1)
       )
     } catch (error) {
       console.error('Error deleting notification:', error)

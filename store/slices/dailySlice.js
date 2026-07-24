@@ -1,73 +1,49 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { supabase } from '../../lib/supabase'
+import { dailyRecordService } from '../../lib/databaseService'
 
-// Fetch all daily records
+// Async thunks
 export const fetchDailyRecords = createAsyncThunk(
   'daily/fetchDailyRecords',
-  async () => {
-    const { data, error } = await supabase
-      .from('daily_records')
-      .select('*')
-      .order('date', { ascending: false })
-    if (error) throw error
-    return data
+  async ({ cageId }, { rejectWithValue }) => {
+    try {
+      const response = await dailyRecordService.getDailyRecords(cageId)
+      if (response.error) throw response.error
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
-// Create a new daily record
 export const createDailyRecord = createAsyncThunk(
   'daily/createDailyRecord',
-  async (record) => {
-    const { data, error } = await supabase
-      .from('daily_records')
-      .insert([record])
-      .single()
-    if (error) throw error
-    return data
-  }
-)
-
-// Update a daily record
-export const updateDailyRecord = createAsyncThunk(
-  'daily/updateDailyRecord',
-  async ({ id, updates }) => {
-    const { data, error } = await supabase
-      .from('daily_records')
-      .update(updates)
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
-  }
-)
-
-// Delete a daily record
-export const deleteDailyRecord = createAsyncThunk(
-  'daily/deleteDailyRecord',
-  async (id) => {
-    const { error } = await supabase
-      .from('daily_records')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-    return id
+  async (recordData, { rejectWithValue }) => {
+    try {
+      const response = await dailyRecordService.createDailyRecord(recordData)
+      if (response.error) throw response.error
+      return response.data[0]
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
 const initialState = {
-  dailyRecords: [],
+  records: [],
   loading: false,
-  error: null,
+  error: null
 }
 
 const dailySlice = createSlice({
   name: 'daily',
   initialState,
   reducers: {
-    clearDailyError: (state) => {
+    clearError: (state) => {
       state.error = null
     },
-    resetDailyState: () => initialState,
+    resetDailyRecords: (state) => {
+      return initialState
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -77,24 +53,23 @@ const dailySlice = createSlice({
       })
       .addCase(fetchDailyRecords.fulfilled, (state, action) => {
         state.loading = false
-        state.dailyRecords = action.payload
+        state.records = action.payload
+        state.error = null
       })
       .addCase(fetchDailyRecords.rejected, (state, action) => {
         state.loading = false
-        state.error = action.error.message
+        state.error = action.payload
       })
       .addCase(createDailyRecord.fulfilled, (state, action) => {
-        state.dailyRecords.unshift(action.payload)
+        state.records = [action.payload, ...state.records]
       })
-      .addCase(updateDailyRecord.fulfilled, (state, action) => {
-        const idx = state.dailyRecords.findIndex(r => r.id === action.payload.id)
-        if (idx !== -1) state.dailyRecords[idx] = action.payload
-      })
-      .addCase(deleteDailyRecord.fulfilled, (state, action) => {
-        state.dailyRecords = state.dailyRecords.filter(r => r.id !== action.payload)
-      })
-  },
+  }
 })
 
-export const { clearDailyError, resetDailyState } = dailySlice.actions
-export default dailySlice.reducer 
+export const { clearError, resetDailyRecords } = dailySlice.actions
+
+export const selectDailyRecords = (state) => state.daily.records
+export const selectDailyLoading = (state) => state.daily.loading
+export const selectDailyError = (state) => state.daily.error
+
+export default dailySlice.reducer

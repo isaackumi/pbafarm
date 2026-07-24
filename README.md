@@ -1,44 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Fish Farm App (PBA Farm)
 
-## Getting Started
+Next.js Pages Router ops app on **Convex + Convex Auth**, with the **Tide Chart** UI theme.
 
-First, run the development server:
+Supabase has been fully removed.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev:backend   # terminal 1 — Convex local backend
+npm run dev           # terminal 2 — Next.js on http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Env (`.env.local`)
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210
+NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:3211
+NEXT_PUBLIC_APP_NAME=Fish Farm Management
+```
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+### First user / admin
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+1. Sign up at `/signup`
+2. Promote yourself:
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx convex run users:promoteToSuperAdmin '{"email":"you@example.com"}'
+```
 
-## Learn More
+3. Optional demo cages:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx convex run seed:seedDemo
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+### Auth JWT secrets (new Convex cloud project)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+node generateKeys.mjs
+npx convex env set JWT_PRIVATE_KEY -- "<key>"
+npx convex env set JWKS '<jwks json>'
+npx convex env set SITE_URL http://localhost:3000
+```
 
-## Deploy on Vercel
+## Deploy (Vercel)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. `npx convex deploy` (production)
+2. Set `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` on Vercel to the production deployment
+3. Set JWT / JWKS / SITE_URL on the Convex production deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## Migration plan
 
-
-TODO
-https://pbafarm.vercel.app
+See `docs/plans/2026-07-24-convex-migration-and-ui-theme.md`.

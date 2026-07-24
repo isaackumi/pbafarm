@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
+import { supplierService } from '../lib/supplierService'
 
 export default function FeedSuppliersPage() {
   return (
@@ -27,105 +27,6 @@ export default function FeedSuppliersPage() {
   )
 }
 
-// Feed Supplier service functions
-const supplierService = {
-  getAllSuppliers: async () => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      console.error('Error fetching suppliers:', error)
-      return { data: null, error }
-    }
-  },
-
-  getSupplierById: async (id) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      console.error('Error fetching supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  createSupplier: async (supplierData) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .insert([supplierData])
-        .select()
-
-      if (error) throw error
-      return { data: data[0], error: null }
-    } catch (error) {
-      console.error('Error creating supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  updateSupplier: async (id, supplierData) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .update(supplierData)
-        .eq('id', id)
-        .select()
-
-      if (error) throw error
-      return { data: data[0], error: null }
-    } catch (error) {
-      console.error('Error updating supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  deleteSupplier: async (id) => {
-    try {
-      // First check if this supplier is used in any feed types
-      const { data: feedTypesData, error: checkError } = await supabase
-        .from('feed_types')
-        .select('id')
-        .eq('supplier_id', id)
-        .limit(1)
-
-      if (checkError) throw checkError
-
-      // If this supplier is used, don't allow deletion
-      if (feedTypesData && feedTypesData.length > 0) {
-        return {
-          data: null,
-          error: {
-            message:
-              'Cannot delete supplier - it is used by one or more feed types.',
-          },
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      return { success: true, error: null }
-    } catch (error) {
-      console.error('Error deleting supplier:', error)
-      return { success: false, error }
-    }
-  },
-}
 
 function FeedSuppliers() {
   const router = useRouter()

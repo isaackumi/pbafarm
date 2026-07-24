@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { useToast } from '../../components/Toast'
-import { supabase } from '../../lib/supabase'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
   LineChart,
   Line,
@@ -71,29 +71,16 @@ function InventoryOverview() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch inventory items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('inventory_items')
-        .select(`
-          *,
-          category:inventory_categories(name)
-        `)
-        .eq('active', true)
-
-      if (itemsError) throw itemsError
+      const client = getConvexHttpClient()
+      
+      // Fetch inventory items (stock levels)
+      const itemsData = await client.query(api.inventory.listStockLevels, {})
       setInventoryItems(itemsData || [])
 
       // Fetch recent transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('inventory_transactions')
-        .select(`
-          *,
-          item:inventory_items(name, category:inventory_categories(name))
-        `)
-        .gte('transaction_date', new Date(new Date().setDate(new Date().getDate() - 30)).toISOString())
-        .order('transaction_date', { ascending: false })
-
-      if (transactionsError) throw transactionsError
+      const transactionsData = await client.query(api.inventory.listTransactions, {
+        days: 30
+      })
 
       // Calculate metrics
       const totalItems = itemsData.reduce((sum, item) => sum + (item.quantity || 0), 0)

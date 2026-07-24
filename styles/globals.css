@@ -1,24 +1,58 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './theme.css';
 
-:root {
-  --font-montserrat: 'Montserrat', sans-serif;
-  --background: #ffffff;
-  --foreground: #171717;
-  --input-text: #333333;
-  --input-bg: #f9fafb;
-  --input-border: #d1d5db;
-  --input-focus: #6366f1;
+@theme {
+  --color-lagoon-700: #0e5c6e;
+  --color-lagoon-800: #0b4a58;
+  --color-lagoon-950: #062a33;
+  --color-foam: #f3f7f6;
+  --color-foam-deep: #e4eeeb;
+  --color-kelp: #2f6b4f;
+  --color-kelp-soft: #3d8a64;
+  --color-signal: #c45c26;
+  --color-signal-soft: #e8a07a;
+  --color-chart-ink: #1a2b32;
+  --color-muted: #5a6f76;
+  --color-surface: #ffffff;
+  --color-input-border: #c5d4d1;
+
+  --color-primary-50: #f3f7f6;
+  --color-primary-100: #e4eeeb;
+  --color-primary-200: #c5d4d1;
+  --color-primary-300: #7aa0a8;
+  --color-primary-400: #4a7a86;
+  --color-primary-500: #0e5c6e;
+  --color-primary-600: #0b4a58;
+  --color-primary-700: #083d49;
+  --color-primary-800: #062a33;
+  --color-primary-900: #041f26;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Form element styling for better visibility */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+}
+
+.font-display {
+  font-weight: 700;
+}
+
 input,
 select,
 textarea {
@@ -26,7 +60,7 @@ textarea {
   font-weight: 500;
 }
 
-input:not([type="checkbox"]):not([type="radio"]),
+input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   background-color: var(--input-bg);
@@ -43,16 +77,5 @@ textarea:focus {
   border-color: var(--input-focus);
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --input-text: #e5e7eb;
-    --input-bg: #1f2937;
-    --input-border: #374151;
-    --input-focus: #8183f4;
-  }
+  box-shadow: 0 0 0 2px rgba(11, 74, 88, 0.25);
 }

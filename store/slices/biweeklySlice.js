@@ -1,58 +1,37 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { supabase } from '../../lib/supabase'
+import { biweeklyRecordService } from '../../lib/databaseService'
 
 // Async thunks
 export const fetchBiweeklyRecords = createAsyncThunk(
-  'biweekly/fetchRecords',
-  async (cageId) => {
-    const { data, error } = await supabase
-      .from('biweekly_records')
-      .select(`
-        *,
-        samplings (*)
-      `)
-      .eq('cage_id', cageId)
-      .order('date', { ascending: false })
-
-    if (error) throw error
-    return data
+  'biweekly/fetchBiweeklyRecords',
+  async ({ cageId }, { rejectWithValue }) => {
+    try {
+      const response = await biweeklyRecordService.getBiweeklyRecords(cageId)
+      if (response.error) throw response.error
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
 export const createBiweeklyRecord = createAsyncThunk(
-  'biweekly/createRecord',
-  async ({ cageId, record, samplings }) => {
-    // Start a transaction
-    const { data: recordData, error: recordError } = await supabase
-      .from('biweekly_records')
-      .insert([record])
-      .select()
-      .single()
-
-    if (recordError) throw recordError
-
-    // Add the record_id to each sampling
-    const samplingsWithRecordId = samplings.map(sampling => ({
-      ...sampling,
-      biweekly_record_id: recordData.id
-    }))
-
-    const { data: samplingData, error: samplingError } = await supabase
-      .from('samplings')
-      .insert(samplingsWithRecordId)
-      .select()
-
-    if (samplingError) throw samplingError
-
-    return { record: recordData, samplings: samplingData }
+  'biweekly/createBiweeklyRecord',
+  async (recordData, { rejectWithValue }) => {
+    try {
+      const response = await biweeklyRecordService.createBiweeklyRecord(recordData)
+      if (response.error) throw response.error
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
 const initialState = {
   records: [],
   loading: false,
-  error: null,
-  success: false
+  error: null
 }
 
 const biweeklySlice = createSlice({
@@ -62,16 +41,12 @@ const biweeklySlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
-    clearSuccess: (state) => {
-      state.success = false
-    },
-    resetState: (state) => {
+    resetBiweeklyRecords: (state) => {
       return initialState
     }
   },
   extraReducers: (builder) => {
     builder
-      // Fetch records
       .addCase(fetchBiweeklyRecords.pending, (state) => {
         state.loading = true
         state.error = null
@@ -79,29 +54,22 @@ const biweeklySlice = createSlice({
       .addCase(fetchBiweeklyRecords.fulfilled, (state, action) => {
         state.loading = false
         state.records = action.payload
+        state.error = null
       })
       .addCase(fetchBiweeklyRecords.rejected, (state, action) => {
         state.loading = false
-        state.error = action.error.message
-      })
-      // Create record
-      .addCase(createBiweeklyRecord.pending, (state) => {
-        state.loading = true
-        state.error = null
-        state.success = false
+        state.error = action.payload
       })
       .addCase(createBiweeklyRecord.fulfilled, (state, action) => {
-        state.loading = false
-        state.records.unshift(action.payload.record)
-        state.success = true
-      })
-      .addCase(createBiweeklyRecord.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.error.message
-        state.success = false
+        state.records = [action.payload, ...state.records]
       })
   }
 })
 
-export const { clearError, clearSuccess, resetState } = biweeklySlice.actions
-export default biweeklySlice.reducer 
+export const { clearError, resetBiweeklyRecords } = biweeklySlice.actions
+
+export const selectBiweeklyRecords = (state) => state.biweekly.records
+export const selectBiweeklyLoading = (state) => state.biweekly.loading
+export const selectBiweeklyError = (state) => state.biweekly.error
+
+export default biweeklySlice.reducer

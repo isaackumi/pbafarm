@@ -100,14 +100,22 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         throw new Error('Please enter valid fish count and weight data')
       }
 
-      // Create the biweekly record
+      // Create the biweekly record (samples included in one Convex mutation)
       const recordData = {
-        cage_id: cage.id,
+        cage_id: cage.id || cage._id,
         date,
         batch_code: batchCode,
         average_body_weight: calculateAverageABW(),
         total_fish_count: totalFish,
-        total_weight: totalWeight
+        total_weight: totalWeight,
+        samples: samplings
+          .filter((s) => s.fish_count && s.total_weight)
+          .map((sampling, index) => ({
+            sampling_number: index + 1,
+            fish_count: Number(sampling.fish_count),
+            total_weight: Number(sampling.total_weight),
+            average_body_weight: Number(sampling.abw),
+          })),
       }
 
       const { data: record, error: recordError } = await biweeklyRecordService.createBiweeklyRecord(recordData)
@@ -116,42 +124,19 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         throw recordError
       }
 
-      // Create sampling records
-      const samplingPromises = samplings.map((sampling, index) => {
-        if (!sampling.fish_count || !sampling.total_weight) return null
-
-        return biweeklyRecordService.createBiweeklySampling({
-          biweekly_record_id: record.id,
-          sampling_number: index + 1,
-          fish_count: Number(sampling.fish_count),
-          total_weight: Number(sampling.total_weight),
-          average_body_weight: Number(sampling.abw)
-        })
-      })
-
-      const samplingResults = await Promise.all(samplingPromises.filter(Boolean))
-      const samplingErrors = samplingResults.filter(result => result.error)
-
-      if (samplingErrors.length > 0) {
-        console.error('Some sampling records failed to save:', samplingErrors)
-        showToast('warning', 'Record saved but some sampling data may be incomplete')
-      }
-
+      showToast('success', 'Biweekly record saved')
       setSuccess(true)
-      showToast('success', 'Bi-weekly record saved successfully')
 
       // Reset form
       setDate(new Date().toISOString().split('T')[0])
       setBatchCode(generateBatchCode())
       setSamplings([{ id: 1, fish_count: '', total_weight: '', abw: 0 }])
 
-      // Call onComplete callback if provided
       if (onComplete) {
         setTimeout(() => {
-          onComplete()
-        }, 2000)
+          onComplete(record)
+        }, 500)
       }
-
     } catch (error) {
       console.error('Failed to save bi-weekly records:', error)
       setError(error.message || 'Failed to save bi-weekly records')

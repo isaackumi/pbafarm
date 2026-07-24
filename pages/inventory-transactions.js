@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 
 export default function InventoryTransactionsPage() {
   return (
@@ -40,33 +40,19 @@ function InventoryTransactions() {
   const fetchTransactions = async () => {
     setLoading(true)
     try {
+      const client = getConvexHttpClient()
+      
       // Fetch feed purchases
-      const { data: purchases, error: purchasesError } = await supabase
-        .from('feed_purchases')
-        .select(`
-          *,
-          feed_type:feed_types(name),
-          supplier:feed_suppliers(name)
-        `)
-        .gte('purchase_date', dateRange.start)
-        .lte('purchase_date', dateRange.end)
-        .order('purchase_date', { ascending: false })
-
-      if (purchasesError) throw purchasesError
+      const purchases = await client.query(api.feed.listPurchases, {
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+      })
 
       // Fetch feed usage
-      const { data: usage, error: usageError } = await supabase
-        .from('feed_usage')
-        .select(`
-          *,
-          feed_type:feed_types(name),
-          cage:cages(name)
-        `)
-        .gte('usage_date', dateRange.start)
-        .lte('usage_date', dateRange.end)
-        .order('usage_date', { ascending: false })
-
-      if (usageError) throw usageError
+      const usage = await client.query(api.feed.listUsage, {
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+      })
 
       // Combine and sort transactions
       const allTransactions = [

@@ -1,0 +1,62 @@
+/* Tide Chart design tokens — aquaculture ops theme */
+:root {
+  --lagoon-950: #062a33;
+  --lagoon-800: #0b4a58;
+  --lagoon-700: #0e5c6e;
+  --foam: #f3f7f6;
+  --foam-deep: #e4eeeb;
+  --kelp: #2f6b4f;
+  --kelp-soft: #3d8a64;
+  --signal: #c45c26;
+  --signal-soft: #e8a07a;
+  --chart-ink: #1a2b32;
+  --muted: #5a6f76;
+  --surface: #ffffff;
+  --waterline: linear-gradient(90deg, #0b4a58 0%, #2f6b4f 100%);
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --background: var(--foam);
+  --foreground: var(--chart-ink);
+  --input-text: var(--chart-ink);
+  --input-bg: #ffffff;
+  --input-border: #c5d4d1;
+  --input-focus: var(--lagoon-800);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-data {
+  font-family: var(--font-data);
+}
+
+.waterline {
+  height: 2px;
+  width: 100%;
+  background: var(--waterline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

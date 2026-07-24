@@ -1,10 +1,9 @@
-// pages/reports.js
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { ArrowLeft, FileText, BarChart, Download, Printer } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import { supabase } from '../lib/supabase'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { cageService } from '../lib/cageService'
 
 export default function ReportsPage() {
   return (
@@ -14,8 +13,11 @@ export default function ReportsPage() {
   )
 }
 
+function cageKey(cage) {
+  return cage.id || cage._id
+}
+
 function Reports() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState('production')
   const [dateRange, setDateRange] = useState({
@@ -29,48 +31,36 @@ function Reports() {
   const [reportData, setReportData] = useState(null)
   const [error, setError] = useState(null)
 
-  // Fetch available cages
   useEffect(() => {
     async function fetchCages() {
       try {
-        const { data, error } = await supabase
-          .from('cages')
-          .select('id, name, status')
-          .order('name')
-
-        if (error) throw error
-
+        const { data, error: err } = await cageService.getAllCages()
+        if (err) throw err
         setCages(data || [])
-      } catch (error) {
-        console.error('Error fetching cages:', error.message)
-        setError(error.message)
+      } catch (err) {
+        console.error('Error fetching cages:', err.message)
+        setError(err.message)
       }
     }
-
     fetchCages()
   }, [])
 
-  const handleCageToggle = (cageId) => {
-    if (selectedCages.includes(cageId)) {
-      setSelectedCages(selectedCages.filter((id) => id !== cageId))
-    } else {
-      setSelectedCages([...selectedCages, cageId])
-    }
+  const handleCageToggle = (id) => {
+    setSelectedCages((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
   }
 
   const handleSelectAllCages = () => {
     if (selectedCages.length === cages.length) {
       setSelectedCages([])
     } else {
-      setSelectedCages(cages.map((cage) => cage.id))
+      setSelectedCages(cages.map(cageKey))
     }
   }
 
   const handleDateRangeChange = (e) => {
-    setDateRange({
-      ...dateRange,
-      [e.target.name]: e.target.value,
-    })
+    setDateRange({ ...dateRange, [e.target.name]: e.target.value })
   }
 
   const generateReport = async () => {
@@ -79,99 +69,93 @@ function Reports() {
     setReportData(null)
 
     try {
-      // Validate inputs
       if (selectedCages.length === 0) {
         throw new Error('Please select at least one cage')
       }
-
       if (!dateRange.startDate || !dateRange.endDate) {
         throw new Error('Please select a date range')
       }
 
-      // Example API call to get report data
-      // In a real app, you would create a dedicated API endpoint for each report type
+      const client = getConvexHttpClient()
+      const result = await client.query(api.reports.productionReport, {
+        reportType,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        cageIds: selectedCages,
+      })
 
-      // Simulating report data for now
-      setTimeout(() => {
-        const dummyReportData = {
-          reportType,
-          dateRange,
-          selectedCages,
-          generatedAt: new Date().toISOString(),
-          data: {
-            totalFeed: 1250.5,
-            totalMortality: 125,
-            averageFCR: 1.45,
-            growthRate: 3.2,
-            biomassGain: 1500,
-          },
-        }
-
-        setReportData(dummyReportData)
-        setLoading(false)
-      }, 1500)
-    } catch (error) {
-      console.error('Error generating report:', error.message)
-      setError(error.message)
+      setReportData({
+        reportType,
+        dateRange,
+        selectedCages,
+        generatedAt: new Date().toISOString(),
+        data: result,
+      })
+    } catch (err) {
+      console.error('Error generating report:', err)
+      setError(err.message || String(err))
+    } finally {
       setLoading(false)
     }
   }
 
   const downloadReport = () => {
-    // In a real app, you would implement proper PDF/Excel generation
-    // This is just a placeholder
     if (!reportData) return
-
     const jsonString = JSON.stringify(reportData, null, 2)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-
     const link = document.createElement('a')
     link.href = url
-    link.download = `${reportType}-report-${
-      new Date().toISOString().split('T')[0]
-    }.json`
+    link.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
-  const printReport = () => {
-    window.print()
+  const summary = reportData?.data?.summary || {}
+  const byCage = reportData?.data?.by_cage || []
+  const rowsForType = () => {
+    const d = reportData?.data
+    if (!d) return []
+    if (reportType === 'feed') return d.daily_rows || []
+    if (reportType === 'growth') return d.growth_rows || []
+    if (reportType === 'mortality') return d.mortality_rows || []
+    if (reportType === 'financial') return d.financial_rows || []
+    return d.by_cage || []
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-montserrat">
+    <div className="min-h-screen bg-foam font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center mb-6">
           <Link
             href="/dashboard"
-            className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+            className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4 font-semibold"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+          <h1 className="text-2xl font-bold text-chart-ink font-display">
+            Reports
+          </h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Report Configuration Panel */}
           <div className="lg:col-span-1">
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="font-medium text-gray-700">Report Options</h2>
+            <div className="bg-surface border border-foam-deep rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-foam-deep">
+                <h2 className="font-semibold text-chart-ink">Report Options</h2>
               </div>
               <div className="p-6 space-y-6">
-                {/* Report Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-chart-ink mb-1">
                     Report Type
                   </label>
                   <select
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md text-sm font-medium"
                   >
                     <option value="production">Production Summary</option>
                     <option value="feed">Feed Usage</option>
@@ -181,14 +165,13 @@ function Reports() {
                   </select>
                 </div>
 
-                {/* Date Range */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-chart-ink mb-1">
                     Date Range
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label className="block text-xs text-muted mb-1 font-medium">
                         From
                       </label>
                       <input
@@ -196,11 +179,11 @@ function Reports() {
                         name="startDate"
                         value={dateRange.startDate}
                         onChange={handleDateRangeChange}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-input-border rounded-md text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label className="block text-xs text-muted mb-1 font-medium">
                         To
                       </label>
                       <input
@@ -208,18 +191,17 @@ function Reports() {
                         name="endDate"
                         value={dateRange.endDate}
                         onChange={handleDateRangeChange}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-input-border rounded-md text-sm"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Cage Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-chart-ink mb-1">
                     Select Cages
                   </label>
-                  <div className="mt-1 bg-gray-50 p-3 rounded-md max-h-60 overflow-y-auto">
+                  <div className="mt-1 bg-foam p-3 rounded-md max-h-60 overflow-y-auto">
                     <div className="flex items-center mb-2">
                       <input
                         type="checkbox"
@@ -229,91 +211,69 @@ function Reports() {
                           cages.length > 0
                         }
                         onChange={handleSelectAllCages}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-lagoon-800 border-input-border rounded"
                       />
                       <label
                         htmlFor="select-all"
-                        className="ml-2 text-sm text-gray-700"
+                        className="ml-2 text-sm font-medium text-chart-ink"
                       >
                         Select All
                       </label>
                     </div>
                     <div className="space-y-2">
-                      {cages.map((cage) => (
-                        <div key={cage.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`cage-${cage.id}`}
-                            checked={selectedCages.includes(cage.id)}
-                            onChange={() => handleCageToggle(cage.id)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                          />
-                          <label
-                            htmlFor={`cage-${cage.id}`}
-                            className="ml-2 text-sm text-gray-700"
-                          >
-                            {cage.name}
-                            {cage.status !== 'active' && (
-                              <span className="ml-2 text-xs text-gray-500">
-                                ({cage.status})
-                              </span>
-                            )}
-                          </label>
-                        </div>
-                      ))}
+                      {cages.map((cage) => {
+                        const id = cageKey(cage)
+                        return (
+                          <div key={id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`cage-${id}`}
+                              checked={selectedCages.includes(id)}
+                              onChange={() => handleCageToggle(id)}
+                              className="h-4 w-4 text-lagoon-800 border-input-border rounded"
+                            />
+                            <label
+                              htmlFor={`cage-${id}`}
+                              className="ml-2 text-sm font-medium text-chart-ink"
+                            >
+                              {cage.name}
+                              {cage.status !== 'active' && (
+                                <span className="ml-2 text-xs text-muted">
+                                  ({cage.status})
+                                </span>
+                              )}
+                            </label>
+                          </div>
+                        )
+                      })}
                       {cages.length === 0 && (
-                        <p className="text-sm text-gray-500">No cages found</p>
+                        <p className="text-sm text-muted">No cages found</p>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Generate Button */}
-                <div>
-                  <button
-                    onClick={generateReport}
-                    disabled={loading}
-                    className={`w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                      loading
-                        ? 'bg-indigo-400'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-                  >
-                    {loading ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <BarChart className="w-4 h-4 mr-2" />
-                        Generate Report
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={generateReport}
+                  disabled={loading}
+                  className={`w-full flex justify-center items-center py-2.5 px-4 rounded-md text-sm font-semibold text-white ${
+                    loading
+                      ? 'bg-lagoon-700/60'
+                      : 'bg-lagoon-800 hover:bg-lagoon-950'
+                  }`}
+                >
+                  {loading ? (
+                    'Generating…'
+                  ) : (
+                    <>
+                      <BarChart className="w-4 h-4 mr-2" />
+                      Generate Report
+                    </>
+                  )}
+                </button>
 
                 {error && (
-                  <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm">
+                  <div className="bg-signal/10 text-signal p-3 rounded-md text-sm font-medium">
                     {error}
                   </div>
                 )}
@@ -321,26 +281,22 @@ function Reports() {
             </div>
           </div>
 
-          {/* Report Preview */}
           <div className="lg:col-span-3">
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="font-medium text-gray-700">Report Preview</h2>
-
+            <div className="bg-surface border border-foam-deep rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-foam-deep flex justify-between items-center">
+                <h2 className="font-semibold text-chart-ink">Report Preview</h2>
                 {reportData && (
                   <div className="flex space-x-2">
                     <button
                       onClick={downloadReport}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      title="Download Report"
+                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-md text-chart-ink bg-surface hover:bg-foam"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </button>
                     <button
-                      onClick={printReport}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      title="Print Report"
+                      onClick={() => window.print()}
+                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-md text-chart-ink bg-surface hover:bg-foam"
                     >
                       <Printer className="h-4 w-4 mr-1" />
                       Print
@@ -351,21 +307,20 @@ function Reports() {
 
               <div className="p-6">
                 {!reportData ? (
-                  <div className="h-96 flex flex-col items-center justify-center text-gray-500">
+                  <div className="h-96 flex flex-col items-center justify-center text-muted">
                     <FileText className="h-12 w-12 mb-4" />
-                    <p className="text-lg">
+                    <p className="text-lg font-semibold">
                       Generate a report to see a preview
                     </p>
-                    <p className="text-sm mt-2">
+                    <p className="text-sm mt-2 font-medium">
                       Select report type, date range, and cages, then click
-                      "Generate Report"
+                      Generate Report
                     </p>
                   </div>
                 ) : (
                   <div id="report-content" className="space-y-6">
-                    {/* Report Header */}
-                    <div className="text-center pb-6 border-b border-gray-200">
-                      <h1 className="text-2xl font-bold text-gray-900">
+                    <div className="text-center pb-6 border-b border-foam-deep">
+                      <h1 className="text-2xl font-bold text-chart-ink font-display">
                         {reportType === 'production' &&
                           'Production Summary Report'}
                         {reportType === 'feed' && 'Feed Usage Report'}
@@ -375,167 +330,139 @@ function Reports() {
                         {reportType === 'financial' &&
                           'Financial Summary Report'}
                       </h1>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted mt-1 font-medium">
                         {new Date(dateRange.startDate).toLocaleDateString()} to{' '}
                         {new Date(dateRange.endDate).toLocaleDateString()}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted mt-1 font-medium">
                         Generated:{' '}
                         {new Date(reportData.generatedAt).toLocaleString()}
                       </p>
                     </div>
 
-                    {/* Report Content - customize based on report type */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Stat
+                        label="Total Feed Used"
+                        value={`${Number(summary.total_feed_kg || 0).toFixed(1)} kg`}
+                      />
+                      <Stat
+                        label="Total Mortality"
+                        value={`${summary.total_mortality || 0} fish`}
+                      />
+                      <Stat
+                        label="Feed Cost"
+                        value={`$${Number(summary.total_feed_cost || 0).toFixed(2)}`}
+                      />
+                      <Stat
+                        label="Avg FCR"
+                        value={
+                          summary.avg_fcr != null
+                            ? Number(summary.avg_fcr).toFixed(2)
+                            : '—'
+                        }
+                      />
+                      <Stat
+                        label="Growth (g/day)"
+                        value={
+                          summary.avg_growth_g_day != null
+                            ? Number(summary.avg_growth_g_day).toFixed(2)
+                            : '—'
+                        }
+                      />
+                      <Stat
+                        label="Harvest Weight"
+                        value={`${Number(summary.harvest_weight_kg || 0).toFixed(1)} kg`}
+                      />
+                    </div>
+
                     {reportType === 'production' && (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="bg-blue-50 p-4 rounded-lg">
-                            <p className="text-sm font-medium text-gray-500">
-                              Total Feed Used
-                            </p>
-                            <p className="text-3xl font-semibold text-blue-600 mt-2">
-                              {reportData.data.totalFeed} kg
-                            </p>
-                          </div>
-                          <div className="bg-green-50 p-4 rounded-lg">
-                            <p className="text-sm font-medium text-gray-500">
-                              Average FCR
-                            </p>
-                            <p className="text-3xl font-semibold text-green-600 mt-2">
-                              {reportData.data.averageFCR}
-                            </p>
-                          </div>
-                          <div className="bg-purple-50 p-4 rounded-lg">
-                            <p className="text-sm font-medium text-gray-500">
-                              Biomass Gain
-                            </p>
-                            <p className="text-3xl font-semibold text-purple-600 mt-2">
-                              {reportData.data.biomassGain} kg
-                            </p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Production Details
-                          </h3>
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th
-                                  scope="col"
-                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                  Metric
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                  Value
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  Total Feed Used
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {reportData.data.totalFeed} kg
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  Total Mortality
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {reportData.data.totalMortality} fish
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  Average FCR
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {reportData.data.averageFCR}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  Growth Rate
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {reportData.data.growthRate} g/day
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  Biomass Gain
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {reportData.data.biomassGain} kg
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Selected Cages
-                          </h3>
-                          <div className="bg-gray-50 p-4 rounded-md">
-                            <ul className="list-disc list-inside">
-                              {cages
-                                .filter((cage) =>
-                                  selectedCages.includes(cage.id),
-                                )
-                                .map((cage) => (
-                                  <li
-                                    key={cage.id}
-                                    className="text-sm text-gray-700"
-                                  >
-                                    {cage.name}
-                                  </li>
-                                ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
+                      <DataTable
+                        title="By Cage"
+                        columns={[
+                          'Cage',
+                          'Status',
+                          'Count',
+                          'Feed kg',
+                          'Mortality',
+                          'Latest ABW',
+                          'Harvest kg',
+                        ]}
+                        rows={byCage.map((r) => [
+                          r.cage_name,
+                          r.status,
+                          r.current_count,
+                          Number(r.feed_kg).toFixed(1),
+                          r.mortality,
+                          r.latest_abw != null
+                            ? Number(r.latest_abw).toFixed(1)
+                            : '—',
+                          Number(r.harvest_weight_kg).toFixed(1),
+                        ])}
+                      />
                     )}
 
-                    {/* Other report types would have their own specialized content */}
-                    {reportType === 'feed' && (
-                      <div className="text-center p-12">
-                        <p className="text-lg text-gray-500">
-                          Feed usage report preview goes here
-                        </p>
-                      </div>
-                    )}
-
-                    {reportType === 'growth' && (
-                      <div className="text-center p-12">
-                        <p className="text-lg text-gray-500">
-                          Growth performance report preview goes here
-                        </p>
-                      </div>
-                    )}
-
-                    {reportType === 'mortality' && (
-                      <div className="text-center p-12">
-                        <p className="text-lg text-gray-500">
-                          Mortality analysis report preview goes here
-                        </p>
-                      </div>
-                    )}
-
-                    {reportType === 'financial' && (
-                      <div className="text-center p-12">
-                        <p className="text-lg text-gray-500">
-                          Financial summary report preview goes here
-                        </p>
-                      </div>
+                    {reportType !== 'production' && (
+                      <DataTable
+                        title={
+                          reportType === 'feed'
+                            ? 'Daily Feed Rows'
+                            : reportType === 'growth'
+                              ? 'Growth Samples'
+                              : reportType === 'mortality'
+                                ? 'Mortality Events'
+                                : 'Financial Rows'
+                        }
+                        columns={
+                          reportType === 'feed'
+                            ? ['Date', 'Cage', 'Feed kg', 'Cost', 'Mortality']
+                            : reportType === 'growth'
+                              ? [
+                                  'Date',
+                                  'Cage',
+                                  'Batch',
+                                  'ABW',
+                                  'Fish',
+                                  'Weight',
+                                ]
+                              : reportType === 'mortality'
+                                ? ['Date', 'Cage', 'Mortality', 'Notes']
+                                : [
+                                    'Date',
+                                    'Cage',
+                                    'Feed kg',
+                                    'Unit price',
+                                    'Cost',
+                                  ]
+                        }
+                        rows={rowsForType().map((r) => {
+                          if (reportType === 'feed')
+                            return [
+                              r.date,
+                              r.cage,
+                              r.feed_kg,
+                              r.feed_cost,
+                              r.mortality,
+                            ]
+                          if (reportType === 'growth')
+                            return [
+                              r.date,
+                              r.cage,
+                              r.batch_code,
+                              r.abw,
+                              r.fish_count,
+                              r.total_weight,
+                            ]
+                          if (reportType === 'mortality')
+                            return [r.date, r.cage, r.mortality, r.notes]
+                          return [
+                            r.date,
+                            r.cage,
+                            r.feed_kg,
+                            r.unit_price,
+                            r.feed_cost,
+                          ]
+                        })}
+                      />
                     )}
                   </div>
                 )}
@@ -543,6 +470,66 @@ function Reports() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="bg-foam border border-foam-deep p-4 rounded-lg">
+      <p className="text-sm font-semibold text-muted">{label}</p>
+      <p className="text-2xl font-bold text-lagoon-800 mt-1 font-data">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function DataTable({ title, columns, rows }) {
+  return (
+    <div>
+      <h3 className="text-lg font-bold text-chart-ink mb-3">{title}</h3>
+      <div className="overflow-x-auto border border-foam-deep rounded-lg">
+        <table className="min-w-full divide-y divide-foam-deep">
+          <thead className="bg-foam">
+            <tr>
+              {columns.map((c) => (
+                <th
+                  key={c}
+                  className="px-4 py-3 text-left text-xs font-bold text-muted uppercase tracking-wider"
+                >
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-surface divide-y divide-foam-deep">
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-6 text-sm text-muted font-medium text-center"
+                >
+                  No rows in this range
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, i) => (
+                <tr key={i}>
+                  {row.map((cell, j) => (
+                    <td
+                      key={j}
+                      className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink font-data"
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

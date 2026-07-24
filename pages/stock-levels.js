@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 
 export default function StockLevelsPage() {
   return (
@@ -35,17 +35,8 @@ function StockLevels() {
   const fetchStockLevels = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('feed_types')
-        .select(`
-          *,
-          supplier:feed_suppliers(name)
-        `)
-        .eq('active', true)
-        .order('name')
-
-      if (error) throw error
-
+      const client = getConvexHttpClient()
+      const data = await client.query(api.inventory.listStockLevels, {})
       setStockLevels(data || [])
     } catch (error) {
       console.error('Error fetching stock levels:', error)

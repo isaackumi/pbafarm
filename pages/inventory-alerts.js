@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 
 export default function InventoryAlertsPage() {
   return (
@@ -36,25 +36,9 @@ function InventoryAlerts() {
   const fetchAlerts = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('feed_types')
-        .select(`
-          *,
-          supplier:feed_suppliers(name)
-        `)
-        .eq('active', true)
-        .order('name')
-
-      if (error) throw error
-
-      // Filter for items that need attention
-      const alerts = (data || []).filter(item => {
-        const currentStock = item.current_stock || 0
-        const minimumStock = item.minimum_stock || 0
-        return currentStock <= minimumStock * 1.2 // Alert if stock is at or below 120% of minimum
-      })
-
-      setAlerts(alerts)
+      const client = getConvexHttpClient()
+      const data = await client.query(api.inventory.listAlerts, {})
+      setAlerts(data || [])
     } catch (error) {
       console.error('Error fetching alerts:', error)
       showToast('error', 'Failed to load alerts')

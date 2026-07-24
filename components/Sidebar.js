@@ -47,13 +47,10 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
-import { useSelector, useDispatch } from 'react-redux'
-import { signOut } from '../store/slices/authSlice'
 
 const Sidebar = () => {
   const { user, signOut } = useAuth()
   const router = useRouter()
-  const dispatch = useDispatch()
   const [collapsed, setCollapsed] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
@@ -73,7 +70,7 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await dispatch(signOut())
+      await signOut()
       showToast('Logged out successfully', 'success')
       router.push('/login')
     } catch (error) {
@@ -136,9 +133,6 @@ const Sidebar = () => {
       icon: LayoutGrid,
       items: [
         { title: 'All Cages', path: '/cages', icon: Database },
-        { title: 'Active Cages', path: '/cages/active', icon: Activity },
-        { title: 'Maintenance', path: '/cages/maintenance', icon: AlertTriangle },
-        { title: 'Harvest Ready', path: '/cages/harvest-ready', icon: Target },
         { title: 'Analytics', path: '/cages/analytics', icon: BarChart2 },
         { title: 'Settings', path: '/cages/settings', icon: Settings },
         { title: 'Create Cage', path: '/create-cage', icon: Plus },
@@ -197,31 +191,30 @@ const Sidebar = () => {
   }
 
   return (
-    <div className="fixed top-0 left-0 h-screen w-64 bg-gray-900 border-r border-gray-800 flex flex-col z-40">
-      {/* Logo and Brand */}
-      <div className="p-4 border-b border-gray-800">
+    <div className="fixed top-0 left-0 h-screen w-64 bg-lagoon-950 border-r border-lagoon-800 flex flex-col z-40">
+      <div className="p-4 border-b border-lagoon-800">
         <Link href="/dashboard" className="flex items-center space-x-2">
-          <Fish className="h-8 w-8 text-indigo-400" />
-          <span className="text-xl font-bold text-white">FishFarm</span>
+          <Fish className="h-7 w-7 text-kelp-soft" />
+          <span className="text-xl font-display font-semibold text-foam tracking-tight">PBA Farm</span>
         </Link>
+        <div className="waterline mt-3" />
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
         {Object.entries(menuItems).map(([key, section]) => (
           <div key={key} className="mb-2">
             <button
               onClick={() => toggleSection(key)}
-              className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 focus:outline-none"
+              className="w-full flex items-center justify-between px-4 py-2 text-sm font-semibold text-foam/90 hover:bg-lagoon-800/60 focus:outline-none"
             >
               <div className="flex items-center">
-                {React.createElement(section.icon, { className: "h-5 w-5 text-indigo-400 mr-2" })}
+                {React.createElement(section.icon, { className: 'h-5 w-5 text-kelp-soft mr-2' })}
                 {section.title}
               </div>
               {expandedSections[key] ? (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-foam/50" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <ChevronRight className="h-4 w-4 text-foam/50" />
               )}
             </button>
 
@@ -231,13 +224,13 @@ const Sidebar = () => {
                   <Link
                     key={item.path}
                     href={item.path}
-                    className={`flex items-center px-8 py-2 text-sm ${
+                    className={`flex items-center px-8 py-2 text-sm font-semibold ${
                       isActive(item.path)
-                        ? 'text-white bg-indigo-600'
-                        : 'text-gray-300 hover:bg-gray-800'
+                        ? 'text-white bg-lagoon-800'
+                        : 'text-foam/80 hover:bg-lagoon-800/50'
                     }`}
                   >
-                    {React.createElement(item.icon, { className: "h-4 w-4 mr-2 text-indigo-400" })}
+                    {React.createElement(item.icon, { className: 'h-4 w-4 mr-2 text-kelp-soft' })}
                     {item.title}
                   </Link>
                 ))}
@@ -247,25 +240,24 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-gray-800 bg-gray-800">
+      <div className="p-4 border-t border-lagoon-800 bg-lagoon-950/80">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
-              <Users className="h-5 w-5 text-white" />
+          <div className="flex items-center min-w-0">
+            <div className="h-8 w-8 rounded-full bg-kelp flex items-center justify-center shrink-0">
+              <Users className="h-5 w-5 text-foam" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-white">
-                {user?.email?.split('@')[0] || 'Admin User'}
+            <div className="ml-3 min-w-0">
+              <p className="text-sm font-medium text-foam truncate">
+                {user?.name || user?.email?.split('@')[0] || 'User'}
               </p>
-              <p className="text-xs text-gray-400">
-                {user?.email || 'admin@fishfarm.com'}
+              <p className="text-xs text-foam/50 truncate font-data">
+                {user?.email || '—'}
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="text-gray-400 hover:text-white"
+            className="text-foam/50 hover:text-foam shrink-0"
             title="Logout"
           >
             <LogOut className="h-5 w-5" />
