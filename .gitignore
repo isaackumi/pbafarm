@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Convex local
 .convex/
+
+# Cursor agent skills (installed via uipro CLI; regenerate with `uipro init --ai cursor`)
+.cursor/skills/

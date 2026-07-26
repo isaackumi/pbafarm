@@ -25,11 +25,15 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
       setError('Cage is required')
       return
     }
+    const feedAmount = Number(formData.feedAmount) || 0
+    if (feedAmount > 0 && !formData.feedTypeId) {
+      setError('Feed type is required when feed amount is greater than zero')
+      return
+    }
     setSaving(true)
     setError('')
     try {
       const client = getConvexHttpClient()
-      const feedAmount = Number(formData.feedAmount) || 0
       const feedPrice = Number(formData.feedPrice) || 0
       await client.mutation(api.dailyRecords.create, {
         cageId,

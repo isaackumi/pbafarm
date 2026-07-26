@@ -260,49 +260,49 @@ function StockingManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-montserrat">
+    <div className="min-h-screen bg-foam font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Link
                 href="/cages"
-                className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+                className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Back to Cages
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-chart-ink">
                 Stocking Management
               </h1>
             </div>
 
             <Link href="/stocking">
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
                 <Plus className="w-4 h-4 mr-2" />
                 New Stocking
               </button>
             </Link>
           </div>
-          <p className="text-gray-600">
+          <p className="text-muted">
             View and manage fish stockings. Each stocking represents a batch of
             fish added to a cage.
           </p>
         </div>
 
         {/* Filters and Actions */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="p-4 flex flex-col md:flex-row justify-between items-center border-b border-gray-200">
+        <div className="page-card mb-6">
+          <div className="p-4 flex flex-col md:flex-row justify-between items-center border-b border-foam-deep">
             <div className="w-full md:w-auto mb-4 md:mb-0 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-muted" />
               </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search stockings..."
-                className="pl-10 block w-full sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                className="pl-10 block w-full sm:text-sm border-input-border rounded-md focus:ring-lagoon-800 focus:border-lagoon-800"
               />
             </div>
 
@@ -310,7 +310,7 @@ function StockingManagement() {
               <div className="relative">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex items-center py-2 px-4 border border-input-border rounded-md shadow-sm bg-white text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
@@ -321,13 +321,13 @@ function StockingManagement() {
                   <div className="origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                     <div className="py-1 p-3 space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-chart-ink mb-1">
                           Year
                         </label>
                         <select
                           value={yearFilter}
                           onChange={(e) => setYearFilter(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-md"
                         >
                           <option value="all">All Years</option>
                           {availableYears.map((year) => (
@@ -339,13 +339,13 @@ function StockingManagement() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-chart-ink mb-1">
                           Cage
                         </label>
                         <select
                           value={cageFilter}
                           onChange={(e) => setCageFilter(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-md"
                         >
                           <option value="all">All Cages</option>
                           {uniqueCages.map((cage) => (
@@ -366,18 +366,18 @@ function StockingManagement() {
           <div className="overflow-x-auto">
             {loading ? (
               <div className="py-12 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="mt-3 text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+                <p className="mt-3 text-sm text-muted">
                   Loading stocking data...
                 </p>
               </div>
             ) : filteredStockings.length > 0 ? (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-foam-deep">
+                <thead className="bg-foam-deep/40">
                   <tr>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('batch_number')}
                     >
                       <div className="flex items-center">
@@ -395,7 +395,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('cage_name')}
                     >
                       <div className="flex items-center">
@@ -413,7 +413,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('stocking_date')}
                     >
                       <div className="flex items-center">
@@ -431,7 +431,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('fish_count')}
                     >
                       <div className="flex items-center">
@@ -449,7 +449,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('initial_abw')}
                     >
                       <div className="flex items-center">
@@ -467,7 +467,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
                       onClick={() => handleSort('initial_biomass')}
                     >
                       <div className="flex items-center">
@@ -485,46 +485,46 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                     >
                       Source
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider"
                     >
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-foam-deep">
                   {filteredStockings.map((stocking) => (
-                    <tr key={stocking.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-indigo-600">
+                    <tr key={stocking.id} className="hover:bg-foam-deep/40">
+                      <td className="px-6 py-4 whitespace-nowrap font-medium text-lagoon-800">
                         {stocking.batch_number}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.cage?.name || 'Unknown'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {formatDate(stocking.stocking_date)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.fish_count.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.initial_abw.toFixed(1)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.initial_biomass.toFixed(1)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.source_location || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-muted">
                         <button
                           onClick={() => handleEditStocking(stocking)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-lagoon-800 hover:text-lagoon-950"
                           title="Edit Stocking"
                         >
                           <Edit className="w-4 h-4" />
@@ -536,9 +536,9 @@ function StockingManagement() {
               </table>
             ) : (
               <div className="py-12 text-center">
-                <p className="text-gray-500">No stocking records found.</p>
+                <p className="text-muted">No stocking records found.</p>
                 <Link href="/stocking">
-                  <button className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                  <button className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
                     <Plus className="w-4 h-4 mr-2" />
                     Create New Stocking
                   </button>
@@ -557,7 +557,7 @@ function StockingManagement() {
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Edit Stocking: {editingStocking.batch_number}
             </h3>
 
@@ -575,7 +575,7 @@ function StockingManagement() {
 
             <form onSubmit={handleSubmitEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Stocking Date
                 </label>
                 <input
@@ -583,13 +583,13 @@ function StockingManagement() {
                   name="stocking_date"
                   value={formData.stocking_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Fish Count
                 </label>
                 <input
@@ -597,14 +597,14 @@ function StockingManagement() {
                   name="fish_count"
                   value={formData.fish_count}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   min="1"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Initial ABW (g)
                 </label>
                 <input
@@ -613,29 +613,29 @@ function StockingManagement() {
                   value={formData.initial_abw}
                   onChange={handleChange}
                   step="0.1"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   min="0.1"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Initial Biomass (kg)
                 </label>
                 <input
                   type="text"
                   value={calculateBiomass().toFixed(2)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm bg-foam-deep/40"
                   readOnly
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-muted">
                   Auto-calculated: (ABW/1000) × Fish Count
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Source Location
                 </label>
                 <input
@@ -643,12 +643,12 @@ function StockingManagement() {
                   name="source_location"
                   value={formData.source_location}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Notes
                 </label>
                 <textarea
@@ -656,7 +656,7 @@ function StockingManagement() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows="3"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="Optional notes"
                 ></textarea>
               </div>
@@ -665,13 +665,13 @@ function StockingManagement() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   Save Changes
                 </button>

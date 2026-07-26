@@ -77,13 +77,13 @@ export default function CageSettingsPage() {
   return (
     <ProtectedRoute>
       <Layout>
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-foam">
           <CageManagementSidebar />
           <div className="flex-1 overflow-auto">
             <div className="p-6">
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Cage Settings</h1>
-                <p className="mt-1 text-sm text-gray-500">
+                <h1 className="text-2xl font-bold text-chart-ink">Cage Settings</h1>
+                <p className="mt-1 text-sm text-muted">
                   Manage cage configurations and maintenance settings
                 </p>
               </div>
@@ -103,9 +103,9 @@ export default function CageSettingsPage() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Cage List */}
-                <div className="bg-white rounded-lg shadow">
+                <div className="page-card">
                   <div className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    <h2 className="text-lg font-medium text-chart-ink mb-4">
                       Cage List
                     </h2>
                     <div className="space-y-4">
@@ -114,23 +114,23 @@ export default function CageSettingsPage() {
                           key={cage.id}
                           className={`p-4 rounded-lg border ${
                             selectedCage?.id === cage.id
-                              ? 'border-indigo-500 bg-indigo-50'
-                              : 'border-gray-200'
+                              ? 'border-lagoon-800 bg-foam-deep'
+                              : 'border-foam-deep'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="font-medium text-gray-900">
+                              <h3 className="font-medium text-chart-ink">
                                 {cage.name}
                               </h3>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-muted">
                                 {cage.location || 'No location specified'}
                               </p>
                             </div>
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => handleEditCage(cage)}
-                                className="p-2 text-gray-400 hover:text-gray-500"
+                                className="p-2 text-muted hover:text-muted"
                               >
                                 <Edit2 className="w-5 h-5" />
                               </button>
@@ -139,7 +139,7 @@ export default function CageSettingsPage() {
                                   setSelectedCage(cage)
                                   setShowDeleteConfirm(true)
                                 }}
-                                className="p-2 text-gray-400 hover:text-red-500"
+                                className="p-2 text-muted hover:text-red-500"
                               >
                                 <Trash2 className="w-5 h-5" />
                               </button>
@@ -153,23 +153,23 @@ export default function CageSettingsPage() {
 
                 {/* Edit Form */}
                 {selectedCage && (
-                  <div className="bg-white rounded-lg shadow">
+                  <div className="page-card">
                     <div className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-medium text-gray-900">
+                        <h2 className="text-lg font-medium text-chart-ink">
                           {editMode ? 'Edit Cage' : 'Cage Details'}
                         </h2>
                         {editMode && (
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setEditMode(false)}
-                              className="p-2 text-gray-400 hover:text-gray-500"
+                              className="p-2 text-muted hover:text-muted"
                             >
                               <X className="w-5 h-5" />
                             </button>
                             <button
                               onClick={handleSaveChanges}
-                              className="p-2 text-gray-400 hover:text-green-500"
+                              className="p-2 text-muted hover:text-green-500"
                             >
                               <Save className="w-5 h-5" />
                             </button>
@@ -179,7 +179,7 @@ export default function CageSettingsPage() {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Cage Name
                           </label>
                           <input
@@ -189,12 +189,12 @@ export default function CageSettingsPage() {
                               setFormData({ ...formData, name: e.target.value })
                             }
                             disabled={!editMode}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Location
                           </label>
                           <input
@@ -204,12 +204,12 @@ export default function CageSettingsPage() {
                               setFormData({ ...formData, location: e.target.value })
                             }
                             disabled={!editMode}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Size (m³)
                           </label>
                           <input
@@ -219,12 +219,12 @@ export default function CageSettingsPage() {
                               setFormData({ ...formData, size: e.target.value })
                             }
                             disabled={!editMode}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Capacity
                           </label>
                           <input
@@ -234,12 +234,12 @@ export default function CageSettingsPage() {
                               setFormData({ ...formData, capacity: e.target.value })
                             }
                             disabled={!editMode}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Material
                           </label>
                           <input
@@ -249,12 +249,12 @@ export default function CageSettingsPage() {
                               setFormData({ ...formData, material: e.target.value })
                             }
                             disabled={!editMode}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-chart-ink">
                             Notes
                           </label>
                           <textarea
@@ -264,7 +264,7 @@ export default function CageSettingsPage() {
                             }
                             disabled={!editMode}
                             rows="3"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 sm:text-sm"
                           />
                         </div>
                       </div>
@@ -278,22 +278,22 @@ export default function CageSettingsPage() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+          <div className="fixed inset-0 bg-foam-deep/400 bg-opacity-75 flex items-center justify-center">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
               <div className="flex items-center mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-chart-ink">
                   Delete Cage
                 </h3>
               </div>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted mb-4">
                 Are you sure you want to delete this cage? This action cannot be
                 undone.
               </p>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>

@@ -4,11 +4,17 @@ import { Doc, Id } from '../_generated/dataModel'
 
 type Ctx = QueryCtx | MutationCtx
 
-/** Users without companyId (greenfield solo farms) see all unscoped rows + their own. */
+/** Company scope for the current user (undefined for unassigned / greenfield). */
 export function companyFilter(user: Doc<'users'>) {
   return user.companyId
 }
 
+/**
+ * Tenant isolation:
+ * - super_admin: all rows
+ * - company member: only their companyId
+ * - no companyId: only unscoped rows (greenfield solo) — never other companies' data
+ */
 export async function listForCompany<T extends { companyId?: Id<'companies'> }>(
   user: Doc<'users'>,
   rows: T[],

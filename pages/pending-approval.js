@@ -1,19 +1,24 @@
-// pages/pending-approval.js
-import React from 'react'
-import PendingApprovalPage from '../components/PendingApprovalPage'
-import Head from 'next/head'
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+import ProtectedRoute from '../components/ProtectedRoute'
 
-export default function PendingApproval() {
+/** Legacy route — stocking approvals live at /approvals */
+function RedirectToApprovals() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/approvals')
+  }, [router])
   return (
-    <>
-      <Head>
-        <title>Registration Status - PBA Farm Management</title>
-        <meta
-          name="description"
-          content="Check your company registration status"
-        />
-      </Head>
-      <PendingApprovalPage />
-    </>
+    <div className="flex min-h-screen items-center justify-center bg-foam text-muted text-sm">
+      Redirecting to approvals…
+    </div>
+  )
+}
+
+export default function PendingApprovalPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <RedirectToApprovals />
+    </ProtectedRoute>
   )
 }

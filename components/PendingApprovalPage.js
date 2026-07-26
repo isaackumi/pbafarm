@@ -62,7 +62,7 @@ const PendingApprovalPage = () => {
       <h2 className="text-2xl font-bold mb-6">Pending Approvals</h2>
       
       {pendingApprovals.all.length === 0 ? (
-        <p className="text-gray-600">No pending approvals</p>
+        <p className="text-muted">No pending approvals</p>
       ) : (
         <div className="space-y-4">
           {pendingApprovals.all.map(item => (
@@ -72,12 +72,12 @@ const PendingApprovalPage = () => {
                   <h3 className="font-semibold text-lg">
                     {item.type === 'stocking' ? 'Stocking Request' : 'Top-up Request'}
                   </h3>
-                  <p className="text-gray-600">Cage: {item.cageName}</p>
-                  <p className="text-gray-600">Batch: {item.batchNumber}</p>
-                  <p className="text-gray-600">Date: {new Date(item.date).toLocaleDateString()}</p>
-                  <p className="text-gray-600">Count: {item.count} fish</p>
-                  <p className="text-gray-600">ABW: {item.abw}g</p>
-                  <p className="text-gray-600">Created: {new Date(item.createdAt).toLocaleDateString()}</p>
+                  <p className="text-muted">Cage: {item.cageName}</p>
+                  <p className="text-muted">Batch: {item.batchNumber}</p>
+                  <p className="text-muted">Date: {new Date(item.date).toLocaleDateString()}</p>
+                  <p className="text-muted">Count: {item.count} fish</p>
+                  <p className="text-muted">ABW: {item.abw}g</p>
+                  <p className="text-muted">Created: {new Date(item.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-2">
                   <button

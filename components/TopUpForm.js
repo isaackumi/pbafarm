@@ -143,9 +143,9 @@ const TopUpForm = ({ onComplete }) => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="font-medium text-gray-700">Top-Up Existing Batch</h2>
+    <div className="page-card overflow-hidden">
+      <div className="px-6 py-4 border-b border-foam-deep">
+        <h2 className="font-medium text-chart-ink">Top-Up Existing Batch</h2>
       </div>
 
       <div className="p-6">
@@ -159,13 +159,13 @@ const TopUpForm = ({ onComplete }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Batch Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-chart-ink mb-1">
               Select Batch to Top-Up <span className="text-red-500">*</span>
             </label>
             {fetchingData ? (
               <div className="flex items-center space-x-2 h-10">
-                <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm text-gray-500">
+                <div className="w-4 h-4 border-2 border-lagoon-800 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-muted">
                   Loading batches...
                 </span>
               </div>
@@ -175,7 +175,7 @@ const TopUpForm = ({ onComplete }) => {
                   name="stocking_id"
                   value={formData.stocking_id}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                   disabled={activeStockings.length === 0}
                 >
@@ -199,11 +199,11 @@ const TopUpForm = ({ onComplete }) => {
 
           {/* Current Batch Info (if selected) */}
           {selectedStocking && (
-            <div className="bg-blue-50 p-4 rounded-md">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">
+            <div className="bg-foam-deep p-4 rounded-md">
+              <h3 className="text-sm font-medium text-lagoon-800 mb-2">
                 Current Batch Information
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-blue-800">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-lagoon-800">
                 <div>
                   <span className="font-medium">Current Count:</span>{' '}
                   {selectedStocking.fish_count.toLocaleString()} fish
@@ -218,7 +218,7 @@ const TopUpForm = ({ onComplete }) => {
                 </div>
               </div>
               {selectedStocking.topups && selectedStocking.topups.length > 0 && (
-                <div className="mt-2 text-sm text-blue-800">
+                <div className="mt-2 text-sm text-lagoon-800">
                   <span className="font-medium">Previous Top-ups:</span>{' '}
                   {selectedStocking.topups.length} (
                   {selectedStocking.topups
@@ -233,7 +233,7 @@ const TopUpForm = ({ onComplete }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Top-up Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Top-up Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -241,14 +241,14 @@ const TopUpForm = ({ onComplete }) => {
                 name="topup_date"
                 value={formData.topup_date}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 required
               />
             </div>
 
             {/* Fish Count */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Fish Count to Add <span className="text-red-500">*</span>
               </label>
               <input
@@ -257,7 +257,7 @@ const TopUpForm = ({ onComplete }) => {
                 value={formData.fish_count}
                 onChange={handleChange}
                 min="1"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Number of fish to add"
                 required
               />
@@ -265,7 +265,7 @@ const TopUpForm = ({ onComplete }) => {
 
             {/* ABW */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Average Body Weight (g) <span className="text-red-500">*</span>
               </label>
               <input
@@ -275,7 +275,7 @@ const TopUpForm = ({ onComplete }) => {
                 onChange={handleChange}
                 step="0.1"
                 min="0.1"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="ABW in grams"
                 required
               />
@@ -283,23 +283,23 @@ const TopUpForm = ({ onComplete }) => {
 
             {/* Calculated Biomass */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Biomass to Add (kg)
               </label>
               <input
                 type="text"
                 value={calculateBiomass().toFixed(2)}
                 readOnly
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 focus:outline-none sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm bg-foam-deep/40 focus:outline-none sm:text-sm"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted">
                 Auto-calculated: (ABW/1000) × Fish Count
               </p>
             </div>
 
             {/* Source Location */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Source Location
               </label>
               <input
@@ -307,14 +307,14 @@ const TopUpForm = ({ onComplete }) => {
                 name="source_location"
                 value={formData.source_location}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Where the fish were sourced from"
               />
             </div>
 
             {/* Transfer Supervisor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Transfer Supervisor
               </label>
               <input
@@ -322,7 +322,7 @@ const TopUpForm = ({ onComplete }) => {
                 name="transfer_supervisor"
                 value={formData.transfer_supervisor}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Person who supervised the transfer"
               />
             </div>
@@ -330,7 +330,7 @@ const TopUpForm = ({ onComplete }) => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-chart-ink mb-1">
               Notes
             </label>
             <textarea
@@ -338,7 +338,7 @@ const TopUpForm = ({ onComplete }) => {
               value={formData.notes}
               onChange={handleChange}
               rows="3"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
               placeholder="Any additional information about this top-up"
             ></textarea>
           </div>
@@ -347,7 +347,7 @@ const TopUpForm = ({ onComplete }) => {
             <button
               type="button"
               onClick={() => router.push('/stocking-management')}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Cancel
             </button>
@@ -364,7 +364,7 @@ const TopUpForm = ({ onComplete }) => {
             </button>
           </div>
 
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-muted mt-2">
             <p>
               Note: Top-up requests require admin approval before being applied.
             </p>

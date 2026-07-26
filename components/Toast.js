@@ -31,7 +31,7 @@ export const ToastProvider = ({ children }) => {
                 ? 'bg-red-50 text-red-800'
                 : toast.type === 'success'
                 ? 'bg-green-50 text-green-800'
-                : 'bg-blue-50 text-blue-800'
+                : 'bg-foam-deep text-lagoon-800'
             }`}
           >
             <div className="flex items-start">
@@ -40,7 +40,7 @@ export const ToastProvider = ({ children }) => {
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="ml-4 text-gray-400 hover:text-gray-500"
+                className="ml-4 text-muted hover:text-muted"
               >
                 <span className="sr-only">Close</span>
                 <svg

@@ -33,12 +33,18 @@ const schema = defineSchema({
     code: v.string(),
     address: v.optional(v.string()),
     contactEmail: v.optional(v.string()),
+    submittedByUserId: v.optional(v.id('users')),
     status: v.union(
       v.literal('pending'),
       v.literal('approved'),
       v.literal('rejected'),
     ),
     rejectionReason: v.optional(v.string()),
+    settings: v.optional(
+      v.object({
+        aiAssistantEnabled: v.boolean(),
+      }),
+    ),
     createdAt: v.number(),
     approvedAt: v.optional(v.number()),
     approvedBy: v.optional(v.id('users')),
@@ -91,6 +97,8 @@ const schema = defineSchema({
     currentStock: v.number(),
     minimumStock: v.number(),
     pricePerKg: v.number(),
+    /** Default bag weight for bags↔kg conversion (e.g. 25). */
+    bagSizeKg: v.optional(v.number()),
     supplierId: v.optional(v.id('feedSuppliers')),
     active: v.boolean(),
     companyId: v.optional(v.id('companies')),
@@ -103,6 +111,7 @@ const schema = defineSchema({
   feedPurchases: defineTable({
     feedTypeId: v.id('feedTypes'),
     quantity: v.number(),
+    bags: v.optional(v.number()),
     pricePerKg: v.number(),
     purchaseDate: v.string(),
     supplierId: v.optional(v.id('feedSuppliers')),
@@ -120,7 +129,12 @@ const schema = defineSchema({
     feedTypeId: v.id('feedTypes'),
     cageId: v.optional(v.id('cages')),
     quantity: v.number(),
+    bags: v.optional(v.number()),
     usageDate: v.string(),
+    /** issue = store take-out; daily = from daily record; usage = generic */
+    source: v.optional(
+      v.union(v.literal('issue'), v.literal('daily'), v.literal('usage')),
+    ),
     notes: v.optional(v.string()),
     companyId: v.optional(v.id('companies')),
     deletedAt: v.optional(v.number()),
@@ -227,10 +241,15 @@ const schema = defineSchema({
     transactionType: v.union(
       v.literal('purchase'),
       v.literal('usage'),
+      v.literal('issue'),
+      v.literal('daily_usage'),
       v.literal('adjustment'),
       v.literal('transfer'),
+      v.literal('reversal'),
     ),
+    /** Signed kg: positive = stock in, negative = stock out. */
     quantityKg: v.number(),
+    bags: v.optional(v.number()),
     transactionDate: v.number(),
     referenceId: v.optional(v.string()),
     notes: v.optional(v.string()),
@@ -238,7 +257,8 @@ const schema = defineSchema({
     createdBy: v.optional(v.id('users')),
   })
     .index('by_feed_type', ['feedTypeId'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_reference', ['referenceId']),
 
   stockingHistory: defineTable({
     cageId: v.id('cages'),

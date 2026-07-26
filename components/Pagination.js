@@ -61,10 +61,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       <button
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
-        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-input-border bg-white text-sm font-medium ${
           currentPage === 1
             ? 'text-gray-300 cursor-not-allowed'
-            : 'text-gray-500 hover:bg-gray-50'
+            : 'text-muted hover:bg-foam-deep/40'
         }`}
       >
         <span className="sr-only">Previous</span>
@@ -77,7 +77,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           return (
             <span
               key={`ellipsis-${index}`}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+              className="relative inline-flex items-center px-4 py-2 border border-input-border bg-white text-sm font-medium text-chart-ink"
             >
               ...
             </span>
@@ -90,8 +90,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             onClick={() => onPageChange(page)}
             className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
               currentPage === page
-                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                ? 'z-10 bg-foam-deep border-lagoon-800 text-lagoon-800'
+                : 'bg-white border-input-border text-muted hover:bg-foam-deep/40'
             }`}
             aria-current={currentPage === page ? 'page' : undefined}
           >
@@ -104,10 +104,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       <button
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
-        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-input-border bg-white text-sm font-medium ${
           currentPage === totalPages
             ? 'text-gray-300 cursor-not-allowed'
-            : 'text-gray-500 hover:bg-gray-50'
+            : 'text-muted hover:bg-foam-deep/40'
         }`}
       >
         <span className="sr-only">Next</span>

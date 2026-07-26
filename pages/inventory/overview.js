@@ -169,23 +169,23 @@ function InventoryOverview() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-foam">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Link
               href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory Overview</h1>
+            <h1 className="text-2xl font-bold text-chart-ink">Inventory Overview</h1>
           </div>
 
           <button
             onClick={fetchData}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -201,7 +201,7 @@ function InventoryOverview() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Link href="/inventory/transactions">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
               <ShoppingCart className="w-5 h-5 mr-2" />
               Record Transaction
             </button>
@@ -219,7 +219,7 @@ function InventoryOverview() {
             </button>
           </Link>
           <Link href="/inventory/reports">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
               <BarChart2 className="w-5 h-5 mr-2" />
               View Reports
             </button>
@@ -280,7 +280,7 @@ function InventoryOverview() {
           ].map((metric, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-300"
+              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -288,8 +288,8 @@ function InventoryOverview() {
                     <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                    <p className="text-sm font-medium text-muted">{metric.title}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">
                       {metric.unit === '₵' ? metric.unit : ''}{metric.value}
                       {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
                     </p>
@@ -315,8 +315,8 @@ function InventoryOverview() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Transaction Trend */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Transaction Trend</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={transactionData}>
@@ -345,8 +345,8 @@ function InventoryOverview() {
           </div>
 
           {/* Category Distribution */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Category Distribution</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Category Distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -371,8 +371,8 @@ function InventoryOverview() {
           </div>
 
           {/* Stock Trend */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Trend</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
@@ -393,8 +393,8 @@ function InventoryOverview() {
           </div>
 
           {/* Low Stock Alerts */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Low Stock Alerts</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Low Stock Alerts</h3>
             <div className="space-y-4">
               {inventoryItems
                 .filter(item => item.quantity <= item.minimum_quantity * 1.2)
@@ -404,13 +404,13 @@ function InventoryOverview() {
                     className="flex items-center justify-between p-4 bg-red-50 rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-chart-ink">{item.name}</p>
+                      <p className="text-sm text-muted">
                         Current: {item.quantity} {item.unit} | Minimum: {item.minimum_quantity} {item.unit}
                       </p>
                     </div>
                     <Link href="/inventory/transactions">
-                      <button className="text-sm text-indigo-600 hover:text-indigo-800">
+                      <button className="text-sm text-lagoon-800 hover:text-lagoon-950">
                         Order Now
                       </button>
                     </Link>
@@ -421,22 +421,25 @@ function InventoryOverview() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h3 className="text-lg font-medium text-chart-ink">Recent Activity</h3>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-foam-deep">
             {inventoryItems.slice(0, 5).map(item => (
               <div key={item.id} className="px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-chart-ink">{item.name}</p>
+                    <p className="text-sm text-muted">
                       Stock: {item.quantity} {item.unit} | Price: ₵{item.unit_price}/{item.unit}
                     </p>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Last updated: {new Date(item.updated_at).toLocaleDateString()}
+                  <div className="text-sm text-muted">
+                    Last updated:{' '}
+                    {item.updated_at && !Number.isNaN(new Date(item.updated_at).getTime())
+                      ? new Date(item.updated_at).toLocaleDateString()
+                      : '—'}
                   </div>
                 </div>
               </div>

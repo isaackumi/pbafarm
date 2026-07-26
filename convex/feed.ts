@@ -2,6 +2,11 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import {
+  applyStockChange,
+  bagsFromKg,
+  kgFromBags,
+} from './lib/feedLedger'
 
 function toClientSupplier(s: any) {
   return {
@@ -19,14 +24,17 @@ function toClientSupplier(s: any) {
 }
 
 function toClientFeedType(f: any) {
+  const bagSize = f.bagSizeKg && f.bagSizeKg > 0 ? f.bagSizeKg : 25
   return {
     id: f._id,
     _id: f._id,
     name: f.name,
     description: f.description,
     current_stock: f.currentStock,
+    current_stock_bags: bagsFromKg(f.currentStock, bagSize),
     minimum_stock: f.minimumStock,
     price_per_kg: f.pricePerKg,
+    bag_size_kg: bagSize,
     supplier_id: f.supplierId,
     active: f.active,
     company_id: f.companyId,
@@ -42,6 +50,7 @@ function toClientPurchase(p: any) {
     _id: p._id,
     feed_type_id: p.feedTypeId,
     quantity: p.quantity,
+    bags: p.bags,
     price_per_kg: p.pricePerKg,
     purchase_date: p.purchaseDate,
     supplier_id: p.supplierId,
@@ -62,13 +71,25 @@ function toClientUsage(u: any) {
     feed_type_id: u.feedTypeId,
     cage_id: u.cageId,
     quantity: u.quantity,
+    bags: u.bags,
     usage_date: u.usageDate,
+    source: u.source,
     notes: u.notes,
     company_id: u.companyId,
     deleted_at: u.deletedAt,
     updated_at: u.updatedAt,
     created_at: u._creationTime,
   }
+}
+
+function resolveQuantityKg(
+  feedType: { bagSizeKg?: number },
+  quantityKg?: number,
+  bags?: number,
+) {
+  if (quantityKg != null && quantityKg > 0) return quantityKg
+  if (bags != null && bags > 0) return kgFromBags(bags, feedType.bagSizeKg)
+  throw new Error('Provide quantityKg or bags greater than zero')
 }
 
 // SUPPLIERS
@@ -179,18 +200,38 @@ export const createFeedType = mutation({
     currentStock: v.number(),
     minimumStock: v.number(),
     pricePerKg: v.number(),
+    bagSizeKg: v.optional(v.number()),
     supplierId: v.optional(v.id('feedSuppliers')),
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const now = Date.now()
+    const opening = Math.max(0, args.currentStock)
     const id = await ctx.db.insert('feedTypes', {
-      ...args,
+      name: args.name,
+      description: args.description,
+      currentStock: 0,
+      minimumStock: args.minimumStock,
+      pricePerKg: args.pricePerKg,
+      bagSizeKg: args.bagSizeKg && args.bagSizeKg > 0 ? args.bagSizeKg : 25,
+      supplierId: args.supplierId,
       active: args.active ?? true,
       companyId: await writeCompanyId(user),
       updatedAt: now,
     })
+
+    if (opening > 0) {
+      await applyStockChange(ctx, {
+        user,
+        feedTypeId: id,
+        deltaKg: opening,
+        transactionType: 'adjustment',
+        referenceId: String(id),
+        notes: 'Opening stock',
+      })
+    }
+
     await logAudit(ctx, {
       actionType: 'create',
       tableName: 'feedTypes',
@@ -207,9 +248,9 @@ export const updateFeedType = mutation({
     patch: v.object({
       name: v.optional(v.string()),
       description: v.optional(v.string()),
-      currentStock: v.optional(v.number()),
       minimumStock: v.optional(v.number()),
       pricePerKg: v.optional(v.number()),
+      bagSizeKg: v.optional(v.number()),
       supplierId: v.optional(v.id('feedSuppliers')),
       active: v.optional(v.boolean()),
     }),
@@ -278,7 +319,8 @@ export const listPurchases = query({
 export const createPurchase = mutation({
   args: {
     feedTypeId: v.id('feedTypes'),
-    quantity: v.number(),
+    quantity: v.optional(v.number()),
+    bags: v.optional(v.number()),
     pricePerKg: v.number(),
     purchaseDate: v.string(),
     supplierId: v.optional(v.id('feedSuppliers')),
@@ -289,44 +331,50 @@ export const createPurchase = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const feedType = await ctx.db.get(args.feedTypeId)
-    if (!feedType) throw new Error('Feed type not found')
+    if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
+    const allowed = await listForCompany(user, [feedType])
+    if (!allowed.length) throw new Error('Access denied')
+
+    const quantityKg = resolveQuantityKg(feedType, args.quantity, args.bags)
+    const bags =
+      args.bags != null ? args.bags : bagsFromKg(quantityKg, feedType.bagSizeKg)
 
     const now = Date.now()
     const id = await ctx.db.insert('feedPurchases', {
-      ...args,
+      feedTypeId: args.feedTypeId,
+      quantity: quantityKg,
+      bags,
+      pricePerKg: args.pricePerKg,
+      purchaseDate: args.purchaseDate,
+      supplierId: args.supplierId,
+      batchNumber: args.batchNumber,
+      expiryDate: args.expiryDate,
+      notes: args.notes,
       companyId: (await writeCompanyId(user)) ?? feedType.companyId,
       updatedAt: now,
     })
 
-    // Update feed type current stock
-    await ctx.db.patch(args.feedTypeId, {
-      currentStock: feedType.currentStock + args.quantity,
-      updatedAt: now,
-    })
-
-    // Create inventory transaction
-    await ctx.db.insert('feedInventoryTransactions', {
+    await applyStockChange(ctx, {
+      user,
       feedTypeId: args.feedTypeId,
+      deltaKg: quantityKg,
+      bags,
       transactionType: 'purchase',
-      quantityKg: args.quantity,
-      transactionDate: now,
-      referenceId: id,
-      notes: `Purchase from ${args.supplierId ? 'supplier' : 'unknown supplier'}`,
-      companyId: feedType.companyId,
-      createdBy: user._id,
+      referenceId: String(id),
+      notes: args.notes || `Purchase ${args.purchaseDate}`,
     })
 
     await logAudit(ctx, {
       actionType: 'create',
       tableName: 'feedPurchases',
       recordId: id,
-      newValues: args,
+      newValues: { ...args, quantityKg, bags },
     })
     return id
   },
 })
 
-// USAGE
+// USAGE / ISSUE
 export const listUsage = query({
   args: {
     feedTypeId: v.optional(v.id('feedTypes')),
@@ -337,7 +385,7 @@ export const listUsage = query({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let usage = []
-    
+
     if (args.feedTypeId) {
       usage = await ctx.db
         .query('feedUsage')
@@ -359,41 +407,110 @@ export const listUsage = query({
   },
 })
 
+async function recordOutboundUsage(
+  ctx: any,
+  args: {
+    feedTypeId: any
+    cageId?: any
+    quantity?: number
+    bags?: number
+    usageDate: string
+    notes?: string
+    source: 'issue' | 'daily' | 'usage'
+    allowNegative?: boolean
+    overrideReason?: string
+    transactionType: 'issue' | 'daily_usage' | 'usage'
+    referenceId?: string
+  },
+) {
+  const user = await requireUser(ctx)
+  const feedType = await ctx.db.get(args.feedTypeId)
+  if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
+  const allowed = await listForCompany(user, [feedType])
+  if (!allowed.length) throw new Error('Access denied')
+
+  if (args.cageId) {
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage) throw new Error('Cage not found')
+    const cageAllowed = await listForCompany(user, [cage])
+    if (!cageAllowed.length) throw new Error('Cage access denied')
+  }
+
+  const quantityKg = resolveQuantityKg(feedType, args.quantity, args.bags)
+  const bags =
+    args.bags != null ? args.bags : bagsFromKg(quantityKg, feedType.bagSizeKg)
+
+  const now = Date.now()
+  const id = await ctx.db.insert('feedUsage', {
+    feedTypeId: args.feedTypeId,
+    cageId: args.cageId,
+    quantity: quantityKg,
+    bags,
+    usageDate: args.usageDate,
+    source: args.source,
+    notes: args.notes,
+    companyId: (await writeCompanyId(user)) ?? feedType.companyId,
+    updatedAt: now,
+  })
+
+  await applyStockChange(ctx, {
+    user,
+    feedTypeId: args.feedTypeId,
+    deltaKg: -quantityKg,
+    bags,
+    transactionType: args.transactionType,
+    referenceId: args.referenceId ?? String(id),
+    notes: args.notes || `${args.source} ${args.usageDate}`,
+    allowNegative: args.allowNegative,
+    overrideReason: args.overrideReason,
+  })
+
+  await logAudit(ctx, {
+    actionType: 'create',
+    tableName: 'feedUsage',
+    recordId: id,
+    newValues: { ...args, quantityKg, bags },
+  })
+  return id
+}
+
 export const createUsage = mutation({
   args: {
     feedTypeId: v.id('feedTypes'),
     cageId: v.optional(v.id('cages')),
-    quantity: v.number(),
+    quantity: v.optional(v.number()),
+    bags: v.optional(v.number()),
     usageDate: v.string(),
     notes: v.optional(v.string()),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    const feedType = await ctx.db.get(args.feedTypeId)
-    if (!feedType) throw new Error('Feed type not found')
-    if (feedType.currentStock < args.quantity) {
-      throw new Error('Insufficient stock')
-    }
-
-    const now = Date.now()
-    const id = await ctx.db.insert('feedUsage', {
+    return await recordOutboundUsage(ctx, {
       ...args,
-      companyId: (await writeCompanyId(user)) ?? feedType.companyId,
-      updatedAt: now,
+      source: 'usage',
+      transactionType: 'usage',
     })
+  },
+})
 
-    // Decrement feed type stock
-    await ctx.db.patch(args.feedTypeId, {
-      currentStock: Math.max(0, feedType.currentStock - args.quantity),
-      updatedAt: now,
+/** Explicit store take-out by feeders (may link to a cage). */
+export const createIssue = mutation({
+  args: {
+    feedTypeId: v.id('feedTypes'),
+    cageId: v.optional(v.id('cages')),
+    quantity: v.optional(v.number()),
+    bags: v.optional(v.number()),
+    usageDate: v.string(),
+    notes: v.optional(v.string()),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await recordOutboundUsage(ctx, {
+      ...args,
+      source: 'issue',
+      transactionType: 'issue',
     })
-
-    await logAudit(ctx, {
-      actionType: 'create',
-      tableName: 'feedUsage',
-      recordId: id,
-      newValues: args,
-    })
-    return id
   },
 })

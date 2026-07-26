@@ -32,6 +32,7 @@ import {
   dailyRecordService,
   biweeklyRecordService,
 } from '../lib/databaseService'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 import BiweeklyForm from './BiweeklyForm'
 import HarvestForm from './HarvestForm'
 import DailyEntryForm from './DailyEntryForm'
@@ -105,8 +106,7 @@ function Dashboard({ selectedCage }) {
 
         setRecentStockings(sortedStockings)
 
-        // Fetch other metrics as needed for dashboard
-        updateDashboardMetrics(cagesData, stockingsData)
+        await updateDashboardMetrics(cagesData, stockingsData)
       } catch (error) {
         console.error('Error fetching data:', error.message)
         setError(error.message)
@@ -154,54 +154,73 @@ function Dashboard({ selectedCage }) {
     }
   }, [selectedCage])
 
-  // Calculate dashboard metrics
-  const updateDashboardMetrics = (cages, stockings) => {
+  // Calculate dashboard metrics from Convex reports + local stocking totals
+  const updateDashboardMetrics = async (cages, stockings) => {
     if (!cages || cages.length === 0) return
 
-    // Calculate total active cages
     const activeCages = cages.filter((cage) => cage.status === 'active')
-
-    // Use most recent stockings for each active cage
     const recentStockingsMap = {}
     activeCages.forEach((cage) => {
-      const cageStockings = stockings
-        .filter((stocking) => stocking.cage_id === cage.id)
+      const cageStockings = (stockings || [])
+        .filter((stocking) => stocking.cage_id === cage.id || stocking.cage_id === cage._id)
         .sort((a, b) => new Date(b.stocking_date) - new Date(a.stocking_date))
-
       if (cageStockings.length > 0) {
-        recentStockingsMap[cage.id] = cageStockings[0]
+        recentStockingsMap[cage.id || cage._id] = cageStockings[0]
       }
     })
 
-    // Calculate total biomass and other metrics
     let totalBiomass = 0
     Object.values(recentStockingsMap).forEach((stocking) => {
       totalBiomass += stocking.initial_biomass || 0
     })
 
-    // Set metrics
+    let averageFCR = 'N/A'
+    let mortalityRate = '0.0'
+    let reportGrowth = null
+    let feedCostPerKg = 'N/A'
+
+    try {
+      const client = getConvexHttpClient()
+      const kpis = await client.query(api.reports.dashboardKpis, {
+        dateRange: 30,
+      })
+
+      if (kpis?.mortality_rate_pct != null) {
+        mortalityRate = Number(kpis.mortality_rate_pct).toFixed(1)
+      }
+      if (kpis?.avg_fcr != null) {
+        averageFCR = Number(kpis.avg_fcr).toFixed(2)
+      }
+      if (kpis?.avg_daily_growth_g != null) {
+        reportGrowth = kpis.avg_daily_growth_g
+      }
+      if (kpis?.feed_cost_per_kg_harvested != null) {
+        feedCostPerKg = Number(kpis.feed_cost_per_kg_harvested).toFixed(2)
+      }
+    } catch (err) {
+      console.warn('Dashboard KPIs unavailable:', err?.message || err)
+    }
+
     setMetrics({
       totalActiveCages: activeCages.length,
       totalBiomass: Math.round(totalBiomass),
-      averageFCR: calculateAverageFCR(cages, dailyRecords, biweeklyRecords),
-      mortalityRate: calculateMortalityRate(cages, dailyRecords),
-      avgDailyGrowth: calculateAvgDailyGrowth(cages, dailyRecords, biweeklyRecords),
-      daysToHarvest: calculateDaysToHarvest(cages, dailyRecords, biweeklyRecords),
-      feedCostPerKg: calculateFeedCostPerKg(cages, dailyRecords, biweeklyRecords),
+      averageFCR,
+      mortalityRate,
+      avgDailyGrowth:
+        reportGrowth != null
+          ? Number(reportGrowth).toFixed(1)
+          : calculateAvgDailyGrowth(cages, dailyRecords, biweeklyRecords),
+      daysToHarvest: calculateDaysToHarvest(
+        cages,
+        dailyRecords,
+        biweeklyRecords,
+      ),
+      feedCostPerKg:
+        feedCostPerKg !== 'N/A'
+          ? feedCostPerKg
+          : calculateFeedCostPerKg(cages, dailyRecords, biweeklyRecords),
       survivalRate: calculateSurvivalRate(cages, dailyRecords),
     })
-  }
-
-  // Helper function to calculate FCR - placeholder logic
-  const calculateAverageFCR = (cages, dailyRecords, biweeklyRecords) => {
-    // This would normally require complex calculation with real data
-    return '1.45' // Placeholder
-  }
-
-  // Helper function to calculate mortality rate - placeholder logic
-  const calculateMortalityRate = (cages, dailyRecords) => {
-    // This would normally require complex calculation with real data
-    return '2.8' // Placeholder
   }
 
   // Helper function to calculate average daily growth
@@ -381,14 +400,31 @@ function Dashboard({ selectedCage }) {
     )
   }
 
-  // Format date in a user-friendly way
+  // Format date in a user-friendly way (DataTable cells receive the full row)
+  const parseDate = (value) => {
+    if (value == null || value === '') return null
+    const date = value instanceof Date ? value : new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
+    const date = parseDate(dateString)
+    if (!date) return '—'
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     })
+  }
+
+  const daysOfCulture = (dateString) => {
+    const stockingDate = parseDate(dateString)
+    if (!stockingDate) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const start = new Date(stockingDate)
+    start.setHours(0, 0, 0, 0)
+    return Math.floor((today - start) / (1000 * 60 * 60 * 24))
   }
 
   const growthData = prepareGrowthData()
@@ -402,7 +438,7 @@ function Dashboard({ selectedCage }) {
       sortable: true,
       searchable: true,
       cell: (row) => (
-        <span className="font-medium text-indigo-600">{row.batch_number}</span>
+        <span className="font-medium text-lagoon-800">{row.batch_number}</span>
       ),
     },
     {
@@ -415,32 +451,35 @@ function Dashboard({ selectedCage }) {
       header: 'Stocking Date',
       accessor: 'stocking_date',
       sortable: true,
-      cell: (row) => formatDate(row.stocking_date),
+      cell: (row) => formatDate(row.stocking_date || row.stockingDate),
     },
     {
       header: 'DOC',
       accessor: 'stocking_date',
-      cell: (value) => {
-        const stockingDate = new Date(value)
-        const today = new Date()
-        const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
-        return `${doc} days`
+      cell: (row) => {
+        const doc = daysOfCulture(row.stocking_date || row.stockingDate)
+        return doc == null ? '—' : `${doc} days`
       },
     },
     {
       header: 'Initial Count',
       accessor: 'fish_count',
-      cell: (value) => value?.toLocaleString() || 'N/A',
+      cell: (row) =>
+        row.fish_count != null ? Number(row.fish_count).toLocaleString() : 'N/A',
     },
     {
       header: 'Initial ABW (g)',
       accessor: 'initial_abw',
-      cell: (value) => value?.toFixed(1) || 'N/A',
+      cell: (row) =>
+        row.initial_abw != null ? Number(row.initial_abw).toFixed(1) : 'N/A',
     },
     {
       header: 'Initial Biomass (kg)',
       accessor: 'initial_biomass',
-      cell: (value) => value?.toFixed(1) || 'N/A',
+      cell: (row) =>
+        row.initial_biomass != null
+          ? Number(row.initial_biomass).toFixed(1)
+          : 'N/A',
     },
   ]
 
@@ -656,8 +695,8 @@ function Dashboard({ selectedCage }) {
             onClick={() => setTimeRange(range)}
             className={`px-3 py-1 rounded-md text-sm ${
               timeRange === range
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-lagoon-800 text-white'
+                : 'bg-foam text-muted hover:bg-gray-200'
             }`}
           >
             {range}
@@ -774,9 +813,9 @@ function Dashboard({ selectedCage }) {
                       <metric.icon className={`w-5 h-5 text-${metric.color}-600`} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-gray-600">{metric.title}</h3>
+                      <h3 className="text-sm font-medium text-muted">{metric.title}</h3>
                       <div className="flex items-baseline">
-                        <p className="text-2xl font-semibold text-gray-900">
+                        <p className="text-2xl font-semibold text-chart-ink">
                           {metric.unit === '₵' ? metric.unit : ''}{metric.value.toFixed(metric.unit === '%' ? 1 : 0)}
                           {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
                         </p>
@@ -784,7 +823,7 @@ function Dashboard({ selectedCage }) {
                           <span className={`ml-2 text-sm flex items-center ${
                             metric.trend.direction === 'up' ? 'text-green-600' : 
                             metric.trend.direction === 'down' ? 'text-red-600' : 
-                            'text-gray-600'
+                            'text-muted'
                           }`}>
                             {metric.trend.direction === 'up' ? <ArrowUp className="w-3 h-3 mr-1" /> : 
                              metric.trend.direction === 'down' ? <ArrowDown className="w-3 h-3 mr-1" /> : 
@@ -813,8 +852,8 @@ function Dashboard({ selectedCage }) {
                 </div>
                 
                 {/* Description and subtext */}
-                <div className="mt-2 pt-2 border-t border-gray-200">
-                  <p className="text-xs text-gray-600">{metric.subtext}</p>
+                <div className="mt-2 pt-2 border-t border-foam-deep">
+                  <p className="text-xs text-muted">{metric.subtext}</p>
                 </div>
               </div>
             </div>
@@ -823,12 +862,12 @@ function Dashboard({ selectedCage }) {
       </div>
 
       {/* Charts Section */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="page-card p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-medium text-gray-900">Performance Analytics</h2>
+          <h2 className="text-lg font-medium text-chart-ink">Performance Analytics</h2>
           <button
             onClick={() => setExpandedSections(prev => ({...prev, charts: !prev.charts}))}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-muted hover:text-chart-ink"
           >
             {expandedSections.charts ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
@@ -838,11 +877,11 @@ function Dashboard({ selectedCage }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Growth Performance Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Growth Performance</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Growth Performance</h3>
               <div className="h-64">
                 {loading ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lagoon-800"></div>
                   </div>
                 ) : growthData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -893,7 +932,7 @@ function Dashboard({ selectedCage }) {
                     </RechartsLineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500">
+                  <div className="h-full flex items-center justify-center text-muted">
                     No growth data available
                   </div>
                 )}
@@ -902,11 +941,11 @@ function Dashboard({ selectedCage }) {
 
             {/* Feed Consumption Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Feed Consumption</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed Consumption</h3>
               <div className="h-64">
                 {loading ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lagoon-800"></div>
                   </div>
                 ) : feedData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -954,7 +993,7 @@ function Dashboard({ selectedCage }) {
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500">
+                  <div className="h-full flex items-center justify-center text-muted">
                     No feed data available
                   </div>
                 )}
@@ -963,7 +1002,7 @@ function Dashboard({ selectedCage }) {
 
             {/* Mortality Trend Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Mortality Trend</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Mortality Trend</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={mortalityData}>
@@ -995,7 +1034,7 @@ function Dashboard({ selectedCage }) {
 
             {/* Feed Efficiency Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Feed Efficiency (FCR)</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed Efficiency (FCR)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={feedEfficiencyData}>
@@ -1016,7 +1055,7 @@ function Dashboard({ selectedCage }) {
 
             {/* Biomass Projection Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Biomass Projection</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Biomass Projection</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={biomassProjection}>
@@ -1044,7 +1083,7 @@ function Dashboard({ selectedCage }) {
 
             {/* Water Quality Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Water Quality Parameters</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Water Quality Parameters</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={waterQualityData}>
@@ -1076,18 +1115,18 @@ function Dashboard({ selectedCage }) {
       </div>
 
       {/* Recent Stockings Section */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="font-medium text-gray-700">Recent Stockings</h2>
+      <div className="page-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-foam-deep flex justify-between items-center">
+          <h2 className="font-medium text-chart-ink">Recent Stockings</h2>
           <div className="flex items-center space-x-4">
             <Link href="/stocking-management">
-              <button className="text-sm text-indigo-600 hover:text-indigo-800">
+              <button className="text-sm text-lagoon-800 hover:text-lagoon-950">
                 View All Stockings
               </button>
             </Link>
             <button
               onClick={() => setExpandedSections(prev => ({...prev, stockings: !prev.stockings}))}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-muted hover:text-chart-ink"
             >
               {expandedSections.stockings ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
@@ -1096,73 +1135,86 @@ function Dashboard({ selectedCage }) {
 
         {expandedSections.stockings && (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-foam-deep">
+              <thead className="bg-foam-deep/40">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Cage
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Stocking Date
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     DOC
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Initial Count
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Initial ABW (g)
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Initial Biomass (kg)
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {cages.map((cage) => {
-                  // Calculate DOC (Days of Culture)
-                  const stockingDate = new Date(cage.stocking_date)
-                  const today = new Date()
-                  const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
+              <tbody className="bg-white divide-y divide-foam-deep">
+                {(recentStockings.length > 0
+                  ? recentStockings.slice(0, 10)
+                  : cages.filter((c) => c.stocking_date || c.stockingDate)
+                ).map((row) => {
+                  const stockingDateValue =
+                    row.stocking_date || row.stockingDate
+                  const doc = daysOfCulture(stockingDateValue)
+                  const cageName =
+                    row.cage?.name ||
+                    row.cage_name ||
+                    cages.find((c) => c.id === (row.cage_id || row.cageId))
+                      ?.name ||
+                    row.name ||
+                    '—'
+                  const count =
+                    row.fish_count ?? row.initial_count ?? row.initialCount
+                  const abw = row.initial_abw ?? row.initialAbw
+                  const biomass = row.initial_biomass ?? row.initialBiomass
 
                   return (
-                    <tr key={cage.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {cage.name}
+                    <tr key={row.id || row._id || `${cageName}-${stockingDateValue}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
+                        {cageName}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(cage.stocking_date).toLocaleDateString()}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {formatDate(stockingDateValue)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {doc} days
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {doc == null ? '—' : `${doc} days`}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {cage.initial_count?.toLocaleString() || 'N/A'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {count != null ? Number(count).toLocaleString() : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {cage.initial_abw?.toFixed(1) || 'N/A'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {abw != null ? Number(abw).toFixed(1) : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {cage.initial_biomass?.toFixed(1) || 'N/A'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {biomass != null ? Number(biomass).toFixed(1) : 'N/A'}
                       </td>
                     </tr>
                   )
@@ -1176,7 +1228,7 @@ function Dashboard({ selectedCage }) {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-4">
         <Link href="/create-cage">
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-lagoon-800 hover:bg-lagoon-950">
             <Plus className="w-4 h-4 mr-2" />
             New Cage
           </button>
@@ -1190,7 +1242,7 @@ function Dashboard({ selectedCage }) {
         </Link>
 
         <Link href="/biweekly-records">
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-lagoon-800 hover:bg-lagoon-950">
             <Scale className="w-4 h-4 mr-2" />
             View Bi-weekly Records
           </button>

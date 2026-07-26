@@ -11,8 +11,12 @@ function toClient(c: any) {
     code: c.code,
     address: c.address,
     contact_email: c.contactEmail,
+    submitted_by_user_id: c.submittedByUserId,
     status: c.status,
     rejection_reason: c.rejectionReason,
+    settings: {
+      ai_assistant_enabled: c.settings?.aiAssistantEnabled === true,
+    },
     created_at: c.createdAt,
     approved_at: c.approvedAt,
     approved_by: c.approvedBy,
@@ -49,7 +53,9 @@ export const register = mutation({
       code: args.code,
       address: args.address,
       contactEmail: args.contactEmail || user.email,
+      submittedByUserId: user._id,
       status: 'pending',
+      settings: { aiAssistantEnabled: false },
       createdAt: now,
     })
 
@@ -90,36 +96,47 @@ export const listPending = query({
 export const approve = mutation({
   args: {
     companyId: v.id('companies'),
-    userId: v.id('users'), // User to promote to admin
+    userId: v.optional(v.id('users')), // User to promote to admin
   },
-  handler: async (ctx, { companyId, userId }) => {
+  handler: async (ctx, { companyId, userId: requestedUserId }) => {
     const user = await requireUser(ctx)
     requireRole(user, 'super_admin')
-    
+
     const company = await ctx.db.get(companyId)
     if (!company) throw new Error('Company not found')
-    
+
     if (company.status !== 'pending') {
       throw new Error('Company is not pending approval')
     }
 
+    let userId = requestedUserId || company.submittedByUserId
+    if (!userId && company.contactEmail) {
+      const byEmail = await ctx.db
+        .query('users')
+        .withIndex('email', (q) => q.eq('email', company.contactEmail!))
+        .unique()
+      userId = byEmail?._id
+    }
+    if (!userId) {
+      throw new Error('No user to promote — registration missing submitter')
+    }
+
     const targetUser = await ctx.db.get(userId)
     if (!targetUser) throw new Error('User not found')
-    
+
     if (targetUser.companyId) {
       throw new Error('User already belongs to a company')
     }
 
     const now = Date.now()
 
-    // Approve the company
     await ctx.db.patch(companyId, {
       status: 'approved',
       approvedAt: now,
       approvedBy: user._id,
+      submittedByUserId: company.submittedByUserId || userId,
     })
 
-    // Set user as admin of the company
     await ctx.db.patch(userId, {
       companyId: companyId,
       role: 'admin',
@@ -129,7 +146,7 @@ export const approve = mutation({
       actionType: 'approve',
       tableName: 'companies',
       recordId: companyId,
-      newValues: { 
+      newValues: {
         status: 'approved',
         promotedUserId: userId,
       },
@@ -213,21 +230,37 @@ export const updateSettings = mutation({
       name: v.optional(v.string()),
       address: v.optional(v.string()),
       contactEmail: v.optional(v.string()),
+      aiAssistantEnabled: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, { id, patch }) => {
     const user = await requireUser(ctx)
     const company = await ctx.db.get(id)
     if (!company) throw new Error('Company not found')
-    
+
     // Only super admins or company admins can update
     if (user.role !== 'super_admin' && (user.companyId !== id || user.role !== 'admin')) {
       throw new Error('Access denied')
     }
-    
+
+    const { aiAssistantEnabled, ...rest } = patch
+    if (aiAssistantEnabled !== undefined) {
+      requireRole(user, 'admin')
+    }
+
     const existing = { ...company }
-    await ctx.db.patch(id, patch)
-    
+    await ctx.db.patch(id, {
+      ...rest,
+      ...(aiAssistantEnabled !== undefined
+        ? {
+            settings: {
+              ...(company.settings || {}),
+              aiAssistantEnabled,
+            },
+          }
+        : {}),
+    })
+
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'companies',
@@ -235,8 +268,30 @@ export const updateSettings = mutation({
       previousValues: existing,
       newValues: patch,
     })
-    
+
     return id
+  },
+})
+
+/** Lightweight flag for AI widget gating. */
+export const aiAssistantStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    if ((user.role ?? 'user') === 'super_admin') {
+      // Super admins without a company: allow for support; with company: follow setting
+      if (!user.companyId) {
+        return { enabled: true, canManage: true }
+      }
+    }
+    if (!user.companyId) {
+      return { enabled: false, canManage: false }
+    }
+    const company = await ctx.db.get(user.companyId)
+    const enabled = company?.settings?.aiAssistantEnabled === true
+    const role = user.role ?? 'user'
+    const canManage = role === 'admin' || role === 'super_admin'
+    return { enabled, canManage }
   },
 })
 

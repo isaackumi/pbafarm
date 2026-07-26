@@ -390,31 +390,31 @@ const BulkUploadModal = ({
       ></div>
       <div className="relative bg-white rounded-lg max-w-4xl w-full mx-4 overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">
+        <div className="px-6 py-4 border-b border-foam-deep flex justify-between items-center">
+          <h3 className="text-lg font-medium text-chart-ink">
             Bulk Upload -{' '}
             {recordType.charAt(0).toUpperCase() + recordType.slice(1)}
           </h3>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-500"
+            className="text-muted hover:text-muted"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Step indicator */}
-        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="px-6 py-3 bg-foam-deep/40 border-b border-foam-deep">
           <div className="flex items-center">
             <div
               className={`flex items-center ${
-                step >= 1 ? 'text-indigo-600' : 'text-gray-400'
+                step >= 1 ? 'text-lagoon-800' : 'text-muted'
               }`}
             >
               <div
                 className={`rounded-full h-6 w-6 flex items-center justify-center ${
-                  step >= 1 ? 'bg-indigo-100' : 'bg-gray-100'
+                  step >= 1 ? 'bg-foam-deep' : 'bg-foam'
                 }`}
               >
                 <span className="text-sm font-medium">1</span>
@@ -423,17 +423,17 @@ const BulkUploadModal = ({
             </div>
             <div
               className={`w-10 h-0.5 mx-2 ${
-                step >= 2 ? 'bg-indigo-600' : 'bg-gray-300'
+                step >= 2 ? 'bg-lagoon-800' : 'bg-gray-300'
               }`}
             ></div>
             <div
               className={`flex items-center ${
-                step >= 2 ? 'text-indigo-600' : 'text-gray-400'
+                step >= 2 ? 'text-lagoon-800' : 'text-muted'
               }`}
             >
               <div
                 className={`rounded-full h-6 w-6 flex items-center justify-center ${
-                  step >= 2 ? 'bg-indigo-100' : 'bg-gray-100'
+                  step >= 2 ? 'bg-foam-deep' : 'bg-foam'
                 }`}
               >
                 <span className="text-sm font-medium">2</span>
@@ -442,17 +442,17 @@ const BulkUploadModal = ({
             </div>
             <div
               className={`w-10 h-0.5 mx-2 ${
-                step >= 3 ? 'bg-indigo-600' : 'bg-gray-300'
+                step >= 3 ? 'bg-lagoon-800' : 'bg-gray-300'
               }`}
             ></div>
             <div
               className={`flex items-center ${
-                step >= 3 ? 'text-indigo-600' : 'text-gray-400'
+                step >= 3 ? 'text-lagoon-800' : 'text-muted'
               }`}
             >
               <div
                 className={`rounded-full h-6 w-6 flex items-center justify-center ${
-                  step >= 3 ? 'bg-indigo-100' : 'bg-gray-100'
+                  step >= 3 ? 'bg-foam-deep' : 'bg-foam'
                 }`}
               >
                 <span className="text-sm font-medium">3</span>
@@ -485,22 +485,22 @@ const BulkUploadModal = ({
 
           {step === 1 && (
             <div className="flex flex-col items-center justify-center py-6">
-              <FileText className="h-16 w-16 text-gray-400 mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">
+              <FileText className="h-16 w-16 text-muted mb-4" />
+              <h4 className="text-lg font-medium text-chart-ink mb-2">
                 Upload Excel or CSV File
               </h4>
-              <p className="text-sm text-gray-500 mb-6 text-center max-w-md">
+              <p className="text-sm text-muted mb-6 text-center max-w-md">
                 Please upload an Excel or CSV file containing your {recordType}{' '}
                 data. Make sure it follows the required template format.
               </p>
 
               <div className="flex flex-col items-center w-full max-w-md">
                 <div
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors"
+                  className="w-full border-2 border-dashed border-input-border rounded-lg p-6 text-center cursor-pointer hover:border-lagoon-800 transition-colors"
                   onClick={() => xlsxLibLoaded && fileInputRef.current?.click()}
                 >
-                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
+                  <Upload className="h-8 w-8 text-muted mx-auto mb-2" />
+                  <p className="text-sm text-muted">
                     {fileData ? (
                       <>
                         Selected:{' '}
@@ -508,14 +508,14 @@ const BulkUploadModal = ({
                       </>
                     ) : (
                       <>
-                        <span className="text-indigo-600 font-medium">
+                        <span className="text-lagoon-800 font-medium">
                           Click to upload
                         </span>{' '}
                         or drag and drop
                       </>
                     )}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Excel or CSV files only
                   </p>
                   <input
@@ -533,7 +533,7 @@ const BulkUploadModal = ({
                     type="button"
                     onClick={downloadTemplate}
                     disabled={!xlsxLibLoaded}
-                    className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
+                    className={`inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 ${
                       !xlsxLibLoaded ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -547,8 +547,8 @@ const BulkUploadModal = ({
                     disabled={!fileData || processing || !xlsxLibLoaded}
                     className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
                       !fileData || processing || !xlsxLibLoaded
-                        ? 'bg-indigo-400 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
+                        ? 'bg-lagoon-700 cursor-not-allowed'
+                        : 'bg-lagoon-800 hover:bg-lagoon-950'
                     }`}
                   >
                     {processing ? 'Processing...' : 'Continue'}
@@ -561,10 +561,10 @@ const BulkUploadModal = ({
           {step === 2 && (
             <div>
               <div className="mb-4">
-                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                <h4 className="text-lg font-medium text-chart-ink mb-2">
                   Preview Data
                 </h4>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted">
                   Review the data before uploading. Found {parsedData.length}{' '}
                   records.
                 </p>
@@ -597,13 +597,13 @@ const BulkUploadModal = ({
                 </div>
               )}
 
-              <div className="border border-gray-200 rounded-md overflow-hidden max-h-96 overflow-y-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0">
+              <div className="border border-foam-deep rounded-md overflow-hidden max-h-96 overflow-y-auto">
+                <table className="min-w-full divide-y divide-foam-deep">
+                  <thead className="bg-foam-deep/40 sticky top-0">
                     <tr>
                       <th
                         scope="col"
-                        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-3 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
                       >
                         Row
                       </th>
@@ -611,14 +611,14 @@ const BulkUploadModal = ({
                         <th
                           key={header}
                           scope="col"
-                          className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          className="px-3 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
                         >
                           {header}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-foam-deep">
                     {parsedData.slice(0, 100).map((record, index) => (
                       <tr
                         key={index}
@@ -627,10 +627,10 @@ const BulkUploadModal = ({
                             ? 'bg-red-50'
                             : index % 2 === 0
                             ? 'bg-white'
-                            : 'bg-gray-50'
+                            : 'bg-foam-deep/40'
                         }
                       >
-                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-muted">
                           {index + 2}
                         </td>
                         {templateHeaders.map((header) => {
@@ -647,7 +647,7 @@ const BulkUploadModal = ({
                               className={`px-3 py-2 whitespace-nowrap text-xs ${
                                 hasError
                                   ? 'text-red-800 font-medium'
-                                  : 'text-gray-500'
+                                  : 'text-muted'
                               }`}
                             >
                               {record[key] !== null &&
@@ -665,7 +665,7 @@ const BulkUploadModal = ({
                       <tr>
                         <td
                           colSpan={templateHeaders.length + 1}
-                          className="px-3 py-2 text-xs text-center text-gray-500"
+                          className="px-3 py-2 text-xs text-center text-muted"
                         >
                           ... {parsedData.length - 100} more rows not shown
                         </td>
@@ -679,7 +679,7 @@ const BulkUploadModal = ({
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Back
                 </button>
@@ -690,8 +690,8 @@ const BulkUploadModal = ({
                   disabled={processing || validationErrors.length > 0}
                   className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
                     processing || validationErrors.length > 0
-                      ? 'bg-indigo-400 cursor-not-allowed'
-                      : 'bg-indigo-600 hover:bg-indigo-700'
+                      ? 'bg-lagoon-700 cursor-not-allowed'
+                      : 'bg-lagoon-800 hover:bg-lagoon-950'
                   }`}
                 >
                   {validationErrors.length > 0
@@ -719,7 +719,7 @@ const BulkUploadModal = ({
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-md mb-6">
+              <div className="bg-foam-deep/40 p-4 rounded-md mb-6">
                 <h5 className="text-sm font-medium text-gray-800 mb-2">
                   Import Summary
                 </h5>
@@ -747,7 +747,7 @@ const BulkUploadModal = ({
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Back
                 </button>

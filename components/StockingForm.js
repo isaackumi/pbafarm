@@ -204,7 +204,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            className="bg-lagoon-800 text-white px-4 py-2 rounded hover:bg-lagoon-800 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Stocking Record'}
           </button>
@@ -212,7 +212,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
             <button
               type="button"
               onClick={onCancel}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              className="bg-foam-deep/400 text-white px-4 py-2 rounded hover:bg-gray-600"
             >
               Cancel
             </button>

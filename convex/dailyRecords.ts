@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { applyStockChange, bagsFromKg } from './lib/feedLedger'
 
 function toClient(r: any) {
   return {
@@ -18,6 +19,91 @@ function toClient(r: any) {
     notes: r.notes,
     created_by: r.createdBy,
     created_at: r._creationTime,
+  }
+}
+
+async function deductDailyFeed(
+  ctx: any,
+  user: any,
+  args: {
+    dailyRecordId: string
+    feedTypeId: any
+    cageId: any
+    feedAmount: number
+    date: string
+    allowNegative?: boolean
+    overrideReason?: string
+  },
+) {
+  if (!args.feedTypeId || !(args.feedAmount > 0)) return
+
+  const feedType = await ctx.db.get(args.feedTypeId)
+  if (!feedType) throw new Error('Feed type not found')
+
+  const bags = bagsFromKg(args.feedAmount, feedType.bagSizeKg)
+  const usageId = await ctx.db.insert('feedUsage', {
+    feedTypeId: args.feedTypeId,
+    cageId: args.cageId,
+    quantity: args.feedAmount,
+    bags,
+    usageDate: args.date,
+    source: 'daily',
+    notes: `Daily record ${args.date}`,
+    companyId: feedType.companyId ?? user.companyId,
+    updatedAt: Date.now(),
+  })
+
+  await applyStockChange(ctx, {
+    user,
+    feedTypeId: args.feedTypeId,
+    deltaKg: -args.feedAmount,
+    bags,
+    transactionType: 'daily_usage',
+    referenceId: String(args.dailyRecordId),
+    notes: `Daily feed ${args.date} (usage ${usageId})`,
+    allowNegative: args.allowNegative,
+    overrideReason: args.overrideReason,
+  })
+}
+
+async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
+  if (!dailyRecord.feedTypeId || !(dailyRecord.feedAmount > 0)) return
+
+  const ref = String(dailyRecord._id)
+  const prior = await ctx.db
+    .query('feedInventoryTransactions')
+    .withIndex('by_reference', (q: any) => q.eq('referenceId', ref))
+    .collect()
+
+  const alreadyReversed = prior.some((t: any) => t.transactionType === 'reversal')
+  const originals = prior.filter(
+    (t: any) => t.transactionType === 'daily_usage' || t.transactionType === 'usage',
+  )
+  if (alreadyReversed || !originals.length) {
+    // Fallback: restore by amount if no ledger row (legacy records)
+    if (!originals.length) {
+      await applyStockChange(ctx, {
+        user,
+        feedTypeId: dailyRecord.feedTypeId,
+        deltaKg: dailyRecord.feedAmount,
+        transactionType: 'reversal',
+        referenceId: ref,
+        notes: 'Reversal of daily feed (legacy)',
+      })
+    }
+    return
+  }
+
+  for (const txn of originals) {
+    await applyStockChange(ctx, {
+      user,
+      feedTypeId: dailyRecord.feedTypeId,
+      deltaKg: -txn.quantityKg,
+      bags: txn.bags,
+      transactionType: 'reversal',
+      referenceId: ref,
+      notes: `Reversal of txn ${txn._id}`,
+    })
   }
 }
 
@@ -66,11 +152,17 @@ export const create = mutation({
     feedCost: v.number(),
     mortality: v.number(),
     notes: v.optional(v.string()),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
     if (!cage) throw new Error('Cage not found')
+
+    if (args.feedAmount > 0 && !args.feedTypeId) {
+      throw new Error('feedTypeId is required when feedAmount > 0')
+    }
 
     const existing = await ctx.db
       .query('dailyRecords')
@@ -81,7 +173,15 @@ export const create = mutation({
     if (existing) throw new Error('Daily record already exists for this cage and date')
 
     const id = await ctx.db.insert('dailyRecords', {
-      ...args,
+      cageId: args.cageId,
+      date: args.date,
+      feedAmount: args.feedAmount,
+      feedTypeId: args.feedTypeId,
+      feedType: args.feedType,
+      feedPrice: args.feedPrice,
+      feedCost: args.feedCost,
+      mortality: args.mortality,
+      notes: args.notes,
       companyId: (await writeCompanyId(user)) ?? cage.companyId,
       createdBy: user._id,
     })
@@ -93,23 +193,15 @@ export const create = mutation({
       })
     }
 
-    if (args.feedTypeId && args.feedAmount > 0) {
-      const feedType = await ctx.db.get(args.feedTypeId)
-      if (feedType) {
-        await ctx.db.patch(args.feedTypeId, {
-          currentStock: Math.max(0, feedType.currentStock - args.feedAmount),
-          updatedAt: Date.now(),
-        })
-        await ctx.db.insert('feedUsage', {
-          feedTypeId: args.feedTypeId,
-          cageId: args.cageId,
-          quantity: args.feedAmount,
-          usageDate: args.date,
-          companyId: feedType.companyId,
-          updatedAt: Date.now(),
-        })
-      }
-    }
+    await deductDailyFeed(ctx, user, {
+      dailyRecordId: id,
+      feedTypeId: args.feedTypeId,
+      cageId: args.cageId,
+      feedAmount: args.feedAmount,
+      date: args.date,
+      allowNegative: args.allowNegative,
+      overrideReason: args.overrideReason,
+    })
 
     await logAudit(ctx, {
       actionType: 'create',
@@ -134,15 +226,44 @@ export const update = mutation({
       mortality: v.optional(v.number()),
       notes: v.optional(v.string()),
     }),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch }) => {
+  handler: async (ctx, { id, patch, allowNegative, overrideReason }) => {
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
 
+    const feedTouched =
+      patch.feedAmount !== undefined ||
+      patch.feedTypeId !== undefined ||
+      patch.date !== undefined
+
+    if (feedTouched) {
+      await reverseDailyFeed(ctx, user, existing)
+    }
+
     await ctx.db.patch(id, patch)
+
+    if (feedTouched) {
+      const updated = await ctx.db.get(id)
+      if (!updated) throw new Error('Daily record missing after update')
+      if (updated.feedAmount > 0 && !updated.feedTypeId) {
+        throw new Error('feedTypeId is required when feedAmount > 0')
+      }
+      await deductDailyFeed(ctx, user, {
+        dailyRecordId: id,
+        feedTypeId: updated.feedTypeId,
+        cageId: updated.cageId,
+        feedAmount: updated.feedAmount,
+        date: updated.date,
+        allowNegative,
+        overrideReason,
+      })
+    }
+
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'daily_records',
@@ -163,6 +284,7 @@ export const remove = mutation({
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
 
+    await reverseDailyFeed(ctx, user, existing)
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
@@ -188,11 +310,18 @@ export const createMany = mutation({
         notes: v.optional(v.string()),
       }),
     ),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, { records }) => {
+  handler: async (ctx, { records, allowNegative, overrideReason }) => {
     const user = await requireUser(ctx)
     const ids = []
     for (const record of records) {
+      if (record.feedAmount > 0 && !record.feedTypeId) {
+        throw new Error(
+          `feedTypeId is required when feedAmount > 0 (${record.date})`,
+        )
+      }
       const cage = await ctx.db.get(record.cageId)
       if (!cage) continue
       const existing = await ctx.db
@@ -207,6 +336,23 @@ export const createMany = mutation({
         ...record,
         companyId: (await writeCompanyId(user)) ?? cage.companyId,
         createdBy: user._id,
+      })
+
+      if (record.mortality && cage.currentCount != null) {
+        await ctx.db.patch(record.cageId, {
+          currentCount: Math.max(0, cage.currentCount - record.mortality),
+          updatedAt: Date.now(),
+        })
+      }
+
+      await deductDailyFeed(ctx, user, {
+        dailyRecordId: id,
+        feedTypeId: record.feedTypeId,
+        cageId: record.cageId,
+        feedAmount: record.feedAmount,
+        date: record.date,
+        allowNegative,
+        overrideReason,
       })
       ids.push(id)
     }

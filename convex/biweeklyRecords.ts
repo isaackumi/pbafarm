@@ -121,6 +121,49 @@ export const create = mutation({
   },
 })
 
+export const createMany = mutation({
+  args: {
+    records: v.array(
+      v.object({
+        cageId: v.id('cages'),
+        date: v.string(),
+        batchCode: v.string(),
+        averageBodyWeight: v.number(),
+        totalFishCount: v.number(),
+        totalWeight: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, { records }) => {
+    const user = await requireUser(ctx)
+    const ids = []
+    for (const record of records) {
+      const cage = await ctx.db.get(record.cageId)
+      if (!cage) continue
+      const existing = await ctx.db
+        .query('biweeklyRecords')
+        .withIndex('by_batch_code', (q) => q.eq('batchCode', record.batchCode))
+        .first()
+      if (existing) continue
+
+      const now = Date.now()
+      const id = await ctx.db.insert('biweeklyRecords', {
+        ...record,
+        companyId: (await writeCompanyId(user)) ?? cage.companyId,
+        createdBy: user._id,
+        updatedAt: now,
+      })
+      ids.push(id)
+    }
+    await logAudit(ctx, {
+      actionType: 'create_many',
+      tableName: 'biweeklyRecords',
+      newValues: { count: ids.length },
+    })
+    return ids
+  },
+})
+
 export const update = mutation({
   args: {
     id: v.id('biweeklyRecords'),

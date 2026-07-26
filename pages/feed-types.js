@@ -129,25 +129,25 @@ function FeedTypes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-montserrat">
+    <div className="min-h-screen bg-foam font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Link
               href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-chart-ink">
               Feed Types Management
             </h1>
           </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Feed Type
@@ -155,72 +155,72 @@ function FeedTypes() {
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-600">
+          <p className="text-muted">
             Manage feed types used in your farm. Create, edit, or deactivate
             feed types as needed.
           </p>
         </div>
 
         {/* Feed Types Table */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-medium text-gray-700">Feed Types</h2>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Feed Types</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-3 text-gray-500">Loading feed types...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <p className="mt-3 text-muted">Loading feed types...</p>
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-foam-deep">
+              <thead className="bg-foam-deep/40">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Name
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Price / kg
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Supplier
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Status
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider"
                   >
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-foam-deep">
                 {feedTypes.length > 0 ? (
                   feedTypes.map((type) => (
-                    <tr key={type.id} className="hover:bg-gray-50">
+                    <tr key={type.id} className="hover:bg-foam-deep/40">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-chart-ink">
                           {type.name}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         ${type.price_per_kg?.toFixed(2) || '0.00'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {(() => {
                           const supplier = suppliers.find(s => s.id === type.supplier_id)
                           return supplier ? supplier.name : '-'
@@ -241,7 +241,7 @@ function FeedTypes() {
                         <div className="flex space-x-3 justify-end">
                           <button
                             onClick={() => handleEdit(type)}
-                            className="text-indigo-600 hover:text-indigo-900"
+                            className="text-lagoon-800 hover:text-lagoon-950"
                             title="Edit Feed Type"
                           >
                             <Edit className="w-4 h-4" />
@@ -260,7 +260,7 @@ function FeedTypes() {
                               </button>
                               <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="text-gray-600 hover:text-gray-800"
+                                className="text-muted hover:text-gray-800"
                                 title="Cancel"
                               >
                                 <X className="w-4 h-4" />
@@ -283,7 +283,7 @@ function FeedTypes() {
                   <tr>
                     <td
                       colSpan="6"
-                      className="px-6 py-12 text-center text-gray-500"
+                      className="px-6 py-12 text-center text-muted"
                     >
                       No feed types found. Click "Add Feed Type" to create your
                       first feed type.
@@ -304,13 +304,13 @@ function FeedTypes() {
             onClick={() => setShowAddModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Add New Feed Type
             </h3>
 
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -318,13 +318,13 @@ function FeedTypes() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Price per kg ($)
                 </label>
                 <input
@@ -334,12 +334,12 @@ function FeedTypes() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Protein Percentage (%)
                 </label>
                 <input
@@ -350,11 +350,11 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Pellet Size
                 </label>
                 <input
@@ -362,20 +362,20 @@ function FeedTypes() {
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
                     Supplier <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     required
                   >
                     <option value="">Select supplier</option>
@@ -395,11 +395,11 @@ function FeedTypes() {
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-lagoon-800 focus:ring-lagoon-800 border-input-border rounded"
                 />
                 <label
                   htmlFor="active"
-                  className="ml-2 block text-sm text-gray-900"
+                  className="ml-2 block text-sm text-chart-ink"
                 >
                   Active
                 </label>
@@ -409,13 +409,13 @@ function FeedTypes() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save
@@ -434,13 +434,13 @@ function FeedTypes() {
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Edit Feed Type
             </h3>
 
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -448,13 +448,13 @@ function FeedTypes() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Price per kg ($)
                 </label>
                 <input
@@ -464,12 +464,12 @@ function FeedTypes() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Protein Percentage (%)
                 </label>
                 <input
@@ -480,11 +480,11 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Pellet Size
                 </label>
                 <input
@@ -492,20 +492,20 @@ function FeedTypes() {
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
                     Supplier <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     required
                   >
                     <option value="">Select supplier</option>
@@ -525,11 +525,11 @@ function FeedTypes() {
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-lagoon-800 focus:ring-lagoon-800 border-input-border rounded"
                 />
                 <label
                   htmlFor="edit-active"
-                  className="ml-2 block text-sm text-gray-900"
+                  className="ml-2 block text-sm text-chart-ink"
                 >
                   Active
                 </label>
@@ -539,13 +539,13 @@ function FeedTypes() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes

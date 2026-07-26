@@ -66,28 +66,28 @@ const FeedAnalytics = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-600">Total Usage</h3>
-            <p className="text-2xl font-bold text-blue-600">
+            <h3 className="text-lg font-semibold text-muted">Total Usage</h3>
+            <p className="text-2xl font-bold text-lagoon-800">
               {analytics.usageStats?.totalUsage?.toFixed(1) || '0'} kg
             </p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-600">Total Cost</h3>
+            <h3 className="text-lg font-semibold text-muted">Total Cost</h3>
             <p className="text-2xl font-bold text-green-600">
               ${analytics.costAnalysis?.totalCost?.toFixed(2) || '0'}
             </p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-600">Avg Cost/kg</h3>
+            <h3 className="text-lg font-semibold text-muted">Avg Cost/kg</h3>
             <p className="text-2xl font-bold text-orange-600">
               ${analytics.costAnalysis?.averageCostPerKg?.toFixed(2) || '0'}
             </p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-600">Low Stock Alerts</h3>
+            <h3 className="text-lg font-semibold text-muted">Low Stock Alerts</h3>
             <p className="text-2xl font-bold text-red-600">
               {analytics.lowStockAlerts.length}
             </p>

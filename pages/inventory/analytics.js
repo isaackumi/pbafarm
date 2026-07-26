@@ -172,25 +172,25 @@ function InventoryAnalytics() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-foam">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Link
               href="/inventory/overview"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Overview
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory Analytics</h1>
+            <h1 className="text-2xl font-bold text-chart-ink">Inventory Analytics</h1>
           </div>
 
           <div className="flex items-center space-x-4">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800"
             >
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
@@ -200,7 +200,7 @@ function InventoryAnalytics() {
 
             <button
               onClick={fetchData}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
@@ -215,8 +215,8 @@ function InventoryAnalytics() {
         )}
 
         {/* Transaction Analysis */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Transaction Analysis</h3>
+        <div className="page-card p-6 mb-6">
+          <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction Analysis</h3>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={transactionData}>
@@ -246,8 +246,8 @@ function InventoryAnalytics() {
 
         {/* Category Analysis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Category Distribution</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Category Distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -271,8 +271,8 @@ function InventoryAnalytics() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Trend</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
@@ -331,7 +331,7 @@ function InventoryAnalytics() {
           ].map((metric, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-300"
+              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -339,8 +339,8 @@ function InventoryAnalytics() {
                     <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                    <p className="text-sm font-medium text-muted">{metric.title}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">
                       {metric.unit === '₵' ? metric.unit : ''}{metric.value}
                       {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
                     </p>
@@ -364,8 +364,8 @@ function InventoryAnalytics() {
         </div>
 
         {/* Recommendations */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recommendations</h3>
+        <div className="page-card p-6">
+          <h3 className="text-lg font-medium text-chart-ink mb-4">Recommendations</h3>
           <div className="space-y-4">
             {[
               {
@@ -395,14 +395,14 @@ function InventoryAnalytics() {
             ].map((recommendation, index) => (
               <div
                 key={index}
-                className="flex items-start p-4 bg-gray-50 rounded-lg"
+                className="flex items-start p-4 bg-foam-deep/40 rounded-lg"
               >
                 <div className={`p-3 rounded-full bg-${recommendation.color}-100 mr-4`}>
                   <recommendation.icon className={`w-6 h-6 text-${recommendation.color}-600`} />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{recommendation.title}</h4>
-                  <p className="text-sm text-gray-500">{recommendation.description}</p>
+                  <h4 className="font-medium text-chart-ink">{recommendation.title}</h4>
+                  <p className="text-sm text-muted">{recommendation.description}</p>
                 </div>
               </div>
             ))}

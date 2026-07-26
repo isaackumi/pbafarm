@@ -147,12 +147,12 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="page-card p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-medium text-gray-900">
+        <h2 className="text-lg font-medium text-chart-ink">
           Bi-weekly Records Entry - {cage.name}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted">
           Enter sampling data for {cage.name}
         </p>
       </div>
@@ -189,24 +189,24 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Summary Section - Moved to top */}
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-8 rounded-xl border-2 border-indigo-100 shadow-sm">
-          <h3 className="text-xl font-semibold text-indigo-900 mb-6">Summary</h3>
+        <div className="bg-gradient-to-r from-foam to-foam-deep p-8 rounded-xl border-2 border-foam-deep shadow-sm">
+          <h3 className="text-xl font-semibold text-lagoon-950 mb-6">Summary</h3>
           <dl className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
-              <dt className="text-base font-medium text-indigo-700 mb-2">Total Fish Count</dt>
-              <dd className="text-3xl font-bold text-indigo-900">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
+              <dt className="text-base font-medium text-lagoon-800 mb-2">Total Fish Count</dt>
+              <dd className="text-3xl font-bold text-lagoon-950">
                 {samplings.reduce((sum, s) => sum + Number(s.fish_count || 0), 0).toLocaleString()}
               </dd>
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
-              <dt className="text-base font-medium text-indigo-700 mb-2">Total Weight</dt>
-              <dd className="text-3xl font-bold text-indigo-900">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
+              <dt className="text-base font-medium text-lagoon-800 mb-2">Total Weight</dt>
+              <dd className="text-3xl font-bold text-lagoon-950">
                 {samplings.reduce((sum, s) => sum + Number(s.total_weight || 0), 0).toFixed(2)}g
               </dd>
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
-              <dt className="text-base font-medium text-indigo-700 mb-2">Average ABW</dt>
-              <dd className="text-3xl font-bold text-indigo-900">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
+              <dt className="text-base font-medium text-lagoon-800 mb-2">Average ABW</dt>
+              <dd className="text-3xl font-bold text-lagoon-950">
                 {calculateAverageABW().toFixed(2)}g
               </dd>
             </div>
@@ -214,18 +214,18 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         </div>
 
         {/* Batch Code Display */}
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-foam-deep shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">Batch Code</label>
-              <p className="text-3xl font-mono font-bold text-indigo-600 tracking-wider bg-white px-4 py-3 rounded-lg border-2 border-indigo-200 shadow-sm">
+              <label className="block text-base font-medium text-chart-ink mb-2">Batch Code</label>
+              <p className="text-3xl font-mono font-bold text-lagoon-800 tracking-wider bg-white px-4 py-3 rounded-lg border-2 border-foam-deep shadow-sm">
                 {batchCode}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setBatchCode(generateBatchCode())}
-              className="inline-flex items-center px-4 py-3 border-2 border-gray-300 shadow-sm text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="inline-flex items-center px-4 py-3 border-2 border-input-border shadow-sm text-base font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 transition-colors"
             >
               <RefreshCw className="w-5 h-5 mr-2" />
               Generate New Code
@@ -235,7 +235,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
 
         {/* Date Field */}
         <div>
-          <label htmlFor="date" className="block text-base font-medium text-gray-700 mb-2">
+          <label htmlFor="date" className="block text-base font-medium text-chart-ink mb-2">
             Sampling Date
           </label>
           <input
@@ -243,7 +243,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             id="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+            className="mt-1 block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base"
             required
           />
         </div>
@@ -251,11 +251,11 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         {/* Sampling Data */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900">Sampling Data</h3>
+            <h3 className="text-xl font-semibold text-chart-ink">Sampling Data</h3>
             <button
               type="button"
               onClick={addSampling}
-              className="inline-flex items-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="inline-flex items-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
               Add Sampling
@@ -264,9 +264,9 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
 
           <div className="space-y-6">
             {samplings.map((sampling, index) => (
-              <div key={sampling.id} className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm hover:border-indigo-300 transition-colors">
+              <div key={sampling.id} className="bg-white p-6 rounded-lg border-2 border-foam-deep shadow-sm hover:border-lagoon-800/40 transition-colors">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900">Sampling {index + 1}</h4>
+                  <h4 className="text-lg font-semibold text-chart-ink">Sampling {index + 1}</h4>
                   {samplings.length > 1 && (
                     <button
                       type="button"
@@ -281,48 +281,48 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                   <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
+                    <label className="block text-base font-medium text-chart-ink mb-2">
                       Fish Count
                     </label>
                     <input
                       type="number"
                       value={sampling.fish_count}
                       onChange={(e) => updateSampling(index, 'fish_count', e.target.value)}
-                      className="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-gray-400"
+                      className="block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base placeholder-gray-400"
                       placeholder="Enter fish count"
                       min="0"
                     />
-                    <p className="mt-1 text-sm text-gray-500">Number of fish in this sample</p>
+                    <p className="mt-1 text-sm text-muted">Number of fish in this sample</p>
                   </div>
 
                   <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
+                    <label className="block text-base font-medium text-chart-ink mb-2">
                       Total Weight (g)
                     </label>
                     <input
                       type="number"
                       value={sampling.total_weight}
                       onChange={(e) => updateSampling(index, 'total_weight', e.target.value)}
-                      className="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-gray-400"
+                      className="block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base placeholder-gray-400"
                       placeholder="0.00"
                       min="0"
                       step="0.01"
                     />
-                    <p className="mt-1 text-sm text-gray-500">Total weight of the sample in grams</p>
+                    <p className="mt-1 text-sm text-muted">Total weight of the sample in grams</p>
                   </div>
 
                   <div>
-                    <label className="block text-base font-medium text-gray-700 mb-2">
+                    <label className="block text-base font-medium text-chart-ink mb-2">
                       Average ABW (g)
                     </label>
                     <input
                       type="number"
                       value={sampling.abw}
-                      className="block w-full px-4 py-3 border-2 border-gray-200 rounded-lg shadow-sm bg-gray-50 text-base text-gray-700 font-mono"
+                      className="block w-full px-4 py-3 border-2 border-foam-deep rounded-lg shadow-sm bg-foam-deep/40 text-base text-chart-ink font-mono"
                       placeholder="0.00"
                       readOnly
                     />
-                    <p className="mt-1 text-sm text-gray-500">Calculated automatically</p>
+                    <p className="mt-1 text-sm text-muted">Calculated automatically</p>
                   </div>
                 </div>
               </div>
@@ -331,14 +331,14 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end pt-6 border-t border-gray-200">
+        <div className="flex justify-end pt-6 border-t border-foam-deep">
           <button
             type="submit"
             disabled={loading}
             className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white transition-colors ${
               loading
-                ? 'bg-indigo-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                ? 'bg-lagoon-700 cursor-not-allowed'
+                : 'bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800'
             }`}
           >
             {loading ? (

@@ -2,34 +2,34 @@
 @import './theme.css';
 
 @theme {
-  --color-lagoon-700: #0e5c6e;
-  --color-lagoon-800: #0b4a58;
-  --color-lagoon-950: #062a33;
-  --color-foam: #f3f7f6;
-  --color-foam-deep: #e4eeeb;
-  --color-kelp: #2f6b4f;
-  --color-kelp-soft: #3d8a64;
-  --color-signal: #c45c26;
-  --color-signal-soft: #e8a07a;
-  --color-chart-ink: #1a2b32;
-  --color-muted: #5a6f76;
+  --color-lagoon-700: #0d9488;
+  --color-lagoon-800: #0f766e;
+  --color-lagoon-950: #0b3d3a;
+  --color-foam: #f4f8f7;
+  --color-foam-deep: #d7e8e4;
+  --color-kelp: #15803d;
+  --color-kelp-soft: #22a06b;
+  --color-signal: #dc2626;
+  --color-signal-soft: #fca5a5;
+  --color-chart-ink: #134e4a;
+  --color-muted: #5f7471;
   --color-surface: #ffffff;
-  --color-input-border: #c5d4d1;
+  --color-input-border: #c5d8d4;
 
-  --color-primary-50: #f3f7f6;
-  --color-primary-100: #e4eeeb;
-  --color-primary-200: #c5d4d1;
-  --color-primary-300: #7aa0a8;
-  --color-primary-400: #4a7a86;
-  --color-primary-500: #0e5c6e;
-  --color-primary-600: #0b4a58;
-  --color-primary-700: #083d49;
-  --color-primary-800: #062a33;
-  --color-primary-900: #041f26;
+  --color-primary-50: #f4f8f7;
+  --color-primary-100: #d7e8e4;
+  --color-primary-200: #c5d8d4;
+  --color-primary-300: #5ea8a0;
+  --color-primary-400: #2a9b90;
+  --color-primary-500: #0d9488;
+  --color-primary-600: #0f766e;
+  --color-primary-700: #0d5f59;
+  --color-primary-800: #0b3d3a;
+  --color-primary-900: #072926;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
-  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Lexend', system-ui, sans-serif;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
@@ -46,6 +46,7 @@ h3,
 h4,
 h5,
 h6 {
+  font-family: var(--font-display);
   font-weight: 700;
 }
 
@@ -77,5 +78,44 @@ textarea:focus {
   border-color: var(--input-focus);
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(11, 74, 88, 0.25);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+}
+
+button:not(:disabled),
+a[href],
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+button,
+a {
+  transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease,
+    opacity 200ms ease, box-shadow 200ms ease;
+}
+
+/* Prefer Harbor Soft over legacy indigo/sky leftovers if any remain */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-blue-500,
+.bg-blue-600 {
+  background-color: var(--lagoon-800) !important;
+}
+
+.hover\:bg-indigo-700:hover,
+.hover\:bg-blue-600:hover {
+  background-color: var(--lagoon-950) !important;
+}
+
+.text-indigo-600,
+.text-indigo-700,
+.text-blue-600 {
+  color: var(--lagoon-800) !important;
+}
+
+.border-indigo-500,
+.border-indigo-600,
+.focus\:ring-indigo-500:focus,
+.focus\:border-indigo-500:focus {
+  --tw-ring-color: rgba(15, 118, 110, 0.35);
+  border-color: var(--lagoon-800);
 }

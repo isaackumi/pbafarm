@@ -1,29 +1,37 @@
-/* Tide Chart design tokens — aquaculture ops theme */
+/* Harbor Soft — teal Soft UI ops theme */
 :root {
-  --lagoon-950: #062a33;
-  --lagoon-800: #0b4a58;
-  --lagoon-700: #0e5c6e;
-  --foam: #f3f7f6;
-  --foam-deep: #e4eeeb;
-  --kelp: #2f6b4f;
-  --kelp-soft: #3d8a64;
-  --signal: #c45c26;
-  --signal-soft: #e8a07a;
-  --chart-ink: #1a2b32;
-  --muted: #5a6f76;
+  --lagoon-950: #0b3d3a;
+  --lagoon-800: #0f766e;
+  --lagoon-700: #0d9488;
+  --foam: #f4f8f7;
+  --foam-deep: #d7e8e4;
+  --kelp: #15803d;
+  --kelp-soft: #22a06b;
+  --signal: #dc2626;
+  --signal-soft: #fca5a5;
+  --chart-ink: #134e4a;
+  --muted: #5f7471;
   --surface: #ffffff;
-  --waterline: linear-gradient(90deg, #0b4a58 0%, #2f6b4f 100%);
+  --waterline: linear-gradient(90deg, #0f766e 0%, #15803d 100%);
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-ui: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
-  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Lexend', system-ui, sans-serif;
+  --font-ui: 'Figtree', system-ui, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
 
   --background: var(--foam);
   --foreground: var(--chart-ink);
   --input-text: var(--chart-ink);
   --input-bg: #ffffff;
-  --input-border: #c5d4d1;
+  --input-border: #c5d8d4;
   --input-focus: var(--lagoon-800);
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --shadow-sm: 0 1px 2px rgba(11, 61, 58, 0.06);
+  --shadow-md: 0 4px 14px rgba(11, 61, 58, 0.1);
 }
 
 html {
@@ -31,7 +39,10 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(ellipse 80% 50% at 0% -10%, rgba(15, 118, 110, 0.08), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(21, 128, 61, 0.06), transparent 50%),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
   font-weight: 500;
@@ -51,6 +62,198 @@ body {
   background: var(--waterline);
 }
 
+/* Shared page primitives */
+.page-shell {
+  min-height: 100%;
+}
+
+.page-card {
+  background: var(--surface);
+  border: 1px solid var(--foam-deep);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-card-sm {
+  background: var(--surface);
+  border: 1px solid var(--foam-deep);
+  border-radius: 0.625rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-card-xl {
+  background: var(--surface);
+  border: 1px solid var(--foam-deep);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-md);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+  color: var(--chart-ink);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--lagoon-800);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms ease, opacity 200ms ease;
+}
+
+.btn-primary:hover {
+  background: var(--lagoon-950);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--lagoon-800);
+  border: 1px solid var(--lagoon-800);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.btn-secondary:hover {
+  background: var(--foam-deep);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--signal);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+.input-field {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--input-bg);
+  color: var(--input-text);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+}
+
+.table-shell {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--foam-deep);
+  border-radius: 0.75rem;
+}
+
+.table-shell table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-shell thead {
+  background: rgba(215, 232, 228, 0.55);
+}
+
+.table-shell th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.table-shell td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--chart-ink);
+  border-top: 1px solid var(--foam-deep);
+}
+
+.table-shell td.num,
+.table-shell .num {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border-bottom: 2px solid var(--lagoon-800);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ai-typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.ai-typing-dot {
+  animation: ai-typing-bounce 1s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -58,5 +261,10 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .ai-typing-dot {
+    animation: none !important;
+    opacity: 0.7;
   }
 }

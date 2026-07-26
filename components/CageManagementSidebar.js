@@ -124,19 +124,19 @@ const CageManagementSidebar = () => {
   ]
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-screen">
+    <div className="w-64 bg-white border-r border-foam-deep h-screen">
       <div className="p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Cage Management</h2>
+        <h2 className="text-lg font-semibold text-chart-ink mb-4">Cage Management</h2>
         
         {/* Quick Stats */}
         <div className="mb-6 space-y-3">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm text-gray-500">Total Cages</div>
-            <div className="text-2xl font-semibold text-gray-900">{analytics.totalCages}</div>
+          <div className="bg-foam-deep/40 rounded-lg p-3">
+            <div className="text-sm text-muted">Total Cages</div>
+            <div className="text-2xl font-semibold text-chart-ink">{analytics.totalCages}</div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm text-gray-500">Utilization Rate</div>
-            <div className="text-2xl font-semibold text-gray-900">{analytics.utilizationRate}%</div>
+          <div className="bg-foam-deep/40 rounded-lg p-3">
+            <div className="text-sm text-muted">Utilization Rate</div>
+            <div className="text-2xl font-semibold text-chart-ink">{analytics.utilizationRate}%</div>
           </div>
           <div className="bg-green-50 rounded-lg p-3">
             <div className="text-sm text-green-600">Active Cages</div>
@@ -154,7 +154,7 @@ const CageManagementSidebar = () => {
             <div key={item.title}>
               <Link
                 href={item.href}
-                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 group"
+                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-muted rounded-md hover:bg-foam-deep/40 hover:text-chart-ink group"
               >
                 <div className="flex items-center">
                   {item.icon}
@@ -172,7 +172,7 @@ const CageManagementSidebar = () => {
                     <Link
                       key={subItem.title}
                       href={subItem.href}
-                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 rounded-md hover:bg-gray-50 hover:text-gray-900"
+                      className="flex items-center px-3 py-2 text-sm font-medium text-muted rounded-md hover:bg-foam-deep/40 hover:text-chart-ink"
                     >
                       {subItem.icon}
                       <span className="ml-3">{subItem.title}</span>
@@ -188,7 +188,7 @@ const CageManagementSidebar = () => {
         <div className="mt-6">
           <Link
             href="/create-cage"
-            className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-lagoon-800 rounded-md hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
           >
             <Plus className="w-5 h-5 mr-2" />
             Create New Cage

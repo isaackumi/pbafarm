@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Bell, Sun, Moon } from 'lucide-react'
+import Link from 'next/link'
+import { Bell, Sun, Moon } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-
-const dummyNotifications = [
-  { id: 1, text: 'New member registered', read: false },
-  { id: 2, text: 'Feed inventory low', read: false },
-  { id: 3, text: 'Cage 3 needs attention', read: true },
-]
+import { useNotifications } from '../contexts/NotificationContext'
 
 const TopBar = ({ title = 'Dashboard' }) => {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const {
+    notifications,
+    unreadCount,
+    loading: notifLoading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
   const fullName = user?.name || user?.user_metadata?.full_name || user?.email || 'User'
   const role = user?.role || user?.user_metadata?.role || 'User'
   const email = user?.email || ''
@@ -51,41 +54,73 @@ const TopBar = ({ title = 'Dashboard' }) => {
     await signOut()
   }
 
-  const unreadCount = dummyNotifications.filter((n) => !n.read).length
+  const handleNotifClick = async (n) => {
+    if (!n.read) await markAsRead(n._id || n.id)
+  }
 
   return (
     <header className="bg-surface sticky top-0 z-30">
       <div className="waterline" />
       <div className="flex justify-between items-center px-6 py-4 border-b border-foam-deep">
-        <h1 className="text-xl font-semibold text-chart-ink tracking-tight">{title}</h1>
+        <h1 className="font-display text-xl font-bold text-chart-ink tracking-tight">
+          {title}
+        </h1>
 
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-4">
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
-              className="relative p-2 text-muted hover:text-lagoon-800 focus:outline-none"
+              className="relative p-2 text-muted hover:text-lagoon-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-md cursor-pointer"
               aria-label="Notifications"
               onClick={() => setNotifDropdownOpen((open) => !open)}
             >
-              <Bell className="w-6 h-6" />
+              <Bell size={22} weight="duotone" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-signal rounded-full" />
+                <span className="absolute top-1 right-1 min-w-[0.5rem] h-2 px-0.5 bg-signal rounded-full" />
               )}
             </button>
             {notifDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1">
-                <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep">
-                  Notifications
+              <div className="absolute right-0 mt-2 w-80 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1 max-h-96 overflow-y-auto">
+                <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep flex items-center justify-between">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => markAllAsRead()}
+                      className="text-xs font-medium text-lagoon-800 hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )}
                 </div>
-                {dummyNotifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`px-4 py-2 text-sm ${
-                      n.read ? 'text-muted' : 'text-chart-ink font-medium'
-                    } hover:bg-foam cursor-pointer`}
-                  >
-                    {n.text}
-                  </div>
-                ))}
+                {notifLoading && (
+                  <div className="px-4 py-3 text-sm text-muted">Loading…</div>
+                )}
+                {!notifLoading && notifications.length === 0 && (
+                  <div className="px-4 py-3 text-sm text-muted">No notifications</div>
+                )}
+                {!notifLoading &&
+                  notifications.map((n) => (
+                    <button
+                      key={n._id || n.id}
+                      type="button"
+                      onClick={() => handleNotifClick(n)}
+                      className={`w-full text-left px-4 py-2.5 text-sm border-b border-foam-deep/60 last:border-0 ${
+                        n.read ? 'text-muted' : 'text-chart-ink font-medium bg-foam/50'
+                      } hover:bg-foam cursor-pointer`}
+                    >
+                      <div className="font-semibold text-chart-ink">{n.title}</div>
+                      <div className="text-xs mt-0.5 line-clamp-2">{n.message}</div>
+                      {n.link && (
+                        <Link
+                          href={n.link}
+                          className="text-xs text-lagoon-800 mt-1 inline-block"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Open
+                        </Link>
+                      )}
+                    </button>
+                  ))}
               </div>
             )}
           </div>
@@ -95,7 +130,11 @@ const TopBar = ({ title = 'Dashboard' }) => {
             aria-label="Toggle theme"
             onClick={toggleTheme}
           >
-            {theme === 'light' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+            {theme === 'light' ? (
+              <Moon size={22} weight="duotone" />
+            ) : (
+              <Sun size={22} weight="duotone" />
+            )}
           </button>
 
           <div className="relative" id="user-profile-dropdown" ref={profileDropdownRef}>

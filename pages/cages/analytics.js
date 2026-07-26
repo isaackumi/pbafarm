@@ -165,11 +165,11 @@ function CageAnalytics() {
 
   if (loading || reduxLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="min-h-screen bg-foam p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-            <p className="mt-2 text-gray-600">Loading analytics...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
+            <p className="mt-2 text-muted">Loading analytics...</p>
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ function CageAnalytics() {
 
   if (error || reduxError) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="min-h-screen bg-foam p-6">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
@@ -202,59 +202,59 @@ function CageAnalytics() {
 
   if (!cages || cages.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="min-h-screen bg-foam p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center text-gray-500">No cage data available.</div>
+          <div className="text-center text-muted">No cage data available.</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-foam p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Cage Analytics</h1>
+        <h1 className="text-2xl font-bold text-chart-ink mb-6">Cage Analytics</h1>
         
         {/* Summary Cards */}
         {analyticsData && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Total Cages</div>
-              <div className="mt-2 text-2xl font-semibold text-blue-600">
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Total Cages</div>
+              <div className="mt-2 text-2xl font-semibold text-lagoon-800">
                 {analyticsData.totalCages}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Active</div>
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Active</div>
               <div className="mt-2 text-2xl font-semibold text-green-600">
                 {analyticsData.activeCages}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Harvested</div>
-              <div className="mt-2 text-2xl font-semibold text-blue-600">
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Harvested</div>
+              <div className="mt-2 text-2xl font-semibold text-lagoon-800">
                 {analyticsData.harvestedCages}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Maintenance</div>
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Maintenance</div>
               <div className="mt-2 text-2xl font-semibold text-yellow-600">
                 {analyticsData.maintenanceCages}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Fallow</div>
-              <div className="mt-2 text-2xl font-semibold text-gray-600">
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Fallow</div>
+              <div className="mt-2 text-2xl font-semibold text-muted">
                 {analyticsData.fallowCages}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm font-medium text-gray-500">Empty</div>
+            <div className="page-card p-4">
+              <div className="text-sm font-medium text-muted">Empty</div>
               <div className="mt-2 text-2xl font-semibold text-purple-600">
                 {analyticsData.emptyCages}
               </div>
@@ -265,7 +265,7 @@ function CageAnalytics() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Status Distribution */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Status Distribution</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Status Distribution</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -292,7 +292,7 @@ function CageAnalytics() {
 
           {/* Size Distribution */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Size Distribution</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Size Distribution</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -319,7 +319,7 @@ function CageAnalytics() {
 
           {/* Harvest Readiness */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Harvest Readiness</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Harvest Readiness</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.harvestReadiness}>
@@ -335,7 +335,7 @@ function CageAnalytics() {
 
           {/* Growth Trends */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Growth Trends</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Growth Trends</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.growthTrends}>

@@ -1,10 +1,10 @@
-// Stub component for AdminCompanyRegistrationsPage
 import React, { useState, useEffect } from 'react'
 import companyService from '../lib/companyService'
 
 const AdminCompanyRegistrationsPage = () => {
   const [pendingRegistrations, setPendingRegistrations] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     loadPendingRegistrations()
@@ -13,69 +13,93 @@ const AdminCompanyRegistrationsPage = () => {
   const loadPendingRegistrations = async () => {
     try {
       setLoading(true)
+      setError('')
       const response = await companyService.listPendingRegistrations()
-      if (response.data) {
-        setPendingRegistrations(response.data)
-      }
-    } catch (error) {
-      console.error('Error loading pending registrations:', error)
+      if (response.error) throw response.error
+      setPendingRegistrations(response.data || [])
+    } catch (err) {
+      console.error('Error loading pending registrations:', err)
+      setError(err.message || 'Failed to load registrations')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApprove = async (companyId) => {
+  const handleApprove = async (company) => {
+    const companyId = company.id || company._id
+    const userId = company.submitted_by_user_id
+    if (!userId) {
+      alert(
+        'Cannot approve: no submitting user on this registration. Re-register the company after updating.',
+      )
+      return
+    }
     try {
-      await companyService.approveRegistration(companyId)
-      alert('Company approved successfully!')
-      loadPendingRegistrations()
-    } catch (error) {
-      console.error('Error approving company:', error)
-      alert('Error approving company')
+      const { error } = await companyService.approveRegistration(companyId, userId)
+      if (error) throw error
+      await loadPendingRegistrations()
+    } catch (err) {
+      console.error('Error approving company:', err)
+      alert(err.message || 'Error approving company')
     }
   }
 
-  const handleReject = async (companyId) => {
+  const handleReject = async (company) => {
+    const companyId = company.id || company._id
     const reason = prompt('Enter rejection reason:')
     if (!reason) return
-    
+
     try {
-      await companyService.rejectRegistration(companyId, reason)
-      alert('Company rejected')
-      loadPendingRegistrations()
-    } catch (error) {
-      console.error('Error rejecting company:', error)
-      alert('Error rejecting company')
+      const { error } = await companyService.rejectRegistration(companyId, reason)
+      if (error) throw error
+      await loadPendingRegistrations()
+    } catch (err) {
+      console.error('Error rejecting company:', err)
+      alert(err.message || 'Error rejecting company')
     }
   }
 
   if (loading) {
-    return <div className="p-4">Loading pending registrations...</div>
+    return <div className="p-4 text-muted">Loading pending registrations…</div>
   }
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Company Registration Approvals</h2>
-      
+      <h2 className="font-display text-2xl font-bold text-chart-ink mb-6">
+        Company Registration Approvals
+      </h2>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-md border border-signal/30 bg-signal/10 text-sm text-signal">
+          {error}
+        </div>
+      )}
+
       {pendingRegistrations.length === 0 ? (
-        <p className="text-gray-600">No pending registrations</p>
+        <p className="text-muted">No pending registrations</p>
       ) : (
         <div className="space-y-4">
-          {pendingRegistrations.map(company => (
-            <div key={company._id} className="bg-white p-4 rounded-lg shadow border">
-              <h3 className="font-semibold text-lg">{company.name}</h3>
-              <p className="text-gray-600">{company.email}</p>
-              <p className="text-gray-600">{company.address}</p>
+          {pendingRegistrations.map((company) => (
+            <div
+              key={company.id || company._id}
+              className="page-card p-4"
+            >
+              <h3 className="font-semibold text-lg text-chart-ink">{company.name}</h3>
+              <p className="text-sm text-muted font-data">{company.code}</p>
+              <p className="text-muted">{company.contact_email}</p>
+              <p className="text-muted">{company.address}</p>
               <div className="mt-4 flex gap-2">
                 <button
-                  onClick={() => handleApprove(company._id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  type="button"
+                  onClick={() => handleApprove(company)}
+                  className="btn-primary"
                 >
                   Approve
                 </button>
                 <button
-                  onClick={() => handleReject(company._id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                  type="button"
+                  onClick={() => handleReject(company)}
+                  className="btn-danger"
                 >
                   Reject
                 </button>

@@ -81,6 +81,94 @@ export const dashboardSummary = query({
   },
 })
 
+/** Compact KPIs for the main dashboard (FCR, mortality %, growth). */
+export const dashboardKpis = query({
+  args: {
+    dateRange: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const daysBack = args.dateRange || 30
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - daysBack)
+    const cutoffDateStr = cutoff.toISOString().split('T')[0]
+
+    let cages = await ctx.db.query('cages').collect()
+    cages = await listForCompany(user, cages)
+    const activeFish = cages
+      .filter((c) => c.status === 'active')
+      .reduce((s, c) => s + (c.currentCount || 0), 0)
+
+    let daily = await ctx.db.query('dailyRecords').collect()
+    daily = await listForCompany(user, daily)
+    daily = daily.filter((r) => r.date >= cutoffDateStr)
+    const recentMortality = daily.reduce((s, r) => s + r.mortality, 0)
+    const recentFeedCost = daily.reduce((s, r) => s + r.feedCost, 0)
+
+    let biweekly = await ctx.db.query('biweeklyRecords').collect()
+    biweekly = await listForCompany(user, biweekly)
+    biweekly = biweekly.filter((r) => r.date >= cutoffDateStr)
+    let avgGrowth: number | null = null
+    if (biweekly.length >= 2) {
+      const byCage: Record<string, typeof biweekly> = {}
+      for (const r of biweekly) {
+        const key = String(r.cageId)
+        if (!byCage[key]) byCage[key] = []
+        byCage[key].push(r)
+      }
+      const rates: number[] = []
+      for (const rows of Object.values(byCage)) {
+        if (rows.length < 2) continue
+        const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date))
+        const first = sorted[0]
+        const last = sorted[sorted.length - 1]
+        const days = Math.max(
+          1,
+          Math.ceil(
+            (new Date(last.date).getTime() - new Date(first.date).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+        rates.push((last.averageBodyWeight - first.averageBodyWeight) / days)
+      }
+      if (rates.length) {
+        avgGrowth = rates.reduce((a, b) => a + b, 0) / rates.length
+      }
+    }
+
+    let harvests = await ctx.db.query('harvestRecords').collect()
+    harvests = await listForCompany(user, harvests)
+    const periodHarvests = harvests.filter((h) => h.harvestDate >= cutoffDateStr)
+    const fcrValues = periodHarvests
+      .map((h) => h.fcr)
+      .filter((f) => typeof f === 'number' && !Number.isNaN(f) && f > 0)
+    const avgFcr =
+      fcrValues.length > 0
+        ? fcrValues.reduce((a, b) => a + b, 0) / fcrValues.length
+        : null
+    const harvestWeight = periodHarvests.reduce((s, h) => s + h.totalWeight, 0)
+
+    const mortalityPct =
+      activeFish + recentMortality > 0
+        ? (recentMortality / (activeFish + recentMortality)) * 100
+        : 0
+
+    return {
+      period_days: daysBack,
+      active_cages: cages.filter((c) => c.status === 'active').length,
+      active_fish_count: activeFish,
+      recent_mortality: recentMortality,
+      mortality_rate_pct: mortalityPct,
+      avg_fcr: avgFcr,
+      avg_daily_growth_g: avgGrowth,
+      recent_feed_cost: recentFeedCost,
+      harvest_weight_kg: harvestWeight,
+      feed_cost_per_kg_harvested:
+        harvestWeight > 0 ? recentFeedCost / harvestWeight : null,
+    }
+  },
+})
+
 export const exportBundle = query({
   args: {
     dateFrom: v.string(),
@@ -414,6 +502,18 @@ export const farmContextForAi = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireUser(ctx)
+
+    const role = user.role ?? 'user'
+    if (role !== 'super_admin' || user.companyId) {
+      if (!user.companyId) {
+        throw new Error('AI assistant is disabled (no company)')
+      }
+      const company = await ctx.db.get(user.companyId)
+      if (company?.settings?.aiAssistantEnabled !== true) {
+        throw new Error('AI assistant is disabled by admin')
+      }
+    }
+
     let cages = await ctx.db.query('cages').collect()
     cages = await listForCompany(user, cages)
     let daily = await ctx.db.query('dailyRecords').collect()

@@ -1,28 +1,36 @@
-// Cage details page - stub version
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import Layout from '../../components/Layout'
+import ProtectedRoute from '../../components/ProtectedRoute'
 import { cageService } from '../../lib/cageService'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 
-const CageDetailsPage = () => {
+function CageDetails() {
   const router = useRouter()
   const { id } = router.query
   const [cage, setCage] = useState(null)
+  const [recentDaily, setRecentDaily] = useState([])
+  const [recentBiweekly, setRecentBiweekly] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (id) {
-      loadCage()
-    }
+    if (id) loadCage()
   }, [id])
 
   const loadCage = async () => {
     try {
       setLoading(true)
       const response = await cageService.getCageById(id)
-      if (response.data) {
-        setCage(response.data)
-      }
+      if (response.data) setCage(response.data)
+
+      const client = getConvexHttpClient()
+      const [daily, biweekly] = await Promise.all([
+        client.query(api.dailyRecords.list, { cageId: id }),
+        client.query(api.biweeklyRecords.list, { cageId: id }),
+      ])
+      setRecentDaily((daily || []).slice(0, 10))
+      setRecentBiweekly((biweekly || []).slice(0, 10))
     } catch (error) {
       console.error('Error loading cage:', error)
     } finally {
@@ -32,9 +40,9 @@ const CageDetailsPage = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Loading cage details...</div>
+      <Layout title="Cage">
+        <div className="flex justify-center items-center h-64 text-muted">
+          Loading cage details…
         </div>
       </Layout>
     )
@@ -42,14 +50,10 @@ const CageDetailsPage = () => {
 
   if (!cage) {
     return (
-      <Layout>
+      <Layout title="Cage">
         <div className="text-center py-8">
-          <h1 className="text-2xl font-bold text-red-600">Cage Not Found</h1>
-          <p className="mt-2">The cage you're looking for doesn't exist.</p>
-          <button
-            onClick={() => router.push('/cages')}
-            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
+          <h1 className="page-title text-signal">Cage not found</h1>
+          <button type="button" onClick={() => router.push('/cages')} className="btn-primary mt-4">
             Back to Cages
           </button>
         </div>
@@ -57,94 +61,118 @@ const CageDetailsPage = () => {
     )
   }
 
+  const cageId = cage.id || cage._id
+  const status = cage.status || '—'
+
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Cage {cage.name}</h1>
-          <button
-            onClick={() => router.push('/cages')}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-          >
-            Back to Cages
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Cage Information</h2>
-            <div className="space-y-2">
-              <p><strong>Name:</strong> {cage.name}</p>
-              <p><strong>Location:</strong> {cage.location}</p>
-              <p><strong>Status:</strong> <span className={`px-2 py-1 rounded text-sm ${getStatusColor(cage.status)}`}>{cage.status}</span></p>
-              <p><strong>Size:</strong> {cage.size} m³</p>
-              <p><strong>Capacity:</strong> {cage.capacity} fish</p>
-              <p><strong>Material:</strong> {cage.material}</p>
-              <p><strong>Installation Date:</strong> {cage.installationDate ? new Date(cage.installationDate).toLocaleDateString() : 'N/A'}</p>
-            </div>
+    <Layout title={`Cage ${cage.name}`}>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h1 className="page-title">Cage {cage.name}</h1>
+            <p className="page-subtitle font-data">{cage.code || cageId}</p>
           </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Current Status</h2>
-            <div className="space-y-2">
-              <p><strong>Stocking Date:</strong> {cage.stockingDate ? new Date(cage.stockingDate).toLocaleDateString() : 'N/A'}</p>
-              <p><strong>Initial Count:</strong> {cage.initialCount || 'N/A'}</p>
-              <p><strong>Current Count:</strong> {cage.currentCount || 'N/A'}</p>
-              <p><strong>Initial ABW:</strong> {cage.initialAbw || 'N/A'}g</p>
-              <p><strong>Current Weight:</strong> {cage.currentWeight || 'N/A'}g</p>
-              <p><strong>Growth Rate:</strong> {cage.growthRate || 'N/A'}%</p>
-              <p><strong>Mortality Rate:</strong> {cage.mortalityRate || 'N/A'}%</p>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/daily-entry?cage=${cageId}`} className="btn-primary">
+              Daily entry
+            </Link>
+            <Link href={`/biweekly-entry?cage=${cageId}`} className="btn-secondary">
+              Biweekly entry
+            </Link>
+            <button type="button" onClick={() => router.push('/cages')} className="btn-secondary">
+              All cages
+            </button>
           </div>
         </div>
 
-        {cage.notes && (
-          <div className="bg-white p-6 rounded-lg shadow mt-6">
-            <h2 className="text-xl font-semibold mb-4">Notes</h2>
-            <p>{cage.notes}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="page-card p-6 space-y-2 text-sm">
+            <h2 className="font-display font-bold text-lg mb-2">Information</h2>
+            <p>
+              <span className="text-muted">Location:</span> {cage.location || '—'}
+            </p>
+            <p>
+              <span className="text-muted">Status:</span>{' '}
+              <span className="font-semibold text-lagoon-800">{status}</span>
+            </p>
+            <p>
+              <span className="text-muted">Size:</span> {cage.size ?? '—'} m³
+            </p>
+            <p>
+              <span className="text-muted">Capacity:</span> {cage.capacity ?? '—'} fish
+            </p>
           </div>
-        )}
+          <div className="page-card p-6 space-y-2 text-sm">
+            <h2 className="font-display font-bold text-lg mb-2">Stock</h2>
+            <p>
+              <span className="text-muted">Current count:</span>{' '}
+              <span className="font-data font-semibold">
+                {cage.current_count ?? cage.currentCount ?? '—'}
+              </span>
+            </p>
+            <p>
+              <span className="text-muted">Current ABW:</span>{' '}
+              <span className="font-data">
+                {cage.current_abw ?? cage.currentAbw ?? cage.currentWeight ?? '—'} g
+              </span>
+            </p>
+            <p>
+              <span className="text-muted">Stocking date:</span>{' '}
+              {cage.stocking_date || cage.stockingDate || '—'}
+            </p>
+          </div>
+        </div>
 
-        <div className="mt-6 flex gap-2">
-          <button
-            onClick={() => router.push(`/daily-entry?cage=${cage._id}`)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Daily Entry
-          </button>
-          <button
-            onClick={() => router.push(`/biweekly-entry?cage=${cage._id}`)}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
-            Biweekly Entry
-          </button>
-          <button
-            onClick={() => router.push(`/harvest-sampling?cage=${cage._id}`)}
-            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
-          >
-            Harvest Sampling
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="page-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-foam-deep font-semibold">
+              Recent daily records
+            </div>
+            {recentDaily.length === 0 ? (
+              <p className="p-4 text-sm text-muted">No daily records yet.</p>
+            ) : (
+              <ul className="divide-y divide-foam-deep text-sm">
+                {recentDaily.map((r) => (
+                  <li key={r.id || r._id} className="px-4 py-2 flex justify-between gap-2">
+                    <span className="font-data">{r.date}</span>
+                    <span className="text-muted">
+                      Feed {r.feed_amount ?? r.feedAmount} kg · Mort{' '}
+                      {r.mortality ?? 0}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="page-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-foam-deep font-semibold">
+              Recent biweekly samples
+            </div>
+            {recentBiweekly.length === 0 ? (
+              <p className="p-4 text-sm text-muted">No biweekly records yet.</p>
+            ) : (
+              <ul className="divide-y divide-foam-deep text-sm">
+                {recentBiweekly.map((r) => (
+                  <li key={r.id || r._id} className="px-4 py-2 flex justify-between gap-2">
+                    <span className="font-data">{r.date}</span>
+                    <span className="text-muted">
+                      ABW {r.average_body_weight ?? r.averageBodyWeight} g
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
   )
 }
 
-function getStatusColor(status) {
-  switch (status?.toLowerCase()) {
-    case 'active':
-      return 'bg-green-100 text-green-800'
-    case 'empty':
-      return 'bg-gray-100 text-gray-800'
-    case 'maintenance':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'harvested':
-      return 'bg-blue-100 text-blue-800'
-    case 'fallow':
-      return 'bg-purple-100 text-purple-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
+export default function CageDetailsPage() {
+  return (
+    <ProtectedRoute>
+      <CageDetails />
+    </ProtectedRoute>
+  )
 }
-
-export default CageDetailsPage

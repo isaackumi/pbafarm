@@ -63,7 +63,7 @@ function InventoryAlerts() {
       case 'medium':
         return 'text-yellow-600 bg-yellow-50'
       default:
-        return 'text-gray-600 bg-gray-50'
+        return 'text-muted bg-foam-deep/40'
     }
   }
 
@@ -82,23 +82,23 @@ function InventoryAlerts() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-foam">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Link
               href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
+              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory Alerts</h1>
+            <h1 className="text-2xl font-bold text-chart-ink">Inventory Alerts</h1>
           </div>
 
           <button
             onClick={fetchAlerts}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -111,18 +111,18 @@ function InventoryAlerts() {
           </div>
         )}
 
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-medium text-gray-700">Active Alerts</h2>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Active Alerts</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-3 text-gray-500">Loading alerts...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <p className="mt-3 text-muted">Loading alerts...</p>
             </div>
           ) : alerts.length > 0 ? (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-foam-deep">
               {alerts.map((item) => {
                 const severity = getAlertSeverity(item.current_stock, item.minimum_stock)
                 return (
@@ -133,7 +133,7 @@ function InventoryAlerts() {
                       </div>
                       <div className="ml-4 flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-medium text-gray-900">
+                          <h3 className="text-sm font-medium text-chart-ink">
                             {item.name}
                           </h3>
                           <span
@@ -144,10 +144,10 @@ function InventoryAlerts() {
                             {severity.charAt(0).toUpperCase() + severity.slice(1)}
                           </span>
                         </div>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-muted">
                           {getAlertMessage(item)}
                         </p>
-                        <div className="mt-2 text-sm text-gray-500">
+                        <div className="mt-2 text-sm text-muted">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <span className="font-medium">Current Stock:</span>{' '}
@@ -175,8 +175,8 @@ function InventoryAlerts() {
             </div>
           ) : (
             <div className="py-12 text-center">
-              <Bell className="h-12 w-12 text-gray-400 mx-auto" />
-              <p className="mt-3 text-gray-500">No active alerts.</p>
+              <Bell className="h-12 w-12 text-muted mx-auto" />
+              <p className="mt-3 text-muted">No active alerts.</p>
             </div>
           )}
         </div>

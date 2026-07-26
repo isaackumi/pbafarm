@@ -1,57 +1,130 @@
-// components/Sidebar.js
-import React, { useState } from 'react'
+// components/Sidebar.js — Harbor Soft collapsible nav
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
-  LayoutDashboard,
+  House,
   Fish,
-  Package,
-  Truck,
-  Calculator,
-  Scale,
-  AlertTriangle,
-  Droplets,
-  Settings,
-  Users,
-  BarChart2,
-  Calendar,
+  CalendarBlank,
+  Scales,
   FileText,
-  ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  Home,
+  Package,
+  Crosshair,
+  Waves,
   Plus,
-  ShoppingCart,
-  DollarSign,
-  TrendingUp,
-  ClipboardList,
-  Database,
+  SquaresFour,
   ChartBar,
-  PieChart,
-  LineChart,
-  Bell,
-  Layers,
-  LogOut,
-  LayoutGrid,
-  Target,
-  Activity,
-  Shield,
-  Building,
-  FileSpreadsheet,
-  Upload,
-  CheckCircle,
+  GearSix,
+  Database,
+  ShoppingCart,
+  Truck,
+  Warning,
+  ChartLineUp,
+  DownloadSimple,
   Eye,
-  Download,
-  Clock
-} from 'lucide-react'
+  Users,
+  Buildings,
+  CheckCircle,
+  UploadSimple,
+  ShieldCheck,
+  SignOut,
+  CaretDown,
+  CaretRight,
+  CaretDoubleLeft,
+  CaretDoubleRight,
+  ListBullets,
+} from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
 
-const Sidebar = () => {
+const MENU_SECTIONS = {
+  production: {
+    title: 'Production',
+    icon: Fish,
+    items: [
+      { title: 'Dashboard', path: '/dashboard', icon: House },
+      { title: 'Daily Entry', path: '/daily-entry', icon: CalendarBlank },
+      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scales },
+      { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText },
+      { title: 'Harvest Data', path: '/harvest', icon: Package },
+      { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
+      { title: 'Stocking Management', path: '/stocking-management', icon: Waves },
+      { title: 'New Stocking', path: '/stocking', icon: Plus },
+    ],
+  },
+  cages: {
+    title: 'Cages',
+    icon: SquaresFour,
+    items: [
+      { title: 'All Cages', path: '/cages', icon: Database },
+      { title: 'Analytics', path: '/cages/analytics', icon: ChartBar },
+      { title: 'Settings', path: '/cages/settings', icon: GearSix },
+      { title: 'Create Cage', path: '/create-cage', icon: Plus },
+    ],
+  },
+  feed: {
+    title: 'Feed',
+    icon: Package,
+    items: [
+      { title: 'Overview', path: '/feed-management', icon: ChartBar },
+      { title: 'Feed Types', path: '/feed-types', icon: ListBullets },
+      { title: 'Suppliers', path: '/feed-suppliers', icon: Truck },
+      { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart },
+      { title: 'Issue Feed', path: '/feed-issue', icon: Package },
+      { title: 'Analytics', path: '/feed-management/analytics', icon: ChartLineUp },
+    ],
+  },
+  inventory: {
+    title: 'Inventory',
+    icon: Database,
+    items: [
+      { title: 'Overview', path: '/inventory/overview', icon: ChartBar },
+      { title: 'Stock Levels', path: '/stock-levels', icon: Package },
+      { title: 'Alerts', path: '/inventory-alerts', icon: Warning },
+      { title: 'Transactions', path: '/inventory-transactions', icon: FileText },
+      { title: 'Analytics', path: '/inventory/analytics', icon: ChartLineUp },
+    ],
+  },
+  analytics: {
+    title: 'Reports',
+    icon: ChartBar,
+    items: [
+      { title: 'Production Report', path: '/report', icon: FileText },
+      { title: 'Export Data', path: '/export', icon: DownloadSimple },
+      {
+        title: 'Audit Logs',
+        path: '/audit-logs',
+        icon: Eye,
+        adminOnly: true,
+      },
+    ],
+  },
+  management: {
+    title: 'Management',
+    icon: GearSix,
+    adminOnly: true,
+    items: [
+      { title: 'Users', path: '/users', icon: Users },
+      { title: 'Company Settings', path: '/company-settings', icon: Buildings },
+        { title: 'Approvals', path: '/approvals', icon: CheckCircle },
+        { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple },
+    ],
+  },
+  admin: {
+    title: 'Admin',
+    icon: ShieldCheck,
+    superAdminOnly: true,
+    items: [
+      { title: 'Admin Dashboard', path: '/admin/admin', icon: House },
+      { title: 'Registrations', path: '/admin/company-registrations', icon: Buildings },
+    ],
+  },
+}
+
+const Sidebar = ({ collapsed = false, onToggle }) => {
   const { user, signOut } = useAuth()
   const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
     production: true,
@@ -60,13 +133,46 @@ const Sidebar = () => {
     inventory: true,
     analytics: true,
     management: true,
-    admin: true
+    admin: true,
   })
   const { showToast } = useToast()
 
-  const toggleSidebar = () => {
-    setCollapsed(!collapsed)
-  }
+  const role = user?.role || 'user'
+  const isAdmin = role === 'admin' || role === 'super_admin'
+  const isSuperAdmin = role === 'super_admin'
+
+  const menuItems = useMemo(() => {
+    const filtered = Object.entries(MENU_SECTIONS)
+      .filter(([, section]) => {
+        if (section.superAdminOnly && !isSuperAdmin) return false
+        if (section.adminOnly && !isAdmin) return false
+        return true
+      })
+      .map(([key, section]) => [
+        key,
+        {
+          ...section,
+          items: section.items.filter((item) => {
+            if (item.superAdminOnly && !isSuperAdmin) return false
+            if (item.adminOnly && !isAdmin) return false
+            return true
+          }),
+        },
+      ])
+    return Object.fromEntries(filtered)
+  }, [isAdmin, isSuperAdmin])
+
+  useEffect(() => {
+    const path = router.pathname
+    const sectionForPath = Object.entries(MENU_SECTIONS).find(([, section]) =>
+      section.items.some(
+        (item) => path === item.path || path.startsWith(`${item.path}/`)
+      )
+    )
+    if (sectionForPath) {
+      setExpandedSections((prev) => ({ ...prev, [sectionForPath[0]]: true }))
+    }
+  }, [router.pathname])
 
   const handleLogout = async () => {
     try {
@@ -82,190 +188,189 @@ const Sidebar = () => {
   }
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+    if (collapsed) return
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }))
   }
 
-  const renderSectionHeader = (title) => {
-    if (collapsed) return null
-    return (
-      <li className="px-3 py-2 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
-        {title}
-      </li>
-    )
-  }
-
-  const renderSectionDivider = () => {
-    if (!collapsed) return null
-    return <li className="py-2 border-t border-indigo-800 mx-3 my-2"></li>
-  }
-
-  const renderTooltip = (text) => {
-    if (!collapsed) return null
-    return (
-      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-        {text}
-      </div>
-    )
-  }
-
-  const isActive = (path) => router.pathname === path
-
-  const menuItems = {
-    production: {
-      title: 'Production',
-      icon: Fish,
-      items: [
-        { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { title: 'Daily Entry', path: '/daily-entry', icon: Calendar },
-        { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale },
-        { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText },
-        { title: 'Harvest Data', path: '/harvest', icon: Package },
-        { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Target },
-        { title: 'Stocking Management', path: '/stocking-management', icon: Activity },
-        { title: 'New Stocking', path: '/stocking', icon: Plus },
-      ],
-    },
-    cages: {
-      title: 'Cage Management',
-      icon: LayoutGrid,
-      items: [
-        { title: 'All Cages', path: '/cages', icon: Database },
-        { title: 'Analytics', path: '/cages/analytics', icon: BarChart2 },
-        { title: 'Settings', path: '/cages/settings', icon: Settings },
-        { title: 'Create Cage', path: '/create-cage', icon: Plus },
-      ],
-    },
-    feed: {
-      title: 'Feed Management',
-      icon: Package,
-      items: [
-        { title: 'Overview', path: '/feed-management', icon: BarChart2 },
-        { title: 'Feed Types', path: '/feed-types', icon: Package },
-        { title: 'Feed Suppliers', path: '/feed-suppliers', icon: Truck },
-        { title: 'Feed Purchases', path: '/feed-purchases', icon: ShoppingCart },
-        { title: 'Feed Analytics', path: '/feed-management/analytics', icon: LineChart },
-      ],
-    },
-    inventory: {
-      title: 'Inventory',
-      icon: Database,
-      items: [
-        { title: 'Overview', path: '/inventory/overview', icon: BarChart2 },
-        { title: 'Stock Levels', path: '/stock-levels', icon: Package },
-        { title: 'Alerts', path: '/inventory-alerts', icon: AlertTriangle },
-        { title: 'Transactions', path: '/inventory-transactions', icon: FileText },
-        { title: 'Analytics', path: '/inventory/analytics', icon: LineChart },
-      ],
-    },
-    analytics: {
-      title: 'Reports & Analytics',
-      icon: BarChart2,
-      items: [
-        { title: 'Production Report', path: '/report', icon: FileSpreadsheet },
-        { title: 'Export Data', path: '/export', icon: Download },
-        { title: 'Audit Logs', path: '/audit-logs', icon: Eye },
-      ],
-    },
-    management: {
-      title: 'Management',
-      icon: Settings,
-      items: [
-        { title: 'User Management', path: '/users', icon: Users },
-        { title: 'Company Settings', path: '/company-settings', icon: Building },
-        { title: 'Approvals', path: '/approvals', icon: CheckCircle },
-        { title: 'Pending Approval', path: '/pending-approval', icon: Clock },
-        { title: 'Bulk Upload', path: '/bulk-upload', icon: Upload },
-      ],
-    },
-    admin: {
-      title: 'Admin',
-      icon: Shield,
-      items: [
-        { title: 'Admin Dashboard', path: '/admin/admin', icon: LayoutDashboard },
-        { title: 'Company Registrations', path: '/admin/company-registrations', icon: Building },
-      ],
-    },
-  }
+  const isActive = (path) =>
+    router.pathname === path ||
+    (path !== '/dashboard' &&
+      path !== '/cages' &&
+      router.pathname.startsWith(`${path}/`)) ||
+    (path === '/cages' &&
+      (router.pathname === '/cages' || router.pathname.startsWith('/cages/')))
 
   return (
-    <div className="fixed top-0 left-0 h-screen w-64 bg-lagoon-950 border-r border-lagoon-800 flex flex-col z-40">
-      <div className="p-4 border-b border-lagoon-800">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <Fish className="h-7 w-7 text-kelp-soft" />
-          <span className="text-xl font-display font-semibold text-foam tracking-tight">PBA Farm</span>
+    <aside
+      className={`fixed top-0 left-0 h-screen flex flex-col z-40 border-r border-lagoon-950/40 bg-lagoon-950 text-foam transition-[width] duration-200 ease-out ${
+        collapsed ? 'w-[4.5rem]' : 'w-64'
+      }`}
+      aria-label="Main navigation"
+    >
+      <div
+        className={`flex items-center border-b border-white/10 ${
+          collapsed ? 'justify-center px-2 py-4' : 'justify-between px-4 py-4'
+        }`}
+      >
+        <Link
+          href="/dashboard"
+          className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}
+          title="PBA Farm"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-kelp/25 text-kelp-soft">
+            <Fish size={22} weight="duotone" aria-hidden />
+          </span>
+          {!collapsed && (
+            <span className="truncate font-display text-lg font-bold tracking-tight text-white">
+              PBA Farm
+            </span>
+          )}
         </Link>
-        <div className="waterline mt-3" />
+        {typeof onToggle === 'function' && !collapsed && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="rounded-lg p-1.5 text-foam/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
+            aria-label="Collapse sidebar"
+          >
+            <CaretDoubleLeft size={18} weight="bold" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4">
-        {Object.entries(menuItems).map(([key, section]) => (
-          <div key={key} className="mb-2">
-            <button
-              onClick={() => toggleSection(key)}
-              className="w-full flex items-center justify-between px-4 py-2 text-sm font-semibold text-foam/90 hover:bg-lagoon-800/60 focus:outline-none"
-            >
-              <div className="flex items-center">
-                {React.createElement(section.icon, { className: 'h-5 w-5 text-kelp-soft mr-2' })}
-                {section.title}
-              </div>
-              {expandedSections[key] ? (
-                <ChevronDown className="h-4 w-4 text-foam/50" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-foam/50" />
-              )}
-            </button>
+      {collapsed && typeof onToggle === 'function' && (
+        <div className="flex justify-center py-2 border-b border-white/10">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="rounded-lg p-1.5 text-foam/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
+            aria-label="Expand sidebar"
+          >
+            <CaretDoubleRight size={18} weight="bold" />
+          </button>
+        </div>
+      )}
 
-            {expandedSections[key] && (
-              <div className="mt-1 space-y-1">
-                {section.items.map((item) => (
-                  <Link
-                    key={item.path}
-                    href={item.path}
-                    className={`flex items-center px-8 py-2 text-sm font-semibold ${
-                      isActive(item.path)
-                        ? 'text-white bg-lagoon-800'
-                        : 'text-foam/80 hover:bg-lagoon-800/50'
-                    }`}
-                  >
-                    {React.createElement(item.icon, { className: 'h-4 w-4 mr-2 text-kelp-soft' })}
-                    {item.title}
-                  </Link>
-                ))}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+        {Object.entries(menuItems).map(([key, section]) => {
+          const SectionIcon = section.icon
+          const open = collapsed ? false : expandedSections[key]
+          const sectionActive = section.items.some((item) => isActive(item.path))
+
+          return (
+            <div key={key}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (collapsed) {
+                    onToggle?.()
+                    setExpandedSections((prev) => ({ ...prev, [key]: true }))
+                    return
+                  }
+                  toggleSection(key)
+                }}
+                className={`w-full flex items-center rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold tracking-wide transition-colors ${
+                  sectionActive
+                    ? 'bg-white/10 text-white'
+                    : 'text-foam/75 hover:bg-white/5 hover:text-white'
+                } ${collapsed ? 'justify-center' : 'justify-between'}`}
+                title={collapsed ? section.title : undefined}
+              >
+                <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2'}`}>
+                  <SectionIcon
+                    size={20}
+                    weight={sectionActive ? 'duotone' : 'regular'}
+                    className="shrink-0 text-kelp-soft"
+                    aria-hidden
+                  />
+                  {!collapsed && <span className="truncate">{section.title}</span>}
+                </span>
+                {!collapsed &&
+                  (open ? (
+                    <CaretDown size={14} className="text-foam/40 shrink-0" />
+                  ) : (
+                    <CaretRight size={14} className="text-foam/40 shrink-0" />
+                  ))}
+              </button>
+
+              {open && (
+                <ul className="mt-0.5 mb-2 ml-2 border-l border-white/10 pl-2 space-y-0.5">
+                  {section.items.map((item) => {
+                    const ItemIcon = item.icon
+                    const active = isActive(item.path)
+                    return (
+                      <li key={item.path}>
+                        <Link
+                          href={item.path}
+                          className={`group relative flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+                            active
+                              ? 'bg-lagoon-800 text-white shadow-sm'
+                              : 'text-foam/70 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {active && (
+                            <span
+                              className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-kelp-soft"
+                              aria-hidden
+                            />
+                          )}
+                          <ItemIcon
+                            size={16}
+                            weight={active ? 'fill' : 'regular'}
+                            className={active ? 'text-white' : 'text-kelp-soft/90'}
+                            aria-hidden
+                          />
+                          <span className="truncate">{item.title}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+          )
+        })}
+      </nav>
+
+      <div className={`border-t border-white/10 ${collapsed ? 'p-2' : 'p-3'}`}>
+        <div
+          className={`flex items-center ${
+            collapsed ? 'flex-col gap-2' : 'justify-between gap-2'
+          }`}
+        >
+          <div
+            className={`flex items-center min-w-0 ${collapsed ? 'justify-center' : 'gap-2.5'}`}
+            title={user?.email || 'User'}
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-kelp text-sm font-bold text-white">
+              {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">
+                  {user?.name || user?.email?.split('@')[0] || 'User'}
+                </p>
+                <p className="truncate font-data text-[11px] text-foam/45">
+                  {user?.email || '—'}
+                </p>
               </div>
             )}
           </div>
-        ))}
-      </nav>
-
-      <div className="p-4 border-t border-lagoon-800 bg-lagoon-950/80">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center min-w-0">
-            <div className="h-8 w-8 rounded-full bg-kelp flex items-center justify-center shrink-0">
-              <Users className="h-5 w-5 text-foam" />
-            </div>
-            <div className="ml-3 min-w-0">
-              <p className="text-sm font-medium text-foam truncate">
-                {user?.name || user?.email?.split('@')[0] || 'User'}
-              </p>
-              <p className="text-xs text-foam/50 truncate font-data">
-                {user?.email || '—'}
-              </p>
-            </div>
-          </div>
           <button
+            type="button"
             onClick={() => setShowLogoutModal(true)}
-            className="text-foam/50 hover:text-foam shrink-0"
+            className="rounded-lg p-2 text-foam/50 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
             title="Logout"
+            aria-label="Logout"
           >
-            <LogOut className="h-5 w-5" />
+            <SignOut size={20} weight="bold" />
           </button>
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <LogoutConfirmationModal
           isOpen={showLogoutModal}
@@ -273,7 +378,7 @@ const Sidebar = () => {
           onConfirm={handleLogout}
         />
       )}
-    </div>
+    </aside>
   )
 }
 

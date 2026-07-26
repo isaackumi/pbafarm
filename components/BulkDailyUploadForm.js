@@ -56,6 +56,11 @@ export default function BulkDailyUploadForm({ onSuccess, onCancel }) {
         if (!cageId) continue
         const feedType = feedByName[(row.feed_type || '').toLowerCase()]
         const feedAmount = Number(row.feed_amount || 0)
+        if (feedAmount > 0 && !feedType) {
+          throw new Error(
+            `Unknown feed_type "${row.feed_type}" on ${row.date} — must match a feed type name`,
+          )
+        }
         const feedPrice = Number(row.feed_price || feedType?.price_per_kg || feedType?.pricePerKg || 0)
         records.push({
           cageId,

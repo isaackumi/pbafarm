@@ -189,9 +189,9 @@ const CreateCageForm = () => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="font-medium text-gray-700">Create New Cage</h2>
+    <div className="page-card overflow-hidden">
+      <div className="px-6 py-4 border-b border-foam-deep">
+        <h2 className="font-medium text-chart-ink">Create New Cage</h2>
       </div>
 
       <div className="p-6">
@@ -211,25 +211,25 @@ const CreateCageForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Cage Code (Auto-generated, read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Cage Code <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="code"
                 value={cageCode}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-700 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm bg-foam-deep/40 text-chart-ink sm:text-sm"
                 placeholder="Auto-generated"
                 readOnly
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted">
                 Auto-generated unique code for this cage
               </p>
             </div>
 
             {/* Cage Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Cage Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -238,8 +238,8 @@ const CreateCageForm = () => {
                 value={formData.name}
                 onChange={handleChange}
                 className={`block w-full px-3 py-2 border ${
-                  nameError ? 'border-red-300' : 'border-gray-300'
-                } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                  nameError ? 'border-red-300' : 'border-input-border'
+                } rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm`}
                 placeholder="e.g., C1, Cage 2, etc."
                 required
               />
@@ -250,7 +250,7 @@ const CreateCageForm = () => {
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Location
               </label>
               <input
@@ -258,14 +258,14 @@ const CreateCageForm = () => {
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="e.g., North Pond, Section A, etc."
               />
             </div>
 
             {/* Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Size (m³)
               </label>
               <input
@@ -274,14 +274,14 @@ const CreateCageForm = () => {
                 value={formData.size}
                 onChange={handleChange}
                 step="0.1"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Volume in cubic meters"
               />
             </div>
 
             {/* Capacity */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Capacity (fish count)
               </label>
               <input
@@ -289,14 +289,14 @@ const CreateCageForm = () => {
                 name="capacity"
                 value={formData.capacity}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Maximum fish capacity"
               />
             </div>
 
             {/* Dimensions */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Dimensions
               </label>
               <input
@@ -304,14 +304,14 @@ const CreateCageForm = () => {
                 name="dimensions"
                 value={formData.dimensions}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="e.g., 5m x 5m x 3m"
               />
             </div>
 
             {/* Material */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Material
               </label>
               <input
@@ -319,14 +319,14 @@ const CreateCageForm = () => {
                 name="material"
                 value={formData.material}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="e.g., HDPE, Metal frame, etc."
               />
             </div>
 
             {/* Installation Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Installation Date
               </label>
               <input
@@ -334,20 +334,20 @@ const CreateCageForm = () => {
                 name="installation_date"
                 value={formData.installation_date}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
               />
             </div>
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Status
               </label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 required
               >
                 <option value="empty">Empty</option>
@@ -359,7 +359,7 @@ const CreateCageForm = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-chart-ink mb-1">
               Notes
             </label>
             <textarea
@@ -367,7 +367,7 @@ const CreateCageForm = () => {
               value={formData.notes}
               onChange={handleChange}
               rows="3"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
               placeholder="Optional notes about the cage"
             ></textarea>
           </div>
@@ -376,7 +376,7 @@ const CreateCageForm = () => {
             <button
               type="button"
               onClick={() => router.push('/cages')}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Cancel
             </button>
@@ -385,9 +385,9 @@ const CreateCageForm = () => {
               disabled={loading || nameError}
               className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
                 loading || nameError
-                  ? 'bg-indigo-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  ? 'bg-lagoon-700 cursor-not-allowed'
+                  : 'bg-lagoon-800 hover:bg-lagoon-950'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800`}
             >
               {loading ? 'Creating...' : 'Create Cage'}
             </button>

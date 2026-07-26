@@ -20,10 +20,10 @@ export default function Home() {
 
   // Show loading state while checking authentication
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-foam">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p className="mt-3 text-gray-700">Loading...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+        <p className="mt-3 text-chart-ink">Loading...</p>
       </div>
     </div>
   )
