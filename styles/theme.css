@@ -1,4 +1,4 @@
-/* Harbor Soft — light canvas + charcoal chrome (UI/UX Pro Max) */
+/* Harbor Soft — light canvas + charcoal chrome; dark mode stays readable */
 :root {
   /* Chrome / primary actions — zinc charcoal (matches white cards) */
   --lagoon-950: #18181b;
@@ -11,7 +11,7 @@
   --signal: #dc2626;
   --signal-soft: #fca5a5;
   --chart-ink: #18181b;
-  --muted: #71717a;
+  --muted: #52525b;
   --surface: #ffffff;
   --waterline: linear-gradient(90deg, #18181b 0%, #3f3f46 100%);
 
@@ -25,6 +25,7 @@
   --input-bg: #ffffff;
   --input-border: #d4d4d8;
   --input-focus: var(--lagoon-950);
+  --card-border: rgba(24, 24, 27, 0.08);
 
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -39,28 +40,39 @@ html {
   color-scheme: light;
 }
 
+/*
+  Dark theme: elevated surfaces + bright ink so body copy stays readable.
+  Avoid near-black text on near-black backgrounds.
+*/
 html.dark,
 html[data-theme='dark'] {
   color-scheme: dark;
-  --foam: #09090b;
-  --foam-deep: #27272a;
-  --chart-ink: #fafafa;
-  --muted: #a1a1aa;
-  --surface: #18181b;
-  --background: #09090b;
-  --foreground: #fafafa;
-  --input-text: #fafafa;
+  --foam: #121216;
+  --foam-deep: #3f3f46;
+  --chart-ink: #f4f4f5;
+  --muted: #d4d4d8;
+  --surface: #1c1c22;
+  --background: #0c0c0f;
+  --foreground: #f4f4f5;
+  --input-text: #f4f4f5;
   --input-bg: #27272a;
-  --input-border: #3f3f46;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --input-border: #52525b;
+  --input-focus: #a1a1aa;
+  --card-border: rgba(255, 255, 255, 0.12);
+  --kelp: #4ade80;
+  --kelp-soft: #86efac;
+  --signal: #f87171;
+  --signal-soft: #fecaca;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
+  --waterline: linear-gradient(90deg, #a1a1aa 0%, #52525b 100%);
 }
 
 html.dark body,
 html[data-theme='dark'] body {
   background:
-    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(255, 255, 255, 0.04), transparent 55%),
-    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(255, 255, 255, 0.03), transparent 50%),
+    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(255, 255, 255, 0.06), transparent 55%),
+    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(255, 255, 255, 0.04), transparent 50%),
     var(--background);
   color: var(--foreground);
 }
@@ -96,9 +108,10 @@ body {
 
 .page-card {
   background: var(--surface);
-  border: 1px solid rgba(215, 232, 228, 0.9);
+  border: 1px solid var(--card-border);
   border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(11, 61, 58, 0.06);
+  box-shadow: var(--shadow-sm);
+  color: var(--chart-ink);
 }
 
 .page-card-sm {
@@ -106,6 +119,7 @@ body {
   border: 1px solid var(--foam-deep);
   border-radius: 0.625rem;
   box-shadow: var(--shadow-sm);
+  color: var(--chart-ink);
 }
 
 .page-card-xl {
@@ -113,6 +127,7 @@ body {
   border: 1px solid var(--foam-deep);
   border-radius: 1rem;
   box-shadow: var(--shadow-md);
+  color: var(--chart-ink);
 }
 
 .page-title {
@@ -146,6 +161,17 @@ body {
   transition: background-color 200ms ease, opacity 200ms ease;
 }
 
+html.dark .btn-primary,
+html[data-theme='dark'] .btn-primary {
+  background: #e4e4e7;
+  color: #18181b;
+}
+
+html.dark .btn-primary:hover,
+html[data-theme='dark'] .btn-primary:hover {
+  background: #fafafa;
+}
+
 .btn-primary:hover {
   background: var(--lagoon-800);
 }
@@ -164,7 +190,7 @@ body {
   min-height: 3rem;
   border-radius: 0.75rem;
   background: var(--surface);
-  color: var(--lagoon-800);
+  color: var(--chart-ink);
   border: 1px solid var(--foam-deep);
   font-size: 0.9375rem;
   font-weight: 600;
@@ -213,6 +239,11 @@ body {
   box-shadow: 0 0 0 2px rgba(24, 24, 27, 0.2);
 }
 
+html.dark .input-field:focus,
+html[data-theme='dark'] .input-field:focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
 .table-shell {
   overflow-x: auto;
   background: var(--surface);
@@ -226,7 +257,7 @@ body {
 }
 
 .table-shell thead {
-  background: rgba(215, 232, 228, 0.55);
+  background: color-mix(in srgb, var(--foam-deep) 55%, var(--surface));
 }
 
 .table-shell th {
@@ -256,7 +287,7 @@ body {
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
-  border-bottom: 2px solid var(--lagoon-800);
+  border-bottom: 2px solid var(--chart-ink);
   animation: spin 0.8s linear infinite;
 }
 
@@ -296,4 +327,143 @@ body {
     animation: none !important;
     opacity: 0.7;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Dark-mode safety net for hard-coded light utility classes          */
+/* ------------------------------------------------------------------ */
+html.dark .bg-white,
+html[data-theme='dark'] .bg-white {
+  background-color: var(--surface) !important;
+  color: var(--chart-ink);
+}
+
+html.dark .bg-white\/80,
+html.dark .bg-white\/90,
+html[data-theme='dark'] .bg-white\/80,
+html[data-theme='dark'] .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+  color: var(--chart-ink);
+}
+
+html.dark .bg-zinc-50,
+html.dark .bg-zinc-100,
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html[data-theme='dark'] .bg-zinc-50,
+html[data-theme='dark'] .bg-zinc-100,
+html[data-theme='dark'] .bg-gray-50,
+html[data-theme='dark'] .bg-gray-100,
+html[data-theme='dark'] .bg-slate-50,
+html[data-theme='dark'] .bg-slate-100 {
+  background-color: color-mix(in srgb, var(--surface) 88%, #000) !important;
+}
+
+html.dark .text-zinc-900,
+html.dark .text-zinc-800,
+html.dark .text-zinc-700,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-black,
+html[data-theme='dark'] .text-zinc-900,
+html[data-theme='dark'] .text-zinc-800,
+html[data-theme='dark'] .text-zinc-700,
+html[data-theme='dark'] .text-gray-900,
+html[data-theme='dark'] .text-gray-800,
+html[data-theme='dark'] .text-gray-700,
+html[data-theme='dark'] .text-slate-900,
+html[data-theme='dark'] .text-slate-800,
+html[data-theme='dark'] .text-black {
+  color: var(--chart-ink) !important;
+}
+
+html.dark .text-zinc-600,
+html.dark .text-zinc-500,
+html.dark .text-gray-600,
+html.dark .text-gray-500,
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html[data-theme='dark'] .text-zinc-600,
+html[data-theme='dark'] .text-zinc-500,
+html[data-theme='dark'] .text-gray-600,
+html[data-theme='dark'] .text-gray-500,
+html[data-theme='dark'] .text-slate-600,
+html[data-theme='dark'] .text-slate-500 {
+  color: var(--muted) !important;
+}
+
+/* Charcoal text utilities become light ink on dark canvas */
+html.dark .text-lagoon-700,
+html.dark .text-lagoon-800,
+html.dark .text-lagoon-950,
+html[data-theme='dark'] .text-lagoon-700,
+html[data-theme='dark'] .text-lagoon-800,
+html[data-theme='dark'] .text-lagoon-950 {
+  color: #e4e4e7 !important;
+}
+
+html.dark .hover\:text-lagoon-800:hover,
+html.dark .hover\:text-lagoon-950:hover,
+html[data-theme='dark'] .hover\:text-lagoon-800:hover,
+html[data-theme='dark'] .hover\:text-lagoon-950:hover {
+  color: #fafafa !important;
+}
+
+html.dark .border-zinc-100,
+html.dark .border-zinc-200,
+html.dark .border-zinc-200\/90,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-slate-200,
+html[data-theme='dark'] .border-zinc-100,
+html[data-theme='dark'] .border-zinc-200,
+html[data-theme='dark'] .border-zinc-200\/90,
+html[data-theme='dark'] .border-gray-100,
+html[data-theme='dark'] .border-gray-200,
+html[data-theme='dark'] .border-slate-200 {
+  border-color: var(--foam-deep) !important;
+}
+
+html.dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-foam-deep > :not([hidden]) ~ :not([hidden]),
+html[data-theme='dark'] .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+html[data-theme='dark'] .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
+html[data-theme='dark'] .divide-foam-deep > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--foam-deep) !important;
+}
+
+html.dark .placeholder\:text-zinc-400::placeholder,
+html[data-theme='dark'] .placeholder\:text-zinc-400::placeholder {
+  color: #a1a1aa !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder,
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: #a1a1aa;
+}
+
+/* Amber / alert panels stay readable */
+html.dark .bg-amber-50,
+html[data-theme='dark'] .bg-amber-50 {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+}
+html.dark .text-amber-800,
+html.dark .text-amber-900,
+html.dark .text-amber-950,
+html[data-theme='dark'] .text-amber-800,
+html[data-theme='dark'] .text-amber-900,
+html[data-theme='dark'] .text-amber-950 {
+  color: #fde68a !important;
+}
+html.dark .border-amber-200,
+html[data-theme='dark'] .border-amber-200 {
+  border-color: rgba(251, 191, 36, 0.35) !important;
 }

@@ -4,7 +4,7 @@ const SettingsContext = createContext()
 
 const DEFAULT_SETTINGS = {
   language: 'en',
-  dateFormat: 'MM/DD/YYYY',
+  dateFormat: 'DD/MM/YYYY',
   timeFormat: '12h',
   currency: 'GHS',
   notifications: {

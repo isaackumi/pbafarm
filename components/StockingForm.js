@@ -185,8 +185,9 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                   secondaryHref="/cages"
                   secondaryLabel="Manage cages"
                   onCreated={(result) => {
-                    if (result?.id) {
-                      setFormData((prev) => ({ ...prev, cageId: result.id }))
+                    const id = result?.id || result?.record?._id || result?.record?.id
+                    if (id) {
+                      setFormData((prev) => ({ ...prev, cageId: id }))
                     }
                   }}
                 />

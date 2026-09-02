@@ -39,6 +39,10 @@ export const DEFAULT_SETTINGS = {
     lowStockMultiplier: 1,
     requireBatchOnPurchase: false,
   },
+  /** Display / money defaults for the whole farm. */
+  locale: {
+    currency: 'GHS' as 'GHS' | 'USD' | 'EUR',
+  },
 }
 
 export type EffectiveSettings = {
@@ -76,6 +80,9 @@ export type EffectiveSettings = {
     lowStockMultiplier: number
     requireBatchOnPurchase: boolean
   }
+  locale: {
+    currency: 'GHS' | 'USD' | 'EUR'
+  }
   updatedAt?: number
 }
 
@@ -107,6 +114,11 @@ export function mergeSettings(raw?: any): EffectiveSettings {
       requireBatchOnPurchase: s.feedRules?.requireBatchOnPurchase === true,
       defaultLocation:
         s.feedRules?.defaultLocation || DEFAULT_SETTINGS.feedRules.defaultLocation,
+    },
+    locale: {
+      currency: (['GHS', 'USD', 'EUR'].includes(s.locale?.currency)
+        ? s.locale.currency
+        : DEFAULT_SETTINGS.locale.currency) as 'GHS' | 'USD' | 'EUR',
     },
     updatedAt: s.updatedAt,
   }
@@ -148,6 +160,10 @@ export function validateSettingsForPublish(settings: any) {
   num(feed.lowStockMultiplier, 'Low-stock multiplier', 0.01)
   if (feed.defaultLocation != null && String(feed.defaultLocation).trim() === '') {
     errors.push('Default store location cannot be empty')
+  }
+  const currency = settings?.locale?.currency
+  if (currency && !['GHS', 'USD', 'EUR'].includes(currency)) {
+    errors.push('Currency must be GHS (Cedis), USD, or EUR')
   }
 
   if (

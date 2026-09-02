@@ -19,13 +19,16 @@ export function ThemeProvider({ children }) {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
-  // Load saved theme preference
+  // Load saved theme preference and apply to <html>
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) {
-      setTheme(savedTheme)
-    } else {
-      setTheme(systemTheme)
+    const next = savedTheme || systemTheme
+    setTheme(next)
+    if (typeof document !== 'undefined') {
+      const dark = next === 'dark'
+      document.documentElement.classList.toggle('dark', dark)
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
     }
   }, [systemTheme])
 
@@ -37,6 +40,7 @@ export function ThemeProvider({ children }) {
       const dark = newTheme === 'dark'
       document.documentElement.classList.toggle('dark', dark)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
     }
   }
 

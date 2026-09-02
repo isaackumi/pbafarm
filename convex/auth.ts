@@ -4,8 +4,11 @@ import type { DataModel } from './_generated/dataModel'
 
 const PasswordProvider = Password<DataModel>({
   profile(params) {
+    const email = String(params.email || '')
+      .trim()
+      .toLowerCase()
     return {
-      email: params.email as string,
+      email,
       name: (params.name as string) || undefined,
       role: 'user',
     }

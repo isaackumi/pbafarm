@@ -23,6 +23,7 @@ import {
   deleteFeedType,
   clearFeedError
 } from '../store/slices/feedSlice'
+import { useCurrency } from '../hooks/useCurrency'
 
 export default function FeedTypesPage() {
   return (
@@ -36,6 +37,7 @@ function FeedTypes() {
   const router = useRouter()
   const { showToast } = useToast()
   const dispatch = useDispatch()
+  const { pricePerKgLabel: priceLabel, formatCurrency: fmt } = useCurrency()
   const { feedTypes, loading, error } = useSelector(state => state.feed)
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -212,7 +214,7 @@ function FeedTypes() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        ${type.price_per_kg?.toFixed(2) || '0.00'}
+                        {fmt(type.price_per_kg || 0)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {(() => {
@@ -318,7 +320,7 @@ function FeedTypes() {
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg ($)
+                  {priceLabel}
                 </label>
                 <input
                   type="number"
@@ -448,7 +450,7 @@ function FeedTypes() {
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg ($)
+                  {priceLabel}
                 </label>
                 <input
                   type="number"

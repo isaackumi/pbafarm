@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
+import { formatCurrency } from '../lib/currencyUtils'
 import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
 import DataTable from '../components/DataTable'
@@ -440,7 +441,7 @@ const FeedManagement = () => {
                               <tr key={type.id} className="hover:bg-foam-deep/40">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{type.name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{type.protein_percentage}%</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">${type.price_per_kg}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{formatCurrency(type.price_per_kg)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <button
                                     onClick={() => handleStatusChange(type.id, !type.active)}
@@ -609,7 +610,7 @@ const FeedManagement = () => {
                             <div>
                               <h3 className="text-sm font-medium text-chart-ink">{type.name}</h3>
                               <p className="text-xs text-muted mt-1">
-                                Protein: {type.protein_percentage}% | ${type.price_per_kg}/kg
+                                Protein: {type.protein_percentage}% | {formatCurrency(type.price_per_kg)}/kg
                               </p>
                               <p className="text-xs text-muted mt-1">
                                 Last used 2 hours ago
@@ -662,7 +663,7 @@ const FeedManagement = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-chart-ink">Price per kg ($)</label>
+                    <label className="block text-sm font-medium text-chart-ink">Price per kg (₵)</label>
                     <input
                       type="number"
                       name="price_per_kg"
@@ -834,7 +835,7 @@ const FeedManagement = () => {
                             {feedTypes.find(ft => ft.id === entry.feed_type_id)?.name}
                           </p>
                           <p className="text-xs text-muted">
-                            {entry.number_of_bags} bags × ${entry.price_per_bag}/bag = ${entry.total_amount}
+                            {entry.number_of_bags} bags × {formatCurrency(entry.price_per_bag)}/bag = {formatCurrency(entry.total_amount)}
                           </p>
                         </div>
                         <button
@@ -877,7 +878,7 @@ const FeedManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-chart-ink">Price per Bag ($)</label>
+                      <label className="block text-sm font-medium text-chart-ink">Price per bag (₵)</label>
                       <input
                         type="number"
                         value={currentFeedEntry.price_per_bag}
@@ -914,7 +915,7 @@ const FeedManagement = () => {
                 <div className="mb-6">
                   <div className="flex justify-between items-center p-4 bg-foam-deep/40 rounded-lg">
                     <span className="text-sm font-medium text-chart-ink">Total Amount:</span>
-                    <span className="text-lg font-bold text-chart-ink">${purchaseData.total_amount.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-chart-ink">{formatCurrency(purchaseData.total_amount)}</span>
                   </div>
                 </div>
 

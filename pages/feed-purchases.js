@@ -66,6 +66,7 @@ function FeedPurchases() {
   const [formData, setFormData] = useState({
     feed_type_id: '',
     quantity: '',
+    bags: '',
     price_per_kg: '',
     purchase_date: new Date().toISOString().split('T')[0],
     supplier_id: '',
@@ -470,18 +471,62 @@ function FeedPurchases() {
     return metrics
   }
 
+  const selectedFeedType = feedTypes.find(
+    (t) => (t.id || t._id) === formData.feed_type_id,
+  )
+  const bagSizeKg = Number(
+    selectedFeedType?.bag_size_kg || selectedFeedType?.bagSizeKg || 25,
+  )
+
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }))
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value }
+      const size =
+        name === 'feed_type_id'
+          ? Number(
+              feedTypes.find((t) => (t.id || t._id) === value)?.bag_size_kg ||
+                feedTypes.find((t) => (t.id || t._id) === value)?.bagSizeKg ||
+                25,
+            )
+          : bagSizeKg
+
+      if (name === 'bags' && value !== '') {
+        const bags = parseFloat(value)
+        if (!Number.isNaN(bags)) {
+          next.quantity = String(Math.round(bags * size * 1000) / 1000)
+        }
+      }
+      if (name === 'quantity' && value !== '') {
+        const kg = parseFloat(value)
+        if (!Number.isNaN(kg) && size > 0) {
+          next.bags = String(Math.round((kg / size) * 1000) / 1000)
+        }
+      }
+      if (name === 'feed_type_id') {
+        // Recalculate bags from kg when bag size changes with feed type
+        if (next.quantity !== '') {
+          const kg = parseFloat(next.quantity)
+          if (!Number.isNaN(kg) && size > 0) {
+            next.bags = String(Math.round((kg / size) * 1000) / 1000)
+          }
+        }
+        const price =
+          feedTypes.find((t) => (t.id || t._id) === value)?.price_per_kg ??
+          feedTypes.find((t) => (t.id || t._id) === value)?.pricePerKg
+        if (price != null && (prev.price_per_kg === '' || prev.price_per_kg == null)) {
+          next.price_per_kg = String(price)
+        }
+      }
+      return next
+    })
   }
 
   const handleAddPurchase = () => {
     setFormData({
       feed_type_id: '',
       quantity: '',
+      bags: '',
       price_per_kg: '',
       purchase_date: new Date().toISOString().split('T')[0],
       supplier_id: '',
@@ -496,12 +541,26 @@ function FeedPurchases() {
 
   const handleEditPurchase = (purchase) => {
     setEditingPurchase(purchase)
+    const qty = purchase.quantity
+    const ft = feedTypes.find(
+      (t) => (t.id || t._id) === purchase.feed_type_id,
+    )
+    const size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
+    let bags = purchase.bags
+    if (
+      (bags == null || bags === '') &&
+      qty != null &&
+      size > 0
+    ) {
+      bags = Math.round((Number(qty) / size) * 1000) / 1000
+    }
     setFormData({
       feed_type_id: purchase.feed_type_id,
-      quantity: purchase.quantity,
+      quantity: qty != null ? String(qty) : '',
+      bags: bags != null && bags !== '' ? String(bags) : '',
       price_per_kg: purchase.price_per_kg,
       purchase_date: purchase.purchase_date,
-      supplier_id: purchase.supplier_id,
+      supplier_id: purchase.supplier_id || '',
       batch_number: purchase.batch_number || '',
       expiry_date: purchase.expiry_date || '',
       notes: purchase.notes || '',
@@ -517,14 +576,26 @@ function FeedPurchases() {
     setSuccess('')
 
     try {
-      if (!formData.feed_type_id || !formData.quantity || !formData.price_per_kg) {
+      if (!formData.feed_type_id || !formData.price_per_kg) {
         throw new Error('Please fill in all required fields')
+      }
+      if (
+        (!formData.quantity || parseFloat(formData.quantity) <= 0) &&
+        (!formData.bags || parseFloat(formData.bags) <= 0)
+      ) {
+        throw new Error('Enter bags or quantity (kg)')
       }
 
       const purchaseData = {
         feed_type_id: formData.feed_type_id,
-        quantity: parseFloat(formData.quantity),
-        bags: formData.bags ? parseFloat(formData.bags) : undefined,
+        quantity:
+          formData.quantity !== '' && formData.quantity != null
+            ? parseFloat(formData.quantity)
+            : undefined,
+        bags:
+          formData.bags !== '' && formData.bags != null
+            ? parseFloat(formData.bags)
+            : undefined,
         price_per_kg: parseFloat(formData.price_per_kg),
         purchase_date:
           formData.purchase_date || new Date().toISOString().split('T')[0],
@@ -555,7 +626,27 @@ function FeedPurchases() {
 
     try {
       if (!editingPurchase) return
-      const { data, error } = await feedService.updatePurchase(editingPurchase.id, formData)
+      if (
+        (!formData.quantity || parseFloat(formData.quantity) <= 0) &&
+        (!formData.bags || parseFloat(formData.bags) <= 0)
+      ) {
+        throw new Error('Enter bags or quantity (kg)')
+      }
+      const { error } = await feedService.updatePurchase(editingPurchase.id, {
+        ...formData,
+        quantity:
+          formData.quantity !== '' && formData.quantity != null
+            ? parseFloat(formData.quantity)
+            : undefined,
+        bags:
+          formData.bags !== '' && formData.bags != null
+            ? parseFloat(formData.bags)
+            : undefined,
+        price_per_kg:
+          formData.price_per_kg !== '' && formData.price_per_kg != null
+            ? parseFloat(formData.price_per_kg)
+            : undefined,
+      })
       if (error) throw error
 
       showToast('success', 'Purchase updated successfully')
@@ -925,6 +1016,9 @@ function FeedPurchases() {
                       Quantity
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                      Bags
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Price/kg
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -947,14 +1041,19 @@ function FeedPurchases() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
                         {purchase.feed_types?.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data">
                         {purchase.quantity} kg
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        ${purchase.price_per_kg}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data">
+                        {purchase.bags != null
+                          ? `${purchase.bags} bags`
+                          : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        ${(purchase.quantity * purchase.price_per_kg).toFixed(2)}
+                        {formatCurrency(purchase.price_per_kg)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        {formatCurrency(purchase.quantity * purchase.price_per_kg)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {new Date(purchase.purchase_date).toLocaleDateString()}
@@ -1060,25 +1159,45 @@ function FeedPurchases() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Quantity (kg) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Bags
+                  </label>
+                  <input
+                    type="number"
+                    name="bags"
+                    value={formData.bags}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    placeholder="e.g. 40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Quantity (kg) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Bag size: {bagSizeKg} kg — enter bags or kg; the other updates.
+                  </p>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg ($) <span className="text-red-500">*</span>
+                  Price per kg (₵) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1211,25 +1330,45 @@ function FeedPurchases() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Quantity (kg) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Bags
+                  </label>
+                  <input
+                    type="number"
+                    name="bags"
+                    value={formData.bags}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    placeholder="e.g. 40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Quantity (kg) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Bag size: {bagSizeKg} kg — enter bags or kg; the other updates.
+                  </p>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg ($) <span className="text-red-500">*</span>
+                  Price per kg (₵) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"

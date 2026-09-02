@@ -380,8 +380,11 @@ function InventoryOverview() {
                           {item.feed_type_name}
                         </p>
                         <p className="text-sm text-muted">
-                          Current: {item.current_stock} kg | Minimum:{' '}
-                          {item.minimum_stock} kg
+                          Current: {item.current_stock} kg
+                          {item.current_stock_bags != null
+                            ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
+                            : ''}{' '}
+                          | Minimum: {item.minimum_stock} kg
                         </p>
                       </div>
                       <Link href="/inventory-transactions">
@@ -409,8 +412,11 @@ function InventoryOverview() {
                         {item.feed_type_name}
                       </p>
                       <p className="text-sm text-muted">
-                        Stock: {item.current_stock} kg | Price: ₵
-                        {item.price_per_kg}/kg
+                        Stock: {item.current_stock} kg
+                        {item.current_stock_bags != null
+                          ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
+                          : ''}{' '}
+                        | Price: ₵{item.price_per_kg}/kg
                       </p>
                     </div>
                     <div className="text-sm text-muted">

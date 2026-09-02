@@ -36,10 +36,12 @@ export function AuthProvider({ children }) {
     if (!isAuthenticated || !convexUser) return null
     return {
       id: convexUser._id,
+      _id: convexUser._id,
       email: convexUser.email,
       name: convexUser.name,
       role: convexUser.role || 'user',
       companyId: convexUser.companyId,
+      mustChangePassword: convexUser.mustChangePassword === true,
       // Compatibility with former Supabase user shape
       user_metadata: {
         full_name: convexUser.name,

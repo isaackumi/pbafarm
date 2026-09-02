@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useAction } from 'convex/react'
 import userService from '../lib/userService'
 import { useAuth } from '../contexts/AuthContext'
+import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, FormCard } from './ui'
 
 const ROLES = [
@@ -9,14 +11,23 @@ const ROLES = [
   { value: 'super_admin', label: 'Super Admin' },
 ]
 
+const EMPTY_CREATE = {
+  email: '',
+  name: '',
+  role: 'user',
+  password: '',
+}
+
 const UserManagement = () => {
   const { user: me, hasRole } = useAuth()
+  const createWithPassword = useAction(api.userAccounts.createWithPassword)
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [savingId, setSavingId] = useState(null)
-  const [invite, setInvite] = useState({ email: '', name: '', role: 'user' })
-  const [inviting, setInviting] = useState(false)
+  const [form, setForm] = useState(EMPTY_CREATE)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -52,23 +63,32 @@ const UserManagement = () => {
     }
   }
 
-  const handleInvite = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
-    setInviting(true)
+    setCreating(true)
     setError('')
+    setSuccess('')
+    const emailForMessage = form.email
     try {
-      const { data, error: inviteError } = await userService.inviteUser(invite)
-      if (inviteError) throw inviteError
-      setInvite({ email: '', name: '', role: 'user' })
-      await loadUsers()
-      if (data?.status === 'pending_signup') {
-        setError('')
-        alert(data.message)
+      if (!form.password || form.password.length < 6) {
+        throw new Error('Temporary password must be at least 6 characters')
       }
+      const data = await createWithPassword({
+        email: form.email,
+        name: form.name || undefined,
+        role: form.role || 'user',
+        password: form.password,
+      })
+      setForm(EMPTY_CREATE)
+      await loadUsers()
+      setSuccess(
+        data?.message ||
+          `Created ${emailForMessage}. Share the temporary password securely — they must change it on first login.`,
+      )
     } catch (err) {
-      setError(err.message || 'Invite failed')
+      setError(err.message || 'Failed to create user')
     } finally {
-      setInviting(false)
+      setCreating(false)
     }
   }
 
@@ -95,36 +115,61 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <FormCard title="Invite user" subtitle="Existing accounts are assigned immediately. New emails must sign up to join.">
-        <form onSubmit={handleInvite} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+      <FormCard
+        title="Add user"
+        subtitle="Create a login with a temporary password. They must change it after signing in."
+      >
+        <form
+          onSubmit={handleCreate}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end"
+        >
           <Field label="Email" required>
             <Input
               type="email"
               required
-              value={invite.email}
-              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              autoComplete="off"
             />
           </Field>
           <Field label="Name">
             <Input
-              value={invite.name}
-              onChange={(e) => setInvite({ ...invite, name: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              autoComplete="off"
             />
           </Field>
           <Field label="Role">
             <Select
-              value={invite.role}
-              onChange={(e) => setInvite({ ...invite, role: e.target.value })}
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </Select>
           </Field>
-          <Button type="submit" disabled={inviting}>
-            {inviting ? 'Inviting…' : 'Invite'}
+          <Field label="Temporary password" required hint="Min 6 characters">
+            <Input
+              type="text"
+              required
+              minLength={6}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              autoComplete="new-password"
+              className="font-data"
+            />
+          </Field>
+          <Button type="submit" disabled={creating}>
+            {creating ? 'Creating…' : 'Create user'}
           </Button>
         </form>
       </FormCard>
+
+      {success && (
+        <div className="rounded-xl bg-kelp/10 text-kelp px-4 py-3 text-sm">
+          {success}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">
@@ -179,6 +224,8 @@ const UserManagement = () => {
                       <td className="px-4 py-3 text-sm">
                         {user.active === false ? (
                           <span className="text-signal font-medium">Inactive</span>
+                        ) : user.mustChangePassword ? (
+                          <span className="text-amber-700 font-medium">Must change password</span>
                         ) : (
                           <span className="text-kelp font-medium">Active</span>
                         )}

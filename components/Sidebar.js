@@ -112,13 +112,13 @@ const MENU_SECTIONS = {
   management: {
     title: 'Management',
     icon: GearSix,
-    adminOnly: true,
     tourId: 'management-section',
     items: [
-      { title: 'Users', path: '/users', icon: Users },
-      { title: 'Company Settings', path: '/company-settings', icon: Buildings, tourId: 'company-settings' },
-      { title: 'Approvals', path: '/approvals', icon: CheckCircle, tourId: 'approvals' },
-      { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple },
+      { title: 'Global Settings', path: '/global-settings', icon: GearSix, tourId: 'global-settings' },
+      { title: 'Users', path: '/users', icon: Users, adminOnly: true },
+      { title: 'Company Settings', path: '/company-settings', icon: Buildings, adminOnly: true, tourId: 'company-settings' },
+      { title: 'Approvals', path: '/approvals', icon: CheckCircle, adminOnly: true, tourId: 'approvals' },
+      { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple, adminOnly: true },
     ],
   },
   admin: {

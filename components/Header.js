@@ -66,7 +66,7 @@ const TopBar = ({ title = 'Dashboard' }) => {
   }
 
   return (
-    <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-30">
+    <header className="bg-surface/90 backdrop-blur-sm sticky top-0 z-30 text-chart-ink">
       <div className="waterline" />
       <div className="flex justify-between items-center px-5 sm:px-8 py-4 border-b border-foam-deep">
         <h1
@@ -209,6 +209,13 @@ const TopBar = ({ title = 'Dashboard' }) => {
                 <div className="px-4 py-2 text-xs text-muted border-b border-foam-deep font-data">
                   {email}
                 </div>
+                <Link
+                  href="/account"
+                  className="block w-full text-left px-4 py-2 text-sm text-chart-ink hover:bg-foam"
+                  onClick={() => setProfileDropdownOpen(false)}
+                >
+                  Account & password
+                </Link>
                 <button
                   className="block w-full text-left px-4 py-2 text-sm text-signal hover:bg-foam"
                   onClick={handleLogout}

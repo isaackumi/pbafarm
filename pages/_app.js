@@ -67,12 +67,32 @@ function AuthWrapper({ children }) {
 
     if (!user && !publicRoutes.includes(currentPath)) {
       router.push('/login')
+      return
     }
 
     if (user && publicRoutes.includes(currentPath)) {
-      router.push('/dashboard')
+      router.push(
+        user.mustChangePassword ? '/account?force=1' : '/dashboard',
+      )
+      return
     }
-  }, [user, initialized, loading, currentPath, router])
+
+    // After password update, mustChangePassword clears reactively — allow leave.
+    if (
+      user?.mustChangePassword &&
+      currentPath !== '/account' &&
+      !publicRoutes.includes(currentPath)
+    ) {
+      router.push('/account?force=1')
+    }
+  }, [
+    user,
+    user?.mustChangePassword,
+    initialized,
+    loading,
+    currentPath,
+    router,
+  ])
 
   if (loading || !initialized) {
     if (!publicRoutes.includes(currentPath)) {

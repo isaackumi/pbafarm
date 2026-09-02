@@ -58,8 +58,15 @@ export function CompanySettingsProvider({ children }) {
 
   const companyMode = settings?.branding?.themeMode || 'light'
   const resolvedMode = useMemo(() => {
+    // Prefer the user's header toggle when company theme is "system"
+    // or when the user has explicitly chosen light/dark in this browser.
     if (companyMode === 'system') {
       return theme === 'dark' || theme === 'light' ? theme : systemTheme
+    }
+    // If the user toggled theme this session, respect it over company default.
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme')
+      if (saved === 'dark' || saved === 'light') return saved
     }
     return companyMode
   }, [companyMode, theme, systemTheme])
@@ -76,6 +83,7 @@ export function CompanySettingsProvider({ children }) {
       displayName:
         settings?.branding?.displayName || company?.name || 'PBA Farm',
       logoUrl: company?.logo_url,
+      currency: settings?.locale?.currency || 'GHS',
       loading: user && data === undefined,
     }),
     [settings, company, user, data],
@@ -96,6 +104,7 @@ export function useCompanySettings() {
       company: null,
       displayName: 'PBA Farm',
       logoUrl: null,
+      currency: 'GHS',
       loading: false,
     }
   }
