@@ -303,7 +303,7 @@ export function Textarea({ className = '', rows = 3, ...props }) {
 }
 
 /** Page-width wrapper for form screens (header + form). */
-export function FormPage({ children, className = '', width = 'lg' }) {
+export function FormPage({ children, className = '', width = 'lg', ...rest }) {
   const max =
     width === 'full'
       ? 'max-w-6xl'
@@ -311,7 +311,7 @@ export function FormPage({ children, className = '', width = 'lg' }) {
         ? 'max-w-3xl'
         : 'max-w-4xl'
   return (
-    <div className={`${max} w-full mx-auto sm:mx-0 ${className}`}>
+    <div className={`${max} w-full mx-auto sm:mx-0 ${className}`} {...rest}>
       {children}
     </div>
   )

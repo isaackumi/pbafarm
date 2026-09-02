@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
+import DependencyEmpty from '../components/DependencyEmpty'
 import {
   PageHeader,
   Button,
@@ -32,6 +33,7 @@ function FeedIssue() {
   const { hasRole } = useAuth()
   const [feedTypes, setFeedTypes] = useState([])
   const [cages, setCages] = useState([])
+  const [lookupsReady, setLookupsReady] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     feedTypeId: '',
@@ -44,17 +46,22 @@ function FeedIssue() {
     overrideReason: '',
   })
 
+  const loadLookups = async () => {
+    const client = getConvexHttpClient()
+    const [types, cageList] = await Promise.all([
+      client.query(api.feed.listFeedTypes, {}),
+      client.query(api.cages.getActive, {}),
+    ])
+    setFeedTypes(types || [])
+    setCages(cageList || [])
+    setLookupsReady(true)
+  }
+
   useEffect(() => {
-    const load = async () => {
-      const client = getConvexHttpClient()
-      const [types, cageList] = await Promise.all([
-        client.query(api.feed.listFeedTypes, {}),
-        client.query(api.cages.getActive, {}),
-      ])
-      setFeedTypes(types || [])
-      setCages(cageList || [])
-    }
-    load().catch((e) => showToast('error', e.message))
+    loadLookups().catch((e) => {
+      showToast('error', e.message)
+      setLookupsReady(true)
+    })
   }, [showToast])
 
   const selected = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)
@@ -111,7 +118,7 @@ function FeedIssue() {
   }
 
   return (
-    <FormPage>
+    <FormPage data-tour="page-feed-issue">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -141,8 +148,13 @@ function FeedIssue() {
                   value={form.feedTypeId}
                   onChange={onChange}
                   required
+                  disabled={lookupsReady && feedTypes.length === 0}
                 >
-                  <option value="">Select…</option>
+                  <option value="">
+                    {lookupsReady && feedTypes.length === 0
+                      ? 'No feed types available'
+                      : 'Select…'}
+                  </option>
                   {feedTypes.map((f) => (
                     <option key={f.id || f._id} value={f.id || f._id}>
                       {f.name} ({Number(f.current_stock).toFixed(1)} kg /{' '}
@@ -150,6 +162,21 @@ function FeedIssue() {
                     </option>
                   ))}
                 </Select>
+                {lookupsReady && feedTypes.length === 0 && (
+                  <DependencyEmpty
+                    message="Issue feed needs at least one feed type."
+                    createKind="feedType"
+                    createLabel="Create feed type"
+                    secondaryHref="/feed-purchases"
+                    secondaryLabel="Record purchase"
+                    onCreated={(result) => {
+                      loadLookups()
+                      if (result?.id) {
+                        setForm((p) => ({ ...p, feedTypeId: result.id }))
+                      }
+                    }}
+                  />
+                )}
               </Field>
               <Field label="Cage (optional)" htmlFor="cageId">
                 <Select
@@ -165,6 +192,16 @@ function FeedIssue() {
                     </option>
                   ))}
                 </Select>
+                {lookupsReady && cages.length === 0 && (
+                  <DependencyEmpty
+                    message="No active cages yet — you can still issue without a cage, or stock one first."
+                    createKind="stocking"
+                    createLabel="Create stocking"
+                    secondaryCreateKind="cage"
+                    secondaryCreateLabel="Create a cage"
+                    onCreated={() => loadLookups()}
+                  />
+                )}
               </Field>
               <Field label="Date" htmlFor="usageDate" required>
                 <Input
@@ -252,7 +289,7 @@ function FeedIssue() {
           )}
 
           <FormActions>
-            <Button type="submit" disabled={saving} size="lg">
+            <Button type="submit" disabled={saving || feedTypes.length === 0} size="lg">
               {saving ? 'Saving…' : 'Issue feed'}
             </Button>
             <Button href="/stock-levels" variant="secondary">

@@ -23,6 +23,7 @@ const TABS = [
   { id: 'branding', label: 'Branding & theme' },
   { id: 'farm', label: 'Farm rules' },
   { id: 'stocking', label: 'Stocking rules' },
+  { id: 'feed', label: 'Feed & inventory' },
 ]
 
 function emptyDraft() {
@@ -55,7 +56,17 @@ function emptyDraft() {
       enforceCageCapacity: true,
       minInitialAbwG: 5,
       maxInitialAbwG: 80,
+      minTopupAbwG: 5,
+      maxTopupAbwG: 800,
       allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested'],
+    },
+    feedRules: {
+      defaultBagSizeKg: 25,
+      defaultLocation: 'Main store',
+      allowNegativeStock: false,
+      trackLots: true,
+      lowStockMultiplier: 1,
+      requireBatchOnPurchase: false,
     },
   }
 }
@@ -558,6 +569,26 @@ function CompanySettings() {
                       }
                     />
                   </Field>
+                  <Field label="Min top-up ABW (g)">
+                    <Input
+                      type="number"
+                      className="font-data"
+                      value={draft.stockingRules?.minTopupAbwG ?? ''}
+                      onChange={(e) =>
+                        patch('stockingRules.minTopupAbwG', Number(e.target.value))
+                      }
+                    />
+                  </Field>
+                  <Field label="Max top-up ABW (g)">
+                    <Input
+                      type="number"
+                      className="font-data"
+                      value={draft.stockingRules?.maxTopupAbwG ?? ''}
+                      onChange={(e) =>
+                        patch('stockingRules.maxTopupAbwG', Number(e.target.value))
+                      }
+                    />
+                  </Field>
                 </div>
                 <Field
                   label="Allowed cage statuses for stocking"
@@ -578,6 +609,87 @@ function CompanySettings() {
                     }
                   />
                 </Field>
+              </div>
+            </FormCard>
+          )}
+
+          {tab === 'feed' && (
+            <FormCard
+              title="Feed & inventory"
+              subtitle="Defaults and rules for stock lots, purchases, and low-stock alerts."
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Default bag size (kg)">
+                    <Input
+                      type="number"
+                      step="any"
+                      className="font-data"
+                      value={draft.feedRules?.defaultBagSizeKg ?? ''}
+                      onChange={(e) =>
+                        patch(
+                          'feedRules.defaultBagSizeKg',
+                          e.target.value === '' ? '' : Number(e.target.value),
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field label="Low-stock multiplier">
+                    <Input
+                      type="number"
+                      step="any"
+                      className="font-data"
+                      value={draft.feedRules?.lowStockMultiplier ?? ''}
+                      onChange={(e) =>
+                        patch(
+                          'feedRules.lowStockMultiplier',
+                          e.target.value === '' ? '' : Number(e.target.value),
+                        )
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label="Default store location"
+                    hint="Used for new purchase lots"
+                  >
+                    <Input
+                      value={draft.feedRules?.defaultLocation ?? ''}
+                      onChange={(e) =>
+                        patch('feedRules.defaultLocation', e.target.value)
+                      }
+                    />
+                  </Field>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={draft.feedRules?.trackLots !== false}
+                    onChange={(e) =>
+                      patch('feedRules.trackLots', e.target.checked)
+                    }
+                  />
+                  Track batch / location lots
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={!!draft.feedRules?.requireBatchOnPurchase}
+                    onChange={(e) =>
+                      patch('feedRules.requireBatchOnPurchase', e.target.checked)
+                    }
+                  />
+                  Require batch number on purchases
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={!!draft.feedRules?.allowNegativeStock}
+                    onChange={(e) =>
+                      patch('feedRules.allowNegativeStock', e.target.checked)
+                    }
+                  />
+                  Allow negative stock (admin override still logged)
+                </label>
               </div>
             </FormCard>
           )}

@@ -11,11 +11,13 @@ import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
 import { AnalyticsProvider } from '../contexts/AnalyticsContext'
 import { ToastProvider } from '../components/Toast'
+import { TourProvider } from '../components/TourProvider'
 import { Provider } from 'react-redux'
 import { store } from '../store'
 import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
 import '../styles/globals.css'
+import '../styles/tour.css'
 
 /** Lazy-load assistant so it does not block first paint / route transitions. */
 const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
@@ -34,10 +36,12 @@ function AppWrapper({ Component, pageProps }) {
                   <ToastProvider>
                     <NotificationProvider>
                       <AnalyticsProvider>
-                        <AuthWrapper>
-                          <Component {...pageProps} />
-                          <AiAssistant />
-                        </AuthWrapper>
+                        <TourProvider>
+                          <AuthWrapper>
+                            <Component {...pageProps} />
+                            <AiAssistant />
+                          </AuthWrapper>
+                        </TourProvider>
                       </AnalyticsProvider>
                     </NotificationProvider>
                   </ToastProvider>

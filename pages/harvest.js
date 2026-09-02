@@ -20,6 +20,19 @@ const HarvestPage = () => {
     start: '',
     end: ''
   })
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingHarvest, setEditingHarvest] = useState(null)
+  const [editForm, setEditForm] = useState({
+    harvest_date: '',
+    harvest_type: 'complete',
+    total_weight: '',
+    average_body_weight: '',
+    estimated_count: '',
+    fcr: '',
+    notes: '',
+    status: 'completed',
+  })
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -45,6 +58,53 @@ const HarvestPage = () => {
     setShowHarvestForm(true)
     setShowSamplingForm(false)
     setSelectedHarvest(null)
+    setEditingHarvest(null)
+  }
+
+  const handleEditHarvest = (record) => {
+    setEditingHarvest(record)
+    setEditForm({
+      harvest_date: record.harvest_date || record.harvestDate || '',
+      harvest_type: record.harvest_type || record.harvestType || 'complete',
+      total_weight: record.total_weight ?? record.totalWeight ?? '',
+      average_body_weight:
+        record.average_body_weight ?? record.averageBodyWeight ?? '',
+      estimated_count: record.estimated_count ?? record.estimatedCount ?? '',
+      fcr: record.fcr ?? '',
+      notes: record.notes || '',
+      status: record.status || 'completed',
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault()
+    if (!editingHarvest) return
+    try {
+      const { error } = await harvestRecordService.updateHarvestRecord(
+        editingHarvest.id || editingHarvest._id,
+        {
+          harvest_date: editForm.harvest_date,
+          harvest_type: editForm.harvest_type,
+          total_weight: Number(editForm.total_weight),
+          average_body_weight: Number(editForm.average_body_weight),
+          estimated_count:
+            editForm.estimated_count === ''
+              ? undefined
+              : Number(editForm.estimated_count),
+          fcr: editForm.fcr === '' ? undefined : Number(editForm.fcr),
+          notes: editForm.notes,
+          status: editForm.status,
+        },
+      )
+      if (error) throw error
+      showToast('Harvest updated', 'success')
+      setShowEditModal(false)
+      setEditingHarvest(null)
+      fetchHarvestRecords()
+    } catch (err) {
+      showToast(err.message || 'Update failed', 'error')
+    }
   }
 
   const handleAddSampling = (harvest) => {
@@ -92,14 +152,15 @@ const HarvestPage = () => {
     }
   }
 
-  const handleDeleteHarvest = async (record) => {
-    if (!confirm('Delete this harvest record and its samples?')) return
+  const handleDeleteHarvest = async () => {
+    if (!deleteConfirm) return
     try {
       const { error } = await harvestRecordService.deleteHarvestRecord(
-        record.id || record._id,
+        deleteConfirm.id || deleteConfirm._id,
       )
       if (error) throw error
       showToast('Harvest deleted', 'success')
+      setDeleteConfirm(null)
       fetchHarvestRecords()
     } catch (err) {
       showToast(err.message || 'Delete failed', 'error')
@@ -142,7 +203,14 @@ const HarvestPage = () => {
     {
       header: 'Actions',
       accessor: record => (
-        <div className="flex space-x-2">
+        <div className="flex space-x-3">
+          <button
+            type="button"
+            onClick={() => handleEditHarvest(record)}
+            className="text-lagoon-800 hover:text-lagoon-950"
+          >
+            Edit
+          </button>
           <button
             type="button"
             onClick={() => handleAddSampling(record)}
@@ -152,7 +220,7 @@ const HarvestPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => handleDeleteHarvest(record)}
+            onClick={() => setDeleteConfirm(record)}
             className="text-signal hover:opacity-80"
           >
             Delete

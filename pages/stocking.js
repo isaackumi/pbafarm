@@ -8,7 +8,7 @@ export default function StockingPage() {
   return (
     <ProtectedRoute>
       <Layout title="New Stocking">
-        <FormPage>
+        <FormPage data-tour="page-stocking">
           <PageHeader
             showTitle={false}
             breadcrumbs={[

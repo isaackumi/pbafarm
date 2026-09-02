@@ -1,12 +1,13 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser } from './lib/authz'
+import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
   bagsFromKg,
   kgFromBags,
 } from './lib/feedLedger'
+import { mergeSettings } from './lib/farmRules'
 
 function toClientSupplier(s: any) {
   return {
@@ -310,6 +311,7 @@ export const listPurchases = query({
       : await ctx.db.query('feedPurchases').collect()
 
     purchases = await listForCompany(user, purchases)
+    purchases = purchases.filter((p) => !p.deletedAt)
     if (args.dateFrom) purchases = purchases.filter((p) => p.purchaseDate >= args.dateFrom!)
     if (args.dateTo) purchases = purchases.filter((p) => p.purchaseDate <= args.dateTo!)
     return purchases.map(toClientPurchase).sort((a, b) => b.purchase_date.localeCompare(a.purchase_date))
@@ -327,6 +329,7 @@ export const createPurchase = mutation({
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
+    location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -334,6 +337,13 @@ export const createPurchase = mutation({
     if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [feedType])
     if (!allowed.length) throw new Error('Access denied')
+
+    const companyId = (await writeCompanyId(user)) ?? feedType.companyId
+    let company = companyId ? await ctx.db.get(companyId) : null
+    const feedRules = mergeSettings(company?.settings).feedRules
+    if (feedRules.requireBatchOnPurchase && !args.batchNumber?.trim()) {
+      throw new Error('Batch number is required for purchases')
+    }
 
     const quantityKg = resolveQuantityKg(feedType, args.quantity, args.bags)
     const bags =
@@ -350,7 +360,7 @@ export const createPurchase = mutation({
       batchNumber: args.batchNumber,
       expiryDate: args.expiryDate,
       notes: args.notes,
-      companyId: (await writeCompanyId(user)) ?? feedType.companyId,
+      companyId,
       updatedAt: now,
     })
 
@@ -362,6 +372,9 @@ export const createPurchase = mutation({
       transactionType: 'purchase',
       referenceId: String(id),
       notes: args.notes || `Purchase ${args.purchaseDate}`,
+      batchNumber: args.batchNumber,
+      expiryDate: args.expiryDate,
+      location: args.location || feedRules.defaultLocation,
     })
 
     await logAudit(ctx, {
@@ -371,6 +384,121 @@ export const createPurchase = mutation({
       newValues: { ...args, quantityKg, bags },
     })
     return id
+  },
+})
+
+/** Update purchase metadata and/or quantity (adjusts ledger by delta). */
+export const updatePurchase = mutation({
+  args: {
+    id: v.id('feedPurchases'),
+    quantity: v.optional(v.number()),
+    bags: v.optional(v.number()),
+    pricePerKg: v.optional(v.number()),
+    purchaseDate: v.optional(v.string()),
+    supplierId: v.optional(v.id('feedSuppliers')),
+    batchNumber: v.optional(v.string()),
+    expiryDate: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const purchase = await ctx.db.get(args.id)
+    if (!purchase || purchase.deletedAt) throw new Error('Purchase not found')
+    const allowed = await listForCompany(user, [purchase])
+    if (!allowed.length) throw new Error('Access denied')
+
+    const feedType = await ctx.db.get(purchase.feedTypeId)
+    if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
+
+    const patch: Record<string, any> = { updatedAt: Date.now() }
+    if (args.pricePerKg != null) patch.pricePerKg = args.pricePerKg
+    if (args.purchaseDate != null) patch.purchaseDate = args.purchaseDate
+    if (args.supplierId !== undefined) patch.supplierId = args.supplierId
+    if (args.batchNumber !== undefined) patch.batchNumber = args.batchNumber
+    if (args.expiryDate !== undefined) patch.expiryDate = args.expiryDate
+    if (args.notes !== undefined) patch.notes = args.notes
+
+    let nextQty = purchase.quantity
+    if (args.quantity != null || args.bags != null) {
+      nextQty = resolveQuantityKg(feedType, args.quantity, args.bags)
+      const bags =
+        args.bags != null ? args.bags : bagsFromKg(nextQty, feedType.bagSizeKg)
+      patch.quantity = nextQty
+      patch.bags = bags
+
+      const delta = nextQty - purchase.quantity
+      if (delta !== 0) {
+        await applyStockChange(ctx, {
+          user,
+          feedTypeId: purchase.feedTypeId,
+          deltaKg: delta,
+          bags: bagsFromKg(Math.abs(delta), feedType.bagSizeKg),
+          transactionType: 'adjustment',
+          referenceId: String(args.id),
+          notes: `Purchase qty adjust ${purchase.quantity} → ${nextQty}`,
+          batchNumber: args.batchNumber ?? purchase.batchNumber,
+          expiryDate: args.expiryDate ?? purchase.expiryDate,
+        })
+      }
+    }
+
+    await ctx.db.patch(args.id, patch)
+    await logAudit(ctx, {
+      actionType: 'update',
+      tableName: 'feedPurchases',
+      recordId: args.id,
+      previousValues: purchase,
+      newValues: patch,
+    })
+    return args.id
+  },
+})
+
+/** Void a purchase: reverse stock and soft-delete the row. */
+export const voidPurchase = mutation({
+  args: {
+    id: v.id('feedPurchases'),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const purchase = await ctx.db.get(args.id)
+    if (!purchase || purchase.deletedAt) throw new Error('Purchase not found')
+    const allowed = await listForCompany(user, [purchase])
+    if (!allowed.length) throw new Error('Access denied')
+
+    if (purchase.quantity > 0) {
+      await applyStockChange(ctx, {
+        user,
+        feedTypeId: purchase.feedTypeId,
+        deltaKg: -purchase.quantity,
+        bags: purchase.bags,
+        transactionType: 'reversal',
+        referenceId: String(args.id),
+        notes: args.reason
+          ? `Void purchase: ${args.reason}`
+          : `Void purchase ${args.id}`,
+        allowNegative: true,
+        overrideReason: args.reason || 'Void purchase',
+      })
+    }
+
+    await ctx.db.patch(args.id, {
+      deletedAt: Date.now(),
+      updatedAt: Date.now(),
+      notes: args.reason
+        ? `${purchase.notes || ''}\nVoided: ${args.reason}`.trim()
+        : purchase.notes,
+    })
+
+    await logAudit(ctx, {
+      actionType: 'delete',
+      tableName: 'feedPurchases',
+      recordId: args.id,
+      previousValues: purchase,
+      newValues: { voided: true, reason: args.reason },
+    })
   },
 })
 

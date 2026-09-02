@@ -18,9 +18,14 @@ import {
   RefreshCw,
   BarChart3,
   FileText,
+  Pencil,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
+import { useToast } from '../components/Toast'
 
 export default function BiweeklyRecords() {
+  const { showToast } = useToast()
   const [records, setRecords] = useState([])
   const [cages, setCages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -33,6 +38,17 @@ export default function BiweeklyRecords() {
   const [totalCount, setTotalCount] = useState(0)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [editRecord, setEditRecord] = useState(null)
+  const [deleteRecord, setDeleteRecord] = useState(null)
+  const [editForm, setEditForm] = useState({
+    date: '',
+    batch_code: '',
+    average_body_weight: '',
+    total_fish_count: '',
+    total_weight: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [stats, setStats] = useState({
     totalRecords: 0,
     totalFish: 0,
@@ -113,6 +129,61 @@ export default function BiweeklyRecords() {
   const handleViewDetails = (record) => {
     setSelectedRecord(record)
     setShowDetails(true)
+  }
+
+  const handleEditRecord = (record) => {
+    setEditRecord(record)
+    setEditForm({
+      date: record.date || '',
+      batch_code: record.batch_code || '',
+      average_body_weight: record.average_body_weight ?? '',
+      total_fish_count: record.total_fish_count ?? '',
+      total_weight: record.total_weight ?? '',
+    })
+  }
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault()
+    if (!editRecord) return
+    setSaving(true)
+    try {
+      const { error } = await biweeklyRecordService.updateBiweeklyRecord(
+        editRecord.id || editRecord._id,
+        {
+          date: editForm.date,
+          batch_code: editForm.batch_code,
+          average_body_weight: Number(editForm.average_body_weight),
+          total_fish_count: Number(editForm.total_fish_count),
+          total_weight: Number(editForm.total_weight),
+        },
+      )
+      if (error) throw error
+      showToast('Biweekly record updated', 'success')
+      setEditRecord(null)
+      fetchData()
+    } catch (err) {
+      showToast(err.message || 'Update failed', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteRecord) return
+    setDeleting(true)
+    try {
+      const { error } = await biweeklyRecordService.deleteBiweeklyRecord(
+        deleteRecord.id || deleteRecord._id,
+      )
+      if (error) throw error
+      showToast('Biweekly record deleted', 'success')
+      setDeleteRecord(null)
+      fetchData()
+    } catch (err) {
+      showToast(err.message || 'Delete failed', 'error')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const exportData = () => {
@@ -430,13 +501,29 @@ export default function BiweeklyRecords() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleViewDetails(record)}
-                              className="text-lagoon-800 hover:text-lagoon-950 flex items-center"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View Details
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleViewDetails(record)}
+                                className="text-lagoon-800 hover:text-lagoon-950 flex items-center"
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditRecord(record)}
+                                className="text-lagoon-800 hover:text-lagoon-950"
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteRecord(record)}
+                                className="text-signal hover:opacity-80"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -558,6 +645,149 @@ export default function BiweeklyRecords() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editRecord && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => !saving && setEditRecord(null)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-chart-ink mb-4">
+                Edit biweekly record
+              </h3>
+              <form onSubmit={handleSaveEdit} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.date}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, date: e.target.value }))
+                    }
+                    className="w-full border border-input-border rounded-md px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Batch code</label>
+                  <input
+                    required
+                    value={editForm.batch_code}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, batch_code: e.target.value }))
+                    }
+                    className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">ABW (g)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      value={editForm.average_body_weight}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          average_body_weight: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Fish</label>
+                    <input
+                      type="number"
+                      required
+                      value={editForm.total_fish_count}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          total_fish_count: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Weight</label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      value={editForm.total_weight}
+                      onChange={(e) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          total_weight: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setEditRecord(null)}
+                    className="px-4 py-2 border rounded-md text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-2 bg-lagoon-950 text-white rounded-md text-sm"
+                  >
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {deleteRecord && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => !deleting && setDeleteRecord(null)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-6 h-6 text-signal" />
+                <h3 className="text-lg font-semibold">Delete record</h3>
+              </div>
+              <p className="text-sm text-muted mb-5">
+                Delete batch{' '}
+                <span className="font-semibold">{deleteRecord.batch_code}</span> from{' '}
+                {deleteRecord.date}? This cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteRecord(null)}
+                  className="px-4 py-2 border rounded-md text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2 bg-signal text-white rounded-md text-sm"
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
               </div>
             </div>
           </div>

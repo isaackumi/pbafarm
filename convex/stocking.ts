@@ -96,6 +96,80 @@ export const listStockingHistory = query({
   },
 })
 
+export const getStocking = query({
+  args: { id: v.id('stockingHistory') },
+  handler: async (ctx, { id }) => {
+    const user = await requireUser(ctx)
+    const stocking = await ctx.db.get(id)
+    if (!stocking || stocking.deletedAt) return null
+    const allowed = await listForCompany(user, [stocking])
+    if (!allowed.length) return null
+
+    const cage = await ctx.db.get(stocking.cageId)
+    const topups = (
+      await ctx.db
+        .query('topupHistory')
+        .withIndex('by_stocking', (q) => q.eq('stockingId', id))
+        .collect()
+    ).filter((t) => t.status === 'approved' || t.status === 'pending_approval')
+
+    return {
+      ...toClientStocking(stocking),
+      cage: cage
+        ? {
+            id: cage._id,
+            name: cage.name,
+            status: cage.status,
+            code: cage.code,
+            location: cage.location,
+          }
+        : null,
+      topups: topups.map(toClientTopup),
+    }
+  },
+})
+
+export const getTopup = query({
+  args: { id: v.id('topupHistory') },
+  handler: async (ctx, { id }) => {
+    const user = await requireUser(ctx)
+    const topup = await ctx.db.get(id)
+    if (!topup) return null
+    const allowed = await listForCompany(user, [topup])
+    if (!allowed.length) return null
+
+    const stocking = await ctx.db.get(topup.stockingId)
+    let cage = null
+    if (stocking) {
+      const c = await ctx.db.get(stocking.cageId)
+      if (c) {
+        cage = {
+          id: c._id,
+          name: c.name,
+          status: c.status,
+          code: c.code,
+          location: c.location,
+        }
+      }
+    }
+
+    return {
+      ...toClientTopup(topup),
+      stocking: stocking
+        ? {
+            id: stocking._id,
+            batch_number: stocking.batchNumber,
+            stocking_date: stocking.stockingDate,
+            status: stocking.status,
+            fish_count: stocking.fishCount,
+            initial_abw: stocking.initialAbw,
+          }
+        : null,
+      cage,
+    }
+  },
+})
+
 export const createStocking = mutation({
   args: {
     cageId: v.id('cages'),
@@ -191,6 +265,39 @@ export const updateStocking = mutation({
       newValues: patch,
     })
     return id
+  },
+})
+
+/** Soft-delete stocking (pending or rejected only). */
+export const removeStocking = mutation({
+  args: {
+    id: v.id('stockingHistory'),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, reason }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const stocking = await ctx.db.get(id)
+    if (!stocking || stocking.deletedAt) throw new Error('Stocking not found')
+    const allowed = await listForCompany(user, [stocking])
+    if (!allowed.length) throw new Error('Access denied')
+    if (stocking.status === 'approved') {
+      throw new Error('Cannot delete an approved stocking — reject or adjust the cage instead')
+    }
+
+    await ctx.db.patch(id, {
+      deletedAt: Date.now(),
+      notes: reason
+        ? `${stocking.notes || ''}\nDeleted: ${reason}`.trim()
+        : stocking.notes,
+    })
+    await logAudit(ctx, {
+      actionType: 'delete',
+      tableName: 'stockingHistory',
+      recordId: id,
+      previousValues: stocking,
+      newValues: { deleted: true, reason },
+    })
   },
 })
 
@@ -435,5 +542,80 @@ export const rejectTopup = mutation({
       recordId: id,
       newValues: { status: 'rejected', reason },
     })
+  },
+})
+
+/** Live pending stocking + top-up queue for the approvals page. */
+export const listPendingApprovals = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+
+    let stockings = await ctx.db
+      .query('stockingHistory')
+      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
+      .take(100)
+    stockings = (await listForCompany(user, stockings)).filter((s) => !s.deletedAt)
+
+    let topups = await ctx.db
+      .query('topupHistory')
+      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
+      .take(100)
+    topups = await listForCompany(user, topups)
+
+    const cageIds = [...new Set(stockings.map((s) => s.cageId))]
+    const cages = new Map<string, string>()
+    for (const cageId of cageIds) {
+      const cage = await ctx.db.get(cageId)
+      if (cage) cages.set(String(cageId), cage.name)
+    }
+
+    const stockingRows = stockings.map((s) => ({
+      type: 'stocking' as const,
+      id: s._id,
+      batchNumber: s.batchNumber,
+      cageName: cages.get(String(s.cageId)) || '—',
+      date: s.stockingDate,
+      count: s.fishCount,
+      abw: s.initialAbw,
+      biomass: s.initialBiomass,
+      createdAt: s._creationTime,
+    }))
+
+    const topupRows = []
+    for (const t of topups) {
+      const stocking = await ctx.db.get(t.stockingId)
+      let batchNumber = 'Top-up'
+      let cageName = '—'
+      if (stocking) {
+        batchNumber = stocking.batchNumber
+        const cached = cages.get(String(stocking.cageId))
+        if (cached) {
+          cageName = cached
+        } else {
+          const cage = await ctx.db.get(stocking.cageId)
+          cageName = cage?.name || '—'
+          if (cage) cages.set(String(stocking.cageId), cage.name)
+        }
+      }
+      topupRows.push({
+        type: 'topup' as const,
+        id: t._id,
+        batchNumber,
+        cageName,
+        date: t.topupDate,
+        count: t.fishCount,
+        abw: t.abw,
+        biomass: (t.fishCount * t.abw) / 1000,
+        createdAt: t._creationTime,
+      })
+    }
+
+    const all = [...stockingRows, ...topupRows].sort(
+      (a, b) => b.createdAt - a.createdAt,
+    )
+
+    return { stockings: stockingRows, topups: topupRows, all }
   },
 })

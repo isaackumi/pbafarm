@@ -59,7 +59,6 @@ function FeedManagementOverview() {
   const [usageData, setUsageData] = useState([])
   const [costData, setCostData] = useState([])
   const [supplierData, setSupplierData] = useState([])
-  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -74,9 +73,12 @@ function FeedManagementOverview() {
       const feedTypesData = await client.query(api.feed.listFeedTypes, {})
       setFeedTypes(feedTypesData || [])
 
-      // Fetch recent feed usage
+      // Fetch recent feed usage (last 30 days)
+      const from = new Date()
+      from.setDate(from.getDate() - 30)
+      const dateFrom = from.toISOString().slice(0, 10)
       const usageData = await client.query(api.feed.listUsage, {
-        days: 30
+        dateFrom,
       })
 
       // Calculate metrics
@@ -109,7 +111,6 @@ function FeedManagementOverview() {
     } catch (error) {
       console.error('Error fetching data:', error)
       showToast('error', 'Failed to load feed management data')
-      setError('Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -180,12 +181,6 @@ function FeedManagementOverview() {
           </button>
         }
       />
-
-        {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

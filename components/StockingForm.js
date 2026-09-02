@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
-import { cageService } from '../lib/cageService'
 import stockingService from '../lib/stockingService'
 import { api } from '../convex/_generated/api'
 import {
@@ -14,44 +13,51 @@ import {
   Select,
   Textarea,
 } from './ui'
+import DependencyEmpty from './DependencyEmpty'
+import { usePersistedForm } from '../hooks/usePersistedForm'
+import { useAuth } from '../contexts/AuthContext'
+
+const STOCKING_DEFAULTS = {
+  cageId: '',
+  batchNumber: '',
+  stockingDate: new Date().toISOString().split('T')[0],
+  fishCount: '',
+  averageBodyWeight: '',
+  sourceLocation: '',
+  transferSupervisor: '',
+  samplingSupervisor: '',
+  notes: '',
+}
+
+const DEFAULT_STOCKABLE = ['empty', 'fallow', 'harvested']
 
 const StockingForm = ({ onSuccess, onCancel }) => {
   const router = useRouter()
+  const { user } = useAuth()
   const settingsData = useQuery(api.companies.getEffectiveSettings)
   const rules = settingsData?.settings
-  const [cages, setCages] = useState([])
-  const [formData, setFormData] = useState({
-    cageId: '',
-    batchNumber: '',
-    stockingDate: new Date().toISOString().split('T')[0],
-    fishCount: '',
-    averageBodyWeight: '',
-    sourceLocation: '',
-    transferSupervisor: '',
-    samplingSupervisor: '',
-    notes: '',
-  })
+  const allCages = useQuery(api.cages.list, user ? {} : 'skip')
+
+  const { formData, handleChange, clear, setFormData } = usePersistedForm(
+    'stocking-create',
+    STOCKING_DEFAULTS,
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [warn, setWarn] = useState([])
 
-  useEffect(() => {
-    loadCages()
-  }, [])
+  const stockableStatuses = useMemo(() => {
+    const fromRules = rules?.stockingRules?.allowStockOnlyEmptyStatuses
+    return Array.isArray(fromRules) && fromRules.length > 0
+      ? fromRules
+      : DEFAULT_STOCKABLE
+  }, [rules])
 
-  const loadCages = async () => {
-    try {
-      const response = await cageService.getAllCages()
-      if (response.data) {
-        const availableCages = response.data.filter((cage) =>
-          ['empty', 'fallow', 'harvested'].includes(cage.status),
-        )
-        setCages(availableCages)
-      }
-    } catch (err) {
-      console.error('Error loading cages:', err)
-    }
-  }
+  const cagesReady = allCages !== undefined
+  const cages = useMemo(() => {
+    if (!allCages) return []
+    return allCages.filter((cage) => stockableStatuses.includes(cage.status))
+  }, [allCages, stockableStatuses])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -73,6 +79,11 @@ const StockingForm = ({ onSuccess, onCancel }) => {
       const response = await stockingService.createStocking(stockingData)
       if (response.error) throw response.error
 
+      clear()
+      setFormData({
+        ...STOCKING_DEFAULTS,
+        stockingDate: new Date().toISOString().split('T')[0],
+      })
       if (onSuccess) onSuccess()
       else router.push('/stocking-management')
     } catch (err) {
@@ -81,11 +92,6 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
   }
 
   useEffect(() => {
@@ -113,10 +119,21 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     setWarn(notes)
   }, [formData, cages, rules])
 
+  // Drop stale cage selection if it is no longer stockable
+  useEffect(() => {
+    if (!cagesReady || !formData.cageId) return
+    const stillThere = cages.some(
+      (c) => (c.id || c._id) === formData.cageId,
+    )
+    if (!stillThere) {
+      setFormData((prev) => ({ ...prev, cageId: '' }))
+    }
+  }, [cages, cagesReady, formData.cageId, setFormData])
+
   return (
     <FormCard
       title="Stocking details"
-      subtitle="Fill in batch and fish metrics for an available cage."
+      subtitle="Fill in batch and fish metrics for an available cage. Drafts survive a refresh."
     >
       {error && (
         <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
@@ -141,14 +158,39 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 value={formData.cageId}
                 onChange={handleChange}
                 required
+                disabled={!cagesReady || cages.length === 0}
               >
-                <option value="">Choose available cage…</option>
+                <option value="">
+                  {!cagesReady
+                    ? 'Loading cages…'
+                    : cages.length === 0
+                      ? 'No stockable cages available'
+                      : 'Choose available cage…'}
+                </option>
                 {cages.map((cage) => (
                   <option key={cage._id || cage.id} value={cage._id || cage.id}>
                     {cage.name} — {cage.status}
                   </option>
                 ))}
               </Select>
+              {cagesReady && cages.length === 0 && (
+                <DependencyEmpty
+                  message={`Stocking needs a cage with status ${stockableStatuses.join(', ')}. Create a cage or harvest/empty an active one first.${
+                    allCages?.length
+                      ? ` (${allCages.length} cage${allCages.length === 1 ? '' : 's'} on farm, none stockable right now.)`
+                      : ''
+                  }`}
+                  createKind="cage"
+                  createLabel="Create a cage"
+                  secondaryHref="/cages"
+                  secondaryLabel="Manage cages"
+                  onCreated={(result) => {
+                    if (result?.id) {
+                      setFormData((prev) => ({ ...prev, cageId: result.id }))
+                    }
+                  }}
+                />
+              )}
             </Field>
             <Field label="Batch number" htmlFor="batchNumber" required>
               <Input
@@ -247,7 +289,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
         </FormSection>
 
         <FormActions>
-          <Button type="submit" disabled={loading} size="lg">
+          <Button type="submit" disabled={loading || cages.length === 0} size="lg">
             {loading ? 'Creating…' : 'Create stocking'}
           </Button>
           <Button

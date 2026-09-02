@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
 import { AlertCircle } from 'lucide-react'
+import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import stockingService from '../lib/stockingService'
 import { useToast } from './Toast'
+import DependencyEmpty from './DependencyEmpty'
+import { usePersistedForm } from '../hooks/usePersistedForm'
 import {
   Button,
   FormCard,
@@ -15,25 +19,33 @@ import {
   Textarea,
 } from './ui'
 
+const TOPUP_DEFAULTS = {
+  stocking_id: '',
+  topup_date: new Date().toISOString().split('T')[0],
+  fish_count: '',
+  abw: '',
+  source_location: '',
+  transfer_supervisor: '',
+  notes: '',
+}
+
 const TopUpForm = ({ onComplete }) => {
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const settingsData = useQuery(api.companies.getEffectiveSettings)
+  const rules = settingsData?.settings
 
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
   const [activeStockings, setActiveStockings] = useState([])
   const [error, setError] = useState('')
   const [selectedStocking, setSelectedStocking] = useState(null)
-  const [formData, setFormData] = useState({
-    stocking_id: '',
-    topup_date: new Date().toISOString().split('T')[0],
-    fish_count: '',
-    abw: '',
-    source_location: '',
-    transfer_supervisor: '',
-    notes: '',
-  })
+  const [warn, setWarn] = useState([])
+  const { formData, handleChange, clear, setFormData } = usePersistedForm(
+    'topup-create',
+    TOPUP_DEFAULTS,
+  )
 
   useEffect(() => {
     async function fetchStockings() {
@@ -74,17 +86,28 @@ const TopUpForm = ({ onComplete }) => {
     }
   }, [formData.stocking_id, showToast])
 
+  useEffect(() => {
+    if (!rules) return
+    const notes = []
+    const abw = Number(formData.abw)
+    const sr = rules.stockingRules
+    const minAbw = sr.minTopupAbwG ?? 5
+    const maxAbw = sr.maxTopupAbwG ?? 800
+    if (abw && (abw < minAbw || abw > maxAbw)) {
+      notes.push(`ABW should be ${minAbw}–${maxAbw}g`)
+    }
+    if (sr.requireApprovalForTopup) {
+      notes.push('This top-up will require admin approval')
+    }
+    setWarn(notes)
+  }, [formData.abw, rules])
+
   const calculateBiomass = () => {
     if (!formData.fish_count || !formData.abw) return 0
     const count = parseFloat(formData.fish_count)
     const abw = parseFloat(formData.abw)
     if (isNaN(count) || isNaN(abw)) return 0
     return (abw / 1000) * count
-  }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e) => {
@@ -117,6 +140,12 @@ const TopUpForm = ({ onComplete }) => {
         'Top-up request submitted successfully. Awaiting approval.',
       )
 
+      clear()
+      setFormData({
+        ...TOPUP_DEFAULTS,
+        topup_date: new Date().toISOString().split('T')[0],
+      })
+
       if (onComplete) {
         onComplete(result)
       } else {
@@ -134,12 +163,19 @@ const TopUpForm = ({ onComplete }) => {
   return (
     <FormCard
       title="Top-up details"
-      subtitle="Add fish to an existing active batch. Requests may need admin approval."
+      subtitle="Add fish to an existing active batch. Drafts survive a refresh."
     >
       {error && (
         <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3 flex items-start gap-2">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <span>{error}</span>
+        </div>
+      )}
+      {warn.length > 0 && (
+        <div className="mb-5 text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-1">
+          {warn.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
         </div>
       )}
 
@@ -170,9 +206,36 @@ const TopUpForm = ({ onComplete }) => {
               </Select>
             )}
             {activeStockings.length === 0 && !fetchingData && (
-              <p className="mt-1 text-xs text-signal">
-                No active batches found. You need an active stocking to perform a top-up.
-              </p>
+              <DependencyEmpty
+                message="Top-up needs an approved active stocking. Stock a cage first, or check pending approvals."
+                createKind="stocking"
+                createLabel="Create stocking"
+                secondaryHref="/approvals"
+                secondaryLabel="View approvals"
+                onCreated={async (result) => {
+                  setFetchingData(true)
+                  try {
+                    const { data, error: fetchError } =
+                      await stockingService.getActiveStockings()
+                    if (fetchError) throw fetchError
+                    setActiveStockings(data || [])
+                    if (result?.id) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        stocking_id: result.id,
+                      }))
+                    }
+                    showToast(
+                      'success',
+                      'Stocking created. If it needs approval, it will appear here after approval.',
+                    )
+                  } catch (err) {
+                    showToast('error', err.message || 'Failed to refresh batches')
+                  } finally {
+                    setFetchingData(false)
+                  }
+                }}
+              />
             )}
           </Field>
 
@@ -239,7 +302,16 @@ const TopUpForm = ({ onComplete }) => {
                 placeholder="Number of fish to add"
               />
             </Field>
-            <Field label="Average body weight (g)" htmlFor="abw" required>
+            <Field
+              label="Average body weight (g)"
+              htmlFor="abw"
+              required
+              hint={
+                rules?.stockingRules
+                  ? `Allowed ${rules.stockingRules.minTopupAbwG ?? 5}–${rules.stockingRules.maxTopupAbwG ?? 800}g (culture size, not fingerling-only)`
+                  : undefined
+              }
+            >
               <Input
                 id="abw"
                 type="number"
@@ -304,7 +376,11 @@ const TopUpForm = ({ onComplete }) => {
         </FormSection>
 
         <FormActions>
-          <Button type="submit" disabled={loading || fetchingData} size="lg">
+          <Button
+            type="submit"
+            disabled={loading || fetchingData || activeStockings.length === 0}
+            size="lg"
+          >
             {loading ? 'Submitting…' : 'Submit top-up'}
           </Button>
           <Button

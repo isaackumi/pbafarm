@@ -5,11 +5,22 @@ const ToastContext = createContext(null)
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([])
 
-  const showToast = useCallback((message, type = 'info') => {
+  const showToast = useCallback((messageOrType, typeOrMessage = 'info') => {
+    const known = ['error', 'success', 'info', 'warning']
+    let message = messageOrType
+    let type = typeOrMessage
+    // Support both showToast(msg, type) and showToast(type, msg)
+    if (
+      known.includes(messageOrType) &&
+      typeof typeOrMessage === 'string' &&
+      !known.includes(typeOrMessage)
+    ) {
+      type = messageOrType
+      message = typeOrMessage
+    }
     const id = Date.now()
     setToasts((prev) => [...prev, { id, message, type }])
 
-    // Auto remove toast after 5 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id))
     }, 5000)

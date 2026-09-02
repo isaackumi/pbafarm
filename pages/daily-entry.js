@@ -8,7 +8,7 @@ export default function DailyUpload() {
   return (
     <ProtectedRoute>
       <Layout title="Daily Entry">
-        <FormPage>
+        <FormPage data-tour="page-daily-entry">
           <PageHeader
             showTitle={false}
             breadcrumbs={[

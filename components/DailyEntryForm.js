@@ -1,22 +1,37 @@
 import React, { useState, useEffect } from 'react'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { feedTypeService } from '../lib/feedTypeService'
+import DependencyEmpty from './DependencyEmpty'
+import { usePersistedForm } from '../hooks/usePersistedForm'
+
+const DAILY_ENTRY_DEFAULTS = {
+  date: new Date().toISOString().split('T')[0],
+  mortality: '',
+  feedAmount: '',
+  feedTypeId: '',
+  feedPrice: '',
+  notes: '',
+}
 
 export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
+  const persistKey = `daily-entry-form-${cageId || 'none'}`
+  const { formData, setFormData, clear } = usePersistedForm(
+    persistKey,
+    DAILY_ENTRY_DEFAULTS,
+  )
   const [feedTypes, setFeedTypes] = useState([])
+  const [lookupsReady, setLookupsReady] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    mortality: 0,
-    feedAmount: 0,
-    feedTypeId: '',
-    feedPrice: 0,
-    notes: '',
-  })
+
+  const loadFeedTypes = () =>
+    feedTypeService
+      .getActiveFeedTypes()
+      .then(({ data }) => setFeedTypes(data || []))
+      .finally(() => setLookupsReady(true))
 
   useEffect(() => {
-    feedTypeService.getActiveFeedTypes().then(({ data }) => setFeedTypes(data || []))
+    loadFeedTypes()
   }, [])
 
   const handleSubmit = async (e) => {
@@ -45,6 +60,11 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
         mortality: Number(formData.mortality) || 0,
         notes: formData.notes || undefined,
       })
+      clear()
+      setFormData({
+        ...DAILY_ENTRY_DEFAULTS,
+        date: new Date().toISOString().split('T')[0],
+      })
       onSubmit?.(formData)
     } catch (err) {
       setError(err.message || 'Failed to save daily record')
@@ -56,6 +76,7 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
   return (
     <div className="max-w-md mx-auto bg-surface border border-foam-deep p-6 rounded-lg shadow-sm">
       <h2 className="text-xl font-semibold text-chart-ink mb-4">Daily entry</h2>
+      <p className="text-xs text-muted mb-4 -mt-2">Drafts survive a browser refresh.</p>
       {error && (
         <div className="mb-4 text-sm text-signal border border-signal/20 bg-signal/10 rounded p-2">
           {error}
@@ -81,18 +102,36 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
               setFormData({
                 ...formData,
                 feedTypeId: e.target.value,
-                feedPrice: ft?.price_per_kg ?? ft?.pricePerKg ?? 0,
+                feedPrice: ft?.price_per_kg ?? ft?.pricePerKg ?? '',
               })
             }}
             className="w-full border border-input-border rounded px-3 py-2"
+            disabled={lookupsReady && feedTypes.length === 0}
           >
-            <option value="">Select feed type</option>
+            <option value="">
+              {lookupsReady && feedTypes.length === 0
+                ? 'No feed types available'
+                : 'Select feed type'}
+            </option>
             {feedTypes.map((t) => (
               <option key={t.id || t._id} value={t.id || t._id}>
                 {t.name}
               </option>
             ))}
           </select>
+          {lookupsReady && feedTypes.length === 0 && (
+            <DependencyEmpty
+              message="Add a feed type before recording feed usage."
+              createKind="feedType"
+              createLabel="Create feed type"
+              onCreated={(result) => {
+                loadFeedTypes()
+                if (result?.id) {
+                  setFormData((prev) => ({ ...prev, feedTypeId: result.id }))
+                }
+              }}
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Feed amount (kg)</label>
@@ -131,7 +170,11 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
             {saving ? 'Saving…' : 'Save'}
           </button>
           {onCancel && (
-            <button type="button" onClick={onCancel} className="bg-foam-deep text-chart-ink px-4 py-2 rounded">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="bg-foam-deep text-chart-ink px-4 py-2 rounded"
+            >
               Cancel
             </button>
           )}

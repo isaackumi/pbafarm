@@ -38,6 +38,7 @@ function toClient(c: any, logo_url: string | null = null) {
       branding: settings.branding,
       farm_rules: settings.farmRules,
       stocking_rules: settings.stockingRules,
+      feed_rules: settings.feedRules,
       updated_at: settings.updatedAt,
     },
     created_at: c.createdAt,
@@ -72,6 +73,8 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
     draft?.stocking_rules ||
     draft?.settings?.stockingRules ||
     {}
+  const feedRules =
+    draft?.feedRules || draft?.feed_rules || draft?.settings?.feedRules || {}
   const ai =
     draft?.aiAssistantEnabled ??
     draft?.ai_assistant_enabled ??
@@ -142,10 +145,41 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         stockingRules.maxInitialAbwG ?? stockingRules.max_initial_abw_g,
         DEFAULT_SETTINGS.stockingRules.maxInitialAbwG,
       ),
+      minTopupAbwG: numOr(
+        stockingRules.minTopupAbwG ?? stockingRules.min_topup_abw_g,
+        DEFAULT_SETTINGS.stockingRules.minTopupAbwG,
+      ),
+      maxTopupAbwG: numOr(
+        stockingRules.maxTopupAbwG ?? stockingRules.max_topup_abw_g,
+        DEFAULT_SETTINGS.stockingRules.maxTopupAbwG,
+      ),
       allowStockOnlyEmptyStatuses:
         stockingRules.allowStockOnlyEmptyStatuses ||
         stockingRules.allow_stock_only_empty_statuses ||
         DEFAULT_SETTINGS.stockingRules.allowStockOnlyEmptyStatuses,
+    },
+    feedRules: {
+      defaultBagSizeKg: numOr(
+        feedRules.defaultBagSizeKg ?? feedRules.default_bag_size_kg,
+        DEFAULT_SETTINGS.feedRules.defaultBagSizeKg,
+      ),
+      defaultLocation:
+        feedRules.defaultLocation ||
+        feedRules.default_location ||
+        DEFAULT_SETTINGS.feedRules.defaultLocation,
+      allowNegativeStock:
+        feedRules.allowNegativeStock ??
+        feedRules.allow_negative_stock ??
+        false,
+      trackLots: feedRules.trackLots ?? feedRules.track_lots ?? true,
+      lowStockMultiplier: numOr(
+        feedRules.lowStockMultiplier ?? feedRules.low_stock_multiplier,
+        DEFAULT_SETTINGS.feedRules.lowStockMultiplier,
+      ),
+      requireBatchOnPurchase:
+        feedRules.requireBatchOnPurchase ??
+        feedRules.require_batch_on_purchase ??
+        false,
     },
   }
 }
@@ -168,6 +202,7 @@ function draftPayloadFromCompany(c: any) {
     branding: settings.branding,
     farmRules: settings.farmRules,
     stockingRules: settings.stockingRules,
+    feedRules: settings.feedRules,
   }
 }
 

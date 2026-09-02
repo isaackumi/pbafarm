@@ -2,7 +2,13 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, logAudit } from './lib/tenancy'
-import { applyStockChange, bagsFromKg } from './lib/feedLedger'
+import {
+  applyStockChange,
+  bagsFromKg,
+  addInventoryLot,
+  deductInventoryLots,
+} from './lib/feedLedger'
+import { mergeSettings } from './lib/farmRules'
 
 function toClientTransaction(t: any) {
   return {
@@ -48,12 +54,38 @@ function toClientAlert(a: any) {
   }
 }
 
+function toClientLot(lot: any, feedTypeName?: string) {
+  return {
+    id: lot._id,
+    _id: lot._id,
+    feed_type_id: lot.feedTypeId,
+    feed_type_name: feedTypeName || null,
+    quantity_kg: lot.quantityKg,
+    batch_number: lot.batchNumber || null,
+    expiry_date: lot.expiryDate || null,
+    location: lot.location || 'Main store',
+    company_id: lot.companyId,
+    updated_at: lot.updatedAt,
+    created_at: lot._creationTime,
+  }
+}
+
 export const listStockLevels = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
+    let feedTypes =
+      user.companyId && user.role !== 'super_admin'
+        ? await ctx.db
+            .query('feedTypes')
+            .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+            .collect()
+        : await ctx.db.query('feedTypes').collect()
     feedTypes = await listForCompany(user, feedTypes)
+
+    const company = user.companyId ? await ctx.db.get(user.companyId) : null
+    const feedRules = mergeSettings(company?.settings).feedRules
+    const multiplier = feedRules.lowStockMultiplier || 1
 
     if (!args.includeInactive) {
       feedTypes = feedTypes.filter((f) => f.active && !f.deletedAt)
@@ -66,8 +98,12 @@ export const listStockLevels = query({
         const supplier = await ctx.db.get(feedType.supplierId)
         supplierName = supplier?.name || null
       }
-      const bagSize = feedType.bagSizeKg && feedType.bagSizeKg > 0 ? feedType.bagSizeKg : 25
+      const bagSize =
+        feedType.bagSizeKg && feedType.bagSizeKg > 0
+          ? feedType.bagSizeKg
+          : feedRules.defaultBagSizeKg
 
+      const threshold = feedType.minimumStock * multiplier
       stockLevels.push({
         feedTypeId: feedType._id,
         feedTypeName: feedType.name,
@@ -79,7 +115,7 @@ export const listStockLevels = query({
         supplierName,
         active: feedType.active,
         stockValue: feedType.currentStock * feedType.pricePerKg,
-        isLowStock: feedType.currentStock <= feedType.minimumStock,
+        isLowStock: feedType.currentStock <= threshold,
       })
     }
 
@@ -109,12 +145,24 @@ export const listTransactions = query({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    const maxRows = Math.min(args.limit ?? 200, 500)
+
     let transactions = args.feedTypeId
       ? await ctx.db
           .query('feedInventoryTransactions')
           .withIndex('by_feed_type', (q) => q.eq('feedTypeId', args.feedTypeId!))
-          .collect()
-      : await ctx.db.query('feedInventoryTransactions').collect()
+          .order('desc')
+          .take(maxRows * 2)
+      : user.companyId && user.role !== 'super_admin'
+        ? await ctx.db
+            .query('feedInventoryTransactions')
+            .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+            .order('desc')
+            .take(maxRows * 2)
+        : await ctx.db
+            .query('feedInventoryTransactions')
+            .order('desc')
+            .take(maxRows * 2)
 
     transactions = await listForCompany(user, transactions)
 
@@ -128,13 +176,10 @@ export const listTransactions = query({
       transactions = transactions.filter((t) => t.transactionDate <= args.dateTo!)
     }
 
-    transactions = transactions.sort((a, b) => b.transactionDate - a.transactionDate)
-
-    if (args.limit) {
-      transactions = transactions.slice(0, args.limit)
-    }
-
-    return transactions.map(toClientTransaction)
+    return transactions
+      .sort((a, b) => b.transactionDate - a.transactionDate)
+      .slice(0, maxRows)
+      .map(toClientTransaction)
   },
 })
 
@@ -146,6 +191,9 @@ export const createAdjustment = mutation({
     notes: v.string(),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    location: v.optional(v.string()),
+    batchNumber: v.optional(v.string()),
+    expiryDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -166,6 +214,9 @@ export const createAdjustment = mutation({
       notes: args.notes,
       allowNegative: args.allowNegative,
       overrideReason: args.overrideReason,
+      location: args.location,
+      batchNumber: args.batchNumber,
+      expiryDate: args.expiryDate,
     })
 
     await logAudit(ctx, {
@@ -183,6 +234,152 @@ export const createAdjustment = mutation({
   },
 })
 
+/** Move stock between locations without changing on-hand total. */
+export const createTransfer = mutation({
+  args: {
+    feedTypeId: v.id('feedTypes'),
+    quantityKg: v.number(),
+    fromLocation: v.string(),
+    toLocation: v.string(),
+    notes: v.optional(v.string()),
+    batchNumber: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!(args.quantityKg > 0)) throw new Error('Transfer quantity must be positive')
+    const from = args.fromLocation.trim()
+    const to = args.toLocation.trim()
+    if (!from || !to) throw new Error('From and to locations are required')
+    if (from === to) throw new Error('Locations must differ')
+
+    const feedType = await ctx.db.get(args.feedTypeId)
+    if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
+    const allowed = await listForCompany(user, [feedType])
+    if (!allowed.length) throw new Error('Access denied')
+
+    await deductInventoryLots(ctx, {
+      feedTypeId: args.feedTypeId,
+      quantityKg: args.quantityKg,
+      location: from,
+    })
+    await addInventoryLot(ctx, {
+      feedTypeId: args.feedTypeId,
+      quantityKg: args.quantityKg,
+      companyId: feedType.companyId ?? user.companyId,
+      batchNumber: args.batchNumber,
+      location: to,
+    })
+
+    const now = Date.now()
+    const transactionId = await ctx.db.insert('feedInventoryTransactions', {
+      feedTypeId: args.feedTypeId,
+      transactionType: 'transfer',
+      quantityKg: args.quantityKg,
+      bags: bagsFromKg(args.quantityKg, feedType.bagSizeKg),
+      transactionDate: now,
+      notes:
+        args.notes ||
+        `Transfer ${args.quantityKg} kg from ${from} → ${to}`,
+      companyId: feedType.companyId ?? user.companyId,
+      createdBy: user._id,
+    })
+
+    await logAudit(ctx, {
+      actionType: 'transfer',
+      tableName: 'feedInventory',
+      recordId: transactionId,
+      newValues: args,
+    })
+
+    return transactionId
+  },
+})
+
+/** Reverse a ledger transaction (creates compensating reversal). */
+export const reverseTransaction = mutation({
+  args: {
+    transactionId: v.id('feedInventoryTransactions'),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!args.reason.trim()) throw new Error('Reversal reason is required')
+
+    const txn = await ctx.db.get(args.transactionId)
+    if (!txn) throw new Error('Transaction not found')
+    const allowed = await listForCompany(user, [txn])
+    if (!allowed.length) throw new Error('Access denied')
+    if (txn.transactionType === 'reversal') {
+      throw new Error('Cannot reverse a reversal')
+    }
+    if (txn.transactionType === 'transfer') {
+      throw new Error('Transfer reversals are not supported yet — reverse with an adjustment')
+    }
+
+    const { transactionId, previousStock, nextStock } = await applyStockChange(ctx, {
+      user,
+      feedTypeId: txn.feedTypeId,
+      deltaKg: -txn.quantityKg,
+      transactionType: 'reversal',
+      referenceId: String(args.transactionId),
+      notes: `Reversal of ${args.transactionId}: ${args.reason}`,
+      allowNegative: true,
+      overrideReason: args.reason,
+    })
+
+    await logAudit(ctx, {
+      actionType: 'reversal',
+      tableName: 'feedInventoryTransactions',
+      recordId: transactionId,
+      previousValues: txn,
+      newValues: { reversed: args.transactionId, reason: args.reason, previousStock, nextStock },
+    })
+
+    return transactionId
+  },
+})
+
+export const listLots = query({
+  args: {
+    feedTypeId: v.optional(v.id('feedTypes')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    let lots = args.feedTypeId
+      ? await ctx.db
+          .query('feedInventory')
+          .withIndex('by_feed_type', (q) => q.eq('feedTypeId', args.feedTypeId!))
+          .collect()
+      : user.companyId && user.role !== 'super_admin'
+        ? await ctx.db
+            .query('feedInventory')
+            .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+            .collect()
+        : await ctx.db.query('feedInventory').collect()
+
+    lots = await listForCompany(user, lots)
+    lots = lots.filter((lot) => lot.quantityKg > 0)
+
+    const names = new Map<string, string>()
+    const out = []
+    for (const lot of lots) {
+      if (!names.has(lot.feedTypeId)) {
+        const ft = await ctx.db.get(lot.feedTypeId)
+        names.set(lot.feedTypeId, ft?.name || '—')
+      }
+      out.push(toClientLot(lot, names.get(lot.feedTypeId)))
+    }
+
+    return out.sort((a, b) => {
+      const byType = (a.feed_type_name || '').localeCompare(b.feed_type_name || '')
+      if (byType) return byType
+      return (a.expiry_date || '9999').localeCompare(b.expiry_date || '9999')
+    })
+  },
+})
+
 export const listAlerts = query({
   args: {},
   handler: async (ctx) => {
@@ -190,8 +387,14 @@ export const listAlerts = query({
     let feedTypes = await ctx.db.query('feedTypes').collect()
     feedTypes = await listForCompany(user, feedTypes)
 
+    const company = user.companyId ? await ctx.db.get(user.companyId) : null
+    const multiplier = mergeSettings(company?.settings).feedRules.lowStockMultiplier || 1
+
     const lowStockFeedTypes = feedTypes.filter(
-      (f) => f.active && !f.deletedAt && f.currentStock <= f.minimumStock,
+      (f) =>
+        f.active &&
+        !f.deletedAt &&
+        f.currentStock <= f.minimumStock * multiplier,
     )
 
     const alerts = []
@@ -202,12 +405,13 @@ export const listAlerts = query({
         supplierName = supplier?.name || null
       }
 
+      const threshold = feedType.minimumStock * multiplier
       alerts.push({
         feedTypeId: feedType._id,
         feedTypeName: feedType.name,
         currentStock: feedType.currentStock,
         minimumStock: feedType.minimumStock,
-        shortage: feedType.minimumStock - feedType.currentStock,
+        shortage: threshold - feedType.currentStock,
         supplierName,
       })
     }
@@ -234,12 +438,22 @@ export const stockTally = query({
         .query('feedInventoryTransactions')
         .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
         .collect()
-      const ledgerSum = txns.reduce((s, t) => s + t.quantityKg, 0)
+      const ledgerSum = txns
+        .filter((t) => t.transactionType !== 'transfer')
+        .reduce((s, t) => s + t.quantityKg, 0)
+
+      const lots = await ctx.db
+        .query('feedInventory')
+        .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
+        .collect()
+      const lotsSum = lots.reduce((s, l) => s + l.quantityKg, 0)
+
       rows.push({
         feed_type_id: feedType._id,
         feed_type_name: feedType.name,
         current_stock: feedType.currentStock,
         ledger_sum: ledgerSum,
+        lots_sum: lotsSum,
         delta: Math.round((feedType.currentStock - ledgerSum) * 1000) / 1000,
         ok: Math.abs(feedType.currentStock - ledgerSum) < 0.001,
       })

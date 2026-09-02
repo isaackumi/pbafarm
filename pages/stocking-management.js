@@ -7,13 +7,16 @@ import {
   Filter,
   ChevronDown,
   Edit,
+  Trash2,
   Calendar,
   Plus,
+  AlertTriangle,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
 import { stockingService } from '../lib/databaseService'
+import { useToast } from '../components/Toast'
 
 export default function StockingManagementPage() {
   return (
@@ -25,6 +28,7 @@ export default function StockingManagementPage() {
 
 function StockingManagement() {
   const router = useRouter()
+  const { showToast } = useToast()
   const [stockings, setStockings] = useState([])
   const [filteredStockings, setFilteredStockings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +42,8 @@ function StockingManagement() {
   const [availableYears, setAvailableYears] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingStocking, setEditingStocking] = useState(null)
+  const [deleteStocking, setDeleteStocking] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const [formData, setFormData] = useState({
     stocking_date: '',
     fish_count: '',
@@ -239,15 +245,34 @@ function StockingManagement() {
       if (error) throw error
 
       setSuccess('Stocking updated successfully')
+      showToast('Stocking updated successfully', 'success')
 
-      // Refresh data after short delay
       setTimeout(() => {
         fetchData()
         setShowEditModal(false)
-      }, 1500)
+      }, 800)
     } catch (error) {
       console.error('Error updating stocking:', error)
       setError(error.message)
+      showToast(error.message || 'Update failed', 'error')
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteStocking) return
+    setDeleting(true)
+    try {
+      const { error } = await stockingService.deleteStocking(
+        deleteStocking.id || deleteStocking._id,
+      )
+      if (error) throw error
+      showToast('Stocking deleted', 'success')
+      setDeleteStocking(null)
+      fetchData()
+    } catch (err) {
+      showToast(err.message || 'Delete failed', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -516,13 +541,24 @@ function StockingManagement() {
                         {stocking.source_location || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-muted">
-                        <button
-                          onClick={() => handleEditStocking(stocking)}
-                          className="text-lagoon-800 hover:text-lagoon-950"
-                          title="Edit Stocking"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                        <div className="flex justify-end gap-3">
+                          <button
+                            onClick={() => handleEditStocking(stocking)}
+                            className="text-lagoon-800 hover:text-lagoon-950"
+                            title="Edit Stocking"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          {stocking.status !== 'approved' && (
+                            <button
+                              onClick={() => setDeleteStocking(stocking)}
+                              className="text-signal hover:opacity-80"
+                              title="Delete Stocking"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -670,6 +706,46 @@ function StockingManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteStocking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => !deleting && setDeleteStocking(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-6 h-6 text-signal" />
+              <h3 className="text-lg font-semibold text-chart-ink">Delete stocking</h3>
+            </div>
+            <p className="text-sm text-muted mb-5">
+              Delete batch{' '}
+              <span className="font-semibold text-chart-ink">
+                {deleteStocking.batch_number || deleteStocking.batchNumber}
+              </span>
+              ? Only pending or rejected stockings can be deleted.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteStocking(null)}
+                className="px-4 py-2 border border-input-border rounded-md text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-md text-sm font-medium text-white bg-signal"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

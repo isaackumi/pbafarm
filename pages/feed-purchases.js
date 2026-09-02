@@ -26,9 +26,9 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
-import { feedTypeService } from '../lib/feedTypeService'
 import { feedService } from '../lib/feedService'
-import { feedTrackingService } from '../lib/feedTrackingService'
+import { supplierService } from '../lib/supplierService'
+import { cageService } from '../lib/cageService'
 import { formatCurrency, formatWeight, formatNumber } from '../lib/currencyUtils'
 import {
   LineChart as RechartsLineChart,
@@ -78,6 +78,8 @@ function FeedPurchases() {
   const [success, setSuccess] = useState('')
   const [timeRange, setTimeRange] = useState('30d')
   const [feedUsage, setFeedUsage] = useState([])
+  const [cages, setCages] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [lowStockAlerts, setLowStockAlerts] = useState([])
   const [stats, setStats] = useState({
     totalPurchases: 0,
@@ -122,40 +124,83 @@ function FeedPurchases() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch feed types
-      const { data: feedTypesData, error: feedTypesError } = await feedTrackingService.getCurrentStockLevels()
-      if (feedTypesError) throw feedTypesError
-      setFeedTypes(feedTypesData || [])
+      const [
+        feedTypesResult,
+        purchasesResult,
+        lowStockResult,
+        usageResult,
+        cagesResult,
+        suppliersResult,
+      ] = await Promise.all([
+        feedService.getAllFeedTypes(),
+        feedService.getAllPurchases(),
+        feedService.getLowStockAlerts(),
+        feedService.getFeedUsageStats(timeRange),
+        cageService.getAllCages(),
+        supplierService.getAllSuppliers(),
+      ])
 
-      // Fetch purchases
-      const { data: purchasesData, error: purchasesError } = await feedTrackingService.getFeedUsageStats(timeRange)
-      if (purchasesError) throw purchasesError
-      setPurchases(purchasesData || [])
+      if (feedTypesResult.error) throw feedTypesResult.error
+      if (purchasesResult.error) throw purchasesResult.error
+      if (lowStockResult.error) throw lowStockResult.error
+      if (usageResult.error) throw usageResult.error
+      if (cagesResult.error) throw cagesResult.error
+      if (suppliersResult.error) throw suppliersResult.error
 
-      // Fetch cost analysis
-      const { data: costAnalysis, error: costError } = await feedTrackingService.getFeedCostAnalysis(timeRange)
-      if (costError) throw costError
-      setCostAnalysis(costAnalysis)
+      const feedTypesData = feedTypesResult.data || []
+      const suppliersData = suppliersResult.data || []
+      const cagesData = cagesResult.data || []
+      const feedById = Object.fromEntries(
+        feedTypesData.map((t) => [t.id || t._id, t]),
+      )
+      const supplierById = Object.fromEntries(
+        suppliersData.map((s) => [s.id || s._id, s]),
+      )
+      const usageRows = (usageResult.data?.rows || []).map((u) => {
+        const feed = feedById[u.feed_type_id]
+        return {
+          ...u,
+          feed_types: feed ? { id: feed.id || feed._id, name: feed.name } : null,
+        }
+      })
 
-      // Fetch low stock alerts
-      const { data: lowStockData, error: lowStockError } = await feedTrackingService.getLowStockAlerts()
-      if (lowStockError) throw lowStockError
-      setLowStockAlerts(lowStockData || [])
+      const purchasesData = (purchasesResult.data || []).map((p) => {
+        const feed = feedById[p.feed_type_id]
+        const supplier = supplierById[p.supplier_id]
+        return {
+          ...p,
+          feed_types: feed ? { id: feed.id || feed._id, name: feed.name } : null,
+          feed_type: feed ? { name: feed.name } : null,
+          suppliers: supplier ? { id: supplier.id || supplier._id, name: supplier.name } : null,
+          supplier: supplier ? { name: supplier.name } : null,
+        }
+      })
 
-      // Calculate statistics
-      const stats = calculateStats(purchasesData)
-      setStats(stats)
+      const lowStockData = (lowStockResult.data || []).map((a) => ({
+        id: a.feed_type_id || a.feedTypeId || a.id,
+        name: a.name || a.feed_type_name || a.feedTypeName || 'Feed',
+        current_stock: a.current_stock ?? a.currentStock ?? 0,
+        minimum_stock: a.minimum_stock ?? a.minimumStock ?? 0,
+      }))
 
-      // Calculate new metrics
-      const inventoryMetricsData = calculateInventoryMetrics(feedTypesData, purchasesData, feedUsage)
-      setInventoryMetrics(inventoryMetricsData)
+      setFeedTypes(feedTypesData)
+      setPurchases(purchasesData)
+      setLowStockAlerts(lowStockData)
+      setFeedUsage(usageRows)
+      setCages(cagesData)
+      setSuppliers(suppliersData)
 
-      const usageAnalyticsData = calculateUsageAnalytics(purchasesData, feedUsage, cages)
-      setUsageAnalytics(usageAnalyticsData)
-
-      const supplierMetricsData = calculateSupplierMetrics(purchasesData, suppliers)
-      setSupplierMetrics(supplierMetricsData)
-
+      setStats(calculateStats(purchasesData))
+      setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
+      setInventoryMetrics(
+        calculateInventoryMetrics(feedTypesData, purchasesData, usageRows),
+      )
+      setUsageAnalytics(
+        calculateUsageAnalytics(purchasesData, usageRows, cagesData),
+      )
+      setSupplierMetrics(
+        calculateSupplierMetrics(purchasesData, suppliersData),
+      )
     } catch (error) {
       console.error('Error fetching data:', error)
       showToast('error', 'Failed to load data')
@@ -286,7 +331,10 @@ function FeedPurchases() {
       name: feed.name,
       currentStock: feed.current_stock,
       minimumStock: feed.minimum_stock,
-      percentage: (feed.current_stock / feed.minimum_stock) * 100
+      percentage:
+        feed.minimum_stock > 0
+          ? (feed.current_stock / feed.minimum_stock) * 100
+          : 0,
     }))
 
     metrics.stockValue = feedTypes.reduce((total, feed) => {
@@ -295,8 +343,9 @@ function FeedPurchases() {
 
     // Calculate days remaining based on average daily usage
     const averageDailyUsage = {}
-    usage.forEach(record => {
+    ;(usage || []).forEach(record => {
       const feedType = record.feed_types?.name
+      if (!feedType) return
       if (!averageDailyUsage[feedType]) {
         averageDailyUsage[feedType] = {
           totalUsage: 0,
@@ -537,6 +586,7 @@ function FeedPurchases() {
 
   return (
     <Layout title="Feed Purchases">
+      <div data-tour="page-feed-purchases">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -592,7 +642,7 @@ function FeedPurchases() {
                   <div className="mt-2 text-sm text-red-700">
                     <ul className="list-disc pl-5 space-y-1">
                       {lowStockAlerts.map((feed) => (
-                        <li key={feed.id}>
+                        <li key={feed.id || feed.name}>
                           {feed.name}: {feed.current_stock}kg remaining (Minimum: {feed.minimum_stock}kg)
                         </li>
                       ))}
@@ -1266,6 +1316,7 @@ function FeedPurchases() {
           </div>
         </div>
       )}
+    </div>
     </Layout>
   )
 } 

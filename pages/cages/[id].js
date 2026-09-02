@@ -1,44 +1,32 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { PageHeader, Button } from '../../components/ui'
-import { cageService } from '../../lib/cageService'
-import { getConvexHttpClient, api } from '../../lib/convexBridge'
+import CageManageModals from '../../components/CageManageModals'
+import { useAuth } from '../../contexts/AuthContext'
+import { api } from '../../convex/_generated/api'
 
 function CageDetails() {
   const router = useRouter()
-  const { id } = router.query
-  const [cage, setCage] = useState(null)
-  const [recentDaily, setRecentDaily] = useState([])
-  const [recentBiweekly, setRecentBiweekly] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const id = typeof router.query.id === 'string' ? router.query.id : null
 
-  useEffect(() => {
-    if (id) loadCage()
-  }, [id])
+  const cage = useQuery(api.cages.get, user && id ? { id } : 'skip')
+  const recentDaily = useQuery(
+    api.dailyRecords.list,
+    user && id ? { cageId: id } : 'skip',
+  )
+  const recentBiweekly = useQuery(
+    api.biweeklyRecords.list,
+    user && id ? { cageId: id } : 'skip',
+  )
 
-  const loadCage = async () => {
-    try {
-      setLoading(true)
-      const response = await cageService.getCageById(id)
-      if (response.data) setCage(response.data)
+  const [editCage, setEditCage] = useState(null)
+  const [deleteCage, setDeleteCage] = useState(null)
 
-      const client = getConvexHttpClient()
-      const [daily, biweekly] = await Promise.all([
-        client.query(api.dailyRecords.list, { cageId: id }),
-        client.query(api.biweeklyRecords.list, { cageId: id }),
-      ])
-      setRecentDaily((daily || []).slice(0, 10))
-      setRecentBiweekly((biweekly || []).slice(0, 10))
-    } catch (error) {
-      console.error('Error loading cage:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
+  if (cage === undefined || !id) {
     return (
       <Layout title="Cage">
         <div className="flex justify-center items-center h-64 text-muted">
@@ -48,7 +36,7 @@ function CageDetails() {
     )
   }
 
-  if (!cage) {
+  if (cage === null) {
     return (
       <Layout title="Cage">
         <PageHeader
@@ -71,6 +59,8 @@ function CageDetails() {
 
   const cageId = cage.id || cage._id
   const status = cage.status || '—'
+  const dailyRows = (recentDaily || []).slice(0, 10)
+  const biweeklyRows = (recentBiweekly || []).slice(0, 10)
 
   return (
     <Layout title={`Cage ${cage.name}`}>
@@ -89,9 +79,26 @@ function CageDetails() {
             { label: 'Stocking', href: '/stocking' },
           ]}
           actions={
-            <Button href="/cages" variant="secondary" size="sm">
-              All cages
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setEditCage(cage)}
+              >
+                Edit
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => setDeleteCage(cage)}
+              >
+                Delete
+              </Button>
+              <Button href="/cages" variant="secondary" size="sm">
+                All cages
+              </Button>
+            </div>
           }
         />
 
@@ -99,7 +106,11 @@ function CageDetails() {
           <Button href={`/daily-entry?cage=${cageId}`} size="sm">
             Daily entry
           </Button>
-          <Button href={`/biweekly-entry?cage=${cageId}`} variant="secondary" size="sm">
+          <Button
+            href={`/biweekly-entry?cage=${cageId}`}
+            variant="secondary"
+            size="sm"
+          >
             Bi-weekly entry
           </Button>
         </div>
@@ -118,7 +129,11 @@ function CageDetails() {
               <span className="text-muted">Size:</span> {cage.size ?? '—'} m³
             </p>
             <p>
-              <span className="text-muted">Capacity:</span> {cage.capacity ?? '—'} fish
+              <span className="text-muted">Capacity:</span> {cage.capacity ?? '—'}{' '}
+              fish
+            </p>
+            <p>
+              <span className="text-muted">Material:</span> {cage.material || '—'}
             </p>
           </div>
           <div className="page-card p-6 space-y-2 text-sm">
@@ -132,7 +147,8 @@ function CageDetails() {
             <p>
               <span className="text-muted">Current ABW:</span>{' '}
               <span className="font-data">
-                {cage.current_abw ?? cage.currentAbw ?? cage.currentWeight ?? '—'} g
+                {cage.current_abw ?? cage.currentAbw ?? cage.currentWeight ?? '—'}{' '}
+                g
               </span>
             </p>
             <p>
@@ -147,12 +163,15 @@ function CageDetails() {
             <div className="px-4 py-3 border-b border-foam-deep font-semibold">
               Recent daily records
             </div>
-            {recentDaily.length === 0 ? (
+            {dailyRows.length === 0 ? (
               <p className="p-4 text-sm text-muted">No daily records yet.</p>
             ) : (
               <ul className="divide-y divide-foam-deep text-sm">
-                {recentDaily.map((r) => (
-                  <li key={r.id || r._id} className="px-4 py-2 flex justify-between gap-2">
+                {dailyRows.map((r) => (
+                  <li
+                    key={r.id || r._id}
+                    className="px-4 py-2 flex justify-between gap-2"
+                  >
                     <span className="font-data">{r.date}</span>
                     <span className="text-muted">
                       Feed {r.feed_amount ?? r.feedAmount} kg · Mort{' '}
@@ -167,12 +186,15 @@ function CageDetails() {
             <div className="px-4 py-3 border-b border-foam-deep font-semibold">
               Recent biweekly samples
             </div>
-            {recentBiweekly.length === 0 ? (
+            {biweeklyRows.length === 0 ? (
               <p className="p-4 text-sm text-muted">No biweekly records yet.</p>
             ) : (
               <ul className="divide-y divide-foam-deep text-sm">
-                {recentBiweekly.map((r) => (
-                  <li key={r.id || r._id} className="px-4 py-2 flex justify-between gap-2">
+                {biweeklyRows.map((r) => (
+                  <li
+                    key={r.id || r._id}
+                    className="px-4 py-2 flex justify-between gap-2"
+                  >
                     <span className="font-data">{r.date}</span>
                     <span className="text-muted">
                       ABW {r.average_body_weight ?? r.averageBodyWeight} g
@@ -184,6 +206,14 @@ function CageDetails() {
           </div>
         </div>
       </div>
+
+      <CageManageModals
+        editCage={editCage}
+        deleteCage={deleteCage}
+        onCloseEdit={() => setEditCage(null)}
+        onCloseDelete={() => setDeleteCage(null)}
+        onDeleted={() => router.push('/cages')}
+      />
     </Layout>
   )
 }

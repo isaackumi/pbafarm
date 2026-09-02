@@ -1,0 +1,66 @@
+/* Driver.js — Harbor Soft theme overrides */
+.pbafarm-tour-popover.driver-popover {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 76, 92, 0.12);
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px rgba(15, 76, 92, 0.18);
+  max-width: min(420px, calc(100vw - 2rem));
+}
+
+.pbafarm-tour-popover .driver-popover-title {
+  font-family: var(--font-display, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b3d4a;
+}
+
+.pbafarm-tour-popover .driver-popover-description {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.pbafarm-tour-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.pbafarm-tour-popover .driver-popover-navigation-btns {
+  gap: 0.5rem;
+}
+
+.pbafarm-tour-popover .driver-popover-next-btn,
+.pbafarm-tour-popover .driver-popover-prev-btn,
+.pbafarm-tour-popover .driver-popover-close-btn {
+  border-radius: 0.65rem;
+  text-shadow: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+}
+
+.pbafarm-tour-popover .driver-popover-next-btn {
+  background: #0b3d4a;
+  color: #f8fafc;
+  border: 1px solid #0b3d4a;
+}
+
+.pbafarm-tour-popover .driver-popover-next-btn:hover {
+  background: #072e38;
+}
+
+.pbafarm-tour-popover .driver-popover-prev-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.pbafarm-tour-popover .driver-popover-close-btn {
+  color: #64748b;
+}
+
+.driver-overlay {
+  background: rgba(7, 46, 56, 0.55) !important;
+}

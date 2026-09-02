@@ -8,7 +8,7 @@ export default function CreateCagePage() {
   return (
     <ProtectedRoute>
       <Layout title="Create Cage">
-        <FormPage>
+        <FormPage data-tour="page-create-cage">
           <PageHeader
             showTitle={false}
             breadcrumbs={[

@@ -130,6 +130,7 @@ function FeedTypes() {
 
   return (
     <Layout title="Feed Types">
+      <div data-tour="page-feed-types">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -547,6 +548,7 @@ function FeedTypes() {
           </div>
         </div>
       )}
+      </div>
     </Layout>
   )
 }

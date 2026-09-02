@@ -26,7 +26,18 @@ export const DEFAULT_SETTINGS = {
     enforceCageCapacity: true,
     minInitialAbwG: 5,
     maxInitialAbwG: 80,
+    /** Top-ups may match current culture size, not only fingerlings. */
+    minTopupAbwG: 5,
+    maxTopupAbwG: 800,
     allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested'] as string[],
+  },
+  feedRules: {
+    defaultBagSizeKg: 25,
+    defaultLocation: 'Main store',
+    allowNegativeStock: false,
+    trackLots: true,
+    lowStockMultiplier: 1,
+    requireBatchOnPurchase: false,
   },
 }
 
@@ -53,7 +64,17 @@ export type EffectiveSettings = {
     enforceCageCapacity: boolean
     minInitialAbwG: number
     maxInitialAbwG: number
+    minTopupAbwG: number
+    maxTopupAbwG: number
     allowStockOnlyEmptyStatuses: string[]
+  }
+  feedRules: {
+    defaultBagSizeKg: number
+    defaultLocation: string
+    allowNegativeStock: boolean
+    trackLots: boolean
+    lowStockMultiplier: number
+    requireBatchOnPurchase: boolean
   }
   updatedAt?: number
 }
@@ -78,6 +99,15 @@ export function mergeSettings(raw?: any): EffectiveSettings {
         s.stockingRules?.allowStockOnlyEmptyStatuses ||
         DEFAULT_SETTINGS.stockingRules.allowStockOnlyEmptyStatuses,
     },
+    feedRules: {
+      ...DEFAULT_SETTINGS.feedRules,
+      ...(s.feedRules || {}),
+      allowNegativeStock: s.feedRules?.allowNegativeStock === true,
+      trackLots: s.feedRules?.trackLots !== false,
+      requireBatchOnPurchase: s.feedRules?.requireBatchOnPurchase === true,
+      defaultLocation:
+        s.feedRules?.defaultLocation || DEFAULT_SETTINGS.feedRules.defaultLocation,
+    },
     updatedAt: s.updatedAt,
   }
 }
@@ -96,6 +126,7 @@ export function validateSettingsForPublish(settings: any) {
   }
   const fr = settings?.farmRules || {}
   const sr = settings?.stockingRules || {}
+  const feed = settings?.feedRules || {}
   const num = (v: any, label: string, min = 0) => {
     if (v === undefined || v === null || v === '') return
     const n = Number(v)
@@ -111,6 +142,13 @@ export function validateSettingsForPublish(settings: any) {
   num(fr.maxFcrAlert, 'Max FCR alert', 0.01)
   num(sr.minInitialAbwG, 'Min initial ABW')
   num(sr.maxInitialAbwG, 'Max initial ABW')
+  num(sr.minTopupAbwG, 'Min top-up ABW')
+  num(sr.maxTopupAbwG, 'Max top-up ABW')
+  num(feed.defaultBagSizeKg, 'Default bag size (kg)', 0.01)
+  num(feed.lowStockMultiplier, 'Low-stock multiplier', 0.01)
+  if (feed.defaultLocation != null && String(feed.defaultLocation).trim() === '') {
+    errors.push('Default store location cannot be empty')
+  }
 
   if (
     fr.harvestDocMinDays != null &&
@@ -125,6 +163,13 @@ export function validateSettingsForPublish(settings: any) {
     Number(sr.minInitialAbwG) > Number(sr.maxInitialAbwG)
   ) {
     errors.push('Min initial ABW cannot exceed max')
+  }
+  if (
+    sr.minTopupAbwG != null &&
+    sr.maxTopupAbwG != null &&
+    Number(sr.minTopupAbwG) > Number(sr.maxTopupAbwG)
+  ) {
+    errors.push('Min top-up ABW cannot exceed max')
   }
   if (errors.length) throw new Error(errors.join('; '))
 }
@@ -173,9 +218,11 @@ export function assertTopupAllowed(opts: {
   farmRules: EffectiveSettings['farmRules']
 }) {
   const { cage, addedFish, abw, rules, farmRules } = opts
-  if (abw < rules.minInitialAbwG || abw > rules.maxInitialAbwG) {
+  const minAbw = rules.minTopupAbwG ?? DEFAULT_SETTINGS.stockingRules.minTopupAbwG
+  const maxAbw = rules.maxTopupAbwG ?? DEFAULT_SETTINGS.stockingRules.maxTopupAbwG
+  if (abw < minAbw || abw > maxAbw) {
     throw new Error(
-      `Top-up ABW must be between ${rules.minInitialAbwG}g and ${rules.maxInitialAbwG}g`,
+      `Top-up ABW must be between ${minAbw}g and ${maxAbw}g`,
     )
   }
   const nextCount = (cage?.currentCount || 0) + addedFish

@@ -43,61 +43,69 @@ const MENU_SECTIONS = {
   production: {
     title: 'Production',
     icon: Fish,
+    tourId: 'production',
     items: [
-      { title: 'Dashboard', path: '/dashboard', icon: House },
-      { title: 'Daily Entry', path: '/daily-entry', icon: CalendarBlank },
-      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scales },
-      { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText },
-      { title: 'Harvest Data', path: '/harvest', icon: Package },
+      { title: 'Dashboard', path: '/dashboard', icon: House, tourId: 'dashboard' },
+      { title: 'Daily Entry', path: '/daily-entry', icon: CalendarBlank, tourId: 'daily-entry' },
+      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scales, tourId: 'biweekly-entry' },
+      { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
+      { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
-      { title: 'Stocking Management', path: '/stocking-management', icon: Waves },
-      { title: 'New Stocking', path: '/stocking', icon: Plus },
+      { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
+      { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
     ],
   },
   cages: {
     title: 'Cages',
     icon: SquaresFour,
+    tourId: 'cages-section',
     items: [
-      { title: 'All Cages', path: '/cages', icon: Database },
+      { title: 'All Cages', path: '/cages', icon: Database, tourId: 'cages' },
       { title: 'Analytics', path: '/cages/analytics', icon: ChartBar },
       { title: 'Settings', path: '/cages/settings', icon: GearSix },
-      { title: 'Create Cage', path: '/create-cage', icon: Plus },
+      { title: 'Create Cage', path: '/create-cage', icon: Plus, tourId: 'create-cage' },
     ],
   },
   feed: {
     title: 'Feed',
     icon: Package,
+    tourId: 'feed-section',
     items: [
       { title: 'Overview', path: '/feed-management', icon: ChartBar },
-      { title: 'Feed Types', path: '/feed-types', icon: ListBullets },
-      { title: 'Suppliers', path: '/feed-suppliers', icon: Truck },
-      { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart },
-      { title: 'Issue Feed', path: '/feed-issue', icon: Package },
+      { title: 'Feed Types', path: '/feed-types', icon: ListBullets, tourId: 'feed-types' },
+      { title: 'Suppliers', path: '/feed-suppliers', icon: Truck, tourId: 'feed-suppliers' },
+      { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart, tourId: 'feed-purchases' },
+      { title: 'Issue Feed', path: '/feed-issue', icon: Package, tourId: 'feed-issue' },
       { title: 'Analytics', path: '/feed-management/analytics', icon: ChartLineUp },
     ],
   },
   inventory: {
     title: 'Inventory',
     icon: Database,
+    tourId: 'inventory-section',
     items: [
-      { title: 'Overview', path: '/inventory/overview', icon: ChartBar },
-      { title: 'Stock Levels', path: '/stock-levels', icon: Package },
+      { title: 'Overview', path: '/inventory/overview', icon: ChartBar, tourId: 'inventory-overview' },
+      { title: 'Stock Levels', path: '/stock-levels', icon: Package, tourId: 'stock-levels' },
+      { title: 'Lots', path: '/inventory/lots', icon: Package, tourId: 'inventory-lots' },
+      { title: 'Adjust / Transfer', path: '/inventory/adjust', icon: Package, tourId: 'inventory-adjust' },
       { title: 'Alerts', path: '/inventory-alerts', icon: Warning },
-      { title: 'Transactions', path: '/inventory-transactions', icon: FileText },
+      { title: 'Transactions', path: '/inventory-transactions', icon: FileText, tourId: 'inventory-transactions' },
       { title: 'Analytics', path: '/inventory/analytics', icon: ChartLineUp },
     ],
   },
   analytics: {
     title: 'Reports',
     icon: ChartBar,
+    tourId: 'reports-section',
     items: [
-      { title: 'Production Report', path: '/report', icon: FileText },
+      { title: 'Production Report', path: '/report', icon: FileText, tourId: 'report' },
       { title: 'Export Data', path: '/export', icon: DownloadSimple },
       {
         title: 'Audit Logs',
         path: '/audit-logs',
         icon: Eye,
         adminOnly: true,
+        tourId: 'audit-logs',
       },
     ],
   },
@@ -105,11 +113,12 @@ const MENU_SECTIONS = {
     title: 'Management',
     icon: GearSix,
     adminOnly: true,
+    tourId: 'management-section',
     items: [
       { title: 'Users', path: '/users', icon: Users },
-      { title: 'Company Settings', path: '/company-settings', icon: Buildings },
-        { title: 'Approvals', path: '/approvals', icon: CheckCircle },
-        { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple },
+      { title: 'Company Settings', path: '/company-settings', icon: Buildings, tourId: 'company-settings' },
+      { title: 'Approvals', path: '/approvals', icon: CheckCircle, tourId: 'approvals' },
+      { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple },
     ],
   },
   admin: {
@@ -226,6 +235,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
         collapsed ? 'w-[4.5rem]' : 'w-64'
       }`}
       aria-label="Main navigation"
+      data-tour="sidebar"
     >
       <div
         className={`flex items-center border-b border-white/10 ${
@@ -296,6 +306,15 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
               )}
               <button
                 type="button"
+                data-tour-section={key}
+                data-tour={
+                  key === 'production'
+                    ? 'nav-section-production'
+                    : section.tourId
+                      ? `nav-section-${section.tourId}`
+                      : undefined
+                }
+                aria-expanded={open}
                 onClick={() => {
                   if (collapsed) {
                     onToggle?.()
@@ -337,6 +356,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                       <li key={item.path}>
                         <Link
                           href={item.path}
+                          data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
                           className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-medium leading-snug transition-colors ${
                             active
                               ? 'bg-white text-lagoon-950 shadow-sm'

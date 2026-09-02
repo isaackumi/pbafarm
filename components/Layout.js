@@ -72,7 +72,7 @@ const Layout = ({ children, title: initialTitle }) => {
     (error.includes('Not authenticated') || error.includes('Unauthenticated'))
 
   return (
-    <div className="min-h-screen font-sans">
+    <div className="min-h-screen font-sans" data-tour="app-shell">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((c) => !c)}

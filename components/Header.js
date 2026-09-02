@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Bell, Sun, Moon } from '@phosphor-icons/react'
+import { Bell, Sun, Moon, Question } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
+import { useTour } from './TourProvider'
 
 const TopBar = ({ title = 'Dashboard' }) => {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { startSystemWalkthrough } = useTour()
   const {
     notifications,
     unreadCount,
@@ -21,8 +23,10 @@ const TopBar = ({ title = 'Dashboard' }) => {
   const avatarLetter = fullName.charAt(0).toUpperCase()
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const profileDropdownRef = useRef(null)
   const notifDropdownRef = useRef(null)
+  const helpRef = useRef(null)
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -38,8 +42,11 @@ const TopBar = ({ title = 'Dashboard' }) => {
       ) {
         setNotifDropdownOpen(false)
       }
+      if (helpRef.current && !event.target.closest('#tour-help-menu')) {
+        setHelpOpen(false)
+      }
     }
-    if (profileDropdownOpen || notifDropdownOpen) {
+    if (profileDropdownOpen || notifDropdownOpen || helpOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     } else {
       document.removeEventListener('mousedown', handleClickOutside)
@@ -47,7 +54,7 @@ const TopBar = ({ title = 'Dashboard' }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [profileDropdownOpen, notifDropdownOpen])
+  }, [profileDropdownOpen, notifDropdownOpen, helpOpen])
 
   const handleLogout = async () => {
     setProfileDropdownOpen(false)
@@ -62,11 +69,52 @@ const TopBar = ({ title = 'Dashboard' }) => {
     <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-30">
       <div className="waterline" />
       <div className="flex justify-between items-center px-5 sm:px-8 py-4 border-b border-foam-deep">
-        <h1 className="font-display text-xl sm:text-2xl font-bold text-chart-ink tracking-tight">
+        <h1
+          className="font-display text-xl sm:text-2xl font-bold text-chart-ink tracking-tight"
+          data-tour="header-title"
+        >
           {title}
         </h1>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div
+            className="relative"
+            id="tour-help-menu"
+            ref={helpRef}
+            data-tour="tour-help"
+          >
+            <button
+              type="button"
+              className="relative p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-xl cursor-pointer min-h-12 min-w-12 flex items-center justify-center"
+              aria-label="Help and walkthrough"
+              aria-expanded={helpOpen}
+              onClick={() => setHelpOpen((o) => !o)}
+            >
+              <Question size={24} weight="duotone" />
+            </button>
+            {helpOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1">
+                <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep">
+                  Help
+                </div>
+                <button
+                  type="button"
+                  className="block w-full text-left px-4 py-2.5 text-sm text-chart-ink hover:bg-foam"
+                  onClick={() => {
+                    setHelpOpen(false)
+                    startSystemWalkthrough()
+                  }}
+                >
+                  Start full system walkthrough
+                </button>
+                <p className="px-4 py-2 text-xs text-muted leading-relaxed">
+                  Guided tour of cages, feed stock, stocking, daily entry,
+                  harvest, and inventory.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
               className="relative p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-xl cursor-pointer min-h-12 min-w-12 flex items-center justify-center"
@@ -105,7 +153,9 @@ const TopBar = ({ title = 'Dashboard' }) => {
                       type="button"
                       onClick={() => handleNotifClick(n)}
                       className={`w-full text-left px-4 py-2.5 text-sm border-b border-foam-deep/60 last:border-0 ${
-                        n.read ? 'text-muted' : 'text-chart-ink font-medium bg-foam/50'
+                        n.read
+                          ? 'text-muted'
+                          : 'text-chart-ink font-medium bg-foam/50'
                       } hover:bg-foam cursor-pointer`}
                     >
                       <div className="font-semibold text-chart-ink">{n.title}</div>

@@ -127,7 +127,7 @@ function FeedSuppliers() {
       }
       const supplierData = {
         name: formData.name.trim(),
-        website: formData.website.trim() || null,
+        website: formData.website.trim() || undefined,
       }
       const { data, error } = await supplierService.createSupplier(supplierData)
       if (error) throw error
@@ -154,7 +154,7 @@ function FeedSuppliers() {
       }
       const supplierData = {
         name: formData.name.trim(),
-        website: formData.website.trim() || null,
+        website: formData.website.trim() || undefined,
       }
       const { data, error } = await supplierService.updateSupplier(
         editingSupplier.id,
