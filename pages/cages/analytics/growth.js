@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
+import { PageHeader, Button } from '../../../components/ui'
 import {
   LineChart,
   Line,
@@ -61,11 +62,11 @@ function GrowthAnalytics() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-            <p className="mt-2 text-gray-600">Loading growth analytics...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
+            <p className="mt-2 text-muted">Loading growth analytics...</p>
           </div>
         </div>
       </div>
@@ -74,7 +75,7 @@ function GrowthAnalytics() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
@@ -98,23 +99,41 @@ function GrowthAnalytics() {
 
   if (!cages || cages.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center text-gray-500">No cage data available.</div>
+          <div className="text-center text-muted">No cage data available.</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Growth Analytics</h1>
-        
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cages', href: '/cages' },
+            { label: 'Analytics', href: '/cages/analytics' },
+            { label: 'Growth' },
+          ]}
+          description="Compare growth rate and weight progress across active cages."
+          related={[
+            { label: 'Cage analytics', href: '/cages/analytics' },
+            { label: 'Harvest analytics', href: '/cages/analytics/harvest' },
+          ]}
+          actions={
+            <Button href="/cages/analytics" variant="secondary" size="sm">
+              All analytics
+            </Button>
+          }
+        />
+
         <div className="grid grid-cols-1 gap-6">
           {/* Growth Rate Chart */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Growth Rate Analysis</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Growth Rate Analysis</h2>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={growthData}>
@@ -132,7 +151,7 @@ function GrowthAnalytics() {
 
           {/* Weight Comparison Chart */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Weight Comparison</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Weight Comparison</h2>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={growthData}>
@@ -150,28 +169,28 @@ function GrowthAnalytics() {
 
           {/* Growth Data Table */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Growth Data</h2>
+            <h2 className="text-lg font-semibold text-chart-ink mb-4">Growth Data</h2>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-foam-deep">
+                <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cage Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOC</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Initial Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Growth Rate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Growth Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Cage Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">DOC</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Initial Weight</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Current Weight</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Growth Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Daily Growth Rate</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-foam-deep">
                   {growthData.map((cage) => (
                     <tr key={cage.cageId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cage.cageName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cage.doc} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cage.initialWeight} g</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cage.currentWeight} g</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cage.growthRate}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cage.dailyGrowthRate}%</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{cage.cageName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.doc} days</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.initialWeight} g</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.currentWeight} g</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.growthRate}%</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.dailyGrowthRate}%</td>
                     </tr>
                   ))}
                 </tbody>

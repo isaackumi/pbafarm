@@ -1,9 +1,7 @@
 // pages/feed-suppliers.js
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Plus,
   Edit,
   Trash,
@@ -14,10 +12,13 @@ import {
   Mail,
   Phone,
   MapPin,
+  Globe,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
+import { supplierService } from '../lib/supplierService'
 
 export default function FeedSuppliersPage() {
   return (
@@ -27,105 +28,6 @@ export default function FeedSuppliersPage() {
   )
 }
 
-// Feed Supplier service functions
-const supplierService = {
-  getAllSuppliers: async () => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      console.error('Error fetching suppliers:', error)
-      return { data: null, error }
-    }
-  },
-
-  getSupplierById: async (id) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      console.error('Error fetching supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  createSupplier: async (supplierData) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .insert([supplierData])
-        .select()
-
-      if (error) throw error
-      return { data: data[0], error: null }
-    } catch (error) {
-      console.error('Error creating supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  updateSupplier: async (id, supplierData) => {
-    try {
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .update(supplierData)
-        .eq('id', id)
-        .select()
-
-      if (error) throw error
-      return { data: data[0], error: null }
-    } catch (error) {
-      console.error('Error updating supplier:', error)
-      return { data: null, error }
-    }
-  },
-
-  deleteSupplier: async (id) => {
-    try {
-      // First check if this supplier is used in any feed types
-      const { data: feedTypesData, error: checkError } = await supabase
-        .from('feed_types')
-        .select('id')
-        .eq('supplier_id', id)
-        .limit(1)
-
-      if (checkError) throw checkError
-
-      // If this supplier is used, don't allow deletion
-      if (feedTypesData && feedTypesData.length > 0) {
-        return {
-          data: null,
-          error: {
-            message:
-              'Cannot delete supplier - it is used by one or more feed types.',
-          },
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('feed_suppliers')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      return { success: true, error: null }
-    } catch (error) {
-      console.error('Error deleting supplier:', error)
-      return { success: false, error }
-    }
-  },
-}
 
 function FeedSuppliers() {
   const router = useRouter()
@@ -225,7 +127,7 @@ function FeedSuppliers() {
       }
       const supplierData = {
         name: formData.name.trim(),
-        website: formData.website.trim() || null,
+        website: formData.website.trim() || undefined,
       }
       const { data, error } = await supplierService.createSupplier(supplierData)
       if (error) throw error
@@ -252,7 +154,7 @@ function FeedSuppliers() {
       }
       const supplierData = {
         name: formData.name.trim(),
-        website: formData.website.trim() || null,
+        website: formData.website.trim() || undefined,
       }
       const { data, error } = await supplierService.updateSupplier(
         editingSupplier.id,
@@ -271,65 +173,51 @@ function FeedSuppliers() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-montserrat">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Feed Suppliers</h1>
-          </div>
-
+    <Layout title="Feed Suppliers">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Feed', href: '/feed-management/overview' },
+          { label: 'Suppliers' },
+        ]}
+        description="Manage feed suppliers and contact information in one place."
+        related={[
+          { label: 'Feed types', href: '/feed-types' },
+          { label: 'Feed purchases', href: '/feed-purchases' },
+          { label: 'Stock levels', href: '/stock-levels' },
+        ]}
+        actions={
           <button
             onClick={handleAddSupplier}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Supplier
           </button>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-gray-600">
-            Manage feed suppliers for your farm. Add contact information and
-            track all your feed vendors in one place.
-          </p>
-        </div>
-
-        {/* Links to related pages */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          <Link href="/feed-types">
-            <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-              Manage Feed Types
-            </button>
-          </Link>
-        </div>
+        }
+      />
 
         {/* Suppliers Grid */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-medium text-gray-700">Suppliers Directory</h2>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Suppliers Directory</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-3 text-gray-500">Loading suppliers...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <p className="mt-3 text-muted">Loading suppliers...</p>
             </div>
           ) : suppliers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
               {suppliers.map((supplier) => (
                 <div
                   key={supplier.id}
-                  className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
+                  className="border border-foam-deep rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
                 >
-                  <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
+                  <div className="px-4 py-5 sm:px-6 bg-foam-deep/40 border-b border-foam-deep">
+                    <h3 className="text-lg font-medium text-chart-ink truncate">
                       {supplier.name}
                     </h3>
                   </div>
@@ -337,12 +225,12 @@ function FeedSuppliers() {
                     <div className="space-y-2">
                       {supplier.website && (
                         <div className="flex items-start">
-                          <Globe className="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
+                          <Globe className="h-5 w-5 text-muted mr-2 mt-0.5" />
                           <a
                             href={supplier.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-indigo-600 hover:text-indigo-500"
+                            className="text-sm text-lagoon-800 hover:text-lagoon-800"
                           >
                             {supplier.website.replace(/^https?:\/\//, '')}
                           </a>
@@ -350,10 +238,10 @@ function FeedSuppliers() {
                       )}
                     </div>
 
-                    <div className="mt-5 flex space-x-3 justify-end border-t border-gray-200 pt-3">
+                    <div className="mt-5 flex space-x-3 justify-end border-t border-foam-deep pt-3">
                       <button
                         onClick={() => handleEditSupplier(supplier)}
-                        className="text-indigo-600 hover:text-indigo-800"
+                        className="text-lagoon-800 hover:text-lagoon-950"
                         title="Edit Supplier"
                       >
                         <Edit className="w-4 h-4" />
@@ -370,7 +258,7 @@ function FeedSuppliers() {
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(null)}
-                            className="text-gray-600 hover:text-gray-800"
+                            className="text-muted hover:text-gray-800"
                             title="Cancel"
                           >
                             <X className="w-4 h-4" />
@@ -392,14 +280,13 @@ function FeedSuppliers() {
             </div>
           ) : (
             <div className="py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto" />
-              <p className="mt-3 text-gray-500">
+              <AlertCircle className="h-12 w-12 text-muted mx-auto" />
+              <p className="mt-3 text-muted">
                 No suppliers found. Add your first supplier to get started.
               </p>
             </div>
           )}
         </div>
-      </div>
 
       {/* Add Supplier Modal */}
       {showAddModal && (
@@ -409,7 +296,7 @@ function FeedSuppliers() {
             onClick={() => setShowAddModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Add New Supplier
             </h3>
 
@@ -427,7 +314,7 @@ function FeedSuppliers() {
 
             <form onSubmit={handleSubmitAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Company Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -435,13 +322,13 @@ function FeedSuppliers() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Website
                 </label>
                 <input
@@ -449,7 +336,7 @@ function FeedSuppliers() {
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
@@ -458,13 +345,13 @@ function FeedSuppliers() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save
@@ -483,7 +370,7 @@ function FeedSuppliers() {
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Edit Supplier
             </h3>
 
@@ -501,7 +388,7 @@ function FeedSuppliers() {
 
             <form onSubmit={handleSubmitEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Company Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -509,13 +396,13 @@ function FeedSuppliers() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Website
                 </label>
                 <input
@@ -523,7 +410,7 @@ function FeedSuppliers() {
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
@@ -532,13 +419,13 @@ function FeedSuppliers() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes
@@ -548,6 +435,6 @@ function FeedSuppliers() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

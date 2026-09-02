@@ -1,32 +1,35 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
-import { fetchUser } from '../store/slices/authSlice'
+import { useAuth } from '../contexts/AuthContext'
+import { AppShellSkeleton } from './ui'
 
-export default function ProtectedRoute({ children }) {
+const ROLE_RANK = { user: 1, admin: 2, super_admin: 3 }
+
+export default function ProtectedRoute({ children, requiredRole = 'user' }) {
   const router = useRouter()
-  const dispatch = useDispatch()
-  const { user, loading } = useSelector((state) => state.auth)
+  const { user, loading, initialized, hasRole } = useAuth()
+
+  const allowed =
+    user &&
+    (typeof hasRole === 'function'
+      ? hasRole(requiredRole)
+      : (ROLE_RANK[user.role || 'user'] || 0) >= (ROLE_RANK[requiredRole] || 1))
 
   useEffect(() => {
-    dispatch(fetchUser())
-  }, [dispatch])
-
-  useEffect(() => {
-    if (!loading && !user) {
+    if (initialized && !loading && !user) {
       router.push('/login')
+      return
     }
-  }, [loading, user, router])
+    if (initialized && !loading && user && !allowed) {
+      router.replace('/dashboard')
+    }
+  }, [initialized, loading, user, allowed, router])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    )
+  if (loading || !initialized) {
+    return <AppShellSkeleton />
   }
 
-  if (!user) {
+  if (!user || !allowed) {
     return null
   }
 

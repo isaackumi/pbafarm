@@ -16,11 +16,11 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
             <LogOut className="h-6 w-6 text-red-600" />
           </div>
-          <h3 className="mt-3 text-lg font-medium text-gray-900">
+          <h3 className="mt-3 text-lg font-medium text-chart-ink">
             Confirm Logout
           </h3>
           <div className="mt-2">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted">
               Are you sure you want to log out from your account?
             </p>
           </div>
@@ -30,7 +30,7 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
           <button
             type="button"
             onClick={onClose}
-            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+            className="mt-3 w-full inline-flex justify-center rounded-md border border-input-border shadow-sm px-4 py-2 bg-white text-base font-medium text-chart-ink hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 sm:mt-0 sm:col-start-1 sm:text-sm"
           >
             Cancel
           </button>

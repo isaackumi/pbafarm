@@ -1,196 +1,171 @@
-import React, { useState } from 'react'
-import { cages } from '../data/cages'
-import { biweeklyRecords } from '../data/biweekly-records'
+import React, { useState, useEffect } from 'react'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { cageService } from '../lib/cageService'
 
-const BiweeklyForm = ({ cageId }) => {
+/** Lightweight biweekly ABW entry used from the dashboard modal. */
+const BiweeklyForm = ({ cageId, onSuccess }) => {
+  const [cage, setCage] = useState(null)
+  const [abwHistory, setAbwHistory] = useState([])
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     averageBodyWeight: '',
-    sampleSize: '30',
+    totalFishCount: '',
     notes: '',
   })
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const selectedCage = cages.find((cage) => cage.id === cageId)
-
-  // Get ABW history for the selected cage
-  const abwHistory = biweeklyRecords
-    .filter((record) => record.cageId === cageId)
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+  useEffect(() => {
+    if (!cageId) return
+    ;(async () => {
+      const { data } = await cageService.getCageById(cageId)
+      setCage(data)
+      try {
+        const client = getConvexHttpClient()
+        const rows = await client.query(api.biweeklyRecords.list, { cageId })
+        setAbwHistory(
+          (rows || []).sort((a, b) => String(b.date).localeCompare(String(a.date))),
+        )
+      } catch {
+        setAbwHistory([])
+      }
+    })()
+  }, [cageId])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // In a real app, this would save to the database
-    // For now, just show a success message
-    setMessage('ABW record saved successfully!')
-
-    // Reset form (except date)
-    setFormData({
-      date: formData.date,
-      averageBodyWeight: '',
-      sampleSize: '30',
-      notes: '',
-    })
-
-    setTimeout(() => {
-      setMessage('')
-    }, 3000)
+    setLoading(true)
+    setError('')
+    setMessage('')
+    try {
+      const abw = Number(formData.averageBodyWeight)
+      const fishCount = Number(
+        formData.totalFishCount || cage?.current_count || cage?.currentCount || 0,
+      )
+      if (!abw || !fishCount) {
+        throw new Error('ABW and fish count are required')
+      }
+      const client = getConvexHttpClient()
+      await client.mutation(api.biweeklyRecords.create, {
+        cageId,
+        date: formData.date,
+        batchCode: `${cage?.name || 'cage'}-${formData.date}-${Date.now()}`,
+        averageBodyWeight: abw,
+        totalFishCount: fishCount,
+        totalWeight: (abw * fishCount) / 1000,
+      })
+      setMessage('ABW record saved')
+      setFormData((prev) => ({
+        ...prev,
+        averageBodyWeight: '',
+        totalFishCount: '',
+        notes: '',
+      }))
+      const rows = await client.query(api.biweeklyRecords.list, { cageId })
+      setAbwHistory(
+        (rows || []).sort((a, b) => String(b.date).localeCompare(String(a.date))),
+      )
+      onSuccess?.()
+    } catch (err) {
+      setError(err.message || 'Save failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (!selectedCage) {
+  if (!cageId) {
     return (
-      <div className="bg-white shadow rounded-lg p-8">
-        <p className="text-center text-gray-600">Please select a cage first</p>
+      <div className="page-card p-8">
+        <p className="text-center text-muted">Please select a cage first</p>
+      </div>
+    )
+  }
+
+  if (!cage) {
+    return (
+      <div className="page-card p-8">
+        <p className="text-center text-muted">Loading cage…</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="font-medium text-gray-700">
-          Biweekly Average Body Weight - {selectedCage.name}
+    <div className="page-card overflow-hidden">
+      <div className="px-6 py-4 border-b border-foam-deep">
+        <h2 className="font-medium text-chart-ink">
+          Biweekly Average Body Weight — {cage.name}
         </h2>
       </div>
       <div className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
-              </label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Average Body Weight (g)
-              </label>
-              <input
-                type="number"
-                name="averageBodyWeight"
-                value={formData.averageBodyWeight}
-                onChange={handleChange}
-                step="0.1"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="0.0"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sample Size (number of fish)
-              </label>
-              <input
-                type="number"
-                name="sampleSize"
-                value={formData.sampleSize}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                min="1"
-                required
-              />
-            </div>
+        {message && (
+          <div className="mb-4 text-sm text-kelp bg-kelp/10 border border-kelp/20 rounded p-2">
+            {message}
           </div>
-
+        )}
+        {error && (
+          <div className="mb-4 text-sm text-signal bg-signal/10 border border-signal/20 rounded p-2">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
+            <label className="block text-sm font-semibold mb-1">Date</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
               onChange={handleChange}
-              rows="3"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Optional notes about sampling method, observations, etc."
-            ></textarea>
+              className="w-full border border-input-border rounded px-3 py-2"
+              required
+            />
           </div>
-
           <div>
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Save ABW Record
-            </button>
+            <label className="block text-sm font-semibold mb-1">ABW (g)</label>
+            <input
+              type="number"
+              step="0.1"
+              name="averageBodyWeight"
+              value={formData.averageBodyWeight}
+              onChange={handleChange}
+              className="w-full border border-input-border rounded px-3 py-2 font-data"
+              required
+            />
           </div>
-
-          {message && (
-            <div className="bg-green-50 text-green-800 p-4 rounded-md">
-              {message}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-semibold mb-1">Fish count</label>
+            <input
+              type="number"
+              name="totalFishCount"
+              value={formData.totalFishCount}
+              onChange={handleChange}
+              placeholder={String(cage.current_count || cage.currentCount || '')}
+              className="w-full border border-input-border rounded px-3 py-2 font-data"
+            />
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? 'Saving…' : 'Save ABW'}
+          </button>
         </form>
-      </div>
 
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">ABW History</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-100">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  ABW (g)
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Sample Size
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {abwHistory.length > 0 ? (
-                abwHistory.map((record) => (
-                  <tr key={record.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.averageBodyWeight.toFixed(1)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {record.sampleSize}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="3"
-                    className="px-6 py-4 text-center text-sm text-gray-500"
-                  >
-                    No ABW records found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {abwHistory.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-muted mb-2">Recent samples</h3>
+            <ul className="text-sm space-y-1">
+              {abwHistory.slice(0, 5).map((r) => (
+                <li key={r.id || r._id} className="flex justify-between font-data">
+                  <span>{r.date}</span>
+                  <span>{r.average_body_weight ?? r.averageBodyWeight} g</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )

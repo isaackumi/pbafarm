@@ -1,12 +1,31 @@
-// pages/daily-upload.js
 import React from 'react'
 import DailyUploadPage from '../components/DailyUploadPage'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader, FormPage } from '../components/ui'
 
 export default function DailyUpload() {
   return (
     <ProtectedRoute>
-      <DailyUploadPage />
+      <Layout title="Daily Entry">
+        <FormPage data-tour="page-daily-entry">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Operations' },
+              { label: 'Daily entry' },
+            ]}
+            description="Log mortality and feed for a cage. Feed amounts deduct stock through the inventory ledger."
+            related={[
+              { label: 'Bulk upload', href: '/bulk-upload' },
+              { label: 'Bi-weekly entry', href: '/biweekly-entry' },
+              { label: 'Issue feed', href: '/feed-issue' },
+            ]}
+          />
+          <DailyUploadPage />
+        </FormPage>
+      </Layout>
     </ProtectedRoute>
   )
 }

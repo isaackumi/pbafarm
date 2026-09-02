@@ -1,33 +1,34 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { supabase } from '../../lib/supabase'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 
-// Async thunks
+// Async thunks - AuthContext now handles auth, these are no-ops/thin wrappers
 export const fetchUser = createAsyncThunk(
   'auth/fetchUser',
   async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error) throw error
-    return user
+    try {
+      const client = getConvexHttpClient()
+      const user = await client.query(api.users.current, {})
+      return user
+    } catch (error) {
+      // Return null if not authenticated
+      return null
+    }
   }
 )
 
 export const signIn = createAsyncThunk(
   'auth/signIn',
   async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-    if (error) throw error
-    return data
+    // AuthContext handles sign in now - this is just for compatibility
+    throw new Error('Use AuthContext for sign in')
   }
 )
 
 export const signOut = createAsyncThunk(
   'auth/signOut',
   async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    // AuthContext handles sign out now - this is just for compatibility
+    throw new Error('Use AuthContext for sign out')
   }
 )
 

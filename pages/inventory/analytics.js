@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Package,
   TrendingUp,
   TrendingDown,
@@ -19,8 +17,10 @@ import {
   Filter,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import Layout from '../../components/Layout'
+import { PageHeader } from '../../components/ui'
 import { useToast } from '../../components/Toast'
-import { supabase } from '../../lib/supabase'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
   LineChart,
   Line,
@@ -90,30 +90,17 @@ function InventoryAnalytics() {
           startDate.setDate(startDate.getDate() - 30)
       }
 
-      // Fetch inventory items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('inventory_items')
-        .select(`
-          *,
-          category:inventory_categories(name)
-        `)
-        .eq('active', true)
-
-      if (itemsError) throw itemsError
+      const client = getConvexHttpClient()
+      
+      // Fetch inventory items (stock levels)
+      const itemsData = await client.query(api.inventory.listStockLevels, {})
       setInventoryItems(itemsData || [])
 
-      // Fetch transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('inventory_transactions')
-        .select(`
-          *,
-          item:inventory_items(name, category:inventory_categories(name))
-        `)
-        .gte('transaction_date', startDate.toISOString())
-        .lte('transaction_date', endDate.toISOString())
-        .order('transaction_date', { ascending: true })
-
-      if (transactionsError) throw transactionsError
+      // Fetch transactions with date range
+      const transactionsData = await client.query(api.inventory.listTransactions, {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
 
       // Process data for charts
       const processedTransactionData = processTransactionData(transactionsData)
@@ -185,25 +172,26 @@ function InventoryAnalytics() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/inventory/overview"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Overview
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory Analytics</h1>
-          </div>
-
-          <div className="flex items-center space-x-4">
+    <Layout title="Inventory Analytics">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Inventory', href: '/inventory/overview' },
+          { label: 'Analytics' },
+        ]}
+        description="Transaction trends and inventory insights over the selected period."
+        related={[
+          { label: 'Overview', href: '/inventory/overview' },
+          { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Reports', href: '/report' },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="rounded-xl border border-zinc-200 shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 text-sm min-h-10 px-3"
             >
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
@@ -213,13 +201,14 @@ function InventoryAnalytics() {
 
             <button
               onClick={fetchData}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </button>
           </div>
-        </div>
+        }
+      />
 
         {error && (
           <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
@@ -228,8 +217,8 @@ function InventoryAnalytics() {
         )}
 
         {/* Transaction Analysis */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Transaction Analysis</h3>
+        <div className="page-card p-6 mb-6">
+          <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction Analysis</h3>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={transactionData}>
@@ -259,8 +248,8 @@ function InventoryAnalytics() {
 
         {/* Category Analysis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Category Distribution</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Category Distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -271,7 +260,11 @@ function InventoryAnalytics() {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    label
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -284,8 +277,8 @@ function InventoryAnalytics() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Stock Trend</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
@@ -344,7 +337,7 @@ function InventoryAnalytics() {
           ].map((metric, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-300"
+              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -352,8 +345,8 @@ function InventoryAnalytics() {
                     <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-                    <p className="text-2xl font-semibold text-gray-900">
+                    <p className="text-sm font-medium text-muted">{metric.title}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">
                       {metric.unit === '₵' ? metric.unit : ''}{metric.value}
                       {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
                     </p>
@@ -377,8 +370,8 @@ function InventoryAnalytics() {
         </div>
 
         {/* Recommendations */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recommendations</h3>
+        <div className="page-card p-6">
+          <h3 className="text-lg font-medium text-chart-ink mb-4">Recommendations</h3>
           <div className="space-y-4">
             {[
               {
@@ -408,20 +401,19 @@ function InventoryAnalytics() {
             ].map((recommendation, index) => (
               <div
                 key={index}
-                className="flex items-start p-4 bg-gray-50 rounded-lg"
+                className="flex items-start p-4 bg-foam-deep/40 rounded-lg"
               >
                 <div className={`p-3 rounded-full bg-${recommendation.color}-100 mr-4`}>
                   <recommendation.icon className={`w-6 h-6 text-${recommendation.color}-600`} />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{recommendation.title}</h4>
-                  <p className="text-sm text-gray-500">{recommendation.description}</p>
+                  <h4 className="font-medium text-chart-ink">{recommendation.title}</h4>
+                  <p className="text-sm text-muted">{recommendation.description}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+    </Layout>
   )
 } 

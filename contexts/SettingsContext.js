@@ -65,10 +65,6 @@ export function SettingsProvider({ children }) {
     resetSettings
   }
 
-  if (loading) {
-    return <div>Loading settings...</div>
-  }
-
   return (
     <SettingsContext.Provider value={value}>
       {children}

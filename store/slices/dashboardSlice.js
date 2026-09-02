@@ -1,76 +1,36 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { supabase } from '../../lib/supabase'
+import { analyticsService } from '../../lib/databaseService'
 
-// Async thunks
-export const fetchDashboardStats = createAsyncThunk(
-  'dashboard/fetchStats',
-  async () => {
+// Async thunks using Convex services
+export const fetchDashboardData = createAsyncThunk(
+  'dashboard/fetchDashboardData',
+  async (_, { rejectWithValue }) => {
     try {
-      // Fetch active cages
-      const { data: activeCages, error: cagesError } = await supabase
-        .from('cages')
-        .select('*')
-        .eq('status', 'active')
+      const [summaryStats, harvestReadiness, statusDistribution] = await Promise.all([
+        analyticsService.getCageSummaryStats(),
+        analyticsService.getHarvestReadiness(),
+        analyticsService.getStatusDistribution()
+      ])
 
-      if (cagesError) throw cagesError
-
-      // Fetch recent biweekly records with sampling data
-      const { data: recentRecords, error: recordsError } = await supabase
-        .from('biweekly_records')
-        .select(`
-          *,
-          biweekly_sampling (
-            id,
-            sampling_number,
-            fish_count,
-            total_weight,
-            average_body_weight
-          )
-        `)
-        .order('date', { ascending: false })
-        .limit(5)
-
-      if (recordsError) throw recordsError
-
-      // Fetch feed inventory
-      const { data: feedInventory, error: feedError } = await supabase
-        .from('feed_types')
-        .select('*')
-        .eq('active', true)
-
-      if (feedError) throw feedError
-
-      // Calculate statistics
-      const statistics = {
-        totalFish: activeCages.reduce((sum, cage) => sum + (cage.initial_count || 0), 0),
-        totalBiomass: activeCages.reduce((sum, cage) => sum + (cage.initial_biomass || 0), 0),
-        activeCageCount: activeCages.length,
-        lowStockFeeds: feedInventory.filter(feed => feed.current_stock < feed.minimum_stock).length
-      }
+      if (summaryStats.error) throw summaryStats.error
+      if (harvestReadiness.error) throw harvestReadiness.error
+      if (statusDistribution.error) throw statusDistribution.error
 
       return {
-        activeCages,
-        recentRecords,
-        feedInventory,
-        statistics
+        summaryStats: summaryStats.data,
+        harvestReadiness: harvestReadiness.data,
+        statusDistribution: statusDistribution.data
       }
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error)
-      throw error
+      return rejectWithValue(error.message || 'Failed to fetch dashboard data')
     }
   }
 )
 
 const initialState = {
-  activeCages: [],
-  recentRecords: [],
-  feedInventory: [],
-  statistics: {
-    totalFish: 0,
-    totalBiomass: 0,
-    activeCageCount: 0,
-    lowStockFeeds: 0
-  },
+  summaryStats: null,
+  harvestReadiness: null,
+  statusDistribution: null,
   loading: false,
   error: null
 }
@@ -82,29 +42,37 @@ const dashboardSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
-    resetState: (state) => {
+    resetDashboard: (state) => {
       return initialState
     }
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchDashboardStats.pending, (state) => {
+      .addCase(fetchDashboardData.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(fetchDashboardStats.fulfilled, (state, action) => {
+      .addCase(fetchDashboardData.fulfilled, (state, action) => {
         state.loading = false
-        state.activeCages = action.payload.activeCages
-        state.recentRecords = action.payload.recentRecords
-        state.feedInventory = action.payload.feedInventory
-        state.statistics = action.payload.statistics
+        state.summaryStats = action.payload.summaryStats
+        state.harvestReadiness = action.payload.harvestReadiness
+        state.statusDistribution = action.payload.statusDistribution
+        state.error = null
       })
-      .addCase(fetchDashboardStats.rejected, (state, action) => {
+      .addCase(fetchDashboardData.rejected, (state, action) => {
         state.loading = false
-        state.error = action.error.message
+        state.error = action.payload
       })
   }
 })
 
-export const { clearError, resetState } = dashboardSlice.actions
-export default dashboardSlice.reducer 
+export const { clearError, resetDashboard } = dashboardSlice.actions
+
+// Selectors
+export const selectSummaryStats = (state) => state.dashboard.summaryStats
+export const selectHarvestReadiness = (state) => state.dashboard.harvestReadiness
+export const selectStatusDistribution = (state) => state.dashboard.statusDistribution
+export const selectDashboardLoading = (state) => state.dashboard.loading
+export const selectDashboardError = (state) => state.dashboard.error
+
+export default dashboardSlice.reducer

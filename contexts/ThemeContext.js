@@ -29,10 +29,15 @@ export function ThemeProvider({ children }) {
     }
   }, [systemTheme])
 
-  // Update theme
+  // Update theme — apply class immediately for user preference
   const updateTheme = (newTheme) => {
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
+    if (typeof document !== 'undefined') {
+      const dark = newTheme === 'dark'
+      document.documentElement.classList.toggle('dark', dark)
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    }
   }
 
   // Toggle between light and dark

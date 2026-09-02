@@ -1,93 +1,86 @@
-// pages/_app.js - Simplified without company registration flow
-
-import { useState, useEffect } from 'react'
+// pages/_app.js
+import dynamic from 'next/dynamic'
+import { useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { SettingsProvider } from '../contexts/SettingsContext'
+import { CompanySettingsProvider } from '../contexts/CompanySettingsContext'
 import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
 import { AnalyticsProvider } from '../contexts/AnalyticsContext'
 import { ToastProvider } from '../components/Toast'
+import { TourProvider } from '../components/TourProvider'
 import { Provider } from 'react-redux'
 import { store } from '../store'
+import { convex } from '../lib/convexClient'
+import { AppShellSkeleton } from '../components/ui'
 import '../styles/globals.css'
+import '../styles/tour.css'
 
-// This HOC (Higher-Order Component) wraps the entire app
+/** Lazy-load assistant so it does not block first paint / route transitions. */
+const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
+  ssr: false,
+})
+
 function AppWrapper({ Component, pageProps }) {
   return (
-    <Provider store={store}>
-      <ThemeProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <DataProvider>
-              <ToastProvider>
-                <NotificationProvider>
-                  <AnalyticsProvider>
-                    <AuthWrapper>
-                      <Component {...pageProps} />
-                    </AuthWrapper>
-                  </AnalyticsProvider>
-                </NotificationProvider>
-              </ToastProvider>
-            </DataProvider>
-          </AuthProvider>
-        </SettingsProvider>
-      </ThemeProvider>
-    </Provider>
+    <ConvexAuthProvider client={convex}>
+      <Provider store={store}>
+        <ThemeProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <CompanySettingsProvider>
+                <DataProvider>
+                  <ToastProvider>
+                    <NotificationProvider>
+                      <AnalyticsProvider>
+                        <TourProvider>
+                          <AuthWrapper>
+                            <Component {...pageProps} />
+                            <AiAssistant />
+                          </AuthWrapper>
+                        </TourProvider>
+                      </AnalyticsProvider>
+                    </NotificationProvider>
+                  </ToastProvider>
+                </DataProvider>
+              </CompanySettingsProvider>
+            </AuthProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </Provider>
+    </ConvexAuthProvider>
   )
 }
 
-// This component handles authentication redirects
 function AuthWrapper({ children }) {
   const { user, initialized, loading } = useAuth()
   const router = useRouter()
 
-  // Public routes that don't require authentication
   const publicRoutes = ['/login', '/signup', '/reset-password', '/verify-email']
-
   const currentPath = router.pathname
 
-  // Redirect unauthenticated users to login
   useEffect(() => {
     if (!initialized || loading) return
 
-    // If not logged in and trying to access protected route, redirect to login
     if (!user && !publicRoutes.includes(currentPath)) {
       router.push('/login')
     }
 
-    // If logged in and trying to access login/signup pages, redirect to dashboard
     if (user && publicRoutes.includes(currentPath)) {
       router.push('/dashboard')
     }
   }, [user, initialized, loading, currentPath, router])
 
-  // Loading state
   if (loading || !initialized) {
-    // Show loading indicator only for protected routes
     if (!publicRoutes.includes(currentPath)) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      )
+      return <AppShellSkeleton />
     }
   }
 
-  // Render children
   return children
-}
-
-// Configure static page generation
-AppWrapper.getInitialProps = async ({ Component, ctx }) => {
-  let pageProps = {}
-
-  if (Component.getInitialProps) {
-    pageProps = await Component.getInitialProps(ctx)
-  }
-
-  return { pageProps }
 }
 
 export default AppWrapper

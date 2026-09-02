@@ -1,24 +1,59 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './theme.css';
 
-:root {
-  --font-montserrat: 'Montserrat', sans-serif;
-  --background: #ffffff;
-  --foreground: #171717;
-  --input-text: #333333;
-  --input-bg: #f9fafb;
-  --input-border: #d1d5db;
-  --input-focus: #6366f1;
+@theme {
+  --color-lagoon-700: #3f3f46;
+  --color-lagoon-800: #27272a;
+  --color-lagoon-950: #18181b;
+  --color-foam: #f8fafc;
+  --color-foam-deep: #e4e4e7;
+  --color-kelp: #15803d;
+  --color-kelp-soft: #22c55e;
+  --color-signal: #dc2626;
+  --color-signal-soft: #fca5a5;
+  --color-chart-ink: #18181b;
+  --color-muted: #71717a;
+  --color-surface: #ffffff;
+  --color-input-border: #d4d4d8;
+
+  --color-primary-50: #fafafa;
+  --color-primary-100: #f4f4f5;
+  --color-primary-200: #e4e4e7;
+  --color-primary-300: #a1a1aa;
+  --color-primary-400: #71717a;
+  --color-primary-500: #52525b;
+  --color-primary-600: #3f3f46;
+  --color-primary-700: #27272a;
+  --color-primary-800: #18181b;
+  --color-primary-900: #09090b;
+
+  --font-display: 'Lexend', system-ui, sans-serif;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Form element styling for better visibility */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.font-display {
+  font-weight: 700;
+}
+
 input,
 select,
 textarea {
@@ -26,7 +61,7 @@ textarea {
   font-weight: 500;
 }
 
-input:not([type="checkbox"]):not([type="radio"]),
+input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   background-color: var(--input-bg);
@@ -34,7 +69,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #6b7280;
+  color: #a1a1aa;
 }
 
 input:focus,
@@ -43,16 +78,44 @@ textarea:focus {
   border-color: var(--input-focus);
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 2px rgba(24, 24, 27, 0.2);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --input-text: #e5e7eb;
-    --input-bg: #1f2937;
-    --input-border: #374151;
-    --input-focus: #8183f4;
-  }
+button:not(:disabled),
+a[href],
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+button,
+a {
+  transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease,
+    opacity 200ms ease, box-shadow 200ms ease;
+}
+
+/* Legacy indigo/sky → charcoal chrome */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-blue-500,
+.bg-blue-600 {
+  background-color: var(--lagoon-950) !important;
+}
+
+.hover\:bg-indigo-700:hover,
+.hover\:bg-blue-600:hover {
+  background-color: var(--lagoon-800) !important;
+}
+
+.text-indigo-600,
+.text-indigo-700,
+.text-blue-600 {
+  color: var(--lagoon-950) !important;
+}
+
+.border-indigo-500,
+.border-indigo-600,
+.focus\:ring-indigo-500:focus,
+.focus\:border-indigo-500:focus {
+  --tw-ring-color: rgba(24, 24, 27, 0.35);
+  border-color: var(--lagoon-950);
 }

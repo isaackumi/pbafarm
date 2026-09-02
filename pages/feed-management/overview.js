@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
-  ArrowLeft,
   Package,
   TrendingUp,
   TrendingDown,
@@ -16,8 +15,10 @@ import {
   Percent,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import Layout from '../../components/Layout'
+import { PageHeader } from '../../components/ui'
 import { useToast } from '../../components/Toast'
-import { supabase } from '../../lib/supabase'
+import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
   LineChart,
   Line,
@@ -58,7 +59,6 @@ function FeedManagementOverview() {
   const [usageData, setUsageData] = useState([])
   const [costData, setCostData] = useState([])
   const [supplierData, setSupplierData] = useState([])
-  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -67,29 +67,19 @@ function FeedManagementOverview() {
   const fetchData = async () => {
     setLoading(true)
     try {
+      const client = getConvexHttpClient()
+      
       // Fetch feed types with current stock
-      const { data: feedTypesData, error: feedTypesError } = await supabase
-        .from('feed_types')
-        .select(`
-          *,
-          supplier:feed_suppliers(name)
-        `)
-        .eq('active', true)
-
-      if (feedTypesError) throw feedTypesError
+      const feedTypesData = await client.query(api.feed.listFeedTypes, {})
       setFeedTypes(feedTypesData || [])
 
-      // Fetch recent feed usage
-      const { data: usageData, error: usageError } = await supabase
-        .from('feed_usage')
-        .select(`
-          *,
-          feed_type:feed_types(name)
-        `)
-        .gte('usage_date', new Date(new Date().setDate(new Date().getDate() - 30)).toISOString())
-        .order('usage_date', { ascending: false })
-
-      if (usageError) throw usageError
+      // Fetch recent feed usage (last 30 days)
+      const from = new Date()
+      from.setDate(from.getDate() - 30)
+      const dateFrom = from.toISOString().slice(0, 10)
+      const usageData = await client.query(api.feed.listUsage, {
+        dateFrom,
+      })
 
       // Calculate metrics
       const totalStock = feedTypesData.reduce((sum, type) => sum + (type.current_stock || 0), 0)
@@ -121,7 +111,6 @@ function FeedManagementOverview() {
     } catch (error) {
       console.error('Error fetching data:', error)
       showToast('error', 'Failed to load feed management data')
-      setError('Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -167,39 +156,36 @@ function FeedManagementOverview() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Feed Management Overview</h1>
-          </div>
-
+    <Layout title="Feed Management Overview">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Feed management' },
+          { label: 'Overview' },
+        ]}
+        description="Feed stock, purchases, and usage at a glance."
+        related={[
+          { label: 'Feed purchases', href: '/feed-purchases' },
+          { label: 'Feed types', href: '/feed-types' },
+          { label: 'Feed suppliers', href: '/feed-suppliers' },
+          { label: 'Stock levels', href: '/stock-levels' },
+        ]}
+        actions={
           <button
             onClick={fetchData}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
+        }
+      />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Link href="/feed-management/purchases">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
               <ShoppingCart className="w-5 h-5 mr-2" />
               Record Purchase
             </button>
@@ -217,7 +203,7 @@ function FeedManagementOverview() {
             </button>
           </Link>
           <Link href="/feed-management/suppliers">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
               <BarChart2 className="w-5 h-5 mr-2" />
               Manage Suppliers
             </button>
@@ -272,15 +258,15 @@ function FeedManagementOverview() {
           ].map((metric, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-300"
+              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
             >
               <div className="flex items-center">
                 <div className={`p-3 rounded-full bg-${metric.color}-100 mr-4`}>
                   <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-                  <p className="text-2xl font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-muted">{metric.title}</p>
+                  <p className="text-2xl font-semibold text-chart-ink">
                     {metric.unit === '₵' ? metric.unit : ''}{metric.value}
                     {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
                   </p>
@@ -293,8 +279,8 @@ function FeedManagementOverview() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Feed Usage Trend */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Feed Usage Trend</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed Usage Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={usageData}>
@@ -318,8 +304,8 @@ function FeedManagementOverview() {
           </div>
 
           {/* Feed Cost Distribution */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Feed Cost Distribution</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed Cost Distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -330,7 +316,11 @@ function FeedManagementOverview() {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    label
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {costData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -344,8 +334,8 @@ function FeedManagementOverview() {
           </div>
 
           {/* Supplier Distribution */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Supplier Distribution</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Supplier Distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={supplierData}>
@@ -361,8 +351,8 @@ function FeedManagementOverview() {
           </div>
 
           {/* Low Stock Alerts */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Low Stock Alerts</h3>
+          <div className="page-card p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Low Stock Alerts</h3>
             <div className="space-y-4">
               {feedTypes
                 .filter(type => type.current_stock <= type.minimum_stock * 1.2)
@@ -372,13 +362,13 @@ function FeedManagementOverview() {
                     className="flex items-center justify-between p-4 bg-red-50 rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{type.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-chart-ink">{type.name}</p>
+                      <p className="text-sm text-muted">
                         Current: {type.current_stock.toFixed(2)} kg | Minimum: {type.minimum_stock.toFixed(2)} kg
                       </p>
                     </div>
                     <Link href="/feed-management/purchases">
-                      <button className="text-sm text-indigo-600 hover:text-indigo-800">
+                      <button className="text-sm text-lagoon-800 hover:text-lagoon-950">
                         Order Now
                       </button>
                     </Link>
@@ -389,29 +379,31 @@ function FeedManagementOverview() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h3 className="text-lg font-medium text-chart-ink">Recent Activity</h3>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-foam-deep">
             {feedTypes.slice(0, 5).map(type => (
               <div key={type.id} className="px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{type.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-chart-ink">{type.name}</p>
+                    <p className="text-sm text-muted">
                       Stock: {type.current_stock.toFixed(2)} kg | Price: ₵{type.price_per_kg.toFixed(2)}/kg
                     </p>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Last updated: {new Date(type.updated_at).toLocaleDateString()}
+                  <div className="text-sm text-muted">
+                    Last updated:{' '}
+                    {type.updated_at && !Number.isNaN(new Date(type.updated_at).getTime())
+                      ? new Date(type.updated_at).toLocaleDateString()
+                      : '—'}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+    </Layout>
   )
 } 

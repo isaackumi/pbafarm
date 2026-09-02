@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button, FormPage } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
 import { Search, Filter, X, Calendar, MapPin, Fish, TrendingUp, Activity } from 'lucide-react'
 import { cageService } from '../lib/databaseService'
@@ -131,9 +132,9 @@ function BiweeklyEntry() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout title="Bi-weekly Entry">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800"></div>
         </div>
       </Layout>
     )
@@ -141,53 +142,80 @@ function BiweeklyEntry() {
 
   if (selectedCage) {
     return (
-      <Layout>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <button
-              onClick={() => setSelectedCage(null)}
-              className="text-indigo-600 hover:text-indigo-800 flex items-center"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Back to Cage Selection
-            </button>
-          </div>
-          <BiweeklyEntryForm 
-            cage={selectedCage} 
+      <Layout title="Bi-weekly Entry">
+        <FormPage width="full">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Bi-weekly records', href: '/biweekly-records' },
+              { label: 'Entry' },
+              { label: selectedCage.name || 'Cage' },
+            ]}
+            description="Enter bi-weekly sampling for the selected cage."
+            related={[
+              { label: 'All records', href: '/biweekly-records' },
+              { label: 'Daily entry', href: '/daily-entry' },
+            ]}
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedCage(null)}
+              >
+                <X className="w-4 h-4" />
+                Back to cages
+              </Button>
+            }
+          />
+          <BiweeklyEntryForm
+            cage={selectedCage}
             onComplete={() => {
               setSelectedCage(null)
               fetchCages()
             }}
           />
-        </div>
+        </FormPage>
       </Layout>
     )
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Bi-weekly Records Entry</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Select a cage to enter bi-weekly sampling records
-          </p>
-        </div>
+    <Layout title="Bi-weekly Entry">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Bi-weekly records', href: '/biweekly-records' },
+          { label: 'Entry' },
+        ]}
+        description="Select a cage to enter bi-weekly sampling records."
+        related={[
+          { label: 'All records', href: '/biweekly-records' },
+          { label: 'Daily entry', href: '/daily-entry' },
+          { label: 'Harvest sampling', href: '/harvest-sampling' },
+        ]}
+        actions={
+          <Button href="/biweekly-records" variant="secondary" size="sm">
+            View records
+          </Button>
+        }
+      />
 
         {/* Enhanced Search and Filters */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="mb-6 page-card-sm border border-foam-deep p-4">
           <div className="space-y-4">
             {/* Search Bar */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-muted" />
               </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search cages by name, code, or location..."
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                className="block w-full pl-10 pr-3 py-3 border border-input-border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-sm"
               />
             </div>
 
@@ -195,7 +223,7 @@ function BiweeklyEntry() {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex items-center px-4 py-2 text-sm font-medium text-chart-ink bg-foam border border-input-border rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-lagoon-800"
               >
                 <Filter className="w-4 h-4 mr-2" />
                 {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -204,7 +232,7 @@ function BiweeklyEntry() {
               {(searchQuery || statusFilter !== 'active' || locationFilter !== 'all' || sizeFilter !== 'all' || growthFilter !== 'all') && (
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-indigo-600 hover:text-indigo-800"
+                  className="text-sm text-lagoon-800 hover:text-lagoon-950"
                 >
                   Clear all filters
                 </button>
@@ -213,13 +241,13 @@ function BiweeklyEntry() {
 
             {/* Advanced Filters */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-foam-deep">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">Status</label>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full px-3 py-2 text-sm border-input-border rounded-md focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -230,11 +258,11 @@ function BiweeklyEntry() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">Location</label>
                   <select
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full px-3 py-2 text-sm border-input-border rounded-md focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
                     <option value="all">All Locations</option>
                     {uniqueLocations.map(location => (
@@ -244,11 +272,11 @@ function BiweeklyEntry() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">Size</label>
                   <select
                     value={sizeFilter}
                     onChange={(e) => setSizeFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full px-3 py-2 text-sm border-input-border rounded-md focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
                     <option value="all">All Sizes</option>
                     <option value="Small (<50m³)">Small (&lt;50m³)</option>
@@ -258,11 +286,11 @@ function BiweeklyEntry() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Growth Rate</label>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">Growth Rate</label>
                   <select
                     value={growthFilter}
                     onChange={(e) => setGrowthFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="block w-full px-3 py-2 text-sm border-input-border rounded-md focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
                     <option value="all">All Growth Rates</option>
                     <option value="Low (<50%)">Low (&lt;50%)</option>
@@ -274,12 +302,12 @@ function BiweeklyEntry() {
             )}
 
             {/* Sort Options */}
-            <div className="flex items-center space-x-4 pt-4 border-t border-gray-200">
-              <label className="text-sm font-medium text-gray-700">Sort by:</label>
+            <div className="flex items-center space-x-4 pt-4 border-t border-foam-deep">
+              <label className="text-sm font-medium text-chart-ink">Sort by:</label>
               <select
                 value={sortBy}
                 onChange={(e) => handleSort(e.target.value)}
-                className="block px-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="block px-3 py-2 text-sm border-input-border rounded-md focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
               >
                 <option value="name">Name</option>
                 <option value="code">Code</option>
@@ -291,7 +319,7 @@ function BiweeklyEntry() {
               </select>
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-3 py-2 text-sm border border-input-border rounded-md hover:bg-foam-deep/40"
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
               </button>
@@ -301,7 +329,7 @@ function BiweeklyEntry() {
 
         {/* Results Summary */}
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted">
             Showing {filteredCages.length} of {cages.length} cages
           </p>
         </div>
@@ -317,20 +345,20 @@ function BiweeklyEntry() {
               <button
                 key={cage.id}
                 onClick={() => setSelectedCage(cage)}
-                className="relative block w-full bg-white border border-gray-200 rounded-xl hover:border-indigo-500 hover:ring-2 hover:ring-indigo-500 hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="relative block w-full bg-white border border-foam-deep rounded-xl hover:border-lagoon-800 hover:ring-2 hover:ring-lagoon-800 hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lagoon-800"
               >
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">{cage.name}</h3>
+                      <h3 className="text-lg font-semibold text-chart-ink truncate">{cage.name}</h3>
                       {cage.code && (
-                        <p className="text-sm text-gray-500 font-mono">{cage.code}</p>
+                        <p className="text-sm text-muted font-mono">{cage.code}</p>
                       )}
                     </div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       cage.status === 'active' ? 'bg-green-100 text-green-800' :
-                      cage.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                      cage.status === 'inactive' ? 'bg-foam text-gray-800' :
                       cage.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
@@ -339,7 +367,7 @@ function BiweeklyEntry() {
                   </div>
                   
                   {cage.location && (
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <div className="flex items-center text-sm text-muted mb-2">
                       <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
                       <span className="truncate">{cage.location}</span>
                     </div>
@@ -350,12 +378,12 @@ function BiweeklyEntry() {
                 <div className="p-6 space-y-4">
                   {/* DOC and Stocking Info */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-gray-600">
+                    <div className="flex items-center text-sm text-muted">
                       <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
                       <span>DOC: {doc ? `${doc} days` : 'Not stocked'}</span>
                     </div>
                     {cage.stocking_date && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted">
                         {new Date(cage.stocking_date).toLocaleDateString()}
                       </span>
                     )}
@@ -363,40 +391,40 @@ function BiweeklyEntry() {
 
                   {/* Size and Capacity */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="text-center p-3 bg-foam-deep/40 rounded-lg">
+                      <div className="text-sm font-medium text-chart-ink">
                         {cage.size ? `${cage.size}m³` : 'N/A'}
                       </div>
-                      <div className="text-xs text-gray-500">{sizeCategory}</div>
+                      <div className="text-xs text-muted">{sizeCategory}</div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="text-center p-3 bg-foam-deep/40 rounded-lg">
+                      <div className="text-sm font-medium text-chart-ink">
                         {cage.current_count || cage.initial_count || 'N/A'}
                       </div>
-                      <div className="text-xs text-gray-500">Fish Count</div>
+                      <div className="text-xs text-muted">Fish Count</div>
                     </div>
                   </div>
 
                   {/* Growth Metrics */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Growth Rate:</span>
+                      <span className="text-muted">Growth Rate:</span>
                       <span className={`font-medium ${
                         cage.growth_rate > 100 ? 'text-green-600' :
                         cage.growth_rate > 50 ? 'text-yellow-600' :
-                        'text-gray-600'
+                        'text-muted'
                       }`}>
                         {cage.growth_rate ? `${cage.growth_rate}%` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Current Weight:</span>
-                      <span className="font-medium text-gray-900">
+                      <span className="text-muted">Current Weight:</span>
+                      <span className="font-medium text-chart-ink">
                         {cage.current_weight ? `${cage.current_weight}g` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Mortality Rate:</span>
+                      <span className="text-muted">Mortality Rate:</span>
                       <span className={`font-medium ${
                         cage.mortality_rate > 10 ? 'text-red-600' :
                         cage.mortality_rate > 5 ? 'text-yellow-600' :
@@ -409,9 +437,9 @@ function BiweeklyEntry() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-3 bg-gray-50 rounded-b-xl">
+                <div className="px-6 py-3 bg-foam-deep/40 rounded-b-xl">
                   <div className="text-center">
-                    <span className="text-sm font-medium text-indigo-600">
+                    <span className="text-sm font-medium text-lagoon-800">
                       Click to enter bi-weekly data
                     </span>
                   </div>
@@ -423,24 +451,23 @@ function BiweeklyEntry() {
 
         {filteredCages.length === 0 && (
           <div className="text-center py-12">
-            <div className="mx-auto h-12 w-12 text-gray-400">
+            <div className="mx-auto h-12 w-12 text-muted">
               <Search className="h-12 w-12" />
             </div>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No cages found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-chart-ink">No cages found</h3>
+            <p className="mt-1 text-sm text-muted">
               Try adjusting your search or filter criteria.
             </p>
             <div className="mt-6">
               <button
                 onClick={clearFilters}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
               >
                 Clear all filters
               </button>
             </div>
           </div>
         )}
-      </div>
     </Layout>
   )
 } 

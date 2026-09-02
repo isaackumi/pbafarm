@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Plus,
   Edit,
   Trash,
@@ -25,11 +23,12 @@ import {
   ChevronUp
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
-import { supabase } from '../lib/supabase'
-import { feedTypeService } from '../lib/feedTypeService'
 import { feedService } from '../lib/feedService'
-import { feedTrackingService } from '../lib/feedTrackingService'
+import { supplierService } from '../lib/supplierService'
+import { cageService } from '../lib/cageService'
 import { formatCurrency, formatWeight, formatNumber } from '../lib/currencyUtils'
 import {
   LineChart as RechartsLineChart,
@@ -79,6 +78,8 @@ function FeedPurchases() {
   const [success, setSuccess] = useState('')
   const [timeRange, setTimeRange] = useState('30d')
   const [feedUsage, setFeedUsage] = useState([])
+  const [cages, setCages] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [lowStockAlerts, setLowStockAlerts] = useState([])
   const [stats, setStats] = useState({
     totalPurchases: 0,
@@ -123,40 +124,83 @@ function FeedPurchases() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch feed types
-      const { data: feedTypesData, error: feedTypesError } = await feedTrackingService.getCurrentStockLevels()
-      if (feedTypesError) throw feedTypesError
-      setFeedTypes(feedTypesData || [])
+      const [
+        feedTypesResult,
+        purchasesResult,
+        lowStockResult,
+        usageResult,
+        cagesResult,
+        suppliersResult,
+      ] = await Promise.all([
+        feedService.getAllFeedTypes(),
+        feedService.getAllPurchases(),
+        feedService.getLowStockAlerts(),
+        feedService.getFeedUsageStats(timeRange),
+        cageService.getAllCages(),
+        supplierService.getAllSuppliers(),
+      ])
 
-      // Fetch purchases
-      const { data: purchasesData, error: purchasesError } = await feedTrackingService.getFeedUsageStats(timeRange)
-      if (purchasesError) throw purchasesError
-      setPurchases(purchasesData || [])
+      if (feedTypesResult.error) throw feedTypesResult.error
+      if (purchasesResult.error) throw purchasesResult.error
+      if (lowStockResult.error) throw lowStockResult.error
+      if (usageResult.error) throw usageResult.error
+      if (cagesResult.error) throw cagesResult.error
+      if (suppliersResult.error) throw suppliersResult.error
 
-      // Fetch cost analysis
-      const { data: costAnalysis, error: costError } = await feedTrackingService.getFeedCostAnalysis(timeRange)
-      if (costError) throw costError
-      setCostAnalysis(costAnalysis)
+      const feedTypesData = feedTypesResult.data || []
+      const suppliersData = suppliersResult.data || []
+      const cagesData = cagesResult.data || []
+      const feedById = Object.fromEntries(
+        feedTypesData.map((t) => [t.id || t._id, t]),
+      )
+      const supplierById = Object.fromEntries(
+        suppliersData.map((s) => [s.id || s._id, s]),
+      )
+      const usageRows = (usageResult.data?.rows || []).map((u) => {
+        const feed = feedById[u.feed_type_id]
+        return {
+          ...u,
+          feed_types: feed ? { id: feed.id || feed._id, name: feed.name } : null,
+        }
+      })
 
-      // Fetch low stock alerts
-      const { data: lowStockData, error: lowStockError } = await feedTrackingService.getLowStockAlerts()
-      if (lowStockError) throw lowStockError
-      setLowStockAlerts(lowStockData || [])
+      const purchasesData = (purchasesResult.data || []).map((p) => {
+        const feed = feedById[p.feed_type_id]
+        const supplier = supplierById[p.supplier_id]
+        return {
+          ...p,
+          feed_types: feed ? { id: feed.id || feed._id, name: feed.name } : null,
+          feed_type: feed ? { name: feed.name } : null,
+          suppliers: supplier ? { id: supplier.id || supplier._id, name: supplier.name } : null,
+          supplier: supplier ? { name: supplier.name } : null,
+        }
+      })
 
-      // Calculate statistics
-      const stats = calculateStats(purchasesData)
-      setStats(stats)
+      const lowStockData = (lowStockResult.data || []).map((a) => ({
+        id: a.feed_type_id || a.feedTypeId || a.id,
+        name: a.name || a.feed_type_name || a.feedTypeName || 'Feed',
+        current_stock: a.current_stock ?? a.currentStock ?? 0,
+        minimum_stock: a.minimum_stock ?? a.minimumStock ?? 0,
+      }))
 
-      // Calculate new metrics
-      const inventoryMetricsData = calculateInventoryMetrics(feedTypesData, purchasesData, feedUsage)
-      setInventoryMetrics(inventoryMetricsData)
+      setFeedTypes(feedTypesData)
+      setPurchases(purchasesData)
+      setLowStockAlerts(lowStockData)
+      setFeedUsage(usageRows)
+      setCages(cagesData)
+      setSuppliers(suppliersData)
 
-      const usageAnalyticsData = calculateUsageAnalytics(purchasesData, feedUsage, cages)
-      setUsageAnalytics(usageAnalyticsData)
-
-      const supplierMetricsData = calculateSupplierMetrics(purchasesData, suppliers)
-      setSupplierMetrics(supplierMetricsData)
-
+      setStats(calculateStats(purchasesData))
+      setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
+      setInventoryMetrics(
+        calculateInventoryMetrics(feedTypesData, purchasesData, usageRows),
+      )
+      setUsageAnalytics(
+        calculateUsageAnalytics(purchasesData, usageRows, cagesData),
+      )
+      setSupplierMetrics(
+        calculateSupplierMetrics(purchasesData, suppliersData),
+      )
     } catch (error) {
       console.error('Error fetching data:', error)
       showToast('error', 'Failed to load data')
@@ -287,7 +331,10 @@ function FeedPurchases() {
       name: feed.name,
       currentStock: feed.current_stock,
       minimumStock: feed.minimum_stock,
-      percentage: (feed.current_stock / feed.minimum_stock) * 100
+      percentage:
+        feed.minimum_stock > 0
+          ? (feed.current_stock / feed.minimum_stock) * 100
+          : 0,
     }))
 
     metrics.stockValue = feedTypes.reduce((total, feed) => {
@@ -296,8 +343,9 @@ function FeedPurchases() {
 
     // Calculate days remaining based on average daily usage
     const averageDailyUsage = {}
-    usage.forEach(record => {
+    ;(usage || []).forEach(record => {
       const feedType = record.feed_types?.name
+      if (!feedType) return
       if (!averageDailyUsage[feedType]) {
         averageDailyUsage[feedType] = {
           totalUsage: 0,
@@ -476,15 +524,17 @@ function FeedPurchases() {
       const purchaseData = {
         feed_type_id: formData.feed_type_id,
         quantity: parseFloat(formData.quantity),
+        bags: formData.bags ? parseFloat(formData.bags) : undefined,
         price_per_kg: parseFloat(formData.price_per_kg),
-        purchase_date: formData.purchase_date || new Date().toISOString(),
-        supplier_id: formData.supplier_id,
-        batch_number: formData.batch_number,
-        expiry_date: formData.expiry_date,
-        notes: formData.notes
+        purchase_date:
+          formData.purchase_date || new Date().toISOString().split('T')[0],
+        supplier_id: formData.supplier_id || undefined,
+        batch_number: formData.batch_number || undefined,
+        expiry_date: formData.expiry_date || undefined,
+        notes: formData.notes || undefined,
       }
 
-      const { error } = await feedTrackingService.recordFeedUsage(purchaseData)
+      const { error } = await feedService.createPurchase(purchaseData)
       if (error) throw error
 
       setSuccess('Purchase recorded successfully')
@@ -535,28 +585,32 @@ function FeedPurchases() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
 
   return (
-    <div className="min-h-screen bg-gray-100 font-montserrat">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Feed Purchases</h1>
-          </div>
-
+    <Layout title="Feed Purchases">
+      <div data-tour="page-feed-purchases">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Feed', href: '/feed-management/overview' },
+          { label: 'Purchases' },
+        ]}
+        description="Record and analyze feed purchases, stock alerts, and spend."
+        related={[
+          { label: 'Feed types', href: '/feed-types' },
+          { label: 'Feed suppliers', href: '/feed-suppliers' },
+          { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Issue feed', href: '/feed-issue' },
+        ]}
+        actions={
           <button
             onClick={handleAddPurchase}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <Plus className="w-4 h-4 mr-2" />
             Record Purchase
           </button>
-        </div>
+        }
+      />
 
         {/* Time Range Selector */}
         <div className="flex justify-end space-x-2 mb-6">
@@ -566,8 +620,8 @@ function FeedPurchases() {
               onClick={() => setTimeRange(range)}
               className={`px-3 py-1 rounded-md text-sm ${
                 timeRange === range
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-lagoon-800 text-white'
+                  : 'bg-foam text-muted hover:bg-gray-200'
               }`}
             >
               {range}
@@ -588,7 +642,7 @@ function FeedPurchases() {
                   <div className="mt-2 text-sm text-red-700">
                     <ul className="list-disc pl-5 space-y-1">
                       {lowStockAlerts.map((feed) => (
-                        <li key={feed.id}>
+                        <li key={feed.id || feed.name}>
                           {feed.name}: {feed.current_stock}kg remaining (Minimum: {feed.minimum_stock}kg)
                         </li>
                       ))}
@@ -602,56 +656,56 @@ function FeedPurchases() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="page-card p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-indigo-100 text-indigo-600">
+              <div className="p-3 rounded-full bg-foam-deep text-lagoon-800">
                 <DollarSign className="w-6 h-6" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Total Cost</h3>
-                <div className="text-2xl font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-muted">Total Cost</h3>
+                <div className="text-2xl font-semibold text-chart-ink">
                   {formatCurrency(stats.totalCost)}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="page-card p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-green-100 text-green-600">
                 <Package className="w-6 h-6" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Total Quantity</h3>
-                <div className="text-2xl font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-muted">Total Quantity</h3>
+                <div className="text-2xl font-semibold text-chart-ink">
                   {formatWeight(stats.totalQuantity)}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="page-card p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              <div className="p-3 rounded-full bg-foam-deep text-lagoon-800">
                 <BarChart2 className="w-6 h-6" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Avg. Cost/kg</h3>
-                <div className="text-2xl font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-muted">Avg. Cost/kg</h3>
+                <div className="text-2xl font-semibold text-chart-ink">
                   {formatCurrency(stats.averageCostPerKg)}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="page-card p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
                 <Database className="w-6 h-6" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Current Stock Value</h3>
-                <div className="text-2xl font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-muted">Current Stock Value</h3>
+                <div className="text-2xl font-semibold text-chart-ink">
                   {formatCurrency(stats.stockValue)}
                 </div>
               </div>
@@ -660,12 +714,12 @@ function FeedPurchases() {
         </div>
 
         {/* Cost Analysis Section */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Cost Analysis</h2>
+        <div className="page-card p-6 mb-6">
+          <h2 className="text-lg font-medium text-chart-ink mb-4">Cost Analysis</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cost Trends Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Cost Trends</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Cost Trends</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={costAnalysis.costTrends}>
@@ -681,7 +735,7 @@ function FeedPurchases() {
 
             {/* Supplier Comparison Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Supplier Price Comparison</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Supplier Price Comparison</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={costAnalysis.supplierComparison}>
@@ -698,16 +752,16 @@ function FeedPurchases() {
         </div>
 
         {/* Inventory Management Section */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Inventory Management</h2>
+        <div className="page-card p-6 mb-6">
+          <h2 className="text-lg font-medium text-chart-ink mb-4">Inventory Management</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Stock Levels */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Current Stock Levels</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Current Stock Levels</h3>
               <div className="space-y-4">
                 {inventoryMetrics.stockLevels.map((stock, index) => (
                   <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">{stock.name}</span>
+                    <span className="text-sm text-muted">{stock.name}</span>
                     <div className="flex items-center">
                       <div className="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
                         <div
@@ -717,7 +771,7 @@ function FeedPurchases() {
                           style={{ width: `${Math.min(stock.percentage, 100)}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted">
                         {stock.currentStock}kg
                       </span>
                     </div>
@@ -728,17 +782,17 @@ function FeedPurchases() {
 
             {/* Reorder Recommendations */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Reorder Recommendations</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Reorder Recommendations</h3>
               <div className="space-y-4">
                 {inventoryMetrics.reorderRecommendations.map((rec, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                     <div>
-                      <span className="text-sm font-medium text-gray-900">{rec.name}</span>
-                      <p className="text-xs text-gray-500">
+                      <span className="text-sm font-medium text-chart-ink">{rec.name}</span>
+                      <p className="text-xs text-muted">
                         Current: {rec.currentStock}kg | Min: {rec.minimumStock}kg
                       </p>
                     </div>
-                    <button className="px-3 py-1 text-sm text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+                    <button className="px-3 py-1 text-sm text-white bg-lagoon-800 rounded-md hover:bg-lagoon-950">
                       Order {rec.recommendedOrder}kg
                     </button>
                   </div>
@@ -749,12 +803,12 @@ function FeedPurchases() {
         </div>
 
         {/* Usage Analytics Section */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Usage Analytics</h2>
+        <div className="page-card p-6 mb-6">
+          <h2 className="text-lg font-medium text-chart-ink mb-4">Usage Analytics</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cage Usage Chart */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Feed Usage by Cage</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed Usage by Cage</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={usageAnalytics.cageUsage}>
@@ -770,7 +824,7 @@ function FeedPurchases() {
 
             {/* FCR by Feed Type */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">FCR by Feed Type</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">FCR by Feed Type</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={usageAnalytics.fcrByType}>
@@ -787,19 +841,19 @@ function FeedPurchases() {
         </div>
 
         {/* Supplier Performance Section */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Supplier Performance</h2>
+        <div className="page-card p-6 mb-6">
+          <h2 className="text-lg font-medium text-chart-ink mb-4">Supplier Performance</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Supplier Reliability */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Supplier Reliability</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Supplier Reliability</h3>
               <div className="space-y-4">
                 {supplierMetrics.reliability && supplierMetrics.reliability.length > 0 ? (
                   supplierMetrics.reliability.map((metric, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex-1">
-                        <span className="text-sm font-medium text-gray-900">{metric.supplier}</span>
-                        <p className="text-xs text-gray-500">{metric.totalOrders} orders</p>
+                        <span className="text-sm font-medium text-chart-ink">{metric.supplier}</span>
+                        <p className="text-xs text-muted">{metric.totalOrders} orders</p>
                       </div>
                       <div className="flex items-center ml-4">
                         <div className="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
@@ -810,14 +864,14 @@ function FeedPurchases() {
                             style={{ width: `${Math.min(metric.reliability, 100)}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-muted">
                           {metric.reliability.toFixed(1)}%
                         </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-gray-500 text-center py-4">
+                  <div className="text-sm text-muted text-center py-4">
                     No supplier data available
                   </div>
                 )}
@@ -826,7 +880,7 @@ function FeedPurchases() {
 
             {/* Price Comparison */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Price Comparison</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Price Comparison</h3>
               <div className="h-64">
                 {supplierMetrics.priceComparison && supplierMetrics.priceComparison.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -839,7 +893,7 @@ function FeedPurchases() {
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                  <div className="h-full flex items-center justify-center text-sm text-muted">
                     No price comparison data available
                   </div>
                 )}
@@ -849,70 +903,70 @@ function FeedPurchases() {
         </div>
 
         {/* Purchases Table */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-medium text-gray-700">Recent Purchases</h2>
+        <div className="page-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Recent Purchases</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-3 text-gray-500">Loading purchases...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <p className="mt-3 text-muted">Loading purchases...</p>
             </div>
           ) : purchases.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-foam-deep">
+                <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Feed Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Price/kg
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Total Cost
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Purchase Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Batch Number
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-foam-deep">
                   {purchases.map((purchase) => (
                     <tr key={purchase.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
                         {purchase.feed_types?.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {purchase.quantity} kg
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         ${purchase.price_per_kg}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         ${(purchase.quantity * purchase.price_per_kg).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {new Date(purchase.purchase_date).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {purchase.batch_number || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         <div className="flex space-x-3">
                           <button
                             onClick={() => handleEditPurchase(purchase)}
-                            className="text-indigo-600 hover:text-indigo-800"
+                            className="text-lagoon-800 hover:text-lagoon-950"
                             title="Edit Purchase"
                           >
                             <Edit className="w-4 h-4" />
@@ -929,7 +983,7 @@ function FeedPurchases() {
                               </button>
                               <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="text-gray-600 hover:text-gray-800"
+                                className="text-muted hover:text-gray-800"
                                 title="Cancel"
                               >
                                 <X className="w-4 h-4" />
@@ -953,14 +1007,13 @@ function FeedPurchases() {
             </div>
           ) : (
             <div className="py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto" />
-              <p className="mt-3 text-gray-500">
+              <AlertCircle className="h-12 w-12 text-muted mx-auto" />
+              <p className="mt-3 text-muted">
                 No purchases found. Record your first purchase to get started.
               </p>
             </div>
           )}
         </div>
-      </div>
 
       {/* Add Purchase Modal */}
       {showAddModal && (
@@ -970,7 +1023,7 @@ function FeedPurchases() {
             onClick={() => setShowAddModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Record New Purchase
             </h3>
 
@@ -988,14 +1041,14 @@ function FeedPurchases() {
 
             <form onSubmit={handleSubmitAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Feed Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="feed_type_id"
                   value={formData.feed_type_id}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 >
                   <option value="">Select feed type</option>
@@ -1008,7 +1061,7 @@ function FeedPurchases() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Quantity (kg) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1018,13 +1071,13 @@ function FeedPurchases() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Price per kg ($) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1034,13 +1087,13 @@ function FeedPurchases() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Purchase Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1048,13 +1101,13 @@ function FeedPurchases() {
                   name="purchase_date"
                   value={formData.purchase_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Batch Number
                 </label>
                 <input
@@ -1062,12 +1115,12 @@ function FeedPurchases() {
                   name="batch_number"
                   value={formData.batch_number}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Expiry Date
                 </label>
                 <input
@@ -1075,12 +1128,12 @@ function FeedPurchases() {
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Notes
                 </label>
                 <textarea
@@ -1088,7 +1141,7 @@ function FeedPurchases() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows={3}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -1096,13 +1149,13 @@ function FeedPurchases() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save
@@ -1121,7 +1174,7 @@ function FeedPurchases() {
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">
               Edit Purchase
             </h3>
 
@@ -1139,14 +1192,14 @@ function FeedPurchases() {
 
             <form onSubmit={handleSubmitEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Feed Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="feed_type_id"
                   value={formData.feed_type_id}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 >
                   <option value="">Select feed type</option>
@@ -1159,7 +1212,7 @@ function FeedPurchases() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Quantity (kg) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1169,13 +1222,13 @@ function FeedPurchases() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Price per kg ($) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1185,13 +1238,13 @@ function FeedPurchases() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Purchase Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1199,13 +1252,13 @@ function FeedPurchases() {
                   name="purchase_date"
                   value={formData.purchase_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Batch Number
                 </label>
                 <input
@@ -1213,12 +1266,12 @@ function FeedPurchases() {
                   name="batch_number"
                   value={formData.batch_number}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Expiry Date
                 </label>
                 <input
@@ -1226,12 +1279,12 @@ function FeedPurchases() {
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-chart-ink mb-1">
                   Notes
                 </label>
                 <textarea
@@ -1239,7 +1292,7 @@ function FeedPurchases() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows={3}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -1247,13 +1300,13 @@ function FeedPurchases() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes
@@ -1264,5 +1317,6 @@ function FeedPurchases() {
         </div>
       )}
     </div>
+    </Layout>
   )
 } 

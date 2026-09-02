@@ -1,73 +1,49 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { supabase } from '../../lib/supabase'
+import { harvestRecordService } from '../../lib/databaseService'
 
-// Fetch all harvest records
+// Async thunks
 export const fetchHarvestRecords = createAsyncThunk(
   'harvest/fetchHarvestRecords',
-  async () => {
-    const { data, error } = await supabase
-      .from('harvest_records')
-      .select('*')
-      .order('harvest_date', { ascending: false })
-    if (error) throw error
-    return data
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await harvestRecordService.getAllHarvestRecords()
+      if (response.error) throw response.error
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
-// Create a new harvest record
 export const createHarvestRecord = createAsyncThunk(
   'harvest/createHarvestRecord',
-  async (record) => {
-    const { data, error } = await supabase
-      .from('harvest_records')
-      .insert([record])
-      .single()
-    if (error) throw error
-    return data
-  }
-)
-
-// Update a harvest record
-export const updateHarvestRecord = createAsyncThunk(
-  'harvest/updateHarvestRecord',
-  async ({ id, updates }) => {
-    const { data, error } = await supabase
-      .from('harvest_records')
-      .update(updates)
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
-  }
-)
-
-// Delete a harvest record
-export const deleteHarvestRecord = createAsyncThunk(
-  'harvest/deleteHarvestRecord',
-  async (id) => {
-    const { error } = await supabase
-      .from('harvest_records')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
-    return id
+  async (recordData, { rejectWithValue }) => {
+    try {
+      const response = await harvestRecordService.createHarvestRecord(recordData)
+      if (response.error) throw response.error
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
   }
 )
 
 const initialState = {
-  harvestRecords: [],
+  records: [],
   loading: false,
-  error: null,
+  error: null
 }
 
 const harvestSlice = createSlice({
   name: 'harvest',
   initialState,
   reducers: {
-    clearHarvestError: (state) => {
+    clearError: (state) => {
       state.error = null
     },
-    resetHarvestState: () => initialState,
+    resetHarvestRecords: (state) => {
+      return initialState
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -77,24 +53,23 @@ const harvestSlice = createSlice({
       })
       .addCase(fetchHarvestRecords.fulfilled, (state, action) => {
         state.loading = false
-        state.harvestRecords = action.payload
+        state.records = action.payload
+        state.error = null
       })
       .addCase(fetchHarvestRecords.rejected, (state, action) => {
         state.loading = false
-        state.error = action.error.message
+        state.error = action.payload
       })
       .addCase(createHarvestRecord.fulfilled, (state, action) => {
-        state.harvestRecords.unshift(action.payload)
+        state.records = [action.payload, ...state.records]
       })
-      .addCase(updateHarvestRecord.fulfilled, (state, action) => {
-        const idx = state.harvestRecords.findIndex(r => r.id === action.payload.id)
-        if (idx !== -1) state.harvestRecords[idx] = action.payload
-      })
-      .addCase(deleteHarvestRecord.fulfilled, (state, action) => {
-        state.harvestRecords = state.harvestRecords.filter(r => r.id !== action.payload)
-      })
-  },
+  }
 })
 
-export const { clearHarvestError, resetHarvestState } = harvestSlice.actions
-export default harvestSlice.reducer 
+export const { clearError, resetHarvestRecords } = harvestSlice.actions
+
+export const selectHarvestRecords = (state) => state.harvest.records
+export const selectHarvestLoading = (state) => state.harvest.loading
+export const selectHarvestError = (state) => state.harvest.error
+
+export default harvestSlice.reducer

@@ -1,78 +1,94 @@
-// components/Layout.js (Updated with collapsible sidebar)
+// components/Layout.js — Tide Chart app shell
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchCages } from '../store/slices/cagesSlice'
+import { useAuth } from '../contexts/AuthContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
-const Layout = ({
-  children,
-  title: initialTitle = 'Dashboard',
-}) => {
+const TITLE_BY_PREFIX = [
+  ['/admin/company-registrations', 'Company Registrations'],
+  ['/admin', 'Admin'],
+  ['/cages/analytics', 'Cage Analytics'],
+  ['/cages/settings', 'Cage Settings'],
+  ['/cages', 'Cage Management'],
+  ['/feed-issue', 'Issue Feed'],
+  ['/feed-purchases', 'Feed Purchases'],
+  ['/feed-suppliers', 'Feed Suppliers'],
+  ['/feed-types', 'Feed Types'],
+  ['/feed-management', 'Feed Management'],
+  ['/inventory', 'Inventory'],
+  ['/stock-levels', 'Stock Levels'],
+  ['/inventory-alerts', 'Inventory Alerts'],
+  ['/inventory-transactions', 'Inventory Ledger'],
+  ['/harvest-sampling', 'Harvest Sampling'],
+  ['/harvest', 'Harvest'],
+  ['/daily-entry', 'Daily Entry'],
+  ['/daily-data', 'Daily Data'],
+  ['/biweekly-entry', 'Bi-weekly Entry'],
+  ['/biweekly-records', 'Bi-weekly Records'],
+  ['/stocking-management', 'Stocking Management'],
+  ['/stocking', 'Stocking'],
+  ['/topup', 'Top-up'],
+  ['/approvals', 'Approvals'],
+  ['/pending-approval', 'Pending Approval'],
+  ['/company-settings', 'Company Settings'],
+  ['/users', 'Users'],
+  ['/report', 'Reports'],
+  ['/export', 'Export'],
+  ['/audit-logs', 'Audit Logs'],
+  ['/bulk-upload', 'Bulk Upload'],
+  ['/create-cage', 'Create Cage'],
+  ['/dashboard', 'Dashboard'],
+]
+
+const Layout = ({ children, title: initialTitle }) => {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('')
-  const [title, setTitle] = useState(initialTitle)
+  const { user, loading: authLoading } = useAuth()
+  const [title, setTitle] = useState(initialTitle || 'Dashboard')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const dispatch = useDispatch()
-  const { cages, loading, error } = useSelector((state) => state.cages)
+  const { loading, error, hasFetched } = useSelector((state) => state.cages)
 
   useEffect(() => {
-    // Set active tab and title based on current route
-    const path = router.pathname
-    let newTitle = 'Dashboard'
-    if (path === '/dashboard') {
-      setActiveTab('dashboard')
-      newTitle = 'Dashboard'
-    } else if (path.includes('/cages')) {
-      setActiveTab('cages')
-      newTitle = 'Cage Management'
-    } else if (path.includes('/harvest')) {
-      setActiveTab('harvest')
-      newTitle = 'Harvest Management'
-    } else if (path.includes('/feed-management')) {
-      setActiveTab('feed')
-      newTitle = 'Feed Management'
-    } else {
-      setActiveTab('')
-      newTitle = 'Dashboard'
+    if (initialTitle) {
+      setTitle(initialTitle)
+      return
     }
-    setTitle(newTitle)
-  }, [router.pathname])
+    const path = router.pathname
+    const match = TITLE_BY_PREFIX.find(([prefix]) => path.startsWith(prefix))
+    setTitle(match ? match[1] : 'PBA Farm')
+  }, [router.pathname, initialTitle])
 
+  // Wait for auth — cage queries require a signed-in user.
   useEffect(() => {
+    if (authLoading || !user || hasFetched || loading) return
     dispatch(fetchCages())
-  }, [dispatch])
+  }, [dispatch, hasFetched, loading, user, authLoading])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-        <div className="flex">
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">Error</h3>
-            <p className="mt-1 text-sm text-red-700">{error}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const authError =
+    typeof error === 'string' &&
+    (error.includes('Not authenticated') || error.includes('Unauthenticated'))
 
   return (
-    <div>
-      {/* Sidebar is fixed, full height */}
-      <Sidebar />
-      {/* Main content is offset by sidebar width */}
-      <div className="ml-64 min-h-screen bg-gray-100">
-        {/* Header is sticky at the top */}
-        <Header />
-        <main className="p-6">
+    <div className="min-h-screen font-sans" data-tour="app-shell">
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((c) => !c)}
+      />
+      <div
+        className={`min-h-screen flex flex-col transition-[margin] duration-200 ease-out ${
+          sidebarCollapsed ? 'ml-[4.5rem]' : 'ml-64'
+        }`}
+      >
+        <Header title={title} />
+        <main className="flex-1 p-5 sm:p-8 animate-fade-in bg-transparent">
+          {error && !authError && (
+            <div className="mb-4 p-3 rounded-md border border-signal/30 bg-signal/10 text-sm text-signal">
+              Cage data temporarily unavailable: {error}
+            </div>
+          )}
           {children}
         </main>
       </div>
