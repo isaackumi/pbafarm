@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Package, RefreshCw } from 'lucide-react'
+import { Package, RefreshCw } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 
@@ -68,35 +69,36 @@ function StockLevels() {
   )
 
   return (
-    <div className="min-h-screen bg-foam">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">Stock Levels</h1>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/feed-issue"
-              className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-lagoon-800 text-lagoon-800 hover:bg-white"
-            >
+    <Layout title="Stock Levels">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Inventory', href: '/inventory/overview' },
+          { label: 'Stock levels' },
+        ]}
+        description="On-hand feed stock from the inventory ledger. Tally should match."
+        related={[
+          { label: 'Issue feed', href: '/feed-issue' },
+          { label: 'Feed purchases', href: '/feed-purchases' },
+          { label: 'Inventory alerts', href: '/inventory-alerts' },
+          { label: 'Ledger', href: '/inventory-transactions' },
+        ]}
+        actions={
+          <>
+            <Button href="/feed-issue" variant="secondary" size="sm">
               Issue feed
-            </Link>
+            </Button>
             <button
               onClick={fetchStockLevels}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+              className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
         {error && (
           <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
@@ -221,7 +223,6 @@ function StockLevels() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Layout>
   )
 }

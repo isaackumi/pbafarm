@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 
@@ -60,29 +61,30 @@ function InventoryTransactions() {
   }
 
   return (
-    <div className="min-h-screen bg-foam">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">
-              Inventory Ledger
-            </h1>
-          </div>
+    <Layout title="Inventory Ledger">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Inventory', href: '/inventory/overview' },
+          { label: 'Ledger' },
+        ]}
+        description="Browse inventory ledger movements by date range."
+        related={[
+          { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Inventory alerts', href: '/inventory-alerts' },
+          { label: 'Feed purchases', href: '/feed-purchases' },
+        ]}
+        actions={
           <button
             onClick={fetchTransactions}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </button>
-        </div>
+        }
+      />
 
         <div className="mb-4 flex gap-4 items-end">
           <div>
@@ -191,7 +193,6 @@ function InventoryTransactions() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Layout>
   )
 }

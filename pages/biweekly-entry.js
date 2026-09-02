@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button, FormPage } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
 import { Search, Filter, X, Calendar, MapPin, Fish, TrendingUp, Activity } from 'lucide-react'
 import { cageService } from '../lib/databaseService'
@@ -131,7 +132,7 @@ function BiweeklyEntry() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout title="Bi-weekly Entry">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800"></div>
         </div>
@@ -141,38 +142,65 @@ function BiweeklyEntry() {
 
   if (selectedCage) {
     return (
-      <Layout>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <button
-              onClick={() => setSelectedCage(null)}
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Back to Cage Selection
-            </button>
-          </div>
-          <BiweeklyEntryForm 
-            cage={selectedCage} 
+      <Layout title="Bi-weekly Entry">
+        <FormPage width="full">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Bi-weekly records', href: '/biweekly-records' },
+              { label: 'Entry' },
+              { label: selectedCage.name || 'Cage' },
+            ]}
+            description="Enter bi-weekly sampling for the selected cage."
+            related={[
+              { label: 'All records', href: '/biweekly-records' },
+              { label: 'Daily entry', href: '/daily-entry' },
+            ]}
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedCage(null)}
+              >
+                <X className="w-4 h-4" />
+                Back to cages
+              </Button>
+            }
+          />
+          <BiweeklyEntryForm
+            cage={selectedCage}
             onComplete={() => {
               setSelectedCage(null)
               fetchCages()
             }}
           />
-        </div>
+        </FormPage>
       </Layout>
     )
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-chart-ink">Bi-weekly Records Entry</h1>
-          <p className="mt-2 text-sm text-muted">
-            Select a cage to enter bi-weekly sampling records
-          </p>
-        </div>
+    <Layout title="Bi-weekly Entry">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Bi-weekly records', href: '/biweekly-records' },
+          { label: 'Entry' },
+        ]}
+        description="Select a cage to enter bi-weekly sampling records."
+        related={[
+          { label: 'All records', href: '/biweekly-records' },
+          { label: 'Daily entry', href: '/daily-entry' },
+          { label: 'Harvest sampling', href: '/harvest-sampling' },
+        ]}
+        actions={
+          <Button href="/biweekly-records" variant="secondary" size="sm">
+            View records
+          </Button>
+        }
+      />
 
         {/* Enhanced Search and Filters */}
         <div className="mb-6 page-card-sm border border-foam-deep p-4">
@@ -440,7 +468,6 @@ function BiweeklyEntry() {
             </div>
           </div>
         )}
-      </div>
     </Layout>
   )
 } 

@@ -35,6 +35,7 @@ import {
   ListBullets,
 } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
+import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
 
@@ -124,6 +125,7 @@ const MENU_SECTIONS = {
 
 const Sidebar = ({ collapsed = false, onToggle }) => {
   const { user, signOut } = useAuth()
+  const { displayName, logoUrl } = useCompanySettings()
   const router = useRouter()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [expandedSections, setExpandedSections] = useState({
@@ -195,13 +197,28 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
     }))
   }
 
-  const isActive = (path) =>
-    router.pathname === path ||
-    (path !== '/dashboard' &&
-      path !== '/cages' &&
-      router.pathname.startsWith(`${path}/`)) ||
-    (path === '/cages' &&
-      (router.pathname === '/cages' || router.pathname.startsWith('/cages/')))
+  const allNavPaths = useMemo(
+    () =>
+      Object.values(MENU_SECTIONS).flatMap((section) =>
+        section.items.map((item) => item.path),
+      ),
+    [],
+  )
+
+  const isActive = (path) => {
+    const current = router.pathname
+    if (current === path) return true
+    // Nested routes (e.g. /cages/[id], /cages/analytics/growth)
+    if (!current.startsWith(`${path}/`)) return false
+    // Prefer a more specific nav item when one matches (fixes /cages + /cages/analytics)
+    const hasMoreSpecific = allNavPaths.some(
+      (other) =>
+        other !== path &&
+        other.startsWith(`${path}/`) &&
+        (current === other || current.startsWith(`${other}/`)),
+    )
+    return !hasMoreSpecific
+  }
 
   return (
     <aside
@@ -218,14 +235,23 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
         <Link
           href="/dashboard"
           className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}
-          title="PBA Farm"
+          title={displayName || 'PBA Farm'}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-kelp/25 text-kelp-soft">
-            <Fish size={22} weight="duotone" aria-hidden />
-          </span>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-xl object-cover bg-white/10"
+            />
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+              <Fish size={22} weight="duotone" aria-hidden />
+            </span>
+          )}
           {!collapsed && (
             <span className="truncate font-display text-lg font-bold tracking-tight text-white">
-              PBA Farm
+              {displayName || 'PBA Farm'}
             </span>
           )}
         </Link>
@@ -233,7 +259,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
           <button
             type="button"
             onClick={onToggle}
-            className="rounded-lg p-1.5 text-foam/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             aria-label="Collapse sidebar"
           >
             <CaretDoubleLeft size={18} weight="bold" />
@@ -246,7 +272,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
           <button
             type="button"
             onClick={onToggle}
-            className="rounded-lg p-1.5 text-foam/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             aria-label="Expand sidebar"
           >
             <CaretDoubleRight size={18} weight="bold" />
@@ -254,14 +280,20 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-        {Object.entries(menuItems).map(([key, section]) => {
+      <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-5">
+        {Object.entries(menuItems).map(([key, section], index) => {
           const SectionIcon = section.icon
           const open = collapsed ? false : expandedSections[key]
           const sectionActive = section.items.some((item) => isActive(item.path))
 
           return (
             <div key={key}>
+              {index > 0 && (
+                <div
+                  className={`mb-4 ${collapsed ? 'mx-2' : 'mx-1'} border-t border-white/10`}
+                  aria-hidden
+                />
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -272,32 +304,32 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                   }
                   toggleSection(key)
                 }}
-                className={`w-full flex items-center rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold tracking-wide transition-colors ${
+                className={`w-full flex items-center rounded-xl px-3 py-2.5 text-left text-[15px] font-semibold leading-snug tracking-normal transition-colors ${
                   sectionActive
                     ? 'bg-white/10 text-white'
-                    : 'text-foam/75 hover:bg-white/5 hover:text-white'
+                    : 'text-zinc-100 hover:bg-white/5 hover:text-white'
                 } ${collapsed ? 'justify-center' : 'justify-between'}`}
                 title={collapsed ? section.title : undefined}
               >
-                <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2'}`}>
+                <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}>
                   <SectionIcon
-                    size={20}
+                    size={22}
                     weight={sectionActive ? 'duotone' : 'regular'}
-                    className="shrink-0 text-kelp-soft"
+                    className="shrink-0 text-zinc-200"
                     aria-hidden
                   />
                   {!collapsed && <span className="truncate">{section.title}</span>}
                 </span>
                 {!collapsed &&
                   (open ? (
-                    <CaretDown size={14} className="text-foam/40 shrink-0" />
+                    <CaretDown size={16} className="text-zinc-400 shrink-0" />
                   ) : (
-                    <CaretRight size={14} className="text-foam/40 shrink-0" />
+                    <CaretRight size={16} className="text-zinc-400 shrink-0" />
                   ))}
               </button>
 
               {open && (
-                <ul className="mt-0.5 mb-2 ml-2 border-l border-white/10 pl-2 space-y-0.5">
+                <ul className="mt-1.5 mb-1 ml-2.5 border-l border-white/15 pl-2.5 space-y-1">
                   {section.items.map((item) => {
                     const ItemIcon = item.icon
                     const active = isActive(item.path)
@@ -305,22 +337,22 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                       <li key={item.path}>
                         <Link
                           href={item.path}
-                          className={`group relative flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-medium leading-snug transition-colors ${
                             active
-                              ? 'bg-lagoon-800 text-white shadow-sm'
-                              : 'text-foam/70 hover:bg-white/5 hover:text-white'
+                              ? 'bg-white text-lagoon-950 shadow-sm'
+                              : 'text-zinc-200 hover:bg-white/5 hover:text-white'
                           }`}
                         >
                           {active && (
                             <span
-                              className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-kelp-soft"
+                              className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-lagoon-950"
                               aria-hidden
                             />
                           )}
                           <ItemIcon
-                            size={16}
+                            size={18}
                             weight={active ? 'fill' : 'regular'}
-                            className={active ? 'text-white' : 'text-kelp-soft/90'}
+                            className={active ? 'text-lagoon-950' : 'text-zinc-400'}
                             aria-hidden
                           />
                           <span className="truncate">{item.title}</span>
@@ -345,15 +377,15 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
             className={`flex items-center min-w-0 ${collapsed ? 'justify-center' : 'gap-2.5'}`}
             title={user?.email || 'User'}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-kelp text-sm font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-lagoon-950">
               {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
+                <p className="truncate text-[15px] font-semibold text-white leading-snug">
                   {user?.name || user?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="truncate font-data text-[11px] text-foam/45">
+                <p className="truncate font-data text-xs text-zinc-400 mt-0.5">
                   {user?.email || '—'}
                 </p>
               </div>
@@ -362,7 +394,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
           <button
             type="button"
             onClick={() => setShowLogoutModal(true)}
-            className="rounded-lg p-2 text-foam/50 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp-soft"
+            className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             title="Logout"
             aria-label="Logout"
           >

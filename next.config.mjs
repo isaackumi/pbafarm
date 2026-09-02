@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Avoid Pages Router HMR race: isrManifest → handleStaticIndicator reads
+  // window.next.router.components before the router is ready (Next 15.x bug).
+  devIndicators: false,
   eslint: {
     ignoreDuringBuilds: true,
   },

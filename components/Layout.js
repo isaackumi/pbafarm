@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchCages } from '../store/slices/cagesSlice'
+import { useAuth } from '../contexts/AuthContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
@@ -44,10 +45,11 @@ const TITLE_BY_PREFIX = [
 
 const Layout = ({ children, title: initialTitle }) => {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const dispatch = useDispatch()
-  const { loading, error } = useSelector((state) => state.cages)
+  const { loading, error, hasFetched } = useSelector((state) => state.cages)
 
   useEffect(() => {
     if (initialTitle) {
@@ -59,9 +61,15 @@ const Layout = ({ children, title: initialTitle }) => {
     setTitle(match ? match[1] : 'PBA Farm')
   }, [router.pathname, initialTitle])
 
+  // Wait for auth — cage queries require a signed-in user.
   useEffect(() => {
+    if (authLoading || !user || hasFetched || loading) return
     dispatch(fetchCages())
-  }, [dispatch])
+  }, [dispatch, hasFetched, loading, user, authLoading])
+
+  const authError =
+    typeof error === 'string' &&
+    (error.includes('Not authenticated') || error.includes('Unauthenticated'))
 
   return (
     <div className="min-h-screen font-sans">
@@ -75,14 +83,11 @@ const Layout = ({ children, title: initialTitle }) => {
         }`}
       >
         <Header title={title} />
-        <main className="flex-1 p-6 animate-fade-in">
-          {error && (
+        <main className="flex-1 p-5 sm:p-8 animate-fade-in bg-transparent">
+          {error && !authError && (
             <div className="mb-4 p-3 rounded-md border border-signal/30 bg-signal/10 text-sm text-signal">
               Cage data temporarily unavailable: {error}
             </div>
-          )}
-          {loading && (
-            <div className="mb-4 text-sm text-muted font-data">Loading cages…</div>
           )}
           {children}
         </main>

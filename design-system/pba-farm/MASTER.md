@@ -1,53 +1,26 @@
-# Design System Master File — Tide Chart
+# Design System — PBA Farm (charcoal light)
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> Page files override this Master. Do **not** use purple/pink AI-default palettes.
+> Source: UI/UX Pro Max Soft UI + light dashboard guidance. Chrome uses zinc charcoal on white — not teal, not purple.
 
----
+## Chrome (sidebar + primary buttons)
 
-**Project:** PBA Farm  
-**Theme:** Tide Chart (aquaculture ops)  
-**Updated:** 2026-07-25
+| Role | Hex | Notes |
+|------|-----|--------|
+| Primary / sidebar | `#18181B` | zinc-900 — soft black on white |
+| Hover / elevated | `#27272A` | zinc-800 |
+| Subtle chrome | `#3F3F46` | zinc-700 |
+| On primary | `#FFFFFF` | |
+| Canvas | `#F8FAFC` | cool near-white |
+| Card | `#FFFFFF` | |
+| Border | `#E4E4E7` | zinc-200 |
+| Muted text | `#71717A` | |
+| Success | `#15803D` | keep for positive metrics only |
+| Danger | `#DC2626` | |
 
----
+## Rules
 
-## Color Palette
-
-| Role | Hex | Token / class |
-|------|-----|----------------|
-| Sidebar / chrome | `#062A33` | `lagoon-950` |
-| Primary actions | `#0B4A58` | `lagoon-800` |
-| Primary hover | `#0E5C6E` | `lagoon-700` |
-| App canvas | `#F3F7F6` | `foam` |
-| Borders / dividers | `#E4EEEB` | `foam-deep` |
-| Success / stock OK | `#2F6B4F` | `kelp` |
-| Alerts / errors | `#C45C26` | `signal` |
-| Body text | `#1A2B32` | `chart-ink` |
-| Secondary text | `#5A6F76` | `muted` |
-| Surfaces / cards | `#FFFFFF` | `surface` |
-
-**Avoid:** purple gradients, cream+terracotta brochure look, broadsheet hairlines, glow, emoji-as-icons.
-
-## Typography
-
-- Display (login brand): **Fraunces** → `font-display`
-- UI: **Source Sans 3** → `font-sans`
-- Data / tables: **IBM Plex Mono** → `font-data`
-
-## Shared classes (globals)
-
-- `.page-shell` — page background + padding
-- `.page-card` — white surface panel
-- `.page-title` — page H1
-- `.btn-primary` / `.btn-secondary` / `.btn-danger`
-- `.input-field` — form controls
-- `.table-shell` — table container
-
-## UX checklist
-
-- Lucide icons only
-- `cursor-pointer` + 150–300ms transitions on controls
-- Focus-visible rings (`lagoon-800`)
-- Loading skeletons/spinners — never blank freeze
-- Dense ops tables with mono numerals
-- Respect `prefers-reduced-motion`
+- Sidebar + primary CTAs use charcoal only (high contrast on white).
+- Active nav item: white chip on charcoal sidebar.
+- Do not use purple / teal as chrome.
+- Buttons: min-height ≥ 44px; hover 150–300ms; visible focus ring.
+- Prefer reusable `components/ui` Button / Card / StatCard.

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import CageManagementSidebar from '../../components/CageManagementSidebar'
+import { PageHeader, Button } from '../../components/ui'
 import { fetchCages } from '../../store/slices/cagesSlice'
 import { cageService } from '../../lib/databaseService'
 import {
-  Settings as SettingsIcon,
   AlertTriangle,
   Trash2,
   Edit2,
@@ -76,25 +75,35 @@ export default function CageSettingsPage() {
 
   return (
     <ProtectedRoute>
-      <Layout>
-        <div className="flex h-screen bg-foam">
-          <CageManagementSidebar />
-          <div className="flex-1 overflow-auto">
-            <div className="p-6">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-chart-ink">Cage Settings</h1>
-                <p className="mt-1 text-sm text-muted">
-                  Manage cage configurations and maintenance settings
-                </p>
-              </div>
+      <Layout title="Cage Settings">
+        <div className="max-w-6xl">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Cages', href: '/cages' },
+              { label: 'Settings' },
+            ]}
+            description="Edit cage details and manage maintenance settings."
+            related={[
+              { label: 'All cages', href: '/cages' },
+              { label: 'Create cage', href: '/create-cage' },
+              { label: 'Analytics', href: '/cages/analytics' },
+            ]}
+            actions={
+              <Button href="/cages" variant="secondary" size="sm">
+                Back to cages
+              </Button>
+            }
+          />
 
               {/* Message Display */}
               {message.text && (
                 <div
-                  className={`mb-4 p-4 rounded-md ${
+                  className={`mb-4 p-4 rounded-xl text-sm ${
                     message.type === 'success'
-                      ? 'bg-green-50 text-green-800'
-                      : 'bg-red-50 text-red-800'
+                      ? 'bg-kelp/10 text-kelp'
+                      : 'bg-signal/10 text-signal'
                   }`}
                 >
                   {message.text}
@@ -272,16 +281,13 @@ export default function CageSettingsPage() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-foam-deep/400 bg-opacity-75 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-lg">
               <div className="flex items-center mb-4">
-                <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+                <AlertTriangle className="w-6 h-6 text-signal mr-2" />
                 <h3 className="text-lg font-medium text-chart-ink">
                   Delete Cage
                 </h3>
@@ -292,14 +298,16 @@ export default function CageSettingsPage() {
               </p>
               <div className="flex justify-end space-x-3">
                 <button
+                  type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 border border-input-border rounded-md text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-zinc-200 rounded-xl text-sm font-medium text-chart-ink hover:bg-foam"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleDeleteCage}
-                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-signal hover:opacity-90"
                 >
                   Delete
                 </button>
@@ -307,6 +315,7 @@ export default function CageSettingsPage() {
             </div>
           </div>
         )}
+        </div>
       </Layout>
     </ProtectedRoute>
   )

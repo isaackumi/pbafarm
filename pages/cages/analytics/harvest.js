@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
+import { PageHeader, Button } from '../../../components/ui'
 import {
   BarChart,
   Bar,
@@ -62,7 +63,7 @@ function HarvestAnalytics() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
@@ -75,7 +76,7 @@ function HarvestAnalytics() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
@@ -99,7 +100,7 @@ function HarvestAnalytics() {
 
   if (!cages || cages.length === 0) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center text-muted">No cage data available.</div>
         </div>
@@ -108,10 +109,29 @@ function HarvestAnalytics() {
   }
 
   return (
-    <div className="min-h-screen bg-foam p-6">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-chart-ink mb-6">Harvest Analytics</h1>
-        
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cages', href: '/cages' },
+            { label: 'Analytics', href: '/cages/analytics' },
+            { label: 'Harvest' },
+          ]}
+          description="See which cages are approaching harvest and how size grades break down."
+          related={[
+            { label: 'Cage analytics', href: '/cages/analytics' },
+            { label: 'Growth', href: '/cages/analytics/growth' },
+            { label: 'Harvest sampling', href: '/harvest-sampling' },
+          ]}
+          actions={
+            <Button href="/cages/analytics" variant="secondary" size="sm">
+              All analytics
+            </Button>
+          }
+        />
+
         <div className="grid grid-cols-1 gap-6">
           {/* Harvest Readiness Chart */}
           <div className="bg-white p-6 rounded-lg shadow">

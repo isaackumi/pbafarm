@@ -5,13 +5,16 @@ import { cageService } from '../../lib/cageService'
 // Async thunks
 export const fetchCages = createAsyncThunk(
   'cages/fetchCages',
-  async ({ page = 1, pageSize = 50 }, { rejectWithValue }) => {
+  async ({ page = 1, pageSize = 50 } = {}, { rejectWithValue }) => {
     try {
       const response = await cageService.getAllCages()
       if (response.error) throw response.error
       return response
     } catch (error) {
-      return rejectWithValue(error.message)
+      const message =
+        error?.message ||
+        (typeof error === 'string' ? error : 'Failed to fetch cages')
+      return rejectWithValue(message)
     }
   }
 )
@@ -104,6 +107,7 @@ const initialState = {
   totalPages: 1,
   totalCount: 0,
   loading: false,
+  hasFetched: false,
   error: null,
   analytics: {
     totalCages: 0,
@@ -135,6 +139,7 @@ const cagesSlice = createSlice({
       })
       .addCase(fetchCages.fulfilled, (state, action) => {
         state.loading = false
+        state.hasFetched = true
         state.cages = action.payload.data
         state.totalPages = action.payload.totalPages
         state.totalCount = action.payload.totalCount
@@ -142,7 +147,13 @@ const cagesSlice = createSlice({
       })
       .addCase(fetchCages.rejected, (state, action) => {
         state.loading = false
-        state.error = action.payload
+        const message = String(action.payload || action.error?.message || '')
+        // Allow retry after auth finishes — do not stick a failed unauthenticated fetch.
+        const authFail =
+          message.includes('Not authenticated') ||
+          message.includes('Unauthenticated')
+        state.hasFetched = !authFail
+        state.error = authFail ? null : message
       })
       // Fetch active cages
       .addCase(fetchActiveCages.pending, (state) => {

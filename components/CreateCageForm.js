@@ -1,12 +1,20 @@
-// Modified CreateCageForm.js with auto-generated cage code
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { cageService } from '../lib/databaseService'
+import {
+  Button,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from './ui'
 
 const CreateCageForm = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [checkingName, setCheckingName] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [nameError, setNameError] = useState('')
@@ -25,37 +33,24 @@ const CreateCageForm = () => {
     status: 'empty',
   })
 
-  // Fetch existing cages to check for name uniqueness and generate a code
   useEffect(() => {
     async function fetchExistingCages() {
       try {
-        // Ensure tables exist and fetch all cages
-        const { data, error } = await cageService.getAllCages()
-
-        if (error) {
-          console.error('Error fetching existing cages:', error)
-          throw error
-        }
-
-        console.log('Fetched existing cages:', data)
+        const { data, error: fetchError } = await cageService.getAllCages()
+        if (fetchError) throw fetchError
         setExistingCages(data || [])
-
-        // Generate a new cage code
         generateCageCode(data || [])
-      } catch (error) {
-        console.error('Error fetching existing cages:', error)
+      } catch (err) {
+        console.error('Error fetching existing cages:', err)
       }
     }
 
     fetchExistingCages()
   }, [])
 
-  // Function to generate a new unique cage code
-  const generateCageCode = (existingCages) => {
-    // Find the highest existing code number
+  const generateCageCode = (cages) => {
     let maxCodeNumber = 0
-
-    existingCages.forEach((cage) => {
+    cages.forEach((cage) => {
       if (cage.code && cage.code.startsWith('C')) {
         const codeNumber = parseInt(cage.code.substring(1), 10)
         if (!isNaN(codeNumber) && codeNumber > maxCodeNumber) {
@@ -63,39 +58,24 @@ const CreateCageForm = () => {
         }
       }
     })
-
-    // Generate the next code
-    const nextCodeNumber = maxCodeNumber + 1
-    const newCode = `C${nextCodeNumber.toString().padStart(3, '0')}`
-
-    console.log('Generated new cage code:', newCode)
-
-    // Set the code in the form data
+    const newCode = `C${(maxCodeNumber + 1).toString().padStart(3, '0')}`
     setCageCode(newCode)
     setFormData((prev) => ({ ...prev, code: newCode }))
   }
 
-  // Check if cage name already exists when name field changes
   useEffect(() => {
-    // Clear previous name error
     setNameError('')
-
-    // Skip check if name is empty
     if (!formData.name) return
-
-    // Debounce check to avoid excessive validation
     const timer = setTimeout(() => {
       const nameExists = existingCages.some(
         (cage) => cage.name.toLowerCase() === formData.name.toLowerCase(),
       )
-
       if (nameExists) {
         setNameError(
           'This cage name already exists. Please choose a unique name.',
         )
       }
     }, 500)
-
     return () => clearTimeout(timer)
   }, [formData.name, existingCages])
 
@@ -111,29 +91,25 @@ const CreateCageForm = () => {
     setMessage('')
 
     try {
-      // Validate required fields
       if (!formData.name) {
         throw new Error('Cage name is required')
       }
 
-      // Check for name uniqueness
       const nameExists = existingCages.some(
         (cage) => cage.name.toLowerCase() === formData.name.toLowerCase(),
       )
-
       if (nameExists) {
         throw new Error(
           'This cage name already exists. Please choose a unique name.',
         )
       }
 
-      // Prepare cage data with correct types
       const cageData = {
         name: formData.name.trim(),
-        code: formData.code, // Include the auto-generated code
+        code: formData.code,
         location: formData.location ? formData.location.trim() : null,
         size: formData.size ? parseFloat(formData.size) : null,
-        capacity: formData.capacity ? parseInt(formData.capacity) : null,
+        capacity: formData.capacity ? parseInt(formData.capacity, 10) : null,
         dimensions: formData.dimensions ? formData.dimensions.trim() : null,
         material: formData.material ? formData.material.trim() : null,
         installation_date: formData.installation_date || null,
@@ -143,22 +119,10 @@ const CreateCageForm = () => {
         updated_at: new Date().toISOString(),
       }
 
-      console.log('Creating cage with data:', cageData)
+      const { data, error: createError } = await cageService.createCage(cageData)
+      if (createError) throw createError
 
-      // Create cage
-      const { data, error: createError } = await cageService.createCage(
-        cageData,
-      )
-
-      if (createError) {
-        console.error('Detailed create error:', createError)
-        throw createError
-      }
-
-      console.log('Cage created successfully:', data)
       setMessage('Cage created successfully!')
-
-      // Reset form
       setFormData({
         name: '',
         code: '',
@@ -171,230 +135,179 @@ const CreateCageForm = () => {
         notes: '',
         status: 'empty',
       })
+      generateCageCode([...existingCages, data])
 
-      // Generate a new code for the next cage
-      const updatedCages = [...existingCages, data]
-      generateCageCode(updatedCages)
-
-      // Navigate to cages page after delay
       setTimeout(() => {
         router.push('/cages')
       }, 2000)
-    } catch (error) {
-      console.error('Error creating cage:', error)
-      setError(error.message)
+    } catch (err) {
+      console.error('Error creating cage:', err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="page-card overflow-hidden">
-      <div className="px-6 py-4 border-b border-foam-deep">
-        <h2 className="font-medium text-chart-ink">Create New Cage</h2>
-      </div>
+    <FormCard
+      title="Cage details"
+      subtitle="Register a physical cage. Stock it separately after creation."
+    >
+      {error && (
+        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3">
+          {message}
+        </div>
+      )}
 
-      <div className="p-6">
-        {error && (
-          <div className="mb-4 bg-red-50 text-red-800 p-4 rounded-md">
-            {error}
-          </div>
-        )}
-
-        {message && (
-          <div className="mb-4 bg-green-50 text-green-800 p-4 rounded-md">
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cage Code (Auto-generated, read-only) */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Cage Code <span className="text-red-500">*</span>
-              </label>
-              <input
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="Identity">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field
+              label="Cage code"
+              htmlFor="code"
+              required
+              hint="Auto-generated unique code"
+            >
+              <Input
+                id="code"
                 type="text"
                 name="code"
                 value={cageCode}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm bg-foam-deep/40 text-chart-ink sm:text-sm"
-                placeholder="Auto-generated"
                 readOnly
+                className="bg-foam font-data"
               />
-              <p className="mt-1 text-xs text-muted">
-                Auto-generated unique code for this cage
-              </p>
-            </div>
-
-            {/* Cage Name */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Cage Name <span className="text-red-500">*</span>
-              </label>
-              <input
+            </Field>
+            <Field
+              label="Cage name"
+              htmlFor="name"
+              required
+              error={nameError || undefined}
+            >
+              <Input
+                id="name"
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`block w-full px-3 py-2 border ${
-                  nameError ? 'border-red-300' : 'border-input-border'
-                } rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm`}
-                placeholder="e.g., C1, Cage 2, etc."
+                placeholder="e.g., Cage 1, North A"
                 required
+                className={nameError ? 'border-signal' : ''}
               />
-              {nameError && (
-                <p className="mt-1 text-sm text-red-600">{nameError}</p>
-              )}
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Location
-              </label>
-              <input
+            </Field>
+            <Field label="Location" htmlFor="location">
+              <Input
+                id="location"
                 type="text"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="e.g., North Pond, Section A, etc."
+                placeholder="e.g., North Pond, Section A"
               />
-            </div>
-
-            {/* Size */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Size (m³)
-              </label>
-              <input
-                type="number"
-                name="size"
-                value={formData.size}
-                onChange={handleChange}
-                step="0.1"
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="Volume in cubic meters"
-              />
-            </div>
-
-            {/* Capacity */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Capacity (fish count)
-              </label>
-              <input
-                type="number"
-                name="capacity"
-                value={formData.capacity}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="Maximum fish capacity"
-              />
-            </div>
-
-            {/* Dimensions */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Dimensions
-              </label>
-              <input
-                type="text"
-                name="dimensions"
-                value={formData.dimensions}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="e.g., 5m x 5m x 3m"
-              />
-            </div>
-
-            {/* Material */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Material
-              </label>
-              <input
-                type="text"
-                name="material"
-                value={formData.material}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="e.g., HDPE, Metal frame, etc."
-              />
-            </div>
-
-            {/* Installation Date */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Installation Date
-              </label>
-              <input
-                type="date"
-                name="installation_date"
-                value={formData.installation_date}
-                onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Status
-              </label>
-              <select
+            </Field>
+            <Field label="Status" htmlFor="status">
+              <Select
+                id="status"
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 required
               >
                 <option value="empty">Empty</option>
                 <option value="maintenance">Maintenance</option>
                 <option value="fallow">Fallow</option>
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
+        </FormSection>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-chart-ink mb-1">
-              Notes
-            </label>
-            <textarea
+        <FormSection title="Capacity & build">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Size (m³)" htmlFor="size">
+              <Input
+                id="size"
+                type="number"
+                name="size"
+                value={formData.size}
+                onChange={handleChange}
+                step="0.1"
+                className="font-data"
+                placeholder="Volume in cubic meters"
+              />
+            </Field>
+            <Field label="Capacity (fish count)" htmlFor="capacity">
+              <Input
+                id="capacity"
+                type="number"
+                name="capacity"
+                value={formData.capacity}
+                onChange={handleChange}
+                className="font-data"
+                placeholder="Maximum fish capacity"
+              />
+            </Field>
+            <Field label="Dimensions" htmlFor="dimensions">
+              <Input
+                id="dimensions"
+                type="text"
+                name="dimensions"
+                value={formData.dimensions}
+                onChange={handleChange}
+                placeholder="e.g., 5m × 5m × 3m"
+              />
+            </Field>
+            <Field label="Material" htmlFor="material">
+              <Input
+                id="material"
+                type="text"
+                name="material"
+                value={formData.material}
+                onChange={handleChange}
+                placeholder="e.g., HDPE, Metal frame"
+              />
+            </Field>
+            <Field label="Installation date" htmlFor="installation_date">
+              <Input
+                id="installation_date"
+                type="date"
+                name="installation_date"
+                value={formData.installation_date}
+                onChange={handleChange}
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Notes">
+          <Field label="Optional notes" htmlFor="notes">
+            <Textarea
+              id="notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              rows="3"
-              className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
               placeholder="Optional notes about the cage"
-            ></textarea>
-          </div>
+            />
+          </Field>
+        </FormSection>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => router.push('/cages')}
-              className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || nameError}
-              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                loading || nameError
-                  ? 'bg-lagoon-700 cursor-not-allowed'
-                  : 'bg-lagoon-800 hover:bg-lagoon-950'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800`}
-            >
-              {loading ? 'Creating...' : 'Create Cage'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <FormActions>
+          <Button type="submit" disabled={loading || !!nameError} size="lg">
+            {loading ? 'Creating…' : 'Create cage'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push('/cages')}
+          >
+            Cancel
+          </Button>
+        </FormActions>
+      </form>
+    </FormCard>
   )
 }
 

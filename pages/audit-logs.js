@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import auditLogService from '../lib/auditLogService'
 
 function AuditLogsContent() {
@@ -43,18 +42,29 @@ function AuditLogsContent() {
 
   return (
     <Layout title="Audit Logs">
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <Link
-          href="/dashboard"
-          className="text-lagoon-800 hover:text-lagoon-950 flex items-center text-sm font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Dashboard
-        </Link>
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Admin' },
+          { label: 'Audit logs' },
+        ]}
+        description="Review who changed what across cages, records, feed, and users."
+        related={[
+          { label: 'Approvals', href: '/approvals' },
+          { label: 'Users', href: '/users' },
+        ]}
+        actions={
+          <Button href="/dashboard" variant="secondary" size="sm">
+            Dashboard
+          </Button>
+        }
+      />
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <select
           value={tableName}
           onChange={(e) => setTableName(e.target.value)}
-          className="border border-input-border rounded-md px-3 py-1.5 text-sm"
+          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm"
         >
           <option value="">All tables</option>
           <option value="cages">Cages</option>

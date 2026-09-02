@@ -2,6 +2,17 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import {
+  mergeSettings,
+  assertStockingAllowed,
+  assertTopupAllowed,
+} from './lib/farmRules'
+
+async function loadRules(ctx: any, companyId: any) {
+  if (!companyId) return mergeSettings(undefined)
+  const company = await ctx.db.get(companyId)
+  return mergeSettings(company?.settings)
+}
 
 const stockingStatus = v.union(
   v.literal('pending_approval'),
@@ -104,18 +115,46 @@ export const createStocking = mutation({
     const cage = await ctx.db.get(args.cageId)
     if (!cage) throw new Error('Cage not found')
 
+    const companyId = (await writeCompanyId(user)) ?? cage.companyId
+    const rules = await loadRules(ctx, companyId)
+    assertStockingAllowed({
+      cage,
+      fishCount: args.fishCount,
+      abw: args.initialAbw,
+      rules: rules.stockingRules,
+      farmRules: rules.farmRules,
+    })
+
+    const status = rules.stockingRules.requireApprovalForStocking
+      ? 'pending_approval'
+      : 'approved'
+
     const id = await ctx.db.insert('stockingHistory', {
       ...args,
-      status: 'pending_approval',
-      companyId: (await writeCompanyId(user)) ?? cage.companyId,
+      status,
+      companyId,
       createdBy: user._id,
+      ...(status === 'approved'
+        ? { approvedBy: user._id, approvedAt: Date.now() }
+        : {}),
     })
+
+    if (status === 'approved') {
+      await ctx.db.patch(args.cageId, {
+        stockingDate: args.stockingDate,
+        initialCount: args.fishCount,
+        currentCount: args.fishCount,
+        initialAbw: args.initialAbw,
+        status: 'active',
+        updatedAt: Date.now(),
+      })
+    }
 
     await logAudit(ctx, {
       actionType: 'create',
       tableName: 'stockingHistory',
       recordId: id,
-      newValues: args,
+      newValues: { ...args, status },
     })
     return id
   },
@@ -278,18 +317,43 @@ export const createTopup = mutation({
       throw new Error('Can only create topups for approved stockings')
     }
 
+    const cage = await ctx.db.get(stocking.cageId)
+    const companyId = (await writeCompanyId(user)) ?? stocking.companyId
+    const rules = await loadRules(ctx, companyId)
+    assertTopupAllowed({
+      cage,
+      addedFish: args.fishCount,
+      abw: args.abw,
+      rules: rules.stockingRules,
+      farmRules: rules.farmRules,
+    })
+
+    const status = rules.stockingRules.requireApprovalForTopup
+      ? 'pending_approval'
+      : 'approved'
+
     const id = await ctx.db.insert('topupHistory', {
       ...args,
-      status: 'pending_approval',
-      companyId: (await writeCompanyId(user)) ?? stocking.companyId,
+      status,
+      companyId,
       createdBy: user._id,
+      ...(status === 'approved'
+        ? { approvedBy: user._id, approvedAt: Date.now() }
+        : {}),
     })
+
+    if (status === 'approved' && cage) {
+      await ctx.db.patch(stocking.cageId, {
+        currentCount: (cage.currentCount || 0) + args.fishCount,
+        updatedAt: Date.now(),
+      })
+    }
 
     await logAudit(ctx, {
       actionType: 'create',
       tableName: 'topupHistory',
       recordId: id,
-      newValues: args,
+      newValues: { ...args, status },
     })
     return id
   },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
 import { harvestRecordService } from '../lib/databaseService'
@@ -21,7 +21,6 @@ const HarvestPage = () => {
     end: ''
   })
   const { showToast } = useToast()
-  const router = useRouter()
 
   useEffect(() => {
     fetchHarvestRecords()
@@ -93,6 +92,20 @@ const HarvestPage = () => {
     }
   }
 
+  const handleDeleteHarvest = async (record) => {
+    if (!confirm('Delete this harvest record and its samples?')) return
+    try {
+      const { error } = await harvestRecordService.deleteHarvestRecord(
+        record.id || record._id,
+      )
+      if (error) throw error
+      showToast('Harvest deleted', 'success')
+      fetchHarvestRecords()
+    } catch (err) {
+      showToast(err.message || 'Delete failed', 'error')
+    }
+  }
+
   const filteredRecords = harvestRecords.filter(record => {
     const matchesSearch = 
       record.cages.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,10 +144,18 @@ const HarvestPage = () => {
       accessor: record => (
         <div className="flex space-x-2">
           <button
+            type="button"
             onClick={() => handleAddSampling(record)}
             className="text-lagoon-800 hover:text-lagoon-950"
           >
             Add Sampling
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeleteHarvest(record)}
+            className="text-signal hover:opacity-80"
+          >
+            Delete
           </button>
         </div>
       )
@@ -143,34 +164,40 @@ const HarvestPage = () => {
 
   return (
     <ProtectedRoute>
-      <Layout title="Harvest Management" showCageSelector={false}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Harvest Management</h1>
-            <button
-              onClick={() => router.push('/harvest-sampling')}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition-colors"
-            >
-              <PlusCircle className="w-5 h-5 mr-2" />
-              Harvest Sampling
-            </button>
-          </div>
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex space-x-4">
+      <Layout title="Harvest Management">
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Harvest' },
+          ]}
+          description="Track harvest events and related sampling records."
+          related={[
+            { label: 'Harvest sampling', href: '/harvest-sampling' },
+            { label: 'Bi-weekly records', href: '/biweekly-records' },
+            { label: 'Cages', href: '/cages' },
+          ]}
+          actions={
+            <>
+              <Button href="/harvest-sampling" variant="secondary" size="sm">
+                <PlusCircle className="w-4 h-4" />
+                Harvest Sampling
+              </Button>
               <button
                 onClick={handleExport}
-                className="inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                className="inline-flex items-center px-3 py-2 border border-foam-deep rounded-xl shadow-sm text-sm font-semibold text-chart-ink bg-white hover:bg-foam min-h-10"
               >
                 Export
               </button>
               <button
                 onClick={handleAddHarvest}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                className="inline-flex items-center px-3 py-2 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
               >
                 Add Harvest
               </button>
-            </div>
-          </div>
+            </>
+          }
+        />
 
           {/* Filters */}
           <div className="page-card p-4 mb-6">
@@ -265,7 +292,6 @@ const HarvestPage = () => {
               </table>
             </div>
           )}
-        </div>
       </Layout>
     </ProtectedRoute>
   )

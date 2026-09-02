@@ -1,9 +1,7 @@
 // pages/feed-types.js
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Plus,
   Edit,
   Trash,
@@ -13,6 +11,8 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { useSelector, useDispatch } from 'react-redux'
 import { supplierService } from '../lib/supplierService'
@@ -129,37 +129,30 @@ function FeedTypes() {
   }
 
   return (
-    <div className="min-h-screen bg-foam font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">
-              Feed Types Management
-            </h1>
-          </div>
-
+    <Layout title="Feed Types">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Feed', href: '/feed-management/overview' },
+          { label: 'Feed types' },
+        ]}
+        description="Manage feed types used on your farm. Create, edit, or deactivate as needed."
+        related={[
+          { label: 'Feed suppliers', href: '/feed-suppliers' },
+          { label: 'Feed purchases', href: '/feed-purchases' },
+          { label: 'Stock levels', href: '/stock-levels' },
+        ]}
+        actions={
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Feed Type
           </button>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-muted">
-            Manage feed types used in your farm. Create, edit, or deactivate
-            feed types as needed.
-          </p>
-        </div>
+        }
+      />
 
         {/* Feed Types Table */}
         <div className="page-card overflow-hidden">
@@ -294,7 +287,6 @@ function FeedTypes() {
             </table>
           )}
         </div>
-      </div>
 
       {/* Add Feed Type Modal */}
       {showAddModal && (
@@ -555,6 +547,6 @@ function FeedTypes() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

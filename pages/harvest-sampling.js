@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import ProtectedRoute from '../components/ProtectedRoute'
+import {
+  PageHeader,
+  FormPage,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Input,
+  Select,
+  Button,
+} from '../components/ui'
 import { cageService } from '../lib/cageService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 
@@ -84,15 +95,24 @@ function HarvestSamplingPage() {
   return (
     <ProtectedRoute>
       <Layout title="Harvest Sampling">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="font-display text-3xl text-lagoon-950 mb-1">Harvest sampling</h1>
-          <div className="waterline max-w-[10rem] mb-6" />
-          <p className="text-sm text-muted mb-6">
-            Record sample weight and size mix. DOC and ABW calculate from cage stocking date.
-          </p>
+        <FormPage width="full">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Harvest', href: '/harvest' },
+              { label: 'Sampling' },
+            ]}
+            description="Record sample weight and size mix. DOC and ABW calculate from cage stocking date."
+            related={[
+              { label: 'Harvest', href: '/harvest' },
+              { label: 'Bi-weekly entry', href: '/biweekly-entry' },
+              { label: 'Cages', href: '/cages' },
+            ]}
+          />
 
           {error && (
-            <div className="mb-4 p-3 rounded border border-signal/30 bg-signal/10 text-signal text-sm">
+            <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
               {error}
             </div>
           )}
@@ -100,103 +120,128 @@ function HarvestSamplingPage() {
           {loading ? (
             <p className="text-muted font-data">Loading cages…</p>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-surface border border-foam-deep rounded-lg p-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Cage</label>
-                  <select
-                    required
-                    value={form.cageId}
-                    onChange={(e) => setForm({ ...form, cageId: e.target.value })}
-                    className="w-full border border-input-border rounded px-3 py-2"
-                  >
-                    <option value="">Select cage</option>
-                    {cages.map((c) => (
-                      <option key={c.id || c._id} value={c.id || c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Sample date</label>
-                  <input
-                    type="date"
-                    required
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    className="w-full border border-input-border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Total weight (kg)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={form.weight}
-                    onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                    className="w-full border border-input-border rounded px-3 py-2 font-data"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Fish count</label>
-                  <input
-                    type="number"
-                    required
-                    value={form.fishCount}
-                    onChange={(e) => setForm({ ...form, fishCount: e.target.value })}
-                    className="w-full border border-input-border rounded px-3 py-2 font-data"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-6 font-data text-sm bg-foam rounded p-3">
-                <div>
-                  <span className="text-muted">DOC</span>{' '}
-                  <span className="font-semibold text-lagoon-800">{doc || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-muted">ABW (kg)</span>{' '}
-                  <span className="font-semibold text-lagoon-800">{abw || '—'}</span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Size breakdown (counts)</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {SIZE_CATEGORIES.map((s) => (
-                    <label key={s.category} className="text-sm">
-                      <span className="font-data text-chart-ink">
-                        {s.category}{' '}
-                        <span className="text-muted text-xs">({s.range})</span>
-                      </span>
-                      <input
-                        type="number"
-                        value={form.sizes[s.category]}
+            <FormCard
+              title="Sampling details"
+              subtitle="Enter sample totals, then optional size breakdown counts."
+            >
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <FormSection title="Cage & sample">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Field label="Cage" htmlFor="cageId" required>
+                      <Select
+                        id="cageId"
+                        required
+                        value={form.cageId}
                         onChange={(e) =>
-                          setForm({
-                            ...form,
-                            sizes: { ...form.sizes, [s.category]: e.target.value },
-                          })
+                          setForm({ ...form, cageId: e.target.value })
                         }
-                        className="mt-1 w-full border border-input-border rounded px-2 py-1.5 font-data"
+                      >
+                        <option value="">Select cage</option>
+                        {cages.map((c) => (
+                          <option key={c.id || c._id} value={c.id || c._id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Sample date" htmlFor="date" required>
+                      <Input
+                        id="date"
+                        type="date"
+                        required
+                        value={form.date}
+                        onChange={(e) =>
+                          setForm({ ...form, date: e.target.value })
+                        }
                       />
-                    </label>
-                  ))}
-                </div>
-              </div>
+                    </Field>
+                    <Field label="Total weight (kg)" htmlFor="weight" required>
+                      <Input
+                        id="weight"
+                        type="number"
+                        step="0.01"
+                        required
+                        value={form.weight}
+                        onChange={(e) =>
+                          setForm({ ...form, weight: e.target.value })
+                        }
+                        className="font-data"
+                      />
+                    </Field>
+                    <Field label="Fish count" htmlFor="fishCount" required>
+                      <Input
+                        id="fishCount"
+                        type="number"
+                        required
+                        value={form.fishCount}
+                        onChange={(e) =>
+                          setForm({ ...form, fishCount: e.target.value })
+                        }
+                        className="font-data"
+                      />
+                    </Field>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full sm:w-auto px-6 py-2.5 rounded bg-lagoon-800 text-white font-semibold hover:bg-lagoon-950 disabled:opacity-60"
-              >
-                {saving ? 'Saving…' : 'Save sampling'}
-              </button>
-            </form>
+                  <div className="mt-5 flex flex-wrap gap-6 rounded-xl bg-foam border border-foam-deep px-4 py-3 font-data text-sm">
+                    <div>
+                      <span className="text-muted">DOC</span>{' '}
+                      <span className="font-semibold text-lagoon-800">
+                        {doc || '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted">ABW (kg)</span>{' '}
+                      <span className="font-semibold text-lagoon-800">
+                        {abw || '—'}
+                      </span>
+                    </div>
+                  </div>
+                </FormSection>
+
+                <FormSection
+                  title="Size breakdown"
+                  description="Optional counts per grade."
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {SIZE_CATEGORIES.map((s) => (
+                      <Field
+                        key={s.category}
+                        label={`${s.category}`}
+                        htmlFor={`size-${s.category}`}
+                        hint={s.range}
+                      >
+                        <Input
+                          id={`size-${s.category}`}
+                          type="number"
+                          value={form.sizes[s.category]}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              sizes: {
+                                ...form.sizes,
+                                [s.category]: e.target.value,
+                              },
+                            })
+                          }
+                          className="font-data"
+                        />
+                      </Field>
+                    ))}
+                  </div>
+                </FormSection>
+
+                <FormActions>
+                  <Button type="submit" disabled={saving} size="lg">
+                    {saving ? 'Saving…' : 'Save sampling'}
+                  </Button>
+                  <Button href="/harvest" variant="secondary">
+                    Cancel
+                  </Button>
+                </FormActions>
+              </form>
+            </FormCard>
           )}
-        </div>
+        </FormPage>
       </Layout>
     </ProtectedRoute>
   )

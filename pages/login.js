@@ -24,7 +24,12 @@ export default function Login() {
     const { error: signInError } = await signInWithEmail(email, password)
 
     if (signInError) {
-      setError(signInError.message || 'Sign in failed')
+      const raw = signInError.message || ''
+      const friendly =
+        raw.includes('InvalidAccountId') || raw.includes('InvalidSecret')
+          ? 'No account for that email, or the password is wrong. Check the address carefully — or create an account on Sign up.'
+          : raw || 'Sign in failed'
+      setError(friendly)
       setLoading(false)
       return
     }

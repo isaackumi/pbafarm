@@ -59,21 +59,21 @@ const TopBar = ({ title = 'Dashboard' }) => {
   }
 
   return (
-    <header className="bg-surface sticky top-0 z-30">
+    <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-30">
       <div className="waterline" />
-      <div className="flex justify-between items-center px-6 py-4 border-b border-foam-deep">
-        <h1 className="font-display text-xl font-bold text-chart-ink tracking-tight">
+      <div className="flex justify-between items-center px-5 sm:px-8 py-4 border-b border-foam-deep">
+        <h1 className="font-display text-xl sm:text-2xl font-bold text-chart-ink tracking-tight">
           {title}
         </h1>
 
         <div className="flex items-center space-x-4">
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
-              className="relative p-2 text-muted hover:text-lagoon-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-md cursor-pointer"
+              className="relative p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-xl cursor-pointer min-h-12 min-w-12 flex items-center justify-center"
               aria-label="Notifications"
               onClick={() => setNotifDropdownOpen((open) => !open)}
             >
-              <Bell size={22} weight="duotone" />
+              <Bell size={24} weight="duotone" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[0.5rem] h-2 px-0.5 bg-signal rounded-full" />
               )}
@@ -126,14 +126,14 @@ const TopBar = ({ title = 'Dashboard' }) => {
           </div>
 
           <button
-            className="p-2 text-muted hover:text-lagoon-800 focus:outline-none"
+            className="p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none rounded-xl min-h-12 min-w-12 flex items-center justify-center"
             aria-label="Toggle theme"
             onClick={toggleTheme}
           >
             {theme === 'light' ? (
-              <Moon size={22} weight="duotone" />
+              <Moon size={24} weight="duotone" />
             ) : (
-              <Sun size={22} weight="duotone" />
+              <Sun size={24} weight="duotone" />
             )}
           </button>
 
@@ -144,7 +144,7 @@ const TopBar = ({ title = 'Dashboard' }) => {
               aria-haspopup="true"
               aria-expanded={profileDropdownOpen}
             >
-              <div className="w-10 h-10 bg-lagoon-800 rounded-full flex items-center justify-center text-foam font-semibold text-lg">
+              <div className="w-10 h-10 bg-lagoon-950 rounded-full flex items-center justify-center text-white font-semibold text-lg">
                 {avatarLetter}
               </div>
               <div className="hidden sm:block text-right">

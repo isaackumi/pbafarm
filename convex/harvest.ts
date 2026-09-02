@@ -1,7 +1,8 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser } from './lib/authz'
+import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { mergeSettings, harvestWarnings } from './lib/farmRules'
 
 function toClientHarvestRecord(r: any) {
   return {
@@ -95,9 +96,27 @@ export const create = mutation({
     const cage = await ctx.db.get(args.cageId)
     if (!cage) throw new Error('Cage not found')
 
+    const companyId = (await writeCompanyId(user)) ?? cage.companyId
+    const company = companyId ? await ctx.db.get(companyId) : null
+    const rules = mergeSettings(company?.settings)
+    let docDays: number | null = null
+    if (cage.stockingDate && args.harvestDate) {
+      docDays = Math.floor(
+        (new Date(args.harvestDate).getTime() -
+          new Date(cage.stockingDate).getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+    }
+    const warnings = harvestWarnings({
+      docDays,
+      abw: args.averageBodyWeight,
+      fcr: args.fcr,
+      farmRules: rules.farmRules,
+    })
+
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
-      companyId: (await writeCompanyId(user)) ?? cage.companyId,
+      companyId,
       createdBy: user._id,
     })
 
@@ -107,7 +126,7 @@ export const create = mutation({
       recordId: id,
       newValues: args,
     })
-    return id
+    return { id, warnings }
   },
 })
 
@@ -142,6 +161,34 @@ export const update = mutation({
       newValues: patch,
     })
     return id
+  },
+})
+
+export const remove = mutation({
+  args: { id: v.id('harvestRecords') },
+  handler: async (ctx, { id }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const existing = await ctx.db.get(id)
+    if (!existing) throw new Error('Harvest record not found')
+    const allowed = await listForCompany(user, [existing])
+    if (!allowed.length) throw new Error('Access denied')
+
+    const samples = await ctx.db
+      .query('harvestSampling')
+      .withIndex('by_harvest', (q) => q.eq('harvestId', id))
+      .collect()
+    for (const s of samples) {
+      await ctx.db.delete(s._id)
+    }
+    await ctx.db.delete(id)
+    await logAudit(ctx, {
+      actionType: 'delete',
+      tableName: 'harvestRecords',
+      recordId: id,
+      previousValues: existing,
+    })
+    return { ok: true }
   },
 })
 

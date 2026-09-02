@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import DataTable from '../components/DataTable'
 import { feedTypeService, supplierService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
@@ -287,18 +288,28 @@ const FeedManagement = () => {
 
   return (
     <ProtectedRoute>
-      <Layout>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-chart-ink">Feed Management</h1>
-                <p className="mt-2 text-sm text-muted">
-                  Manage feed types, suppliers, and track feed usage across your farm
-                </p>
-              </div>
-            </div>
-          </div>
+      <Layout title="Feed Management">
+        <div className="max-w-7xl">
+          <PageHeader
+            showTitle={false}
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Feed' },
+              { label: 'Management' },
+            ]}
+            description="Manage feed types, suppliers, and track usage across your farm."
+            related={[
+              { label: 'Stock levels', href: '/stock-levels' },
+              { label: 'Issue feed', href: '/feed-issue' },
+              { label: 'Purchases', href: '/feed-purchases' },
+              { label: 'Overview', href: '/feed-management/overview' },
+            ]}
+            actions={
+              <Button href="/feed-issue" size="sm">
+                Issue feed
+              </Button>
+            }
+          />
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

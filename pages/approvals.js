@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
-  ArrowLeft,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -13,6 +12,8 @@ import {
   Info,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import stockingService from '../lib/stockingService'
 import { useToast } from '../components/Toast'
@@ -162,26 +163,25 @@ function PendingApprovals() {
   }
 
   return (
-    <div className="min-h-screen bg-foam font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center mb-6">
-          <Link
-            href="/dashboard"
-            className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Dashboard
-          </Link>
-          <h1 className="text-2xl font-bold text-chart-ink">
-            Pending Approvals
-          </h1>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-muted">
-            Review and manage pending stocking and top-up approvals.
-          </p>
-        </div>
+    <Layout title="Pending Approvals">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Approvals' },
+        ]}
+        description="Review and manage pending stocking and top-up approvals."
+        related={[
+          { label: 'Stocking management', href: '/stocking-management' },
+          { label: 'New stocking', href: '/stocking' },
+          { label: 'Top-up', href: '/topup' },
+        ]}
+        actions={
+          <Button href="/dashboard" variant="secondary" size="sm">
+            Back
+          </Button>
+        }
+      />
 
         {/* Main Content */}
         <div className="page-card overflow-hidden">
@@ -328,7 +328,6 @@ function PendingApprovals() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Approve Confirmation Modal */}
       {showApproveModal && currentRecord && (
@@ -475,6 +474,6 @@ function PendingApprovals() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

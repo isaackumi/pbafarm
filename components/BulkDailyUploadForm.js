@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
+import { Button, FormActions, FormSection, Field } from './ui'
 
 /**
  * CSV columns (header row):
@@ -61,7 +62,9 @@ export default function BulkDailyUploadForm({ onSuccess, onCancel }) {
             `Unknown feed_type "${row.feed_type}" on ${row.date} — must match a feed type name`,
           )
         }
-        const feedPrice = Number(row.feed_price || feedType?.price_per_kg || feedType?.pricePerKg || 0)
+        const feedPrice = Number(
+          row.feed_price || feedType?.price_per_kg || feedType?.pricePerKg || 0,
+        )
         records.push({
           cageId,
           date: row.date,
@@ -89,41 +92,43 @@ export default function BulkDailyUploadForm({ onSuccess, onCancel }) {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-surface border border-foam-deep p-6 rounded-lg shadow-sm">
-      <h2 className="text-xl font-semibold text-chart-ink mb-2">Bulk daily upload</h2>
-      <p className="text-sm text-muted mb-4">
-        CSV header: <span className="font-data">cage_name,date,feed_amount,feed_type,feed_price,mortality,notes</span>
-      </p>
-      {error && (
-        <div className="mb-3 text-sm text-signal border border-signal/20 bg-signal/10 rounded p-2">{error}</div>
-      )}
-      {result && (
-        <div className="mb-3 text-sm text-kelp border border-kelp/20 bg-foam rounded p-2">
-          Inserted {result.inserted} of {result.attempted} rows
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="w-full border border-input-border rounded px-3 py-2"
-        />
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-lagoon-800 text-white px-4 py-2 rounded hover:bg-lagoon-950 disabled:opacity-60"
-          >
-            {loading ? 'Uploading…' : 'Upload'}
-          </button>
-          {onCancel && (
-            <button type="button" onClick={onCancel} className="bg-foam-deep px-4 py-2 rounded">
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+    <div>
+      <FormSection
+        title="Daily CSV"
+        description="Header: cage_name, date, feed_amount, feed_type, feed_price, mortality, notes"
+      >
+        {error && (
+          <div className="mb-4 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+            {error}
+          </div>
+        )}
+        {result && (
+          <div className="mb-4 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3">
+            Inserted {result.inserted} of {result.attempted} rows
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Field label="CSV file" htmlFor="daily-csv" required>
+            <input
+              id="daily-csv"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm text-chart-ink file:mr-4 file:rounded-xl file:border-0 file:bg-foam file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-chart-ink hover:file:bg-zinc-200/80"
+            />
+          </Field>
+          <FormActions className="mt-4 pt-4">
+            <Button type="submit" disabled={loading} size="lg">
+              {loading ? 'Uploading…' : 'Upload CSV'}
+            </Button>
+            {onCancel && (
+              <Button type="button" variant="secondary" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+          </FormActions>
+        </form>
+      </FormSection>
     </div>
   )
 }

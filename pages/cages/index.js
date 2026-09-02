@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import CageManagementSidebar from '../../components/CageManagementSidebar'
+import { PageHeader, Button } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import { 
   fetchCages, 
@@ -26,7 +26,6 @@ import {
   LineChart,
   PieChart,
   Plus,
-  ArrowLeft
 } from 'lucide-react'
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import cageService from '../../lib/cageService'
@@ -34,7 +33,7 @@ import cageService from '../../lib/cageService'
 export default function CagesPage() {
   return (
     <ProtectedRoute>
-      <Layout>
+      <Layout title="Cage Management">
         <CagesManagement />
       </Layout>
     </ProtectedRoute>
@@ -284,13 +283,9 @@ function CagesManagement() {
   // Show loading state for initial load
   if (localLoading) {
     return (
-      <div className="min-h-screen bg-foam p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
-            <p className="mt-2 text-muted">Loading cages...</p>
-          </div>
-        </div>
+      <div className="py-12 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
+        <p className="mt-2 text-muted">Loading cages...</p>
       </div>
     )
   }
@@ -298,21 +293,17 @@ function CagesManagement() {
   // Show error state
   if (localError) {
     return (
-      <div className="min-h-screen bg-foam p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{localError}</p>
-                </div>
-              </div>
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">Error</h3>
+            <div className="mt-2 text-sm text-red-700">
+              <p>{localError}</p>
             </div>
           </div>
         </div>
@@ -321,35 +312,27 @@ function CagesManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-foam">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Link href="/dashboard">
-                <button className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4">
-                  <ArrowLeft className="w-4 h-4 mr-1" />
-                  Back to Dashboard
-                </button>
-              </Link>
-              <h1 className="text-2xl font-bold text-chart-ink">
-                Cage Management
-              </h1>
-            </div>
-            <div className="flex space-x-2">
-              <Link href="/create-cage">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Cage
-                </button>
-              </Link>
-            </div>
-          </div>
-          <p className="text-muted">
-            Manage your physical cages. Create new cages, update their status,
-            or remove unused cages.
-          </p>
-        </div>
+    <>
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Cages' },
+        ]}
+        description="Manage physical cages: create, update status, and open cage details."
+        related={[
+          { label: 'Create cage', href: '/create-cage' },
+          { label: 'Stocking', href: '/stocking' },
+          { label: 'Analytics', href: '/cages/analytics' },
+          { label: 'Stocking management', href: '/stocking-management' },
+        ]}
+        actions={
+          <Button href="/create-cage" size="sm">
+            <Plus className="h-4 w-4" />
+            Create New Cage
+          </Button>
+        }
+      />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
@@ -397,7 +380,11 @@ function CagesManagement() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {analyticsData.statusDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -423,7 +410,11 @@ function CagesManagement() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {analyticsData.harvestReadiness.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -532,7 +523,6 @@ function CagesManagement() {
             emptyMessage="No cages found. Create your first cage to get started."
           />
         </div>
-      </div>
-    </div>
+    </>
   )
 } 

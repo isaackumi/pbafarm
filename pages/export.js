@@ -1,6 +1,17 @@
 import React, { useState } from 'react'
 import Layout from '../components/Layout'
 import ProtectedRoute from '../components/ProtectedRoute'
+import {
+  PageHeader,
+  Button,
+  FormPage,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Select,
+  Input,
+} from '../components/ui'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import * as XLSX from 'xlsx'
 
@@ -92,83 +103,104 @@ function ExportPageInner() {
 
   return (
     <Layout title="Export">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="page-title mb-6">Export Data</h1>
+      <FormPage>
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Reports', href: '/report' },
+            { label: 'Export' },
+          ]}
+          description="Download farm records as Excel for offline analysis or sharing."
+          related={[
+            { label: 'Reports', href: '/report' },
+            { label: 'Audit logs', href: '/audit-logs' },
+          ]}
+        />
 
-        <div className="page-card p-6">
-          <form onSubmit={handleExport} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Export type</label>
-              <select
-                value={exportType}
-                onChange={(e) => setExportType(e.target.value)}
-                className="w-full border border-input-border rounded px-3 py-2 font-medium"
-                required
-              >
-                <option value="daily_records">Daily Records</option>
-                <option value="biweekly_records">Biweekly Records</option>
-                <option value="harvest_records">Harvest Records</option>
-                <option value="stocking_history">Stocking History</option>
-                <option value="cages">Cage Information</option>
-                <option value="all">Full Bundle</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Format</label>
-              <select
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-                className="w-full border border-input-border rounded px-3 py-2 font-medium"
-              >
-                <option value="xlsx">Excel (.xlsx)</option>
-                <option value="json">JSON</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold mb-2">From</label>
-                <input
-                  type="date"
-                  value={dateRange.startDate}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, startDate: e.target.value })
-                  }
-                  className="w-full border border-input-border rounded px-3 py-2"
-                  required
-                />
+        <FormCard
+          title="Export options"
+          subtitle="Choose what to download and the date window."
+        >
+          <form onSubmit={handleExport} className="space-y-8">
+            <FormSection title="Dataset">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="Export type" htmlFor="exportType" required>
+                  <Select
+                    id="exportType"
+                    value={exportType}
+                    onChange={(e) => setExportType(e.target.value)}
+                    required
+                  >
+                    <option value="daily_records">Daily Records</option>
+                    <option value="biweekly_records">Biweekly Records</option>
+                    <option value="harvest_records">Harvest Records</option>
+                    <option value="stocking_history">Stocking History</option>
+                    <option value="cages">Cage Information</option>
+                    <option value="all">Full Bundle</option>
+                  </Select>
+                </Field>
+                <Field label="Format" htmlFor="format">
+                  <Select
+                    id="format"
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value)}
+                  >
+                    <option value="xlsx">Excel (.xlsx)</option>
+                    <option value="csv">CSV</option>
+                    <option value="json">JSON</option>
+                  </Select>
+                </Field>
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">To</label>
-                <input
-                  type="date"
-                  value={dateRange.endDate}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, endDate: e.target.value })
-                  }
-                  className="w-full border border-input-border rounded px-3 py-2"
-                  required
-                />
+            </FormSection>
+
+            <FormSection title="Date range">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="From" htmlFor="startDate" required>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={dateRange.startDate}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, startDate: e.target.value })
+                    }
+                    required
+                  />
+                </Field>
+                <Field label="To" htmlFor="endDate" required>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={dateRange.endDate}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, endDate: e.target.value })
+                    }
+                    required
+                  />
+                </Field>
               </div>
-            </div>
+            </FormSection>
 
             {error && (
-              <div className="text-sm font-medium text-signal bg-signal/10 p-3 rounded">
+              <div className="text-sm font-medium text-signal bg-signal/10 border border-signal/20 p-3 rounded-xl">
                 {error}
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading
-                ? 'Exporting…'
-                : format === 'xlsx'
-                  ? 'Download Excel'
-                  : 'Download JSON'}
-            </button>
+            <FormActions>
+              <Button type="submit" disabled={loading} size="lg">
+                {loading
+                  ? 'Exporting…'
+                  : format === 'xlsx'
+                    ? 'Download Excel'
+                    : format === 'csv'
+                      ? 'Download CSV'
+                      : 'Download JSON'}
+              </Button>
+            </FormActions>
           </form>
-        </div>
-      </div>
+        </FormCard>
+      </FormPage>
     </Layout>
   )
 }

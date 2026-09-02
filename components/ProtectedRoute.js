@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../contexts/AuthContext'
+import { AppShellSkeleton } from './ui'
 
 const ROLE_RANK = { user: 1, admin: 2, super_admin: 3 }
 
@@ -25,11 +26,7 @@ export default function ProtectedRoute({ children, requiredRole = 'user' }) {
   }, [initialized, loading, user, allowed, router])
 
   if (loading || !initialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-foam">
-        <div className="spinner" aria-label="Loading" />
-      </div>
-    )
+    return <AppShellSkeleton />
   }
 
   if (!user || !allowed) {

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Package,
   TrendingUp,
   TrendingDown,
@@ -19,6 +17,8 @@ import {
   Filter,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import Layout from '../../components/Layout'
+import { PageHeader } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
@@ -172,25 +172,26 @@ function InventoryAnalytics() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   return (
-    <div className="min-h-screen bg-foam">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/inventory/overview"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Overview
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">Inventory Analytics</h1>
-          </div>
-
-          <div className="flex items-center space-x-4">
+    <Layout title="Inventory Analytics">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Inventory', href: '/inventory/overview' },
+          { label: 'Analytics' },
+        ]}
+        description="Transaction trends and inventory insights over the selected period."
+        related={[
+          { label: 'Overview', href: '/inventory/overview' },
+          { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Reports', href: '/report' },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="rounded-md border-input-border shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800"
+              className="rounded-xl border border-zinc-200 shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 text-sm min-h-10 px-3"
             >
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
@@ -200,13 +201,14 @@ function InventoryAnalytics() {
 
             <button
               onClick={fetchData}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+              className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </button>
           </div>
-        </div>
+        }
+      />
 
         {error && (
           <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
@@ -258,7 +260,11 @@ function InventoryAnalytics() {
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
-                    label
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -408,7 +414,6 @@ function InventoryAnalytics() {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+    </Layout>
   )
 } 

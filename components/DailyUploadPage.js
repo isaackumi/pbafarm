@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
 import { dailyRecordService } from '../lib/databaseService'
+import {
+  Button,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from './ui'
 
 const DailyUploadPage = () => {
   const [cages, setCages] = useState([])
@@ -49,8 +59,8 @@ const DailyUploadPage = () => {
       return
     }
 
+    setLoading(true)
     try {
-      setLoading(true)
       const selectedFeed = feedTypes.find(
         (f) => (f.id || f._id) === formData.feedTypeId,
       )
@@ -76,6 +86,7 @@ const DailyUploadPage = () => {
 
       if (response.error) throw response.error
 
+      setSelectedCage('')
       setFormData({
         date: new Date().toISOString().split('T')[0],
         mortalityCount: 0,
@@ -102,110 +113,116 @@ const DailyUploadPage = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-2 text-chart-ink">Daily Record Entry</h2>
-      <p className="text-sm text-muted mb-6">
-        Feed amounts deduct stock through the inventory ledger.
-      </p>
-
+    <FormCard
+      title="Record details"
+      subtitle="Choose a cage, then log mortality and feed for the day."
+    >
       {error && (
-        <div className="mb-4 text-sm text-red-700 bg-red-50 rounded p-3">{error}</div>
+        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+          {error}
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Select Cage</label>
-          <select
-            value={selectedCage}
-            onChange={(e) => setSelectedCage(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            required
-          >
-            <option value="">Choose a cage…</option>
-            {cages.map((cage) => (
-              <option key={cage._id || cage.id} value={cage._id || cage.id}>
-                {cage.name} — {cage.status}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Mortality</label>
-            <input
-              type="number"
-              name="mortalityCount"
-              value={formData.mortalityCount}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              min="0"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Feed type</label>
-            <select
-              name="feedTypeId"
-              value={formData.feedTypeId}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="Cage & date">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Cage" htmlFor="cage" required className="md:col-span-2">
+              <Select
+                id="cage"
+                value={selectedCage}
+                onChange={(e) => setSelectedCage(e.target.value)}
+                required
+              >
+                <option value="">Choose a cage…</option>
+                {cages.map((cage) => (
+                  <option key={cage._id || cage.id} value={cage._id || cage.id}>
+                    {cage.name} — {cage.status}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Date" htmlFor="date" required>
+              <Input
+                id="date"
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              />
+            </Field>
+            <Field
+              label="Mortality"
+              htmlFor="mortalityCount"
+              hint="Number of fish lost today"
             >
-              <option value="">Select…</option>
-              {feedTypes.map((f) => (
-                <option key={f.id || f._id} value={f.id || f._id}>
-                  {f.name} ({Number(f.current_stock).toFixed(1)} kg)
-                </option>
-              ))}
-            </select>
+              <Input
+                id="mortalityCount"
+                type="number"
+                name="mortalityCount"
+                value={formData.mortalityCount}
+                onChange={handleChange}
+                min="0"
+                className="font-data"
+              />
+            </Field>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Feed amount (kg)</label>
-            <input
-              type="number"
-              name="feedAmount"
-              step="0.1"
-              value={formData.feedAmount}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2 font-mono"
-              min="0"
-            />
-          </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Notes</label>
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            rows={3}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-lagoon-800 text-white py-2 rounded hover:bg-lagoon-950 disabled:opacity-60"
+        <FormSection
+          title="Feed"
+          description="Feed amounts deduct stock through the inventory ledger."
         >
-          {loading ? 'Saving…' : 'Save daily record'}
-        </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Feed type" htmlFor="feedTypeId">
+              <Select
+                id="feedTypeId"
+                name="feedTypeId"
+                value={formData.feedTypeId}
+                onChange={handleChange}
+              >
+                <option value="">Select…</option>
+                {feedTypes.map((f) => (
+                  <option key={f.id || f._id} value={f.id || f._id}>
+                    {f.name} ({Number(f.current_stock).toFixed(1)} kg)
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Feed amount (kg)" htmlFor="feedAmount">
+              <Input
+                id="feedAmount"
+                type="number"
+                name="feedAmount"
+                step="0.1"
+                value={formData.feedAmount}
+                onChange={handleChange}
+                min="0"
+                className="font-data"
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Notes">
+          <Field label="Optional notes" htmlFor="notes">
+            <Textarea
+              id="notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              placeholder="Observations, weather, unusual events…"
+            />
+          </Field>
+        </FormSection>
+
+        <FormActions>
+          <Button type="submit" disabled={loading} size="lg">
+            {loading ? 'Saving…' : 'Save daily record'}
+          </Button>
+        </FormActions>
       </form>
-    </div>
+    </FormCard>
   )
 }
 

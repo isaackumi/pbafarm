@@ -1,18 +1,19 @@
-/* Harbor Soft — teal Soft UI ops theme */
+/* Harbor Soft — light canvas + charcoal chrome (UI/UX Pro Max) */
 :root {
-  --lagoon-950: #0b3d3a;
-  --lagoon-800: #0f766e;
-  --lagoon-700: #0d9488;
-  --foam: #f4f8f7;
-  --foam-deep: #d7e8e4;
+  /* Chrome / primary actions — zinc charcoal (matches white cards) */
+  --lagoon-950: #18181b;
+  --lagoon-800: #27272a;
+  --lagoon-700: #3f3f46;
+  --foam: #f8fafc;
+  --foam-deep: #e4e4e7;
   --kelp: #15803d;
-  --kelp-soft: #22a06b;
+  --kelp-soft: #22c55e;
   --signal: #dc2626;
   --signal-soft: #fca5a5;
-  --chart-ink: #134e4a;
-  --muted: #5f7471;
+  --chart-ink: #18181b;
+  --muted: #71717a;
   --surface: #ffffff;
-  --waterline: linear-gradient(90deg, #0f766e 0%, #15803d 100%);
+  --waterline: linear-gradient(90deg, #18181b 0%, #3f3f46 100%);
 
   --font-display: 'Lexend', system-ui, sans-serif;
   --font-ui: 'Figtree', system-ui, sans-serif;
@@ -22,26 +23,52 @@
   --foreground: var(--chart-ink);
   --input-text: var(--chart-ink);
   --input-bg: #ffffff;
-  --input-border: #c5d8d4;
-  --input-focus: var(--lagoon-800);
+  --input-border: #d4d4d8;
+  --input-focus: var(--lagoon-950);
 
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
-  --shadow-sm: 0 1px 2px rgba(11, 61, 58, 0.06);
-  --shadow-md: 0 4px 14px rgba(11, 61, 58, 0.1);
+  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.06);
+  --shadow-md: 0 4px 14px rgba(24, 24, 27, 0.08);
 }
 
 html {
   color-scheme: light;
 }
 
+html.dark,
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --foam: #09090b;
+  --foam-deep: #27272a;
+  --chart-ink: #fafafa;
+  --muted: #a1a1aa;
+  --surface: #18181b;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --input-text: #fafafa;
+  --input-bg: #27272a;
+  --input-border: #3f3f46;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+html.dark body,
+html[data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(255, 255, 255, 0.04), transparent 55%),
+    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(255, 255, 255, 0.03), transparent 50%),
+    var(--background);
+  color: var(--foreground);
+}
+
 body {
   background:
-    radial-gradient(ellipse 80% 50% at 0% -10%, rgba(15, 118, 110, 0.08), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(21, 128, 61, 0.06), transparent 50%),
+    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(24, 24, 27, 0.04), transparent 55%),
+    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(63, 63, 70, 0.04), transparent 50%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
@@ -69,9 +96,9 @@ body {
 
 .page-card {
   background: var(--surface);
-  border: 1px solid var(--foam-deep);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(215, 232, 228, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(11, 61, 58, 0.06);
 }
 
 .page-card-sm {
@@ -108,18 +135,19 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--lagoon-800);
+  padding: 0.75rem 1.25rem;
+  min-height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--lagoon-950);
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 200ms ease, opacity 200ms ease;
 }
 
 .btn-primary:hover {
-  background: var(--lagoon-950);
+  background: var(--lagoon-800);
 }
 
 .btn-primary:disabled {
@@ -132,12 +160,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  min-height: 3rem;
+  border-radius: 0.75rem;
   background: var(--surface);
   color: var(--lagoon-800);
-  border: 1px solid var(--lagoon-800);
-  font-size: 0.875rem;
+  border: 1px solid var(--foam-deep);
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 200ms ease, color 200ms ease;
@@ -181,7 +210,7 @@ body {
 .input-field:focus {
   outline: none;
   border-color: var(--input-focus);
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+  box-shadow: 0 0 0 2px rgba(24, 24, 27, 0.2);
 }
 
 .table-shell {

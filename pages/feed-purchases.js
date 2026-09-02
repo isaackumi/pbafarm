@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Plus,
   Edit,
   Trash,
@@ -25,6 +23,8 @@ import {
   ChevronUp
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { feedTypeService } from '../lib/feedTypeService'
 import { feedService } from '../lib/feedService'
@@ -536,28 +536,31 @@ function FeedPurchases() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
 
   return (
-    <div className="min-h-screen bg-foam font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">Feed Purchases</h1>
-          </div>
-
+    <Layout title="Feed Purchases">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Feed', href: '/feed-management/overview' },
+          { label: 'Purchases' },
+        ]}
+        description="Record and analyze feed purchases, stock alerts, and spend."
+        related={[
+          { label: 'Feed types', href: '/feed-types' },
+          { label: 'Feed suppliers', href: '/feed-suppliers' },
+          { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Issue feed', href: '/feed-issue' },
+        ]}
+        actions={
           <button
             onClick={handleAddPurchase}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <Plus className="w-4 h-4 mr-2" />
             Record Purchase
           </button>
-        </div>
+        }
+      />
 
         {/* Time Range Selector */}
         <div className="flex justify-end space-x-2 mb-6">
@@ -961,7 +964,6 @@ function FeedPurchases() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Add Purchase Modal */}
       {showAddModal && (
@@ -1264,6 +1266,6 @@ function FeedPurchases() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 } 

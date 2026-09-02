@@ -19,6 +19,7 @@ import type * as harvest from "../harvest.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_authz from "../lib/authz.js";
+import type * as lib_farmRules from "../lib/farmRules.js";
 import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as notifications from "../notifications.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   inventory: typeof inventory;
   "lib/authz": typeof lib_authz;
+  "lib/farmRules": typeof lib_farmRules;
   "lib/feedLedger": typeof lib_feedLedger;
   "lib/tenancy": typeof lib_tenancy;
   notifications: typeof notifications;

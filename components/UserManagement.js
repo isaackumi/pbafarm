@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import userService from '../lib/userService'
 import { useAuth } from '../contexts/AuthContext'
+import { Button, Field, Input, Select, FormCard } from './ui'
 
 const ROLES = [
   { value: 'user', label: 'User' },
@@ -14,6 +15,8 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [savingId, setSavingId] = useState(null)
+  const [invite, setInvite] = useState({ email: '', name: '', role: 'user' })
+  const [inviting, setInviting] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -49,29 +52,87 @@ const UserManagement = () => {
     }
   }
 
+  const handleInvite = async (e) => {
+    e.preventDefault()
+    setInviting(true)
+    setError('')
+    try {
+      const { data, error: inviteError } = await userService.inviteUser(invite)
+      if (inviteError) throw inviteError
+      setInvite({ email: '', name: '', role: 'user' })
+      await loadUsers()
+      if (data?.status === 'pending_signup') {
+        setError('')
+        alert(data.message)
+      }
+    } catch (err) {
+      setError(err.message || 'Invite failed')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const toggleActive = async (user) => {
+    const id = user._id || user.id
+    try {
+      setSavingId(id)
+      if (user.active === false) {
+        await userService.reactivateUser(id)
+      } else {
+        await userService.deactivateUser(id)
+      }
+      await loadUsers()
+    } catch (err) {
+      setError(err.message || 'Failed to update user')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   if (loading) {
     return <div className="p-4 text-chart-ink">Loading users…</div>
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-chart-ink">User Management</h2>
-          <p className="text-sm text-muted mt-1">
-            Roles: user (ops), admin (company), super_admin (platform).
-            New accounts sign up themselves; admins assign roles here.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <FormCard title="Invite user" subtitle="Existing accounts are assigned immediately. New emails must sign up to join.">
+        <form onSubmit={handleInvite} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <Field label="Email" required>
+            <Input
+              type="email"
+              required
+              value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+            />
+          </Field>
+          <Field label="Name">
+            <Input
+              value={invite.name}
+              onChange={(e) => setInvite({ ...invite, name: e.target.value })}
+            />
+          </Field>
+          <Field label="Role">
+            <Select
+              value={invite.role}
+              onChange={(e) => setInvite({ ...invite, role: e.target.value })}
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </Field>
+          <Button type="submit" disabled={inviting}>
+            {inviting ? 'Inviting…' : 'Invite'}
+          </Button>
+        </form>
+      </FormCard>
 
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 text-red-800 px-4 py-3 text-sm">
+        <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
-      <div className="page-card border border-gray-100">
+      <div className="page-card border border-zinc-200/90 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-foam">
@@ -79,43 +140,65 @@ const UserManagement = () => {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Name</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Email</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Role</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
                     No users found for this company.
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
-                  <tr key={user._id || user.id} className="border-t border-gray-100">
-                    <td className="px-4 py-3">{user.name || '—'}</td>
-                    <td className="px-4 py-3 font-mono text-sm">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={user.role || 'user'}
-                        disabled={
-                          savingId === (user._id || user.id) ||
-                          (user._id || user.id) === (me?._id || me?.id)
-                        }
-                        onChange={(e) =>
-                          handleRoleChange(user._id || user.id, e.target.value)
-                        }
-                        className="border border-input-border rounded-md px-3 py-1.5 text-sm focus:ring-lagoon-800 focus:border-lagoon-800"
-                      >
-                        {ROLES.filter((r) =>
-                          r.value !== 'super_admin' || hasRole?.('super_admin'),
-                        ).map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))
+                users.map((user) => {
+                  const id = user._id || user.id
+                  const isMe = id === (me?._id || me?.id)
+                  return (
+                    <tr key={id} className="border-t border-zinc-100">
+                      <td className="px-4 py-3">{user.name || '—'}</td>
+                      <td className="px-4 py-3 font-data text-sm">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={user.role || 'user'}
+                          disabled={savingId === id || isMe}
+                          onChange={(e) => handleRoleChange(id, e.target.value)}
+                          className="border border-zinc-200 rounded-xl px-3 py-1.5 text-sm bg-white"
+                        >
+                          {ROLES.filter(
+                            (r) =>
+                              r.value !== 'super_admin' || hasRole?.('super_admin'),
+                          ).map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {user.active === false ? (
+                          <span className="text-signal font-medium">Inactive</span>
+                        ) : (
+                          <span className="text-kelp font-medium">Active</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isMe && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            disabled={savingId === id}
+                            onClick={() => toggleActive(user)}
+                          >
+                            {user.active === false ? 'Reactivate' : 'Deactivate'}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

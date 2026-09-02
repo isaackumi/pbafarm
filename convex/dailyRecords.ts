@@ -3,6 +3,11 @@ import { query, mutation } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
+import {
+  mergeSettings,
+  dailyMortalityPct,
+  cumulativeMortalityPct,
+} from './lib/farmRules'
 
 function toClient(r: any) {
   return {
@@ -191,6 +196,50 @@ export const create = mutation({
         currentCount: Math.max(0, cage.currentCount - args.mortality),
         updatedAt: Date.now(),
       })
+    }
+
+    // Mortality threshold alerts
+    if (args.mortality > 0 && user.companyId) {
+      const company = await ctx.db.get(user.companyId)
+      const rules = mergeSettings(company?.settings)
+      const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
+      const nextCount =
+        cage.currentCount != null
+          ? Math.max(0, cage.currentCount - args.mortality)
+          : cage.currentCount
+      const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
+      const alerts: string[] = []
+      if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
+        alerts.push(
+          `Daily mortality ${dailyPct.toFixed(2)}% on cage ${cage.name} (threshold ${rules.farmRules.dailyMortalityAlertPct}%)`,
+        )
+      }
+      if (cumPct >= rules.farmRules.cumulativeMortalityAlertPct) {
+        alerts.push(
+          `Cumulative mortality ${cumPct.toFixed(1)}% on cage ${cage.name} (threshold ${rules.farmRules.cumulativeMortalityAlertPct}%)`,
+        )
+      }
+      if (alerts.length) {
+        const admins = (
+          await ctx.db.query('users').collect()
+        ).filter(
+          (u) =>
+            u.companyId === user.companyId &&
+            (u.role === 'admin' || u.role === 'super_admin') &&
+            u.active !== false,
+        )
+        for (const admin of admins) {
+          await ctx.db.insert('notifications', {
+            userId: admin._id,
+            title: 'Mortality alert',
+            message: alerts.join(' · '),
+            type: 'warning',
+            read: false,
+            link: '/daily-entry',
+            companyId: user.companyId,
+          })
+        }
+      }
     }
 
     await deductDailyFeed(ctx, user, {

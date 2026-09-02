@@ -2,26 +2,175 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import {
+  mergeSettings,
+  validateSettingsForPublish,
+  DEFAULT_SETTINGS,
+} from './lib/farmRules'
 
-function toClient(c: any) {
+async function logoUrl(ctx: any, storageId?: any) {
+  if (!storageId) return null
+  try {
+    return await ctx.storage.getUrl(storageId)
+  } catch {
+    return null
+  }
+}
+
+function toClient(c: any, logo_url: string | null = null) {
+  const settings = mergeSettings(c.settings)
   return {
     id: c._id,
     _id: c._id,
     name: c.name,
     code: c.code,
+    abbreviation: c.abbreviation,
     address: c.address,
     contact_email: c.contactEmail,
+    contact_phone: c.contactPhone,
+    logo_storage_id: c.logoStorageId,
+    logo_url,
     submitted_by_user_id: c.submittedByUserId,
     status: c.status,
     rejection_reason: c.rejectionReason,
     settings: {
-      ai_assistant_enabled: c.settings?.aiAssistantEnabled === true,
+      ai_assistant_enabled: settings.aiAssistantEnabled,
+      branding: settings.branding,
+      farm_rules: settings.farmRules,
+      stocking_rules: settings.stockingRules,
+      updated_at: settings.updatedAt,
     },
     created_at: c.createdAt,
     approved_at: c.approvedAt,
     approved_by: c.approvedBy,
   }
 }
+
+function requireCompanyAdmin(user: any, companyId: string) {
+  if (user.role === 'super_admin') return
+  if (user.companyId !== companyId || user.role !== 'admin') {
+    throw new Error('Access denied')
+  }
+}
+
+function profileFromDraft(draft: any) {
+  return {
+    name: draft?.name,
+    abbreviation: draft?.abbreviation,
+    address: draft?.address,
+    contactEmail: draft?.contactEmail ?? draft?.contact_email,
+    contactPhone: draft?.contactPhone ?? draft?.contact_phone,
+    logoStorageId: draft?.logoStorageId ?? draft?.logo_storage_id,
+  }
+}
+
+function settingsFromDraft(draft: any, existingAi?: boolean) {
+  const branding = draft?.branding || draft?.settings?.branding || {}
+  const farmRules = draft?.farmRules || draft?.farm_rules || draft?.settings?.farmRules || {}
+  const stockingRules =
+    draft?.stockingRules ||
+    draft?.stocking_rules ||
+    draft?.settings?.stockingRules ||
+    {}
+  const ai =
+    draft?.aiAssistantEnabled ??
+    draft?.ai_assistant_enabled ??
+    draft?.settings?.aiAssistantEnabled ??
+    existingAi ??
+    false
+
+  return {
+    aiAssistantEnabled: ai === true,
+    branding: {
+      displayName: branding.displayName || branding.display_name,
+      accentHex: branding.accentHex || branding.accent_hex || DEFAULT_SETTINGS.branding.accentHex,
+      themeMode: branding.themeMode || branding.theme_mode || DEFAULT_SETTINGS.branding.themeMode,
+    },
+    farmRules: {
+      targetHarvestAbwG: numOr(
+        farmRules.targetHarvestAbwG ?? farmRules.target_harvest_abw_g,
+        DEFAULT_SETTINGS.farmRules.targetHarvestAbwG,
+      ),
+      harvestDocMinDays: numOr(
+        farmRules.harvestDocMinDays ?? farmRules.harvest_doc_min_days,
+        DEFAULT_SETTINGS.farmRules.harvestDocMinDays,
+      ),
+      harvestDocMaxDays: numOr(
+        farmRules.harvestDocMaxDays ?? farmRules.harvest_doc_max_days,
+        DEFAULT_SETTINGS.farmRules.harvestDocMaxDays,
+      ),
+      maxDensityFishPerM3: numOr(
+        farmRules.maxDensityFishPerM3 ?? farmRules.max_density_fish_per_m3,
+        DEFAULT_SETTINGS.farmRules.maxDensityFishPerM3,
+      ),
+      dailyMortalityAlertPct: numOr(
+        farmRules.dailyMortalityAlertPct ?? farmRules.daily_mortality_alert_pct,
+        DEFAULT_SETTINGS.farmRules.dailyMortalityAlertPct,
+      ),
+      cumulativeMortalityAlertPct: numOr(
+        farmRules.cumulativeMortalityAlertPct ??
+          farmRules.cumulative_mortality_alert_pct,
+        DEFAULT_SETTINGS.farmRules.cumulativeMortalityAlertPct,
+      ),
+      targetFcr: numOr(
+        farmRules.targetFcr ?? farmRules.target_fcr,
+        DEFAULT_SETTINGS.farmRules.targetFcr,
+      ),
+      maxFcrAlert: numOr(
+        farmRules.maxFcrAlert ?? farmRules.max_fcr_alert,
+        DEFAULT_SETTINGS.farmRules.maxFcrAlert,
+      ),
+    },
+    stockingRules: {
+      requireApprovalForStocking:
+        stockingRules.requireApprovalForStocking ??
+        stockingRules.require_approval_for_stocking ??
+        true,
+      requireApprovalForTopup:
+        stockingRules.requireApprovalForTopup ??
+        stockingRules.require_approval_for_topup ??
+        true,
+      enforceCageCapacity:
+        stockingRules.enforceCageCapacity ??
+        stockingRules.enforce_cage_capacity ??
+        true,
+      minInitialAbwG: numOr(
+        stockingRules.minInitialAbwG ?? stockingRules.min_initial_abw_g,
+        DEFAULT_SETTINGS.stockingRules.minInitialAbwG,
+      ),
+      maxInitialAbwG: numOr(
+        stockingRules.maxInitialAbwG ?? stockingRules.max_initial_abw_g,
+        DEFAULT_SETTINGS.stockingRules.maxInitialAbwG,
+      ),
+      allowStockOnlyEmptyStatuses:
+        stockingRules.allowStockOnlyEmptyStatuses ||
+        stockingRules.allow_stock_only_empty_statuses ||
+        DEFAULT_SETTINGS.stockingRules.allowStockOnlyEmptyStatuses,
+    },
+  }
+}
+
+function numOr(v: any, fallback: number) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function draftPayloadFromCompany(c: any) {
+  const settings = mergeSettings(c.settings)
+  return {
+    name: c.name,
+    abbreviation: c.abbreviation || '',
+    address: c.address || '',
+    contactEmail: c.contactEmail || '',
+    contactPhone: c.contactPhone || '',
+    logoStorageId: c.logoStorageId,
+    aiAssistantEnabled: settings.aiAssistantEnabled,
+    branding: settings.branding,
+    farmRules: settings.farmRules,
+    stockingRules: settings.stockingRules,
+  }
+}
+
 
 export const register = mutation({
   args: {
@@ -89,7 +238,7 @@ export const listPending = query({
       .withIndex('by_status', (q) => q.eq('status', 'pending'))
       .collect()
     
-    return pending.map(toClient).sort((a, b) => b.created_at - a.created_at)
+    return pending.map((c) => toClient(c)).sort((a, b) => b.created_at - a.created_at)
   },
 })
 
@@ -203,7 +352,7 @@ export const list = query({
       companies = companies.filter((c) => c.status === args.status)
     }
     
-    return companies.map(toClient).sort((a, b) => b.created_at - a.created_at)
+    return companies.map((c) => toClient(c)).sort((a, b) => b.created_at - a.created_at)
   },
 })
 
@@ -219,7 +368,7 @@ export const get = query({
       throw new Error('Access denied')
     }
     
-    return toClient(company)
+    return toClient(company, await logoUrl(ctx, company.logoStorageId))
   },
 })
 
@@ -300,10 +449,257 @@ export const getCurrentCompany = query({
   handler: async (ctx) => {
     const user = await requireUser(ctx)
     if (!user.companyId) return null
-    
+
     const company = await ctx.db.get(user.companyId)
     if (!company) return null
-    
-    return toClient(company)
+
+    return toClient(company, await logoUrl(ctx, company.logoStorageId))
+  },
+})
+
+export const getEffectiveSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    if (!user.companyId) {
+      return { settings: mergeSettings(undefined), company: null }
+    }
+    const company = await ctx.db.get(user.companyId)
+    if (!company) {
+      return { settings: mergeSettings(undefined), company: null }
+    }
+    return {
+      settings: mergeSettings(company.settings),
+      company: toClient(company, await logoUrl(ctx, company.logoStorageId)),
+    }
+  },
+})
+
+export const getSettingsDraft = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) {
+      return {
+        missingCompany: true,
+        draft: null,
+        published: null,
+        hasDraft: false,
+        draftUpdatedAt: null,
+        logoUrl: null,
+        companyId: null,
+      }
+    }
+    const company = await ctx.db.get(user.companyId)
+    if (!company) {
+      return {
+        missingCompany: true,
+        draft: null,
+        published: null,
+        hasDraft: false,
+        draftUpdatedAt: null,
+        logoUrl: null,
+        companyId: null,
+      }
+    }
+
+    const existing = await ctx.db
+      .query('companySettingsDrafts')
+      .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+      .first()
+
+    const published = draftPayloadFromCompany(company)
+    const draft = existing?.draft || published
+    return {
+      missingCompany: false,
+      draft,
+      published,
+      hasDraft: !!existing,
+      draftUpdatedAt: existing?.updatedAt,
+      logoUrl: await logoUrl(ctx, draft.logoStorageId || company.logoStorageId),
+      companyId: company._id,
+    }
+  },
+})
+
+export const saveSettingsDraft = mutation({
+  args: { draft: v.any() },
+  handler: async (ctx, { draft }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked to your account')
+    requireCompanyAdmin(user, user.companyId)
+
+    const now = Date.now()
+    const existing = await ctx.db
+      .query('companySettingsDrafts')
+      .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+      .first()
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        draft,
+        updatedAt: now,
+        updatedBy: user._id,
+      })
+    } else {
+      await ctx.db.insert('companySettingsDrafts', {
+        companyId: user.companyId,
+        draft,
+        updatedAt: now,
+        updatedBy: user._id,
+      })
+    }
+
+    await logAudit(ctx, {
+      actionType: 'settings_draft',
+      tableName: 'companies',
+      recordId: user.companyId,
+      newValues: { savedAt: now },
+    })
+    return { ok: true }
+  },
+})
+
+export const publishSettings = mutation({
+  args: { draft: v.optional(v.any()) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked to your account')
+    requireCompanyAdmin(user, user.companyId)
+
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+
+    let draft = args.draft
+    if (!draft) {
+      const row = await ctx.db
+        .query('companySettingsDrafts')
+        .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+        .first()
+      draft = row?.draft || draftPayloadFromCompany(company)
+    }
+
+    const nextSettings = {
+      ...settingsFromDraft(draft, company.settings?.aiAssistantEnabled),
+      updatedAt: Date.now(),
+      updatedBy: user._id,
+    }
+    validateSettingsForPublish(nextSettings)
+
+    const profile = profileFromDraft(draft)
+    const patch: Record<string, any> = {
+      settings: nextSettings,
+    }
+    if (profile.name) patch.name = String(profile.name).trim()
+    if (profile.abbreviation !== undefined) {
+      patch.abbreviation = String(profile.abbreviation || '').trim()
+    }
+    if (profile.address !== undefined) patch.address = profile.address
+    if (profile.contactEmail !== undefined) patch.contactEmail = profile.contactEmail
+    if (profile.contactPhone !== undefined) patch.contactPhone = profile.contactPhone
+    if (profile.logoStorageId !== undefined) {
+      patch.logoStorageId = profile.logoStorageId || undefined
+    }
+
+    await ctx.db.patch(user.companyId, patch)
+
+    const published = draftPayloadFromCompany({
+      ...company,
+      ...patch,
+      settings: nextSettings,
+    })
+
+    const existing = await ctx.db
+      .query('companySettingsDrafts')
+      .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
+      .first()
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        draft: published,
+        updatedAt: Date.now(),
+        updatedBy: user._id,
+      })
+    } else {
+      await ctx.db.insert('companySettingsDrafts', {
+        companyId: user.companyId,
+        draft: published,
+        updatedAt: Date.now(),
+        updatedBy: user._id,
+      })
+    }
+
+    await logAudit(ctx, {
+      actionType: 'settings_publish',
+      tableName: 'companies',
+      recordId: user.companyId,
+      previousValues: company.settings,
+      newValues: nextSettings,
+    })
+
+    return {
+      company: toClient(
+        { ...company, ...patch },
+        await logoUrl(ctx, patch.logoStorageId ?? company.logoStorageId),
+      ),
+    }
+  },
+})
+
+export const generateLogoUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked')
+    return await ctx.storage.generateUploadUrl()
+  },
+})
+
+export const setLogo = mutation({
+  args: { storageId: v.id('_storage') },
+  handler: async (ctx, { storageId }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked')
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+    if (company.logoStorageId) {
+      try {
+        await ctx.storage.delete(company.logoStorageId)
+      } catch {
+        /* ignore */
+      }
+    }
+    await ctx.db.patch(user.companyId, { logoStorageId: storageId })
+    await logAudit(ctx, {
+      actionType: 'update',
+      tableName: 'companies',
+      recordId: user.companyId,
+      newValues: { logoStorageId: storageId },
+    })
+    return { logoUrl: await logoUrl(ctx, storageId) }
+  },
+})
+
+export const clearLogo = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked')
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+    if (company.logoStorageId) {
+      try {
+        await ctx.storage.delete(company.logoStorageId)
+      } catch {
+        /* ignore */
+      }
+    }
+    await ctx.db.patch(user.companyId, { logoStorageId: undefined })
+    return { ok: true }
   },
 })

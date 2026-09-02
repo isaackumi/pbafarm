@@ -1,9 +1,24 @@
-// Stub component for StockingForm
 import React, { useState, useEffect } from 'react'
+import { useQuery } from 'convex/react'
+import { useRouter } from 'next/router'
 import { cageService } from '../lib/cageService'
 import stockingService from '../lib/stockingService'
+import { api } from '../convex/_generated/api'
+import {
+  Button,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from './ui'
 
 const StockingForm = ({ onSuccess, onCancel }) => {
+  const router = useRouter()
+  const settingsData = useQuery(api.companies.getEffectiveSettings)
+  const rules = settingsData?.settings
   const [cages, setCages] = useState([])
   const [formData, setFormData] = useState({
     cageId: '',
@@ -14,9 +29,11 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     sourceLocation: '',
     transferSupervisor: '',
     samplingSupervisor: '',
-    notes: ''
+    notes: '',
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [warn, setWarn] = useState([])
 
   useEffect(() => {
     loadCages()
@@ -26,46 +43,41 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     try {
       const response = await cageService.getAllCages()
       if (response.data) {
-        // Filter for available cages (empty, fallow, harvested)
-        const availableCages = response.data.filter(cage => 
-          ['empty', 'fallow', 'harvested'].includes(cage.status)
+        const availableCages = response.data.filter((cage) =>
+          ['empty', 'fallow', 'harvested'].includes(cage.status),
         )
         setCages(availableCages)
       }
-    } catch (error) {
-      console.error('Error loading cages:', error)
+    } catch (err) {
+      console.error('Error loading cages:', err)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+    setError('')
     try {
       setLoading(true)
-      
       const stockingData = {
         cage_id: formData.cageId,
         batch_number: formData.batchNumber,
         stocking_date: formData.stockingDate,
-        fish_count: parseInt(formData.fishCount),
+        fish_count: parseInt(formData.fishCount, 10),
         initial_abw: parseFloat(formData.averageBodyWeight),
         source_location: formData.sourceLocation,
         transfer_supervisor: formData.transferSupervisor,
         sampling_supervisor: formData.samplingSupervisor,
-        notes: formData.notes
+        notes: formData.notes,
       }
 
       const response = await stockingService.createStocking(stockingData)
-      
-      if (response.error) {
-        throw response.error
-      }
+      if (response.error) throw response.error
 
-      alert('Stocking record created successfully!')
       if (onSuccess) onSuccess()
-    } catch (error) {
-      console.error('Error creating stocking record:', error)
-      alert('Error creating stocking record: ' + error.message)
+      else router.push('/stocking-management')
+    } catch (err) {
+      console.error('Error creating stocking record:', err)
+      setError(err.message || 'Error creating stocking record')
     } finally {
       setLoading(false)
     }
@@ -73,153 +85,181 @@ const StockingForm = ({ onSuccess, onCancel }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: value
-    })
+    setFormData({ ...formData, [name]: value })
   }
 
+  useEffect(() => {
+    if (!rules) return
+    const notes = []
+    const count = Number(formData.fishCount)
+    const abw = Number(formData.averageBodyWeight)
+    const cage = cages.find((c) => (c._id || c.id) === formData.cageId)
+    const sr = rules.stockingRules
+    const fr = rules.farmRules
+    if (abw && (abw < sr.minInitialAbwG || abw > sr.maxInitialAbwG)) {
+      notes.push(`ABW should be ${sr.minInitialAbwG}–${sr.maxInitialAbwG}g`)
+    }
+    if (cage?.capacity && count > cage.capacity && sr.enforceCageCapacity) {
+      notes.push(`Exceeds cage capacity (${cage.capacity})`)
+    }
+    if (cage?.size && count > 0 && count / cage.size > fr.maxDensityFishPerM3) {
+      notes.push(`Exceeds max density ${fr.maxDensityFishPerM3} fish/m³`)
+    }
+    if (sr.requireApprovalForStocking) {
+      notes.push('This stocking will require admin approval')
+    } else {
+      notes.push('This stocking will activate the cage immediately')
+    }
+    setWarn(notes)
+  }, [formData, cages, rules])
+
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-6">New Stocking Entry</h2>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Select Cage</label>
-          <select
-            name="cageId"
-            value={formData.cageId}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            required
+    <FormCard
+      title="Stocking details"
+      subtitle="Fill in batch and fish metrics for an available cage."
+    >
+      {error && (
+        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+          {error}
+        </div>
+      )}
+      {warn.length > 0 && (
+        <div className="mb-5 text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-1">
+          {warn.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <FormSection title="Cage & batch">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Cage" htmlFor="cageId" required className="md:col-span-2">
+              <Select
+                id="cageId"
+                name="cageId"
+                value={formData.cageId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Choose available cage…</option>
+                {cages.map((cage) => (
+                  <option key={cage._id || cage.id} value={cage._id || cage.id}>
+                    {cage.name} — {cage.status}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Batch number" htmlFor="batchNumber" required>
+              <Input
+                id="batchNumber"
+                type="text"
+                name="batchNumber"
+                value={formData.batchNumber}
+                onChange={handleChange}
+                required
+              />
+            </Field>
+            <Field label="Stocking date" htmlFor="stockingDate" required>
+              <Input
+                id="stockingDate"
+                type="date"
+                name="stockingDate"
+                value={formData.stockingDate}
+                onChange={handleChange}
+                required
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Fish metrics">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Fish count" htmlFor="fishCount" required>
+              <Input
+                id="fishCount"
+                type="number"
+                name="fishCount"
+                value={formData.fishCount}
+                onChange={handleChange}
+                min="1"
+                required
+                className="font-data"
+              />
+            </Field>
+            <Field label="Average body weight (g)" htmlFor="averageBodyWeight" required>
+              <Input
+                id="averageBodyWeight"
+                type="number"
+                name="averageBodyWeight"
+                step="0.1"
+                value={formData.averageBodyWeight}
+                onChange={handleChange}
+                min="0"
+                required
+                className="font-data"
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Source & supervisors">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Source location" htmlFor="sourceLocation" className="md:col-span-2">
+              <Input
+                id="sourceLocation"
+                type="text"
+                name="sourceLocation"
+                value={formData.sourceLocation}
+                onChange={handleChange}
+              />
+            </Field>
+            <Field label="Transfer supervisor" htmlFor="transferSupervisor">
+              <Input
+                id="transferSupervisor"
+                type="text"
+                name="transferSupervisor"
+                value={formData.transferSupervisor}
+                onChange={handleChange}
+              />
+            </Field>
+            <Field label="Sampling supervisor" htmlFor="samplingSupervisor">
+              <Input
+                id="samplingSupervisor"
+                type="text"
+                name="samplingSupervisor"
+                value={formData.samplingSupervisor}
+                onChange={handleChange}
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Notes">
+          <Field label="Optional notes" htmlFor="notes">
+            <Textarea
+              id="notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+            />
+          </Field>
+        </FormSection>
+
+        <FormActions>
+          <Button type="submit" disabled={loading} size="lg">
+            {loading ? 'Creating…' : 'Create stocking'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel || (() => router.push('/cages'))}
           >
-            <option value="">Choose available cage...</option>
-            {cages.map(cage => (
-              <option key={cage._id} value={cage._id}>
-                {cage.name} - {cage.status}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Batch Number</label>
-            <input
-              type="text"
-              name="batchNumber"
-              value={formData.batchNumber}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Stocking Date</label>
-            <input
-              type="date"
-              name="stockingDate"
-              value={formData.stockingDate}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Fish Count</label>
-            <input
-              type="number"
-              name="fishCount"
-              value={formData.fishCount}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              min="1"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Average Body Weight (g)</label>
-            <input
-              type="number"
-              name="averageBodyWeight"
-              step="0.1"
-              value={formData.averageBodyWeight}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              min="0"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Source Location</label>
-          <input
-            type="text"
-            name="sourceLocation"
-            value={formData.sourceLocation}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Transfer Supervisor</label>
-            <input
-              type="text"
-              name="transferSupervisor"
-              value={formData.transferSupervisor}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Sampling Supervisor</label>
-            <input
-              type="text"
-              name="samplingSupervisor"
-              value={formData.samplingSupervisor}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Notes</label>
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            rows="3"
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-lagoon-800 text-white px-4 py-2 rounded hover:bg-lagoon-800 disabled:opacity-50"
-          >
-            {loading ? 'Creating...' : 'Create Stocking Record'}
-          </button>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-foam-deep/400 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+            Cancel
+          </Button>
+        </FormActions>
       </form>
-    </div>
+    </FormCard>
   )
 }
 

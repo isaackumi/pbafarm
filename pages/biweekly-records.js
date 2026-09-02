@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import { biweeklyRecordService, cageService } from '../lib/databaseService'
 import {
   Search,
@@ -14,7 +15,6 @@ import {
   Eye,
   Download,
   Plus,
-  ArrowLeft,
   RefreshCw,
   BarChart3,
   FileText,
@@ -141,15 +141,11 @@ export default function BiweeklyRecords() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <Layout>
-          <div className="min-h-screen bg-foam">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <div className="page-card p-8">
-                <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-lagoon-800 border-t-transparent"></div>
-                  <p className="mt-4 text-lg text-muted">Loading biweekly records...</p>
-                </div>
-              </div>
+        <Layout title="Bi-weekly Records">
+          <div className="page-card p-8">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-lagoon-800 border-t-transparent"></div>
+              <p className="mt-4 text-lg text-muted">Loading biweekly records...</p>
             </div>
           </div>
         </Layout>
@@ -159,41 +155,35 @@ export default function BiweeklyRecords() {
 
   return (
     <ProtectedRoute>
-      <Layout>
-        <div className="min-h-screen bg-foam">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Header */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Link href="/dashboard">
-                    <button className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4">
-                      <ArrowLeft className="w-4 h-4 mr-1" />
-                      Back to Dashboard
-                    </button>
-                  </Link>
-                  <h1 className="text-3xl font-bold text-chart-ink">Bi-weekly Records</h1>
-                </div>
-                <div className="flex space-x-3">
-                  <Link href="/biweekly-entry">
-                    <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950">
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Record
-                    </button>
-                  </Link>
-                  <button
-                    onClick={exportData}
-                    className="inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </button>
-                </div>
-              </div>
-              <p className="text-muted">
-                View and manage all bi-weekly sampling records across your cages
-              </p>
-            </div>
+      <Layout title="Bi-weekly Records">
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Bi-weekly records' },
+          ]}
+          description="View and manage all bi-weekly sampling records across your cages."
+          related={[
+            { label: 'New record', href: '/biweekly-entry' },
+            { label: 'Daily entry', href: '/daily-entry' },
+            { label: 'Harvest sampling', href: '/harvest-sampling' },
+          ]}
+          actions={
+            <>
+              <Button href="/biweekly-entry" size="sm">
+                <Plus className="w-4 h-4" />
+                New Record
+              </Button>
+              <button
+                onClick={exportData}
+                className="inline-flex items-center px-3 py-2 border border-foam-deep text-sm font-semibold rounded-xl text-chart-ink bg-white hover:bg-foam min-h-10"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </button>
+            </>
+          }
+        />
 
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
@@ -482,8 +472,6 @@ export default function BiweeklyRecords() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
         {/* Details Modal */}
         {showDetails && selectedRecord && (

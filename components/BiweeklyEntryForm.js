@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { useToast } from './Toast'
 import { biweeklyRecordService } from '../lib/databaseService'
-import { 
-  Plus, 
-  Trash, 
-  Save, 
-  AlertCircle,
-  Calculator,
-  RefreshCw,
-  X,
-  CheckCircle
-} from 'lucide-react'
+import { Plus, Trash, Save, AlertCircle, RefreshCw, CheckCircle } from 'lucide-react'
+import {
+  Button,
+  FormCard,
+  FormActions,
+  FormSection,
+  Field,
+  Input,
+} from './ui'
+
+function generateBatchCode() {
+  const date = new Date()
+  const year = date.getFullYear().toString().slice(-2)
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, '0')
+  return `BW${year}${month}${day}${random}`
+}
 
 const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const { showToast } = useToast()
   const [samplings, setSamplings] = useState([
-    { id: 1, fish_count: '', total_weight: '', abw: 0 }
+    { id: 1, fish_count: '', total_weight: '', abw: 0 },
   ])
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [batchCode, setBatchCode] = useState(generateBatchCode())
@@ -23,30 +33,15 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
-  // Generate batch code on component mount
   useEffect(() => {
     setBatchCode(generateBatchCode())
   }, [])
 
-  // Clear success message after 3 seconds
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
-      return () => clearTimeout(timer)
-    }
+    if (!success) return
+    const timer = setTimeout(() => setSuccess(false), 3000)
+    return () => clearTimeout(timer)
   }, [success])
-
-  function generateBatchCode() {
-    const date = new Date()
-    const year = date.getFullYear().toString().slice(-2)
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const day = date.getDate().toString().padStart(2, '0')
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-    const code = `BW${year}${month}${day}${random}`
-    return code
-  }
 
   const addSampling = () => {
     setSamplings([
@@ -55,8 +50,8 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         id: samplings.length + 1,
         fish_count: '',
         total_weight: '',
-        abw: 0
-      }
+        abw: 0,
+      },
     ])
   }
 
@@ -71,20 +66,38 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
     newSamplings[index] = {
       ...newSamplings[index],
       [field]: value,
-      abw: field === 'total_weight' && newSamplings[index].fish_count
-        ? (Number(value) / Number(newSamplings[index].fish_count)).toFixed(2)
-        : field === 'fish_count' && newSamplings[index].total_weight
-          ? (Number(newSamplings[index].total_weight) / Number(value)).toFixed(2)
-          : newSamplings[index].abw
+      abw:
+        field === 'total_weight' && newSamplings[index].fish_count
+          ? (Number(value) / Number(newSamplings[index].fish_count)).toFixed(2)
+          : field === 'fish_count' && newSamplings[index].total_weight
+            ? (
+                Number(newSamplings[index].total_weight) / Number(value)
+              ).toFixed(2)
+            : newSamplings[index].abw,
     }
     setSamplings(newSamplings)
   }
 
   const calculateAverageABW = () => {
-    const totalWeight = samplings.reduce((sum, s) => sum + Number(s.total_weight || 0), 0)
-    const totalFish = samplings.reduce((sum, s) => sum + Number(s.fish_count || 0), 0)
+    const totalWeight = samplings.reduce(
+      (sum, s) => sum + Number(s.total_weight || 0),
+      0,
+    )
+    const totalFish = samplings.reduce(
+      (sum, s) => sum + Number(s.fish_count || 0),
+      0,
+    )
     return totalFish > 0 ? totalWeight / totalFish : 0
   }
+
+  const totalFish = samplings.reduce(
+    (sum, s) => sum + Number(s.fish_count || 0),
+    0,
+  )
+  const totalWeight = samplings.reduce(
+    (sum, s) => sum + Number(s.total_weight || 0),
+    0,
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -92,15 +105,10 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
     setLoading(true)
 
     try {
-      // Validate form data
-      const totalFish = samplings.reduce((sum, s) => sum + Number(s.fish_count || 0), 0)
-      const totalWeight = samplings.reduce((sum, s) => sum + Number(s.total_weight || 0), 0)
-
       if (totalFish === 0 || totalWeight === 0) {
         throw new Error('Please enter valid fish count and weight data')
       }
 
-      // Create the biweekly record (samples included in one Convex mutation)
       const recordData = {
         cage_id: cage.id || cage._id,
         date,
@@ -118,28 +126,23 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
           })),
       }
 
-      const { data: record, error: recordError } = await biweeklyRecordService.createBiweeklyRecord(recordData)
+      const { data: record, error: recordError } =
+        await biweeklyRecordService.createBiweeklyRecord(recordData)
 
-      if (recordError) {
-        throw recordError
-      }
+      if (recordError) throw recordError
 
       showToast('success', 'Biweekly record saved')
       setSuccess(true)
-
-      // Reset form
       setDate(new Date().toISOString().split('T')[0])
       setBatchCode(generateBatchCode())
       setSamplings([{ id: 1, fish_count: '', total_weight: '', abw: 0 }])
 
       if (onComplete) {
-        setTimeout(() => {
-          onComplete(record)
-        }, 500)
+        setTimeout(() => onComplete(record), 500)
       }
-    } catch (error) {
-      console.error('Failed to save bi-weekly records:', error)
-      setError(error.message || 'Failed to save bi-weekly records')
+    } catch (err) {
+      console.error('Failed to save bi-weekly records:', err)
+      setError(err.message || 'Failed to save bi-weekly records')
       showToast('error', 'Failed to save bi-weekly records')
     } finally {
       setLoading(false)
@@ -147,216 +150,178 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   }
 
   return (
-    <div className="page-card p-6">
-      <div className="mb-6">
-        <h2 className="text-lg font-medium text-chart-ink">
-          Bi-weekly Records Entry - {cage.name}
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Enter sampling data for {cage.name}
-        </p>
-      </div>
-
+    <FormCard
+      title={`Bi-weekly entry — ${cage.name}`}
+      subtitle="Add one or more samples. ABW calculates from weight ÷ fish count."
+    >
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-            </div>
-          </div>
+        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3 flex items-start gap-2">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
-
       {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircle className="h-5 w-5 text-green-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">Success</h3>
-              <p className="mt-1 text-sm text-green-700">
-                Bi-weekly records saved successfully
-              </p>
-            </div>
-          </div>
+        <div className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3 flex items-start gap-2">
+          <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <span>Bi-weekly records saved successfully</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Summary Section - Moved to top */}
-        <div className="bg-gradient-to-r from-foam to-foam-deep p-8 rounded-xl border-2 border-foam-deep shadow-sm">
-          <h3 className="text-xl font-semibold text-lagoon-950 mb-6">Summary</h3>
-          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
-              <dt className="text-base font-medium text-lagoon-800 mb-2">Total Fish Count</dt>
-              <dd className="text-3xl font-bold text-lagoon-950">
-                {samplings.reduce((sum, s) => sum + Number(s.fish_count || 0), 0).toLocaleString()}
-              </dd>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
-              <dt className="text-base font-medium text-lagoon-800 mb-2">Total Weight</dt>
-              <dd className="text-3xl font-bold text-lagoon-950">
-                {samplings.reduce((sum, s) => sum + Number(s.total_weight || 0), 0).toFixed(2)}g
-              </dd>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-foam-deep">
-              <dt className="text-base font-medium text-lagoon-800 mb-2">Average ABW</dt>
-              <dd className="text-3xl font-bold text-lagoon-950">
-                {calculateAverageABW().toFixed(2)}g
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Batch Code Display */}
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-foam-deep shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-base font-medium text-chart-ink mb-2">Batch Code</label>
-              <p className="text-3xl font-mono font-bold text-lagoon-800 tracking-wider bg-white px-4 py-3 rounded-lg border-2 border-foam-deep shadow-sm">
-                {batchCode}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setBatchCode(generateBatchCode())}
-              className="inline-flex items-center px-4 py-3 border-2 border-input-border shadow-sm text-base font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 transition-colors"
-            >
-              <RefreshCw className="w-5 h-5 mr-2" />
-              Generate New Code
-            </button>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-foam-deep bg-foam p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Total fish
+            </p>
+            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+              {totalFish.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Total weight
+            </p>
+            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+              {totalWeight.toFixed(2)}g
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Average ABW
+            </p>
+            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+              {calculateAverageABW().toFixed(2)}g
+            </p>
           </div>
         </div>
 
-        {/* Date Field */}
-        <div>
-          <label htmlFor="date" className="block text-base font-medium text-chart-ink mb-2">
-            Sampling Date
-          </label>
-          <input
-            type="date"
-            id="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base"
-            required
-          />
-        </div>
+        <FormSection title="Session">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Sampling date" htmlFor="date" required>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Batch code" htmlFor="batchCode">
+              <div className="flex gap-2">
+                <Input
+                  id="batchCode"
+                  type="text"
+                  value={batchCode}
+                  readOnly
+                  className="font-data bg-foam"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setBatchCode(generateBatchCode())}
+                  aria-label="Generate new batch code"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            </Field>
+          </div>
+        </FormSection>
 
-        {/* Sampling Data */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-chart-ink">Sampling Data</h3>
-            <button
-              type="button"
-              onClick={addSampling}
-              className="inline-flex items-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 transition-colors"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Sampling
-            </button>
+        <FormSection title="Samples">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted">
+              Each sample needs fish count and total weight.
+            </p>
+            <Button type="button" variant="secondary" size="sm" onClick={addSampling}>
+              <Plus className="w-4 h-4" />
+              Add sample
+            </Button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {samplings.map((sampling, index) => (
-              <div key={sampling.id} className="bg-white p-6 rounded-lg border-2 border-foam-deep shadow-sm hover:border-lagoon-800/40 transition-colors">
+              <div
+                key={sampling.id}
+                className="rounded-xl border border-foam-deep bg-white p-4 sm:p-5"
+              >
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-chart-ink">Sampling {index + 1}</h4>
+                  <h4 className="text-sm font-bold text-chart-ink">
+                    Sample {index + 1}
+                  </h4>
                   {samplings.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeSampling(index)}
-                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Remove this sampling"
+                      className="text-signal hover:opacity-80 p-1.5 rounded-lg hover:bg-signal/10"
+                      title="Remove sample"
                     >
-                      <Trash className="w-5 h-5" />
+                      <Trash className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                  <div>
-                    <label className="block text-base font-medium text-chart-ink mb-2">
-                      Fish Count
-                    </label>
-                    <input
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Field label="Fish count" htmlFor={`fish-${index}`}>
+                    <Input
+                      id={`fish-${index}`}
                       type="number"
                       value={sampling.fish_count}
-                      onChange={(e) => updateSampling(index, 'fish_count', e.target.value)}
-                      className="block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base placeholder-gray-400"
-                      placeholder="Enter fish count"
+                      onChange={(e) =>
+                        updateSampling(index, 'fish_count', e.target.value)
+                      }
                       min="0"
+                      className="font-data"
+                      placeholder="Count"
                     />
-                    <p className="mt-1 text-sm text-muted">Number of fish in this sample</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-medium text-chart-ink mb-2">
-                      Total Weight (g)
-                    </label>
-                    <input
+                  </Field>
+                  <Field label="Total weight (g)" htmlFor={`weight-${index}`}>
+                    <Input
+                      id={`weight-${index}`}
                       type="number"
                       value={sampling.total_weight}
-                      onChange={(e) => updateSampling(index, 'total_weight', e.target.value)}
-                      className="block w-full px-4 py-3 border-2 border-input-border rounded-lg shadow-sm focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-base placeholder-gray-400"
-                      placeholder="0.00"
+                      onChange={(e) =>
+                        updateSampling(index, 'total_weight', e.target.value)
+                      }
                       min="0"
                       step="0.01"
+                      className="font-data"
+                      placeholder="0.00"
                     />
-                    <p className="mt-1 text-sm text-muted">Total weight of the sample in grams</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-medium text-chart-ink mb-2">
-                      Average ABW (g)
-                    </label>
-                    <input
+                  </Field>
+                  <Field
+                    label="ABW (g)"
+                    htmlFor={`abw-${index}`}
+                    hint="Calculated"
+                  >
+                    <Input
+                      id={`abw-${index}`}
                       type="number"
                       value={sampling.abw}
-                      className="block w-full px-4 py-3 border-2 border-foam-deep rounded-lg shadow-sm bg-foam-deep/40 text-base text-chart-ink font-mono"
-                      placeholder="0.00"
                       readOnly
+                      className="font-data bg-foam"
                     />
-                    <p className="mt-1 text-sm text-muted">Calculated automatically</p>
-                  </div>
+                  </Field>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </FormSection>
 
-        {/* Submit Button */}
-        <div className="flex justify-end pt-6 border-t border-foam-deep">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white transition-colors ${
-              loading
-                ? 'bg-lagoon-700 cursor-not-allowed'
-                : 'bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800'
-            }`}
-          >
+        <FormActions>
+          <Button type="submit" disabled={loading} size="lg">
             {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                Saving...
-              </>
+              'Saving…'
             ) : (
               <>
-                <Save className="w-5 h-5 mr-3" />
-                Save Bi-weekly Record
+                <Save className="w-4 h-4" />
+                Save bi-weekly record
               </>
             )}
-          </button>
-        </div>
+          </Button>
+        </FormActions>
       </form>
-    </div>
+    </FormCard>
   )
 }
 
-export default BiweeklyEntryForm 
+export default BiweeklyEntryForm

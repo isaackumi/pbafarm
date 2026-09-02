@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
-  ArrowLeft,
   Search,
   Filter,
   ChevronDown,
@@ -12,6 +11,8 @@ import {
   Plus,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Layout from '../components/Layout'
+import { PageHeader, Button } from '../components/ui'
 import { stockingService } from '../lib/databaseService'
 
 export default function StockingManagementPage() {
@@ -260,35 +261,28 @@ function StockingManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-foam font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Link
-                href="/cages"
-                className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to Cages
-              </Link>
-              <h1 className="text-2xl font-bold text-chart-ink">
-                Stocking Management
-              </h1>
-            </div>
-
-            <Link href="/stocking">
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
-                <Plus className="w-4 h-4 mr-2" />
-                New Stocking
-              </button>
-            </Link>
-          </div>
-          <p className="text-muted">
-            View and manage fish stockings. Each stocking represents a batch of
-            fish added to a cage.
-          </p>
-        </div>
+    <Layout title="Stocking Management">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Cages', href: '/cages' },
+          { label: 'Stocking management' },
+        ]}
+        description="View and manage fish stockings. Each stocking is a batch added to a cage."
+        related={[
+          { label: 'New stocking', href: '/stocking' },
+          { label: 'Top-up', href: '/topup' },
+          { label: 'Approvals', href: '/approvals' },
+          { label: 'Cages', href: '/cages' },
+        ]}
+        actions={
+          <Button href="/stocking" size="sm">
+            <Plus className="w-4 h-4" />
+            New Stocking
+          </Button>
+        }
+      />
 
         {/* Filters and Actions */}
         <div className="page-card mb-6">
@@ -547,7 +541,6 @@ function StockingManagement() {
             )}
           </div>
         </div>
-      </div>
 
       {/* Edit Stocking Modal */}
       {showEditModal && editingStocking && (
@@ -680,6 +673,6 @@ function StockingManagement() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

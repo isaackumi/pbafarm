@@ -26,6 +26,7 @@ const schema = defineSchema({
       v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')),
     ),
     companyId: v.optional(v.id('companies')),
+    active: v.optional(v.boolean()),
   }).index('email', ['email']),
 
   companies: defineTable({
@@ -33,6 +34,9 @@ const schema = defineSchema({
     code: v.string(),
     address: v.optional(v.string()),
     contactEmail: v.optional(v.string()),
+    contactPhone: v.optional(v.string()),
+    abbreviation: v.optional(v.string()),
+    logoStorageId: v.optional(v.id('_storage')),
     submittedByUserId: v.optional(v.id('users')),
     status: v.union(
       v.literal('pending'),
@@ -43,12 +47,66 @@ const schema = defineSchema({
     settings: v.optional(
       v.object({
         aiAssistantEnabled: v.boolean(),
+        branding: v.optional(
+          v.object({
+            displayName: v.optional(v.string()),
+            accentHex: v.optional(v.string()),
+            themeMode: v.optional(
+              v.union(
+                v.literal('light'),
+                v.literal('dark'),
+                v.literal('system'),
+              ),
+            ),
+          }),
+        ),
+        farmRules: v.optional(
+          v.object({
+            targetHarvestAbwG: v.optional(v.number()),
+            harvestDocMinDays: v.optional(v.number()),
+            harvestDocMaxDays: v.optional(v.number()),
+            maxDensityFishPerM3: v.optional(v.number()),
+            dailyMortalityAlertPct: v.optional(v.number()),
+            cumulativeMortalityAlertPct: v.optional(v.number()),
+            targetFcr: v.optional(v.number()),
+            maxFcrAlert: v.optional(v.number()),
+          }),
+        ),
+        stockingRules: v.optional(
+          v.object({
+            requireApprovalForStocking: v.boolean(),
+            requireApprovalForTopup: v.boolean(),
+            enforceCageCapacity: v.boolean(),
+            minInitialAbwG: v.optional(v.number()),
+            maxInitialAbwG: v.optional(v.number()),
+            allowStockOnlyEmptyStatuses: v.optional(v.array(v.string())),
+          }),
+        ),
+        updatedAt: v.optional(v.number()),
+        updatedBy: v.optional(v.id('users')),
       }),
     ),
     createdAt: v.number(),
     approvedAt: v.optional(v.number()),
     approvedBy: v.optional(v.id('users')),
   }).index('by_code', ['code']).index('by_status', ['status']),
+
+  companySettingsDrafts: defineTable({
+    companyId: v.id('companies'),
+    draft: v.any(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  }).index('by_company', ['companyId']),
+
+  userInvites: defineTable({
+    email: v.string(),
+    role: v.union(v.literal('user'), v.literal('admin')),
+    companyId: v.id('companies'),
+    invitedBy: v.optional(v.id('users')),
+    createdAt: v.number(),
+  })
+    .index('by_email', ['email'])
+    .index('by_company', ['companyId']),
 
   cages: defineTable({
     name: v.string(),

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import { PageHeader, Button } from '../../components/ui'
 import { cageService } from '../../lib/cageService'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
 
@@ -51,11 +51,19 @@ function CageDetails() {
   if (!cage) {
     return (
       <Layout title="Cage">
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cages', href: '/cages' },
+            { label: 'Not found' },
+          ]}
+        />
         <div className="text-center py-8">
-          <h1 className="page-title text-signal">Cage not found</h1>
-          <button type="button" onClick={() => router.push('/cages')} className="btn-primary mt-4">
-            Back to Cages
-          </button>
+          <p className="text-signal font-semibold">Cage not found</p>
+          <Button href="/cages" className="mt-4">
+            Back to cages
+          </Button>
         </div>
       </Layout>
     )
@@ -66,23 +74,34 @@ function CageDetails() {
 
   return (
     <Layout title={`Cage ${cage.name}`}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-wrap justify-between items-center gap-3">
-          <div>
-            <h1 className="page-title">Cage {cage.name}</h1>
-            <p className="page-subtitle font-data">{cage.code || cageId}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/daily-entry?cage=${cageId}`} className="btn-primary">
-              Daily entry
-            </Link>
-            <Link href={`/biweekly-entry?cage=${cageId}`} className="btn-secondary">
-              Biweekly entry
-            </Link>
-            <button type="button" onClick={() => router.push('/cages')} className="btn-secondary">
+      <div className="max-w-5xl space-y-6">
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cages', href: '/cages' },
+            { label: cage.name },
+          ]}
+          description={`Code ${cage.code || cageId} · Status ${status}`}
+          related={[
+            { label: 'Daily entry', href: `/daily-entry?cage=${cageId}` },
+            { label: 'Bi-weekly entry', href: `/biweekly-entry?cage=${cageId}` },
+            { label: 'Stocking', href: '/stocking' },
+          ]}
+          actions={
+            <Button href="/cages" variant="secondary" size="sm">
               All cages
-            </button>
-          </div>
+            </Button>
+          }
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <Button href={`/daily-entry?cage=${cageId}`} size="sm">
+            Daily entry
+          </Button>
+          <Button href={`/biweekly-entry?cage=${cageId}`} variant="secondary" size="sm">
+            Bi-weekly entry
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

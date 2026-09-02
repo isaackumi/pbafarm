@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import CageManagementSidebar from '../../components/CageManagementSidebar'
+import { PageHeader, Button } from '../../components/ui'
 import { fetchCages } from '../../store/slices/cagesSlice'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   BarChart,
   Bar,
@@ -33,41 +34,48 @@ export default function CageAnalyticsPage() {
 
 function CageAnalytics() {
   const dispatch = useDispatch()
-  const { cages, loading: reduxLoading, error: reduxError } = useSelector((state) => state.cages)
+  const { user, loading: authLoading } = useAuth()
+  const { cages, loading: reduxLoading, error: reduxError } = useSelector(
+    (state) => state.cages,
+  )
   const [analyticsData, setAnalyticsData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (authLoading || !user) return
+
     const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Fetch cages if not already loaded
-        if (!cages || cages.length === 0) {
-          await dispatch(fetchCages({ page: 1, pageSize: 100 }))
+        let cageList = cages
+        if (!cageList || cageList.length === 0) {
+          const result = await dispatch(fetchCages({ page: 1, pageSize: 100 }))
+          cageList = result?.payload?.data || cageList || []
         }
 
-        // Fetch analytics data
-        const { data, error: analyticsError } = await analyticsService.getCageSummaryStats()
-        
-        if (analyticsError) {
-          console.error('Analytics service error:', analyticsError)
-          // Don't throw error, use fallback data
+        // Derive stats locally from already-authenticated cage data when possible
+        if (cageList?.length) {
           setAnalyticsData({
-            totalCages: cages?.length || 0,
-            activeCages: cages?.filter(c => c.status === 'active').length || 0,
-            harvestedCages: cages?.filter(c => c.status === 'harvested').length || 0,
-            maintenanceCages: cages?.filter(c => c.status === 'maintenance').length || 0,
-            fallowCages: cages?.filter(c => c.status === 'fallow').length || 0,
-            emptyCages: cages?.filter(c => c.status === 'empty').length || 0,
+            totalCages: cageList.length,
+            activeCages: cageList.filter((c) => c.status === 'active').length,
+            harvestedCages: cageList.filter((c) => c.status === 'harvested')
+              .length,
+            maintenanceCages: cageList.filter((c) => c.status === 'maintenance')
+              .length,
+            fallowCages: cageList.filter((c) => c.status === 'fallow').length,
+            emptyCages: cageList.filter((c) => c.status === 'empty').length,
           })
         } else {
+          const { data, error: analyticsError } =
+            await analyticsService.getCageSummaryStats()
+          if (analyticsError) throw analyticsError
           setAnalyticsData(data)
         }
-      } catch (error) {
-        console.error('Error loading analytics:', error)
+      } catch (err) {
+        console.error('Error loading analytics:', err)
         setError('Failed to load analytics data. Please try again.')
       } finally {
         setLoading(false)
@@ -75,7 +83,9 @@ function CageAnalytics() {
     }
 
     loadData()
-  }, [dispatch, cages])
+    // Intentionally omit cages from deps to avoid refetch loops; we load once auth is ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, user, authLoading])
 
   // Calculate analytics from cages data if analytics service fails
   const analytics = React.useMemo(() => {
@@ -165,7 +175,7 @@ function CageAnalytics() {
 
   if (loading || reduxLoading) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
@@ -178,7 +188,7 @@ function CageAnalytics() {
 
   if (error || reduxError) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
@@ -202,7 +212,7 @@ function CageAnalytics() {
 
   if (!cages || cages.length === 0) {
     return (
-      <div className="min-h-screen bg-foam p-6">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center text-muted">No cage data available.</div>
         </div>
@@ -211,10 +221,28 @@ function CageAnalytics() {
   }
 
   return (
-    <div className="min-h-screen bg-foam p-6">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-chart-ink mb-6">Cage Analytics</h1>
-        
+        <PageHeader
+          showTitle={false}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cages', href: '/cages' },
+            { label: 'Analytics' },
+          ]}
+          description="Status mix, biomass, and harvest readiness across your cages."
+          related={[
+            { label: 'All cages', href: '/cages' },
+            { label: 'Growth', href: '/cages/analytics/growth' },
+            { label: 'Harvest analytics', href: '/cages/analytics/harvest' },
+          ]}
+          actions={
+            <Button href="/cages" variant="secondary" size="sm">
+              Back to cages
+            </Button>
+          }
+        />
+
         {/* Summary Cards */}
         {analyticsData && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -277,7 +305,11 @@ function CageAnalytics() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {analytics.statusDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -304,7 +336,11 @@ function CageAnalytics() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent, value }) =>
+                      value > 0
+                        ? `${name} ${(percent * 100).toFixed(0)}%`
+                        : null
+                    }
                   >
                     {analytics.sizeDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

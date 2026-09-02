@@ -1,9 +1,10 @@
 // pages/admin/companies.js
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Plus, ArrowLeft, Edit, Trash, Eye } from 'lucide-react'
+import { Plus, Edit, Trash, Eye } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import Layout from '../../components/Layout'
+import { PageHeader, Button } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import { useAuth } from '../../contexts/AuthContext'
 import companyService from '../../lib/companyService'
@@ -122,29 +123,26 @@ function CompaniesList() {
   }
 
   return (
-    <div className="min-h-screen bg-foam font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link
-              href="/dashboard"
-              className="text-lagoon-800 hover:text-lagoon-950 flex items-center mr-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-2xl font-bold text-chart-ink">
-              Company Management
-            </h1>
-          </div>
-
-          <Link href="/admin/companies/create">
-            <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Company
-            </button>
-          </Link>
-        </div>
+    <Layout title="Company Management">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Admin' },
+          { label: 'Companies' },
+        ]}
+        description="Create and manage companies on the platform."
+        related={[
+          { label: 'Company registrations', href: '/admin/company-registrations' },
+          { label: 'Users', href: '/users' },
+        ]}
+        actions={
+          <Button href="/admin/companies/create" size="sm">
+            <Plus className="w-4 h-4" />
+            Add Company
+          </Button>
+        }
+      />
 
         {/* Main Content */}
         <div className="page-card overflow-hidden">
@@ -159,7 +157,6 @@ function CompaniesList() {
             emptyMessage="No companies found."
           />
         </div>
-      </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
@@ -194,6 +191,6 @@ function CompaniesList() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

@@ -72,7 +72,11 @@ export default function AiAssistant() {
         : loaded
     setSettings(next)
     if (next !== loaded) saveLlmSettings(next)
+  }, [])
 
+  // Only hit /api/llm/status when the panel is opened (avoids polling on every page).
+  useEffect(() => {
+    if (!open || envStatus) return
     fetchLlmEnvStatus().then((status) => {
       if (!status) return
       setEnvStatus(status)
@@ -89,7 +93,7 @@ export default function AiAssistant() {
         })
       }
     })
-  }, [])
+  }, [open, envStatus])
 
   useEffect(() => {
     if (!showKey) return
