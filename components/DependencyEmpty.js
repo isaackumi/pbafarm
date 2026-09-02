@@ -55,7 +55,11 @@ export default function DependencyEmpty({
           {primaryIsCreate && (
             <button
               type="button"
-              onClick={() => setOpenKind(createKind)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpenKind(createKind)
+              }}
               className="inline-flex items-center gap-1 font-semibold text-lagoon-800 hover:text-lagoon-950 underline-offset-2 hover:underline"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -65,6 +69,7 @@ export default function DependencyEmpty({
           {!primaryIsCreate && href && linkLabel && (
             <Link
               href={href}
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 font-semibold text-lagoon-800 hover:text-lagoon-950 underline-offset-2 hover:underline"
             >
               {linkLabel}
@@ -75,7 +80,11 @@ export default function DependencyEmpty({
           {secondaryIsCreate && (
             <button
               type="button"
-              onClick={() => setOpenKind(secondaryCreateKind)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpenKind(secondaryCreateKind)
+              }}
               className="inline-flex items-center gap-1 font-medium text-chart-ink/80 hover:text-chart-ink underline-offset-2 hover:underline"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -85,6 +94,7 @@ export default function DependencyEmpty({
           {!secondaryIsCreate && secondaryHref && secondaryLabel && (
             <Link
               href={secondaryHref}
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 font-medium text-chart-ink/80 hover:text-chart-ink underline-offset-2 hover:underline"
             >
               {secondaryLabel}

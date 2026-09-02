@@ -68,6 +68,9 @@ function emptyDraft() {
       lowStockMultiplier: 1,
       requireBatchOnPurchase: false,
     },
+    locale: {
+      currency: 'GHS',
+    },
   }
 }
 

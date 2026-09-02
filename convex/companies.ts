@@ -75,6 +75,7 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
     {}
   const feedRules =
     draft?.feedRules || draft?.feed_rules || draft?.settings?.feedRules || {}
+  const locale = draft?.locale || draft?.settings?.locale || {}
   const ai =
     draft?.aiAssistantEnabled ??
     draft?.ai_assistant_enabled ??
@@ -181,6 +182,11 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         feedRules.require_batch_on_purchase ??
         false,
     },
+    locale: {
+      currency: (['GHS', 'USD', 'EUR'].includes(locale.currency)
+        ? locale.currency
+        : DEFAULT_SETTINGS.locale.currency) as 'GHS' | 'USD' | 'EUR',
+    },
   }
 }
 
@@ -203,6 +209,7 @@ function draftPayloadFromCompany(c: any) {
     farmRules: settings.farmRules,
     stockingRules: settings.stockingRules,
     feedRules: settings.feedRules,
+    locale: settings.locale,
   }
 }
 

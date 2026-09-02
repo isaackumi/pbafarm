@@ -27,6 +27,8 @@ const schema = defineSchema({
     ),
     companyId: v.optional(v.id('companies')),
     active: v.optional(v.boolean()),
+    /** Set when an admin creates the account with a temporary password. */
+    mustChangePassword: v.optional(v.boolean()),
   }).index('email', ['email']),
 
   companies: defineTable({
@@ -92,6 +94,13 @@ const schema = defineSchema({
             trackLots: v.optional(v.boolean()),
             lowStockMultiplier: v.optional(v.number()),
             requireBatchOnPurchase: v.optional(v.boolean()),
+          }),
+        ),
+        locale: v.optional(
+          v.object({
+            currency: v.optional(
+              v.union(v.literal('GHS'), v.literal('USD'), v.literal('EUR')),
+            ),
           }),
         ),
         updatedAt: v.optional(v.number()),

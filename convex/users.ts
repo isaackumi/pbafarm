@@ -1,5 +1,5 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
-import { query, mutation } from './_generated/server'
+import { query, mutation, internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 import { requireUser, requireRole } from './lib/authz'
 import { logAudit } from './lib/tenancy'
@@ -16,6 +16,7 @@ function toClient(u: any) {
     phone: u.phone,
     image: u.image,
     active: u.active !== false,
+    mustChangePassword: u.mustChangePassword === true,
   }
 }
 
@@ -54,6 +55,18 @@ export const list = query({
       users = users.filter((u) => u.companyId && u.companyId === me.companyId)
     }
     return users.map(toClient).sort((a, b) => (a.email || '').localeCompare(b.email || ''))
+  },
+})
+
+/** Internal: email collision check for admin create-with-password. */
+export const emailExists = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const existing = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', email.trim().toLowerCase()))
+      .unique()
+    return existing ? { exists: true, userId: existing._id } : { exists: false }
   },
 })
 
@@ -246,5 +259,58 @@ export const promoteToSuperAdmin = mutation({
     }
     await ctx.db.patch(user._id, { role: 'super_admin' })
     return user._id
+  },
+})
+
+/** After admin createAccount: attach company, role, and force password change. */
+export const finalizeCreatedUser = internalMutation({
+  args: {
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    role: v.union(v.literal('user'), v.literal('admin')),
+    name: v.optional(v.string()),
+    actorId: v.id('users'),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) throw new Error('Created user not found')
+    await ctx.db.patch(args.userId, {
+      companyId: args.companyId,
+      role: args.role,
+      active: true,
+      mustChangePassword: true,
+      ...(args.name ? { name: args.name } : {}),
+    })
+    // Clear any pending invite for this email
+    if (user.email) {
+      const invite = await ctx.db
+        .query('userInvites')
+        .withIndex('by_email', (q) => q.eq('email', user.email!.toLowerCase()))
+        .first()
+      if (invite) await ctx.db.delete(invite._id)
+    }
+    await logAudit(ctx, {
+      actionType: 'create',
+      tableName: 'users',
+      recordId: args.userId,
+      newValues: {
+        email: user.email,
+        role: args.role,
+        companyId: args.companyId,
+        createdBy: args.actorId,
+        mustChangePassword: true,
+      },
+    })
+    return args.userId
+  },
+})
+
+export const clearMustChangePassword = internalMutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId)
+    if (!user) throw new Error('User not found')
+    await ctx.db.patch(userId, { mustChangePassword: false })
+    return userId
   },
 })

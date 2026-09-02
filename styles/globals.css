@@ -2,19 +2,20 @@
 @import './theme.css';
 
 @theme {
-  --color-lagoon-700: #3f3f46;
-  --color-lagoon-800: #27272a;
-  --color-lagoon-950: #18181b;
-  --color-foam: #f8fafc;
-  --color-foam-deep: #e4e4e7;
-  --color-kelp: #15803d;
-  --color-kelp-soft: #22c55e;
-  --color-signal: #dc2626;
-  --color-signal-soft: #fca5a5;
-  --color-chart-ink: #18181b;
-  --color-muted: #71717a;
-  --color-surface: #ffffff;
-  --color-input-border: #d4d4d8;
+  /* Semantic tokens track light/dark via theme.css variables */
+  --color-lagoon-700: var(--lagoon-700);
+  --color-lagoon-800: var(--lagoon-800);
+  --color-lagoon-950: var(--lagoon-950);
+  --color-foam: var(--foam);
+  --color-foam-deep: var(--foam-deep);
+  --color-kelp: var(--kelp);
+  --color-kelp-soft: var(--kelp-soft);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-chart-ink: var(--chart-ink);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-input-border: var(--input-border);
 
   --color-primary-50: #fafafa;
   --color-primary-100: #f4f4f5;
@@ -69,7 +70,8 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #a1a1aa;
+  color: var(--muted);
+  opacity: 0.75;
 }
 
 input:focus,
@@ -78,7 +80,7 @@ textarea:focus {
   border-color: var(--input-focus);
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(24, 24, 27, 0.2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus) 28%, transparent);
 }
 
 button:not(:disabled),

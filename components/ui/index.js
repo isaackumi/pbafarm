@@ -9,9 +9,9 @@ const SIZE = {
 
 const VARIANT = {
   primary:
-    'bg-lagoon-950 text-white hover:bg-lagoon-800 shadow-sm border border-transparent',
+    'bg-lagoon-950 text-white hover:bg-lagoon-800 shadow-sm border border-transparent dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa]',
   secondary:
-    'bg-white text-chart-ink border border-foam-deep hover:bg-foam hover:border-lagoon-700',
+    'bg-surface text-chart-ink border border-foam-deep hover:bg-foam hover:border-lagoon-700',
   ghost: 'bg-transparent text-chart-ink hover:bg-foam border border-transparent',
   danger: 'bg-signal text-white hover:opacity-90 border border-transparent',
 }
@@ -45,7 +45,7 @@ export function Button({
 export function Card({ children, className = '', padding = true }) {
   return (
     <div
-      className={`bg-white border border-zinc-200/90 rounded-2xl shadow-[0_1px_3px_rgba(24,24,27,0.06)] ${
+      className={`bg-surface text-chart-ink border border-foam-deep/90 rounded-2xl shadow-[0_1px_3px_rgba(24,24,27,0.06)] ${
         padding ? 'p-5 sm:p-6' : ''
       } ${className}`}
     >
@@ -155,7 +155,7 @@ export function TabBar({ tabs, active, onChange }) {
           onClick={() => onChange(tab.id)}
           className={`px-4 py-2.5 text-sm font-semibold rounded-lg min-h-11 transition-colors ${
             active === tab.id
-              ? 'bg-white text-chart-ink shadow-sm'
+              ? 'bg-surface text-chart-ink shadow-sm'
               : 'text-muted hover:text-chart-ink'
           }`}
         >
@@ -259,7 +259,7 @@ export function PageHeader({
 }
 
 const FIELD_CLASS =
-  'w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-[15px] text-chart-ink placeholder:text-zinc-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
+  'w-full rounded-xl border border-foam-deep bg-surface px-3.5 py-3 text-[15px] text-chart-ink placeholder:text-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
 
 export function Field({ label, htmlFor, hint, error, required, children, className = '' }) {
   return (
@@ -412,7 +412,7 @@ export function AppShellSkeleton() {
       </aside>
 
       <div className="ml-64 min-h-screen flex flex-col">
-        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-foam-deep px-5 sm:px-8 py-4">
+        <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-sm border-b border-foam-deep px-5 sm:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-8 w-48" />
             <div className="flex items-center gap-3">

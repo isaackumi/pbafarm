@@ -107,16 +107,14 @@ const CreateCageForm = () => {
       const cageData = {
         name: formData.name.trim(),
         code: formData.code,
-        location: formData.location ? formData.location.trim() : null,
-        size: formData.size ? parseFloat(formData.size) : null,
-        capacity: formData.capacity ? parseInt(formData.capacity, 10) : null,
-        dimensions: formData.dimensions ? formData.dimensions.trim() : null,
-        material: formData.material ? formData.material.trim() : null,
-        installation_date: formData.installation_date || null,
-        notes: formData.notes ? formData.notes.trim() : null,
+        location: formData.location ? formData.location.trim() : undefined,
+        size: formData.size ? parseFloat(formData.size) : undefined,
+        capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
+        dimensions: formData.dimensions ? formData.dimensions.trim() : undefined,
+        material: formData.material ? formData.material.trim() : undefined,
+        installation_date: formData.installation_date || undefined,
+        notes: formData.notes ? formData.notes.trim() : undefined,
         status: formData.status || 'empty',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       }
 
       const { data, error: createError } = await cageService.createCage(cageData)

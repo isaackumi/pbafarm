@@ -6,6 +6,8 @@
   border-radius: 1rem;
   box-shadow: 0 18px 40px rgba(15, 76, 92, 0.18);
   max-width: min(420px, calc(100vw - 2rem));
+  /* Arrow sits outside the box — never clip it */
+  overflow: visible !important;
 }
 
 .pbafarm-tour-popover .driver-popover-title {
@@ -61,6 +63,122 @@
   color: #64748b;
 }
 
+/*
+  Popover pointer arrow — Driver uses a CSS border triangle.
+  Force size + contrast so it stays visible on the dim overlay.
+*/
+.pbafarm-tour-popover .driver-popover-arrow {
+  content: '';
+  position: absolute;
+  border: 10px solid #ffffff !important;
+  display: block !important;
+  z-index: 1;
+}
+
+.pbafarm-tour-popover .driver-popover-arrow-side-over,
+.pbafarm-tour-popover .driver-popover-arrow-side-center,
+.pbafarm-tour-popover .driver-popover-arrow-none {
+  display: none !important;
+}
+
+/* Popover below the target → arrow on top edge, pointing up */
+.pbafarm-tour-popover .driver-popover-arrow-side-bottom {
+  bottom: 100% !important;
+  top: auto !important;
+  border-top-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: #ffffff !important;
+  filter: drop-shadow(0 -1px 0 rgba(15, 76, 92, 0.22));
+}
+
+/* Popover above the target → arrow on bottom edge, pointing down */
+.pbafarm-tour-popover .driver-popover-arrow-side-top {
+  top: 100% !important;
+  bottom: auto !important;
+  border-bottom-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-top-color: #ffffff !important;
+  filter: drop-shadow(0 1px 0 rgba(15, 76, 92, 0.22));
+}
+
+/* Popover to the right of target → arrow on left edge, pointing left */
+.pbafarm-tour-popover .driver-popover-arrow-side-right {
+  right: 100% !important;
+  left: auto !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: #ffffff !important;
+  filter: drop-shadow(-1px 0 0 rgba(15, 76, 92, 0.22));
+}
+
+/* Popover to the left of target → arrow on right edge, pointing right */
+.pbafarm-tour-popover .driver-popover-arrow-side-left {
+  left: 100% !important;
+  right: auto !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-right-color: transparent !important;
+  border-left-color: #ffffff !important;
+  filter: drop-shadow(1px 0 0 rgba(15, 76, 92, 0.22));
+}
+
 .driver-overlay {
   background: rgba(7, 46, 56, 0.55) !important;
+}
+
+.driver-active-element {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px;
+}
+
+/* Keep tour card light even when the app is in dark mode */
+html.dark .pbafarm-tour-popover.driver-popover,
+html[data-theme='dark'] .pbafarm-tour-popover.driver-popover {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-title,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-title {
+  color: #0b3d4a !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-description,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description {
+  color: #334155 !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-arrow-side-bottom,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-bottom {
+  border-top-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: #ffffff !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-arrow-side-top,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-top {
+  border-bottom-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-top-color: #ffffff !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-arrow-side-right,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-right {
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: #ffffff !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-arrow-side-left,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-left {
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-right-color: transparent !important;
+  border-left-color: #ffffff !important;
 }
