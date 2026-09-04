@@ -25,7 +25,9 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
+import FarmLocationSelect from '../components/FarmLocationSelect'
 import { useToast } from '../components/Toast'
+import { useLocation } from '../contexts/LocationContext'
 import { feedService } from '../lib/feedService'
 import { supplierService } from '../lib/supplierService'
 import { cageService } from '../lib/cageService'
@@ -56,6 +58,7 @@ export default function FeedPurchasesPage() {
 function FeedPurchases() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { activeLocationId } = useLocation()
 
   const [feedTypes, setFeedTypes] = useState([])
   const [purchases, setPurchases] = useState([])
@@ -73,6 +76,7 @@ function FeedPurchases() {
     batch_number: '',
     expiry_date: '',
     notes: '',
+    locationId: '',
   })
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [error, setError] = useState('')
@@ -533,6 +537,7 @@ function FeedPurchases() {
       batch_number: '',
       expiry_date: '',
       notes: '',
+      locationId: activeLocationId || '',
     })
     setError('')
     setSuccess('')
@@ -603,6 +608,7 @@ function FeedPurchases() {
         batch_number: formData.batch_number || undefined,
         expiry_date: formData.expiry_date || undefined,
         notes: formData.notes || undefined,
+        locationId: formData.locationId || activeLocationId || undefined,
       }
 
       const { error } = await feedService.createPurchase(purchaseData)
@@ -1249,6 +1255,22 @@ function FeedPurchases() {
                   onChange={handleChange}
                   className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-chart-ink mb-1">
+                  Farm location <span className="text-red-500">*</span>
+                </label>
+                <FarmLocationSelect
+                  name="locationId"
+                  value={formData.locationId}
+                  onChange={handleChange}
+                  required
+                  allowEmpty={false}
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Defaults to the location selected in the header
+                </p>
               </div>
 
               <div>

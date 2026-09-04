@@ -5,6 +5,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
+import FarmLocationSelect from './FarmLocationSelect'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
@@ -86,12 +87,13 @@ function cleanCageArgs(raw) {
 
 export function QuickCreateCageModal({ onClose, onCreated }) {
   const createCage = useMutation(api.cages.create)
-  const { locationArgs, activeLocation } = useLocation()
+  const { locationArgs, activeLocation, activeLocationId, locations } =
+    useLocation()
   const existingCages = useQuery(api.cages.list, locationArgs)
   const [form, setForm] = useState({
     name: '',
     code: '',
-    location: '',
+    locationId: '',
     size: '',
     capacity: '',
     dimensions: '',
@@ -110,14 +112,6 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
       prev.code ? prev : { ...prev, code: nextCageCode(existingCages) },
     )
   }, [existingCages])
-
-  useEffect(() => {
-    if (activeLocation?.name) {
-      setForm((prev) =>
-        prev.location ? prev : { ...prev, location: activeLocation.name },
-      )
-    }
-  }, [activeLocation])
 
   useEffect(() => {
     setNameError('')
@@ -142,12 +136,20 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
       if (!form.name.trim()) throw new Error('Cage name is required')
       if (nameError) throw new Error(nameError)
 
+      const locationId = form.locationId || activeLocationId
+      if (!locationId) {
+        throw new Error('Select a farm location (header switcher)')
+      }
+      const locName =
+        (locations || []).find((l) => (l.id || l._id) === locationId)?.name ||
+        activeLocation?.name
+
       const id = await createCage(
         cleanCageArgs({
           name: form.name.trim(),
           code: form.code || undefined,
-          location: form.location.trim() || undefined,
-          locationId: getActiveLocationId() || undefined,
+          location: locName || undefined,
+          locationId,
           size: form.size !== '' ? Number(form.size) : undefined,
           capacity: form.capacity !== '' ? Number(form.capacity) : undefined,
           dimensions: form.dimensions.trim() || undefined,
@@ -214,12 +216,19 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
               className={nameError ? 'border-signal' : ''}
             />
           </Field>
-          <Field label="Location" htmlFor="qc-cage-location">
-            <Input
+          <Field
+            label="Farm location"
+            htmlFor="qc-cage-location"
+            required
+            hint="Defaults to header location"
+          >
+            <FarmLocationSelect
               id="qc-cage-location"
-              value={form.location}
-              onChange={setField('location')}
-              placeholder="e.g. North Pond"
+              name="locationId"
+              value={form.locationId}
+              onChange={setField('locationId')}
+              required
+              allowEmpty={false}
             />
           </Field>
           <Field
@@ -707,11 +716,18 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               required
             />
           </Field>
-          <Field label="Source location" htmlFor="qc-st-source" className="sm:col-span-2">
-            <Input
+          <Field
+            label="Source location"
+            htmlFor="qc-st-source"
+            className="sm:col-span-2"
+            hint="Defaults to header location; where fish came from"
+          >
+            <FarmLocationSelect
               id="qc-st-source"
+              name="sourceLocation"
               value={form.sourceLocation}
               onChange={setField('sourceLocation')}
+              valueKind="name"
             />
           </Field>
           <Field
@@ -767,6 +783,7 @@ export function QuickCreatePurchaseModal({
   const createPurchase = useMutation(api.feed.createPurchase)
   const feedTypes = useQuery(api.feed.listFeedTypes)
   const suppliers = useQuery(api.feed.listSuppliers) || []
+  const { activeLocationId } = useLocation()
   const activeFeedTypes = (feedTypes || []).filter((t) => t.active !== false)
   const ready = feedTypes !== undefined
   const { pricePerKgLabel } = useCurrency()
@@ -781,6 +798,7 @@ export function QuickCreatePurchaseModal({
     batch_number: '',
     expiry_date: '',
     notes: '',
+    locationId: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -876,7 +894,7 @@ export function QuickCreatePurchaseModal({
       if (form.batch_number.trim()) args.batchNumber = form.batch_number.trim()
       if (form.expiry_date) args.expiryDate = form.expiry_date
       if (form.notes.trim()) args.notes = form.notes.trim()
-      const locId = getActiveLocationId()
+      const locId = form.locationId || getActiveLocationId() || activeLocationId
       if (locId) args.locationId = locId
 
       const id = await createPurchase(args)
@@ -1033,6 +1051,20 @@ export function QuickCreatePurchaseModal({
             type="date"
             value={form.expiry_date}
             onChange={setField('expiry_date')}
+          />
+        </Field>
+        <Field
+          label="Farm location"
+          htmlFor="qc-pu-loc"
+          hint="Defaults to header location"
+        >
+          <FarmLocationSelect
+            id="qc-pu-loc"
+            name="locationId"
+            value={form.locationId}
+            onChange={setField('locationId')}
+            required
+            allowEmpty={false}
           />
         </Field>
         <Field label="Notes" htmlFor="qc-pu-notes">

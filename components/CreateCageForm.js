@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { cageService } from '../lib/databaseService'
+import { useLocation } from '../contexts/LocationContext'
+import FarmLocationSelect from './FarmLocationSelect'
 import {
   Button,
   FormCard,
@@ -14,6 +16,8 @@ import {
 
 const CreateCageForm = () => {
   const router = useRouter()
+  const { activeLocationId, activeLocation, locationArgs, locations } =
+    useLocation()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -23,7 +27,7 @@ const CreateCageForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    location: '',
+    locationId: '',
     size: '',
     capacity: '',
     dimensions: '',
@@ -46,7 +50,7 @@ const CreateCageForm = () => {
     }
 
     fetchExistingCages()
-  }, [])
+  }, [locationArgs?.locationId])
 
   const generateCageCode = (cages) => {
     let maxCodeNumber = 0
@@ -79,6 +83,12 @@ const CreateCageForm = () => {
     return () => clearTimeout(timer)
   }, [formData.name, existingCages])
 
+  const selectedLocationName = useMemo(() => {
+    const id = formData.locationId || activeLocationId
+    const match = (locations || []).find((l) => (l.id || l._id) === id)
+    return match?.name || activeLocation?.name || ''
+  }, [formData.locationId, activeLocationId, locations, activeLocation])
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -95,6 +105,13 @@ const CreateCageForm = () => {
         throw new Error('Cage name is required')
       }
 
+      const locationId = formData.locationId || activeLocationId
+      if (!locationId) {
+        throw new Error(
+          'Select a farm location in the header (or create one under Farm Locations)',
+        )
+      }
+
       const nameExists = existingCages.some(
         (cage) => cage.name.toLowerCase() === formData.name.toLowerCase(),
       )
@@ -107,7 +124,8 @@ const CreateCageForm = () => {
       const cageData = {
         name: formData.name.trim(),
         code: formData.code,
-        location: formData.location ? formData.location.trim() : undefined,
+        locationId,
+        location: selectedLocationName || undefined,
         size: formData.size ? parseFloat(formData.size) : undefined,
         capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
         dimensions: formData.dimensions ? formData.dimensions.trim() : undefined,
@@ -124,7 +142,7 @@ const CreateCageForm = () => {
       setFormData({
         name: '',
         code: '',
-        location: '',
+        locationId: activeLocationId || '',
         size: '',
         capacity: '',
         dimensions: '',
@@ -197,14 +215,19 @@ const CreateCageForm = () => {
                 className={nameError ? 'border-signal' : ''}
               />
             </Field>
-            <Field label="Location" htmlFor="location">
-              <Input
-                id="location"
-                type="text"
-                name="location"
-                value={formData.location}
+            <Field
+              label="Farm location"
+              htmlFor="locationId"
+              required
+              hint="Defaults to the location selected in the header"
+            >
+              <FarmLocationSelect
+                id="locationId"
+                name="locationId"
+                value={formData.locationId}
                 onChange={handleChange}
-                placeholder="e.g., North Pond, Section A"
+                required
+                allowEmpty={false}
               />
             </Field>
             <Field label="Status" htmlFor="status">

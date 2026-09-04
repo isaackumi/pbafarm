@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
@@ -16,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
+import FarmLocationSelect from '../../components/FarmLocationSelect'
 
 export default function InventoryAdjustPage() {
   return (
@@ -28,7 +29,8 @@ export default function InventoryAdjustPage() {
 function InventoryAdjust() {
   const { user } = useAuth()
   const { showToast } = useToast()
-  const { locations: farmLocations } = useLocation()
+  const { locations: farmLocations, activeLocationId, activeLocation } =
+    useLocation()
   const feedTypes = useQuery(api.feed.listFeedTypes, user ? {} : 'skip')
   const lots = useQuery(api.inventory.listLots, user ? {} : 'skip')
   const createAdjustment = useMutation(api.inventory.createAdjustment)
@@ -38,19 +40,22 @@ function InventoryAdjust() {
   const [feedTypeId, setFeedTypeId] = useState('')
   const [quantityKg, setQuantityKg] = useState('')
   const [notes, setNotes] = useState('')
-  const [location, setLocation] = useState('Main store')
+  const [locationId, setLocationId] = useState('')
   const [fromLocationId, setFromLocationId] = useState('')
   const [toLocationId, setToLocationId] = useState('')
   const [batchNumber, setBatchNumber] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const storeLabels = useMemo(() => {
-    const set = new Set(['Main store'])
-    for (const lot of lots || []) {
-      if (lot.location) set.add(lot.location)
-    }
-    return [...set]
-  }, [lots])
+  useEffect(() => {
+    if (!activeLocationId) return
+    setLocationId((prev) => prev || activeLocationId)
+    setFromLocationId((prev) => prev || activeLocationId)
+  }, [activeLocationId])
+
+  const locationName = (id) =>
+    (farmLocations || []).find((l) => (l.id || l._id) === id)?.name ||
+    activeLocation?.name ||
+    undefined
 
   const relevantLots = (lots || []).filter(
     (lot) => !feedTypeId || lot.feed_type_id === feedTypeId,
@@ -72,11 +77,12 @@ function InventoryAdjust() {
     try {
       if (mode === 'adjust') {
         if (!notes.trim()) throw new Error('Reason is required')
+        const locId = locationId || activeLocationId
         await createAdjustment({
           feedTypeId,
           quantityKg: qty,
           notes: notes.trim(),
-          location: location || undefined,
+          location: locationName(locId),
           batchNumber: batchNumber || undefined,
         })
         showToast('success', 'Stock adjusted')
@@ -189,51 +195,42 @@ function InventoryAdjust() {
             </Field>
 
             {mode === 'adjust' ? (
-              <Field label="Store label (lot)">
-                <Input
-                  list="inv-locations"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+              <Field
+                label="Farm location"
+                hint="Defaults to header location"
+              >
+                <FarmLocationSelect
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
+                  required
+                  allowEmpty={false}
                 />
               </Field>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="From farm location" required>
-                  <Select
+                <Field
+                  label="From farm location"
+                  required
+                  hint="Defaults to header"
+                >
+                  <FarmLocationSelect
                     value={fromLocationId}
                     onChange={(e) => setFromLocationId(e.target.value)}
                     required
-                  >
-                    <option value="">Select…</option>
-                    {(farmLocations || []).map((loc) => (
-                      <option key={loc.id || loc._id} value={loc.id || loc._id}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </Select>
+                    allowEmpty={false}
+                  />
                 </Field>
                 <Field label="To farm location" required>
-                  <Select
+                  <FarmLocationSelect
                     value={toLocationId}
                     onChange={(e) => setToLocationId(e.target.value)}
                     required
-                  >
-                    <option value="">Select…</option>
-                    {(farmLocations || []).map((loc) => (
-                      <option key={loc.id || loc._id} value={loc.id || loc._id}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </Select>
+                    allowEmpty={false}
+                    syncWithHeader={false}
+                  />
                 </Field>
               </div>
             )}
-
-            <datalist id="inv-locations">
-              {storeLabels.map((loc) => (
-                <option key={loc} value={loc} />
-              ))}
-            </datalist>
 
             <Field label="Batch (optional)">
               <Input
@@ -252,7 +249,11 @@ function InventoryAdjust() {
             </Field>
 
             <Button type="submit" disabled={busy}>
-              {busy ? 'Saving…' : mode === 'adjust' ? 'Apply adjustment' : 'Transfer'}
+              {busy
+                ? 'Saving…'
+                : mode === 'adjust'
+                  ? 'Apply adjustment'
+                  : 'Transfer'}
             </Button>
           </form>
         </FormCard>
@@ -262,8 +263,8 @@ function InventoryAdjust() {
             <p className="text-sm text-muted">Loading lots…</p>
           ) : relevantLots.length === 0 ? (
             <p className="text-sm text-muted">
-              No lot rows yet. Purchases and inbound adjustments create them when lot
-              tracking is enabled.
+              No lot rows yet. Purchases and inbound adjustments create them when
+              lot tracking is enabled.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -282,9 +283,15 @@ function InventoryAdjust() {
                     <tr key={lot.id} className="border-t border-foam-deep">
                       <td className="py-2 pr-3">{lot.feed_type_name}</td>
                       <td className="py-2 pr-3">{lot.location}</td>
-                      <td className="py-2 pr-3 font-data">{lot.batch_number || '—'}</td>
-                      <td className="py-2 pr-3 font-data">{lot.expiry_date || '—'}</td>
-                      <td className="py-2 text-right font-data">{lot.quantity_kg}</td>
+                      <td className="py-2 pr-3 font-data">
+                        {lot.batch_number || '—'}
+                      </td>
+                      <td className="py-2 pr-3 font-data">
+                        {lot.expiry_date || '—'}
+                      </td>
+                      <td className="py-2 text-right font-data">
+                        {lot.quantity_kg}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -292,7 +299,10 @@ function InventoryAdjust() {
             </div>
           )}
           <p className="mt-3 text-sm">
-            <Link href="/inventory/lots" className="text-lagoon-800 hover:underline">
+            <Link
+              href="/inventory/lots"
+              className="text-lagoon-800 hover:underline"
+            >
               View all lots →
             </Link>
           </p>

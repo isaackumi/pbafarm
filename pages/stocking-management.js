@@ -15,6 +15,7 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
+import FarmLocationSelect from '../components/FarmLocationSelect'
 import { stockingService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
 
@@ -670,14 +671,14 @@ function StockingManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Source Location
+                  Source location
                 </label>
-                <input
-                  type="text"
+                <FarmLocationSelect
                   name="source_location"
                   value={formData.source_location}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  valueKind="name"
+                  syncWithHeader={false}
                 />
               </div>
 

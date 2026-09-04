@@ -8,6 +8,7 @@ import stockingService from '../lib/stockingService'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import PersonPicker from './PersonPicker'
+import FarmLocationSelect from './FarmLocationSelect'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import {
   Button,
@@ -344,14 +345,17 @@ const TopUpForm = ({ onComplete }) => {
 
         <FormSection title="Source & notes">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Source location" htmlFor="source_location">
-              <Input
+            <Field
+              label="Source location"
+              htmlFor="source_location"
+              hint="Defaults to header location"
+            >
+              <FarmLocationSelect
                 id="source_location"
-                type="text"
                 name="source_location"
                 value={formData.source_location}
                 onChange={handleChange}
-                placeholder="Where the fish were sourced from"
+                valueKind="name"
               />
             </Field>
             <Field

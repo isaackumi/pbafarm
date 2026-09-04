@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { AlertTriangle } from 'lucide-react'
 import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
+import FarmLocationSelect from './FarmLocationSelect'
 
 const EMPTY_FORM = {
   name: '',
-  location: '',
+  locationId: '',
   size: '',
   capacity: '',
   material: '',
@@ -32,7 +34,7 @@ function formFromCage(cage) {
   if (!cage) return { ...EMPTY_FORM }
   return {
     name: cage.name || '',
-    location: cage.location || '',
+    locationId: cage.location_id || cage.locationId || '',
     size: cage.size ?? '',
     capacity: cage.capacity ?? '',
     material: cage.material || '',
@@ -53,6 +55,7 @@ export default function CageManageModals({
   onDeleted,
 }) {
   const { showToast } = useToast()
+  const { locations, activeLocationId } = useLocation()
   const updateCage = useMutation(api.cages.update)
   const removeCage = useMutation(api.cages.remove)
 
@@ -84,12 +87,19 @@ export default function CageManageModals({
 
     setSaving(true)
     try {
+      const locationId = form.locationId || activeLocationId || undefined
+      const locName = locationId
+        ? (locations || []).find((l) => (l.id || l._id) === locationId)?.name
+        : undefined
       const patch = {
         name: form.name.trim(),
         status: form.status,
-        location: form.location.trim(),
         material: form.material.trim(),
         notes: form.notes.trim(),
+      }
+      if (locationId) {
+        patch.locationId = locationId
+        if (locName) patch.location = locName
       }
       if (form.size !== '' && form.size != null) {
         const n = Number(form.size)
@@ -159,10 +169,14 @@ export default function CageManageModals({
                   required
                 />
               </Field>
-              <Field label="Location">
-                <Input
-                  value={form.location}
-                  onChange={(e) => patchField('location', e.target.value)}
+              <Field
+                label="Farm location"
+                hint="Defaults to header location"
+              >
+                <FarmLocationSelect
+                  value={form.locationId}
+                  onChange={(e) => patchField('locationId', e.target.value)}
+                  syncWithHeader={false}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-4">

@@ -15,6 +15,7 @@ import {
 } from './ui'
 import DependencyEmpty from './DependencyEmpty'
 import PersonPicker from './PersonPicker'
+import FarmLocationSelect from './FarmLocationSelect'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -305,13 +306,18 @@ const StockingForm = ({ onSuccess, onCancel }) => {
 
         <FormSection title="Source & supervisors">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Source location" htmlFor="sourceLocation" className="md:col-span-2">
-              <Input
+            <Field
+              label="Source location"
+              htmlFor="sourceLocation"
+              className="md:col-span-2"
+              hint="Defaults to header location"
+            >
+              <FarmLocationSelect
                 id="sourceLocation"
-                type="text"
                 name="sourceLocation"
                 value={formData.sourceLocation}
                 onChange={handleChange}
+                valueKind="name"
               />
             </Field>
             <Field
