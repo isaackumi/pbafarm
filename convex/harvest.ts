@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 
 function toClientHarvestRecord(r: any) {
@@ -49,6 +49,7 @@ export const list = query({
     cageId: v.optional(v.id('cages')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -59,7 +60,7 @@ export const list = query({
           .collect()
       : await ctx.db.query('harvestRecords').collect()
 
-    records = await listForCompany(user, records)
+    records = await listForCompanyAndLocation(user, records, args.locationId)
     if (args.dateFrom) records = records.filter((r) => r.harvestDate >= args.dateFrom!)
     if (args.dateTo) records = records.filter((r) => r.harvestDate <= args.dateTo!)
     return records.map(toClientHarvestRecord).sort((a, b) => b.harvest_date.localeCompare(a.harvest_date))
@@ -116,6 +117,7 @@ export const create = mutation({
 
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
+      locationId: cage.locationId,
       companyId,
       createdBy: user._id,
     })
@@ -125,6 +127,7 @@ export const create = mutation({
       tableName: 'harvestRecords',
       recordId: id,
       newValues: args,
+      locationId: cage.locationId,
     })
     return { id, warnings }
   },

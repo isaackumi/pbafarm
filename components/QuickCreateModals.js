@@ -5,6 +5,8 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import { useCurrency } from '../hooks/useCurrency'
+import { useLocation } from '../contexts/LocationContext'
+import { getActiveLocationId } from '../lib/locationScope'
 
 function ModalShell({ title, subtitle, onClose, children }) {
   const [mounted, setMounted] = useState(false)
@@ -82,7 +84,8 @@ function cleanCageArgs(raw) {
 
 export function QuickCreateCageModal({ onClose, onCreated }) {
   const createCage = useMutation(api.cages.create)
-  const existingCages = useQuery(api.cages.list)
+  const { locationArgs, activeLocation } = useLocation()
+  const existingCages = useQuery(api.cages.list, locationArgs)
   const [form, setForm] = useState({
     name: '',
     code: '',
@@ -105,6 +108,14 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
       prev.code ? prev : { ...prev, code: nextCageCode(existingCages) },
     )
   }, [existingCages])
+
+  useEffect(() => {
+    if (activeLocation?.name) {
+      setForm((prev) =>
+        prev.location ? prev : { ...prev, location: activeLocation.name },
+      )
+    }
+  }, [activeLocation])
 
   useEffect(() => {
     setNameError('')
@@ -134,6 +145,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
           name: form.name.trim(),
           code: form.code || undefined,
           location: form.location.trim() || undefined,
+          locationId: getActiveLocationId() || undefined,
           size: form.size !== '' ? Number(form.size) : undefined,
           capacity: form.capacity !== '' ? Number(form.capacity) : undefined,
           dimensions: form.dimensions.trim() || undefined,
@@ -481,7 +493,8 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
 export function QuickCreateStockingModal({ onClose, onCreated }) {
   const createStocking = useMutation(api.stocking.createStocking)
   const settingsData = useQuery(api.companies.getEffectiveSettings)
-  const allCages = useQuery(api.cages.list)
+  const { locationArgs } = useLocation()
+  const allCages = useQuery(api.cages.list, locationArgs)
   const stockableStatuses =
     settingsData?.settings?.stockingRules?.allowStockOnlyEmptyStatuses || [
       'empty',
@@ -806,6 +819,8 @@ export function QuickCreatePurchaseModal({
       if (form.batch_number.trim()) args.batchNumber = form.batch_number.trim()
       if (form.expiry_date) args.expiryDate = form.expiry_date
       if (form.notes.trim()) args.notes = form.notes.trim()
+      const locId = getActiveLocationId()
+      if (locId) args.locationId = locId
 
       const id = await createPurchase(args)
       onCreated?.({

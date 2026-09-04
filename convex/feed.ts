@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
   bagsFromKg,
@@ -300,6 +300,7 @@ export const listPurchases = query({
     feedTypeId: v.optional(v.id('feedTypes')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -310,7 +311,7 @@ export const listPurchases = query({
           .collect()
       : await ctx.db.query('feedPurchases').collect()
 
-    purchases = await listForCompany(user, purchases)
+    purchases = await listForCompanyAndLocation(user, purchases, args.locationId)
     purchases = purchases.filter((p) => !p.deletedAt)
     if (args.dateFrom) purchases = purchases.filter((p) => p.purchaseDate >= args.dateFrom!)
     if (args.dateTo) purchases = purchases.filter((p) => p.purchaseDate <= args.dateTo!)
@@ -330,6 +331,7 @@ export const createPurchase = mutation({
     expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
     location: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -344,6 +346,12 @@ export const createPurchase = mutation({
     if (feedRules.requireBatchOnPurchase && !args.batchNumber?.trim()) {
       throw new Error('Batch number is required for purchases')
     }
+
+    await ensureDefaultLocation(ctx, user)
+    const locationId =
+      (await writeLocationId(ctx, user, args.locationId)) ||
+      (await ensureDefaultLocation(ctx, user))
+    const farmLoc = await ctx.db.get(locationId)
 
     const quantityKg = resolveQuantityKg(feedType, args.quantity, args.bags)
     const bags =
@@ -360,6 +368,7 @@ export const createPurchase = mutation({
       batchNumber: args.batchNumber,
       expiryDate: args.expiryDate,
       notes: args.notes,
+      locationId,
       companyId,
       updatedAt: now,
     })
@@ -374,7 +383,8 @@ export const createPurchase = mutation({
       notes: args.notes || `Purchase ${args.purchaseDate}`,
       batchNumber: args.batchNumber,
       expiryDate: args.expiryDate,
-      location: args.location || feedRules.defaultLocation,
+      location: args.location || farmLoc?.name || feedRules.defaultLocation,
+      locationId,
     })
 
     await logAudit(ctx, {
@@ -382,6 +392,7 @@ export const createPurchase = mutation({
       tableName: 'feedPurchases',
       recordId: id,
       newValues: { ...args, quantityKg, bags },
+      locationId,
     })
     return id
   },
@@ -509,6 +520,7 @@ export const listUsage = query({
     cageId: v.optional(v.id('cages')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -528,7 +540,7 @@ export const listUsage = query({
       usage = await ctx.db.query('feedUsage').collect()
     }
 
-    usage = await listForCompany(user, usage)
+    usage = await listForCompanyAndLocation(user, usage, args.locationId)
     if (args.dateFrom) usage = usage.filter((u) => u.usageDate >= args.dateFrom!)
     if (args.dateTo) usage = usage.filter((u) => u.usageDate <= args.dateTo!)
     return usage.map(toClientUsage).sort((a, b) => b.usage_date.localeCompare(a.usage_date))
@@ -549,6 +561,7 @@ async function recordOutboundUsage(
     overrideReason?: string
     transactionType: 'issue' | 'daily_usage' | 'usage'
     referenceId?: string
+    locationId?: any
   },
 ) {
   const user = await requireUser(ctx)
@@ -557,12 +570,19 @@ async function recordOutboundUsage(
   const allowed = await listForCompany(user, [feedType])
   if (!allowed.length) throw new Error('Access denied')
 
+  let locationId = args.locationId
   if (args.cageId) {
     const cage = await ctx.db.get(args.cageId)
     if (!cage) throw new Error('Cage not found')
     const cageAllowed = await listForCompany(user, [cage])
     if (!cageAllowed.length) throw new Error('Cage access denied')
+    locationId = locationId || cage.locationId
   }
+
+  await ensureDefaultLocation(ctx, user)
+  locationId =
+    (await writeLocationId(ctx, user, locationId)) ||
+    (await ensureDefaultLocation(ctx, user))
 
   const quantityKg = resolveQuantityKg(feedType, args.quantity, args.bags)
   const bags =
@@ -577,6 +597,7 @@ async function recordOutboundUsage(
     usageDate: args.usageDate,
     source: args.source,
     notes: args.notes,
+    locationId,
     companyId: (await writeCompanyId(user)) ?? feedType.companyId,
     updatedAt: now,
   })
@@ -591,6 +612,7 @@ async function recordOutboundUsage(
     notes: args.notes || `${args.source} ${args.usageDate}`,
     allowNegative: args.allowNegative,
     overrideReason: args.overrideReason,
+    locationId,
   })
 
   await logAudit(ctx, {
@@ -598,6 +620,7 @@ async function recordOutboundUsage(
     tableName: 'feedUsage',
     recordId: id,
     newValues: { ...args, quantityKg, bags },
+    locationId,
   })
   return id
 }
@@ -612,6 +635,7 @@ export const createUsage = mutation({
     notes: v.optional(v.string()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     return await recordOutboundUsage(ctx, {
@@ -633,6 +657,7 @@ export const createIssue = mutation({
     notes: v.optional(v.string()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     return await recordOutboundUsage(ctx, {

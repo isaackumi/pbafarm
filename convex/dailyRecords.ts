@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
 import {
   mergeSettings,
@@ -45,6 +45,7 @@ async function deductDailyFeed(
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType) throw new Error('Feed type not found')
 
+  const cage = await ctx.db.get(args.cageId)
   const bags = bagsFromKg(args.feedAmount, feedType.bagSizeKg)
   const usageId = await ctx.db.insert('feedUsage', {
     feedTypeId: args.feedTypeId,
@@ -54,6 +55,7 @@ async function deductDailyFeed(
     usageDate: args.date,
     source: 'daily',
     notes: `Daily record ${args.date}`,
+    locationId: cage?.locationId,
     companyId: feedType.companyId ?? user.companyId,
     updatedAt: Date.now(),
   })
@@ -68,6 +70,7 @@ async function deductDailyFeed(
     notes: `Daily feed ${args.date} (usage ${usageId})`,
     allowNegative: args.allowNegative,
     overrideReason: args.overrideReason,
+    locationId: cage?.locationId,
   })
 }
 
@@ -117,6 +120,7 @@ export const list = query({
     cageId: v.optional(v.id('cages')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -127,7 +131,7 @@ export const list = query({
           .collect()
       : await ctx.db.query('dailyRecords').collect()
 
-    rows = await listForCompany(user, rows)
+    rows = await listForCompanyAndLocation(user, rows, args.locationId)
     if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
     if (args.dateTo) rows = rows.filter((r) => r.date <= args.dateTo!)
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
@@ -187,6 +191,7 @@ export const create = mutation({
       feedCost: args.feedCost,
       mortality: args.mortality,
       notes: args.notes,
+      locationId: cage.locationId,
       companyId: (await writeCompanyId(user)) ?? cage.companyId,
       createdBy: user._id,
     })
@@ -383,6 +388,7 @@ export const createMany = mutation({
 
       const id = await ctx.db.insert('dailyRecords', {
         ...record,
+        locationId: cage.locationId,
         companyId: (await writeCompanyId(user)) ?? cage.companyId,
         createdBy: user._id,
       })

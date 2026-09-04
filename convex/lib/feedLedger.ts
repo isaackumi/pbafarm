@@ -39,6 +39,7 @@ export async function addInventoryLot(
     batchNumber?: string
     expiryDate?: string
     location?: string
+    locationId?: Id<'farmLocations'>
   },
 ) {
   if (args.quantityKg <= 0) return null
@@ -52,7 +53,9 @@ export async function addInventoryLot(
 
   const match = existing.find(
     (lot) =>
-      (lot.location || 'Main store') === location &&
+      (lot.locationId
+        ? lot.locationId === args.locationId
+        : (lot.location || 'Main store') === location) &&
       (lot.batchNumber || '') === (args.batchNumber || '') &&
       (lot.expiryDate || '') === (args.expiryDate || ''),
   )
@@ -60,6 +63,7 @@ export async function addInventoryLot(
   if (match) {
     await ctx.db.patch(match._id, {
       quantityKg: match.quantityKg + args.quantityKg,
+      locationId: args.locationId ?? match.locationId,
       updatedAt: now,
     })
     return match._id
@@ -71,6 +75,7 @@ export async function addInventoryLot(
     batchNumber: args.batchNumber,
     expiryDate: args.expiryDate,
     location,
+    locationId: args.locationId,
     companyId: args.companyId,
     updatedAt: now,
   })
@@ -83,6 +88,7 @@ export async function deductInventoryLots(
     feedTypeId: Id<'feedTypes'>
     quantityKg: number
     location?: string
+    locationId?: Id<'farmLocations'>
   },
 ) {
   let remaining = args.quantityKg
@@ -94,7 +100,9 @@ export async function deductInventoryLots(
     .collect()
 
   lots = lots.filter((lot) => lot.quantityKg > 0)
-  if (args.location) {
+  if (args.locationId) {
+    lots = lots.filter((lot) => lot.locationId === args.locationId)
+  } else if (args.location) {
     const loc = args.location.trim()
     lots = lots.filter((lot) => (lot.location || 'Main store') === loc)
   }
@@ -140,6 +148,7 @@ export async function applyStockChange(
     batchNumber?: string
     expiryDate?: string
     location?: string
+    locationId?: Id<'farmLocations'>
     /** Skip lot updates (e.g. pure transfer bookkeeping already applied). */
     skipLots?: boolean
   },
@@ -195,12 +204,14 @@ export async function applyStockChange(
         batchNumber: args.batchNumber,
         expiryDate: args.expiryDate,
         location,
+        locationId: args.locationId,
       })
     } else {
       await deductInventoryLots(ctx, {
         feedTypeId: args.feedTypeId,
         quantityKg: Math.abs(args.deltaKg),
         location: args.location ? location : undefined,
+        locationId: args.locationId,
       })
     }
   }
@@ -215,6 +226,7 @@ export async function applyStockChange(
     notes: args.overrideReason
       ? `${args.notes || ''} [override: ${args.overrideReason}]`.trim()
       : args.notes,
+    locationId: args.locationId,
     companyId,
     createdBy: args.user._id,
   })
@@ -235,6 +247,7 @@ export async function applyStockChange(
         deltaKg: args.deltaKg,
         overrideReason: args.overrideReason,
       },
+      locationId: args.locationId,
     })
   }
 

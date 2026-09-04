@@ -16,6 +16,7 @@ import {
 import DependencyEmpty from './DependencyEmpty'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 
 const STOCKING_DEFAULTS = {
   cageId: '',
@@ -34,9 +35,10 @@ const DEFAULT_STOCKABLE = ['empty', 'fallow', 'harvested']
 const StockingForm = ({ onSuccess, onCancel }) => {
   const router = useRouter()
   const { user } = useAuth()
+  const { locationArgs } = useLocation()
   const settingsData = useQuery(api.companies.getEffectiveSettings)
   const rules = settingsData?.settings
-  const allCages = useQuery(api.cages.list, user ? {} : 'skip')
+  const allCages = useQuery(api.cages.list, user ? locationArgs : 'skip')
 
   const { formData, handleChange, clear, setFormData } = usePersistedForm(
     'stocking-create',

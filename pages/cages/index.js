@@ -8,6 +8,7 @@ import { PageHeader, Button } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import {
@@ -32,7 +33,8 @@ export default function CagesPage() {
 function CagesManagement() {
   const router = useRouter()
   const { user } = useAuth()
-  const cages = useQuery(api.cages.list, user ? {} : 'skip')
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const loading = cages === undefined
 
   const [searchQuery, setSearchQuery] = useState('')

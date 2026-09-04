@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { SettingsProvider } from '../contexts/SettingsContext'
 import { CompanySettingsProvider } from '../contexts/CompanySettingsContext'
+import { LocationProvider } from '../contexts/LocationContext'
 import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
 import { AnalyticsProvider } from '../contexts/AnalyticsContext'
@@ -32,6 +33,7 @@ function AppWrapper({ Component, pageProps }) {
           <SettingsProvider>
             <AuthProvider>
               <CompanySettingsProvider>
+                <LocationProvider>
                 <DataProvider>
                   <ToastProvider>
                     <NotificationProvider>
@@ -46,6 +48,7 @@ function AppWrapper({ Component, pageProps }) {
                     </NotificationProvider>
                   </ToastProvider>
                 </DataProvider>
+                </LocationProvider>
               </CompanySettingsProvider>
             </AuthProvider>
           </SettingsProvider>

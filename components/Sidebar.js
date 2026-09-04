@@ -28,6 +28,7 @@ import {
   UploadSimple,
   ShieldCheck,
   SignOut,
+  MapPin,
   CaretDown,
   CaretRight,
   CaretDoubleLeft,
@@ -115,6 +116,7 @@ const MENU_SECTIONS = {
     tourId: 'management-section',
     items: [
       { title: 'Global Settings', path: '/global-settings', icon: GearSix, tourId: 'global-settings' },
+      { title: 'Farm Locations', path: '/farm-locations', icon: MapPin, adminOnly: true, tourId: 'farm-locations' },
       { title: 'Users', path: '/users', icon: Users, adminOnly: true },
       { title: 'Company Settings', path: '/company-settings', icon: Buildings, adminOnly: true, tourId: 'company-settings' },
       { title: 'Approvals', path: '/approvals', icon: CheckCircle, adminOnly: true, tourId: 'approvals' },

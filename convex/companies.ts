@@ -333,6 +333,23 @@ export const approve = mutation({
       role: 'admin',
     })
 
+    const existingLocs = await ctx.db
+      .query('farmLocations')
+      .withIndex('by_company', (q) => q.eq('companyId', companyId))
+      .collect()
+    let locationId = existingLocs.find((l) => l.active !== false)?._id
+    if (!locationId) {
+      locationId = await ctx.db.insert('farmLocations', {
+        companyId,
+        name: 'Main farm',
+        code: 'MAIN',
+        active: true,
+        notes: 'Default location',
+        updatedAt: now,
+      })
+    }
+    await ctx.db.patch(userId, { activeLocationId: locationId })
+
     await logAudit(ctx, {
       actionType: 'approve',
       tableName: 'companies',
@@ -340,10 +357,12 @@ export const approve = mutation({
       newValues: {
         status: 'approved',
         promotedUserId: userId,
+        locationId,
       },
+      locationId,
     })
 
-    return { companyId, userId }
+    return { companyId, userId, locationId }
   },
 })
 

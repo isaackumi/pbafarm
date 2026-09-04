@@ -29,7 +29,21 @@ const schema = defineSchema({
     active: v.optional(v.boolean()),
     /** Set when an admin creates the account with a temporary password. */
     mustChangePassword: v.optional(v.boolean()),
+    /** Assigned farm sites; empty/undefined = all company locations. */
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
+    activeLocationId: v.optional(v.id('farmLocations')),
   }).index('email', ['email']),
+
+  /** Physical farm sites under a company (ops + inventory scope). */
+  farmLocations: defineTable({
+    companyId: v.optional(v.id('companies')),
+    name: v.string(),
+    code: v.optional(v.string()),
+    address: v.optional(v.string()),
+    active: v.boolean(),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index('by_company', ['companyId']),
 
   companies: defineTable({
     name: v.string(),
@@ -151,6 +165,7 @@ const schema = defineSchema({
     nextMaintenanceDate: v.optional(v.string()),
     status: cageStatus,
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
     updatedAt: v.number(),
@@ -158,7 +173,9 @@ const schema = defineSchema({
     .index('by_name', ['name'])
     .index('by_status', ['status'])
     .index('by_company', ['companyId'])
-    .index('by_company_status', ['companyId', 'status']),
+    .index('by_company_status', ['companyId', 'status'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   feedSuppliers: defineTable({
     name: v.string(),
@@ -197,12 +214,15 @@ const schema = defineSchema({
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     deletedAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index('by_feed_type', ['feedTypeId'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   feedUsage: defineTable({
     feedTypeId: v.id('feedTypes'),
@@ -215,13 +235,16 @@ const schema = defineSchema({
       v.union(v.literal('issue'), v.literal('daily'), v.literal('usage')),
     ),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     deletedAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index('by_feed_type', ['feedTypeId'])
     .index('by_cage', ['cageId'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   dailyRecords: defineTable({
     cageId: v.id('cages'),
@@ -233,13 +256,16 @@ const schema = defineSchema({
     feedCost: v.number(),
     mortality: v.number(),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
   })
     .index('by_cage', ['cageId'])
     .index('by_cage_date', ['cageId', 'date'])
     .index('by_date', ['date'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   biweeklyRecords: defineTable({
     cageId: v.id('cages'),
@@ -248,6 +274,7 @@ const schema = defineSchema({
     averageBodyWeight: v.number(),
     totalFishCount: v.number(),
     totalWeight: v.number(),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
     updatedBy: v.optional(v.id('users')),
@@ -256,7 +283,9 @@ const schema = defineSchema({
     .index('by_cage', ['cageId'])
     .index('by_batch_code', ['batchCode'])
     .index('by_company', ['companyId'])
-    .index('by_date', ['date']),
+    .index('by_date', ['date'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   biweeklySampling: defineTable({
     biweeklyRecordId: v.id('biweeklyRecords'),
@@ -279,12 +308,15 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
     status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
   })
     .index('by_cage', ['cageId'])
     .index('by_company', ['companyId'])
-    .index('by_date', ['harvestDate']),
+    .index('by_date', ['harvestDate'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   harvestSampling: defineTable({
     harvestId: v.id('harvestRecords'),
@@ -297,11 +329,13 @@ const schema = defineSchema({
     sizeBreakdown: v.optional(v.any()),
     doc: v.optional(v.number()),
     abw: v.optional(v.number()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
   })
     .index('by_harvest', ['harvestId'])
-    .index('by_cage', ['cageId']),
+    .index('by_cage', ['cageId'])
+    .index('by_location', ['locationId']),
 
   feedInventory: defineTable({
     feedTypeId: v.id('feedTypes'),
@@ -309,11 +343,14 @@ const schema = defineSchema({
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     location: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     updatedAt: v.number(),
   })
     .index('by_feed_type', ['feedTypeId'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   feedInventoryTransactions: defineTable({
     feedTypeId: v.id('feedTypes'),
@@ -332,12 +369,15 @@ const schema = defineSchema({
     transactionDate: v.number(),
     referenceId: v.optional(v.string()),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
   })
     .index('by_feed_type', ['feedTypeId'])
     .index('by_company', ['companyId'])
-    .index('by_reference', ['referenceId']),
+    .index('by_reference', ['referenceId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   stockingHistory: defineTable({
     cageId: v.id('cages'),
@@ -356,6 +396,7 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
     approvedBy: v.optional(v.id('users')),
@@ -364,7 +405,9 @@ const schema = defineSchema({
   })
     .index('by_cage', ['cageId'])
     .index('by_status', ['status'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId']),
 
   topupHistory: defineTable({
     stockingId: v.id('stockingHistory'),
@@ -379,6 +422,7 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
     approvedBy: v.optional(v.id('users')),
@@ -386,7 +430,8 @@ const schema = defineSchema({
   })
     .index('by_stocking', ['stockingId'])
     .index('by_status', ['status'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId']),
 
   auditLogs: defineTable({
     userId: v.optional(v.id('users')),
@@ -395,6 +440,7 @@ const schema = defineSchema({
     recordId: v.optional(v.string()),
     previousValues: v.optional(v.any()),
     newValues: v.optional(v.any()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
   })
     .index('by_user', ['userId'])
@@ -408,6 +454,7 @@ const schema = defineSchema({
     type: v.optional(v.string()),
     read: v.boolean(),
     link: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
   })
     .index('by_user', ['userId'])

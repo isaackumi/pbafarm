@@ -1,15 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Bell, Sun, Moon, Question } from '@phosphor-icons/react'
+import { Bell, Sun, Moon, Question, MapPin } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
+import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
 
 const TopBar = ({ title = 'Dashboard' }) => {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { startSystemWalkthrough } = useTour()
+  const {
+    locations,
+    activeLocationId,
+    setActiveLocation,
+    loading: locationLoading,
+  } = useLocation()
   const {
     notifications,
     unreadCount,
@@ -77,6 +84,31 @@ const TopBar = ({ title = 'Dashboard' }) => {
         </h1>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
+          {locations.length > 0 && (
+            <label className="hidden sm:flex items-center gap-2 min-h-12">
+              <MapPin
+                size={18}
+                weight="duotone"
+                className="text-muted shrink-0"
+                aria-hidden
+              />
+              <select
+                aria-label="Farm location"
+                data-tour="location-switcher"
+                className="max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-xl bg-surface px-3 py-2 text-chart-ink focus:outline-none focus:ring-2 focus:ring-lagoon-800"
+                value={activeLocationId || ''}
+                disabled={locationLoading}
+                onChange={(e) => setActiveLocation(e.target.value)}
+              >
+                {locations.map((loc) => (
+                  <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <div
             className="relative"
             id="tour-help-menu"

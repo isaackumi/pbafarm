@@ -42,6 +42,8 @@ export function AuthProvider({ children }) {
       role: convexUser.role || 'user',
       companyId: convexUser.companyId,
       mustChangePassword: convexUser.mustChangePassword === true,
+      activeLocationId: convexUser.activeLocationId,
+      locationIds: convexUser.locationIds,
       // Compatibility with former Supabase user shape
       user_metadata: {
         full_name: convexUser.name,

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
   bagsFromKg,
@@ -71,7 +71,10 @@ function toClientLot(lot: any, feedTypeName?: string) {
 }
 
 export const listStockLevels = query({
-  args: { includeInactive: v.optional(v.boolean()) },
+  args: {
+    includeInactive: v.optional(v.boolean()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let feedTypes =
@@ -91,6 +94,15 @@ export const listStockLevels = query({
       feedTypes = feedTypes.filter((f) => f.active && !f.deletedAt)
     }
 
+    let lots: any[] = []
+    if (args.locationId) {
+      lots = await ctx.db
+        .query('feedInventory')
+        .withIndex('by_location', (q) => q.eq('locationId', args.locationId!))
+        .collect()
+      lots = await listForCompany(user, lots)
+    }
+
     const stockLevels = []
     for (const feedType of feedTypes) {
       let supplierName = null
@@ -103,19 +115,36 @@ export const listStockLevels = query({
           ? feedType.bagSizeKg
           : feedRules.defaultBagSizeKg
 
+      let currentStock = feedType.currentStock
+      if (args.locationId) {
+        currentStock = lots
+          .filter((l) => l.feedTypeId === feedType._id)
+          .reduce((sum, l) => sum + (l.quantityKg || 0), 0)
+        // Fallback: sum location-scoped transactions when lots empty
+        if (currentStock === 0 && lots.length === 0) {
+          const txns = await ctx.db
+            .query('feedInventoryTransactions')
+            .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
+            .collect()
+          currentStock = txns
+            .filter((t) => t.locationId === args.locationId)
+            .reduce((sum, t) => sum + (t.quantityKg || 0), 0)
+        }
+      }
+
       const threshold = feedType.minimumStock * multiplier
       stockLevels.push({
         feedTypeId: feedType._id,
         feedTypeName: feedType.name,
-        currentStock: feedType.currentStock,
-        currentStockBags: bagsFromKg(feedType.currentStock, bagSize),
+        currentStock,
+        currentStockBags: bagsFromKg(currentStock, bagSize),
         bagSizeKg: bagSize,
         minimumStock: feedType.minimumStock,
         pricePerKg: feedType.pricePerKg,
         supplierName,
         active: feedType.active,
-        stockValue: feedType.currentStock * feedType.pricePerKg,
-        isLowStock: feedType.currentStock <= threshold,
+        stockValue: currentStock * feedType.pricePerKg,
+        isLowStock: currentStock <= threshold,
       })
     }
 
@@ -344,6 +373,7 @@ export const reverseTransaction = mutation({
 export const listLots = query({
   args: {
     feedTypeId: v.optional(v.id('feedTypes')),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -358,8 +388,7 @@ export const listLots = query({
             .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
             .collect()
         : await ctx.db.query('feedInventory').collect()
-
-    lots = await listForCompany(user, lots)
+    lots = await listForCompanyAndLocation(user, lots, args.locationId)
     lots = lots.filter((lot) => lot.quantityKg > 0)
 
     const names = new Map<string, string>()

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 
 function toClient(r: any) {
   return {
@@ -26,6 +26,7 @@ export const list = query({
     cageId: v.optional(v.id('cages')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -36,7 +37,7 @@ export const list = query({
           .collect()
       : await ctx.db.query('biweeklyRecords').collect()
 
-    rows = await listForCompany(user, rows)
+    rows = await listForCompanyAndLocation(user, rows, args.locationId)
     if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
     if (args.dateTo) rows = rows.filter((r) => r.date <= args.dateTo!)
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
@@ -91,6 +92,7 @@ export const create = mutation({
 
     const id = await ctx.db.insert('biweeklyRecords', {
       ...recordData,
+      locationId: cage.locationId,
       companyId: (await writeCompanyId(user)) ?? cage.companyId,
       createdBy: user._id,
       updatedAt: now,
@@ -149,6 +151,7 @@ export const createMany = mutation({
       const now = Date.now()
       const id = await ctx.db.insert('biweeklyRecords', {
         ...record,
+        locationId: cage.locationId,
         companyId: (await writeCompanyId(user)) ?? cage.companyId,
         createdBy: user._id,
         updatedAt: now,

@@ -6,6 +6,7 @@ import Layout from '../../components/Layout'
 import { PageHeader, Button } from '../../components/ui'
 import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 
 export default function CageSettingsPage() {
@@ -20,7 +21,8 @@ export default function CageSettingsPage() {
 
 function CageSettings() {
   const { user } = useAuth()
-  const cages = useQuery(api.cages.list, user ? {} : 'skip')
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const [editCage, setEditCage] = useState(null)
   const [deleteCage, setDeleteCage] = useState(null)
 

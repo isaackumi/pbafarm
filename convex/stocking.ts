@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import {
   mergeSettings,
   assertStockingAllowed,
@@ -71,6 +71,7 @@ export const listStockingHistory = query({
     cageId: v.optional(v.id('cages')),
     status: v.optional(stockingStatus),
     includeDeleted: v.optional(v.boolean()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -81,7 +82,7 @@ export const listStockingHistory = query({
           .collect()
       : await ctx.db.query('stockingHistory').collect()
 
-    stockings = await listForCompany(user, stockings)
+    stockings = await listForCompanyAndLocation(user, stockings, args.locationId)
 
     if (args.status) {
       stockings = stockings.filter((s) => s.status === args.status)
@@ -203,9 +204,12 @@ export const createStocking = mutation({
       ? 'pending_approval'
       : 'approved'
 
+    const locationId = cage.locationId
+
     const id = await ctx.db.insert('stockingHistory', {
       ...args,
       status,
+      locationId,
       companyId,
       createdBy: user._id,
       ...(status === 'approved'
@@ -442,6 +446,7 @@ export const createTopup = mutation({
     const id = await ctx.db.insert('topupHistory', {
       ...args,
       status,
+      locationId: stocking.locationId || cage?.locationId,
       companyId,
       createdBy: user._id,
       ...(status === 'approved'

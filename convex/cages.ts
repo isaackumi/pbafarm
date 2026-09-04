@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 
 const cageStatus = v.union(
   v.literal('active'),
@@ -19,6 +19,7 @@ function toClient(cage: any) {
     name: cage.name,
     code: cage.code,
     location: cage.location,
+    location_id: cage.locationId,
     size: cage.size,
     capacity: cage.capacity,
     dimensions: cage.dimensions,
@@ -47,6 +48,7 @@ function toClient(cage: any) {
 export const list = query({
   args: {
     status: v.optional(cageStatus),
+    locationId: v.optional(v.id('farmLocations')),
     filter: v.optional(
       v.union(
         v.literal('all'),
@@ -59,7 +61,7 @@ export const list = query({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
 
     if (args.status) {
       cages = cages.filter((c) => c.status === args.status)
@@ -92,14 +94,14 @@ export const get = query({
 })
 
 export const getActive = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { locationId: v.optional(v.id('farmLocations')) },
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let cages = await ctx.db
       .query('cages')
       .withIndex('by_status', (q) => q.eq('status', 'active'))
       .collect()
-    cages = await listForCompany(user, cages)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
     return cages.map(toClient)
   },
 })
@@ -109,6 +111,7 @@ export const create = mutation({
     name: v.string(),
     code: v.optional(v.string()),
     location: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
     size: v.optional(v.number()),
     capacity: v.optional(v.number()),
     dimensions: v.optional(v.string()),
@@ -124,10 +127,16 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const now = Date.now()
+    await ensureDefaultLocation(ctx, user)
+    const locationId =
+      (await writeLocationId(ctx, user, args.locationId)) ||
+      (await ensureDefaultLocation(ctx, user))
+    const loc = await ctx.db.get(locationId)
     const id = await ctx.db.insert('cages', {
       name: args.name,
       code: args.code,
-      location: args.location,
+      location: args.location || loc?.name,
+      locationId,
       size: args.size,
       capacity: args.capacity,
       dimensions: args.dimensions,
@@ -149,6 +158,7 @@ export const create = mutation({
       tableName: 'cages',
       recordId: id,
       newValues: args,
+      locationId,
     })
     return id
   },
@@ -160,6 +170,7 @@ export const update = mutation({
     patch: v.object({
       name: v.optional(v.string()),
       location: v.optional(v.string()),
+      locationId: v.optional(v.id('farmLocations')),
       size: v.optional(v.number()),
       capacity: v.optional(v.number()),
       dimensions: v.optional(v.string()),
@@ -187,13 +198,22 @@ export const update = mutation({
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
 
-    await ctx.db.patch(id, { ...patch, updatedAt: Date.now() })
+    const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
+    if (patch.locationId) {
+      const locationId = await writeLocationId(ctx, user, patch.locationId)
+      next.locationId = locationId
+      const loc = locationId ? await ctx.db.get(locationId) : null
+      if (loc && patch.location === undefined) next.location = loc.name
+    }
+
+    await ctx.db.patch(id, next)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'cages',
       recordId: id,
       previousValues: existing,
       newValues: patch,
+      locationId: (next.locationId as any) || existing.locationId,
     })
     return id
   },
@@ -219,11 +239,11 @@ export const remove = mutation({
 })
 
 export const analytics = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { locationId: v.optional(v.id('farmLocations')) },
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
     const total = cages.length
     const active = cages.filter((c) => c.status === 'active').length
     const maintenance = cages.filter((c) => c.status === 'maintenance').length

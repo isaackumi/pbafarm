@@ -14,6 +14,7 @@ import type * as biweeklyRecords from "../biweeklyRecords.js";
 import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
 import type * as dailyRecords from "../dailyRecords.js";
+import type * as farmLocations from "../farmLocations.js";
 import type * as feed from "../feed.js";
 import type * as harvest from "../harvest.js";
 import type * as http from "../http.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   cages: typeof cages;
   companies: typeof companies;
   dailyRecords: typeof dailyRecords;
+  farmLocations: typeof farmLocations;
   feed: typeof feed;
   harvest: typeof harvest;
   http: typeof http;
