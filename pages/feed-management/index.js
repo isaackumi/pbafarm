@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import ProtectedRoute from '../components/ProtectedRoute'
-import { formatCurrency } from '../lib/currencyUtils'
-import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
-import DataTable from '../components/DataTable'
-import { feedTypeService, supplierService } from '../lib/databaseService'
-import { useToast } from '../components/Toast'
+import ProtectedRoute from '../../components/ProtectedRoute'
+import { formatCurrency } from '../../lib/currencyUtils'
+import Layout from '../../components/Layout'
+import { PageHeader, Button } from '../../components/ui'
+import DataTable from '../../components/DataTable'
+import { feedTypeService, supplierService } from '../../lib/databaseService'
+import { useToast } from '../../components/Toast'
 import { Plus, ArrowLeft, Download, Filter, Search, Utensils, Users, Database, LineChart, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
@@ -446,7 +446,7 @@ const FeedManagement = () => {
                                   <button
                                     onClick={() => handleStatusChange(type.id, !type.active)}
                                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer ${
-                                      type.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                      type.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
                                     }`}
                                   >
                                     {type.active ? 'Active' : 'Inactive'}
@@ -575,7 +575,7 @@ const FeedManagement = () => {
                             <p className="text-xs text-muted">{supplier.phone}</p>
                           </div>
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            supplier.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            supplier.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
                           }`}>
                             {supplier.active ? 'Active' : 'Inactive'}
                           </span>
@@ -616,7 +616,7 @@ const FeedManagement = () => {
                                 Last used 2 hours ago
                               </p>
                             </div>
-                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-kelp/15 text-kelp">
                               Active
                             </span>
                           </div>

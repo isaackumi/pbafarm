@@ -105,16 +105,16 @@ const FeedAnalytics = () => {
               </div>
 
               {analytics.lowStockAlerts.length > 0 && (
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm mb-8">
+                <div className="page-card p-6 mb-8">
                   <h2 className="text-lg font-semibold mb-4 text-signal">Low Stock Alerts</h2>
                   <div className="space-y-2">
                     {analytics.lowStockAlerts.map((alert, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center p-3 bg-signal/5 rounded-xl"
+                        className="flex justify-between items-center gap-4 p-3 rounded-xl border border-signal/25 bg-signal/10"
                       >
-                        <span className="font-medium">{alert.name}</span>
-                        <span className="text-signal text-sm font-data">
+                        <span className="font-medium text-chart-ink">{alert.name}</span>
+                        <span className="text-signal text-sm font-data shrink-0">
                           {alert.currentStock} kg remaining (Min: {alert.minimumStock} kg)
                         </span>
                       </div>

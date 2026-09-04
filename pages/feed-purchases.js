@@ -26,6 +26,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
 import FarmLocationSelect from '../components/FarmLocationSelect'
+import FeedTypeField from '../components/FeedTypeField'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { feedService } from '../lib/feedService'
@@ -729,18 +730,24 @@ function FeedPurchases() {
         {/* Low Stock Alerts */}
         {lowStockAlerts.length > 0 && (
           <div className="mb-6">
-            <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="rounded-xl border border-signal/25 bg-signal/10 border-l-4 border-l-signal p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <AlertTriangle className="h-5 w-5 text-signal" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Low Stock Alert</h3>
-                  <div className="mt-2 text-sm text-red-700">
+                  <h3 className="text-sm font-medium text-chart-ink">
+                    Low Stock Alert
+                  </h3>
+                  <div className="mt-2 text-sm text-muted">
                     <ul className="list-disc pl-5 space-y-1">
                       {lowStockAlerts.map((feed) => (
                         <li key={feed.id || feed.name}>
-                          {feed.name}: {feed.current_stock}kg remaining (Minimum: {feed.minimum_stock}kg)
+                          <span className="text-chart-ink font-medium">
+                            {feed.name}
+                          </span>
+                          : {feed.current_stock}kg remaining (Minimum:{' '}
+                          {feed.minimum_stock}kg)
                         </li>
                       ))}
                     </ul>
@@ -879,17 +886,27 @@ function FeedPurchases() {
 
             {/* Reorder Recommendations */}
             <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-chart-ink mb-4">Reorder Recommendations</h3>
+              <h3 className="text-sm font-medium text-chart-ink mb-4">
+                Reorder Recommendations
+              </h3>
               <div className="space-y-4">
                 {inventoryMetrics.reorderRecommendations.map((rec, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-4 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10"
+                  >
                     <div>
-                      <span className="text-sm font-medium text-chart-ink">{rec.name}</span>
+                      <span className="text-sm font-medium text-chart-ink">
+                        {rec.name}
+                      </span>
                       <p className="text-xs text-muted">
                         Current: {rec.currentStock}kg | Min: {rec.minimumStock}kg
                       </p>
                     </div>
-                    <button className="px-3 py-1 text-sm text-white bg-lagoon-800 rounded-md hover:bg-lagoon-950">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 text-sm font-semibold text-white bg-lagoon-800 rounded-md hover:bg-lagoon-950 shrink-0"
+                    >
                       Order {rec.recommendedOrder}kg
                     </button>
                   </div>
@@ -1145,25 +1162,29 @@ function FeedPurchases() {
             )}
 
             <form onSubmit={handleSubmitAdd} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Feed Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="feed_type_id"
-                  value={formData.feed_type_id}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                >
-                  <option value="">Select feed type</option>
-                  {feedTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FeedTypeField
+                id="add-feed-type"
+                name="feed_type_id"
+                value={formData.feed_type_id}
+                onChange={handleChange}
+                feedTypes={feedTypes}
+                ready={!loading}
+                required
+                showStock={false}
+                offerPurchaseCreate={false}
+                hint="Catalog product this purchase adds stock to. Create one if the list is empty."
+                emptyMessage="Add a feed type before recording a purchase."
+                onFeedTypesChanged={fetchData}
+                onCreated={(result) => {
+                  fetchData()
+                  if (result?.id) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      feed_type_id: result.id,
+                    }))
+                  }
+                }}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1332,25 +1353,29 @@ function FeedPurchases() {
             )}
 
             <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Feed Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="feed_type_id"
-                  value={formData.feed_type_id}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                >
-                  <option value="">Select feed type</option>
-                  {feedTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FeedTypeField
+                id="edit-feed-type"
+                name="feed_type_id"
+                value={formData.feed_type_id}
+                onChange={handleChange}
+                feedTypes={feedTypes}
+                ready={!loading}
+                required
+                showStock={false}
+                offerPurchaseCreate={false}
+                hint="Catalog product this purchase adds stock to. Create one if the list is empty."
+                emptyMessage="Add a feed type before recording a purchase."
+                onFeedTypesChanged={fetchData}
+                onCreated={(result) => {
+                  fetchData()
+                  if (result?.id) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      feed_type_id: result.id,
+                    }))
+                  }
+                }}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -357,10 +357,10 @@ function BiweeklyEntry() {
                       )}
                     </div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      cage.status === 'active' ? 'bg-green-100 text-green-800' :
-                      cage.status === 'inactive' ? 'bg-foam text-gray-800' :
-                      cage.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
+                      cage.status === 'active' ? 'bg-kelp/15 text-kelp' :
+                      cage.status === 'inactive' ? 'bg-foam-deep/60 text-muted' :
+                      cage.status === 'maintenance' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' :
+                      'bg-signal/15 text-signal'
                     }`}>
                       {cage.status}
                     </span>

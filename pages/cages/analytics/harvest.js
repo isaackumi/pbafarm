@@ -198,9 +198,9 @@ function HarvestAnalytics() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.growthRate}%</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          cage.status === 'Ready' ? 'bg-red-100 text-red-800' :
-                          cage.status === 'Soon' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
+                          cage.status === 'Ready' ? 'bg-signal/15 text-signal' :
+                          cage.status === 'Soon' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' :
+                          'bg-kelp/15 text-kelp'
                         }`}>
                           {cage.status}
                         </span>

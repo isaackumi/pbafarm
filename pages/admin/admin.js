@@ -94,6 +94,12 @@ function CompaniesList() {
       sortable: true,
     },
     {
+      header: 'Status',
+      accessor: 'status',
+      sortable: true,
+      cell: (row) => row.status || '—',
+    },
+    {
       header: 'Contact Email',
       accessor: 'contact_email',
       sortable: true,
@@ -106,7 +112,10 @@ function CompaniesList() {
       header: 'Created',
       accessor: 'created_at',
       sortable: true,
-      cell: (row) => new Date(row.created_at).toLocaleDateString(),
+      cell: (row) =>
+        row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : '—',
     },
     {
       header: 'Users',
@@ -170,9 +179,9 @@ function CompaniesList() {
               Confirm Deletion
             </h3>
             <p className="text-sm text-muted mb-4">
-              Are you sure you want to delete {companyToDelete?.name}? This
-              action cannot be undone and will remove ALL data associated with
-              this company.
+              Remove {companyToDelete?.name} from the active company list? The
+              company will be marked rejected. Tenant data is not permanently
+              deleted.
             </p>
             <div className="flex justify-end space-x-3">
               <button

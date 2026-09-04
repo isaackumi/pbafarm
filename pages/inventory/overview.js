@@ -159,28 +159,40 @@ function InventoryOverview() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Link href="/inventory/transactions">
-              <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Record Transaction
-              </button>
-            </Link>
-            <Link href="/inventory/items">
-              <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+            <Link href="/stock-levels">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+              >
                 <Package className="w-5 h-5 mr-2" />
-                Manage Items
+                Stock levels
               </button>
             </Link>
-            <Link href="/inventory/categories">
-              <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">
-                <BarChart2 className="w-5 h-5 mr-2" />
-                Manage Categories
+            <Link href="/feed-types">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-kelp hover:opacity-90"
+              >
+                <Package className="w-5 h-5 mr-2" />
+                Feed types
               </button>
             </Link>
-            <Link href="/inventory/reports">
-              <button className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
+            <Link href="/inventory/adjust">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-950 hover:bg-lagoon-800"
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Adjust / transfer
+              </button>
+            </Link>
+            <Link href="/inventory/analytics">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+              >
                 <BarChart2 className="w-5 h-5 mr-2" />
-                View Reports
+                Analytics
               </button>
             </Link>
           </div>
@@ -373,7 +385,7 @@ function InventoryOverview() {
                   lowStock.map((item) => (
                     <div
                       key={item.feed_type_id}
-                      className="flex items-center justify-between p-4 bg-red-50 rounded-lg"
+                      className="flex items-center justify-between gap-4 p-4 rounded-xl border border-signal/25 bg-signal/10"
                     >
                       <div>
                         <p className="font-medium text-chart-ink">
@@ -388,7 +400,10 @@ function InventoryOverview() {
                         </p>
                       </div>
                       <Link href="/inventory-transactions">
-                        <button className="text-sm text-lagoon-800 hover:text-lagoon-950">
+                        <button
+                          type="button"
+                          className="text-sm font-semibold text-signal hover:opacity-80 shrink-0"
+                        >
                           Order Now
                         </button>
                       </Link>

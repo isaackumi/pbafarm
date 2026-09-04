@@ -9,7 +9,6 @@ import {
   FormCard,
   Field,
   Input,
-  Select,
   Textarea,
 } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
@@ -17,6 +16,7 @@ import { useToast } from '../../components/Toast'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import FarmLocationSelect from '../../components/FarmLocationSelect'
+import FeedTypeField from '../../components/FeedTypeField'
 
 export default function InventoryAdjustPage() {
   return (
@@ -162,20 +162,19 @@ function InventoryAdjust() {
               </button>
             </div>
 
-            <Field label="Feed type">
-              <Select
-                value={feedTypeId}
-                onChange={(e) => setFeedTypeId(e.target.value)}
-                required
-              >
-                <option value="">Select…</option>
-                {(feedTypes || []).map((ft) => (
-                  <option key={ft.id || ft._id} value={ft.id || ft._id}>
-                    {ft.name} ({ft.current_stock ?? 0} kg)
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <FeedTypeField
+              id="adjust-feed-type"
+              value={feedTypeId}
+              onChange={(e) => setFeedTypeId(e.target.value)}
+              feedTypes={(feedTypes || []).filter((t) => t.active !== false)}
+              ready={feedTypes !== undefined}
+              required
+              hint="Stock lot to adjust or transfer. Create a type first if the catalog is empty."
+              emptyMessage="Add a feed type before adjusting inventory."
+              onCreated={(result) => {
+                if (result?.id) setFeedTypeId(result.id)
+              }}
+            />
 
             <Field
               label={

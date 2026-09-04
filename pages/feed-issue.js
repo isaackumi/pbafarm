@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import DependencyEmpty from '../components/DependencyEmpty'
+import FeedTypeField from '../components/FeedTypeField'
 import {
   PageHeader,
   Button,
@@ -141,43 +142,24 @@ function FeedIssue() {
         <form onSubmit={submit} className="space-y-8">
           <FormSection title="What & where">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Field label="Feed type" htmlFor="feedTypeId" required className="md:col-span-2">
-                <Select
-                  id="feedTypeId"
-                  name="feedTypeId"
-                  value={form.feedTypeId}
-                  onChange={onChange}
-                  required
-                  disabled={lookupsReady && feedTypes.length === 0}
-                >
-                  <option value="">
-                    {lookupsReady && feedTypes.length === 0
-                      ? 'No feed types available'
-                      : 'Select…'}
-                  </option>
-                  {feedTypes.map((f) => (
-                    <option key={f.id || f._id} value={f.id || f._id}>
-                      {f.name} ({Number(f.current_stock).toFixed(1)} kg /{' '}
-                      {Number(f.current_stock_bags || 0).toFixed(1)} bags)
-                    </option>
-                  ))}
-                </Select>
-                {lookupsReady && feedTypes.length === 0 && (
-                  <DependencyEmpty
-                    message="Issue feed needs at least one feed type."
-                    createKind="feedType"
-                    createLabel="Create feed type"
-                    secondaryHref="/feed-purchases"
-                    secondaryLabel="Record purchase"
-                    onCreated={(result) => {
-                      loadLookups()
-                      if (result?.id) {
-                        setForm((p) => ({ ...p, feedTypeId: result.id }))
-                      }
-                    }}
-                  />
-                )}
-              </Field>
+              <FeedTypeField
+                id="feedTypeId"
+                name="feedTypeId"
+                value={form.feedTypeId}
+                onChange={onChange}
+                feedTypes={feedTypes}
+                ready={lookupsReady}
+                required
+                fieldClassName="md:col-span-2"
+                emptyMessage="Issue feed needs at least one feed type on the catalog."
+                onFeedTypesChanged={loadLookups}
+                onCreated={(result) => {
+                  loadLookups()
+                  if (result?.id) {
+                    setForm((p) => ({ ...p, feedTypeId: result.id }))
+                  }
+                }}
+              />
               <Field label="Cage (optional)" htmlFor="cageId">
                 <Select
                   id="cageId"

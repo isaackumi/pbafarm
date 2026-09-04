@@ -361,6 +361,102 @@ html[data-theme='dark'] .bg-slate-100 {
   background-color: color-mix(in srgb, var(--surface) 88%, #000) !important;
 }
 
+/* Soft status backgrounds stay tinted; pair with vivid status text below */
+html.dark .bg-yellow-50,
+html.dark .bg-yellow-100,
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html[data-theme='dark'] .bg-yellow-50,
+html[data-theme='dark'] .bg-yellow-100,
+html[data-theme='dark'] .bg-amber-50,
+html[data-theme='dark'] .bg-amber-100 {
+  background-color: color-mix(in srgb, #f59e0b 18%, var(--surface)) !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-red-100,
+html[data-theme='dark'] .bg-red-50,
+html[data-theme='dark'] .bg-red-100 {
+  background-color: color-mix(in srgb, var(--signal) 18%, var(--surface)) !important;
+}
+
+html.dark .bg-green-50,
+html.dark .bg-green-100,
+html[data-theme='dark'] .bg-green-50,
+html[data-theme='dark'] .bg-green-100 {
+  background-color: color-mix(in srgb, var(--kelp) 18%, var(--surface)) !important;
+}
+
+html.dark .bg-orange-50,
+html.dark .bg-orange-100,
+html[data-theme='dark'] .bg-orange-50,
+html[data-theme='dark'] .bg-orange-100 {
+  background-color: color-mix(in srgb, #f97316 18%, var(--surface)) !important;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-blue-100,
+html.dark .bg-purple-50,
+html.dark .bg-purple-100,
+html.dark .bg-cyan-50,
+html.dark .bg-cyan-100,
+html[data-theme='dark'] .bg-blue-50,
+html[data-theme='dark'] .bg-blue-100,
+html[data-theme='dark'] .bg-purple-50,
+html[data-theme='dark'] .bg-purple-100,
+html[data-theme='dark'] .bg-cyan-50,
+html[data-theme='dark'] .bg-cyan-100 {
+  background-color: color-mix(in srgb, var(--lagoon-800) 20%, var(--surface)) !important;
+}
+
+/* Status pill / alert text — vivid on tinted dark surfaces (not light chart-ink) */
+html.dark .text-green-700,
+html.dark .text-green-800,
+html.dark .text-green-600,
+html[data-theme='dark'] .text-green-700,
+html[data-theme='dark'] .text-green-800,
+html[data-theme='dark'] .text-green-600 {
+  color: var(--kelp) !important;
+}
+
+html.dark .text-red-700,
+html.dark .text-red-800,
+html.dark .text-red-600,
+html[data-theme='dark'] .text-red-700,
+html[data-theme='dark'] .text-red-800,
+html[data-theme='dark'] .text-red-600 {
+  color: var(--signal) !important;
+}
+
+html.dark .text-yellow-700,
+html.dark .text-yellow-800,
+html.dark .text-amber-700,
+html.dark .text-amber-800,
+html[data-theme='dark'] .text-yellow-700,
+html[data-theme='dark'] .text-yellow-800,
+html[data-theme='dark'] .text-amber-700,
+html[data-theme='dark'] .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+html.dark .text-orange-700,
+html.dark .text-orange-800,
+html[data-theme='dark'] .text-orange-700,
+html[data-theme='dark'] .text-orange-800 {
+  color: #fb923c !important;
+}
+
+html.dark .text-purple-700,
+html.dark .text-purple-800,
+html.dark .text-cyan-700,
+html.dark .text-cyan-800,
+html[data-theme='dark'] .text-purple-700,
+html[data-theme='dark'] .text-purple-800,
+html[data-theme='dark'] .text-cyan-700,
+html[data-theme='dark'] .text-cyan-800 {
+  color: var(--lagoon-soft, #7dd3fc) !important;
+}
+
 html.dark .text-zinc-900,
 html.dark .text-zinc-800,
 html.dark .text-zinc-700,

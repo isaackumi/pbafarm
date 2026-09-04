@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { feedTypeService } from '../lib/feedTypeService'
-import DependencyEmpty from './DependencyEmpty'
+import FeedTypeField from './FeedTypeField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
 
@@ -112,46 +112,31 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
             required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Feed type</label>
-          <select
-            value={formData.feedTypeId}
-            onChange={(e) => {
-              const ft = feedTypes.find((t) => (t.id || t._id) === e.target.value)
-              setFormData({
-                ...formData,
-                feedTypeId: e.target.value,
-                feedPrice: ft?.price_per_kg ?? ft?.pricePerKg ?? '',
-              })
-            }}
-            className="w-full border border-input-border rounded px-3 py-2"
-            disabled={lookupsReady && feedTypes.length === 0}
-          >
-            <option value="">
-              {lookupsReady && feedTypes.length === 0
-                ? 'No feed types available'
-                : 'Select feed type'}
-            </option>
-            {feedTypes.map((t) => (
-              <option key={t.id || t._id} value={t.id || t._id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          {lookupsReady && feedTypes.length === 0 && (
-            <DependencyEmpty
-              message="Add a feed type before recording feed usage."
-              createKind="feedType"
-              createLabel="Create feed type"
-              onCreated={(result) => {
-                loadFeedTypes()
-                if (result?.id) {
-                  setFormData((prev) => ({ ...prev, feedTypeId: result.id }))
-                }
-              }}
-            />
-          )}
-        </div>
+        <FeedTypeField
+          id="feedTypeId"
+          name="feedTypeId"
+          value={formData.feedTypeId}
+          onChange={(e) => {
+            const ft = feedTypes.find(
+              (t) => (t.id || t._id) === e.target.value,
+            )
+            setFormData({
+              ...formData,
+              feedTypeId: e.target.value,
+              feedPrice: ft?.price_per_kg ?? ft?.pricePerKg ?? '',
+            })
+          }}
+          feedTypes={feedTypes}
+          ready={lookupsReady}
+          showStock
+          onFeedTypesChanged={loadFeedTypes}
+          onCreated={(result) => {
+            loadFeedTypes()
+            if (result?.id) {
+              setFormData((prev) => ({ ...prev, feedTypeId: result.id }))
+            }
+          }}
+        />
         <div>
           <label className="block text-sm font-medium mb-1">Feed amount (kg)</label>
           <input

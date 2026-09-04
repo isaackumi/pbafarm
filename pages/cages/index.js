@@ -158,17 +158,17 @@ function CagesManagement() {
       filterable: true,
       cell: (row) => {
         const styles = {
-          active: 'bg-green-100 text-green-800',
-          maintenance: 'bg-yellow-100 text-yellow-800',
+          active: 'bg-kelp/15 text-kelp',
+          maintenance: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
           harvested: 'bg-foam-deep text-lagoon-800',
-          fallow: 'bg-foam text-gray-800',
-          empty: 'bg-purple-100 text-purple-800',
-          harvesting: 'bg-cyan-100 text-cyan-800',
+          fallow: 'bg-foam-deep/60 text-muted',
+          empty: 'bg-lagoon-800/15 text-lagoon-800',
+          harvesting: 'bg-lagoon-800/15 text-lagoon-800',
         }
         return (
           <span
             className={`px-2 py-1 text-xs font-medium rounded-full ${
-              styles[row.status] || 'bg-foam text-gray-800'
+              styles[row.status] || 'bg-foam-deep/60 text-muted'
             }`}
           >
             {row.status

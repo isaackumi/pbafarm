@@ -24,10 +24,11 @@ export const DEFAULT_SETTINGS = {
     requireApprovalForStocking: true,
     requireApprovalForTopup: true,
     enforceCageCapacity: true,
-    minInitialAbwG: 5,
-    maxInitialAbwG: 80,
+    /** Fingerlings through small juveniles (grams). */
+    minInitialAbwG: 1,
+    maxInitialAbwG: 500,
     /** Top-ups may match current culture size, not only fingerlings. */
-    minTopupAbwG: 5,
+    minTopupAbwG: 1,
     maxTopupAbwG: 800,
     allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested'] as string[],
   },
@@ -105,6 +106,19 @@ export function mergeSettings(raw?: any): EffectiveSettings {
       allowStockOnlyEmptyStatuses:
         s.stockingRules?.allowStockOnlyEmptyStatuses ||
         DEFAULT_SETTINGS.stockingRules.allowStockOnlyEmptyStatuses,
+      // Lift legacy published default (5–80g) so farms can stock fry/juveniles
+      // without a settings visit. Custom ranges other than exactly 5/80 are kept.
+      ...(() => {
+        const min = s.stockingRules?.minInitialAbwG
+        const max = s.stockingRules?.maxInitialAbwG
+        if (min === 5 && max === 80) {
+          return {
+            minInitialAbwG: DEFAULT_SETTINGS.stockingRules.minInitialAbwG,
+            maxInitialAbwG: DEFAULT_SETTINGS.stockingRules.maxInitialAbwG,
+          }
+        }
+        return {}
+      })(),
     },
     feedRules: {
       ...DEFAULT_SETTINGS.feedRules,
@@ -206,7 +220,7 @@ export function assertStockingAllowed(opts: {
   }
   if (abw < rules.minInitialAbwG || abw > rules.maxInitialAbwG) {
     throw new Error(
-      `Initial ABW must be between ${rules.minInitialAbwG}g and ${rules.maxInitialAbwG}g`,
+      `Initial ABW must be between ${rules.minInitialAbwG}g and ${rules.maxInitialAbwG}g (got ${abw}g). Use grams, not kg — or widen the range in Company Settings → Stocking rules.`,
     )
   }
   if (rules.enforceCageCapacity && cage?.capacity != null && fishCount > cage.capacity) {

@@ -122,9 +122,28 @@ export const listStockingHistory = query({
       stockings = stockings.filter((s) => !s.deletedAt)
     }
 
-    return stockings
-      .map(toClientStocking)
-      .sort((a, b) => b.stocking_date.localeCompare(a.stocking_date))
+    return (
+      await Promise.all(
+        stockings.map(async (s) => {
+          const cage = s.cageId ? await ctx.db.get(s.cageId) : null
+          const client = toClientStocking(s)
+          return {
+            ...client,
+            cage: cage
+              ? {
+                  id: cage._id,
+                  _id: cage._id,
+                  name: cage.name,
+                  code: cage.code,
+                  status: cage.status,
+                  location: cage.location,
+                }
+              : null,
+            cage_name: cage?.name ?? null,
+          }
+        }),
+      )
+    ).sort((a, b) => b.stocking_date.localeCompare(a.stocking_date))
   },
 })
 

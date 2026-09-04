@@ -97,13 +97,30 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     e.preventDefault()
     setError('')
     try {
+      const fishCount = parseInt(formData.fishCount, 10)
+      const initialAbw = parseFloat(formData.averageBodyWeight)
+      const sr = rules?.stockingRules
+      if (!formData.cageId) throw new Error('Select a cage')
+      if (!fishCount || fishCount < 1) throw new Error('Enter a valid fish count')
+      if (!initialAbw || initialAbw <= 0) {
+        throw new Error('Enter average body weight in grams')
+      }
+      if (
+        sr &&
+        (initialAbw < sr.minInitialAbwG || initialAbw > sr.maxInitialAbwG)
+      ) {
+        throw new Error(
+          `Initial ABW must be between ${sr.minInitialAbwG}g and ${sr.maxInitialAbwG}g (you entered ${initialAbw}g). Change Company Settings → Stocking rules if your farm stocks outside this range.`,
+        )
+      }
+
       setLoading(true)
       const stockingData = {
         cage_id: formData.cageId,
         batch_number: formData.batchNumber,
         stocking_date: formData.stockingDate,
-        fish_count: parseInt(formData.fishCount, 10),
-        initial_abw: parseFloat(formData.averageBodyWeight),
+        fish_count: fishCount,
+        initial_abw: initialAbw,
         species: formData.species || undefined,
         source_location: formData.sourceLocation,
         transfer_supervisor: formData.transferSupervisor,
@@ -176,7 +193,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
         </div>
       )}
       {warn.length > 0 && (
-        <div className="mb-5 text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-1">
+        <div className="mb-5 text-sm text-amber-800 dark:text-amber-200 border border-amber-500/30 bg-amber-500/10 rounded-xl p-3 space-y-1">
           {warn.map((w) => (
             <p key={w}>{w}</p>
           ))}
@@ -288,7 +305,16 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 className="font-data"
               />
             </Field>
-            <Field label="Average body weight (g)" htmlFor="averageBodyWeight" required>
+            <Field
+              label="Average body weight (g)"
+              htmlFor="averageBodyWeight"
+              required
+              hint={
+                rules?.stockingRules
+                  ? `Fingerling size for initial stocking: ${rules.stockingRules.minInitialAbwG}–${rules.stockingRules.maxInitialAbwG}g (not kg). Adjust in Company Settings if needed.`
+                  : 'Enter weight in grams (not kg).'
+              }
+            >
               <Input
                 id="averageBodyWeight"
                 type="number"
@@ -296,7 +322,8 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 step="0.1"
                 value={formData.averageBodyWeight}
                 onChange={handleChange}
-                min="0"
+                min={rules?.stockingRules?.minInitialAbwG ?? 1}
+                max={rules?.stockingRules?.maxInitialAbwG ?? 500}
                 required
                 className="font-data"
               />

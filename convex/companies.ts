@@ -429,6 +429,43 @@ export const reject = mutation({
   },
 })
 
+/** Soft-remove a company (super_admin). Does not wipe tenant data. */
+export const remove = mutation({
+  args: {
+    companyId: v.id('companies'),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { companyId, reason }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'super_admin')
+
+    const company = await ctx.db.get(companyId)
+    if (!company) throw new Error('Company not found')
+    if (company.status === 'rejected') {
+      return companyId
+    }
+
+    await ctx.db.patch(companyId, {
+      status: 'rejected',
+      rejectionReason: reason || 'Removed by admin',
+      approvedAt: Date.now(),
+      approvedBy: user._id,
+    })
+
+    await logAudit(ctx, {
+      actionType: 'reject',
+      tableName: 'companies',
+      recordId: companyId,
+      newValues: {
+        status: 'rejected',
+        reason: reason || 'Removed by admin',
+      },
+    })
+
+    return companyId
+  },
+})
+
 export const list = query({
   args: { status: v.optional(v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))) },
   handler: async (ctx, args) => {
@@ -440,8 +477,21 @@ export const list = query({
     if (args.status) {
       companies = companies.filter((c) => c.status === args.status)
     }
+
+    const users = await ctx.db.query('users').collect()
+    const userCountByCompany = new Map<string, number>()
+    for (const u of users) {
+      if (!u.companyId) continue
+      const key = String(u.companyId)
+      userCountByCompany.set(key, (userCountByCompany.get(key) || 0) + 1)
+    }
     
-    return companies.map((c) => toClient(c)).sort((a, b) => b.created_at - a.created_at)
+    return companies
+      .map((c) => ({
+        ...toClient(c),
+        user_count: userCountByCompany.get(String(c._id)) || 0,
+      }))
+      .sort((a, b) => b.created_at - a.created_at)
   },
 })
 

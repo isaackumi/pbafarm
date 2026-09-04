@@ -6,6 +6,7 @@ import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
 import FarmLocationSelect from './FarmLocationSelect'
+import FeedTypeField from './FeedTypeField'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
@@ -565,8 +566,19 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
       if (!form.cageId) throw new Error('Select a cage')
       const fishCount = parseInt(form.fishCount, 10)
       const initialAbw = parseFloat(form.averageBodyWeight)
+      const sr = settingsData?.settings?.stockingRules
       if (!fishCount || fishCount < 1) throw new Error('Enter a valid fish count')
-      if (!initialAbw || initialAbw <= 0) throw new Error('Enter a valid ABW')
+      if (!initialAbw || initialAbw <= 0) {
+        throw new Error('Enter average body weight in grams')
+      }
+      if (
+        sr &&
+        (initialAbw < sr.minInitialAbwG || initialAbw > sr.maxInitialAbwG)
+      ) {
+        throw new Error(
+          `Initial ABW must be between ${sr.minInitialAbwG}g and ${sr.maxInitialAbwG}g (you entered ${initialAbw}g). Use grams, not kg — or widen Company Settings → Stocking rules.`,
+        )
+      }
 
       const args = {
         cageId: form.cageId,
@@ -704,12 +716,26 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               required
             />
           </Field>
-          <Field label="Average body weight (g)" htmlFor="qc-st-abw" required>
+          <Field
+            label="Average body weight (g)"
+            htmlFor="qc-st-abw"
+            required
+            hint={
+              settingsData?.settings?.stockingRules
+                ? `${settingsData.settings.stockingRules.minInitialAbwG}–${settingsData.settings.stockingRules.maxInitialAbwG}g for initial stocking`
+                : 'Weight in grams (not kg)'
+            }
+          >
             <Input
               id="qc-st-abw"
               type="number"
               step="0.1"
-              min="0"
+              min={
+                settingsData?.settings?.stockingRules?.minInitialAbwG ?? 1
+              }
+              max={
+                settingsData?.settings?.stockingRules?.maxInitialAbwG ?? 500
+              }
               value={form.averageBodyWeight}
               onChange={setField('averageBodyWeight')}
               className="font-data"
@@ -802,7 +828,6 @@ export function QuickCreatePurchaseModal({
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [showFeedTypeCreate, setShowFeedTypeCreate] = useState(false)
 
   const selectedFeed = activeFeedTypes.find(
     (t) => (t.id || t._id) === form.feed_type_id,
@@ -912,20 +937,6 @@ export function QuickCreatePurchaseModal({
     }
   }
 
-  if (showFeedTypeCreate) {
-    return (
-      <QuickCreateFeedTypeModal
-        onClose={() => setShowFeedTypeCreate(false)}
-        onCreated={(result) => {
-          if (result?.id) {
-            setForm((p) => ({ ...p, feed_type_id: result.id, price_per_kg: '' }))
-          }
-          setShowFeedTypeCreate(false)
-        }}
-      />
-    )
-  }
-
   return (
     <ModalShell
       title="Record feed purchase"
@@ -938,41 +949,33 @@ export function QuickCreatePurchaseModal({
         </div>
       )}
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Feed type" htmlFor="qc-pu-ft" required>
-          <Select
-            id="qc-pu-ft"
-            value={form.feed_type_id}
-            onChange={(e) =>
+        <FeedTypeField
+          id="qc-pu-ft"
+          name="feed_type_id"
+          value={form.feed_type_id}
+          onChange={(e) =>
+            setForm((p) => ({
+              ...p,
+              feed_type_id: e.target.value,
+              price_per_kg: '',
+            }))
+          }
+          feedTypes={activeFeedTypes}
+          ready={ready}
+          required
+          offerPurchaseCreate={false}
+          hint="Catalog product this purchase adds stock to. Create one if the list is empty."
+          emptyMessage="Add a feed type before recording a purchase."
+          onCreated={(result) => {
+            if (result?.id) {
               setForm((p) => ({
                 ...p,
-                feed_type_id: e.target.value,
+                feed_type_id: result.id,
                 price_per_kg: '',
               }))
             }
-            required
-            disabled={ready && activeFeedTypes.length === 0}
-          >
-            <option value="">
-              {ready && activeFeedTypes.length === 0
-                ? 'No feed types'
-                : 'Select feed type…'}
-            </option>
-            {activeFeedTypes.map((t) => (
-              <option key={t.id || t._id} value={t.id || t._id}>
-                {t.name} ({Number(t.current_stock ?? t.currentStock ?? 0).toFixed(1)} kg on hand)
-              </option>
-            ))}
-          </Select>
-          {ready && activeFeedTypes.length === 0 && (
-            <button
-              type="button"
-              onClick={() => setShowFeedTypeCreate(true)}
-              className="mt-2 text-sm font-semibold text-lagoon-800 underline-offset-2 hover:underline"
-            >
-              Create a feed type first
-            </button>
-          )}
-        </Field>
+          }}
+        />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Bags" htmlFor="qc-pu-bags">
             <Input

@@ -7,6 +7,52 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      // Legacy feed-management nested paths → real pages
+      {
+        source: '/feed-management/purchases',
+        destination: '/feed-purchases',
+        permanent: false,
+      },
+      {
+        source: '/feed-management/usage',
+        destination: '/feed-issue',
+        permanent: false,
+      },
+      {
+        source: '/feed-management/types',
+        destination: '/feed-types',
+        permanent: false,
+      },
+      {
+        source: '/feed-management/suppliers',
+        destination: '/feed-suppliers',
+        permanent: false,
+      },
+      // Legacy inventory nested paths → real pages
+      {
+        source: '/inventory/items',
+        destination: '/feed-types',
+        permanent: false,
+      },
+      {
+        source: '/inventory/categories',
+        destination: '/feed-types',
+        permanent: false,
+      },
+      {
+        source: '/inventory/reports',
+        destination: '/inventory/analytics',
+        permanent: false,
+      },
+      {
+        source: '/inventory/transactions',
+        destination: '/inventory-transactions',
+        permanent: false,
+      },
+    ]
+  },
   // Fix chunk loading issues
   webpack: (config, { isServer }) => {
     // Ensure proper module resolution
@@ -16,7 +62,7 @@ const nextConfig = {
       net: false,
       tls: false,
     }
-    
+
     return config
   },
 }

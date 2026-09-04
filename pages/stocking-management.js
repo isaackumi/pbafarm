@@ -74,10 +74,16 @@ function StockingManagement() {
       setStockings(data || [])
 
       // Extract unique cages for filtering
-      const cages = [...new Set(data.map((s) => s.cage?.name || 'Unknown'))]
+      const cages = [
+        ...new Set(
+          data.map((s) => s.cage?.name || s.cage_name).filter(Boolean),
+        ),
+      ]
         .map((name) => ({
           name,
-          id: data.find((s) => s.cage?.name === name)?.cage_id,
+          id: data.find(
+            (s) => (s.cage?.name || s.cage_name) === name,
+          )?.cage_id,
         }))
         .sort((a, b) => a.name.localeCompare(b.name))
 
@@ -107,6 +113,9 @@ function StockingManagement() {
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           stocking.cage?.name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          stocking.cage_name
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           stocking.source_location
@@ -141,8 +150,8 @@ function StockingManagement() {
 
       // Handle cage name sorting
       if (sortField === 'cage_name') {
-        valueA = a.cage?.name || ''
-        valueB = b.cage?.name || ''
+        valueA = a.cage?.name || a.cage_name || ''
+        valueB = b.cage?.name || b.cage_name || ''
       }
 
       if (valueA < valueB) {
@@ -529,7 +538,9 @@ function StockingManagement() {
                         ) : null}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        {stocking.cage?.name || 'Unknown'}
+                        {stocking.cage?.name ||
+                          stocking.cage_name ||
+                          'Unknown'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {formatDate(stocking.stocking_date)}

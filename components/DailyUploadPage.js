@@ -13,6 +13,7 @@ import {
   Textarea,
 } from './ui'
 import DependencyEmpty from './DependencyEmpty'
+import FeedTypeField from './FeedTypeField'
 import { useToast } from './Toast'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
@@ -261,44 +262,24 @@ const DailyUploadPage = () => {
           description="Feed amounts deduct stock through the inventory ledger."
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Feed type" htmlFor="feedTypeId">
-              <Select
-                id="feedTypeId"
-                name="feedTypeId"
-                value={formData.feedTypeId}
-                onChange={handleChange}
-                disabled={lookupsReady && feedTypes.length === 0}
-              >
-                <option value="">
-                  {lookupsReady && feedTypes.length === 0
-                    ? 'No feed types available'
-                    : 'Select…'}
-                </option>
-                {feedTypes.map((f) => (
-                  <option key={f.id || f._id} value={f.id || f._id}>
-                    {f.name} ({Number(f.current_stock || 0).toFixed(1)} kg)
-                  </option>
-                ))}
-              </Select>
-              {lookupsReady && feedTypes.length === 0 && (
-                <DependencyEmpty
-                  message="Add a feed type before recording feed amounts. Purchases can then add stock to that type."
-                  createKind="feedType"
-                  createLabel="Create feed type"
-                  secondaryCreateKind="purchase"
-                  secondaryCreateLabel="Record a purchase"
-                  onCreated={(result) => {
-                    loadLookups()
-                    if (result?.kind === 'feedType' && result.id) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        feedTypeId: result.id,
-                      }))
-                    }
-                  }}
-                />
-              )}
-            </Field>
+            <FeedTypeField
+              id="feedTypeId"
+              name="feedTypeId"
+              value={formData.feedTypeId}
+              onChange={handleChange}
+              feedTypes={feedTypes}
+              ready={lookupsReady}
+              onFeedTypesChanged={loadLookups}
+              onCreated={(result) => {
+                loadLookups()
+                if (result?.kind === 'feedType' && result.id) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    feedTypeId: result.id,
+                  }))
+                }
+              }}
+            />
             <Field
               label="Feed amount (kg)"
               htmlFor="feedAmount"

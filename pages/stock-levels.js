@@ -54,11 +54,11 @@ function StockLevels() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'critical':
-        return 'text-red-600 bg-red-50'
+        return 'text-signal bg-signal/10'
       case 'low':
-        return 'text-yellow-600 bg-yellow-50'
+        return 'text-amber-700 dark:text-amber-300 bg-amber-500/15'
       case 'good':
-        return 'text-green-600 bg-green-50'
+        return 'text-kelp bg-kelp/10'
       default:
         return 'text-muted bg-foam-deep/40'
     }
