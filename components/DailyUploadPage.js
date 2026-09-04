@@ -16,11 +16,13 @@ import DependencyEmpty from './DependencyEmpty'
 import { useToast } from './Toast'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
+import { MORTALITY_CAUSES } from '../lib/farmHealth'
 
 const DEFAULTS = {
   selectedCage: '',
   date: new Date().toISOString().split('T')[0],
   mortalityCount: 0,
+  mortalityCause: 'unknown',
   feedAmount: 0,
   feedTypeId: '',
   feedPrice: 0,
@@ -116,6 +118,10 @@ const DailyUploadPage = () => {
         feed_cost: feedAmount * feedPrice,
         feedCost: feedAmount * feedPrice,
         mortality: Number(formData.mortalityCount) || 0,
+        mortalityCause:
+          Number(formData.mortalityCount) > 0
+            ? formData.mortalityCause || 'unknown'
+            : undefined,
         notes: formData.notes || undefined,
         allowNegative: formData.allowNegative === true,
         overrideReason: formData.overrideReason || undefined,
@@ -231,6 +237,22 @@ const DailyUploadPage = () => {
                 className="font-data"
               />
             </Field>
+            {Number(formData.mortalityCount) > 0 && (
+              <Field label="Mortality cause" htmlFor="mortalityCause">
+                <Select
+                  id="mortalityCause"
+                  name="mortalityCause"
+                  value={formData.mortalityCause || 'unknown'}
+                  onChange={handleChange}
+                >
+                  {MORTALITY_CAUSES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
           </div>
         </FormSection>
 

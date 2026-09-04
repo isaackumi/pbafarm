@@ -17,6 +17,7 @@ import type * as dailyRecords from "../dailyRecords.js";
 import type * as farmLocations from "../farmLocations.js";
 import type * as feed from "../feed.js";
 import type * as harvest from "../harvest.js";
+import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   farmLocations: typeof farmLocations;
   feed: typeof feed;
   harvest: typeof harvest;
+  health: typeof health;
   http: typeof http;
   inventory: typeof inventory;
   "lib/authz": typeof lib_authz;

@@ -257,6 +257,8 @@ const schema = defineSchema({
     feedPrice: v.number(),
     feedCost: v.number(),
     mortality: v.number(),
+    /** Cause when mortality > 0 (disease, do_crash, predator, theft, cull, unknown, other). */
+    mortalityCause: v.optional(v.string()),
     notes: v.optional(v.string()),
     /** Dissolved oxygen (mg/L). */
     dissolvedOxygen: v.optional(v.number()),
@@ -514,6 +516,30 @@ const schema = defineSchema({
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId'])
     .index('by_date', ['saleDate']),
+
+  /** Health events / treatments on a cage (medications, diagnosis, withdrawal). */
+  healthTreatments: defineTable({
+    cageId: v.id('cages'),
+    date: v.string(),
+    diagnosis: v.optional(v.string()),
+    treatment: v.string(),
+    productName: v.optional(v.string()),
+    dosage: v.optional(v.string()),
+    fishAffected: v.optional(v.number()),
+    withdrawalDays: v.optional(v.number()),
+    withdrawalUntil: v.optional(v.string()),
+    administeredBy: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+    companyId: v.optional(v.id('companies')),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_cage', ['cageId'])
+    .index('by_company', ['companyId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId'])
+    .index('by_date', ['date']),
 })
 
 export default schema

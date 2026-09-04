@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query } from './_generated/server'
 import { requireUser } from './lib/authz'
-import { listForCompany } from './lib/tenancy'
+import { listForCompany, listForCompanyAndLocation } from './lib/tenancy'
 
 export const dashboardSummary = query({
   args: {
@@ -548,5 +548,138 @@ export const farmContextForAi = query({
           low: f.currentStock <= f.minimumStock,
         })),
     }
+  },
+})
+/**
+ * Per-cage P&L: feed cost from daily records vs sales revenue.
+ */
+export const getCagePnL = query({
+  args: {
+    cageId: v.id('cages'),
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage) return null
+    const allowed = await listForCompany(user, [cage])
+    if (!allowed.length) return null
+
+    let daily = await ctx.db
+      .query('dailyRecords')
+      .withIndex('by_cage', (q) => q.eq('cageId', args.cageId))
+      .collect()
+    if (args.dateFrom) daily = daily.filter((r) => r.date >= args.dateFrom!)
+    if (args.dateTo) daily = daily.filter((r) => r.date <= args.dateTo!)
+
+    let harvests = await ctx.db
+      .query('harvestRecords')
+      .withIndex('by_cage', (q) => q.eq('cageId', args.cageId))
+      .collect()
+    if (args.dateFrom)
+      harvests = harvests.filter((r) => r.harvestDate >= args.dateFrom!)
+    if (args.dateTo)
+      harvests = harvests.filter((r) => r.harvestDate <= args.dateTo!)
+
+    let sales = await ctx.db.query('sales').collect()
+    sales = sales.filter((s) => s.cageId === args.cageId)
+    if (args.dateFrom) sales = sales.filter((s) => s.saleDate >= args.dateFrom!)
+    if (args.dateTo) sales = sales.filter((s) => s.saleDate <= args.dateTo!)
+
+    const feedKg = daily.reduce((s, r) => s + r.feedAmount, 0)
+    const feedCost = daily.reduce((s, r) => s + r.feedCost, 0)
+    const mortality = daily.reduce((s, r) => s + r.mortality, 0)
+    const mortalityByCause: Record<string, number> = {}
+    for (const r of daily) {
+      if (!(r.mortality > 0)) continue
+      const cause = r.mortalityCause || 'unknown'
+      mortalityByCause[cause] = (mortalityByCause[cause] || 0) + r.mortality
+    }
+
+    const harvestKg = harvests.reduce((s, r) => s + r.totalWeight, 0)
+    const soldKg = sales.reduce((s, r) => s + r.weightKg, 0)
+    const revenue = sales.reduce((s, r) => s + r.totalAmount, 0)
+    const grossMargin = revenue - feedCost
+
+    return {
+      cage_id: cage._id,
+      cage_name: cage.name,
+      species: cage.species || null,
+      status: cage.status,
+      feed_kg: feedKg,
+      feed_cost: feedCost,
+      mortality,
+      mortality_by_cause: mortalityByCause,
+      harvest_kg: harvestKg,
+      sold_kg: soldKg,
+      revenue,
+      gross_margin: grossMargin,
+      margin_pct: revenue > 0 ? (grossMargin / revenue) * 100 : null,
+      sale_count: sales.length,
+      daily_entries: daily.length,
+    }
+  },
+})
+
+/** P&L rollup for cages at a location (or company). */
+export const listCagePnL = query({
+  args: {
+    locationId: v.optional(v.id('farmLocations')),
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    let cages = await ctx.db.query('cages').collect()
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+
+    const rows = []
+    for (const cage of cages) {
+      let daily = await ctx.db
+        .query('dailyRecords')
+        .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
+        .collect()
+      if (args.dateFrom) daily = daily.filter((r) => r.date >= args.dateFrom!)
+      if (args.dateTo) daily = daily.filter((r) => r.date <= args.dateTo!)
+
+      let sales = (await ctx.db.query('sales').collect()).filter(
+        (s) => s.cageId === cage._id,
+      )
+      if (args.dateFrom) sales = sales.filter((s) => s.saleDate >= args.dateFrom!)
+      if (args.dateTo) sales = sales.filter((s) => s.saleDate <= args.dateTo!)
+
+      let harvests = await ctx.db
+        .query('harvestRecords')
+        .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
+        .collect()
+      if (args.dateFrom)
+        harvests = harvests.filter((r) => r.harvestDate >= args.dateFrom!)
+      if (args.dateTo)
+        harvests = harvests.filter((r) => r.harvestDate <= args.dateTo!)
+
+      const feedCost = daily.reduce((s, r) => s + r.feedCost, 0)
+      const revenue = sales.reduce((s, r) => s + r.totalAmount, 0)
+      const grossMargin = revenue - feedCost
+      if (daily.length === 0 && sales.length === 0 && harvests.length === 0) {
+        continue
+      }
+      rows.push({
+        cage_id: cage._id,
+        cage_name: cage.name,
+        species: cage.species || null,
+        status: cage.status,
+        feed_cost: feedCost,
+        feed_kg: daily.reduce((s, r) => s + r.feedAmount, 0),
+        mortality: daily.reduce((s, r) => s + r.mortality, 0),
+        harvest_kg: harvests.reduce((s, r) => s + r.totalWeight, 0),
+        sold_kg: sales.reduce((s, r) => s + r.weightKg, 0),
+        revenue,
+        gross_margin: grossMargin,
+        margin_pct: revenue > 0 ? (grossMargin / revenue) * 100 : null,
+      })
+    }
+
+    return rows.sort((a, b) => b.gross_margin - a.gross_margin)
   },
 })

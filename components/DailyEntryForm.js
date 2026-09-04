@@ -3,10 +3,12 @@ import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { feedTypeService } from '../lib/feedTypeService'
 import DependencyEmpty from './DependencyEmpty'
 import { usePersistedForm } from '../hooks/usePersistedForm'
+import { MORTALITY_CAUSES } from '../lib/farmHealth'
 
 const DAILY_ENTRY_DEFAULTS = {
   date: new Date().toISOString().split('T')[0],
   mortality: '',
+  mortalityCause: 'unknown',
   feedAmount: '',
   feedTypeId: '',
   feedPrice: '',
@@ -61,6 +63,10 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
         feedPrice,
         feedCost: feedAmount * feedPrice,
         mortality: Number(formData.mortality) || 0,
+        mortalityCause:
+          Number(formData.mortality) > 0
+            ? formData.mortalityCause || 'unknown'
+            : undefined,
         notes: formData.notes || undefined,
         dissolvedOxygen:
           formData.dissolvedOxygen !== ''
@@ -165,6 +171,24 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
             className="w-full border border-input-border rounded px-3 py-2 font-data"
           />
         </div>
+        {Number(formData.mortality) > 0 && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Mortality cause</label>
+            <select
+              value={formData.mortalityCause}
+              onChange={(e) =>
+                setFormData({ ...formData, mortalityCause: e.target.value })
+              }
+              className="w-full border border-input-border rounded px-3 py-2"
+            >
+              {MORTALITY_CAUSES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label className="block text-sm font-medium mb-1">DO (mg/L)</label>

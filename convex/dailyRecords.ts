@@ -21,6 +21,7 @@ function toClient(r: any) {
     feed_price: r.feedPrice,
     feed_cost: r.feedCost,
     mortality: r.mortality,
+    mortality_cause: r.mortalityCause,
     notes: r.notes,
     dissolved_oxygen: r.dissolvedOxygen,
     temperature_c: r.temperatureC,
@@ -164,6 +165,7 @@ export const create = mutation({
     feedPrice: v.number(),
     feedCost: v.number(),
     mortality: v.number(),
+    mortalityCause: v.optional(v.string()),
     notes: v.optional(v.string()),
     dissolvedOxygen: v.optional(v.number()),
     temperatureC: v.optional(v.number()),
@@ -194,11 +196,16 @@ export const create = mutation({
       dissolvedOxygen,
       temperatureC,
       secchiCm,
+      mortalityCause,
       ...recordFields
     } = args
 
     const id = await ctx.db.insert('dailyRecords', {
       ...recordFields,
+      mortalityCause:
+        args.mortality > 0
+          ? mortalityCause?.trim() || 'unknown'
+          : mortalityCause?.trim() || undefined,
       dissolvedOxygen,
       temperatureC,
       secchiCm,
