@@ -23,11 +23,13 @@ import {
   ArrowRight,
 } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import {
   cageService,
   stockingService,
 } from '../lib/databaseService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { withActiveLocation } from '../lib/locationScope'
 import {
   Button,
   Card,
@@ -81,6 +83,7 @@ function farmHealthScore(metrics) {
 export default function Dashboard() {
   const router = useRouter()
   const { user } = useAuth()
+  const { activeLocationId, locationArgs } = useLocation()
   const [cages, setCages] = useState([])
   const [dailyRecords, setDailyRecords] = useState([])
   const [recentStockings, setRecentStockings] = useState([])
@@ -90,6 +93,7 @@ export default function Dashboard() {
   const [tableTab, setTableTab] = useState('stockings')
   const [metrics, setMetrics] = useState({
     totalActiveCages: 0,
+    totalCages: 0,
     totalBiomass: 0,
     averageFCR: 'N/A',
     mortalityRate: '0.0',
@@ -136,18 +140,27 @@ export default function Dashboard() {
         })
 
         const client = getConvexHttpClient()
+        const scoped = withActiveLocation({ dateRange: 30 })
         const [kpis, dashSummary, daily] = await Promise.all([
-          client.query(api.reports.dashboardKpis, { dateRange: 30 }).catch(() => null),
-          client.query(api.reports.dashboardSummary, { dateRange: 30 }).catch(() => null),
-          client.query(api.dailyRecords.list, {}).catch(() => []),
+          client.query(api.reports.dashboardKpis, scoped).catch(() => null),
+          client.query(api.reports.dashboardSummary, scoped).catch(() => null),
+          client
+            .query(api.dailyRecords.list, withActiveLocation())
+            .catch(() => []),
         ])
         if (cancelled) return
 
         setDailyRecords(daily || [])
         setSummary(dashSummary)
 
+        const totalActive =
+          dashSummary?.cages?.active ??
+          kpis?.active_cages ??
+          active.length
+        const totalCages = dashSummary?.cages?.total ?? cagesList.length
+
         setMetrics({
-          totalActiveCages: active.length,
+          totalActiveCages: totalActive,
           totalBiomass: Math.round(biomass),
           averageFCR:
             kpis?.avg_fcr != null ? Number(kpis.avg_fcr).toFixed(2) : 'N/A',
@@ -163,7 +176,11 @@ export default function Dashboard() {
             kpis?.feed_cost_per_kg_harvested != null
               ? Number(kpis.feed_cost_per_kg_harvested).toFixed(2)
               : 'N/A',
-          activeFish: kpis?.active_fish_count ?? dashSummary?.active_fish_count ?? 0,
+          activeFish:
+            kpis?.active_fish_count ??
+            dashSummary?.active_fish_count ??
+            0,
+          totalCages,
         })
       } catch (err) {
         if (!cancelled) setError(err.message || String(err))
@@ -175,7 +192,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeLocationId, locationArgs?.locationId])
 
   const feedTrend = useMemo(() => {
     const byDate = {}
@@ -256,7 +273,7 @@ export default function Dashboard() {
           label="Active cages"
           value={metrics.totalActiveCages}
           icon={Fish}
-          hint={`${summary?.cages?.total ?? cages.length} total cages`}
+          hint={`${metrics.totalCages ?? summary?.cages?.total ?? cages.length} total at this location`}
         />
         <StatCard
           label="Stocked biomass"

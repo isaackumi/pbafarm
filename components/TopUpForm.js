@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import stockingService from '../lib/stockingService'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
+import PersonPicker from './PersonPicker'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import {
   Button,
@@ -353,10 +354,13 @@ const TopUpForm = ({ onComplete }) => {
                 placeholder="Where the fish were sourced from"
               />
             </Field>
-            <Field label="Transfer supervisor" htmlFor="transfer_supervisor">
-              <Input
+            <Field
+              label="Transfer supervisor"
+              htmlFor="transfer_supervisor"
+              hint="Pick a user or type a name"
+            >
+              <PersonPicker
                 id="transfer_supervisor"
-                type="text"
                 name="transfer_supervisor"
                 value={formData.transfer_supervisor}
                 onChange={handleChange}

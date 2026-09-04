@@ -18,9 +18,38 @@
 }
 
 .pbafarm-tour-popover .driver-popover-description {
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.65;
+  color: #1e293b;
+}
+
+.pbafarm-tour-popover .driver-popover-description strong,
+.pbafarm-tour-popover .driver-popover-description .tour-em {
+  font-weight: 700;
+  color: #0b3d3a;
+}
+
+.pbafarm-tour-popover .driver-popover-description mark,
+.pbafarm-tour-popover .driver-popover-description .tour-mark {
+  background: linear-gradient(
+    120deg,
+    rgba(15, 118, 110, 0.22) 0%,
+    rgba(21, 128, 61, 0.18) 100%
+  );
+  color: #0b3d3a;
+  font-weight: 700;
+  padding: 0.08em 0.38em;
+  border-radius: 0.35em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.pbafarm-tour-popover .driver-popover-description .tour-flow {
+  display: inline;
+  font-weight: 700;
+  color: #0f766e;
+  letter-spacing: 0.01em;
 }
 
 .pbafarm-tour-popover .driver-popover-progress-text {
@@ -148,7 +177,26 @@ html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-title {
 
 html.dark .pbafarm-tour-popover .driver-popover-description,
 html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description {
-  color: #334155 !important;
+  color: #1e293b !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-description .tour-em,
+html.dark .pbafarm-tour-popover .driver-popover-description strong,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description .tour-em,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description strong {
+  color: #0b3d3a !important;
+}
+
+html.dark .pbafarm-tour-popover .driver-popover-description .tour-mark,
+html.dark .pbafarm-tour-popover .driver-popover-description mark,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description .tour-mark,
+html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description mark {
+  background: linear-gradient(
+    120deg,
+    rgba(15, 118, 110, 0.22) 0%,
+    rgba(21, 128, 61, 0.18) 100%
+  ) !important;
+  color: #0b3d3a !important;
 }
 
 html.dark .pbafarm-tour-popover .driver-popover-arrow-side-bottom,

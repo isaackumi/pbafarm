@@ -58,6 +58,30 @@ export const list = query({
   },
 })
 
+/**
+ * Lightweight company directory for supervisor pickers.
+ * Any signed-in company user can load names (not admin-only).
+ */
+export const listDirectory = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUser(ctx)
+    let users = await ctx.db.query('users').collect()
+    if ((me.role ?? 'user') !== 'super_admin') {
+      if (!me.companyId) return []
+      users = users.filter((u) => u.companyId === me.companyId)
+    }
+    return users
+      .filter((u) => u.active !== false)
+      .map((u) => ({
+        id: u._id,
+        name: (u.name || '').trim() || u.email || 'User',
+        email: u.email || '',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
+})
+
 /** Internal: email collision check for admin create-with-password. */
 export const emailExists = internalQuery({
   args: { email: v.string() },

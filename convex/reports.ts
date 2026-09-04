@@ -6,6 +6,7 @@ import { listForCompany, listForCompanyAndLocation } from './lib/tenancy'
 export const dashboardSummary = query({
   args: {
     dateRange: v.optional(v.number()), // Days to look back
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -14,9 +15,9 @@ export const dashboardSummary = query({
     cutoffDate.setDate(cutoffDate.getDate() - daysBack)
     const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
 
-    // Get cage counts by status
+    // Get cage counts by status (scoped to active farm location when provided)
     let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
     
     const cagesByStatus = {
       total: cages.length,
@@ -30,7 +31,11 @@ export const dashboardSummary = query({
 
     // Get recent mortality sum
     let dailyRecords = await ctx.db.query('dailyRecords').collect()
-    dailyRecords = await listForCompany(user, dailyRecords)
+    dailyRecords = await listForCompanyAndLocation(
+      user,
+      dailyRecords,
+      args.locationId,
+    )
     const recentMortality = dailyRecords
       .filter((r) => r.date >= cutoffDateStr)
       .reduce((sum, r) => sum + r.mortality, 0)
@@ -47,7 +52,11 @@ export const dashboardSummary = query({
 
     // Get harvest count in period
     let harvestRecords = await ctx.db.query('harvestRecords').collect()
-    harvestRecords = await listForCompany(user, harvestRecords)
+    harvestRecords = await listForCompanyAndLocation(
+      user,
+      harvestRecords,
+      args.locationId,
+    )
     const recentHarvestCount = harvestRecords
       .filter((h) => h.harvestDate >= cutoffDateStr).length
 
@@ -61,7 +70,7 @@ export const dashboardSummary = query({
       .filter((c) => c.status === 'active')
       .reduce((sum, c) => sum + (c.currentCount || 0), 0)
 
-    // Get low stock alerts count
+    // Get low stock alerts count (company-wide feed types)
     let feedTypes = await ctx.db.query('feedTypes').collect()
     feedTypes = await listForCompany(user, feedTypes)
     const lowStockAlerts = feedTypes
@@ -85,6 +94,7 @@ export const dashboardSummary = query({
 export const dashboardKpis = query({
   args: {
     dateRange: v.optional(v.number()),
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -94,19 +104,19 @@ export const dashboardKpis = query({
     const cutoffDateStr = cutoff.toISOString().split('T')[0]
 
     let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
     const activeFish = cages
       .filter((c) => c.status === 'active')
       .reduce((s, c) => s + (c.currentCount || 0), 0)
 
     let daily = await ctx.db.query('dailyRecords').collect()
-    daily = await listForCompany(user, daily)
+    daily = await listForCompanyAndLocation(user, daily, args.locationId)
     daily = daily.filter((r) => r.date >= cutoffDateStr)
     const recentMortality = daily.reduce((s, r) => s + r.mortality, 0)
     const recentFeedCost = daily.reduce((s, r) => s + r.feedCost, 0)
 
     let biweekly = await ctx.db.query('biweeklyRecords').collect()
-    biweekly = await listForCompany(user, biweekly)
+    biweekly = await listForCompanyAndLocation(user, biweekly, args.locationId)
     biweekly = biweekly.filter((r) => r.date >= cutoffDateStr)
     let avgGrowth: number | null = null
     if (biweekly.length >= 2) {
@@ -137,7 +147,7 @@ export const dashboardKpis = query({
     }
 
     let harvests = await ctx.db.query('harvestRecords').collect()
-    harvests = await listForCompany(user, harvests)
+    harvests = await listForCompanyAndLocation(user, harvests, args.locationId)
     const periodHarvests = harvests.filter((h) => h.harvestDate >= cutoffDateStr)
     const fcrValues = periodHarvests
       .map((h) => h.fcr)

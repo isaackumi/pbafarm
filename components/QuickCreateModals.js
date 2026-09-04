@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
+import PersonPicker from './PersonPicker'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
@@ -518,13 +519,33 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
     transferSupervisor: '',
     samplingSupervisor: '',
     notes: '',
+    _batchAuto: true,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showCageCreate, setShowCageCreate] = useState(false)
 
+  const suggestedBatch = useQuery(
+    api.stocking.suggestBatchNumber,
+    form.cageId
+      ? { cageId: form.cageId, stockingDate: form.stockingDate || undefined }
+      : 'skip',
+  )
+
+  useEffect(() => {
+    if (!suggestedBatch) return
+    setForm((prev) => {
+      if (prev.batchNumber && !prev._batchAuto) return prev
+      return { ...prev, batchNumber: suggestedBatch, _batchAuto: true }
+    })
+  }, [suggestedBatch])
+
   const setField = (key) => (e) =>
-    setForm((p) => ({ ...p, [key]: e.target.value }))
+    setForm((p) => ({
+      ...p,
+      [key]: e.target.value,
+      ...(key === 'batchNumber' ? { _batchAuto: false } : {}),
+    }))
 
   const submit = async (e) => {
     e.preventDefault()
@@ -533,7 +554,6 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
     setError('')
     try {
       if (!form.cageId) throw new Error('Select a cage')
-      if (!form.batchNumber.trim()) throw new Error('Batch number is required')
       const fishCount = parseInt(form.fishCount, 10)
       const initialAbw = parseFloat(form.averageBodyWeight)
       if (!fishCount || fishCount < 1) throw new Error('Enter a valid fish count')
@@ -541,12 +561,14 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
 
       const args = {
         cageId: form.cageId,
-        batchNumber: form.batchNumber.trim(),
         stockingDate: form.stockingDate,
         fishCount,
         initialAbw,
         initialBiomass: (fishCount * initialAbw) / 1000,
         species: form.species || undefined,
+      }
+      if (form.batchNumber.trim()) {
+        args.batchNumber = form.batchNumber.trim()
       }
       if (form.sourceLocation.trim()) args.sourceLocation = form.sourceLocation.trim()
       if (form.transferSupervisor.trim()) {
@@ -623,12 +645,20 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
           )}
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Batch number" htmlFor="qc-st-batch" required>
+          <Field
+            label="Batch number"
+            htmlFor="qc-st-batch"
+            hint="Auto from cage + date"
+          >
             <Input
               id="qc-st-batch"
               value={form.batchNumber}
               onChange={setField('batchNumber')}
-              required
+              placeholder={
+                form.cageId
+                  ? suggestedBatch || 'Generating…'
+                  : 'Select a cage first'
+              }
             />
           </Field>
           <Field label="Stocking date" htmlFor="qc-st-date" required>
@@ -684,16 +714,26 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               onChange={setField('sourceLocation')}
             />
           </Field>
-          <Field label="Transfer supervisor" htmlFor="qc-st-transfer">
-            <Input
+          <Field
+            label="Transfer supervisor"
+            htmlFor="qc-st-transfer"
+            hint="Pick a user or type a name"
+          >
+            <PersonPicker
               id="qc-st-transfer"
+              name="transferSupervisor"
               value={form.transferSupervisor}
               onChange={setField('transferSupervisor')}
             />
           </Field>
-          <Field label="Sampling supervisor" htmlFor="qc-st-sampling">
-            <Input
+          <Field
+            label="Sampling supervisor"
+            htmlFor="qc-st-sampling"
+            hint="Pick a user or type a name"
+          >
+            <PersonPicker
               id="qc-st-sampling"
+              name="samplingSupervisor"
               value={form.samplingSupervisor}
               onChange={setField('samplingSupervisor')}
             />

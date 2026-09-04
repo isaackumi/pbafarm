@@ -14,6 +14,7 @@ import {
   Textarea,
 } from './ui'
 import DependencyEmpty from './DependencyEmpty'
+import PersonPicker from './PersonPicker'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -62,6 +63,34 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     if (!allCages) return []
     return allCages.filter((cage) => stockableStatuses.includes(cage.status))
   }, [allCages, stockableStatuses])
+
+  const suggestedBatch = useQuery(
+    api.stocking.suggestBatchNumber,
+    user && formData.cageId
+      ? {
+          cageId: formData.cageId,
+          stockingDate: formData.stockingDate || undefined,
+        }
+      : 'skip',
+  )
+
+  useEffect(() => {
+    if (!suggestedBatch) return
+    setFormData((prev) => {
+      // Only overwrite empty or previously auto-filled values
+      if (prev.batchNumber && !prev._batchAuto) return prev
+      return { ...prev, batchNumber: suggestedBatch, _batchAuto: true }
+    })
+  }, [suggestedBatch, setFormData])
+
+  const handleBatchChange = (e) => {
+    const value = e.target.value
+    setFormData((prev) => ({
+      ...prev,
+      batchNumber: value,
+      _batchAuto: false,
+    }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -198,14 +227,22 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 />
               )}
             </Field>
-            <Field label="Batch number" htmlFor="batchNumber" required>
+            <Field
+              label="Batch number"
+              htmlFor="batchNumber"
+              hint="Auto-generated from cage + date; edit if needed"
+            >
               <Input
                 id="batchNumber"
                 type="text"
                 name="batchNumber"
                 value={formData.batchNumber}
-                onChange={handleChange}
-                required
+                onChange={handleBatchChange}
+                placeholder={
+                  formData.cageId
+                    ? suggestedBatch || 'Generating…'
+                    : 'Select a cage first'
+                }
               />
             </Field>
             <Field label="Stocking date" htmlFor="stockingDate" required>
@@ -277,19 +314,25 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 onChange={handleChange}
               />
             </Field>
-            <Field label="Transfer supervisor" htmlFor="transferSupervisor">
-              <Input
+            <Field
+              label="Transfer supervisor"
+              htmlFor="transferSupervisor"
+              hint="Pick a user or type a name"
+            >
+              <PersonPicker
                 id="transferSupervisor"
-                type="text"
                 name="transferSupervisor"
                 value={formData.transferSupervisor}
                 onChange={handleChange}
               />
             </Field>
-            <Field label="Sampling supervisor" htmlFor="samplingSupervisor">
-              <Input
+            <Field
+              label="Sampling supervisor"
+              htmlFor="samplingSupervisor"
+              hint="Pick a user or type a name"
+            >
+              <PersonPicker
                 id="samplingSupervisor"
-                type="text"
                 name="samplingSupervisor"
                 value={formData.samplingSupervisor}
                 onChange={handleChange}

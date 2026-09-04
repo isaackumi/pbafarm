@@ -14,6 +14,35 @@ async function loadRules(ctx: any, companyId: any) {
   return mergeSettings(company?.settings)
 }
 
+function cageBatchSlug(cage: { code?: string; name?: string }) {
+  const raw = (cage.code || cage.name || 'CAGE')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '')
+    .slice(0, 10)
+  return raw || 'CAGE'
+}
+
+/** Unique batch like CAGE01-20260904 or CAGE01-20260904-2 */
+async function allocateBatchNumber(
+  ctx: any,
+  user: any,
+  cage: { code?: string; name?: string },
+  stockingDate: string,
+) {
+  const datePart = (stockingDate || new Date().toISOString().slice(0, 10)).replace(
+    /-/g,
+    '',
+  )
+  const base = `${cageBatchSlug(cage)}-${datePart}`
+  let rows = await ctx.db.query('stockingHistory').collect()
+  rows = await listForCompany(user, rows)
+  const existing = new Set(rows.map((r: any) => r.batchNumber))
+  if (!existing.has(base)) return base
+  let n = 2
+  while (existing.has(`${base}-${n}`)) n += 1
+  return `${base}-${n}`
+}
+
 const stockingStatus = v.union(
   v.literal('pending_approval'),
   v.literal('approved'),
@@ -176,7 +205,7 @@ export const getTopup = query({
 export const createStocking = mutation({
   args: {
     cageId: v.id('cages'),
-    batchNumber: v.string(),
+    batchNumber: v.optional(v.string()),
     stockingDate: v.string(),
     fishCount: v.number(),
     initialAbw: v.number(),
@@ -208,10 +237,14 @@ export const createStocking = mutation({
       : 'approved'
 
     const locationId = cage.locationId
-    const { species, ...rest } = args
+    const { species, batchNumber: rawBatch, ...rest } = args
+    const batchNumber =
+      rawBatch?.trim() ||
+      (await allocateBatchNumber(ctx, user, cage, args.stockingDate))
 
     const id = await ctx.db.insert('stockingHistory', {
       ...rest,
+      batchNumber,
       species: species || undefined,
       status,
       locationId,
@@ -238,9 +271,27 @@ export const createStocking = mutation({
       actionType: 'create',
       tableName: 'stockingHistory',
       recordId: id,
-      newValues: { ...args, status },
+      newValues: { ...args, batchNumber, status },
     })
     return id
+  },
+})
+
+/** Preview next auto batch number for a cage + date. */
+export const suggestBatchNumber = query({
+  args: {
+    cageId: v.id('cages'),
+    stockingDate: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage) return null
+    const allowed = await listForCompany(user, [cage])
+    if (!allowed.length) return null
+    const stockingDate =
+      args.stockingDate || new Date().toISOString().split('T')[0]
+    return allocateBatchNumber(ctx, user, cage, stockingDate)
   },
 })
 
