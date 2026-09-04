@@ -521,6 +521,11 @@ function StockingManagement() {
                     <tr key={stocking.id} className="hover:bg-foam-deep/40">
                       <td className="px-6 py-4 whitespace-nowrap font-medium text-lagoon-800">
                         {stocking.batch_number}
+                        {stocking.species ? (
+                          <span className="block text-xs text-muted font-normal">
+                            {stocking.species.replace(/_/g, ' ')}
+                          </span>
+                        ) : null}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {stocking.cage?.name || 'Unknown'}

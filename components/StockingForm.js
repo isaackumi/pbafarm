@@ -17,6 +17,7 @@ import DependencyEmpty from './DependencyEmpty'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
+import { FISH_SPECIES } from '../lib/fishSpecies'
 
 const STOCKING_DEFAULTS = {
   cageId: '',
@@ -24,6 +25,7 @@ const STOCKING_DEFAULTS = {
   stockingDate: new Date().toISOString().split('T')[0],
   fishCount: '',
   averageBodyWeight: '',
+  species: 'nile_tilapia',
   sourceLocation: '',
   transferSupervisor: '',
   samplingSupervisor: '',
@@ -72,6 +74,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
         stocking_date: formData.stockingDate,
         fish_count: parseInt(formData.fishCount, 10),
         initial_abw: parseFloat(formData.averageBodyWeight),
+        species: formData.species || undefined,
         source_location: formData.sourceLocation,
         transfer_supervisor: formData.transferSupervisor,
         sampling_supervisor: formData.samplingSupervisor,
@@ -214,6 +217,21 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 onChange={handleChange}
                 required
               />
+            </Field>
+            <Field label="Species" htmlFor="species" required>
+              <Select
+                id="species"
+                name="species"
+                value={formData.species}
+                onChange={handleChange}
+                required
+              >
+                {FISH_SPECIES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
             </Field>
           </div>
         </FormSection>

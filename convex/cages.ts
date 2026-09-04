@@ -38,6 +38,7 @@ function toClient(cage: any) {
     next_maintenance_date: cage.nextMaintenanceDate,
     status: cage.status,
     notes: cage.notes,
+    species: cage.species,
     company_id: cage.companyId,
     created_by: cage.createdBy,
     updated_at: cage.updatedAt,

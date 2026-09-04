@@ -29,6 +29,9 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   ])
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [batchCode, setBatchCode] = useState(generateBatchCode())
+  const [dissolvedOxygen, setDissolvedOxygen] = useState('')
+  const [temperatureC, setTemperatureC] = useState('')
+  const [secchiCm, setSecchiCm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
@@ -116,6 +119,10 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         average_body_weight: calculateAverageABW(),
         total_fish_count: totalFish,
         total_weight: totalWeight,
+        dissolved_oxygen:
+          dissolvedOxygen !== '' ? Number(dissolvedOxygen) : undefined,
+        temperature_c: temperatureC !== '' ? Number(temperatureC) : undefined,
+        secchi_cm: secchiCm !== '' ? Number(secchiCm) : undefined,
         samples: samplings
           .filter((s) => s.fish_count && s.total_weight)
           .map((sampling, index) => ({
@@ -135,6 +142,9 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       setSuccess(true)
       setDate(new Date().toISOString().split('T')[0])
       setBatchCode(generateBatchCode())
+      setDissolvedOxygen('')
+      setTemperatureC('')
+      setSecchiCm('')
       setSamplings([{ id: 1, fish_count: '', total_weight: '', abw: 0 }])
 
       if (onComplete) {
@@ -224,6 +234,44 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                   <RefreshCw className="w-4 h-4" />
                 </Button>
               </div>
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Water quality">
+          <p className="text-sm text-muted -mt-2 mb-3">
+            Optional — DO, temperature, and Secchi at sampling time.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <Field label="Dissolved oxygen (mg/L)" htmlFor="bw-do">
+              <Input
+                id="bw-do"
+                type="number"
+                step="0.1"
+                value={dissolvedOxygen}
+                onChange={(e) => setDissolvedOxygen(e.target.value)}
+                className="font-data"
+              />
+            </Field>
+            <Field label="Temperature (°C)" htmlFor="bw-temp">
+              <Input
+                id="bw-temp"
+                type="number"
+                step="0.1"
+                value={temperatureC}
+                onChange={(e) => setTemperatureC(e.target.value)}
+                className="font-data"
+              />
+            </Field>
+            <Field label="Secchi (cm)" htmlFor="bw-secchi">
+              <Input
+                id="bw-secchi"
+                type="number"
+                step="1"
+                value={secchiCm}
+                onChange={(e) => setSecchiCm(e.target.value)}
+                className="font-data"
+              />
             </Field>
           </div>
         </FormSection>

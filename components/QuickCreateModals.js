@@ -7,6 +7,7 @@ import { Button, Field, Input, Select, Textarea } from './ui'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
+import { FISH_SPECIES } from '../lib/fishSpecies'
 
 function ModalShell({ title, subtitle, onClose, children }) {
   const [mounted, setMounted] = useState(false)
@@ -512,6 +513,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
     stockingDate: new Date().toISOString().split('T')[0],
     fishCount: '',
     averageBodyWeight: '',
+    species: 'nile_tilapia',
     sourceLocation: '',
     transferSupervisor: '',
     samplingSupervisor: '',
@@ -544,6 +546,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
         fishCount,
         initialAbw,
         initialBiomass: (fishCount * initialAbw) / 1000,
+        species: form.species || undefined,
       }
       if (form.sourceLocation.trim()) args.sourceLocation = form.sourceLocation.trim()
       if (form.transferSupervisor.trim()) {
@@ -636,6 +639,20 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               onChange={setField('stockingDate')}
               required
             />
+          </Field>
+          <Field label="Species" htmlFor="qc-st-species" required>
+            <Select
+              id="qc-st-species"
+              value={form.species}
+              onChange={setField('species')}
+              required
+            >
+              {FISH_SPECIES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           <Field label="Fish count" htmlFor="qc-st-count" required>
             <Input

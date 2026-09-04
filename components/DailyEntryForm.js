@@ -10,6 +10,9 @@ const DAILY_ENTRY_DEFAULTS = {
   feedAmount: '',
   feedTypeId: '',
   feedPrice: '',
+  dissolvedOxygen: '',
+  temperatureC: '',
+  secchiCm: '',
   notes: '',
 }
 
@@ -59,6 +62,16 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
         feedCost: feedAmount * feedPrice,
         mortality: Number(formData.mortality) || 0,
         notes: formData.notes || undefined,
+        dissolvedOxygen:
+          formData.dissolvedOxygen !== ''
+            ? Number(formData.dissolvedOxygen)
+            : undefined,
+        temperatureC:
+          formData.temperatureC !== ''
+            ? Number(formData.temperatureC)
+            : undefined,
+        secchiCm:
+          formData.secchiCm !== '' ? Number(formData.secchiCm) : undefined,
       })
       clear()
       setFormData({
@@ -151,6 +164,47 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
             onChange={(e) => setFormData({ ...formData, mortality: e.target.value })}
             className="w-full border border-input-border rounded px-3 py-2 font-data"
           />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <label className="block text-sm font-medium mb-1">DO (mg/L)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.dissolvedOxygen}
+              onChange={(e) =>
+                setFormData({ ...formData, dissolvedOxygen: e.target.value })
+              }
+              className="w-full border border-input-border rounded px-3 py-2 font-data"
+              placeholder="opt."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Temp (°C)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.temperatureC}
+              onChange={(e) =>
+                setFormData({ ...formData, temperatureC: e.target.value })
+              }
+              className="w-full border border-input-border rounded px-3 py-2 font-data"
+              placeholder="opt."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Secchi (cm)</label>
+            <input
+              type="number"
+              step="1"
+              value={formData.secchiCm}
+              onChange={(e) =>
+                setFormData({ ...formData, secchiCm: e.target.value })
+              }
+              className="w-full border border-input-border rounded px-3 py-2 font-data"
+              placeholder="opt."
+            />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Notes</label>

@@ -13,6 +13,10 @@ function toClient(r: any) {
     average_body_weight: r.averageBodyWeight,
     total_fish_count: r.totalFishCount,
     total_weight: r.totalWeight,
+    dissolved_oxygen: r.dissolvedOxygen,
+    temperature_c: r.temperatureC,
+    secchi_cm: r.secchiCm,
+    location_id: r.locationId,
     company_id: r.companyId,
     created_by: r.createdBy,
     updated_by: r.updatedBy,
@@ -64,6 +68,9 @@ export const create = mutation({
     averageBodyWeight: v.number(),
     totalFishCount: v.number(),
     totalWeight: v.number(),
+    dissolvedOxygen: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
+    secchiCm: v.optional(v.number()),
     samples: v.optional(
       v.array(
         v.object({

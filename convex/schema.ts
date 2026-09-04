@@ -165,6 +165,8 @@ const schema = defineSchema({
     nextMaintenanceDate: v.optional(v.string()),
     status: cageStatus,
     notes: v.optional(v.string()),
+    /** Active culture species (set from stocking). */
+    species: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -256,6 +258,12 @@ const schema = defineSchema({
     feedCost: v.number(),
     mortality: v.number(),
     notes: v.optional(v.string()),
+    /** Dissolved oxygen (mg/L). */
+    dissolvedOxygen: v.optional(v.number()),
+    /** Water temperature (°C). */
+    temperatureC: v.optional(v.number()),
+    /** Secchi disk depth (cm). */
+    secchiCm: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -274,6 +282,9 @@ const schema = defineSchema({
     averageBodyWeight: v.number(),
     totalFishCount: v.number(),
     totalWeight: v.number(),
+    dissolvedOxygen: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
+    secchiCm: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -396,6 +407,8 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     notes: v.optional(v.string()),
+    /** Culture species code (e.g. nile_tilapia). */
+    species: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),

@@ -36,6 +36,8 @@ function toClientStocking(s: any) {
     sampling_supervisor: s.samplingSupervisor,
     status: s.status,
     notes: s.notes,
+    species: s.species,
+    location_id: s.locationId,
     company_id: s.companyId,
     created_by: s.createdBy,
     approved_by: s.approvedBy,
@@ -184,6 +186,7 @@ export const createStocking = mutation({
     transferSupervisor: v.optional(v.string()),
     samplingSupervisor: v.optional(v.string()),
     notes: v.optional(v.string()),
+    species: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -205,9 +208,11 @@ export const createStocking = mutation({
       : 'approved'
 
     const locationId = cage.locationId
+    const { species, ...rest } = args
 
     const id = await ctx.db.insert('stockingHistory', {
-      ...args,
+      ...rest,
+      species: species || undefined,
       status,
       locationId,
       companyId,
@@ -224,6 +229,7 @@ export const createStocking = mutation({
         currentCount: args.fishCount,
         initialAbw: args.initialAbw,
         status: 'active',
+        species: species || cage.species,
         updatedAt: Date.now(),
       })
     }
@@ -336,6 +342,7 @@ export const approveStocking = mutation({
       currentCount: stocking.fishCount,
       initialAbw: stocking.initialAbw,
       status: 'active',
+      species: stocking.species,
       updatedAt: now,
     })
 

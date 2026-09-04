@@ -22,6 +22,10 @@ function toClient(r: any) {
     feed_cost: r.feedCost,
     mortality: r.mortality,
     notes: r.notes,
+    dissolved_oxygen: r.dissolvedOxygen,
+    temperature_c: r.temperatureC,
+    secchi_cm: r.secchiCm,
+    location_id: r.locationId,
     created_by: r.createdBy,
     created_at: r._creationTime,
   }
@@ -161,6 +165,9 @@ export const create = mutation({
     feedCost: v.number(),
     mortality: v.number(),
     notes: v.optional(v.string()),
+    dissolvedOxygen: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
+    secchiCm: v.optional(v.number()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
   },
@@ -181,16 +188,20 @@ export const create = mutation({
       .first()
     if (existing) throw new Error('Daily record already exists for this cage and date')
 
+    const {
+      allowNegative,
+      overrideReason,
+      dissolvedOxygen,
+      temperatureC,
+      secchiCm,
+      ...recordFields
+    } = args
+
     const id = await ctx.db.insert('dailyRecords', {
-      cageId: args.cageId,
-      date: args.date,
-      feedAmount: args.feedAmount,
-      feedTypeId: args.feedTypeId,
-      feedType: args.feedType,
-      feedPrice: args.feedPrice,
-      feedCost: args.feedCost,
-      mortality: args.mortality,
-      notes: args.notes,
+      ...recordFields,
+      dissolvedOxygen,
+      temperatureC,
+      secchiCm,
       locationId: cage.locationId,
       companyId: (await writeCompanyId(user)) ?? cage.companyId,
       createdBy: user._id,
