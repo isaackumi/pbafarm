@@ -69,40 +69,40 @@ function InventoryAnalytics() {
 
   const fetchData = async () => {
     setLoading(true)
+    setError(null)
     try {
-      // Calculate date range based on selected time range
-      const endDate = new Date()
-      const startDate = new Date()
+      const endMs = Date.now()
+      const start = new Date()
       switch (timeRange) {
         case '7d':
-          startDate.setDate(startDate.getDate() - 7)
+          start.setDate(start.getDate() - 7)
           break
         case '30d':
-          startDate.setDate(startDate.getDate() - 30)
+          start.setDate(start.getDate() - 30)
           break
         case '90d':
-          startDate.setDate(startDate.getDate() - 90)
+          start.setDate(start.getDate() - 90)
           break
         case '1y':
-          startDate.setFullYear(startDate.getFullYear() - 1)
+          start.setFullYear(start.getFullYear() - 1)
           break
         default:
-          startDate.setDate(startDate.getDate() - 30)
+          start.setDate(start.getDate() - 30)
       }
+      const dateFrom = start.getTime()
+      const dateTo = endMs
 
       const client = getConvexHttpClient()
-      
-      // Fetch inventory items (stock levels)
+
       const itemsData = await client.query(api.inventory.listStockLevels, {})
       setInventoryItems(itemsData || [])
 
-      // Fetch transactions with date range
       const transactionsData = await client.query(api.inventory.listTransactions, {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        dateFrom,
+        dateTo,
+        limit: 500,
       })
 
-      // Process data for charts
       const processedTransactionData = processTransactionData(transactionsData)
       setTransactionData(processedTransactionData)
 
@@ -111,61 +111,70 @@ function InventoryAnalytics() {
 
       const processedTrendData = processTrendData(transactionsData)
       setTrendData(processedTrendData)
-
     } catch (error) {
       console.error('Error fetching data:', error)
-      showToast('error', 'Failed to load analytics data')
-      setError('Failed to load data. Please try again.')
+      showToast('error', error.message || 'Failed to load analytics data')
+      setError(error.message || 'Failed to load data. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
+  const IN_TYPES = new Set(['purchase', 'adjustment', 'transfer', 'reversal'])
+  const OUT_TYPES = new Set(['usage', 'issue', 'daily_usage'])
+
+  const qtyKg = (item) => Number(item.quantity_kg ?? item.quantity ?? 0)
+
   const processTransactionData = (data) => {
-    // Group by date and type
-    const grouped = data.reduce((acc, item) => {
+    const grouped = (data || []).reduce((acc, item) => {
       const date = new Date(item.transaction_date).toLocaleDateString()
       if (!acc[date]) acc[date] = { in: 0, out: 0 }
-      if (item.transaction_type === 'in') {
-        acc[date].in += item.quantity
+      const type = item.transaction_type
+      const qty = Math.abs(qtyKg(item))
+      if (OUT_TYPES.has(type) || qtyKg(item) < 0) {
+        acc[date].out += qty
+      } else if (IN_TYPES.has(type) || type === 'purchase') {
+        acc[date].in += qty
       } else {
-        acc[date].out += item.quantity
+        acc[date].in += qty
       }
       return acc
     }, {})
 
     return Object.entries(grouped).map(([date, values]) => ({
       date,
-      ...values
+      ...values,
     }))
   }
 
   const processCategoryData = (data) => {
-    const categoryMap = data.reduce((acc, item) => {
-      const category = item.category?.name || 'Uncategorized'
-      if (!acc[category]) acc[category] = 0
-      acc[category] += item.quantity * item.unit_price
-      return acc
-    }, {})
-
-    return Object.entries(categoryMap).map(([name, value]) => ({
-      name,
-      value
+    const rows = (data || []).map((item) => ({
+      name: item.feed_type_name || 'Feed',
+      value: Number(item.stock_value ?? 0),
     }))
+    const withValue = rows.filter((r) => r.value > 0)
+    return withValue.length ? withValue : [{ name: 'No stock value', value: 0 }]
   }
 
   const processTrendData = (data) => {
-    // Group by date and calculate net change
-    const grouped = data.reduce((acc, item) => {
+    const grouped = (data || []).reduce((acc, item) => {
       const date = new Date(item.transaction_date).toLocaleDateString()
       if (!acc[date]) acc[date] = 0
-      acc[date] += item.transaction_type === 'in' ? item.quantity : -item.quantity
+      const type = item.transaction_type
+      const qty = qtyKg(item)
+      if (OUT_TYPES.has(type)) {
+        acc[date] -= Math.abs(qty)
+      } else if (type === 'purchase') {
+        acc[date] += Math.abs(qty)
+      } else {
+        acc[date] += qty
+      }
       return acc
     }, {})
 
     return Object.entries(grouped).map(([date, value]) => ({
       date,
-      value
+      value,
     }))
   }
 
@@ -312,25 +321,29 @@ function InventoryAnalytics() {
             },
             {
               title: 'Total Value',
-              value: inventoryItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0).toFixed(2),
+              value: inventoryItems
+                .reduce((sum, item) => sum + Number(item.stock_value || 0), 0)
+                .toFixed(2),
               unit: '₵',
               icon: DollarSign,
               color: 'green',
               trend: { value: 2.5, direction: 'up' }
             },
             {
-              title: 'Turnover Rate',
-              value: '15',
-              unit: 'days',
-              icon: Calendar,
+              title: 'Low stock',
+              value: inventoryItems.filter((i) => i.is_low_stock).length,
+              unit: 'feeds',
+              icon: AlertTriangle,
               color: 'purple',
-              trend: { value: 2, direction: 'down' }
+              trend: { value: 0, direction: 'down' }
             },
             {
-              title: 'Stock Accuracy',
-              value: '98',
-              unit: '%',
-              icon: Percent,
+              title: 'On hand',
+              value: inventoryItems
+                .reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
+                .toFixed(0),
+              unit: 'kg',
+              icon: Scale,
               color: 'yellow',
               trend: { value: 1, direction: 'up' }
             },

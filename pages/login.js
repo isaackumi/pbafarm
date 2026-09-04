@@ -12,7 +12,11 @@ export default function Login() {
   const router = useRouter()
 
   if (user) {
-    router.push('/dashboard')
+    const next =
+      typeof router.query.next === 'string' && router.query.next.startsWith('/')
+        ? router.query.next
+        : '/dashboard'
+    router.push(next)
     return null
   }
 
@@ -34,7 +38,11 @@ export default function Login() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(
+      typeof router.query.next === 'string' && router.query.next.startsWith('/')
+        ? router.query.next
+        : '/dashboard',
+    )
   }
 
   return (

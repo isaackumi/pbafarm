@@ -84,18 +84,20 @@ const TopBar = ({ title = 'Dashboard' }) => {
         </h1>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
-          {locations.length > 0 && (
-            <label className="hidden sm:flex items-center gap-2 min-h-12">
-              <MapPin
-                size={18}
-                weight="duotone"
-                className="text-muted shrink-0"
-                aria-hidden
-              />
+          <div
+            className="flex items-center gap-1.5 sm:gap-2 min-h-12"
+            data-tour="location-switcher"
+          >
+            <MapPin
+              size={18}
+              weight="duotone"
+              className="text-muted shrink-0"
+              aria-hidden
+            />
+            {locations.length > 0 ? (
               <select
                 aria-label="Farm location"
-                data-tour="location-switcher"
-                className="max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-xl bg-surface px-3 py-2 text-chart-ink focus:outline-none focus:ring-2 focus:ring-lagoon-800"
+                className="max-w-[9rem] sm:max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-xl bg-surface px-3 py-2 text-chart-ink focus:outline-none focus:ring-2 focus:ring-lagoon-800"
                 value={activeLocationId || ''}
                 disabled={locationLoading}
                 onChange={(e) => setActiveLocation(e.target.value)}
@@ -106,8 +108,15 @@ const TopBar = ({ title = 'Dashboard' }) => {
                   </option>
                 ))}
               </select>
-            </label>
-          )}
+            ) : (
+              <Link
+                href="/farm-locations"
+                className="text-xs sm:text-sm font-semibold text-lagoon-800 hover:underline whitespace-nowrap"
+              >
+                Set location
+              </Link>
+            )}
+          </div>
 
           <div
             className="relative"
@@ -208,6 +217,8 @@ const TopBar = ({ title = 'Dashboard' }) => {
           </div>
 
           <button
+            type="button"
+            data-tour="theme-toggle"
             className="p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none rounded-xl min-h-12 min-w-12 flex items-center justify-center"
             aria-label="Toggle theme"
             onClick={toggleTheme}

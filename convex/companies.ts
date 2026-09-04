@@ -220,17 +220,37 @@ export const register = mutation({
     code: v.string(),
     address: v.optional(v.string()),
     contactEmail: v.optional(v.string()),
+    contactPhone: v.optional(v.string()),
+    abbreviation: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    
+
+    const name = args.name.trim()
+    if (!name) throw new Error('Company name is required')
+
+    let code = args.code
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9-]/g, '')
+    if (!code) {
+      code = name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 8)
+    }
+    if (!code) throw new Error('Company code is required')
+    if (code.length < 2) {
+      throw new Error('Company code must be at least 2 characters')
+    }
+
     // Check if company code already exists
     const existingByCode = await ctx.db
       .query('companies')
-      .withIndex('by_code', (q) => q.eq('code', args.code))
+      .withIndex('by_code', (q) => q.eq('code', code))
       .first()
     if (existingByCode) {
-      throw new Error('Company code already exists')
+      throw new Error('Company code already exists — choose another short code')
     }
 
     // User should not already belong to a company
@@ -238,31 +258,39 @@ export const register = mutation({
       throw new Error('User already belongs to a company')
     }
 
+    const contactEmail =
+      args.contactEmail?.trim() || user.email || undefined
+    const contactPhone = args.contactPhone?.trim() || undefined
+    const address = args.address?.trim() || undefined
+    const abbreviation = args.abbreviation?.trim() || undefined
+
     const now = Date.now()
     const companyId = await ctx.db.insert('companies', {
-      name: args.name,
-      code: args.code,
-      address: args.address,
-      contactEmail: args.contactEmail || user.email,
+      name,
+      code,
+      address,
+      contactEmail,
+      contactPhone,
+      abbreviation,
       submittedByUserId: user._id,
       status: 'pending',
       settings: { aiAssistantEnabled: false },
       createdAt: now,
     })
 
-    // Note: We don't set user.companyId yet - that happens on approval
-    // Store the requesting user's email in contactEmail if not provided
-    if (!args.contactEmail && user.email) {
-      await ctx.db.patch(companyId, {
-        contactEmail: user.email,
-      })
-    }
-
     await logAudit(ctx, {
       actionType: 'register',
       tableName: 'companies',
       recordId: companyId,
-      newValues: { ...args, requestedByUserId: user._id },
+      newValues: {
+        name,
+        code,
+        address,
+        contactEmail,
+        contactPhone,
+        abbreviation,
+        requestedByUserId: user._id,
+      },
     })
 
     return companyId
