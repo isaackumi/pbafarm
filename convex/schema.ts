@@ -472,6 +472,48 @@ const schema = defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_read', ['userId', 'read']),
+
+  /** Buyers / market outlets (company-wide catalog). */
+  customers: defineTable({
+    name: v.string(),
+    contactName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    active: v.boolean(),
+    companyId: v.optional(v.id('companies')),
+    deletedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_company', ['companyId']),
+
+  /** Sales from harvest (or ad-hoc) — revenue by kg × price. */
+  sales: defineTable({
+    harvestId: v.optional(v.id('harvestRecords')),
+    cageId: v.optional(v.id('cages')),
+    customerId: v.optional(v.id('customers')),
+    customerName: v.optional(v.string()),
+    saleDate: v.string(),
+    weightKg: v.number(),
+    pricePerKg: v.number(),
+    totalAmount: v.number(),
+    paymentStatus: v.optional(
+      v.union(
+        v.literal('pending'),
+        v.literal('partial'),
+        v.literal('paid'),
+      ),
+    ),
+    notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+    companyId: v.optional(v.id('companies')),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_harvest', ['harvestId'])
+    .index('by_location', ['locationId'])
+    .index('by_company_location', ['companyId', 'locationId'])
+    .index('by_date', ['saleDate']),
 })
 
 export default schema

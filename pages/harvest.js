@@ -242,11 +242,15 @@ const HarvestPage = () => {
           description="Track harvest events and related sampling records."
           related={[
             { label: 'Harvest sampling', href: '/harvest-sampling' },
+            { label: 'Sales', href: '/sales' },
             { label: 'Bi-weekly records', href: '/biweekly-records' },
             { label: 'Cages', href: '/cages' },
           ]}
           actions={
             <>
+              <Button href="/sales" variant="secondary" size="sm">
+                Sales
+              </Button>
               <Button href="/harvest-sampling" variant="secondary" size="sm">
                 <PlusCircle className="w-4 h-4" />
                 Harvest Sampling

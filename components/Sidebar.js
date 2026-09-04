@@ -52,6 +52,7 @@ const MENU_SECTIONS = {
       { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
       { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
+      { title: 'Sales', path: '/sales', icon: ShoppingCart, tourId: 'sales' },
       { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
       { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
     ],

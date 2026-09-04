@@ -14,6 +14,7 @@ import {
 } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
+import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 
 export default function InventoryAdjustPage() {
@@ -27,6 +28,7 @@ export default function InventoryAdjustPage() {
 function InventoryAdjust() {
   const { user } = useAuth()
   const { showToast } = useToast()
+  const { locations: farmLocations } = useLocation()
   const feedTypes = useQuery(api.feed.listFeedTypes, user ? {} : 'skip')
   const lots = useQuery(api.inventory.listLots, user ? {} : 'skip')
   const createAdjustment = useMutation(api.inventory.createAdjustment)
@@ -37,12 +39,12 @@ function InventoryAdjust() {
   const [quantityKg, setQuantityKg] = useState('')
   const [notes, setNotes] = useState('')
   const [location, setLocation] = useState('Main store')
-  const [fromLocation, setFromLocation] = useState('Main store')
-  const [toLocation, setToLocation] = useState('')
+  const [fromLocationId, setFromLocationId] = useState('')
+  const [toLocationId, setToLocationId] = useState('')
   const [batchNumber, setBatchNumber] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const locations = useMemo(() => {
+  const storeLabels = useMemo(() => {
     const set = new Set(['Main store'])
     for (const lot of lots || []) {
       if (lot.location) set.add(lot.location)
@@ -80,15 +82,18 @@ function InventoryAdjust() {
         showToast('success', 'Stock adjusted')
       } else {
         if (qty < 0) throw new Error('Transfer quantity must be positive')
+        if (!fromLocationId || !toLocationId) {
+          throw new Error('Select from and to farm locations')
+        }
         await createTransfer({
           feedTypeId,
           quantityKg: Math.abs(qty),
-          fromLocation,
-          toLocation,
+          fromLocationId,
+          toLocationId,
           notes: notes.trim() || undefined,
           batchNumber: batchNumber || undefined,
         })
-        showToast('success', 'Stock transferred')
+        showToast('success', 'Stock transferred between locations')
       }
       setQuantityKg('')
       setNotes('')
@@ -109,11 +114,12 @@ function InventoryAdjust() {
           { label: 'Inventory', href: '/inventory/overview' },
           { label: 'Adjust' },
         ]}
-        description="Correct on-hand stock or move lots between store locations."
+        description="Correct on-hand stock or move lots between farm locations."
         related={[
           { label: 'Ledger', href: '/inventory-transactions' },
           { label: 'Lots', href: '/inventory/lots' },
           { label: 'Stock levels', href: '/stock-levels' },
+          { label: 'Farm locations', href: '/farm-locations' },
         ]}
         actions={
           <Button href="/inventory-transactions" variant="secondary" size="sm">
@@ -183,7 +189,7 @@ function InventoryAdjust() {
             </Field>
 
             {mode === 'adjust' ? (
-              <Field label="Location">
+              <Field label="Store label (lot)">
                 <Input
                   list="inv-locations"
                   value={location}
@@ -192,27 +198,39 @@ function InventoryAdjust() {
               </Field>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="From">
-                  <Input
-                    list="inv-locations"
-                    value={fromLocation}
-                    onChange={(e) => setFromLocation(e.target.value)}
+                <Field label="From farm location" required>
+                  <Select
+                    value={fromLocationId}
+                    onChange={(e) => setFromLocationId(e.target.value)}
                     required
-                  />
+                  >
+                    <option value="">Select…</option>
+                    {(farmLocations || []).map((loc) => (
+                      <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </Select>
                 </Field>
-                <Field label="To">
-                  <Input
-                    list="inv-locations"
-                    value={toLocation}
-                    onChange={(e) => setToLocation(e.target.value)}
+                <Field label="To farm location" required>
+                  <Select
+                    value={toLocationId}
+                    onChange={(e) => setToLocationId(e.target.value)}
                     required
-                  />
+                  >
+                    <option value="">Select…</option>
+                    {(farmLocations || []).map((loc) => (
+                      <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </Select>
                 </Field>
               </div>
             )}
 
             <datalist id="inv-locations">
-              {locations.map((loc) => (
+              {storeLabels.map((loc) => (
                 <option key={loc} value={loc} />
               ))}
             </datalist>

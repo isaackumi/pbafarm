@@ -25,6 +25,7 @@ import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as notifications from "../notifications.js";
 import type * as reports from "../reports.js";
+import type * as sales from "../sales.js";
 import type * as seed from "../seed.js";
 import type * as stocking from "../stocking.js";
 import type * as userAccounts from "../userAccounts.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tenancy": typeof lib_tenancy;
   notifications: typeof notifications;
   reports: typeof reports;
+  sales: typeof sales;
   seed: typeof seed;
   stocking: typeof stocking;
   userAccounts: typeof userAccounts;

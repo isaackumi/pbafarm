@@ -263,13 +263,15 @@ export const createAdjustment = mutation({
   },
 })
 
-/** Move stock between locations without changing on-hand total. */
+/** Move stock between farm locations (or legacy store labels) without changing company total. */
 export const createTransfer = mutation({
   args: {
     feedTypeId: v.id('feedTypes'),
     quantityKg: v.number(),
-    fromLocation: v.string(),
-    toLocation: v.string(),
+    fromLocation: v.optional(v.string()),
+    toLocation: v.optional(v.string()),
+    fromLocationId: v.optional(v.id('farmLocations')),
+    toLocationId: v.optional(v.id('farmLocations')),
     notes: v.optional(v.string()),
     batchNumber: v.optional(v.string()),
   },
@@ -277,10 +279,36 @@ export const createTransfer = mutation({
     const user = await requireUser(ctx)
     requireRole(user, 'admin')
     if (!(args.quantityKg > 0)) throw new Error('Transfer quantity must be positive')
-    const from = args.fromLocation.trim()
-    const to = args.toLocation.trim()
-    if (!from || !to) throw new Error('From and to locations are required')
-    if (from === to) throw new Error('Locations must differ')
+
+    let fromLabel = (args.fromLocation || '').trim()
+    let toLabel = (args.toLocation || '').trim()
+    const fromLocationId = args.fromLocationId
+    const toLocationId = args.toLocationId
+
+    if (fromLocationId) {
+      const loc = await ctx.db.get(fromLocationId)
+      if (!loc) throw new Error('From location not found')
+      fromLabel = fromLabel || loc.name
+    }
+    if (toLocationId) {
+      const loc = await ctx.db.get(toLocationId)
+      if (!loc) throw new Error('To location not found')
+      toLabel = toLabel || loc.name
+    }
+
+    if (!fromLabel || !toLabel) {
+      throw new Error('From and to locations are required')
+    }
+    if (
+      fromLocationId &&
+      toLocationId &&
+      fromLocationId === toLocationId
+    ) {
+      throw new Error('Locations must differ')
+    }
+    if (!fromLocationId && !toLocationId && fromLabel === toLabel) {
+      throw new Error('Locations must differ')
+    }
 
     const feedType = await ctx.db.get(args.feedTypeId)
     if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
@@ -290,14 +318,16 @@ export const createTransfer = mutation({
     await deductInventoryLots(ctx, {
       feedTypeId: args.feedTypeId,
       quantityKg: args.quantityKg,
-      location: from,
+      location: fromLocationId ? undefined : fromLabel,
+      locationId: fromLocationId,
     })
     await addInventoryLot(ctx, {
       feedTypeId: args.feedTypeId,
       quantityKg: args.quantityKg,
       companyId: feedType.companyId ?? user.companyId,
       batchNumber: args.batchNumber,
-      location: to,
+      location: toLabel,
+      locationId: toLocationId,
     })
 
     const now = Date.now()
@@ -309,7 +339,8 @@ export const createTransfer = mutation({
       transactionDate: now,
       notes:
         args.notes ||
-        `Transfer ${args.quantityKg} kg from ${from} → ${to}`,
+        `Transfer ${args.quantityKg} kg from ${fromLabel} → ${toLabel}`,
+      locationId: toLocationId || fromLocationId,
       companyId: feedType.companyId ?? user.companyId,
       createdBy: user._id,
     })
@@ -319,6 +350,7 @@ export const createTransfer = mutation({
       tableName: 'feedInventory',
       recordId: transactionId,
       newValues: args,
+      locationId: toLocationId || fromLocationId,
     })
 
     return transactionId
