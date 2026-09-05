@@ -455,6 +455,8 @@ export const listAlerts = query({
       (f) =>
         f.active &&
         !f.deletedAt &&
+        // Min must be configured — otherwise 0 ≤ 0 alerts every empty type
+        (f.minimumStock ?? 0) > 0 &&
         f.currentStock <= f.minimumStock * multiplier,
     )
 

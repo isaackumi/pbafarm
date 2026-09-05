@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
 import { harvestRecordService } from '../lib/databaseService'
@@ -364,6 +365,25 @@ const HarvestPage = () => {
               </table>
             </div>
           )}
+
+        <ConfirmDeleteModal
+          open={Boolean(deleteConfirm)}
+          title="Delete harvest"
+          message={
+            <>
+              Delete harvest for{' '}
+              <span className="font-semibold text-chart-ink">
+                {deleteConfirm?.cages?.name || 'this cage'}
+              </span>
+              {deleteConfirm?.harvest_date
+                ? ` on ${new Date(deleteConfirm.harvest_date).toLocaleDateString()}`
+                : ''}
+              ?
+            </>
+          }
+          onCancel={() => setDeleteConfirm(null)}
+          onConfirm={handleDeleteHarvest}
+        />
       </Layout>
     </ProtectedRoute>
   )

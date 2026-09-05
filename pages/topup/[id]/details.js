@@ -224,7 +224,7 @@ function TopupDetails() {
       {rejectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-chart-ink/40"
+            className="absolute inset-0 modal-backdrop"
             onClick={() => !processing && setRejectOpen(false)}
           />
           <div className="relative bg-white rounded-2xl border border-foam-deep p-6 w-full max-w-md space-y-4">

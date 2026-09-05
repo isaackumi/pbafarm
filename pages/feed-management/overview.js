@@ -84,7 +84,12 @@ function FeedManagementOverview() {
       // Calculate metrics
       const totalStock = feedTypesData.reduce((sum, type) => sum + (type.current_stock || 0), 0)
       const totalValue = feedTypesData.reduce((sum, type) => sum + (type.current_stock * type.price_per_kg || 0), 0)
-      const lowStockItems = feedTypesData.filter(type => type.current_stock <= type.minimum_stock * 1.2).length
+      const lowStockItems = feedTypesData.filter(
+        (type) =>
+          (Number(type.minimum_stock) || 0) > 0 &&
+          (Number(type.current_stock) || 0) <=
+            (Number(type.minimum_stock) || 0) * 1.2,
+      ).length
       const monthlyUsage = usageData.reduce((sum, usage) => sum + (usage.quantity || 0), 0)
 
       setMetrics({

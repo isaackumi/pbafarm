@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -26,6 +27,9 @@ function InventoryTransactions() {
       .split('T')[0],
     end: new Date().toISOString().split('T')[0],
   })
+  const [reverseTarget, setReverseTarget] = useState(null)
+  const [reverseReason, setReverseReason] = useState('')
+  const [reversing, setReversing] = useState(false)
 
   const dateFrom = useMemo(
     () => new Date(dateRange.start).getTime(),
@@ -52,17 +56,26 @@ function InventoryTransactions() {
 
   const loading = feedTypes === undefined || transactions === undefined
 
-  const onReverse = async (txn) => {
-    const reason = window.prompt('Reason for reversal?')
-    if (!reason?.trim()) return
+  const onReverse = async () => {
+    if (!reverseTarget) return
+    const reason = reverseReason.trim()
+    if (!reason) {
+      showToast('error', 'Enter a reason for the reversal')
+      return
+    }
+    setReversing(true)
     try {
       await reverseTransaction({
-        transactionId: txn.id || txn._id,
-        reason: reason.trim(),
+        transactionId: reverseTarget.id || reverseTarget._id,
+        reason,
       })
       showToast('success', 'Transaction reversed')
+      setReverseTarget(null)
+      setReverseReason('')
     } catch (err) {
       showToast('error', err.message || 'Reversal failed')
+    } finally {
+      setReversing(false)
     }
   }
 
@@ -174,7 +187,10 @@ function InventoryTransactions() {
                           txn.transaction_type !== 'transfer' && (
                             <button
                               type="button"
-                              onClick={() => onReverse(txn)}
+                              onClick={() => {
+                                setReverseReason('')
+                                setReverseTarget(txn)
+                              }}
                               className="text-xs text-red-600 hover:underline"
                             >
                               Reverse
@@ -189,6 +205,45 @@ function InventoryTransactions() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={Boolean(reverseTarget)}
+        title="Reverse transaction"
+        confirmLabel="Reverse"
+        busy={reversing}
+        message={
+          <div className="space-y-3">
+            <p>
+              Reverse this{' '}
+              <span className="font-semibold text-chart-ink">
+                {reverseTarget?.transaction_type}
+              </span>{' '}
+              of{' '}
+              <span className="font-data text-chart-ink">
+                {reverseTarget?.quantity_kg} kg
+              </span>
+              ? Stock will be adjusted.
+            </p>
+            <label className="block text-xs font-semibold text-chart-ink">
+              Reason
+              <input
+                type="text"
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-input-border bg-surface px-3 py-2 text-sm text-chart-ink"
+                placeholder="Why reverse this entry?"
+                autoFocus
+              />
+            </label>
+          </div>
+        }
+        onCancel={() => {
+          if (reversing) return
+          setReverseTarget(null)
+          setReverseReason('')
+        }}
+        onConfirm={onReverse}
+      />
     </Layout>
   )
 }

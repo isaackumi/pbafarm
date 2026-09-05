@@ -73,8 +73,13 @@ export const dashboardSummary = query({
     // Get low stock alerts count (company-wide feed types)
     let feedTypes = await ctx.db.query('feedTypes').collect()
     feedTypes = await listForCompany(user, feedTypes)
-    const lowStockAlerts = feedTypes
-      .filter((f) => f.active && !f.deletedAt && f.currentStock <= f.minimumStock).length
+    const lowStockAlerts = feedTypes.filter(
+      (f) =>
+        f.active &&
+        !f.deletedAt &&
+        (f.minimumStock ?? 0) > 0 &&
+        f.currentStock <= f.minimumStock,
+    ).length
 
     return {
       period_days: daysBack,

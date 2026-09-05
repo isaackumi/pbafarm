@@ -5,8 +5,6 @@ import {
   Plus,
   Edit,
   Trash,
-  Check,
-  X,
   Save,
   AlertCircle,
   Mail,
@@ -17,6 +15,7 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { supplierService } from '../lib/supplierService'
 
@@ -97,9 +96,11 @@ function FeedSuppliers() {
     setShowEditModal(true)
   }
 
-  const handleDeleteSupplier = async (id) => {
+  const handleDeleteSupplier = async () => {
+    const id = deleteConfirm?.id || deleteConfirm?._id
+    if (!id) return
     try {
-      const { success, error } = await supplierService.deleteSupplier(id)
+      const { error } = await supplierService.deleteSupplier(id)
 
       if (error) throw error
 
@@ -247,32 +248,14 @@ function FeedSuppliers() {
                         <Edit className="w-4 h-4" />
                       </button>
 
-                      {deleteConfirm === supplier.id ? (
-                        <>
-                          <button
-                            onClick={() => handleDeleteSupplier(supplier.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Confirm Delete"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(null)}
-                            className="text-muted hover:text-gray-800"
-                            title="Cancel"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setDeleteConfirm(supplier.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete Supplier"
-                        >
-                          <Trash className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm(supplier)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Delete Supplier"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -292,7 +275,7 @@ function FeedSuppliers() {
       {showAddModal && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => setShowAddModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
@@ -366,7 +349,7 @@ function FeedSuppliers() {
       {showEditModal && editingSupplier && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
@@ -435,6 +418,22 @@ function FeedSuppliers() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteConfirm)}
+        title="Delete supplier"
+        message={
+          <>
+            Delete{' '}
+            <span className="font-semibold text-chart-ink">
+              {deleteConfirm?.name || 'this supplier'}
+            </span>
+            ? Feed types linked to it may need a new supplier.
+          </>
+        }
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteSupplier}
+      />
     </Layout>
   )
 }

@@ -7,6 +7,7 @@ import { Button, Field, Input, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
 import FarmLocationSelect from './FarmLocationSelect'
 import FeedTypeField from './FeedTypeField'
+import BagSizeField from './BagSizeField'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
@@ -34,7 +35,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
   // Portal outside any parent <form> so submit/create actually works.
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-chart-ink/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="quick-create-title"
@@ -818,6 +819,7 @@ export function QuickCreatePurchaseModal({
     feed_type_id: defaultFeedTypeId || '',
     quantity: '',
     bags: '',
+    bag_size_kg: '25',
     price_per_kg: '',
     purchase_date: new Date().toISOString().split('T')[0],
     supplier_id: '',
@@ -832,24 +834,44 @@ export function QuickCreatePurchaseModal({
   const selectedFeed = activeFeedTypes.find(
     (t) => (t.id || t._id) === form.feed_type_id,
   )
-  const bagSizeKg = Number(
-    selectedFeed?.bag_size_kg || selectedFeed?.bagSizeKg || 25,
-  )
+  const bagSizeKg =
+    Number(form.bag_size_kg) > 0
+      ? Number(form.bag_size_kg)
+      : Number(selectedFeed?.bag_size_kg || selectedFeed?.bagSizeKg || 25)
 
   const setField = (key) => (e) => {
     const value = e.target.value
     setForm((p) => {
       const next = { ...p, [key]: value }
-      const size =
-        key === 'feed_type_id'
-          ? Number(
-              activeFeedTypes.find((t) => (t.id || t._id) === value)
-                ?.bag_size_kg ||
-                activeFeedTypes.find((t) => (t.id || t._id) === value)
-                  ?.bagSizeKg ||
-                25,
-            )
-          : bagSizeKg
+      let size = Number(p.bag_size_kg) > 0 ? Number(p.bag_size_kg) : 25
+
+      if (key === 'feed_type_id') {
+        const ft = activeFeedTypes.find((t) => (t.id || t._id) === value)
+        size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
+        next.bag_size_kg = String(size)
+        next.price_per_kg = ''
+        if (next.quantity !== '') {
+          const kg = parseFloat(next.quantity)
+          if (!Number.isNaN(kg) && size > 0) {
+            next.bags = String(Math.round((kg / size) * 1000) / 1000)
+          }
+        }
+      }
+
+      if (key === 'bag_size_kg') {
+        size = Number(value) > 0 ? Number(value) : 25
+        if (next.bags !== '') {
+          const bags = parseFloat(next.bags)
+          if (!Number.isNaN(bags)) {
+            next.quantity = String(Math.round(bags * size * 1000) / 1000)
+          }
+        } else if (next.quantity !== '') {
+          const kg = parseFloat(next.quantity)
+          if (!Number.isNaN(kg) && size > 0) {
+            next.bags = String(Math.round((kg / size) * 1000) / 1000)
+          }
+        }
+      }
 
       if (key === 'bags' && value !== '') {
         const bags = parseFloat(value)
@@ -861,15 +883,6 @@ export function QuickCreatePurchaseModal({
         const kg = parseFloat(value)
         if (!Number.isNaN(kg) && size > 0) {
           next.bags = String(Math.round((kg / size) * 1000) / 1000)
-        }
-      }
-      if (key === 'feed_type_id') {
-        next.price_per_kg = ''
-        if (next.quantity !== '') {
-          const kg = parseFloat(next.quantity)
-          if (!Number.isNaN(kg) && size > 0) {
-            next.bags = String(Math.round((kg / size) * 1000) / 1000)
-          }
         }
       }
       return next
@@ -886,6 +899,22 @@ export function QuickCreatePurchaseModal({
       setForm((p) => ({ ...p, price_per_kg: String(price) }))
     }
   }, [form.feed_type_id, form.price_per_kg, activeFeedTypes])
+
+  // Seed bag size when opening with a preselected feed type
+  useEffect(() => {
+    if (!defaultFeedTypeId || !activeFeedTypes.length) return
+    const ft = activeFeedTypes.find(
+      (t) => (t.id || t._id) === defaultFeedTypeId,
+    )
+    if (!ft) return
+    const size = Number(ft.bag_size_kg || ft.bagSizeKg || 25)
+    setForm((p) => ({
+      ...p,
+      bag_size_kg: String(size > 0 ? size : 25),
+    }))
+    // intentionally once when catalog for default id is available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultFeedTypeId, activeFeedTypes.length])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -968,13 +997,22 @@ export function QuickCreatePurchaseModal({
           emptyMessage="Add a feed type before recording a purchase."
           onCreated={(result) => {
             if (result?.id) {
+              const size = Number(
+                result.bag_size_kg || result.bagSizeKg || 25,
+              )
               setForm((p) => ({
                 ...p,
                 feed_type_id: result.id,
                 price_per_kg: '',
+                bag_size_kg: String(size > 0 ? size : 25),
               }))
             }
           }}
+        />
+        <BagSizeField
+          id="qc-pu-bag-size"
+          value={form.bag_size_kg}
+          onChange={setField('bag_size_kg')}
         />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Bags" htmlFor="qc-pu-bags">
@@ -1004,7 +1042,7 @@ export function QuickCreatePurchaseModal({
           </Field>
         </div>
         <p className="text-xs text-muted -mt-1">
-          Bag size: {bagSizeKg} kg — enter bags or kg; the other updates.
+          At {bagSizeKg} kg/bag — enter bags or kg; the other updates.
         </p>
         <Field label={pricePerKgLabel} htmlFor="qc-pu-price" required>
           <Input

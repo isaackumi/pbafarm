@@ -183,7 +183,7 @@ function AuditLogsContent() {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 modal-backdrop"
             onClick={() => setSelected(null)}
           />
           <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto p-6">

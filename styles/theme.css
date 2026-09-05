@@ -563,3 +563,18 @@ html.dark .border-amber-200,
 html[data-theme='dark'] .border-amber-200 {
   border-color: rgba(251, 191, 36, 0.35) !important;
 }
+
+/* Soft glass dim behind dialogs — light blur, not a hard blackout */
+.modal-backdrop {
+  background-color: color-mix(in srgb, var(--chart-ink) 42%, transparent);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  isolation: isolate;
+}
+
+html.dark .modal-backdrop,
+html[data-theme='dark'] .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}

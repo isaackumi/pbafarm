@@ -5,8 +5,12 @@ import { formatCurrency } from '../../lib/currencyUtils'
 import Layout from '../../components/Layout'
 import { PageHeader, Button } from '../../components/ui'
 import DataTable from '../../components/DataTable'
-import { feedTypeService, supplierService } from '../../lib/databaseService'
+import { feedTypeService } from '../../lib/feedTypeService'
+import { supplierService } from '../../lib/supplierService'
+import { feedService } from '../../lib/feedService'
 import { useToast } from '../../components/Toast'
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
+import BagSizeField from '../../components/BagSizeField'
 import { Plus, ArrowLeft, Download, Filter, Search, Utensils, Users, Database, LineChart, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
@@ -22,8 +26,11 @@ const FeedManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     price_per_kg: '0.00',
-    protein_percentage: '',
+    protein_content: '',
+    description: '',
     pellet_size: '',
+    minimum_stock: '',
+    bag_size_kg: '25',
     supplier_id: '',
     active: true,
   })
@@ -92,62 +99,129 @@ const FeedManagement = () => {
     }
   }
 
+  const emptyFeedForm = () => ({
+    name: '',
+    price_per_kg: '0.00',
+    protein_content: '',
+    description: '',
+    pellet_size: '',
+    minimum_stock: '',
+    bag_size_kg: '25',
+    supplier_id: '',
+    active: true,
+  })
+
+  const closeFeedModal = () => {
+    setShowAddModal(false)
+    setShowEditModal(false)
+    setEditingType(null)
+    setFormData(emptyFeedForm())
+  }
+
   const handleAddFeedType = () => {
-    setFormData({
-      name: '',
-      price_per_kg: '0.00',
-      protein_percentage: '',
-      pellet_size: '',
-      supplier_id: '',
-      active: true,
-    })
+    setEditingType(null)
+    setFormData(emptyFeedForm())
+    setShowEditModal(false)
     setShowAddModal(true)
   }
 
   const handleEditFeedType = (feedType) => {
     setEditingType(feedType)
+    const protein =
+      feedType.protein_percentage ??
+      feedType.protein_content ??
+      ''
     setFormData({
-      name: feedType.name,
-      price_per_kg: feedType.price_per_kg?.toString() || '0.00',
-      protein_percentage: feedType.protein_percentage?.toString() || '',
+      name: feedType.name || '',
+      price_per_kg: String(feedType.price_per_kg ?? feedType.pricePerKg ?? '0.00'),
+      protein_content: protein !== '' && protein != null ? String(protein) : '',
+      description: feedType.description || '',
       pellet_size: feedType.pellet_size || '',
-      supplier_id: feedType.supplier_id || '',
-      active: feedType.active,
+      minimum_stock:
+        feedType.minimum_stock != null
+          ? String(feedType.minimum_stock)
+          : '',
+      bag_size_kg: String(
+        feedType.bag_size_kg || feedType.bagSizeKg || 25,
+      ),
+      supplier_id: feedType.supplier_id || feedType.supplierId || '',
+      active: feedType.active !== false,
     })
-    setShowEditModal(true)
+    setShowEditModal(false)
+    setShowAddModal(true)
   }
 
-  const handleDeleteFeedType = async (id) => {
+  const handleDeleteFeedType = async () => {
+    const id = deleteConfirm?.id || deleteConfirm
+    if (!id) return
     try {
       const { error } = await feedTypeService.deleteFeedType(id)
       if (error) throw error
       showToast('Feed type deleted successfully', 'success')
-      fetchFeedTypes()
       setDeleteConfirm(null)
+      fetchFeedTypes()
     } catch (error) {
       console.error('Error deleting feed type:', error)
-      showToast('Failed to delete feed type', 'error')
+      showToast(error.message || 'Failed to delete feed type', 'error')
+    }
+  }
+
+  const buildFeedPayload = () => {
+    const parts = []
+    if (formData.protein_content !== '' && formData.protein_content != null) {
+      parts.push(`Protein ${formData.protein_content}%`)
+    }
+    if (formData.pellet_size?.trim()) {
+      parts.push(`Pellet ${formData.pellet_size.trim()}`)
+    }
+    // Structured protein/pellet fields win when set; otherwise keep free-text description
+    const description =
+      parts.length > 0
+        ? parts.join(' · ')
+        : formData.description?.trim() || undefined
+    return {
+      name: formData.name.trim(),
+      description,
+      price_per_kg: formData.price_per_kg,
+      current_stock: 0,
+      minimum_stock:
+        formData.minimum_stock !== ''
+          ? Number(formData.minimum_stock)
+          : 0,
+      bag_size_kg:
+        formData.bag_size_kg !== ''
+          ? Number(formData.bag_size_kg)
+          : 25,
+      supplier_id: formData.supplier_id || undefined,
+      active: formData.active !== false,
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      if (!formData.name.trim()) {
+        showToast('Name is required', 'error')
+        return
+      }
+      const payload = buildFeedPayload()
       if (editingType) {
-        const { error } = await feedTypeService.updateFeedType(editingType.id, formData)
+        const { error } = await feedTypeService.updateFeedType(
+          editingType.id || editingType._id,
+          payload,
+        )
         if (error) throw error
         showToast('Feed type updated successfully', 'success')
-        setShowEditModal(false)
       } else {
-        const { error } = await feedTypeService.createFeedType(formData)
+        const { error } = await feedTypeService.createFeedType(payload)
         if (error) throw error
         showToast('Feed type created successfully', 'success')
-        setShowAddModal(false)
       }
+      closeFeedModal()
       fetchFeedTypes()
     } catch (error) {
       console.error('Error saving feed type:', error)
-      showToast('Failed to save feed type', 'error')
+      showToast(error.message || 'Failed to save feed type', 'error')
     }
   }
 
@@ -225,27 +299,40 @@ const FeedManagement = () => {
   }
 
   const handleAddFeedEntry = () => {
-    if (!currentFeedEntry.feed_type_id || !currentFeedEntry.number_of_bags || !currentFeedEntry.price_per_bag) {
+    if (
+      !currentFeedEntry.feed_type_id ||
+      !currentFeedEntry.number_of_bags ||
+      !currentFeedEntry.price_per_bag
+    ) {
       showToast('Please fill in all feed entry details', 'error')
       return
     }
-
-    const entry = {
-      ...currentFeedEntry,
-      total_amount: parseFloat(currentFeedEntry.number_of_bags) * parseFloat(currentFeedEntry.price_per_bag)
+    const bagSize = Number(currentFeedEntry.bag_size)
+    if (!bagSize || bagSize <= 0) {
+      showToast('Enter a valid bag size (kg)', 'error')
+      return
     }
 
-    setPurchaseData(prev => ({
+    const bags = parseFloat(currentFeedEntry.number_of_bags)
+    const pricePerBag = parseFloat(currentFeedEntry.price_per_bag)
+    const entry = {
+      ...currentFeedEntry,
+      bag_size: String(bagSize),
+      quantity_kg: Math.round(bags * bagSize * 1000) / 1000,
+      total_amount: bags * pricePerBag,
+    }
+
+    setPurchaseData((prev) => ({
       ...prev,
       feed_entries: [...prev.feed_entries, entry],
-      total_amount: prev.total_amount + entry.total_amount
+      total_amount: prev.total_amount + entry.total_amount,
     }))
 
     setCurrentFeedEntry({
       feed_type_id: '',
       number_of_bags: '',
       price_per_bag: '',
-      bag_size: '25'
+      bag_size: '25',
     })
   }
 
@@ -270,8 +357,40 @@ const FeedManagement = () => {
     }
 
     try {
-      // Here you would implement the API call to save the purchase
-      // For now, we'll just show a success message
+      const errors = []
+      for (const entry of purchaseData.feed_entries) {
+        const bags = Number(entry.number_of_bags)
+        const bagSize = Number(entry.bag_size) > 0 ? Number(entry.bag_size) : 25
+        const pricePerBag = Number(entry.price_per_bag)
+        const quantityKg =
+          entry.quantity_kg != null
+            ? Number(entry.quantity_kg)
+            : Math.round(bags * bagSize * 1000) / 1000
+        const pricePerKg =
+          bagSize > 0 ? Math.round((pricePerBag / bagSize) * 10000) / 10000 : 0
+
+        const { error } = await feedService.createPurchase({
+          feed_type_id: entry.feed_type_id,
+          quantity: quantityKg,
+          bags,
+          price_per_kg: pricePerKg,
+          purchase_date: purchaseData.purchase_date,
+          supplier_id: purchaseData.supplier_id,
+          notes: purchaseData.notes || undefined,
+        })
+        if (error) {
+          errors.push(
+            error.message ||
+              `Failed to save ${feedTypes.find((t) => t.id === entry.feed_type_id)?.name || 'entry'}`,
+          )
+        }
+      }
+
+      if (errors.length) {
+        showToast(errors[0], 'error')
+        return
+      }
+
       showToast('Feed purchase saved successfully', 'success')
       setShowPurchaseModal(false)
       setPurchaseData({
@@ -279,11 +398,19 @@ const FeedManagement = () => {
         purchase_date: new Date().toISOString().split('T')[0],
         total_amount: 0,
         notes: '',
-        feed_entries: []
+        feed_entries: [],
       })
+      setCurrentFeedEntry({
+        feed_type_id: '',
+        number_of_bags: '',
+        price_per_bag: '',
+        bag_size: '25',
+      })
+      // Stock on feed types may have changed
+      fetchFeedTypes()
     } catch (error) {
       console.error('Error saving feed purchase:', error)
-      showToast('Failed to save feed purchase', 'error')
+      showToast(error.message || 'Failed to save feed purchase', 'error')
     }
   }
 
@@ -373,7 +500,7 @@ const FeedManagement = () => {
                     <h2 className="text-lg font-medium text-chart-ink">Feed Types</h2>
                     <div className="flex space-x-3">
                       <button
-                        onClick={() => setShowAddModal(true)}
+                        onClick={handleAddFeedType}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                       >
                         <Plus className="h-4 w-4 mr-2" />
@@ -440,7 +567,11 @@ const FeedManagement = () => {
                             {currentItems.map((type) => (
                               <tr key={type.id} className="hover:bg-foam-deep/40">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{type.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{type.protein_percentage}%</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                                  {type.protein_percentage != null && type.protein_percentage !== ''
+                                    ? `${type.protein_percentage}%`
+                                    : '—'}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{formatCurrency(type.price_per_kg)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <button
@@ -460,7 +591,8 @@ const FeedManagement = () => {
                                     Edit
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteFeedType(type.id)}
+                                    type="button"
+                                    onClick={() => setDeleteConfirm(type)}
                                     className="text-red-600 hover:text-red-900"
                                   >
                                     Delete
@@ -610,7 +742,11 @@ const FeedManagement = () => {
                             <div>
                               <h3 className="text-sm font-medium text-chart-ink">{type.name}</h3>
                               <p className="text-xs text-muted mt-1">
-                                Protein: {type.protein_percentage}% | {formatCurrency(type.price_per_kg)}/kg
+                                Protein:{' '}
+                                {type.protein_percentage != null && type.protein_percentage !== ''
+                                  ? `${type.protein_percentage}%`
+                                  : '—'}{' '}
+                                | {formatCurrency(type.price_per_kg)}/kg
                               </p>
                               <p className="text-xs text-muted mt-1">
                                 Last used 2 hours ago
@@ -631,7 +767,7 @@ const FeedManagement = () => {
 
         {/* Add/Edit Feed Type Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-foam-deep/400 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
             <div className="page-card-xl max-w-md w-full">
               <div className="px-6 py-4 border-b border-foam-deep">
                 <h3 className="text-lg font-medium text-chart-ink">
@@ -674,6 +810,40 @@ const FeedManagement = () => {
                       required
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-chart-ink">
+                        Minimum stock (kg)
+                      </label>
+                      <input
+                        type="number"
+                        name="minimum_stock"
+                        value={formData.minimum_stock}
+                        onChange={handleChange}
+                        step="1"
+                        min="0"
+                        placeholder="e.g. 500"
+                        className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                      />
+                      <p className="mt-1 text-xs text-muted">
+                        Alerts when stock ≤ this
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-chart-ink">
+                        Bag size (kg)
+                      </label>
+                      <input
+                        type="number"
+                        name="bag_size_kg"
+                        value={formData.bag_size_kg}
+                        onChange={handleChange}
+                        step="0.1"
+                        min="0.1"
+                        className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-chart-ink">Description</label>
                     <textarea
@@ -688,7 +858,7 @@ const FeedManagement = () => {
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={closeFeedModal}
                     className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                   >
                     Cancel
@@ -707,7 +877,7 @@ const FeedManagement = () => {
 
         {/* Add Supplier Modal */}
         {showAddSupplierModal && (
-          <div className="fixed inset-0 bg-foam-deep/400 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
             <div className="page-card-xl max-w-md w-full">
               <div className="px-6 py-4 border-b border-foam-deep">
                 <h3 className="text-lg font-medium text-chart-ink">Add New Supplier</h3>
@@ -791,7 +961,7 @@ const FeedManagement = () => {
 
         {/* Feed Purchase Modal */}
         {showPurchaseModal && (
-          <div className="fixed inset-0 bg-foam-deep/400 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
             <div className="page-card-xl max-w-4xl w-full">
               <div className="px-6 py-4 border-b border-foam-deep">
                 <h3 className="text-lg font-medium text-chart-ink">New Feed Purchase</h3>
@@ -835,7 +1005,9 @@ const FeedManagement = () => {
                             {feedTypes.find(ft => ft.id === entry.feed_type_id)?.name}
                           </p>
                           <p className="text-xs text-muted">
-                            {entry.number_of_bags} bags × {formatCurrency(entry.price_per_bag)}/bag = {formatCurrency(entry.total_amount)}
+                            {entry.number_of_bags} × {entry.bag_size || 25} kg bags
+                            {' '}({entry.quantity_kg ?? Number(entry.number_of_bags) * Number(entry.bag_size || 25)} kg)
+                            {' '}× {formatCurrency(entry.price_per_bag)}/bag = {formatCurrency(entry.total_amount)}
                           </p>
                         </div>
                         <button
@@ -853,12 +1025,23 @@ const FeedManagement = () => {
                 {/* Add New Feed Entry */}
                 <div className="mb-6 p-4 border border-foam-deep rounded-lg">
                   <h4 className="text-sm font-medium text-chart-ink mb-3">Add Feed Entry</h4>
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-chart-ink">Feed Type</label>
                       <select
                         value={currentFeedEntry.feed_type_id}
-                        onChange={(e) => setCurrentFeedEntry(prev => ({ ...prev, feed_type_id: e.target.value }))}
+                        onChange={(e) => {
+                          const id = e.target.value
+                          const ft = feedTypes.find((t) => (t.id || t._id) === id)
+                          const size = Number(
+                            ft?.bag_size_kg || ft?.bagSizeKg || 25,
+                          )
+                          setCurrentFeedEntry((prev) => ({
+                            ...prev,
+                            feed_type_id: id,
+                            bag_size: String(size > 0 ? size : 25),
+                          }))
+                        }}
                         className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       >
                         <option value="">Select feed type</option>
@@ -897,6 +1080,18 @@ const FeedManagement = () => {
                         Add Entry
                       </button>
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <BagSizeField
+                      id="purchase-entry-bag-size"
+                      value={currentFeedEntry.bag_size}
+                      onChange={(e) =>
+                        setCurrentFeedEntry((prev) => ({
+                          ...prev,
+                          bag_size: e.target.value,
+                        }))
+                      }
+                    />
                   </div>
                 </div>
 
@@ -938,6 +1133,22 @@ const FeedManagement = () => {
             </div>
           </div>
         )}
+
+        <ConfirmDeleteModal
+          open={Boolean(deleteConfirm)}
+          title="Delete feed type"
+          message={
+            <>
+              Delete{' '}
+              <span className="font-semibold text-chart-ink">
+                {deleteConfirm?.name || 'this feed type'}
+              </span>
+              ? Purchases and usage history that reference it may be affected.
+            </>
+          }
+          onCancel={() => setDeleteConfirm(null)}
+          onConfirm={handleDeleteFeedType}
+        />
       </Layout>
     </ProtectedRoute>
   )

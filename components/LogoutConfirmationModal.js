@@ -8,7 +8,7 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   return (
     <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 modal-backdrop"
         onClick={onClose}
       ></div>
       <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">

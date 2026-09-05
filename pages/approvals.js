@@ -317,7 +317,7 @@ function PendingApprovals() {
       {showApproveModal && currentRecord && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => !processingAction && setShowApproveModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
@@ -396,7 +396,7 @@ function PendingApprovals() {
       {showRejectModal && currentRecord && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => !processingAction && setShowRejectModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">

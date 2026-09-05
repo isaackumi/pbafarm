@@ -5,14 +5,13 @@ import {
   Plus,
   Edit,
   Trash,
-  Check,
-  X,
   Save,
   AlertCircle,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useSelector, useDispatch } from 'react-redux'
 import { supplierService } from '../lib/supplierService'
@@ -48,6 +47,8 @@ function FeedTypes() {
     price_per_kg: '0.00',
     protein_percentage: '',
     pellet_size: '',
+    minimum_stock: '',
+    bag_size_kg: '25',
     supplier_id: '',
     active: true,
   })
@@ -104,8 +105,14 @@ function FeedTypes() {
         description: parts.length ? parts.join(' · ') : undefined,
         price_per_kg: formData.price_per_kg,
         current_stock: 0,
-        minimum_stock: 0,
-        bag_size_kg: 25,
+        minimum_stock:
+          formData.minimum_stock !== ''
+            ? Number(formData.minimum_stock)
+            : 0,
+        bag_size_kg:
+          formData.bag_size_kg !== ''
+            ? Number(formData.bag_size_kg)
+            : 25,
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }
@@ -121,6 +128,8 @@ function FeedTypes() {
         price_per_kg: '0.00',
         protein_percentage: '',
         pellet_size: '',
+        minimum_stock: '',
+        bag_size_kg: '25',
         supplier_id: '',
         active: true,
       })
@@ -136,6 +145,13 @@ function FeedTypes() {
       price_per_kg: type.price_per_kg?.toString() || '0.00',
       protein_percentage: type.protein_percentage?.toString() || '',
       pellet_size: type.pellet_size || '',
+      minimum_stock:
+        type.minimum_stock != null && type.minimum_stock !== ''
+          ? String(type.minimum_stock)
+          : '',
+      bag_size_kg: String(
+        type.bag_size_kg || type.bagSizeKg || 25,
+      ),
       supplier_id: type.supplier_id || '',
       active: type.active,
     })
@@ -160,6 +176,14 @@ function FeedTypes() {
         name: formData.name.trim(),
         description: parts.length ? parts.join(' · ') : undefined,
         price_per_kg: formData.price_per_kg,
+        minimum_stock:
+          formData.minimum_stock !== ''
+            ? Number(formData.minimum_stock)
+            : 0,
+        bag_size_kg:
+          formData.bag_size_kg !== ''
+            ? Number(formData.bag_size_kg)
+            : 25,
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }
@@ -178,6 +202,8 @@ function FeedTypes() {
         price_per_kg: '0.00',
         protein_percentage: '',
         pellet_size: '',
+        minimum_stock: '',
+        bag_size_kg: '25',
         supplier_id: '',
         active: true,
       })
@@ -186,7 +212,9 @@ function FeedTypes() {
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
+    const id = deleteConfirm?.id || deleteConfirm?._id
+    if (!id) return
     await dispatch(deleteFeedType(id))
     setDeleteConfirm(null)
   }
@@ -304,34 +332,14 @@ function FeedTypes() {
                             <Edit className="w-4 h-4" />
                           </button>
 
-                          {deleteConfirm === type.id ? (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleDelete(type.id)
-                                }
-                                className="text-red-600 hover:text-red-800"
-                                title="Confirm Delete"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirm(null)}
-                                className="text-muted hover:text-gray-800"
-                                title="Cancel"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => setDeleteConfirm(type.id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Delete Feed Type"
-                            >
-                              <Trash className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirm(type)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete Feed Type"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -356,7 +364,7 @@ function FeedTypes() {
       {showAddModal && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => setShowAddModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
@@ -420,6 +428,41 @@ function FeedTypes() {
                   onChange={handleChange}
                   className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Minimum stock (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="minimum_stock"
+                    value={formData.minimum_stock}
+                    onChange={handleChange}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 500"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Alert when stock falls to or below this.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Bag size (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="bag_size_kg"
+                    value={formData.bag_size_kg}
+                    onChange={handleChange}
+                    step="0.1"
+                    min="0.1"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -490,7 +533,7 @@ function FeedTypes() {
       {showEditModal && editingType && (
         <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
           <div
-            className="fixed inset-0 bg-black bg-opacity-50"
+            className="fixed inset-0 modal-backdrop"
             onClick={() => setShowEditModal(false)}
           ></div>
           <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
@@ -559,6 +602,41 @@ function FeedTypes() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Minimum stock (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="minimum_stock"
+                    value={formData.minimum_stock}
+                    onChange={handleChange}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 500"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Alert when stock falls to or below this.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
+                    Bag size (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="bag_size_kg"
+                    value={formData.bag_size_kg}
+                    onChange={handleChange}
+                    step="0.1"
+                    min="0.1"
+                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-chart-ink mb-1">
                     Supplier
                   </label>
                   <select
@@ -614,6 +692,22 @@ function FeedTypes() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteConfirm)}
+        title="Delete feed type"
+        message={
+          <>
+            Delete{' '}
+            <span className="font-semibold text-chart-ink">
+              {deleteConfirm?.name || 'this feed type'}
+            </span>
+            ?
+          </>
+        }
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDelete}
+      />
       </div>
     </Layout>
   )

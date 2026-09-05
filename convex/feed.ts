@@ -16,7 +16,13 @@ function toClientSupplier(s: any) {
     name: s.name,
     abbreviation: s.abbreviation,
     contact_info: s.contactInfo,
+    /** Legacy UI fields — contact details are stored in contactInfo. */
+    contact_person: s.contactInfo || '',
+    phone: '',
+    email: '',
+    address: '',
     website: s.website,
+    active: !s.deletedAt,
     company_id: s.companyId,
     deleted_at: s.deletedAt,
     updated_at: s.updatedAt,
@@ -24,13 +30,32 @@ function toClientSupplier(s: any) {
   }
 }
 
+function parseFeedDescriptionMeta(description?: string) {
+  let protein_percentage: number | null = null
+  let pellet_size = ''
+  if (description) {
+    const proteinMatch = description.match(/Protein\s+([\d.]+)\s*%/i)
+    if (proteinMatch) {
+      const n = Number(proteinMatch[1])
+      if (!Number.isNaN(n)) protein_percentage = n
+    }
+    const pelletMatch = description.match(/Pellet\s+([^·|]+)/i)
+    if (pelletMatch) pellet_size = pelletMatch[1].trim()
+  }
+  return { protein_percentage, pellet_size }
+}
+
 function toClientFeedType(f: any) {
   const bagSize = f.bagSizeKg && f.bagSizeKg > 0 ? f.bagSizeKg : 25
+  const meta = parseFeedDescriptionMeta(f.description)
   return {
     id: f._id,
     _id: f._id,
     name: f.name,
     description: f.description,
+    protein_percentage: meta.protein_percentage,
+    protein_content: meta.protein_percentage,
+    pellet_size: meta.pellet_size,
     current_stock: f.currentStock,
     current_stock_bags: bagsFromKg(f.currentStock, bagSize),
     minimum_stock: f.minimumStock,
