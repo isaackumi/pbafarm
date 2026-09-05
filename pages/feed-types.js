@@ -85,17 +85,48 @@ function FeedTypes() {
     }))
   }
 
-  const handleAdd = async () => {
-    await dispatch(createFeedType(formData))
-    setShowAddModal(false)
-    setFormData({
-      name: '',
-      price_per_kg: '0.00',
-      protein_percentage: '',
-      pellet_size: '',
-      supplier_id: '',
-      active: true,
-    })
+  const handleAdd = async (e) => {
+    e?.preventDefault?.()
+    try {
+      if (!formData.name.trim()) {
+        showToast('error', 'Name is required')
+        return
+      }
+      const parts = []
+      if (formData.protein_percentage !== '') {
+        parts.push(`Protein ${formData.protein_percentage}%`)
+      }
+      if (formData.pellet_size.trim()) {
+        parts.push(`Pellet ${formData.pellet_size.trim()}`)
+      }
+      const payload = {
+        name: formData.name.trim(),
+        description: parts.length ? parts.join(' · ') : undefined,
+        price_per_kg: formData.price_per_kg,
+        current_stock: 0,
+        minimum_stock: 0,
+        bag_size_kg: 25,
+        supplier_id: formData.supplier_id || undefined,
+        active: formData.active !== false,
+      }
+      const result = await dispatch(createFeedType(payload))
+      if (createFeedType.rejected.match(result)) {
+        showToast('error', result.payload || 'Failed to create feed type')
+        return
+      }
+      showToast('success', 'Feed type created')
+      setShowAddModal(false)
+      setFormData({
+        name: '',
+        price_per_kg: '0.00',
+        protein_percentage: '',
+        pellet_size: '',
+        supplier_id: '',
+        active: true,
+      })
+    } catch (err) {
+      showToast('error', err.message || 'Failed to create feed type')
+    }
   }
 
   const handleEdit = (type) => {
@@ -111,18 +142,48 @@ function FeedTypes() {
     setShowEditModal(true)
   }
 
-  const handleUpdate = async () => {
-    await dispatch(updateFeedType({ id: editingType.id, updates: formData }))
-    setShowEditModal(false)
-    setEditingType(null)
-    setFormData({
-      name: '',
-      price_per_kg: '0.00',
-      protein_percentage: '',
-      pellet_size: '',
-      supplier_id: '',
-      active: true,
-    })
+  const handleUpdate = async (e) => {
+    e?.preventDefault?.()
+    try {
+      if (!formData.name.trim()) {
+        showToast('error', 'Name is required')
+        return
+      }
+      const parts = []
+      if (formData.protein_percentage !== '') {
+        parts.push(`Protein ${formData.protein_percentage}%`)
+      }
+      if (formData.pellet_size.trim()) {
+        parts.push(`Pellet ${formData.pellet_size.trim()}`)
+      }
+      const updates = {
+        name: formData.name.trim(),
+        description: parts.length ? parts.join(' · ') : undefined,
+        price_per_kg: formData.price_per_kg,
+        supplier_id: formData.supplier_id || undefined,
+        active: formData.active !== false,
+      }
+      const result = await dispatch(
+        updateFeedType({ id: editingType.id, updates }),
+      )
+      if (updateFeedType.rejected.match(result)) {
+        showToast('error', result.payload || 'Failed to update feed type')
+        return
+      }
+      showToast('success', 'Feed type updated')
+      setShowEditModal(false)
+      setEditingType(null)
+      setFormData({
+        name: '',
+        price_per_kg: '0.00',
+        protein_percentage: '',
+        pellet_size: '',
+        supplier_id: '',
+        active: true,
+      })
+    } catch (err) {
+      showToast('error', err.message || 'Failed to update feed type')
+    }
   }
 
   const handleDelete = async (id) => {
@@ -364,22 +425,26 @@ function FeedTypes() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Supplier <span className="text-red-500">*</span>
+                    Supplier
                   </label>
                   <select
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
                     className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                    required
                   >
-                    <option value="">Select supplier</option>
+                    <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name}
                       </option>
                     ))}
                   </select>
+                  {suppliers.length === 0 && (
+                    <p className="mt-1 text-xs text-muted">
+                      No suppliers yet — you can save without one.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -494,16 +559,15 @@ function FeedTypes() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Supplier <span className="text-red-500">*</span>
+                    Supplier
                   </label>
                   <select
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
                     className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                    required
                   >
-                    <option value="">Select supplier</option>
+                    <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name}

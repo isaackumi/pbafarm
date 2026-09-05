@@ -198,8 +198,8 @@ export const createFeedType = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    currentStock: v.number(),
-    minimumStock: v.number(),
+    currentStock: v.optional(v.number()),
+    minimumStock: v.optional(v.number()),
     pricePerKg: v.number(),
     bagSizeKg: v.optional(v.number()),
     supplierId: v.optional(v.id('feedSuppliers')),
@@ -208,12 +208,12 @@ export const createFeedType = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const now = Date.now()
-    const opening = Math.max(0, args.currentStock)
+    const opening = Math.max(0, args.currentStock ?? 0)
     const id = await ctx.db.insert('feedTypes', {
       name: args.name,
       description: args.description,
       currentStock: 0,
-      minimumStock: args.minimumStock,
+      minimumStock: args.minimumStock ?? 0,
       pricePerKg: args.pricePerKg,
       bagSizeKg: args.bagSizeKg && args.bagSizeKg > 0 ? args.bagSizeKg : 25,
       supplierId: args.supplierId,
