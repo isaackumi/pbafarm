@@ -51,11 +51,16 @@ export default function FeedPurchaseModal({
 
   useEffect(() => {
     if (!open) return
-    setPurchaseData(emptyPurchase())
     const ft = feedTypes.find(
       (t) => (t.id || t._id) === defaultFeedTypeId,
     )
     const size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
+    const defaultSupplier =
+      ft?.supplier_id || ft?.supplierId || ''
+    setPurchaseData({
+      ...emptyPurchase(),
+      supplier_id: defaultSupplier ? String(defaultSupplier) : '',
+    })
     setCurrentFeedEntry(
       emptyEntry(
         defaultFeedTypeId
@@ -321,6 +326,15 @@ export default function FeedPurchaseModal({
                       feed_type_id: id,
                       bag_size: String(size > 0 ? size : 25),
                     }))
+                    // Prefill supplier from feed type when purchase supplier empty
+                    const feedSupplier = ft?.supplier_id || ft?.supplierId
+                    if (feedSupplier) {
+                      setPurchaseData((prev) =>
+                        prev.supplier_id
+                          ? prev
+                          : { ...prev, supplier_id: String(feedSupplier) },
+                      )
+                    }
                   }}
                   className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 >

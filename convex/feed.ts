@@ -362,7 +362,7 @@ export const createPurchase = mutation({
     bags: v.optional(v.number()),
     pricePerKg: v.number(),
     purchaseDate: v.string(),
-    supplierId: v.optional(v.id('feedSuppliers')),
+    supplierId: v.id('feedSuppliers'),
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
@@ -375,6 +375,13 @@ export const createPurchase = mutation({
     if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [feedType])
     if (!allowed.length) throw new Error('Access denied')
+
+    const supplier = await ctx.db.get(args.supplierId)
+    if (!supplier || supplier.deletedAt) {
+      throw new Error('Supplier is required')
+    }
+    const supplierAllowed = await listForCompany(user, [supplier])
+    if (!supplierAllowed.length) throw new Error('Supplier access denied')
 
     const companyId = (await writeCompanyId(user)) ?? feedType.companyId
     let company = companyId ? await ctx.db.get(companyId) : null
@@ -460,7 +467,18 @@ export const updatePurchase = mutation({
     const patch: Record<string, any> = { updatedAt: Date.now() }
     if (args.pricePerKg != null) patch.pricePerKg = args.pricePerKg
     if (args.purchaseDate != null) patch.purchaseDate = args.purchaseDate
-    if (args.supplierId !== undefined) patch.supplierId = args.supplierId
+    if (args.supplierId !== undefined) {
+      if (!args.supplierId) throw new Error('Supplier is required')
+      const supplier = await ctx.db.get(args.supplierId)
+      if (!supplier || supplier.deletedAt) {
+        throw new Error('Supplier is required')
+      }
+      const supplierAllowed = await listForCompany(user, [supplier])
+      if (!supplierAllowed.length) throw new Error('Supplier access denied')
+      patch.supplierId = args.supplierId
+    } else if (!purchase.supplierId) {
+      throw new Error('Supplier is required — assign a supplier to this purchase')
+    }
     if (args.batchNumber !== undefined) patch.batchNumber = args.batchNumber
     if (args.expiryDate !== undefined) patch.expiryDate = args.expiryDate
     if (args.notes !== undefined) patch.notes = args.notes

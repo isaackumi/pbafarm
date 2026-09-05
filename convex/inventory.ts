@@ -64,6 +64,7 @@ function toClientLot(lot: any, feedTypeName?: string) {
     batch_number: lot.batchNumber || null,
     expiry_date: lot.expiryDate || null,
     location: lot.location || 'Main store',
+    location_id: lot.locationId || null,
     company_id: lot.companyId,
     updated_at: lot.updatedAt,
     created_at: lot._creationTime,

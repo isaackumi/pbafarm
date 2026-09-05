@@ -61,7 +61,7 @@ export default function FeedPurchasesPage() {
 function FeedPurchases() {
   const router = useRouter()
   const { showToast } = useToast()
-  const { activeLocationId } = useLocation()
+  const { activeLocationId, activeLocation, locations } = useLocation()
 
   const [feedTypes, setFeedTypes] = useState([])
   const [purchases, setPurchases] = useState([])
@@ -124,14 +124,16 @@ function FeedPurchases() {
   const [supplierMetrics, setSupplierMetrics] = useState({
     reliability: [],
     priceComparison: [],
+    unassigned: null,
     deliveryPerformance: {},
     qualityMetrics: {}
   })
 
-  // Fetch data on mount
+  // Fetch data on mount / when location list is ready
   useEffect(() => {
     fetchData()
-  }, [timeRange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRange, activeLocationId, locations])
 
   const fetchData = async () => {
     setLoading(true)
@@ -190,7 +192,7 @@ function FeedPurchases() {
 
       const mapPurchase = (p) => {
         const feed = feedById[p.feed_type_id] || feedById[String(p.feed_type_id)]
-        const supplierId = p.supplier_id || p.supplierId
+        const supplierId = p.supplier_id || p.supplierId || null
         const supplier =
           (supplierId &&
             (supplierById[supplierId] || supplierById[String(supplierId)])) ||
@@ -235,6 +237,11 @@ function FeedPurchases() {
         purchasesAllData,
         usageRows,
         lotsData,
+        {
+          locations: locations || [],
+          activeLocation,
+          activeLocationId,
+        },
       )
       nextStats.stockValue = nextInventory.stockValue
       nextStats.totalBags = nextInventory.totalBags
@@ -297,8 +304,10 @@ function FeedPurchases() {
       const supplier =
         purchase.supplier?.name ||
         purchase.suppliers?.name ||
-        'No supplier'
-      supplierMap.set(supplier, (supplierMap.get(supplier) || 0) + purchase.quantity)
+        null
+      if (supplier) {
+        supplierMap.set(supplier, (supplierMap.get(supplier) || 0) + purchase.quantity)
+      }
     })
 
     // Calculate average cost per kg
@@ -350,19 +359,19 @@ function FeedPurchases() {
 
     // Calculate supplier comparison
     const supplierCosts = {}
-    purchases.forEach(purchase => {
+    purchases.forEach((purchase) => {
       const supplier =
-        purchase.suppliers?.name ||
-        purchase.supplier?.name ||
-        'No supplier'
+        purchase.suppliers?.name || purchase.supplier?.name || null
+      if (!supplier) return
       if (!supplierCosts[supplier]) {
         supplierCosts[supplier] = {
           totalCost: 0,
           totalQuantity: 0,
-          averagePrice: 0
+          averagePrice: 0,
         }
       }
-      supplierCosts[supplier].totalCost += purchase.quantity * purchase.price_per_kg
+      supplierCosts[supplier].totalCost +=
+        purchase.quantity * purchase.price_per_kg
       supplierCosts[supplier].totalQuantity += purchase.quantity
     })
 
@@ -375,7 +384,13 @@ function FeedPurchases() {
     return analysis
   }
 
-  const calculateInventoryMetrics = (feedTypes, purchases, usage, lots = []) => {
+  const calculateInventoryMetrics = (
+    feedTypes,
+    purchases,
+    usage,
+    lots = [],
+    locationContext = {},
+  ) => {
     const metrics = {
       stockLevels: [],
       stockValue: 0,
@@ -386,44 +401,113 @@ function FeedPurchases() {
     }
 
     const active = (feedTypes || []).filter((f) => f.active !== false)
-    const maxStock = Math.max(
-      ...active.map((f) => Number(f.current_stock) || 0),
-      1,
+    const feedById = Object.fromEntries(
+      active.map((f) => [String(f.id || f._id), f]),
     )
+    const locationNameById = Object.fromEntries(
+      (locationContext.locations || []).map((l) => [
+        String(l.id || l._id),
+        l.name,
+      ]),
+    )
+    const fallbackLocationName =
+      locationContext.activeLocation?.name ||
+      (locationContext.activeLocationId &&
+        locationNameById[String(locationContext.activeLocationId)]) ||
+      'All locations'
 
-    metrics.stockLevels = active.map((feed) => {
-      const current = Number(feed.current_stock) || 0
-      const minimum = Number(feed.minimum_stock) || 0
-      const bagSize = Number(feed.bag_size_kg || feed.bagSizeKg || 25)
-      let status = 'ok'
-      if (minimum > 0 && current <= minimum) status = 'critical'
-      else if (minimum > 0 && current <= minimum * 1.2) status = 'low'
-      else if (current <= 0) status = 'empty'
-      const vsMinPct =
-        minimum > 0 ? Math.round((current / minimum) * 100) : null
-      const bagsOnHand =
-        bagSize > 0 ? Math.round((current / bagSize) * 10) / 10 : null
-      return {
-        id: feed.id || feed._id,
-        name: feed.name,
-        currentStock: current,
-        minimumStock: minimum,
-        bagSizeKg: bagSize,
-        bagsOnHand,
-        protein: feed.protein_percentage ?? feed.protein_content ?? null,
-        pricePerKg: Number(feed.price_per_kg) || 0,
-        // Bar fill relative to largest stock so empty types don't look full
-        barPct: Math.min(100, Math.round((current / maxStock) * 100)),
-        vsMinPct,
-        status,
+    const resolveLocationLabel = (lot) => {
+      const id = lot.location_id || lot.locationId
+      if (id && locationNameById[String(id)]) {
+        return locationNameById[String(id)]
       }
-    })
+      return (lot.location || '').trim() || fallbackLocationName
+    }
 
-    metrics.stockValue = active.reduce((total, feed) => {
-      return (
-        total +
-        (Number(feed.current_stock) || 0) * (Number(feed.price_per_kg) || 0)
-      )
+    // Prefer lot-based per-location stock when lots exist
+    const lotRows = []
+    const qtyByFeedLocation = new Map()
+    for (const lot of lots || []) {
+      const ftId = String(lot.feed_type_id || lot.feedTypeId || '')
+      if (!ftId || !feedById[ftId]) continue
+      const locLabel = resolveLocationLabel(lot)
+      const key = `${ftId}::${locLabel}`
+      const kg = Number(lot.quantity_kg ?? lot.quantityKg ?? 0)
+      if (kg <= 0) continue
+      qtyByFeedLocation.set(key, (qtyByFeedLocation.get(key) || 0) + kg)
+    }
+
+    if (qtyByFeedLocation.size > 0) {
+      for (const [key, current] of qtyByFeedLocation.entries()) {
+        const sep = key.indexOf('::')
+        const ftId = key.slice(0, sep)
+        const locLabel = key.slice(sep + 2)
+        const feed = feedById[ftId]
+        if (!feed) continue
+        lotRows.push({ feed, current, location: locLabel })
+      }
+      // Include zero-stock active types so empties still appear
+      for (const feed of active) {
+        const ftId = String(feed.id || feed._id)
+        const hasAny = [...qtyByFeedLocation.keys()].some((k) =>
+          k.startsWith(`${ftId}::`),
+        )
+        if (!hasAny) {
+          lotRows.push({
+            feed,
+            current: 0,
+            location: fallbackLocationName,
+          })
+        }
+      }
+    } else {
+      for (const feed of active) {
+        lotRows.push({
+          feed,
+          current: Number(feed.current_stock) || 0,
+          location: fallbackLocationName,
+        })
+      }
+    }
+
+    const maxStock = Math.max(...lotRows.map((r) => r.current), 1)
+
+    metrics.stockLevels = lotRows
+      .map(({ feed, current, location }) => {
+        const minimum = Number(feed.minimum_stock) || 0
+        const bagSize = Number(feed.bag_size_kg || feed.bagSizeKg || 25)
+        let status = 'ok'
+        if (minimum > 0 && current <= minimum) status = 'critical'
+        else if (minimum > 0 && current <= minimum * 1.2) status = 'low'
+        else if (current <= 0) status = 'empty'
+        const vsMinPct =
+          minimum > 0 ? Math.round((current / minimum) * 100) : null
+        const bagsOnHand =
+          bagSize > 0 ? Math.round((current / bagSize) * 10) / 10 : null
+        return {
+          id: `${feed.id || feed._id}::${location}`,
+          feedTypeId: feed.id || feed._id,
+          name: feed.name,
+          location,
+          currentStock: current,
+          minimumStock: minimum,
+          bagSizeKg: bagSize,
+          bagsOnHand,
+          protein: feed.protein_percentage ?? feed.protein_content ?? null,
+          pricePerKg: Number(feed.price_per_kg) || 0,
+          barPct: Math.min(100, Math.round((current / maxStock) * 100)),
+          vsMinPct,
+          status,
+        }
+      })
+      .sort((a, b) => {
+        const byLoc = (a.location || '').localeCompare(b.location || '')
+        if (byLoc) return byLoc
+        return (a.name || '').localeCompare(b.name || '')
+      })
+
+    metrics.stockValue = metrics.stockLevels.reduce((total, row) => {
+      return total + (Number(row.currentStock) || 0) * (Number(row.pricePerKg) || 0)
     }, 0)
 
     metrics.totalBags = metrics.stockLevels.reduce((sum, row) => {
@@ -558,51 +642,76 @@ function FeedPurchases() {
     const metrics = {
       reliability: [],
       priceComparison: [],
+      unassigned: null,
       deliveryPerformance: {},
       qualityMetrics: {}
     }
 
-    // Calculate supplier reliability
     const supplierOrders = {}
-    purchases.forEach(purchase => {
-      const supplier =
-        purchase.suppliers?.name ||
-        purchase.supplier?.name ||
-        'No supplier'
-      if (!supplierOrders[supplier]) {
-        supplierOrders[supplier] = {
+    let unassigned = {
+      totalOrders: 0,
+      totalCost: 0,
+      totalQuantity: 0,
+    }
+
+    purchases.forEach((purchase) => {
+      const supplierName =
+        purchase.suppliers?.name || purchase.supplier?.name || null
+      const cost =
+        (Number(purchase.quantity) || 0) * (Number(purchase.price_per_kg) || 0)
+      const qty = Number(purchase.quantity) || 0
+
+      if (!supplierName) {
+        unassigned.totalOrders++
+        unassigned.totalCost += cost
+        unassigned.totalQuantity += qty
+        return
+      }
+
+      if (!supplierOrders[supplierName]) {
+        supplierOrders[supplierName] = {
           totalOrders: 0,
           onTimeDeliveries: 0,
           totalCost: 0,
-          totalQuantity: 0
+          totalQuantity: 0,
         }
       }
-      supplierOrders[supplier].totalOrders++
-      supplierOrders[supplier].totalCost += purchase.quantity * purchase.price_per_kg
-      supplierOrders[supplier].totalQuantity += purchase.quantity
-
+      supplierOrders[supplierName].totalOrders++
+      supplierOrders[supplierName].totalCost += cost
+      supplierOrders[supplierName].totalQuantity += qty
       // No real delivery ETA yet — treat recorded purchases as completed on time
-      supplierOrders[supplier].onTimeDeliveries++
+      supplierOrders[supplierName].onTimeDeliveries++
     })
 
-    // Convert supplier orders to reliability array
-    metrics.reliability = Object.entries(supplierOrders).map(([supplier, data]) => ({
-      supplier,
-      reliability: (data.onTimeDeliveries / data.totalOrders) * 100,
-      totalOrders: data.totalOrders,
-      totalCost: data.totalCost,
-      averagePrice:
-        data.totalQuantity > 0 ? data.totalCost / data.totalQuantity : 0,
-    }))
+    metrics.reliability = Object.entries(supplierOrders)
+      .map(([supplier, data]) => ({
+        supplier,
+        reliability: (data.onTimeDeliveries / data.totalOrders) * 100,
+        totalOrders: data.totalOrders,
+        totalCost: data.totalCost,
+        averagePrice:
+          data.totalQuantity > 0 ? data.totalCost / data.totalQuantity : 0,
+        unassigned: false,
+      }))
+      .sort((a, b) => b.totalOrders - a.totalOrders)
 
-    // Sort reliability by number of orders (most orders first)
-    metrics.reliability.sort((a, b) => b.totalOrders - a.totalOrders)
+    if (unassigned.totalOrders > 0) {
+      metrics.unassigned = {
+        supplier: 'No supplier',
+        totalOrders: unassigned.totalOrders,
+        totalCost: unassigned.totalCost,
+        averagePrice:
+          unassigned.totalQuantity > 0
+            ? unassigned.totalCost / unassigned.totalQuantity
+            : 0,
+        unassigned: true,
+      }
+    }
 
-    // Calculate price comparison
-    metrics.priceComparison = metrics.reliability.map(item => ({
+    metrics.priceComparison = metrics.reliability.map((item) => ({
       supplier: item.supplier,
       averagePrice: item.averagePrice,
-      totalOrders: item.totalOrders
+      totalOrders: item.totalOrders,
     }))
 
     return metrics
@@ -728,6 +837,9 @@ function FeedPurchases() {
         (!formData.bags || parseFloat(formData.bags) <= 0)
       ) {
         throw new Error('Enter bags or quantity (kg)')
+      }
+      if (!formData.supplier_id) {
+        throw new Error('Supplier is required')
       }
       const { error } = await feedService.updatePurchase(editingPurchase.id, {
         ...formData,
@@ -1018,7 +1130,7 @@ function FeedPurchases() {
                 Inventory
               </h2>
               <p className="mt-0.5 text-xs text-muted">
-                Stock vs peers · bag size · protein · reorder only when a minimum is set
+                By location · bag size · protein · reorder only when a minimum is set
               </p>
             </div>
             <div className="flex flex-wrap gap-3 text-[11px] text-muted">
@@ -1060,15 +1172,22 @@ function FeedPurchases() {
                             : 'bg-kelp'
                     return (
                       <li
-                        key={stock.id || stock.name}
+                        key={stock.id || `${stock.name}-${stock.location}`}
                         className="rounded-xl border border-foam-deep/70 bg-surface px-3 py-2.5 transition-colors duration-200 hover:border-foam-deep"
                       >
                         <div className="mb-1.5 flex items-baseline justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="text-sm font-medium text-chart-ink">
-                              {stock.name}
-                            </span>
-                            <span className="ml-2 text-[11px] text-muted">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <span className="text-sm font-medium text-chart-ink">
+                                {stock.name}
+                              </span>
+                              {stock.location ? (
+                                <span className="inline-flex items-center rounded-md border border-foam-deep/80 bg-foam-deep/30 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+                                  {stock.location}
+                                </span>
+                              ) : null}
+                            </div>
+                            <span className="text-[11px] text-muted">
                               {stock.protein != null ? `${stock.protein}% protein` : 'Protein —'}
                               {' · '}
                               {stock.bagSizeKg}Kg bags
@@ -1208,7 +1327,7 @@ function FeedPurchases() {
               Supplier performance
             </h2>
             <p className="mt-0.5 text-xs text-muted">
-              Based on recorded purchases. “No supplier” means the purchase was saved without a supplier selected — edit the purchase to assign one.
+              Based on recorded purchases. Supplier is required on every purchase.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-0 lg:grid-cols-2 lg:divide-x lg:divide-foam-deep">
@@ -1221,7 +1340,7 @@ function FeedPurchases() {
                 {supplierMetrics.reliability && supplierMetrics.reliability.length > 0 ? (
                   supplierMetrics.reliability.map((metric, index) => (
                     <div
-                      key={index}
+                      key={metric.supplier || index}
                       className="flex items-center justify-between gap-3 rounded-xl border border-foam-deep/70 bg-surface px-3 py-2.5"
                     >
                       <div className="min-w-0 flex-1">
@@ -1255,6 +1374,28 @@ function FeedPurchases() {
                     No supplier data yet — record purchases with a supplier selected.
                   </p>
                 )}
+                {supplierMetrics.unassigned ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-chart-ink">
+                          Unassigned supplier
+                        </p>
+                        <p className="text-xs text-muted">
+                          {supplierMetrics.unassigned.totalOrders}{' '}
+                          {supplierMetrics.unassigned.totalOrders === 1
+                            ? 'order'
+                            : 'orders'}
+                          {' · '}
+                          {formatCurrency(supplierMetrics.unassigned.totalCost || 0)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-muted">
+                          Edit those purchases and assign a supplier — required for all new purchases.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -1535,15 +1676,16 @@ function FeedPurchases() {
 
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Supplier
+                  Supplier <span className="text-signal">*</span>
                 </label>
                 <select
                   name="supplier_id"
                   value={formData.supplier_id || ''}
                   onChange={handleChange}
+                  required
                   className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 >
-                  <option value="">Select supplier (optional)</option>
+                  <option value="">Select supplier</option>
                   {suppliers.map((supplier) => (
                     <option
                       key={supplier.id || supplier._id}
