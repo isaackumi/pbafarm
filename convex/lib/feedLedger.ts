@@ -14,12 +14,12 @@ export type StockTxnType =
   | 'reversal'
 
 export function bagsFromKg(quantityKg: number, bagSizeKg?: number | null) {
-  const size = bagSizeKg && bagSizeKg > 0 ? bagSizeKg : 25
+  const size = bagSizeKg && bagSizeKg > 0 ? bagSizeKg : 20
   return Math.round((quantityKg / size) * 1000) / 1000
 }
 
 export function kgFromBags(bags: number, bagSizeKg?: number | null) {
-  const size = bagSizeKg && bagSizeKg > 0 ? bagSizeKg : 25
+  const size = bagSizeKg && bagSizeKg > 0 ? bagSizeKg : 20
   return Math.round(bags * size * 1000) / 1000
 }
 

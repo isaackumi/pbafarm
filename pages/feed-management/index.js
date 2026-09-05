@@ -33,7 +33,7 @@ const FeedManagement = () => {
     description: '',
     pellet_size: '',
     minimum_stock: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     supplier_id: '',
     active: true,
   })
@@ -128,7 +128,7 @@ const FeedManagement = () => {
     description: '',
     pellet_size: '',
     minimum_stock: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     supplier_id: '',
     active: true,
   })
@@ -325,7 +325,7 @@ const FeedManagement = () => {
   return (
     <ProtectedRoute>
       <Layout title="Feed Management">
-        <div className="max-w-7xl">
+        <div className="max-w-7xl" data-tour="page-feed-management">
           <PageHeader
             showTitle={false}
             breadcrumbs={[

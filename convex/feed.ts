@@ -58,7 +58,7 @@ function toClientFeedType(f: any) {
       ? f.bagSizeKg
       : meta.bag_size_kg && meta.bag_size_kg > 0
         ? meta.bag_size_kg
-        : 25
+        : 20
   return {
     id: f._id,
     _id: f._id,
@@ -251,7 +251,7 @@ export const createFeedType = mutation({
       currentStock: 0,
       minimumStock: args.minimumStock ?? 0,
       pricePerKg: args.pricePerKg,
-      bagSizeKg: args.bagSizeKg && args.bagSizeKg > 0 ? args.bagSizeKg : 25,
+      bagSizeKg: args.bagSizeKg && args.bagSizeKg > 0 ? args.bagSizeKg : 20,
       supplierId: args.supplierId,
       active: args.active ?? true,
       companyId: await writeCompanyId(user),

@@ -1,8 +1,12 @@
 const PRESETS = [10, 20, 25]
 
+/** Default bag size when none is set on the feed type or form. */
+export const DEFAULT_BAG_SIZE_KG = 20
+
 /**
  * Bag size for bags ↔ kg conversion on purchases.
  * Presets cover common sizes; number input allows any (e.g. 15).
+ * Starts at 20 kg unless the user (or feed type) picks another size.
  */
 export default function BagSizeField({
   id = 'bag-size-kg',
@@ -53,8 +57,17 @@ export default function BagSizeField({
         />
       </div>
       <p className="mt-1 text-xs text-muted">
-        Defaults from the feed type — change if this lot uses a different bag size.
+        Default {DEFAULT_BAG_SIZE_KG} kg — change if this lot uses a different bag size.
       </p>
     </div>
   )
+}
+
+/** Resolve bag size: explicit value → feed type → 20 kg default. */
+export function resolveBagSizeKg(...candidates) {
+  for (const raw of candidates) {
+    const n = Number(raw)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return DEFAULT_BAG_SIZE_KG
 }

@@ -26,7 +26,10 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
 import FeedTypeField from '../components/FeedTypeField'
-import BagSizeField from '../components/BagSizeField'
+import BagSizeField, {
+  DEFAULT_BAG_SIZE_KG,
+  resolveBagSizeKg,
+} from '../components/BagSizeField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../components/FeedPurchaseModal'
 import { useToast } from '../components/Toast'
@@ -74,7 +77,7 @@ function FeedPurchases() {
     feed_type_id: '',
     quantity: '',
     bags: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     price_per_kg: '',
     purchase_date: new Date().toISOString().split('T')[0],
     supplier_id: '',
@@ -141,18 +144,16 @@ function FeedPurchases() {
       const [
         feedTypesResult,
         purchasesResult,
-        purchasesAllResult,
         lotsResult,
-        lowStockResult,
+        stockLevelsResult,
         usageResult,
         cagesResult,
         suppliersResult,
       ] = await Promise.all([
         feedService.getAllFeedTypes(),
         feedService.getAllPurchases(),
-        feedService.getAllPurchases({ allLocations: true }),
-        feedService.getInventoryLots({ allLocations: true }),
-        feedService.getLowStockAlerts(),
+        feedService.getInventoryLots(),
+        feedService.getStockLevels(),
         feedService.getFeedUsageStats(timeRange),
         cageService.getAllCages(),
         supplierService.getAllSuppliers(),
@@ -160,9 +161,8 @@ function FeedPurchases() {
 
       if (feedTypesResult.error) throw feedTypesResult.error
       if (purchasesResult.error) throw purchasesResult.error
-      if (purchasesAllResult.error) throw purchasesAllResult.error
       if (lotsResult.error) throw lotsResult.error
-      if (lowStockResult.error) throw lowStockResult.error
+      if (stockLevelsResult.error) throw stockLevelsResult.error
       if (usageResult.error) throw usageResult.error
       if (cagesResult.error) throw cagesResult.error
       if (suppliersResult.error) throw suppliersResult.error
@@ -171,6 +171,7 @@ function FeedPurchases() {
       const suppliersData = suppliersResult.data || []
       const cagesData = cagesResult.data || []
       const lotsData = lotsResult.data || []
+      const stockLevelsData = stockLevelsResult.data || []
       const feedById = Object.fromEntries(
         feedTypesData.map((t) => [t.id || t._id, t]),
       )
@@ -210,18 +211,21 @@ function FeedPurchases() {
       }
 
       const purchasesData = (purchasesResult.data || []).map(mapPurchase)
-      const purchasesAllData = (purchasesAllResult.data || []).map(mapPurchase)
 
-      const lowStockData = (lowStockResult.data || [])
+      const lowStockData = (stockLevelsData || [])
         .map((a) => ({
           id: a.feed_type_id || a.feedTypeId || a.id,
-          name: a.name || a.feed_type_name || a.feedTypeName || 'Feed',
+          name: a.feed_type_name || a.feedTypeName || a.name || 'Feed',
           current_stock: a.current_stock ?? a.currentStock ?? 0,
           minimum_stock: a.minimum_stock ?? a.minimumStock ?? 0,
           protein_percentage: a.protein_percentage ?? null,
           bag_size_kg: a.bag_size_kg ?? a.bagSizeKg ?? null,
         }))
-        .filter((a) => Number(a.minimum_stock) > 0)
+        .filter((a) => {
+          const min = Number(a.minimum_stock) || 0
+          if (min <= 0) return false
+          return (Number(a.current_stock) || 0) <= min
+        })
 
       setFeedTypes(feedTypesData)
       setPurchases(purchasesData)
@@ -230,30 +234,31 @@ function FeedPurchases() {
       setCages(cagesData)
       setSuppliers(suppliersData)
 
-      // KPIs span all farm locations / inventories
-      const nextStats = calculateStats(purchasesAllData)
+      // KPIs are scoped to the active header location
+      const nextStats = calculateStats(purchasesData)
       const nextInventory = calculateInventoryMetrics(
         feedTypesData,
-        purchasesAllData,
+        purchasesData,
         usageRows,
         lotsData,
         {
           locations: locations || [],
           activeLocation,
           activeLocationId,
+          stockLevels: stockLevelsData,
         },
       )
       nextStats.stockValue = nextInventory.stockValue
       nextStats.totalBags = nextInventory.totalBags
       nextStats.avgFeedAgeDays = nextInventory.avgFeedAgeDays
       setStats(nextStats)
-      setCostAnalysis(calculateCostAnalysis(purchasesAllData, feedTypesData))
+      setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
       setInventoryMetrics(nextInventory)
       setUsageAnalytics(
-        calculateUsageAnalytics(purchasesAllData, usageRows, cagesData),
+        calculateUsageAnalytics(purchasesData, usageRows, cagesData),
       )
       setSupplierMetrics(
-        calculateSupplierMetrics(purchasesAllData, suppliersData),
+        calculateSupplierMetrics(purchasesData, suppliersData),
       )
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -461,10 +466,18 @@ function FeedPurchases() {
         }
       }
     } else {
+      // Per-location stock from listStockLevels (not company-wide feedTypes.currentStock)
+      const stockByFeed = Object.fromEntries(
+        (locationContext.stockLevels || []).map((row) => [
+          String(row.feed_type_id || row.feedTypeId),
+          Number(row.current_stock ?? row.currentStock ?? 0),
+        ]),
+      )
       for (const feed of active) {
+        const ftId = String(feed.id || feed._id)
         lotRows.push({
           feed,
-          current: Number(feed.current_stock) || 0,
+          current: stockByFeed[ftId] ?? 0,
           location: fallbackLocationName,
         })
       }
@@ -514,7 +527,7 @@ function FeedPurchases() {
       return sum + (Number(row.bagsOnHand) || 0)
     }, 0)
 
-    // Weighted average age of on-hand lots across all locations
+    // Weighted average age of on-hand lots at this location
     const now = Date.now()
     let weightedAgeDays = 0
     let ageWeightKg = 0
@@ -560,32 +573,33 @@ function FeedPurchases() {
 
     Object.entries(averageDailyUsage).forEach(([feedType, data]) => {
       const avgDailyUsage = data.totalUsage / data.days
-      const feed = active.find((f) => f.name === feedType)
-      if (feed && avgDailyUsage > 0) {
+      const row = metrics.stockLevels.find((s) => s.name === feedType)
+      if (row && avgDailyUsage > 0) {
         metrics.daysRemaining[feedType] = Math.floor(
-          (Number(feed.current_stock) || 0) / avgDailyUsage,
+          (Number(row.currentStock) || 0) / avgDailyUsage,
         )
       }
     })
 
-    metrics.reorderRecommendations = active
-      .filter((feed) => {
-        const min = Number(feed.minimum_stock) || 0
+    metrics.reorderRecommendations = metrics.stockLevels
+      .filter((row) => {
+        const min = Number(row.minimumStock) || 0
         if (min <= 0) return false
-        return (Number(feed.current_stock) || 0) <= min * 1.2
+        return (Number(row.currentStock) || 0) <= min * 1.2
       })
-      .map((feed) => {
-        const current = Number(feed.current_stock) || 0
-        const minimum = Number(feed.minimum_stock) || 0
-        const bagSize = Number(feed.bag_size_kg || feed.bagSizeKg || 25)
+      .map((row) => {
+        const current = Number(row.currentStock) || 0
+        const minimum = Number(row.minimumStock) || 0
+        const bagSize = Number(row.bagSizeKg) || 20
         const recommendedOrder = Math.max(0, Math.ceil(minimum * 2 - current))
         return {
-          id: feed.id || feed._id,
-          name: feed.name,
+          id: row.feedTypeId || row.id,
+          name: row.name,
+          location: row.location,
           currentStock: current,
           minimumStock: minimum,
           bagSizeKg: bagSize,
-          protein: feed.protein_percentage ?? feed.protein_content ?? null,
+          protein: row.protein,
           recommendedOrder,
           recommendedBags:
             bagSize > 0
@@ -717,18 +731,17 @@ function FeedPurchases() {
     return metrics
   }
 
-  const bagSizeKg = Number(formData.bag_size_kg) > 0 ? Number(formData.bag_size_kg) : 25
+  const bagSizeKg = resolveBagSizeKg(formData.bag_size_kg)
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => {
       const next = { ...prev, [name]: value }
-      let size = Number(prev.bag_size_kg) > 0 ? Number(prev.bag_size_kg) : 25
+      let size = resolveBagSizeKg(prev.bag_size_kg)
 
       if (name === 'feed_type_id') {
         const ft = feedTypes.find((t) => (t.id || t._id) === value)
-        size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
-        next.bag_size_kg = String(size)
+        // Keep bag size at default / user choice
         if (next.quantity !== '') {
           const kg = parseFloat(next.quantity)
           if (!Number.isNaN(kg) && size > 0) {
@@ -742,7 +755,7 @@ function FeedPurchases() {
       }
 
       if (name === 'bag_size_kg') {
-        size = Number(value) > 0 ? Number(value) : 25
+        size = resolveBagSizeKg(value)
         if (next.bags !== '') {
           const bags = parseFloat(next.bags)
           if (!Number.isNaN(bags)) {
@@ -906,6 +919,7 @@ function FeedPurchases() {
         actions={
           <button
             onClick={handleAddPurchase}
+            data-tour="feed-purchases-record"
             className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -1015,10 +1029,16 @@ function FeedPurchases() {
           </div>
         )}
 
-        {/* Stats Cards — all farm locations */}
-        <div className="mb-2 flex items-end justify-between gap-2">
+        {/* Stats Cards — active location */}
+        <div
+          className="mb-2 flex items-end justify-between gap-2"
+          data-tour="feed-purchases-kpis"
+        >
           <p className="text-xs text-muted">
-            KPIs cover <span className="font-medium text-chart-ink">all locations</span>
+            KPIs for{' '}
+            <span className="font-medium text-chart-ink">
+              {activeLocation?.name || 'this location'}
+            </span>
           </p>
         </div>
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -1123,14 +1143,18 @@ function FeedPurchases() {
         </div>
 
         {/* Inventory Management Section */}
-        <div className="page-card mb-6 overflow-hidden">
+        <div
+          className="page-card mb-6 overflow-hidden"
+          data-tour="feed-purchases-inventory"
+        >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-foam-deep px-5 py-4">
             <div>
               <h2 className="text-base font-semibold text-chart-ink">
                 Inventory
               </h2>
               <p className="mt-0.5 text-xs text-muted">
-                By location · bag size · protein · reorder only when a minimum is set
+                {activeLocation?.name || 'This location'} · bag size · protein ·
+                reorder only when a minimum is set
               </p>
             </div>
             <div className="flex flex-wrap gap-3 text-[11px] text-muted">
@@ -1590,13 +1614,9 @@ function FeedPurchases() {
                 onCreated={(result) => {
                   fetchData()
                   if (result?.id) {
-                    const size = Number(
-                      result.bag_size_kg || result.bagSizeKg || 25,
-                    )
                     setFormData((prev) => ({
                       ...prev,
                       feed_type_id: result.id,
-                      bag_size_kg: String(size > 0 ? size : 25),
                     }))
                   }
                 }}

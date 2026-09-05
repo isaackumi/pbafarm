@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import BagSizeField from './BagSizeField'
+import BagSizeField, {
+  DEFAULT_BAG_SIZE_KG,
+  resolveBagSizeKg,
+} from './BagSizeField'
 import LocationMetaField from './LocationMetaField'
 import { feedService } from '../lib/feedService'
 import { formatCurrency } from '../lib/currencyUtils'
@@ -12,7 +15,7 @@ const emptyEntry = (overrides = {}) => ({
   feed_type_id: '',
   number_of_bags: '',
   price_per_bag: '',
-  bag_size: '25',
+  bag_size: String(DEFAULT_BAG_SIZE_KG),
   ...overrides,
 })
 
@@ -54,9 +57,7 @@ export default function FeedPurchaseModal({
     const ft = feedTypes.find(
       (t) => (t.id || t._id) === defaultFeedTypeId,
     )
-    const size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
-    const defaultSupplier =
-      ft?.supplier_id || ft?.supplierId || ''
+    const defaultSupplier = ft?.supplier_id || ft?.supplierId || ''
     setPurchaseData({
       ...emptyPurchase(),
       supplier_id: defaultSupplier ? String(defaultSupplier) : '',
@@ -66,7 +67,6 @@ export default function FeedPurchaseModal({
         defaultFeedTypeId
           ? {
               feed_type_id: defaultFeedTypeId,
-              bag_size: String(size > 0 ? size : 25),
             }
           : {},
       ),
@@ -146,7 +146,7 @@ export default function FeedPurchaseModal({
       const errors = []
       for (const entry of purchaseData.feed_entries) {
         const bags = Number(entry.number_of_bags)
-        const bagSize = Number(entry.bag_size) > 0 ? Number(entry.bag_size) : 25
+        const bagSize = resolveBagSizeKg(entry.bag_size)
         const pricePerBag = Number(entry.price_per_bag)
         const quantityKg =
           entry.quantity_kg != null
@@ -277,10 +277,10 @@ export default function FeedPurchaseModal({
                       )?.name || 'Feed'}
                     </p>
                     <p className="text-xs text-muted">
-                      {entry.number_of_bags} × {entry.bag_size || 25} kg bags (
+                      {entry.number_of_bags} × {entry.bag_size || DEFAULT_BAG_SIZE_KG} kg bags (
                       {entry.quantity_kg ??
                         Number(entry.number_of_bags) *
-                          Number(entry.bag_size || 25)}{' '}
+                          Number(entry.bag_size || DEFAULT_BAG_SIZE_KG)}{' '}
                       kg) × {formatCurrency(entry.price_per_bag)}/bag ={' '}
                       {formatCurrency(entry.total_amount)}
                     </p>
@@ -318,13 +318,9 @@ export default function FeedPurchaseModal({
                     const ft = activeFeedTypes.find(
                       (t) => (t.id || t._id) === id,
                     )
-                    const size = Number(
-                      ft?.bag_size_kg || ft?.bagSizeKg || 25,
-                    )
                     setCurrentFeedEntry((prev) => ({
                       ...prev,
                       feed_type_id: id,
-                      bag_size: String(size > 0 ? size : 25),
                     }))
                     // Prefill supplier from feed type when purchase supplier empty
                     const feedSupplier = ft?.supplier_id || ft?.supplierId

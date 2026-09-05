@@ -52,7 +52,7 @@ function FeedTypes() {
     protein_percentage: '',
     pellet_size: '',
     minimum_stock: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     supplier_id: '',
     active: true,
   })
@@ -128,7 +128,7 @@ function FeedTypes() {
         protein_percentage: '',
         pellet_size: '',
         minimum_stock: '',
-        bag_size_kg: '25',
+        bag_size_kg: '20',
         supplier_id: '',
         active: true,
       })
@@ -149,7 +149,7 @@ function FeedTypes() {
           ? String(type.minimum_stock)
           : '',
       bag_size_kg: String(
-        type.bag_size_kg || type.bagSizeKg || 25,
+        type.bag_size_kg || type.bagSizeKg || 20,
       ),
       supplier_id: type.supplier_id || '',
       active: type.active,
@@ -197,7 +197,7 @@ function FeedTypes() {
         protein_percentage: '',
         pellet_size: '',
         minimum_stock: '',
-        bag_size_kg: '25',
+        bag_size_kg: '20',
         supplier_id: '',
         active: true,
       })

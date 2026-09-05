@@ -7,7 +7,10 @@ import { Button, Field, Input, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
 import FarmLocationSelect from './FarmLocationSelect'
 import FeedTypeField from './FeedTypeField'
-import BagSizeField from './BagSizeField'
+import BagSizeField, {
+  DEFAULT_BAG_SIZE_KG,
+  resolveBagSizeKg,
+} from './BagSizeField'
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
@@ -331,7 +334,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
     protein_percentage: '',
     pellet_size: '',
     supplier_id: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     current_stock: '0',
     minimum_stock: '0',
     active: true,
@@ -820,7 +823,7 @@ export function QuickCreatePurchaseModal({
     feed_type_id: defaultFeedTypeId || '',
     quantity: '',
     bags: '',
-    bag_size_kg: '25',
+    bag_size_kg: '20',
     price_per_kg: '',
     purchase_date: new Date().toISOString().split('T')[0],
     supplier_id: '',
@@ -835,21 +838,16 @@ export function QuickCreatePurchaseModal({
   const selectedFeed = activeFeedTypes.find(
     (t) => (t.id || t._id) === form.feed_type_id,
   )
-  const bagSizeKg =
-    Number(form.bag_size_kg) > 0
-      ? Number(form.bag_size_kg)
-      : Number(selectedFeed?.bag_size_kg || selectedFeed?.bagSizeKg || 25)
+  const bagSizeKg = resolveBagSizeKg(form.bag_size_kg)
 
   const setField = (key) => (e) => {
     const value = e.target.value
     setForm((p) => {
       const next = { ...p, [key]: value }
-      let size = Number(p.bag_size_kg) > 0 ? Number(p.bag_size_kg) : 25
+      let size = resolveBagSizeKg(p.bag_size_kg)
 
       if (key === 'feed_type_id') {
-        const ft = activeFeedTypes.find((t) => (t.id || t._id) === value)
-        size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
-        next.bag_size_kg = String(size)
+        // Keep bag size at default / user choice — do not overwrite from feed type
         next.price_per_kg = ''
         if (next.quantity !== '') {
           const kg = parseFloat(next.quantity)
@@ -860,7 +858,7 @@ export function QuickCreatePurchaseModal({
       }
 
       if (key === 'bag_size_kg') {
-        size = Number(value) > 0 ? Number(value) : 25
+        size = resolveBagSizeKg(value)
         if (next.bags !== '') {
           const bags = parseFloat(next.bags)
           if (!Number.isNaN(bags)) {
@@ -901,21 +899,16 @@ export function QuickCreatePurchaseModal({
     }
   }, [form.feed_type_id, form.price_per_kg, activeFeedTypes])
 
-  // Seed bag size when opening with a preselected feed type
+  // Keep default bag size (20 kg) when opening — user can change
   useEffect(() => {
-    if (!defaultFeedTypeId || !activeFeedTypes.length) return
-    const ft = activeFeedTypes.find(
-      (t) => (t.id || t._id) === defaultFeedTypeId,
-    )
-    if (!ft) return
-    const size = Number(ft.bag_size_kg || ft.bagSizeKg || 25)
+    if (!defaultFeedTypeId) return
     setForm((p) => ({
       ...p,
-      bag_size_kg: String(size > 0 ? size : 25),
+      feed_type_id: defaultFeedTypeId,
+      bag_size_kg: p.bag_size_kg || String(DEFAULT_BAG_SIZE_KG),
     }))
-    // intentionally once when catalog for default id is available
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultFeedTypeId, activeFeedTypes.length])
+  }, [defaultFeedTypeId])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -998,14 +991,10 @@ export function QuickCreatePurchaseModal({
           emptyMessage="Add a feed type before recording a purchase."
           onCreated={(result) => {
             if (result?.id) {
-              const size = Number(
-                result.bag_size_kg || result.bagSizeKg || 25,
-              )
               setForm((p) => ({
                 ...p,
                 feed_type_id: result.id,
                 price_per_kg: '',
-                bag_size_kg: String(size > 0 ? size : 25),
               }))
             }
           }}
