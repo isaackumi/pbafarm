@@ -35,8 +35,10 @@ function PendingApprovals() {
   )
   const approveStocking = useMutation(api.stocking.approveStocking)
   const approveTopup = useMutation(api.stocking.approveTopup)
+  const approveFishTransfer = useMutation(api.fishTransfers.approveFishTransfer)
   const rejectStocking = useMutation(api.stocking.rejectStocking)
   const rejectTopup = useMutation(api.stocking.rejectTopup)
+  const rejectFishTransfer = useMutation(api.fishTransfers.rejectFishTransfer)
 
   const [currentRecord, setCurrentRecord] = useState(null)
   const [showApproveModal, setShowApproveModal] = useState(false)
@@ -61,6 +63,13 @@ function PendingApprovals() {
     setShowRejectModal(true)
   }
 
+  const typeLabel = (type) => {
+    if (type === 'stocking') return 'Stocking'
+    if (type === 'topup') return 'Top-up'
+    if (type === 'fish_transfer') return 'Fish transfer'
+    return type
+  }
+
   const confirmApprove = async () => {
     if (!currentRecord) return
 
@@ -69,15 +78,15 @@ function PendingApprovals() {
     try {
       if (currentRecord.type === 'topup') {
         await approveTopup({ id: currentRecord.id })
+      } else if (currentRecord.type === 'fish_transfer') {
+        await approveFishTransfer({ id: currentRecord.id })
       } else {
         await approveStocking({ id: currentRecord.id })
       }
 
       showToast(
         'success',
-        `${
-          currentRecord.type === 'stocking' ? 'Stocking' : 'Top-up'
-        } approved successfully`,
+        `${typeLabel(currentRecord.type)} approved successfully`,
       )
 
       setShowApproveModal(false)
@@ -108,6 +117,11 @@ function PendingApprovals() {
           id: currentRecord.id,
           reason: rejectionReason.trim(),
         })
+      } else if (currentRecord.type === 'fish_transfer') {
+        await rejectFishTransfer({
+          id: currentRecord.id,
+          reason: rejectionReason.trim(),
+        })
       } else {
         await rejectStocking({
           id: currentRecord.id,
@@ -115,10 +129,7 @@ function PendingApprovals() {
         })
       }
 
-      showToast(
-        'success',
-        `${currentRecord.type === 'stocking' ? 'Stocking' : 'Top-up'} rejected`,
-      )
+      showToast('success', `${typeLabel(currentRecord.type)} rejected`)
 
       setShowRejectModal(false)
       setCurrentRecord(null)
@@ -229,10 +240,12 @@ function PendingApprovals() {
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
                           record.type === 'stocking'
                             ? 'bg-foam-deep text-lagoon-800'
-                            : 'bg-orange-100 text-orange-800'
+                            : record.type === 'fish_transfer'
+                              ? 'bg-sky-100 text-sky-900'
+                              : 'bg-orange-100 text-orange-800'
                         }`}
                       >
-                        {record.type === 'stocking' ? 'Stocking' : 'Top-up'}
+                        {typeLabel(record.type)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -289,13 +302,23 @@ function PendingApprovals() {
                         >
                           <XCircle className="h-5 w-5" />
                         </button>
-                        <Link
-                          href={`/${record.type}/${record.id}/details`}
-                          className="text-lagoon-800 hover:text-blue-900"
-                          title="View Details"
-                        >
-                          <Info className="h-5 w-5" />
-                        </Link>
+                        {record.type !== 'fish_transfer' ? (
+                          <Link
+                            href={`/${record.type}/${record.id}/details`}
+                            className="text-lagoon-800 hover:text-blue-900"
+                            title="View Details"
+                          >
+                            <Info className="h-5 w-5" />
+                          </Link>
+                        ) : (
+                          <Link
+                            href="/fish-transfers"
+                            className="text-lagoon-800 hover:text-blue-900"
+                            title="View transfers"
+                          >
+                            <Info className="h-5 w-5" />
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -327,7 +350,12 @@ function PendingApprovals() {
 
             <p className="text-muted mb-4">
               Are you sure you want to approve this{' '}
-              {currentRecord.type === 'stocking' ? 'stocking' : 'top-up'} for{' '}
+              {currentRecord.type === 'stocking'
+                ? 'stocking'
+                : currentRecord.type === 'fish_transfer'
+                  ? 'fish transfer'
+                  : 'top-up'}{' '}
+              for{' '}
               <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
               in <span className="font-medium">{currentRecord.cageName}</span>?
             </p>
@@ -406,7 +434,12 @@ function PendingApprovals() {
 
             <p className="text-muted mb-4">
               Are you sure you want to reject this{' '}
-              {currentRecord.type === 'stocking' ? 'stocking' : 'top-up'} for{' '}
+              {currentRecord.type === 'stocking'
+                ? 'stocking'
+                : currentRecord.type === 'fish_transfer'
+                  ? 'fish transfer'
+                  : 'top-up'}{' '}
+              for{' '}
               <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
               in <span className="font-medium">{currentRecord.cageName}</span>?
             </p>

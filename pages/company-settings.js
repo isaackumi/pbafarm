@@ -53,6 +53,7 @@ function emptyDraft() {
     stockingRules: {
       requireApprovalForStocking: true,
       requireApprovalForTopup: true,
+      requireApprovalForFishTransfer: true,
       enforceCageCapacity: true,
       minInitialAbwG: 1,
       maxInitialAbwG: 500,
@@ -61,7 +62,7 @@ function emptyDraft() {
       allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested'],
     },
     feedRules: {
-      defaultBagSizeKg: 25,
+      defaultBagSizeKg: 20,
       defaultLocation: 'Main store',
       allowNegativeStock: false,
       trackLots: true,
@@ -296,6 +297,9 @@ function CompanySettings() {
     draft.stockingRules?.requireApprovalForTopup
       ? 'Top-ups require approval'
       : 'Top-ups auto-approve',
+    draft.stockingRules?.requireApprovalForFishTransfer
+      ? 'Fish transfers require approval'
+      : 'Fish transfers auto-approve',
     draft.stockingRules?.enforceCageCapacity
       ? 'Cage capacity enforced'
       : 'Cage capacity not enforced',
@@ -540,6 +544,21 @@ function CompanySettings() {
                     }
                   />
                   Require approval for top-ups
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={
+                      draft.stockingRules?.requireApprovalForFishTransfer !== false
+                    }
+                    onChange={(e) =>
+                      patch(
+                        'stockingRules.requireApprovalForFishTransfer',
+                        e.target.checked,
+                      )
+                    }
+                  />
+                  Require approval for fish transfers
                 </label>
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <input

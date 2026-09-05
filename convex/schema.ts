@@ -92,6 +92,7 @@ const schema = defineSchema({
           v.object({
             requireApprovalForStocking: v.boolean(),
             requireApprovalForTopup: v.boolean(),
+            requireApprovalForFishTransfer: v.optional(v.boolean()),
             enforceCageCapacity: v.boolean(),
             minInitialAbwG: v.optional(v.number()),
             maxInitialAbwG: v.optional(v.number()),
@@ -447,6 +448,38 @@ const schema = defineSchema({
     .index('by_status', ['status'])
     .index('by_company', ['companyId'])
     .index('by_location', ['locationId']),
+
+  fishTransfers: defineTable({
+    sourceCageId: v.id('cages'),
+    destinationCageId: v.id('cages'),
+    sourceLocationId: v.optional(v.id('farmLocations')),
+    destinationLocationId: v.optional(v.id('farmLocations')),
+    sourceStockingId: v.optional(v.id('stockingHistory')),
+    destinationStockingId: v.optional(v.id('stockingHistory')),
+    destinationTopupId: v.optional(v.id('topupHistory')),
+    transferDate: v.string(),
+    quantity: v.number(),
+    abw: v.number(),
+    biomass: v.number(),
+    transferType: v.union(v.literal('full'), v.literal('partial')),
+    transferSupervisor: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    status: v.union(
+      v.literal('pending_approval'),
+      v.literal('approved'),
+      v.literal('rejected'),
+    ),
+    companyId: v.optional(v.id('companies')),
+    createdBy: v.optional(v.id('users')),
+    approvedBy: v.optional(v.id('users')),
+    approvedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_status', ['status'])
+    .index('by_source_cage', ['sourceCageId'])
+    .index('by_destination_cage', ['destinationCageId'])
+    .index('by_company_location', ['companyId', 'sourceLocationId']),
 
   auditLogs: defineTable({
     userId: v.optional(v.id('users')),

@@ -34,6 +34,7 @@ import {
   CaretRight,
   CaretDoubleLeft,
   CaretDoubleRight,
+  ArrowsLeftRight,
   ListBullets,
 } from '@phosphor-icons/react'
 import { useAuth } from '../contexts/AuthContext'
@@ -57,6 +58,7 @@ const MENU_SECTIONS = {
       { title: 'Health', path: '/health', icon: FirstAidKit, tourId: 'health' },
       { title: 'Cage P&L', path: '/pnl', icon: ChartLineUp, tourId: 'pnl' },
       { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
+      { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowsLeftRight, tourId: 'fish-transfers' },
       { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
     ],
   },
@@ -76,7 +78,7 @@ const MENU_SECTIONS = {
     icon: Package,
     tourId: 'feed-section',
     items: [
-      { title: 'Overview', path: '/feed-management', icon: ChartBar },
+      { title: 'Overview', path: '/feed-management', icon: ChartBar, tourId: 'feed-management' },
       { title: 'Feed Types', path: '/feed-types', icon: ListBullets, tourId: 'feed-types' },
       { title: 'Suppliers', path: '/feed-suppliers', icon: Truck, tourId: 'feed-suppliers' },
       { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart, tourId: 'feed-purchases' },

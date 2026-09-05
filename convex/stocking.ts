@@ -646,7 +646,33 @@ export const listPendingApprovals = query({
       .take(100)
     topups = await listForCompany(user, topups)
 
-    const cageIds = [...new Set(stockings.map((s) => s.cageId))]
+    let transfers = await ctx.db
+      .query('fishTransfers')
+      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
+      .take(100)
+    transfers = await listForCompany(user, transfers)
+
+    const linkedStockingIds = new Set(
+      transfers
+        .map((t) => t.destinationStockingId)
+        .filter(Boolean)
+        .map(String),
+    )
+    const linkedTopupIds = new Set(
+      transfers
+        .map((t) => t.destinationTopupId)
+        .filter(Boolean)
+        .map(String),
+    )
+    stockings = stockings.filter((s) => !linkedStockingIds.has(String(s._id)))
+    topups = topups.filter((t) => !linkedTopupIds.has(String(t._id)))
+
+    const cageIds = [
+      ...new Set([
+        ...stockings.map((s) => s.cageId),
+        ...transfers.flatMap((t) => [t.sourceCageId, t.destinationCageId]),
+      ]),
+    ]
     const cages = new Map<string, string>()
     for (const cageId of cageIds) {
       const cage = await ctx.db.get(cageId)
@@ -694,10 +720,31 @@ export const listPendingApprovals = query({
       })
     }
 
-    const all = [...stockingRows, ...topupRows].sort(
+    const transferRows = transfers.map((t) => {
+      const srcName = cages.get(String(t.sourceCageId)) || '—'
+      const destName = cages.get(String(t.destinationCageId)) || '—'
+      return {
+        type: 'fish_transfer' as const,
+        id: t._id,
+        batchNumber: `${srcName} → ${destName}`,
+        cageName: destName,
+        date: t.transferDate,
+        count: t.quantity,
+        abw: t.abw,
+        biomass: t.biomass,
+        createdAt: t._creationTime,
+      }
+    })
+
+    const all = [...stockingRows, ...topupRows, ...transferRows].sort(
       (a, b) => b.createdAt - a.createdAt,
     )
 
-    return { stockings: stockingRows, topups: topupRows, all }
+    return {
+      stockings: stockingRows,
+      topups: topupRows,
+      fishTransfers: transferRows,
+      all,
+    }
   },
 })

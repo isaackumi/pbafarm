@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = {
   stockingRules: {
     requireApprovalForStocking: true,
     requireApprovalForTopup: true,
+    requireApprovalForFishTransfer: true,
     enforceCageCapacity: true,
     /** Fingerlings through small juveniles (grams). */
     minInitialAbwG: 1,
@@ -33,7 +34,7 @@ export const DEFAULT_SETTINGS = {
     allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested'] as string[],
   },
   feedRules: {
-    defaultBagSizeKg: 25,
+    defaultBagSizeKg: 20,
     defaultLocation: 'Main store',
     allowNegativeStock: false,
     trackLots: true,
@@ -66,6 +67,7 @@ export type EffectiveSettings = {
   stockingRules: {
     requireApprovalForStocking: boolean
     requireApprovalForTopup: boolean
+    requireApprovalForFishTransfer: boolean
     enforceCageCapacity: boolean
     minInitialAbwG: number
     maxInitialAbwG: number
