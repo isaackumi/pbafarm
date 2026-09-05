@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { harvestRecordService, cageService } from '../lib/databaseService'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
+import LocationMetaField from './LocationMetaField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 
 const SIZE_CATEGORIES = [
@@ -188,6 +189,9 @@ const HarvestForm = ({ onComplete }) => {
             <p className="text-sm text-muted -mt-4">Drafts survive a browser refresh.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <LocationMetaField />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-chart-ink mb-1">Cage</label>
                 <select

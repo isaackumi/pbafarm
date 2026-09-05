@@ -14,6 +14,7 @@ import {
 } from './ui'
 import DependencyEmpty from './DependencyEmpty'
 import FeedTypeField from './FeedTypeField'
+import LocationMetaField from './LocationMetaField'
 import { useToast } from './Toast'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
@@ -174,6 +175,9 @@ const DailyUploadPage = () => {
       <form onSubmit={handleSubmit} className="space-y-8">
         <FormSection title="Cage & date">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2">
+              <LocationMetaField />
+            </div>
             <Field label="Cage" htmlFor="selectedCage" required className="md:col-span-2">
               <Select
                 id="selectedCage"

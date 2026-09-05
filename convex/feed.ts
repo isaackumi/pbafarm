@@ -32,6 +32,7 @@ function toClientSupplier(s: any) {
 
 function parseFeedDescriptionMeta(description?: string) {
   let protein_percentage: number | null = null
+  let bag_size_kg: number | null = null
   let pellet_size = ''
   if (description) {
     const proteinMatch = description.match(/Protein\s+([\d.]+)\s*%/i)
@@ -39,15 +40,25 @@ function parseFeedDescriptionMeta(description?: string) {
       const n = Number(proteinMatch[1])
       if (!Number.isNaN(n)) protein_percentage = n
     }
+    const bagMatch = description.match(/([\d.]+)\s*[Kk]g\s*bags/i)
+    if (bagMatch) {
+      const n = Number(bagMatch[1])
+      if (!Number.isNaN(n) && n > 0) bag_size_kg = n
+    }
     const pelletMatch = description.match(/Pellet\s+([^·|]+)/i)
     if (pelletMatch) pellet_size = pelletMatch[1].trim()
   }
-  return { protein_percentage, pellet_size }
+  return { protein_percentage, bag_size_kg, pellet_size }
 }
 
 function toClientFeedType(f: any) {
-  const bagSize = f.bagSizeKg && f.bagSizeKg > 0 ? f.bagSizeKg : 25
   const meta = parseFeedDescriptionMeta(f.description)
+  const bagSize =
+    f.bagSizeKg && f.bagSizeKg > 0
+      ? f.bagSizeKg
+      : meta.bag_size_kg && meta.bag_size_kg > 0
+        ? meta.bag_size_kg
+        : 25
   return {
     id: f._id,
     _id: f._id,

@@ -16,6 +16,10 @@ import { useToast } from '../components/Toast'
 import { useSelector, useDispatch } from 'react-redux'
 import { supplierService } from '../lib/supplierService'
 import {
+  buildFeedTypeDescription,
+  normalizeBagSizeKg,
+} from '../lib/feedTypeMeta'
+import {
   fetchFeedTypes,
   createFeedType,
   updateFeedType,
@@ -93,26 +97,21 @@ function FeedTypes() {
         showToast('error', 'Name is required')
         return
       }
-      const parts = []
-      if (formData.protein_percentage !== '') {
-        parts.push(`Protein ${formData.protein_percentage}%`)
-      }
-      if (formData.pellet_size.trim()) {
-        parts.push(`Pellet ${formData.pellet_size.trim()}`)
-      }
+      const bag_size_kg = normalizeBagSizeKg(formData.bag_size_kg)
       const payload = {
         name: formData.name.trim(),
-        description: parts.length ? parts.join(' · ') : undefined,
+        description: buildFeedTypeDescription({
+          protein_percentage: formData.protein_percentage,
+          pellet_size: formData.pellet_size,
+          bag_size_kg,
+        }),
         price_per_kg: formData.price_per_kg,
         current_stock: 0,
         minimum_stock:
           formData.minimum_stock !== ''
             ? Number(formData.minimum_stock)
             : 0,
-        bag_size_kg:
-          formData.bag_size_kg !== ''
-            ? Number(formData.bag_size_kg)
-            : 25,
+        bag_size_kg,
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }
@@ -165,25 +164,20 @@ function FeedTypes() {
         showToast('error', 'Name is required')
         return
       }
-      const parts = []
-      if (formData.protein_percentage !== '') {
-        parts.push(`Protein ${formData.protein_percentage}%`)
-      }
-      if (formData.pellet_size.trim()) {
-        parts.push(`Pellet ${formData.pellet_size.trim()}`)
-      }
+      const bag_size_kg = normalizeBagSizeKg(formData.bag_size_kg)
       const updates = {
         name: formData.name.trim(),
-        description: parts.length ? parts.join(' · ') : undefined,
+        description: buildFeedTypeDescription({
+          protein_percentage: formData.protein_percentage,
+          pellet_size: formData.pellet_size,
+          bag_size_kg,
+        }),
         price_per_kg: formData.price_per_kg,
         minimum_stock:
           formData.minimum_stock !== ''
             ? Number(formData.minimum_stock)
             : 0,
-        bag_size_kg:
-          formData.bag_size_kg !== ''
-            ? Number(formData.bag_size_kg)
-            : 25,
+        bag_size_kg,
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }

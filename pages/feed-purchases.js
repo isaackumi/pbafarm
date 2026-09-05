@@ -18,15 +18,17 @@ import {
   Users,
   Database,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Clock,
+  Layers,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
-import FarmLocationSelect from '../components/FarmLocationSelect'
 import FeedTypeField from '../components/FeedTypeField'
 import BagSizeField from '../components/BagSizeField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import FeedPurchaseModal from '../components/FeedPurchaseModal'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { feedService } from '../lib/feedService'
@@ -66,6 +68,7 @@ function FeedPurchases() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [purchaseDefaultFeedTypeId, setPurchaseDefaultFeedTypeId] = useState('')
   const [editingPurchase, setEditingPurchase] = useState(null)
   const [formData, setFormData] = useState({
     feed_type_id: '',
@@ -97,6 +100,8 @@ function FeedPurchases() {
     supplierDistribution: [],
     monthlyUsage: [],
     stockValue: 0,
+    totalBags: 0,
+    avgFeedAgeDays: null,
   })
   const [costAnalysis, setCostAnalysis] = useState({
     costTrends: [],
@@ -134,6 +139,8 @@ function FeedPurchases() {
       const [
         feedTypesResult,
         purchasesResult,
+        purchasesAllResult,
+        lotsResult,
         lowStockResult,
         usageResult,
         cagesResult,
@@ -141,6 +148,8 @@ function FeedPurchases() {
       ] = await Promise.all([
         feedService.getAllFeedTypes(),
         feedService.getAllPurchases(),
+        feedService.getAllPurchases({ allLocations: true }),
+        feedService.getInventoryLots({ allLocations: true }),
         feedService.getLowStockAlerts(),
         feedService.getFeedUsageStats(timeRange),
         cageService.getAllCages(),
@@ -149,6 +158,8 @@ function FeedPurchases() {
 
       if (feedTypesResult.error) throw feedTypesResult.error
       if (purchasesResult.error) throw purchasesResult.error
+      if (purchasesAllResult.error) throw purchasesAllResult.error
+      if (lotsResult.error) throw lotsResult.error
       if (lowStockResult.error) throw lowStockResult.error
       if (usageResult.error) throw usageResult.error
       if (cagesResult.error) throw cagesResult.error
@@ -157,6 +168,7 @@ function FeedPurchases() {
       const feedTypesData = feedTypesResult.data || []
       const suppliersData = suppliersResult.data || []
       const cagesData = cagesResult.data || []
+      const lotsData = lotsResult.data || []
       const feedById = Object.fromEntries(
         feedTypesData.map((t) => [t.id || t._id, t]),
       )
@@ -176,7 +188,7 @@ function FeedPurchases() {
         }
       })
 
-      const purchasesData = (purchasesResult.data || []).map((p) => {
+      const mapPurchase = (p) => {
         const feed = feedById[p.feed_type_id] || feedById[String(p.feed_type_id)]
         const supplierId = p.supplier_id || p.supplierId
         const supplier =
@@ -193,7 +205,10 @@ function FeedPurchases() {
             : null,
           supplier: supplier ? { name: supplier.name } : null,
         }
-      })
+      }
+
+      const purchasesData = (purchasesResult.data || []).map(mapPurchase)
+      const purchasesAllData = (purchasesAllResult.data || []).map(mapPurchase)
 
       const lowStockData = (lowStockResult.data || [])
         .map((a) => ({
@@ -213,21 +228,25 @@ function FeedPurchases() {
       setCages(cagesData)
       setSuppliers(suppliersData)
 
-      const nextStats = calculateStats(purchasesData)
+      // KPIs span all farm locations / inventories
+      const nextStats = calculateStats(purchasesAllData)
       const nextInventory = calculateInventoryMetrics(
         feedTypesData,
-        purchasesData,
+        purchasesAllData,
         usageRows,
+        lotsData,
       )
       nextStats.stockValue = nextInventory.stockValue
+      nextStats.totalBags = nextInventory.totalBags
+      nextStats.avgFeedAgeDays = nextInventory.avgFeedAgeDays
       setStats(nextStats)
-      setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
+      setCostAnalysis(calculateCostAnalysis(purchasesAllData, feedTypesData))
       setInventoryMetrics(nextInventory)
       setUsageAnalytics(
-        calculateUsageAnalytics(purchasesData, usageRows, cagesData),
+        calculateUsageAnalytics(purchasesAllData, usageRows, cagesData),
       )
       setSupplierMetrics(
-        calculateSupplierMetrics(purchasesData, suppliersData),
+        calculateSupplierMetrics(purchasesAllData, suppliersData),
       )
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -240,13 +259,16 @@ function FeedPurchases() {
 
   const calculateStats = (purchases) => {
     const stats = {
+      totalPurchases: 0,
       totalCost: 0,
       totalQuantity: 0,
       averageCostPerKg: 0,
       feedTypeDistribution: [],
       supplierDistribution: [],
       monthlyUsage: [],
-      stockValue: 0
+      stockValue: 0,
+      totalBags: 0,
+      avgFeedAgeDays: null,
     }
 
     if (!purchases || !Array.isArray(purchases)) {
@@ -258,6 +280,7 @@ function FeedPurchases() {
     const supplierMap = new Map()
 
     purchases.forEach(purchase => {
+      stats.totalPurchases += 1
       // Total cost and quantity
       stats.totalCost += purchase.quantity * purchase.price_per_kg
       stats.totalQuantity += purchase.quantity
@@ -352,10 +375,12 @@ function FeedPurchases() {
     return analysis
   }
 
-  const calculateInventoryMetrics = (feedTypes, purchases, usage) => {
+  const calculateInventoryMetrics = (feedTypes, purchases, usage, lots = []) => {
     const metrics = {
       stockLevels: [],
       stockValue: 0,
+      totalBags: 0,
+      avgFeedAgeDays: null,
       daysRemaining: {},
       reorderRecommendations: [],
     }
@@ -376,14 +401,15 @@ function FeedPurchases() {
       else if (current <= 0) status = 'empty'
       const vsMinPct =
         minimum > 0 ? Math.round((current / minimum) * 100) : null
+      const bagsOnHand =
+        bagSize > 0 ? Math.round((current / bagSize) * 10) / 10 : null
       return {
         id: feed.id || feed._id,
         name: feed.name,
         currentStock: current,
         minimumStock: minimum,
         bagSizeKg: bagSize,
-        bagsOnHand:
-          bagSize > 0 ? Math.round((current / bagSize) * 10) / 10 : null,
+        bagsOnHand,
         protein: feed.protein_percentage ?? feed.protein_content ?? null,
         pricePerKg: Number(feed.price_per_kg) || 0,
         // Bar fill relative to largest stock so empty types don't look full
@@ -399,6 +425,43 @@ function FeedPurchases() {
         (Number(feed.current_stock) || 0) * (Number(feed.price_per_kg) || 0)
       )
     }, 0)
+
+    metrics.totalBags = metrics.stockLevels.reduce((sum, row) => {
+      return sum + (Number(row.bagsOnHand) || 0)
+    }, 0)
+
+    // Weighted average age of on-hand lots across all locations
+    const now = Date.now()
+    let weightedAgeDays = 0
+    let ageWeightKg = 0
+    for (const lot of lots || []) {
+      const kg = Number(lot.quantity_kg ?? lot.quantityKg ?? 0)
+      if (kg <= 0) continue
+      const created = Number(lot.created_at ?? lot._creationTime)
+      if (!Number.isFinite(created) || created <= 0) continue
+      const ageDays = Math.max(0, (now - created) / (1000 * 60 * 60 * 24))
+      weightedAgeDays += ageDays * kg
+      ageWeightKg += kg
+    }
+    if (ageWeightKg > 0) {
+      metrics.avgFeedAgeDays = Math.round((weightedAgeDays / ageWeightKg) * 10) / 10
+    } else if ((purchases || []).length > 0) {
+      // Fallback: age from purchase dates weighted by remaining stock proxy (qty bought)
+      let w = 0
+      let q = 0
+      for (const p of purchases) {
+        const qty = Number(p.quantity) || 0
+        if (qty <= 0 || !p.purchase_date) continue
+        const purchasedAt = new Date(p.purchase_date).getTime()
+        if (!Number.isFinite(purchasedAt)) continue
+        const ageDays = Math.max(0, (now - purchasedAt) / (1000 * 60 * 60 * 24))
+        w += ageDays * qty
+        q += qty
+      }
+      if (q > 0) {
+        metrics.avgFeedAgeDays = Math.round((w / q) * 10) / 10
+      }
+    }
 
     const averageDailyUsage = {}
     ;(usage || []).forEach((record) => {
@@ -601,19 +664,7 @@ function FeedPurchases() {
   }
 
   const handleAddPurchase = () => {
-    setFormData({
-      feed_type_id: '',
-      quantity: '',
-      bags: '',
-      bag_size_kg: '25',
-      price_per_kg: '',
-      purchase_date: new Date().toISOString().split('T')[0],
-      supplier_id: '',
-      batch_number: '',
-      expiry_date: '',
-      notes: '',
-      locationId: activeLocationId || '',
-    })
+    setPurchaseDefaultFeedTypeId('')
     setError('')
     setSuccess('')
     setShowAddModal(true)
@@ -625,21 +676,9 @@ function FeedPurchases() {
         (t.id || t._id) === feedIdOrName ||
         t.name === feedIdOrName,
     )
-    const size = Number(ft?.bag_size_kg || ft?.bagSizeKg || 25)
-    setFormData({
-      feed_type_id: ft ? String(ft.id || ft._id) : '',
-      quantity: '',
-      bags: '',
-      bag_size_kg: String(size > 0 ? size : 25),
-      price_per_kg:
-        ft?.price_per_kg != null ? String(ft.price_per_kg) : '',
-      purchase_date: new Date().toISOString().split('T')[0],
-      supplier_id: ft?.supplier_id || '',
-      batch_number: '',
-      expiry_date: '',
-      notes: '',
-      locationId: activeLocationId || '',
-    })
+    setPurchaseDefaultFeedTypeId(
+      ft ? String(ft.id || ft._id) : '',
+    )
     setError('')
     setSuccess('')
     setShowAddModal(true)
@@ -675,56 +714,6 @@ function FeedPurchases() {
     setError('')
     setSuccess('')
     setShowEditModal(true)
-  }
-
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-
-    try {
-      if (!formData.feed_type_id || !formData.price_per_kg) {
-        throw new Error('Please fill in all required fields')
-      }
-      if (
-        (!formData.quantity || parseFloat(formData.quantity) <= 0) &&
-        (!formData.bags || parseFloat(formData.bags) <= 0)
-      ) {
-        throw new Error('Enter bags or quantity (kg)')
-      }
-
-      const purchaseData = {
-        feed_type_id: formData.feed_type_id,
-        quantity:
-          formData.quantity !== '' && formData.quantity != null
-            ? parseFloat(formData.quantity)
-            : undefined,
-        bags:
-          formData.bags !== '' && formData.bags != null
-            ? parseFloat(formData.bags)
-            : undefined,
-        price_per_kg: parseFloat(formData.price_per_kg),
-        purchase_date:
-          formData.purchase_date || new Date().toISOString().split('T')[0],
-        supplier_id: formData.supplier_id || undefined,
-        batch_number: formData.batch_number || undefined,
-        expiry_date: formData.expiry_date || undefined,
-        notes: formData.notes || undefined,
-        locationId: formData.locationId || activeLocationId || undefined,
-      }
-
-      const { error } = await feedService.createPurchase(purchaseData)
-      if (error) throw error
-
-      setSuccess('Purchase recorded successfully')
-      showToast('success', 'Purchase recorded successfully')
-      setTimeout(() => {
-        setShowAddModal(false)
-        fetchData()
-      }, 1500)
-    } catch (error) {
-      setError(error.message)
-    }
   }
 
   const handleSubmitEdit = async (e) => {
@@ -914,8 +903,13 @@ function FeedPurchases() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Stats Cards — all farm locations */}
+        <div className="mb-2 flex items-end justify-between gap-2">
+          <p className="text-xs text-muted">
+            KPIs cover <span className="font-medium text-chart-ink">all locations</span>
+          </p>
+        </div>
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {[
             {
               label: 'Total cost',
@@ -939,6 +933,21 @@ function FeedPurchases() {
               label: 'Stock on hand',
               value: formatCurrency(stats.stockValue),
               icon: Database,
+              tone: 'bg-foam-deep text-lagoon-800',
+            },
+            {
+              label: 'Bags on hand',
+              value: `${formatNumber(stats.totalBags || 0, { decimals: 0 })} bags`,
+              icon: Layers,
+              tone: 'bg-kelp/15 text-kelp',
+            },
+            {
+              label: 'Avg. feed age',
+              value:
+                stats.avgFeedAgeDays != null
+                  ? `${formatNumber(stats.avgFeedAgeDays, { decimals: 0 })} days`
+                  : '—',
+              icon: Clock,
               tone: 'bg-foam-deep text-lagoon-800',
             },
           ].map((card) => (
@@ -1062,7 +1071,7 @@ function FeedPurchases() {
                             <span className="ml-2 text-[11px] text-muted">
                               {stock.protein != null ? `${stock.protein}% protein` : 'Protein —'}
                               {' · '}
-                              {stock.bagSizeKg}kg bags
+                              {stock.bagSizeKg}Kg bags
                               {stock.bagsOnHand != null
                                 ? ` · ~${stock.bagsOnHand} bags`
                                 : ''}
@@ -1386,233 +1395,18 @@ function FeedPurchases() {
           )}
         </div>
 
-      {/* Add Purchase Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowAddModal(false)}
-          ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Record New Purchase
-            </h3>
-
-            {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
-                {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitAdd} className="space-y-4">
-              <FeedTypeField
-                id="add-feed-type"
-                name="feed_type_id"
-                value={formData.feed_type_id}
-                onChange={handleChange}
-                feedTypes={feedTypes}
-                ready={!loading}
-                required
-                showStock={false}
-                offerPurchaseCreate={false}
-                hint="Catalog product this purchase adds stock to. Create one if the list is empty."
-                emptyMessage="Add a feed type before recording a purchase."
-                onFeedTypesChanged={fetchData}
-                onCreated={(result) => {
-                  fetchData()
-                  if (result?.id) {
-                    const size = Number(
-                      result.bag_size_kg || result.bagSizeKg || 25,
-                    )
-                    setFormData((prev) => ({
-                      ...prev,
-                      feed_type_id: result.id,
-                      bag_size_kg: String(size > 0 ? size : 25),
-                    }))
-                  }
-                }}
-              />
-
-              <BagSizeField
-                id="add-bag-size"
-                value={formData.bag_size_kg}
-                onChange={handleChange}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Bags
-                  </label>
-                  <input
-                    type="number"
-                    name="bags"
-                    value={formData.bags}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
-                    placeholder="e.g. 40"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Quantity (kg) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-muted">
-                    At {bagSizeKg} kg/bag — enter bags or kg; the other updates.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg (₵) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="price_per_kg"
-                  value={formData.price_per_kg}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Purchase Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="purchase_date"
-                  value={formData.purchase_date}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Supplier
-                </label>
-                <select
-                  name="supplier_id"
-                  value={formData.supplier_id || ''}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                >
-                  <option value="">Select supplier (optional)</option>
-                  {suppliers.map((supplier) => (
-                    <option
-                      key={supplier.id || supplier._id}
-                      value={supplier.id || supplier._id}
-                    >
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
-                {suppliers.length === 0 && (
-                  <p className="mt-1 text-xs text-muted">
-                    No suppliers yet — add one under Feed suppliers.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Batch Number
-                </label>
-                <input
-                  type="text"
-                  name="batch_number"
-                  value={formData.batch_number}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Expiry Date
-                </label>
-                <input
-                  type="date"
-                  name="expiry_date"
-                  value={formData.expiry_date}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Farm location <span className="text-red-500">*</span>
-                </label>
-                <FarmLocationSelect
-                  name="locationId"
-                  value={formData.locationId}
-                  onChange={handleChange}
-                  required
-                  allowEmpty={false}
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Defaults to the location selected in the header
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Notes
-                </label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <FeedPurchaseModal
+        open={showAddModal}
+        onClose={() => {
+          setShowAddModal(false)
+          setPurchaseDefaultFeedTypeId('')
+        }}
+        onSaved={fetchData}
+        feedTypes={feedTypes}
+        suppliers={suppliers}
+        defaultFeedTypeId={purchaseDefaultFeedTypeId}
+        title="New Feed Purchase"
+      />
 
       {/* Edit Purchase Modal */}
       {showEditModal && editingPurchase && (

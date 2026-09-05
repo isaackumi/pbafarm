@@ -100,7 +100,12 @@ const TopBar = ({ title = 'Dashboard' }) => {
                 className="max-w-[9rem] sm:max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-xl bg-surface px-3 py-2 text-chart-ink focus:outline-none focus:ring-2 focus:ring-lagoon-800"
                 value={activeLocationId || ''}
                 disabled={locationLoading}
-                onChange={(e) => setActiveLocation(e.target.value)}
+                title="Changing location refreshes the page"
+                onChange={(e) => {
+                  const next = e.target.value
+                  if (!next || next === activeLocationId) return
+                  setActiveLocation(next)
+                }}
               >
                 {locations.map((loc) => (
                   <option key={loc.id || loc._id} value={loc.id || loc._id}>

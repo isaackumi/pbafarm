@@ -18,6 +18,7 @@ import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
+import LocationMetaField from '../components/LocationMetaField'
 import { DIAGNOSIS_SUGGESTIONS } from '../lib/farmHealth'
 
 export default function HealthPage() {
@@ -149,6 +150,9 @@ function HealthTreatments() {
         <FormCard className="mb-6">
           <form onSubmit={submit}>
             <FormSection title="New treatment">
+              <div className="mb-4">
+                <LocationMetaField />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Cage" htmlFor="ht-cage" required>
                   <Select

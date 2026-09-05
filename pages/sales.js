@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
+import LocationMetaField from '../components/LocationMetaField'
 
 export default function SalesPage() {
   return (
@@ -198,6 +199,9 @@ function Sales() {
         <FormCard className="mb-6">
           <form onSubmit={submitSale}>
             <FormSection title="New sale">
+              <div className="mb-4">
+                <LocationMetaField />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Harvest (optional)" htmlFor="sale-harvest">
                   <Select

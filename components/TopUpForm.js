@@ -356,6 +356,7 @@ const TopUpForm = ({ onComplete }) => {
                 value={formData.source_location}
                 onChange={handleChange}
                 valueKind="name"
+                locked
               />
             </Field>
             <Field

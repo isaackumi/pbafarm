@@ -7,6 +7,7 @@ import { Select } from './ui'
  * - valueKind "id" (default): value is farmLocations id
  * - valueKind "name": value is the location display name (string fields)
  * - syncWithHeader: follow the header switcher when it changes
+ * - locked: read-only, always the header location (forms that track site metadata)
  */
 export default function FarmLocationSelect({
   id,
@@ -15,6 +16,7 @@ export default function FarmLocationSelect({
   onChange,
   required = false,
   disabled = false,
+  locked = false,
   className = '',
   syncWithHeader = true,
   valueKind = 'id',
@@ -50,7 +52,15 @@ export default function FarmLocationSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync on header change
   }, [syncWithHeader, activeLocationId])
 
+  // Locked fields always emit the active header location
+  useEffect(() => {
+    if (!locked || !activeLocationId) return
+    emit(activeLocationId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, activeLocationId])
+
   const selectValue = (() => {
+    if (locked) return activeLocationId || ''
     if (valueKind === 'name') {
       if (!value) return activeLocationId || ''
       const match = (locations || []).find(
@@ -66,15 +76,21 @@ export default function FarmLocationSelect({
       id={id}
       name={name}
       value={selectValue}
-      required={required}
-      disabled={disabled}
+      required={required || locked}
+      disabled={disabled || locked}
       className={className}
       onChange={(e) => {
+        if (locked) return
         lastHeader.current = e.target.value || lastHeader.current
         emit(e.target.value)
       }}
+      title={
+        locked
+          ? 'Locked to header location — switch site from the top bar'
+          : undefined
+      }
     >
-      {allowEmpty && !required ? (
+      {!locked && allowEmpty && !required ? (
         <option value="">{emptyLabel}</option>
       ) : (
         <option value="" disabled>
@@ -85,6 +101,7 @@ export default function FarmLocationSelect({
         <option key={loc.id || loc._id} value={loc.id || loc._id}>
           {loc.name}
           {loc.code ? ` (${loc.code})` : ''}
+          {locked && (loc.id || loc._id) === activeLocationId ? ' · current' : ''}
         </option>
       ))}
     </Select>

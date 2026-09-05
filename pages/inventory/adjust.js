@@ -203,6 +203,7 @@ function InventoryAdjust() {
                   onChange={(e) => setLocationId(e.target.value)}
                   required
                   allowEmpty={false}
+                  locked
                 />
               </Field>
             ) : (
@@ -217,6 +218,7 @@ function InventoryAdjust() {
                     onChange={(e) => setFromLocationId(e.target.value)}
                     required
                     allowEmpty={false}
+                    locked
                   />
                 </Field>
                 <Field label="To farm location" required>

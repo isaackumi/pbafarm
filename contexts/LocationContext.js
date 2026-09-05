@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
 } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
@@ -19,6 +20,7 @@ export function LocationProvider({ children }) {
   const ensureDefault = useMutation(api.farmLocations.ensureDefault)
   const setActiveMutation = useMutation(api.farmLocations.setActiveLocation)
   const backfill = useMutation(api.farmLocations.backfillLocations)
+  const defaultBound = useRef(false)
 
   const activeFromServer = user?.activeLocationId
 
@@ -55,7 +57,7 @@ export function LocationProvider({ children }) {
   }, [locations, activeLocationId])
 
   const setActiveLocation = useCallback(
-    async (locationId) => {
+    async (locationId, { reload = true } = {}) => {
       if (!locationId) return
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY, locationId)
@@ -65,11 +67,32 @@ export function LocationProvider({ children }) {
       } catch (err) {
         console.warn('Failed to persist active location', err)
       }
+      // Refresh so every page reloads location-scoped data
+      if (reload && typeof window !== 'undefined') {
+        window.location.reload()
+      }
     },
     [setActiveMutation],
   )
 
-  // Sync localStorage when server active changes
+  // Persist a company default when the user has none locked in yet
+  useEffect(() => {
+    if (!user || !locations?.length || defaultBound.current) return
+    const preferred =
+      activeFromServer &&
+      locations.some((l) => (l.id || l._id) === activeFromServer)
+        ? activeFromServer
+        : locations[0]?.id || locations[0]?._id
+    if (!preferred) return
+    defaultBound.current = true
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, preferred)
+    }
+    if (activeFromServer === preferred) return
+    setActiveMutation({ locationId: preferred }).catch(() => {})
+  }, [user, locations, activeFromServer, setActiveMutation])
+
+  // Sync localStorage when resolved active changes
   useEffect(() => {
     if (!activeLocationId || typeof window === 'undefined') return
     localStorage.setItem(STORAGE_KEY, activeLocationId)

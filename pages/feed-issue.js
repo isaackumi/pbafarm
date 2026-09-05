@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import DependencyEmpty from '../components/DependencyEmpty'
 import FeedTypeField from '../components/FeedTypeField'
+import LocationMetaField from '../components/LocationMetaField'
 import {
   PageHeader,
   Button,
@@ -18,6 +19,8 @@ import {
   Select,
   Textarea,
 } from '../components/ui'
+import { useLocation } from '../contexts/LocationContext'
+import { getActiveLocationId } from '../lib/locationScope'
 
 export default function FeedIssuePage() {
   return (
@@ -32,6 +35,7 @@ export default function FeedIssuePage() {
 function FeedIssue() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
+  const { activeLocationId } = useLocation()
   const [feedTypes, setFeedTypes] = useState([])
   const [cages, setCages] = useState([])
   const [lookupsReady, setLookupsReady] = useState(false)
@@ -101,6 +105,8 @@ function FeedIssue() {
         notes: form.notes || undefined,
         allowNegative: form.allowNegative || undefined,
         overrideReason: form.overrideReason || undefined,
+        locationId:
+          activeLocationId || getActiveLocationId() || undefined,
       })
       showToast('success', 'Feed issued — stock deducted on ledger')
       setForm((p) => ({
@@ -142,6 +148,9 @@ function FeedIssue() {
         <form onSubmit={submit} className="space-y-8">
           <FormSection title="What & where">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <LocationMetaField />
+              </div>
               <FeedTypeField
                 id="feedTypeId"
                 name="feedTypeId"

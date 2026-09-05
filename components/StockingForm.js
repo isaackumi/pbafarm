@@ -345,6 +345,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 value={formData.sourceLocation}
                 onChange={handleChange}
                 valueKind="name"
+                locked
               />
             </Field>
             <Field

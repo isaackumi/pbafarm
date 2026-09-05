@@ -12,6 +12,7 @@ import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
 import { FISH_SPECIES } from '../lib/fishSpecies'
+import { buildFeedTypeDescription, normalizeBagSizeKg } from '../lib/feedTypeMeta'
 
 function ModalShell({ title, subtitle, onClose, children }) {
   const [mounted, setMounted] = useState(false)
@@ -231,6 +232,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
               onChange={setField('locationId')}
               required
               allowEmpty={false}
+              locked
             />
           </Field>
           <Field
@@ -350,14 +352,12 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
     setError('')
     try {
       if (!form.name.trim()) throw new Error('Feed type name is required')
-      const parts = []
-      if (form.protein_percentage !== '') {
-        parts.push(`Protein ${form.protein_percentage}%`)
-      }
-      if (form.pellet_size.trim()) {
-        parts.push(`Pellet ${form.pellet_size.trim()}`)
-      }
-      const description = parts.length ? parts.join(' · ') : undefined
+      const bagSizeKg = normalizeBagSizeKg(form.bag_size_kg)
+      const description = buildFeedTypeDescription({
+        protein_percentage: form.protein_percentage,
+        pellet_size: form.pellet_size,
+        bag_size_kg: bagSizeKg,
+      })
 
       const args = {
         name: form.name.trim(),
@@ -365,7 +365,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
         currentStock: Number(form.current_stock || 0),
         minimumStock: Number(form.minimum_stock || 0),
         pricePerKg: Number(form.price_per_kg || 0),
-        bagSizeKg: Number(form.bag_size_kg || 25),
+        bagSizeKg,
         active: form.active !== false,
       }
       if (form.supplier_id) args.supplierId = form.supplier_id
@@ -755,6 +755,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               value={form.sourceLocation}
               onChange={setField('sourceLocation')}
               valueKind="name"
+              locked
             />
           </Field>
           <Field
@@ -1106,6 +1107,7 @@ export function QuickCreatePurchaseModal({
             onChange={setField('locationId')}
             required
             allowEmpty={false}
+            locked
           />
         </Field>
         <Field label="Notes" htmlFor="qc-pu-notes">

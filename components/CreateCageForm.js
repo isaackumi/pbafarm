@@ -228,6 +228,7 @@ const CreateCageForm = () => {
                 onChange={handleChange}
                 required
                 allowEmpty={false}
+                locked
               />
             </Field>
             <Field label="Status" htmlFor="status">
