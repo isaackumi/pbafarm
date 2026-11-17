@@ -2,9 +2,9 @@
 import Link from 'next/link'
 
 const SIZE = {
-  sm: 'px-3 py-2 text-sm min-h-10',
-  md: 'px-5 py-3 text-base min-h-12',
-  lg: 'px-6 py-3.5 text-base min-h-14',
+  sm: 'px-3 text-sm min-h-9',
+  md: 'px-4 text-sm min-h-11',
+  lg: 'px-5 text-base min-h-12',
 }
 
 const VARIANT = {
@@ -25,7 +25,7 @@ export function Button({
   type = 'button',
   ...props
 }) {
-  const classes = `inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.primary} ${className}`
+  const classes = `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.primary} ${className}`
 
   if (href) {
     return (
@@ -45,7 +45,7 @@ export function Button({
 export function Card({ children, className = '', padding = true }) {
   return (
     <div
-      className={`bg-surface text-chart-ink border border-foam-deep/90 rounded-2xl shadow-[0_1px_3px_rgba(24,24,27,0.06)] ${
+      className={`bg-surface text-chart-ink border border-foam-deep rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${
         padding ? 'p-5 sm:p-6' : ''
       } ${className}`}
     >
@@ -58,10 +58,10 @@ export function CardHeader({ title, subtitle, action }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
-        <h2 className="font-display text-lg font-bold text-chart-ink tracking-tight">
+        <h2 className="font-display text-lg font-medium text-chart-ink">
           {title}
         </h2>
-        {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -75,29 +75,23 @@ export function StatCard({ label, value, unit, hint, icon: Icon, tone = 'default
       : tone === 'warn'
         ? 'text-signal'
         : tone === 'accent'
-          ? 'text-lagoon-950'
+          ? 'text-lake'
           : 'text-chart-ink'
 
+  // Stat cards are numbers: label, figure, change. The icon prop is accepted but not drawn.
   return (
-    <Card className="min-h-[7.5rem] flex flex-col justify-between">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-muted">{label}</p>
-        {Icon && (
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-foam text-lagoon-950">
-            <Icon size={20} weight="duotone" aria-hidden />
-          </span>
-        )}
-      </div>
+    <Card className="min-h-[7.5rem] flex flex-col justify-between gap-3">
+      <p className="text-sm text-muted">{label}</p>
       <div>
-        <p className={`font-display text-2xl sm:text-3xl font-bold tracking-tight ${toneClass}`}>
-          <span className="font-data">{value}</span>
+        <p className={`text-[28px] leading-none font-medium tabular-nums ${toneClass}`}>
+          <span>{value}</span>
           {unit && (
-            <span className="ml-1 text-sm font-semibold text-muted font-sans">
+            <span className="ml-1 text-sm font-normal text-muted">
               {unit}
             </span>
           )}
         </p>
-        {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
+        {hint && <p className="text-xs text-muted mt-2">{hint}</p>}
       </div>
     </Card>
   )
@@ -107,29 +101,25 @@ export function HealthMeter({ score, label = 'Farm health' }) {
   const clamped = Math.max(0, Math.min(100, Number(score) || 0))
   return (
     <Card className="min-h-[7.5rem]">
-      <p className="text-sm font-semibold text-muted mb-2">{label}</p>
-      <p className="font-display text-3xl font-bold text-chart-ink font-data mb-3">
+      <p className="text-sm text-muted mb-3">{label}</p>
+      <p className="text-[28px] leading-none font-medium text-chart-ink tabular-nums mb-4">
         {clamped.toFixed(0)}
-        <span className="text-base text-muted font-sans font-semibold"> / 100</span>
+        <span className="text-sm text-muted font-normal"> / 100</span>
       </p>
       <div
-        className="h-3 rounded-full overflow-hidden"
-        style={{
-          background:
-            'linear-gradient(90deg, #dc2626 0%, #eab308 45%, #15803d 100%)',
-        }}
+        className="h-2 rounded-full overflow-hidden bg-foam-deep"
         role="meter"
         aria-valuenow={clamped}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={label}
       >
-        <div className="relative h-full w-full">
-          <span
-            className="absolute top-1/2 -translate-y-1/2 h-4 w-1 rounded-full bg-white shadow border border-chart-ink/20"
-            style={{ left: `calc(${clamped}% - 2px)` }}
-          />
-        </div>
+        <div
+          className={`h-full rounded-full ${
+            clamped >= 75 ? 'bg-kelp' : clamped >= 50 ? 'bg-amber-500' : 'bg-signal'
+          }`}
+          style={{ width: `${clamped}%` }}
+        />
       </div>
     </Card>
   )
@@ -147,13 +137,13 @@ export function EmptyState({ title, description, action }) {
 
 export function TabBar({ tabs, active, onChange }) {
   return (
-    <div className="inline-flex rounded-xl bg-foam p-1 border border-foam-deep">
+    <div className="inline-flex rounded-lg bg-foam p-1 border border-foam-deep">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-lg min-h-11 transition-colors ${
+          className={`px-3 text-sm font-medium rounded-lg min-h-9 transition-colors ${
             active === tab.id
               ? 'bg-surface text-chart-ink shadow-sm'
               : 'text-muted hover:text-chart-ink'
@@ -183,13 +173,13 @@ export function Breadcrumbs({ items = [] }) {
               {item.href && !last ? (
                 <Link
                   href={item.href}
-                  className="font-medium text-muted hover:text-lagoon-950 transition-colors"
+                  className="text-muted hover:text-lake transition-colors"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
-                  className={last ? 'font-semibold text-chart-ink' : 'text-muted'}
+                  className={last ? 'font-medium text-chart-ink' : 'text-muted'}
                   aria-current={last ? 'page' : undefined}
                 >
                   {item.label}
@@ -217,13 +207,13 @@ export function PageHeader({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 max-w-3xl">
           {showTitle && title && (
-            <h2 className="font-display text-2xl sm:text-[1.75rem] font-bold text-chart-ink tracking-tight">
+            <h2 className="font-display text-2xl sm:text-[28px] font-medium text-chart-ink">
               {title}
             </h2>
           )}
           {description && (
             <p
-              className={`text-sm sm:text-[15px] text-muted leading-relaxed ${
+              className={`text-sm text-muted leading-relaxed ${
                 showTitle && title ? 'mt-1.5' : 'mt-0'
               }`}
             >
@@ -240,14 +230,14 @@ export function PageHeader({
           aria-label="Related pages"
           className="mt-5 flex flex-wrap items-center gap-2 border-t border-foam-deep pt-4"
         >
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted mr-1">
+          <span className="text-sm text-muted mr-1">
             Related
           </span>
           {related.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="inline-flex items-center rounded-lg bg-foam px-3 py-1.5 text-sm font-medium text-chart-ink hover:bg-zinc-200/80 transition-colors"
+              className="inline-flex items-center rounded-lg border border-foam-deep px-3 min-h-8 text-sm text-chart-ink hover:border-lake hover:text-lake transition-colors"
             >
               {item.label}
             </Link>
@@ -259,7 +249,8 @@ export function PageHeader({
 }
 
 const FIELD_CLASS =
-  'w-full rounded-xl border border-foam-deep bg-surface px-3.5 py-3 text-[15px] text-chart-ink placeholder:text-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
+  // 16px text keeps iOS from zooming into fields on focus.
+  'w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-base text-chart-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-lake-soft focus:border-lake transition-colors disabled:opacity-50 min-h-11'
 
 export function Field({ label, htmlFor, hint, error, required, children, className = '' }) {
   return (
@@ -323,7 +314,7 @@ export function FormSection({ title, description, children, className = '' }) {
       {(title || description) && (
         <div className="pb-1 border-b border-foam-deep">
           {title && (
-            <h3 className="text-sm font-bold uppercase tracking-wide text-muted">
+            <h3 className="text-base font-medium text-chart-ink">
               {title}
             </h3>
           )}
@@ -347,13 +338,13 @@ export function FormCard({
 }) {
   return (
     <Card
-      className={`${fullWidth ? 'w-full' : 'max-w-2xl'} p-6 sm:p-8 ${className}`}
+      className={`${fullWidth ? 'w-full' : 'max-w-2xl'} p-5 sm:p-8 ${className}`}
       padding={false}
     >
       {(title || subtitle) && (
         <div className="mb-6">
           {title && (
-            <h3 className="font-display text-lg font-bold text-chart-ink tracking-tight">
+            <h3 className="font-display text-lg font-medium text-chart-ink">
               {title}
             </h3>
           )}

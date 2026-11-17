@@ -130,7 +130,7 @@ function StockingDetails() {
 
         <div className="page-card p-6 space-y-5">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-xl font-bold text-chart-ink">
+            <h2 className="font-display text-xl font-semibold text-chart-ink">
               {stocking.batch_number}
             </h2>
             <span

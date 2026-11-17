@@ -85,7 +85,7 @@ export default function DataTable({
                   </div>
                   <input
                     type="text"
-                    className="block w-full pl-10 pr-3 py-2 border border-input-border rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-input-border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -96,7 +96,7 @@ export default function DataTable({
             {filterable && (
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-3 py-2 border border-input-border shadow-sm text-sm leading-4 font-medium rounded-md text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                className="inline-flex items-center px-3 py-2 border border-input-border shadow-sm text-sm leading-4 font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
@@ -114,7 +114,7 @@ export default function DataTable({
               <th
                 key={index}
                 scope="col"
-                className={`px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider ${
+                className={`px-6 py-3 text-left text-xs font-medium text-muted ${
                   sortable && column.sortable ? 'cursor-pointer hover:text-chart-ink' : ''
                 }`}
                 onClick={() => sortable && column.sortable && handleSort(column.accessor)}
@@ -157,14 +157,14 @@ export default function DataTable({
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-md text-chart-ink bg-white hover:bg-foam-deep/40"
+              className="relative inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Previous
             </button>
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-md text-chart-ink bg-white hover:bg-foam-deep/40"
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Next
             </button>
@@ -177,7 +177,7 @@ export default function DataTable({
               </p>
             </div>
             <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
                 <button
                   onClick={() => onPageChange(currentPage - 1)}
                   disabled={currentPage === 1}

@@ -33,10 +33,7 @@ export function applyBrandToDocument(branding, resolvedMode) {
   root.style.setProperty('--lagoon-950', accent)
   root.style.setProperty('--lagoon-800', lightenHex(accent, 14))
   root.style.setProperty('--lagoon-700', lightenHex(accent, 28))
-  root.style.setProperty(
-    '--waterline',
-    `linear-gradient(90deg, ${accent} 0%, ${lightenHex(accent, 28)} 100%)`,
-  )
+  root.style.setProperty('--waterline', accent)
   root.style.setProperty('--input-focus', accent)
 
   const dark = resolvedMode === 'dark'

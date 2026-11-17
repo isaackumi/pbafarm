@@ -198,7 +198,7 @@ const HarvestForm = ({ onComplete }) => {
                   name="cageId"
                   value={formData.cageId}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                   disabled={cagesReady && cages.length === 0}
                 >
@@ -246,7 +246,7 @@ const HarvestForm = ({ onComplete }) => {
                   name="harvestDate"
                   value={formData.harvestDate}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -259,7 +259,7 @@ const HarvestForm = ({ onComplete }) => {
                   name="harvestType"
                   value={formData.harvestType}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 >
                   <option value="complete">Complete Harvest</option>
@@ -277,7 +277,7 @@ const HarvestForm = ({ onComplete }) => {
                   value={formData.totalWeight}
                   onChange={handleChange}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -292,7 +292,7 @@ const HarvestForm = ({ onComplete }) => {
                   value={formData.averageBodyWeight}
                   onChange={handleChange}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -306,7 +306,7 @@ const HarvestForm = ({ onComplete }) => {
                   name="estimatedCount"
                   value={formData.estimatedCount}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -321,7 +321,7 @@ const HarvestForm = ({ onComplete }) => {
                   value={formData.fcr}
                   onChange={handleChange}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -342,7 +342,7 @@ const HarvestForm = ({ onComplete }) => {
                       value={size.weight}
                       onChange={(e) => handleSizeBreakdownChange(index, e.target.value)}
                       step="0.01"
-                      className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -357,7 +357,7 @@ const HarvestForm = ({ onComplete }) => {
                 value={formData.notes}
                 onChange={handleChange}
                 rows="3"
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Optional notes about the harvest"
               />
             </div>
@@ -367,14 +367,14 @@ const HarvestForm = ({ onComplete }) => {
             <button
               type="button"
               onClick={() => onComplete()}
-              className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+              className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || cages.length === 0}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 disabled:opacity-60"
+              className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 disabled:opacity-60"
             >
               Preview Harvest Record
             </button>
@@ -432,7 +432,7 @@ const HarvestForm = ({ onComplete }) => {
               {sizeBreakdown.map((size) => (
                 <li
                   key={size.category}
-                  className="bg-foam-deep/40 p-3 rounded-md text-sm text-gray-800"
+                  className="bg-foam-deep/40 p-3 rounded-lg text-sm text-gray-800"
                 >
                   <span className="font-medium">
                     {size.category} ({size.range}):
@@ -446,7 +446,7 @@ const HarvestForm = ({ onComplete }) => {
           {formData.notes && (
             <div className="border-t pt-6 mt-6">
               <h4 className="text-lg font-medium text-chart-ink mb-2">Notes</h4>
-              <p className="text-sm text-chart-ink bg-foam-deep/40 p-3 rounded-md">
+              <p className="text-sm text-chart-ink bg-foam-deep/40 p-3 rounded-lg">
                 {formData.notes}
               </p>
             </div>
@@ -456,7 +456,7 @@ const HarvestForm = ({ onComplete }) => {
             <button
               type="button"
               onClick={handleEdit}
-              className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+              className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
             >
               Edit
             </button>
@@ -464,7 +464,7 @@ const HarvestForm = ({ onComplete }) => {
               type="button"
               onClick={handleConfirmSave}
               disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+              className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
             >
               {loading ? 'Saving...' : 'Confirm Save'}
             </button>

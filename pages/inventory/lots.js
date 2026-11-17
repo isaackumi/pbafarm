@@ -52,19 +52,19 @@ function InventoryLots() {
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Feed type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Location
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Batch
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Expiry
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
                     Quantity (kg)
                   </th>
                 </tr>

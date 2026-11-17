@@ -87,7 +87,7 @@ function AuditLogsContent() {
         <select
           value={actionType}
           onChange={(e) => setActionType(e.target.value)}
-          className="border border-input-border rounded-md px-3 py-1.5 text-sm"
+          className="border border-input-border rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">All actions</option>
           <option value="create">Create</option>
@@ -105,17 +105,17 @@ function AuditLogsContent() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="page-card p-4">
-            <p className="text-xs text-muted uppercase">Events in range</p>
-            <p className="font-data text-xl font-bold text-chart-ink">
+            <p className="text-xs text-muted">Events in range</p>
+            <p className="font-data text-xl font-semibold text-chart-ink">
               {summary.total_logs ?? 0}
             </p>
           </div>
           {(summary.top_users || []).slice(0, 3).map((u) => (
             <div key={u.userId} className="page-card p-4">
-              <p className="text-xs text-muted uppercase truncate">
+              <p className="text-xs text-muted truncate">
                 {u.label || u.userId}
               </p>
-              <p className="font-data text-xl font-bold text-chart-ink">{u.count}</p>
+              <p className="font-data text-xl font-semibold text-chart-ink">{u.count}</p>
             </div>
           ))}
         </div>
@@ -131,19 +131,19 @@ function AuditLogsContent() {
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     When
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Action
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Table
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Record
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     User
                   </th>
                 </tr>
@@ -210,7 +210,7 @@ function AuditLogsContent() {
             <p className="text-xs text-muted mb-2">Record: {selected.record_id || '—'}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-muted mb-1">
+                <p className="text-xs font-semibold text-muted mb-1">
                   Previous
                 </p>
                 <pre className="text-xs bg-foam-deep/40 rounded-lg p-3 overflow-auto max-h-64 font-data">
@@ -218,7 +218,7 @@ function AuditLogsContent() {
                 </pre>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase text-muted mb-1">New</p>
+                <p className="text-xs font-semibold text-muted mb-1">New</p>
                 <pre className="text-xs bg-foam-deep/40 rounded-lg p-3 overflow-auto max-h-64 font-data">
                   {JSON.stringify(selected.new_values ?? null, null, 2)}
                 </pre>

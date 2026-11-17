@@ -77,7 +77,7 @@ function GrowthAnalytics() {
     return (
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -174,12 +174,12 @@ function GrowthAnalytics() {
               <table className="min-w-full divide-y divide-foam-deep">
                 <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Cage Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">DOC</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Initial Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Current Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Growth Rate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Daily Growth Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Cage Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">DOC</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Initial Weight</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Current Weight</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Growth Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Daily Growth Rate</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-foam-deep">

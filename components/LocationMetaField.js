@@ -25,7 +25,7 @@ export default function LocationMetaField({
             : activeLocation?.name ||
               (activeLocationId ? 'Selected location' : 'No location set')}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
           <Lock className="h-3 w-3" aria-hidden />
           Locked
         </span>

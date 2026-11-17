@@ -161,7 +161,7 @@ function Reports() {
                   <select
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value)}
-                    className="block w-full px-3 py-2 border border-input-border rounded-md text-sm font-medium"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg text-sm font-medium"
                   >
                     <option value="production">Production Summary</option>
                     <option value="feed">Feed Usage</option>
@@ -185,7 +185,7 @@ function Reports() {
                         name="startDate"
                         value={dateRange.startDate}
                         onChange={handleDateRangeChange}
-                        className="block w-full px-3 py-2 border border-input-border rounded-md text-sm"
+                        className="block w-full px-3 py-2 border border-input-border rounded-lg text-sm"
                       />
                     </div>
                     <div>
@@ -197,7 +197,7 @@ function Reports() {
                         name="endDate"
                         value={dateRange.endDate}
                         onChange={handleDateRangeChange}
-                        className="block w-full px-3 py-2 border border-input-border rounded-md text-sm"
+                        className="block w-full px-3 py-2 border border-input-border rounded-lg text-sm"
                       />
                     </div>
                   </div>
@@ -207,7 +207,7 @@ function Reports() {
                   <label className="block text-sm font-semibold text-chart-ink mb-1">
                     Select Cages
                   </label>
-                  <div className="mt-1 bg-foam p-3 rounded-md max-h-60 overflow-y-auto">
+                  <div className="mt-1 bg-foam p-3 rounded-lg max-h-60 overflow-y-auto">
                     <div className="flex items-center mb-2">
                       <input
                         type="checkbox"
@@ -262,7 +262,7 @@ function Reports() {
                 <button
                   onClick={generateReport}
                   disabled={loading}
-                  className={`w-full flex justify-center items-center py-2.5 px-4 rounded-md text-sm font-semibold text-white ${
+                  className={`w-full flex justify-center items-center py-2.5 px-4 rounded-lg text-sm font-semibold text-white ${
                     loading
                       ? 'bg-lagoon-700/60'
                       : 'bg-lagoon-800 hover:bg-lagoon-950'
@@ -279,7 +279,7 @@ function Reports() {
                 </button>
 
                 {error && (
-                  <div className="bg-signal/10 text-signal p-3 rounded-md text-sm font-medium">
+                  <div className="bg-signal/10 text-signal p-3 rounded-lg text-sm font-medium">
                     {error}
                   </div>
                 )}
@@ -295,14 +295,14 @@ function Reports() {
                   <div className="flex space-x-2">
                     <button
                       onClick={downloadReport}
-                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-md text-chart-ink bg-surface hover:bg-foam"
+                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-lg text-chart-ink bg-surface hover:bg-foam"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </button>
                     <button
                       onClick={() => window.print()}
-                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-md text-chart-ink bg-surface hover:bg-foam"
+                      className="inline-flex items-center px-3 py-1 border border-input-border text-sm font-semibold rounded-lg text-chart-ink bg-surface hover:bg-foam"
                     >
                       <Printer className="h-4 w-4 mr-1" />
                       Print
@@ -326,7 +326,7 @@ function Reports() {
                 ) : (
                   <div id="report-content" className="space-y-6">
                     <div className="text-center pb-6 border-b border-foam-deep">
-                      <h1 className="text-2xl font-bold text-chart-ink font-display">
+                      <h1 className="text-2xl font-semibold text-chart-ink font-display">
                         {reportType === 'production' &&
                           'Production Summary Report'}
                         {reportType === 'feed' && 'Feed Usage Report'}
@@ -484,7 +484,7 @@ function Stat({ label, value }) {
   return (
     <div className="bg-foam border border-foam-deep p-4 rounded-lg">
       <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className="text-2xl font-bold text-lagoon-800 mt-1 font-data">
+      <p className="text-2xl font-semibold text-lagoon-800 mt-1 font-data">
         {value}
       </p>
     </div>
@@ -494,7 +494,7 @@ function Stat({ label, value }) {
 function DataTable({ title, columns, rows }) {
   return (
     <div>
-      <h3 className="text-lg font-bold text-chart-ink mb-3">{title}</h3>
+      <h3 className="text-lg font-semibold text-chart-ink mb-3">{title}</h3>
       <div className="overflow-x-auto border border-foam-deep rounded-lg">
         <table className="min-w-full divide-y divide-foam-deep">
           <thead className="bg-foam">
@@ -502,7 +502,7 @@ function DataTable({ title, columns, rows }) {
               {columns.map((c) => (
                 <th
                   key={c}
-                  className="px-4 py-3 text-left text-xs font-bold text-muted uppercase tracking-wider"
+                  className="px-4 py-3 text-left text-xs font-semibold text-muted"
                 >
                   {c}
                 </th>

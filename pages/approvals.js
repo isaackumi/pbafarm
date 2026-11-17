@@ -193,37 +193,37 @@ function PendingApprovals() {
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Type
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Batch/Cage
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Date
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Quantity
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Requested
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-right text-xs font-medium text-muted"
                   >
                     Actions
                   </th>
@@ -360,7 +360,7 @@ function PendingApprovals() {
               in <span className="font-medium">{currentRecord.cageName}</span>?
             </p>
 
-            <div className="bg-foam-deep p-3 rounded-md mb-4">
+            <div className="bg-foam-deep p-3 rounded-lg mb-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="font-medium text-lagoon-800">Date:</span>{' '}
@@ -390,7 +390,7 @@ function PendingApprovals() {
             </div>
 
             {actionError && (
-              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm">
                 {actionError}
               </div>
             )}
@@ -400,7 +400,7 @@ function PendingApprovals() {
                 type="button"
                 onClick={() => setShowApproveModal(false)}
                 disabled={processingAction}
-                className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
               >
                 Cancel
               </button>
@@ -408,7 +408,7 @@ function PendingApprovals() {
                 type="button"
                 onClick={confirmApprove}
                 disabled={processingAction}
-                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                className={`px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
                   processingAction
                     ? 'bg-green-400'
                     : 'bg-green-600 hover:bg-green-700'
@@ -452,14 +452,14 @@ function PendingApprovals() {
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 rows="3"
-                className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 placeholder="Please provide a reason for rejection"
                 required
               ></textarea>
             </div>
 
             {actionError && (
-              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm">
                 {actionError}
               </div>
             )}
@@ -469,7 +469,7 @@ function PendingApprovals() {
                 type="button"
                 onClick={() => setShowRejectModal(false)}
                 disabled={processingAction}
-                className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
               >
                 Cancel
               </button>
@@ -477,7 +477,7 @@ function PendingApprovals() {
                 type="button"
                 onClick={confirmReject}
                 disabled={processingAction}
-                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                className={`px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
                   processingAction
                     ? 'bg-red-400'
                     : 'bg-red-600 hover:bg-red-700'

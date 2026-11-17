@@ -53,7 +53,7 @@ export default function BagSizeField({
           step="0.1"
           min="0.1"
           placeholder="Custom"
-          className="block w-24 min-h-9 rounded-md border border-input-border px-3 py-1.5 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+          className="block w-24 min-h-9 rounded-lg border border-input-border px-3 py-1.5 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
         />
       </div>
       <p className="mt-1 text-xs text-muted">

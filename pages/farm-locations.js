@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { MapPin, Plus } from '@phosphor-icons/react'
+import {
+  MapPin,
+  Plus,
+} from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -240,7 +243,7 @@ function FarmLocations() {
 
       <div className="page-card overflow-hidden">
         <div className="px-6 py-4 border-b border-foam-deep flex items-center gap-2">
-          <MapPin size={20} weight="duotone" className="text-lagoon-800" />
+          <MapPin size={20} className="text-lagoon-800" />
           <h3 className="text-lg font-medium text-chart-ink">Locations</h3>
         </div>
         {locations === undefined ? (

@@ -265,7 +265,7 @@ export default function BiweeklyRecords() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted">Total Records</p>
-                    <p className="text-2xl font-bold text-chart-ink">{stats.totalRecords}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">{stats.totalRecords}</p>
                   </div>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function BiweeklyRecords() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted">Total Fish</p>
-                    <p className="text-2xl font-bold text-chart-ink">{stats.totalFish.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">{stats.totalFish.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -289,7 +289,7 @@ export default function BiweeklyRecords() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted">Total Weight</p>
-                    <p className="text-2xl font-bold text-chart-ink">{(stats.totalWeight / 1000).toFixed(1)}kg</p>
+                    <p className="text-2xl font-semibold text-chart-ink">{(stats.totalWeight / 1000).toFixed(1)}kg</p>
                   </div>
                 </div>
               </div>
@@ -301,7 +301,7 @@ export default function BiweeklyRecords() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted">Avg ABW</p>
-                    <p className="text-2xl font-bold text-chart-ink">{stats.averageABW.toFixed(1)}g</p>
+                    <p className="text-2xl font-semibold text-chart-ink">{stats.averageABW.toFixed(1)}g</p>
                   </div>
                 </div>
               </div>
@@ -313,7 +313,7 @@ export default function BiweeklyRecords() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-muted">Active Cages</p>
-                    <p className="text-2xl font-bold text-chart-ink">{stats.activeCages}</p>
+                    <p className="text-2xl font-semibold text-chart-ink">{stats.activeCages}</p>
                   </div>
                 </div>
               </div>
@@ -424,28 +424,28 @@ export default function BiweeklyRecords() {
                   <table className="min-w-full divide-y divide-foam-deep">
                     <thead className="bg-foam-deep/40">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Date
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Cage
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Batch Code
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Total Fish
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Total Weight
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Average ABW
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Samples
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                           Actions
                         </th>
                       </tr>
@@ -543,14 +543,14 @@ export default function BiweeklyRecords() {
                       <button
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-2 border border-input-border rounded-md text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 border border-input-border rounded-lg text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous
                       </button>
                       <button
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-input-border rounded-md text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 border border-input-border rounded-lg text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
                       </button>
@@ -625,10 +625,10 @@ export default function BiweeklyRecords() {
                       <table className="min-w-full divide-y divide-foam-deep">
                         <thead className="bg-foam-deep/40">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">Sample #</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">Fish Count</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">Total Weight</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">Average ABW</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample #</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish Count</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total Weight</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Average ABW</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-foam-deep">
@@ -670,7 +670,7 @@ export default function BiweeklyRecords() {
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, date: e.target.value }))
                     }
-                    className="w-full border border-input-border rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-input-border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
@@ -681,7 +681,7 @@ export default function BiweeklyRecords() {
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, batch_code: e.target.value }))
                     }
-                    className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                    className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -698,7 +698,7 @@ export default function BiweeklyRecords() {
                           average_body_weight: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
                     />
                   </div>
                   <div>
@@ -713,7 +713,7 @@ export default function BiweeklyRecords() {
                           total_fish_count: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
                     />
                   </div>
                   <div>
@@ -729,7 +729,7 @@ export default function BiweeklyRecords() {
                           total_weight: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-md px-3 py-2 text-sm font-data"
+                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
                     />
                   </div>
                 </div>
@@ -738,14 +738,14 @@ export default function BiweeklyRecords() {
                     type="button"
                     disabled={saving}
                     onClick={() => setEditRecord(null)}
-                    className="px-4 py-2 border rounded-md text-sm"
+                    className="px-4 py-2 border rounded-lg text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-4 py-2 bg-lagoon-950 text-white rounded-md text-sm"
+                    className="px-4 py-2 bg-lagoon-950 text-white rounded-lg text-sm"
                   >
                     {saving ? 'Saving…' : 'Save'}
                   </button>
@@ -776,7 +776,7 @@ export default function BiweeklyRecords() {
                   type="button"
                   disabled={deleting}
                   onClick={() => setDeleteRecord(null)}
-                  className="px-4 py-2 border rounded-md text-sm"
+                  className="px-4 py-2 border rounded-lg text-sm"
                 >
                   Cancel
                 </button>
@@ -784,7 +784,7 @@ export default function BiweeklyRecords() {
                   type="button"
                   disabled={deleting}
                   onClick={handleConfirmDelete}
-                  className="px-4 py-2 bg-signal text-white rounded-md text-sm"
+                  className="px-4 py-2 bg-signal text-white rounded-lg text-sm"
                 >
                   {deleting ? 'Deleting…' : 'Delete'}
                 </button>

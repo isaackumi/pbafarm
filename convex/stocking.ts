@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import {
   mergeSettings,
   assertStockingAllowed,
@@ -239,7 +239,7 @@ export const createStocking = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
-    if (!cage) throw new Error('Cage not found')
+    assertOwns(user, cage, 'Cage')
 
     const companyId = (await writeCompanyId(user)) ?? cage.companyId
     const rules = await loadRules(ctx, companyId)
@@ -335,6 +335,7 @@ export const updateStocking = mutation({
     if (!stocking) throw new Error('Stocking record not found')
     const allowed = await listForCompany(user, [stocking])
     if (!allowed.length) throw new Error('Access denied')
+    if (stocking.status === 'approved') requireRole(user, 'admin')
 
     await ctx.db.patch(id, patch)
     await logAudit(ctx, {
@@ -499,7 +500,7 @@ export const createTopup = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const stocking = await ctx.db.get(args.stockingId)
-    if (!stocking) throw new Error('Stocking record not found')
+    assertOwns(user, stocking, 'Stocking record')
 
     if (stocking.status !== 'approved') {
       throw new Error('Can only create topups for approved stockings')

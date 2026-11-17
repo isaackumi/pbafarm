@@ -154,7 +154,7 @@ const CageManagementSidebar = () => {
             <div key={item.title}>
               <Link
                 href={item.href}
-                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-muted rounded-md hover:bg-foam-deep/40 hover:text-chart-ink group"
+                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam-deep/40 hover:text-chart-ink group"
               >
                 <div className="flex items-center">
                   {item.icon}
@@ -172,7 +172,7 @@ const CageManagementSidebar = () => {
                     <Link
                       key={subItem.title}
                       href={subItem.href}
-                      className="flex items-center px-3 py-2 text-sm font-medium text-muted rounded-md hover:bg-foam-deep/40 hover:text-chart-ink"
+                      className="flex items-center px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam-deep/40 hover:text-chart-ink"
                     >
                       {subItem.icon}
                       <span className="ml-3">{subItem.title}</span>
@@ -188,7 +188,7 @@ const CageManagementSidebar = () => {
         <div className="mt-6">
           <Link
             href="/create-cage"
-            className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-lagoon-800 rounded-md hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+            className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-lagoon-800 rounded-lg hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
           >
             <Plus className="w-5 h-5 mr-2" />
             Create New Cage

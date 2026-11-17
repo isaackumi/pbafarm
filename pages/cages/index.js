@@ -339,13 +339,13 @@ function CagesManagement() {
               placeholder="Search cages by name or location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-input-border rounded-md focus:ring-lagoon-800 focus:border-lagoon-800"
+              className="w-full px-4 py-2 border border-input-border rounded-lg focus:ring-lagoon-800 focus:border-lagoon-800"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-input-border rounded-md focus:ring-lagoon-800 focus:border-lagoon-800"
+            className="px-4 py-2 border border-input-border rounded-lg focus:ring-lagoon-800 focus:border-lagoon-800"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active</option>

@@ -138,7 +138,7 @@ const CreateCageForm = () => {
       const { data, error: createError } = await cageService.createCage(cageData)
       if (createError) throw createError
 
-      setMessage('Cage created successfully!')
+      setMessage('Cage created')
       setFormData({
         name: '',
         code: '',

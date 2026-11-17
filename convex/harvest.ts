@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 
 function toClientHarvestRecord(r: any) {
@@ -105,7 +105,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
-    if (!cage) throw new Error('Cage not found')
+    assertOwns(user, cage, 'Cage')
 
     const companyId = (await writeCompanyId(user)) ?? cage.companyId
     const company = companyId ? await ctx.db.get(companyId) : null
@@ -259,7 +259,7 @@ export const createFromSampling = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
-    if (!cage) throw new Error('Cage not found')
+    assertOwns(user, cage, 'Cage')
 
     const companyId = (await writeCompanyId(user)) ?? cage.companyId
     const abw =

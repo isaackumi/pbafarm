@@ -37,7 +37,7 @@ export const ToastProvider = ({ children }) => {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-md p-4 shadow-lg max-w-md transform transition-all duration-300 ease-in-out ${
+            className={`rounded-lg p-4 shadow-lg max-w-md transform transition-colors duration-300 ease-in-out ${
               toast.type === 'error'
                 ? 'bg-red-50 text-red-800'
                 : toast.type === 'success'

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { FirstAidKit } from '@phosphor-icons/react'
+import {
+  HeartPulse,
+} from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -130,7 +132,7 @@ function HealthTreatments() {
       {(withdrawals || []).length > 0 && (
         <div className="page-card p-4 mb-6 border-amber-200 bg-amber-50">
           <div className="flex items-center gap-2 mb-2">
-            <FirstAidKit size={18} className="text-amber-800" />
+            <HeartPulse size={18} className="text-amber-800" />
             <h3 className="font-semibold text-amber-900">
               Active withdrawal windows
             </h3>
@@ -308,23 +310,23 @@ function HealthTreatments() {
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Cage
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Diagnosis
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Treatment
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Withdrawal
                   </th>
                   {isAdmin && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Actions
                     </th>
                   )}

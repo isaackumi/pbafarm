@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import companyService from '../lib/companyService'
+import { useToast } from './Toast'
 
 const AdminCompanyRegistrationsPage = () => {
   const [pendingRegistrations, setPendingRegistrations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { showToast } = useToast()
 
   useEffect(() => {
     loadPendingRegistrations()
@@ -29,18 +31,20 @@ const AdminCompanyRegistrationsPage = () => {
     const companyId = company.id || company._id
     const userId = company.submitted_by_user_id
     if (!userId) {
-      alert(
-        'Cannot approve: no submitting user on this registration. Re-register the company after updating.',
+      showToast(
+        'Cannot approve: this registration has no submitting user. Ask them to register again.',
+        'error',
       )
       return
     }
     try {
       const { error } = await companyService.approveRegistration(companyId, userId)
       if (error) throw error
+      showToast(`${company.name || 'Company'} approved`, 'success')
       await loadPendingRegistrations()
     } catch (err) {
       console.error('Error approving company:', err)
-      alert(err.message || 'Error approving company')
+      showToast(err.message || 'Could not approve the company', 'error')
     }
   }
 
@@ -52,10 +56,11 @@ const AdminCompanyRegistrationsPage = () => {
     try {
       const { error } = await companyService.rejectRegistration(companyId, reason)
       if (error) throw error
+      showToast('Registration rejected', 'success')
       await loadPendingRegistrations()
     } catch (err) {
       console.error('Error rejecting company:', err)
-      alert(err.message || 'Error rejecting company')
+      showToast(err.message || 'Could not reject the registration', 'error')
     }
   }
 
@@ -65,12 +70,12 @@ const AdminCompanyRegistrationsPage = () => {
 
   return (
     <div className="p-6">
-      <h2 className="font-display text-2xl font-bold text-chart-ink mb-6">
+      <h2 className="font-display text-2xl font-semibold text-chart-ink mb-6">
         Company Registration Approvals
       </h2>
 
       {error && (
-        <div className="mb-4 p-3 rounded-md border border-signal/30 bg-signal/10 text-sm text-signal">
+        <div className="mb-4 p-3 rounded-lg border border-signal/30 bg-signal/10 text-sm text-signal">
           {error}
         </div>
       )}

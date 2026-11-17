@@ -220,7 +220,7 @@ function InventoryAnalytics() {
       />
 
         {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
             {error}
           </div>
         )}

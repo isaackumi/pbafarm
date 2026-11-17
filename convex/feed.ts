@@ -201,6 +201,7 @@ export const softDeleteSupplier = mutation({
   args: { id: v.id('feedSuppliers') },
   handler: async (ctx, { id }) => {
     const user = await requireUser(ctx)
+    requireRole(user, 'admin')
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Supplier not found')
     const allowed = await listForCompany(user, [existing])
@@ -245,6 +246,8 @@ export const createFeedType = mutation({
     const user = await requireUser(ctx)
     const now = Date.now()
     const opening = Math.max(0, args.currentStock ?? 0)
+    // Opening stock is a stock adjustment — admin only (purchases are the normal path).
+    if (opening > 0) requireRole(user, 'admin')
     const id = await ctx.db.insert('feedTypes', {
       name: args.name,
       description: args.description,
@@ -315,6 +318,7 @@ export const softDeleteFeedType = mutation({
   args: { id: v.id('feedTypes') },
   handler: async (ctx, { id }) => {
     const user = await requireUser(ctx)
+    requireRole(user, 'admin')
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [existing])
@@ -456,6 +460,7 @@ export const updatePurchase = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    requireRole(user, 'admin')
     const purchase = await ctx.db.get(args.id)
     if (!purchase || purchase.deletedAt) throw new Error('Purchase not found')
     const allowed = await listForCompany(user, [purchase])

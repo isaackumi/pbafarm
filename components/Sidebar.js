@@ -3,40 +3,42 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
-  House,
-  Fish,
-  CalendarBlank,
-  Scales,
-  FileText,
-  Package,
+  ArrowLeftRight,
+  Building2,
+  Calendar,
+  ChartColumn,
+  ChevronDown,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleCheck,
   Crosshair,
-  Waves,
-  Plus,
-  SquaresFour,
-  ChartBar,
-  GearSix,
   Database,
-  ShoppingCart,
-  Truck,
-  Warning,
-  ChartLineUp,
-  DownloadSimple,
+  Download,
   Eye,
-  Users,
-  Buildings,
-  CheckCircle,
-  UploadSimple,
-  ShieldCheck,
-  SignOut,
+  FileText,
+  Fish,
+  HeartPulse,
+  House,
+  LayoutGrid,
+  List,
+  LogOut,
   MapPin,
-  FirstAidKit,
-  CaretDown,
-  CaretRight,
-  CaretDoubleLeft,
-  CaretDoubleRight,
-  ArrowsLeftRight,
-  ListBullets,
-} from '@phosphor-icons/react'
+  Package,
+  Plus,
+  QrCode,
+  Scale,
+  Settings,
+  ShieldCheck,
+  ShoppingCart,
+  TrendingUp,
+  TriangleAlert,
+  Truck,
+  Upload,
+  Users,
+  Waves,
+  X,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
@@ -49,27 +51,28 @@ const MENU_SECTIONS = {
     tourId: 'production',
     items: [
       { title: 'Dashboard', path: '/dashboard', icon: House, tourId: 'dashboard' },
-      { title: 'Daily Entry', path: '/daily-entry', icon: CalendarBlank, tourId: 'daily-entry' },
-      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scales, tourId: 'biweekly-entry' },
+      { title: 'Daily Entry', path: '/daily-entry', icon: Calendar, tourId: 'daily-entry' },
+      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale, tourId: 'biweekly-entry' },
       { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
       { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
       { title: 'Sales', path: '/sales', icon: ShoppingCart, tourId: 'sales' },
-      { title: 'Health', path: '/health', icon: FirstAidKit, tourId: 'health' },
-      { title: 'Cage P&L', path: '/pnl', icon: ChartLineUp, tourId: 'pnl' },
+      { title: 'Health', path: '/health', icon: HeartPulse, tourId: 'health' },
+      { title: 'Cage P&L', path: '/pnl', icon: TrendingUp, tourId: 'pnl' },
       { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
-      { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowsLeftRight, tourId: 'fish-transfers' },
+      { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowLeftRight, tourId: 'fish-transfers' },
       { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
     ],
   },
   cages: {
     title: 'Cages',
-    icon: SquaresFour,
+    icon: LayoutGrid,
     tourId: 'cages-section',
     items: [
       { title: 'All Cages', path: '/cages', icon: Database, tourId: 'cages' },
-      { title: 'Analytics', path: '/cages/analytics', icon: ChartBar },
-      { title: 'Settings', path: '/cages/settings', icon: GearSix },
+      { title: 'Analytics', path: '/cages/analytics', icon: ChartColumn },
+      { title: 'QR codes', path: '/cages/qr-codes', icon: QrCode },
+      { title: 'Settings', path: '/cages/settings', icon: Settings },
       { title: 'Create Cage', path: '/create-cage', icon: Plus, tourId: 'create-cage' },
     ],
   },
@@ -78,12 +81,12 @@ const MENU_SECTIONS = {
     icon: Package,
     tourId: 'feed-section',
     items: [
-      { title: 'Overview', path: '/feed-management', icon: ChartBar, tourId: 'feed-management' },
-      { title: 'Feed Types', path: '/feed-types', icon: ListBullets, tourId: 'feed-types' },
+      { title: 'Overview', path: '/feed-management', icon: ChartColumn, tourId: 'feed-management' },
+      { title: 'Feed Types', path: '/feed-types', icon: List, tourId: 'feed-types' },
       { title: 'Suppliers', path: '/feed-suppliers', icon: Truck, tourId: 'feed-suppliers' },
       { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart, tourId: 'feed-purchases' },
       { title: 'Issue Feed', path: '/feed-issue', icon: Package, tourId: 'feed-issue' },
-      { title: 'Analytics', path: '/feed-management/analytics', icon: ChartLineUp },
+      { title: 'Analytics', path: '/feed-management/analytics', icon: TrendingUp },
     ],
   },
   inventory: {
@@ -91,22 +94,22 @@ const MENU_SECTIONS = {
     icon: Database,
     tourId: 'inventory-section',
     items: [
-      { title: 'Overview', path: '/inventory/overview', icon: ChartBar, tourId: 'inventory-overview' },
+      { title: 'Overview', path: '/inventory/overview', icon: ChartColumn, tourId: 'inventory-overview' },
       { title: 'Stock Levels', path: '/stock-levels', icon: Package, tourId: 'stock-levels' },
       { title: 'Lots', path: '/inventory/lots', icon: Package, tourId: 'inventory-lots' },
       { title: 'Adjust / Transfer', path: '/inventory/adjust', icon: Package, tourId: 'inventory-adjust' },
-      { title: 'Alerts', path: '/inventory-alerts', icon: Warning },
+      { title: 'Alerts', path: '/inventory-alerts', icon: TriangleAlert },
       { title: 'Transactions', path: '/inventory-transactions', icon: FileText, tourId: 'inventory-transactions' },
-      { title: 'Analytics', path: '/inventory/analytics', icon: ChartLineUp },
+      { title: 'Analytics', path: '/inventory/analytics', icon: TrendingUp },
     ],
   },
   analytics: {
     title: 'Reports',
-    icon: ChartBar,
+    icon: ChartColumn,
     tourId: 'reports-section',
     items: [
       { title: 'Production Report', path: '/report', icon: FileText, tourId: 'report' },
-      { title: 'Export Data', path: '/export', icon: DownloadSimple },
+      { title: 'Export Data', path: '/export', icon: Download },
       {
         title: 'Audit Logs',
         path: '/audit-logs',
@@ -118,15 +121,15 @@ const MENU_SECTIONS = {
   },
   management: {
     title: 'Management',
-    icon: GearSix,
+    icon: Settings,
     tourId: 'management-section',
     items: [
-      { title: 'Global Settings', path: '/global-settings', icon: GearSix, tourId: 'global-settings' },
+      { title: 'Global Settings', path: '/global-settings', icon: Settings, tourId: 'global-settings' },
       { title: 'Farm Locations', path: '/farm-locations', icon: MapPin, adminOnly: true, tourId: 'farm-locations' },
       { title: 'Users', path: '/users', icon: Users, adminOnly: true },
-      { title: 'Company Settings', path: '/company-settings', icon: Buildings, adminOnly: true, tourId: 'company-settings' },
-      { title: 'Approvals', path: '/approvals', icon: CheckCircle, adminOnly: true, tourId: 'approvals' },
-      { title: 'Bulk Upload', path: '/bulk-upload', icon: UploadSimple, adminOnly: true },
+      { title: 'Company Settings', path: '/company-settings', icon: Building2, adminOnly: true, tourId: 'company-settings' },
+      { title: 'Approvals', path: '/approvals', icon: CircleCheck, adminOnly: true, tourId: 'approvals' },
+      { title: 'Bulk Upload', path: '/bulk-upload', icon: Upload, adminOnly: true },
     ],
   },
   admin: {
@@ -135,12 +138,12 @@ const MENU_SECTIONS = {
     superAdminOnly: true,
     items: [
       { title: 'Admin Dashboard', path: '/admin/admin', icon: House },
-      { title: 'Registrations', path: '/admin/company-registrations', icon: Buildings },
+      { title: 'Registrations', path: '/admin/company-registrations', icon: Building2 },
     ],
   },
 }
 
-const Sidebar = ({ collapsed = false, onToggle }) => {
+const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }) => {
   const { user, signOut } = useAuth()
   const { displayName, logoUrl } = useCompanySettings()
   const router = useRouter()
@@ -239,9 +242,9 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen flex flex-col z-40 border-r border-lagoon-950/40 bg-lagoon-950 text-foam transition-[width] duration-200 ease-out ${
-        collapsed ? 'w-[4.5rem]' : 'w-64'
-      }`}
+      className={`print:hidden fixed top-0 left-0 h-screen flex flex-col z-40 border-r border-lagoon-950/40 bg-lagoon-950 text-foam transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${collapsed ? 'w-[4.5rem]' : 'w-72 lg:w-64'}`}
       aria-label="Main navigation"
       data-tour="sidebar"
     >
@@ -264,23 +267,33 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
             />
           ) : (
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
-              <Fish size={22} weight="duotone" aria-hidden />
+              <Fish size={22} aria-hidden />
             </span>
           )}
           {!collapsed && (
-            <span className="truncate font-display text-lg font-bold tracking-tight text-white">
+            <span className="truncate font-display text-base font-semibold text-white">
               {displayName || 'PBA Farm'}
             </span>
           )}
         </Link>
+        {typeof onMobileClose === 'function' && mobileOpen && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="lg:hidden rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
         {typeof onToggle === 'function' && !collapsed && (
           <button
             type="button"
             onClick={onToggle}
-            className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="hidden lg:block rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             aria-label="Collapse sidebar"
           >
-            <CaretDoubleLeft size={18} weight="bold" />
+            <ChevronsLeft size={18} />
           </button>
         )}
       </div>
@@ -293,7 +306,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
             className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             aria-label="Expand sidebar"
           >
-            <CaretDoubleRight size={18} weight="bold" />
+            <ChevronsRight size={18} />
           </button>
         </div>
       )}
@@ -331,7 +344,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                   }
                   toggleSection(key)
                 }}
-                className={`w-full flex items-center rounded-xl px-3 py-2.5 text-left text-[15px] font-semibold leading-snug tracking-normal transition-colors ${
+                className={`w-full flex items-center rounded-lg px-3 min-h-10 text-left text-sm font-medium leading-5 transition-colors ${
                   sectionActive
                     ? 'bg-white/10 text-white'
                     : 'text-zinc-100 hover:bg-white/5 hover:text-white'
@@ -340,8 +353,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
               >
                 <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}>
                   <SectionIcon
-                    size={22}
-                    weight={sectionActive ? 'duotone' : 'regular'}
+                    size={18}
                     className="shrink-0 text-zinc-200"
                     aria-hidden
                   />
@@ -349,9 +361,9 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                 </span>
                 {!collapsed &&
                   (open ? (
-                    <CaretDown size={16} className="text-zinc-400 shrink-0" />
+                    <ChevronDown size={16} className="text-zinc-400 shrink-0" />
                   ) : (
-                    <CaretRight size={16} className="text-zinc-400 shrink-0" />
+                    <ChevronRight size={16} className="text-zinc-400 shrink-0" />
                   ))}
               </button>
 
@@ -365,7 +377,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                         <Link
                           href={item.path}
                           data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
-                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-medium leading-snug transition-colors ${
+                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 min-h-9 text-sm leading-5 transition-colors ${
                             active
                               ? 'bg-white text-lagoon-950 shadow-sm'
                               : 'text-zinc-200 hover:bg-white/5 hover:text-white'
@@ -379,7 +391,6 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
                           )}
                           <ItemIcon
                             size={18}
-                            weight={active ? 'fill' : 'regular'}
                             className={active ? 'text-lagoon-950' : 'text-zinc-400'}
                             aria-hidden
                           />
@@ -405,12 +416,12 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
             className={`flex items-center min-w-0 ${collapsed ? 'justify-center' : 'gap-2.5'}`}
             title={user?.email || 'User'}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-lagoon-950">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-lagoon-950">
               {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
             </div>
             {!collapsed && (
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-semibold text-white leading-snug">
+                <p className="truncate text-sm font-medium text-white leading-5">
                   {user?.name || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="truncate font-data text-xs text-zinc-400 mt-0.5">
@@ -423,10 +434,10 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
             type="button"
             onClick={() => setShowLogoutModal(true)}
             className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            title="Logout"
-            aria-label="Logout"
+            title="Log out"
+            aria-label="Log out"
           >
-            <SignOut size={20} weight="bold" />
+            <LogOut size={20} />
           </button>
         </div>
       </div>

@@ -16,6 +16,9 @@
   --color-muted: var(--muted);
   --color-surface: var(--surface);
   --color-input-border: var(--input-border);
+  /* Lake water: the one accent (selection, focus, links, key figure) */
+  --color-lake: var(--lake);
+  --color-lake-soft: var(--lake-soft);
 
   --color-primary-50: #fafafa;
   --color-primary-100: #f4f4f5;
@@ -37,29 +40,28 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.font-display {
-  font-weight: 700;
+/* In the base layer so Tailwind weight utilities can still override it */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
 }
 
 input,
 select,
 textarea {
   color: var(--input-text);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 input:not([type='checkbox']):not([type='radio']),

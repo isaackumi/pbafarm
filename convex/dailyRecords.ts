@@ -2,8 +2,8 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
-import { requireUser } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { requireUser, requireRole } from './lib/authz'
+import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
 import {
   mergeSettings,
@@ -104,6 +104,7 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
         transactionType: 'reversal',
         referenceId: ref,
         notes: 'Reversal of daily feed (legacy)',
+        locationId: dailyRecord.locationId,
       })
     }
     return
@@ -118,6 +119,7 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
       transactionType: 'reversal',
       referenceId: ref,
       notes: `Reversal of txn ${txn._id}`,
+      locationId: dailyRecord.locationId,
     })
   }
 }
@@ -142,6 +144,28 @@ export const list = query({
     if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
     if (args.dateTo) rows = rows.filter((r) => r.date <= args.dateTo!)
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
+  },
+})
+
+/**
+ * Lines already logged on one date (for the batch form: mark cages done,
+ * and "same as yesterday"). Bounded by the by_date index.
+ */
+export const listForDate = query({
+  args: { date: v.string() },
+  handler: async (ctx, { date }) => {
+    const user = await requireUser(ctx)
+    const rows = await ctx.db
+      .query('dailyRecords')
+      .withIndex('by_date', (q) => q.eq('date', date))
+      .take(500)
+    const mine = await listForCompany(user, rows)
+    return mine.map((r) => ({
+      cage_id: r.cageId,
+      feed_type_id: r.feedTypeId ?? null,
+      feed_amount: r.feedAmount,
+      mortality: r.mortality,
+    }))
   },
 })
 
@@ -182,7 +206,7 @@ async function insertDailyRecord(
   args: DailyRecordInput,
 ): Promise<Id<'dailyRecords'>> {
   const cage = await ctx.db.get(args.cageId)
-  if (!cage) throw new Error('Cage not found')
+  assertOwns(user, cage, 'Cage')
 
   if (args.feedAmount > 0 && !args.feedTypeId) {
     throw new Error('feedTypeId is required when feedAmount > 0')
@@ -329,6 +353,8 @@ export const createBatch = mutation({
         mortality: v.number(),
         mortalityCause: v.optional(v.string()),
         notes: v.optional(v.string()),
+        dissolvedOxygen: v.optional(v.number()),
+        temperatureC: v.optional(v.number()),
       }),
     ),
     allowNegative: v.optional(v.boolean()),
@@ -381,6 +407,8 @@ export const createBatch = mutation({
           mortality: rec.mortality,
           mortalityCause: rec.mortalityCause,
           notes: rec.notes?.trim() || undefined,
+          dissolvedOxygen: rec.dissolvedOxygen,
+          temperatureC: rec.temperatureC,
           allowNegative,
           overrideReason,
         })
@@ -459,6 +487,7 @@ export const remove = mutation({
   args: { id: v.id('dailyRecords') },
   handler: async (ctx, { id }) => {
     const user = await requireUser(ctx)
+    requireRole(user, 'admin')
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
     const allowed = await listForCompany(user, [existing])
@@ -503,7 +532,7 @@ export const createMany = mutation({
         )
       }
       const cage = await ctx.db.get(record.cageId)
-      if (!cage) continue
+      assertOwns(user, cage, 'Cage')
       const existing = await ctx.db
         .query('dailyRecords')
         .withIndex('by_cage_date', (q) =>

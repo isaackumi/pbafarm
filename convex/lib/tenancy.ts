@@ -27,6 +27,22 @@ export async function listForCompany<T extends { companyId?: Id<'companies'> }>(
 }
 
 /**
+ * Throw unless the user may write to this tenant-scoped document.
+ * Same rules as listForCompany: super_admin sees all, members only their
+ * company, unassigned users only unscoped rows.
+ */
+export function assertOwns<T extends { companyId?: Id<'companies'> }>(
+  user: Doc<'users'>,
+  doc: T | null | undefined,
+  label = 'Record',
+): asserts doc is T {
+  if (!doc) throw new Error(`${label} not found`)
+  if ((user.role ?? 'user') === 'super_admin') return
+  const ok = user.companyId ? doc.companyId === user.companyId : !doc.companyId
+  if (!ok) throw new Error(`${label} not found`)
+}
+
+/**
  * Company filter, then optional location filter.
  * When locationId is omitted, returns all company rows (admin "all sites" views).
  * Legacy rows with no locationId are included only when filtering to a location

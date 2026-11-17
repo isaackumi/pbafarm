@@ -117,7 +117,7 @@ function CageDetails() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="page-card p-6 space-y-2 text-sm">
-            <h2 className="font-display font-bold text-lg mb-2">Information</h2>
+            <h2 className="font-display font-semibold text-lg mb-2">Information</h2>
             <p>
               <span className="text-muted">Location:</span> {cage.location || '—'}
             </p>
@@ -137,7 +137,7 @@ function CageDetails() {
             </p>
           </div>
           <div className="page-card p-6 space-y-2 text-sm">
-            <h2 className="font-display font-bold text-lg mb-2">Stock</h2>
+            <h2 className="font-display font-semibold text-lg mb-2">Stock</h2>
             <p>
               <span className="text-muted">Current count:</span>{' '}
               <span className="font-data font-semibold">

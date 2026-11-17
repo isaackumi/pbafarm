@@ -6,24 +6,41 @@ Supabase has been fully removed.
 
 ## Local development
 
+Everything runs on your machine. No Convex account is needed.
+
 ```bash
 npm install
-npm run dev:backend   # terminal 1 — Convex local backend
-npm run dev           # terminal 2 — Next.js on http://localhost:3000
+npm run dev:backend   # terminal 1: Convex local backend on http://127.0.0.1:3210
+npm run dev           # terminal 2: Next.js on http://localhost:3000
 ```
 
-### Env (`.env.local`)
+### First-time setup (once per machine)
 
-```bash
-NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210
-NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:3211
-NEXT_PUBLIC_APP_NAME=Fish Farm Management
-```
+1. Create the local backend and write `.env.local`:
+
+   ```bash
+   CONVEX_AGENT_MODE=anonymous npx convex dev --once
+   ```
+
+   This saves `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL` and
+   `NEXT_PUBLIC_CONVEX_SITE_URL` to `.env.local`. After that, plain
+   `npm run dev:backend` reuses it.
+
+2. Give the backend its sign-in keys (these live on the Convex backend, not in `.env.local`):
+
+   ```bash
+   node generateKeys.mjs        # prints JWT_PRIVATE_KEY and JWKS
+   npx convex env set JWT_PRIVATE_KEY -- "<key printed above, without quotes>"
+   npx convex env set JWKS -- '<jwks json printed above>'
+   npx convex env set SITE_URL http://localhost:3000
+   ```
+
+3. Optional: add an assistant key to `.env.local` (`GEMINI_API_KEY=...`). See `.env.example`.
 
 ### First user / admin
 
-1. Sign up at `/signup`
-2. Promote yourself:
+1. Sign up at http://localhost:3000/signup
+2. Promote yourself (this function is internal, so only the CLI can run it):
 
 ```bash
 npx convex run users:promoteToSuperAdmin '{"email":"you@example.com"}'
@@ -35,14 +52,11 @@ npx convex run users:promoteToSuperAdmin '{"email":"you@example.com"}'
 npx convex run seed:seedDemo
 ```
 
-### Auth JWT secrets (new Convex cloud project)
+### Phones on the same Wi-Fi
 
-```bash
-node generateKeys.mjs
-npx convex env set JWT_PRIVATE_KEY -- "<key>"
-npx convex env set JWKS '<jwks json>'
-npx convex env set SITE_URL http://localhost:3000
-```
+Run `npm run dev -- -H 0.0.0.0` and open `http://<your-mac-ip>:3000` on the phone.
+The app installs to the home screen in production builds (`npm run build && npm start`);
+the service worker is off in dev on purpose.
 
 ## Deploy (Vercel)
 

@@ -111,6 +111,9 @@ export const create = mutation({
     // Get the target user to inherit their company context
     const targetUser = await ctx.db.get(args.userId)
     if (!targetUser) throw new Error('Target user not found')
+    if (user.role !== 'super_admin' && targetUser.companyId !== user.companyId) {
+      throw new Error('Target user not found')
+    }
     
     const id = await ctx.db.insert('notifications', {
       userId: args.userId,
@@ -149,6 +152,7 @@ export const createBulk = mutation({
       // Get the target user to inherit their company context
       const targetUser = await ctx.db.get(userId)
       if (!targetUser) continue // Skip invalid users
+      if (user.role !== 'super_admin' && targetUser.companyId !== user.companyId) continue
       
       const id = await ctx.db.insert('notifications', {
         userId: userId,

@@ -51,14 +51,13 @@ export default function SignUp() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <p className="font-display text-4xl text-lagoon-950 tracking-tight">PBA Farm</p>
-          <div className="waterline mx-auto mt-3 mb-4 max-w-[8rem]" />
           <h1 className="text-xl font-semibold text-chart-ink">Create account</h1>
           <p className="mt-1 text-sm text-muted">Start with email and password. Roles come next.</p>
         </div>
 
         <div className="bg-surface border border-foam-deep rounded-lg px-6 py-8 shadow-sm">
           {error && (
-            <div className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-md text-sm">
+            <div className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -75,7 +74,7 @@ export default function SignUp() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
             </div>
 
@@ -91,7 +90,7 @@ export default function SignUp() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
             </div>
 
@@ -107,7 +106,7 @@ export default function SignUp() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
             </div>
 
@@ -123,14 +122,14 @@ export default function SignUp() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex justify-center py-2.5 px-4 rounded-md text-sm font-semibold text-white ${
+              className={`w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-semibold text-white ${
                 loading ? 'bg-lagoon-700/70' : 'bg-lagoon-800 hover:bg-lagoon-950'
               } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800`}
             >
