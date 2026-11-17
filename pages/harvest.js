@@ -129,6 +129,10 @@ const HarvestPage = () => {
     try {
       const { data, error } = await harvestRecordService.exportHarvestRecords()
       if (error) throw error
+      if (!data?.length) {
+        showToast('No harvest records to export', 'info')
+        return
+      }
 
       // Convert to CSV
       const headers = Object.keys(data[0])
@@ -170,8 +174,8 @@ const HarvestPage = () => {
 
   const filteredRecords = harvestRecords.filter(record => {
     const matchesSearch = 
-      record.cages.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.cages.code.toLowerCase().includes(searchTerm.toLowerCase())
+      (record.cages?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (record.cages?.code || '').toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesDateRange = 
       (!dateRange.start || new Date(record.harvest_date) >= new Date(dateRange.start)) &&
@@ -183,7 +187,10 @@ const HarvestPage = () => {
   const columns = [
     {
       header: 'Cage',
-      accessor: record => `${record.cages.name} (${record.cages.code})`
+      accessor: record =>
+        record.cages?.code
+          ? `${record.cages.name} (${record.cages.code})`
+          : record.cages?.name || '—'
     },
     {
       header: 'Harvest Date',

@@ -1,5 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
+import type { MutationCtx } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
@@ -155,6 +157,139 @@ export const get = query({
   },
 })
 
+type DailyRecordInput = {
+  cageId: Id<'cages'>
+  date: string
+  feedAmount: number
+  feedTypeId?: Id<'feedTypes'>
+  feedType?: string
+  feedPrice: number
+  feedCost: number
+  mortality: number
+  mortalityCause?: string
+  notes?: string
+  dissolvedOxygen?: number
+  temperatureC?: number
+  secchiCm?: number
+  allowNegative?: boolean
+  overrideReason?: string
+}
+
+/** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
+async function insertDailyRecord(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: DailyRecordInput,
+): Promise<Id<'dailyRecords'>> {
+  const cage = await ctx.db.get(args.cageId)
+  if (!cage) throw new Error('Cage not found')
+
+  if (args.feedAmount > 0 && !args.feedTypeId) {
+    throw new Error('feedTypeId is required when feedAmount > 0')
+  }
+
+  const existing = await ctx.db
+    .query('dailyRecords')
+    .withIndex('by_cage_date', (q) =>
+      q.eq('cageId', args.cageId).eq('date', args.date),
+    )
+    .first()
+  if (existing) throw new Error('Daily record already exists for this cage and date')
+
+  const {
+    allowNegative,
+    overrideReason,
+    dissolvedOxygen,
+    temperatureC,
+    secchiCm,
+    mortalityCause,
+    ...recordFields
+  } = args
+
+  const id = await ctx.db.insert('dailyRecords', {
+    ...recordFields,
+    mortalityCause:
+      args.mortality > 0
+        ? mortalityCause?.trim() || 'unknown'
+        : mortalityCause?.trim() || undefined,
+    dissolvedOxygen,
+    temperatureC,
+    secchiCm,
+    locationId: cage.locationId,
+    companyId: (await writeCompanyId(user)) ?? cage.companyId,
+    createdBy: user._id,
+  })
+
+  if (args.mortality && cage.currentCount != null) {
+    await ctx.db.patch(args.cageId, {
+      currentCount: Math.max(0, cage.currentCount - args.mortality),
+      updatedAt: Date.now(),
+    })
+  }
+
+  // Mortality threshold alerts
+  if (args.mortality > 0 && user.companyId) {
+    const company = await ctx.db.get(user.companyId)
+    const rules = mergeSettings(company?.settings)
+    const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
+    const nextCount =
+      cage.currentCount != null
+        ? Math.max(0, cage.currentCount - args.mortality)
+        : cage.currentCount
+    const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
+    const alerts: string[] = []
+    if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
+      alerts.push(
+        `Daily mortality ${dailyPct.toFixed(2)}% on cage ${cage.name} (threshold ${rules.farmRules.dailyMortalityAlertPct}%)`,
+      )
+    }
+    if (cumPct >= rules.farmRules.cumulativeMortalityAlertPct) {
+      alerts.push(
+        `Cumulative mortality ${cumPct.toFixed(1)}% on cage ${cage.name} (threshold ${rules.farmRules.cumulativeMortalityAlertPct}%)`,
+      )
+    }
+    if (alerts.length) {
+      const admins = (
+        await ctx.db.query('users').collect()
+      ).filter(
+        (u) =>
+          u.companyId === user.companyId &&
+          (u.role === 'admin' || u.role === 'super_admin') &&
+          u.active !== false,
+      )
+      for (const admin of admins) {
+        await ctx.db.insert('notifications', {
+          userId: admin._id,
+          title: 'Mortality alert',
+          message: alerts.join(' · '),
+          type: 'warning',
+          read: false,
+          link: '/daily-entry',
+          companyId: user.companyId,
+        })
+      }
+    }
+  }
+
+  await deductDailyFeed(ctx, user, {
+    dailyRecordId: id,
+    feedTypeId: args.feedTypeId,
+    cageId: args.cageId,
+    feedAmount: args.feedAmount,
+    date: args.date,
+    allowNegative: args.allowNegative,
+    overrideReason: args.overrideReason,
+  })
+
+  await logAudit(ctx, {
+    actionType: 'create',
+    tableName: 'daily_records',
+    recordId: id,
+    newValues: args,
+  })
+  return id
+}
+
 export const create = mutation({
   args: {
     cageId: v.id('cages'),
@@ -175,113 +310,86 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    const cage = await ctx.db.get(args.cageId)
-    if (!cage) throw new Error('Cage not found')
+    return await insertDailyRecord(ctx, user, args)
+  },
+})
 
-    if (args.feedAmount > 0 && !args.feedTypeId) {
-      throw new Error('feedTypeId is required when feedAmount > 0')
-    }
+/**
+ * Save several cages' daily records for one date in a single transaction.
+ * Any failure (duplicate, insufficient stock, missing cage) rolls back every line.
+ */
+export const createBatch = mutation({
+  args: {
+    date: v.string(),
+    records: v.array(
+      v.object({
+        cageId: v.id('cages'),
+        feedAmount: v.number(),
+        feedTypeId: v.optional(v.id('feedTypes')),
+        mortality: v.number(),
+        mortalityCause: v.optional(v.string()),
+        notes: v.optional(v.string()),
+      }),
+    ),
+    allowNegative: v.optional(v.boolean()),
+    overrideReason: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, records, allowNegative, overrideReason }) => {
+    const user = await requireUser(ctx)
+    if (!records.length) throw new Error('Add at least one cage line')
+    if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
 
-    const existing = await ctx.db
-      .query('dailyRecords')
-      .withIndex('by_cage_date', (q) =>
-        q.eq('cageId', args.cageId).eq('date', args.date),
-      )
-      .first()
-    if (existing) throw new Error('Daily record already exists for this cage and date')
-
-    const {
-      allowNegative,
-      overrideReason,
-      dissolvedOxygen,
-      temperatureC,
-      secchiCm,
-      mortalityCause,
-      ...recordFields
-    } = args
-
-    const id = await ctx.db.insert('dailyRecords', {
-      ...recordFields,
-      mortalityCause:
-        args.mortality > 0
-          ? mortalityCause?.trim() || 'unknown'
-          : mortalityCause?.trim() || undefined,
-      dissolvedOxygen,
-      temperatureC,
-      secchiCm,
-      locationId: cage.locationId,
-      companyId: (await writeCompanyId(user)) ?? cage.companyId,
-      createdBy: user._id,
-    })
-
-    if (args.mortality && cage.currentCount != null) {
-      await ctx.db.patch(args.cageId, {
-        currentCount: Math.max(0, cage.currentCount - args.mortality),
-        updatedAt: Date.now(),
-      })
-    }
-
-    // Mortality threshold alerts
-    if (args.mortality > 0 && user.companyId) {
-      const company = await ctx.db.get(user.companyId)
-      const rules = mergeSettings(company?.settings)
-      const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
-      const nextCount =
-        cage.currentCount != null
-          ? Math.max(0, cage.currentCount - args.mortality)
-          : cage.currentCount
-      const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
-      const alerts: string[] = []
-      if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
-        alerts.push(
-          `Daily mortality ${dailyPct.toFixed(2)}% on cage ${cage.name} (threshold ${rules.farmRules.dailyMortalityAlertPct}%)`,
-        )
+    const seen = new Set<string>()
+    const ids: Id<'dailyRecords'>[] = []
+    for (const [i, rec] of records.entries()) {
+      const line = `Line ${i + 1}`
+      const cage = await ctx.db.get(rec.cageId)
+      if (!cage) throw new Error(`${line}: cage not found`)
+      const allowed = await listForCompany(user, [cage])
+      if (!allowed.length) throw new Error(`${line}: access denied for cage ${cage.name}`)
+      if (seen.has(rec.cageId)) {
+        throw new Error(`${line}: cage ${cage.name} appears more than once`)
       }
-      if (cumPct >= rules.farmRules.cumulativeMortalityAlertPct) {
-        alerts.push(
-          `Cumulative mortality ${cumPct.toFixed(1)}% on cage ${cage.name} (threshold ${rules.farmRules.cumulativeMortalityAlertPct}%)`,
-        )
+      seen.add(rec.cageId)
+      if (!(rec.feedAmount >= 0) || !(rec.mortality >= 0)) {
+        throw new Error(`${line} (${cage.name}): feed and mortality cannot be negative`)
       }
-      if (alerts.length) {
-        const admins = (
-          await ctx.db.query('users').collect()
-        ).filter(
-          (u) =>
-            u.companyId === user.companyId &&
-            (u.role === 'admin' || u.role === 'super_admin') &&
-            u.active !== false,
-        )
-        for (const admin of admins) {
-          await ctx.db.insert('notifications', {
-            userId: admin._id,
-            title: 'Mortality alert',
-            message: alerts.join(' · '),
-            type: 'warning',
-            read: false,
-            link: '/daily-entry',
-            companyId: user.companyId,
-          })
+      if (rec.feedAmount > 0 && !rec.feedTypeId) {
+        throw new Error(`${line} (${cage.name}): choose a feed type`)
+      }
+
+      let feedPrice = 0
+      let feedTypeName: string | undefined
+      if (rec.feedTypeId) {
+        const feedType = await ctx.db.get(rec.feedTypeId)
+        if (!feedType || feedType.deletedAt) {
+          throw new Error(`${line} (${cage.name}): feed type not found`)
         }
+        feedPrice = feedType.pricePerKg ?? 0
+        feedTypeName = feedType.name
+      }
+
+      try {
+        const id = await insertDailyRecord(ctx, user, {
+          cageId: rec.cageId,
+          date,
+          feedAmount: rec.feedAmount,
+          feedTypeId: rec.feedTypeId,
+          feedType: feedTypeName,
+          feedPrice,
+          feedCost: rec.feedAmount * feedPrice,
+          mortality: rec.mortality,
+          mortalityCause: rec.mortalityCause,
+          notes: rec.notes?.trim() || undefined,
+          allowNegative,
+          overrideReason,
+        })
+        ids.push(id)
+      } catch (err: any) {
+        throw new Error(`${line} (${cage.name}): ${err?.message || err}`)
       }
     }
-
-    await deductDailyFeed(ctx, user, {
-      dailyRecordId: id,
-      feedTypeId: args.feedTypeId,
-      cageId: args.cageId,
-      feedAmount: args.feedAmount,
-      date: args.date,
-      allowNegative: args.allowNegative,
-      overrideReason: args.overrideReason,
-    })
-
-    await logAudit(ctx, {
-      actionType: 'create',
-      tableName: 'daily_records',
-      recordId: id,
-      newValues: args,
-    })
-    return id
+    return ids
   },
 })
 

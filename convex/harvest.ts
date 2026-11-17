@@ -63,7 +63,17 @@ export const list = query({
     records = await listForCompanyAndLocation(user, records, args.locationId)
     if (args.dateFrom) records = records.filter((r) => r.harvestDate >= args.dateFrom!)
     if (args.dateTo) records = records.filter((r) => r.harvestDate <= args.dateTo!)
-    return records.map(toClientHarvestRecord).sort((a, b) => b.harvest_date.localeCompare(a.harvest_date))
+    const cageIds = [...new Set(records.map((r) => r.cageId))]
+    const cages = new Map(
+      await Promise.all(cageIds.map(async (id) => [id, await ctx.db.get(id)] as const)),
+    )
+    return records
+      .map((r) => {
+        const cage = cages.get(r.cageId)
+        const cageInfo = { name: cage?.name ?? 'Unknown cage', code: cage?.code ?? '' }
+        return { ...toClientHarvestRecord(r), cages: cageInfo, cage: cageInfo }
+      })
+      .sort((a, b) => b.harvest_date.localeCompare(a.harvest_date))
   },
 })
 
@@ -213,8 +223,13 @@ export const createSampling = mutation({
     const harvest = await ctx.db.get(args.harvestId)
     if (!harvest) throw new Error('Harvest record not found')
 
+    const allowed = await listForCompany(user, [harvest])
+    if (!allowed.length) throw new Error('Access denied')
+
     const id = await ctx.db.insert('harvestSampling', {
       ...args,
+      cageId: args.cageId ?? harvest.cageId,
+      locationId: harvest.locationId,
       companyId: (await writeCompanyId(user)) ?? harvest.companyId,
       createdBy: user._id,
     })
@@ -264,6 +279,7 @@ export const createFromSampling = mutation({
       notes: args.notes,
       harvestType: args.harvestType ?? 'complete',
       status: 'completed',
+      locationId: cage.locationId,
       companyId,
       createdBy: user._id,
     })
@@ -278,6 +294,7 @@ export const createFromSampling = mutation({
       sizeBreakdown: args.sizes,
       doc: args.doc,
       abw,
+      locationId: cage.locationId,
       companyId,
       createdBy: user._id,
     })
