@@ -13,4 +13,7 @@ crons.cron(
   {},
 )
 
+// Outbox replay keys older than 30 days (MOBILE-002).
+crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {})
+
 export default crons

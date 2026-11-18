@@ -21,6 +21,7 @@ import type * as fishTransfers from "../fishTransfers.js";
 import type * as harvest from "../harvest.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
+import type * as idempotency from "../idempotency.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_authErrors from "../lib/authErrors.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -62,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   harvest: typeof harvest;
   health: typeof health;
   http: typeof http;
+  idempotency: typeof idempotency;
   inventory: typeof inventory;
   "lib/authErrors": typeof lib_authErrors;
   "lib/authz": typeof lib_authz;

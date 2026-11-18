@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
@@ -208,7 +209,8 @@ async function freshBatchCode(
  * the fish counted and their total weight in grams; ABW is computed here.
  * All lines save or none do. Batch codes are generated when not given.
  */
-export const createBatch = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
   args: {
     date: v.string(),
     records: v.array(

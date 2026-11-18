@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
@@ -246,7 +247,8 @@ export const suggestFcr = query({
   },
 })
 
-export const create = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const create = idempotentMutation('harvest.create', {
   args: {
     cageId: v.id('cages'),
     harvestDate: v.string(),

@@ -695,6 +695,23 @@ const schema = defineSchema({
     .index('by_company_and_date', ['companyId', 'date'])
     .index('by_company_and_withdrawalUntil', ['companyId', 'withdrawalUntil'])
     .index('by_date', ['date']),
+
+  /**
+   * Replay guard for field writes sent from a phone's outbox (MOBILE-002).
+   * A mutation called with `clientMutationId` records its result here; a
+   * retry with the same key (lost response, flaky signal) returns that result
+   * instead of writing again. Rows older than 30 days are pruned daily.
+   */
+  idempotencyKeys: defineTable({
+    userId: v.id('users'),
+    companyId: v.optional(v.id('companies')),
+    key: v.string(),
+    mutation: v.string(),
+    result: v.any(),
+    createdAt: v.number(),
+  })
+    .index('by_user_and_key', ['userId', 'key'])
+    .index('by_createdAt', ['createdAt']),
 })
 
 export default schema
