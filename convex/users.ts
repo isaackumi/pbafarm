@@ -22,6 +22,8 @@ import {
 } from './lib/memberships'
 import { randomToken, sha256Hex } from './lib/tokens'
 import { siteUrl } from './lib/email'
+import { userError } from './lib/errors'
+import { SUPPORTED_UI_LOCALES } from './lib/orgProfile'
 
 /** Invite links stay valid for 7 days. */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -176,6 +178,23 @@ export const current = query({
       hasPhone: !!user.phone,
       maskedPhone: user.phone ? maskPhone(user.phone) : null,
     }
+  },
+})
+
+/**
+ * The caller's interface language (I18N-002). Only languages with a committed
+ * catalog are accepted; null clears it so the organization's default applies.
+ * Allowed before two-step verification so /verify can switch language.
+ */
+export const setLocale = mutation({
+  args: { locale: v.union(v.string(), v.null()) },
+  handler: async (ctx, { locale }) => {
+    const user = await requireAccount(ctx, { allowPendingMfa: true })
+    if (locale !== null && !(SUPPORTED_UI_LOCALES as readonly string[]).includes(locale)) {
+      throw userError('VALIDATION', `Language ${locale} is not available`, { field: 'locale' })
+    }
+    await ctx.db.patch(user._id, { locale: locale ?? undefined })
+    return locale
   },
 })
 

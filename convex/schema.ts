@@ -12,6 +12,11 @@ import {
   runDelivery,
   runStatus,
 } from './automation/validators'
+import { CURRENCY_CODES } from './lib/currencies'
+
+const [cur0, cur1, ...curRest] = CURRENCY_CODES.map((c) => v.literal(c))
+/** Organization currency codes (I18N-003). */
+export const currencyValidator = v.union(cur0, cur1, ...curRest)
 
 /** Production unit kinds (D-003). Rows without unitType are cages. */
 export const unitTypeValidator = v.union(
@@ -205,6 +210,8 @@ const schema = defineSchema({
     activeLocationId: v.optional(v.id('farmLocations')),
     /** Set when the account was anonymized after a deletion request (ENT-005). */
     deletedAt: v.optional(v.number()),
+    /** Interface language ('en' | 'fr', I18N-002); unset = organization default. */
+    locale: v.optional(v.string()),
   })
     .index('email', ['email'])
     // Same name as the Convex Auth users table: phone sign-in looks users up by E.164 phone.
@@ -267,6 +274,33 @@ const schema = defineSchema({
     expiresAt: v.number(),
     attempts: v.number(),
   }).index('by_userId', ['userId']),
+
+  /**
+   * Culture species an organization farms (D-012): growth targets and the
+   * harvest size grades its harvest form offers. `key` matches cages.species.
+   */
+  species: defineTable({
+    companyId: v.id('companies'),
+    key: v.string(),
+    name: v.string(),
+    scientificName: v.optional(v.string()),
+    targetHarvestAbwG: v.optional(v.number()),
+    targetFcr: v.optional(v.number()),
+    /** Expected average daily weight gain in grow-out (g/day). */
+    expectedDailyGrowthG: v.optional(v.number()),
+    /** Bounded (≤ 12, lib/species MAX_HARVEST_GRADES), heaviest first. */
+    harvestGrades: v.array(
+      v.object({
+        key: v.string(),
+        label: v.string(),
+        minG: v.optional(v.number()),
+        maxG: v.optional(v.number()),
+      }),
+    ),
+    active: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  }).index('by_companyId_and_key', ['companyId', 'key']),
 
   /** Physical farm sites under a company (ops + inventory scope). */
   farmLocations: defineTable({
@@ -368,9 +402,8 @@ const schema = defineSchema({
         ),
         locale: v.optional(
           v.object({
-            currency: v.optional(
-              v.union(v.literal('GHS'), v.literal('USD'), v.literal('EUR')),
-            ),
+            /** Any code in lib/currencies (I18N-003); amounts are not converted. */
+            currency: v.optional(currencyValidator),
           }),
         ),
         /** ISO 3166 alpha-2 used to read local phone numbers (INT-001). Default 'GH'. */

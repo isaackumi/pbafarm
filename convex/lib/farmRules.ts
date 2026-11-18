@@ -2,6 +2,7 @@
  * Farm settings defaults + enforcement helpers.
  * Missing company fields resolve to these defaults (today's hardcoded behavior).
  */
+import { DEFAULT_CURRENCY_CODE, isCurrencyCode, type CurrencyCode } from './currencies'
 
 export const DEFAULT_SETTINGS = {
   aiAssistantEnabled: false,
@@ -51,7 +52,7 @@ export const DEFAULT_SETTINGS = {
   },
   /** Display / money defaults for the whole farm. */
   locale: {
-    currency: 'GHS' as 'GHS' | 'USD' | 'EUR',
+    currency: DEFAULT_CURRENCY_CODE as CurrencyCode,
   },
 }
 
@@ -96,7 +97,7 @@ export type EffectiveSettings = {
     requireBatchOnPurchase: boolean
   }
   locale: {
-    currency: 'GHS' | 'USD' | 'EUR'
+    currency: CurrencyCode
   }
   updatedAt?: number
 }
@@ -144,9 +145,9 @@ export function mergeSettings(raw?: any): EffectiveSettings {
         s.feedRules?.defaultLocation || DEFAULT_SETTINGS.feedRules.defaultLocation,
     },
     locale: {
-      currency: (['GHS', 'USD', 'EUR'].includes(s.locale?.currency)
+      currency: isCurrencyCode(s.locale?.currency)
         ? s.locale.currency
-        : DEFAULT_SETTINGS.locale.currency) as 'GHS' | 'USD' | 'EUR',
+        : DEFAULT_SETTINGS.locale.currency,
     },
     updatedAt: s.updatedAt,
   }
@@ -196,8 +197,8 @@ export function validateSettingsForPublish(settings: any) {
     errors.push('Default store location cannot be empty')
   }
   const currency = settings?.locale?.currency
-  if (currency && !['GHS', 'USD', 'EUR'].includes(currency)) {
-    errors.push('Currency must be GHS (Cedis), USD, or EUR')
+  if (currency && !isCurrencyCode(currency)) {
+    errors.push(`Currency ${currency} is not supported`)
   }
 
   if (
