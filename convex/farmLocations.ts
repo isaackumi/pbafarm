@@ -74,6 +74,7 @@ function toClient(loc: any) {
     longitude: loc.longitude ?? null,
     water_body: loc.waterBody ?? null,
     waterBody: loc.waterBody ?? null,
+    businessUnitId: loc.businessUnitId ?? null,
     company_id: loc.companyId,
     updated_at: loc.updatedAt,
     created_at: loc._creationTime,

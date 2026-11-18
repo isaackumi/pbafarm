@@ -58,4 +58,8 @@ crons.cron('verify audit chains', '15 2 * * *', internal.audit.verifyAll, {})
 crons.cron('process data requests', '30 4 * * *', internal.governance.processDueRequests, {})
 crons.cron('prune data exports', '45 4 * * *', internal.governance.pruneExports, {})
 
+// 06:00 UTC: equipment and asset servicing due in 3 days or overdue
+// (INV-012), one bounded job per company.
+crons.cron('equipment maintenance reminders', '0 6 * * *', internal.equipment.maintenanceReminders, {})
+
 export default crons

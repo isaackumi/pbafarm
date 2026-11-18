@@ -20,6 +20,14 @@ export const PERMISSION_GROUPS = {
     'integrations.manage': 'Configure messaging channels, API keys and webhooks',
     'automation.manage': 'Create and run automations; assign tasks',
     'customization.manage': 'Define custom fields, terminology, form layouts, dashboards and navigation',
+    'org.structure.manage': 'Manage business units, regions and subsidiary links (FARM-004, ENT-001)',
+  },
+  Group: {
+    'group.reports.view': 'See consolidated reports of linked subsidiaries (ENT-002)',
+  },
+  Workforce: {
+    'workforce.view': 'See teams, departments and the staff roster (ENT-004)',
+    'workforce.manage': 'Manage teams, departments and staff records; see staff contact details',
   },
   Production: {
     'production.view': 'See units, stockings, records and batches',
@@ -95,6 +103,9 @@ export const ADMIN_ONLY: readonly Permission[] = [
   'integrations.manage',
   'automation.manage',
   'customization.manage',
+  'org.structure.manage',
+  'group.reports.view',
+  'workforce.manage',
   'production.units.delete',
   'production.stock.adjust',
   'production.records.delete',

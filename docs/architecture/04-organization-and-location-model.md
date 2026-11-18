@@ -162,20 +162,38 @@ sizeGrades: defineTable({
 
 Rule resolution order for a harvest or stocking check: species default → company `farmRules`/`stockingRules` override → (later) site override. Today's company settings keep winning because they are applied last, so behaviour does not change for existing tenants.
 
-### 3.6 `businessUnits` (ENT phase, documented so nothing blocks it)
+### 3.6 Regions, business units and subsidiaries (FARM-004, ENT-001, built)
+
+Optional grouping between the organization and its sites. A single-site farm uses none of it; every field below is optional and every screen works without it.
 
 ```ts
 businessUnits: defineTable({
   companyId: v.id('companies'),
   name: v.string(),
   code: v.optional(v.string()),
-  kind: v.union(v.literal('region'), v.literal('subsidiary'), v.literal('business_unit')),
-  parentId: v.optional(v.id('businessUnits')),
+  kind: v.union(v.literal('region'), v.literal('business_unit')),
+  parentId: v.optional(v.id('businessUnits')),   // at most 3 levels, no cycles
+  description: v.optional(v.string()),
   active: v.boolean(),
+  …
 }).index('by_companyId_and_parentId', ['companyId', 'parentId'])
+
+farmLocations.businessUnitId: v.optional(v.id('businessUnits'))
+
+companyLinks: defineTable({
+  companyId: v.id('companies'),        // the parent
+  childCompanyId: v.id('companies'),   // the subsidiary
+  status: 'pending' | 'active' | 'declined' | 'ended',
+  shareReports: v.boolean(),           // set by the subsidiary
+  requestedBy/At, respondedBy/At, endedBy/At, note, updatedAt
+}).index('by_companyId_and_status', …).index('by_childCompanyId_and_status', …)
 ```
 
-Memberships could then scope by business unit (`memberships.businessUnitIds`), resolved to sites at guard time. Not designed further until a customer needs it.
+- **Subsidiaries are separate organizations** (their own tenant, members, data), not a `businessUnits.kind`. A parent links one with `companyLinks.request({ childCode })`; the subsidiary's admins accept or decline (`respond`) and decide whether to share reports (`shareReports`, changeable any time with `setShareReports`). Either side can `end` the link. A subsidiary has at most one active parent; self-links and reverse links (A→B and B→A) are refused; at most 50 links per side.
+- **Functions** (`convex/businessUnits.ts`, `convex/companyLinks.ts`): `businessUnits.list` (`org.view`, with site counts); `create`/`update`/`remove`/`assignSites` and every `companyLinks` call need `org.structure.manage` (admin-only). A unit with child units or sites cannot be removed. `businessUnits.siteReport({ from, to, businessUnitId? })` (`reports.view`) gives per-site KPIs for a unit and its descendants, within the caller's site scope.
+- **Pickers**: `FarmLocationSelect` groups sites by unit (`<optgroup>`) once any site has one, and takes `businessUnitId` to restrict the list. Memberships still scope by site; scoping by unit (`memberships.businessUnitIds`) is not built.
+- **Consolidated reporting** (ENT-002): see doc 03 §4 (`group.reports.view`) and `convex/groupReports.ts`.
+- UI: `/organization-structure` (units, site assignment, subsidiary links), `/reports/regions`, `/group-reports`.
 
 ## 4. Functions
 

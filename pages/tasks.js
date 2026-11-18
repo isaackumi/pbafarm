@@ -31,6 +31,7 @@ function TaskRow({ task, onStatus, busy }) {
         <p className="mt-1 text-sm">
           {open ? <DueLabel dueDate={task.dueDate} /> : <span className="text-muted">Done</span>}
           {task.cageName && <span className="text-muted"> · Cage {task.cageName}</span>}
+          {task.teamName && <span className="text-muted"> · Team {task.teamName}</span>}
         </p>
       </div>
       <div className="flex shrink-0 gap-2">
