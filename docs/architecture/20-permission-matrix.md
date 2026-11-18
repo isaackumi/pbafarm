@@ -115,6 +115,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `dailyRecords.listPage` | `production.view` | yes | yes | yes | yes | yes |
 | `dailyRecords.remove` | `production.records.delete` | yes | yes | no | no | no |
 | `dailyRecords.update` | `production.daily.correct` | yes | yes | yes | no | no |
+| `dashboardLayouts.get` | `reports.view` | yes | yes | yes | yes | yes |
+| `dashboardLayouts.getOrgDefault` | `customization.manage` | yes | yes | no | no | no |
+| `dashboardLayouts.reset` | `reports.view` | yes | yes | yes | yes | yes |
+| `dashboardLayouts.save` | `reports.view` | yes | yes | yes | yes | yes |
 | `emailVerification.requestCode` | `account` | self | self | self | self | self |
 | `emailVerification.status` | `account` | self | self | self | self | self |
 | `emailVerification.verify` | `account` | self | self | self | self | self |
@@ -152,6 +156,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `feed.updatePurchase` | `inventory.purchase.correct` | yes | yes | no | no | no |
 | `feed.updateSupplier` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `feed.voidPurchase` | `inventory.purchase.correct` | yes | yes | no | no | no |
+| `feedingPlans.list` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.rationForCage` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.rations` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.reset` | `org.settings.manage` | yes | yes | no | no | no |
+| `feedingPlans.save` | `org.settings.manage` | yes | yes | no | no | no |
 | `files.attach` | `files.upload` | yes | yes | yes | yes | no |
 | `files.generateUploadUrl` | `files.upload` | yes | yes | yes | yes | no |
 | `files.list` | `org.view` | yes | yes | yes | yes | yes |
@@ -164,6 +173,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `fishTransfers.listFishTransfersPage` | `production.view` | yes | yes | yes | yes | yes |
 | `fishTransfers.rejectFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
 | `fishTransfers.reverseFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
+| `formLayouts.get` | `org.view` | yes | yes | yes | yes | yes |
+| `formLayouts.listSaved` | `customization.manage` | yes | yes | no | no | no |
+| `formLayouts.reset` | `customization.manage` | yes | yes | no | no | no |
+| `formLayouts.save` | `customization.manage` | yes | yes | no | no | no |
 | `governance.cancelRequest` | `account` | self | self | self | self | self |
 | `governance.decideRequest` | `platform` | no | no | no | no | no |
 | `governance.exportDownloadUrl` | `org.data.export` | yes | yes | no | no | no |
