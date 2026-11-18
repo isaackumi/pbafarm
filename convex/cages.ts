@@ -1,6 +1,8 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
+import { cageCycleGrowth } from './lib/growth'
+import { mergeSettings } from './lib/farmRules'
 import { listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 
 const cageStatus = v.union(
@@ -72,8 +74,10 @@ export const list = query({
       } else if (args.filter === 'maintenance') {
         cages = cages.filter((c) => c.status === 'maintenance')
       } else if (args.filter === 'harvest-ready') {
+        const company = user.companyId ? await ctx.db.get(user.companyId) : null
+        const target = mergeSettings(company?.settings).farmRules.targetHarvestAbwG
         cages = cages.filter(
-          (c) => c.status === 'active' && (c.currentWeight ?? c.initialAbw ?? 0) >= 500,
+          (c) => c.status === 'active' && (c.currentWeight ?? 0) >= target,
         )
       }
     }
@@ -104,6 +108,19 @@ export const getActive = query({
       .collect()
     cages = await listForCompanyAndLocation(user, cages, args.locationId)
     return cages.map(toClient)
+  },
+})
+
+/** Growth for the cage's current cycle: ABW, biomass, feed, eFCR, SGR, ADG. */
+export const growth = query({
+  args: { id: v.id('cages') },
+  handler: async (ctx, { id }) => {
+    const user = await requireUser(ctx)
+    const cage = await ctx.db.get(id)
+    if (!cage) return null
+    const allowed = await listForCompany(user, [cage])
+    if (!allowed.length) return null
+    return await cageCycleGrowth(ctx, cage)
   },
 })
 

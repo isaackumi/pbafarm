@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
+import { syncCageAbw } from './lib/growth'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 
 function toClient(r: any) {
@@ -120,6 +121,9 @@ export const create = mutation({
       }
     }
 
+    // The latest sample becomes the cage's current fish weight.
+    await syncCageAbw(ctx, args.cageId)
+
     await logAudit(ctx, {
       actionType: 'create',
       tableName: 'biweeklyRecords',
@@ -165,6 +169,9 @@ export const createMany = mutation({
       })
       ids.push(id)
     }
+    for (const cageId of new Set(records.map((r) => r.cageId))) {
+      await syncCageAbw(ctx, cageId)
+    }
     await logAudit(ctx, {
       actionType: 'create_many',
       tableName: 'biweeklyRecords',
@@ -208,6 +215,7 @@ export const update = mutation({
       updatedBy: user._id,
       updatedAt: Date.now(),
     })
+    await syncCageAbw(ctx, existing.cageId)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'biweeklyRecords',
@@ -239,6 +247,7 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(id)
+    await syncCageAbw(ctx, existing.cageId)
     await logAudit(ctx, {
       actionType: 'delete',
       tableName: 'biweeklyRecords',

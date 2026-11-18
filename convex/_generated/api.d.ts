@@ -25,6 +25,7 @@ import type * as lib_authz from "../lib/authz.js";
 import type * as lib_farmRules from "../lib/farmRules.js";
 import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
+import type * as lib_growth from "../lib/growth.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as notifications from "../notifications.js";
 import type * as reports from "../reports.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   "lib/farmRules": typeof lib_farmRules;
   "lib/feedLedger": typeof lib_feedLedger;
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;
+  "lib/growth": typeof lib_growth;
   "lib/tenancy": typeof lib_tenancy;
   notifications: typeof notifications;
   reports: typeof reports;
