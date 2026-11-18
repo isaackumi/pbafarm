@@ -34,6 +34,7 @@ import { localToday } from '../lib/format'
 import { useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
 import SiteConditions from './SiteConditions'
+import { usePermission } from '../hooks/usePermission'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -87,6 +88,7 @@ function farmHealthScore(metrics) {
 export default function Dashboard() {
   const router = useRouter()
   const { user } = useAuth()
+  const canManageSites = usePermission('org.sites.manage')
   const { activeLocationId, locationArgs } = useLocation()
   const aiStatus = useQuery(api.companies.aiAssistantStatus, user ? {} : 'skip')
   const [cages, setCages] = useState([])
@@ -389,7 +391,7 @@ export default function Dashboard() {
 
       <SiteConditions
         locationId={activeLocationId || undefined}
-        isAdmin={user?.role === 'admin' || user?.role === 'super_admin'}
+        isAdmin={canManageSites}
       />
 
       {/* Recent activity */}

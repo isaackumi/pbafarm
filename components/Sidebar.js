@@ -98,6 +98,8 @@ const MENU_SECTIONS = {
       { title: 'All Cages', path: '/cages', permission: 'production.view', icon: Database, tourId: 'cages' },
       { title: 'Unit board', path: '/units', permission: 'production.view', icon: LayoutGrid },
       { title: 'Groups', path: '/units/groups', permission: 'production.view', icon: List },
+      { title: 'Water quality', path: '/water-quality', permission: 'production.view', icon: Waves },
+      { title: 'Maintenance', path: '/maintenance', permission: 'production.view', icon: Settings },
       { title: 'Analytics', path: '/cages/analytics', permission: 'production.view', icon: ChartColumn },
       { title: 'QR codes', path: '/cages/qr-codes', permission: 'production.view', icon: QrCode },
       { title: 'Settings', path: '/cages/settings', permission: 'production.units.manage', icon: Settings },

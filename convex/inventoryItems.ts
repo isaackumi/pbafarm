@@ -333,27 +333,46 @@ export const issue = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
-    const item = await loadItem(ctx, user, args.itemId)
-    let locationId = args.locationId
-    if (args.cageId) {
-      const cage = await ctx.db.get(args.cageId)
-      assertOwns(user, cage, 'Cage')
-      if (locationId && cage.locationId && cage.locationId !== locationId) {
-        throw new Error('The cage is not at that site')
-      }
-      locationId = locationId ?? cage.locationId
-    }
-    locationId = await siteFor(ctx, user, locationId)
-    return await move(ctx, user, item, {
-      locationId,
-      type: 'issue',
-      quantity: -positive(args.quantity),
-      cageId: args.cageId,
-      date: args.date,
-      notes: args.notes,
-    })
+    return await issueItem(ctx, user, args)
   },
 })
+
+/**
+ * Issue a non-feed item to a unit (or a site). Used by the issue screen and
+ * by maintenance and pond water logs that consume spares or chemicals.
+ */
+export async function issueItem(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: {
+    itemId: Id<'inventoryItems'>
+    quantity: number
+    locationId?: Id<'farmLocations'>
+    cageId?: Id<'cages'>
+    date?: string
+    notes?: string
+  },
+): Promise<Id<'inventoryMovements'>> {
+  const item = await loadItem(ctx, user, args.itemId)
+  let locationId = args.locationId
+  if (args.cageId) {
+    const cage = await ctx.db.get(args.cageId)
+    assertOwns(user, cage, 'Cage')
+    if (locationId && cage.locationId && cage.locationId !== locationId) {
+      throw new Error('The cage is not at that site')
+    }
+    locationId = locationId ?? cage.locationId
+  }
+  locationId = await siteFor(ctx, user, locationId)
+  return await move(ctx, user, item, {
+    locationId,
+    type: 'issue',
+    quantity: -positive(args.quantity),
+    cageId: args.cageId,
+    date: args.date,
+    notes: args.notes,
+  })
+}
 
 /** Stock count correction (signed). Admin only, reason required. */
 export const adjust = mutation({

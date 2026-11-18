@@ -31,6 +31,7 @@ import type * as crons from "../crons.js";
 import type * as dailyRecords from "../dailyRecords.js";
 import type * as emailVerification from "../emailVerification.js";
 import type * as emails from "../emails.js";
+import type * as equipment from "../equipment.js";
 import type * as expenses from "../expenses.js";
 import type * as farmLocations from "../farmLocations.js";
 import type * as feed from "../feed.js";
@@ -89,6 +90,7 @@ import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_tokens from "../lib/tokens.js";
 import type * as lib_traceability from "../lib/traceability.js";
 import type * as lib_unitStatus from "../lib/unitStatus.js";
+import type * as lib_waterQuality from "../lib/waterQuality.js";
 import type * as memberships from "../memberships.js";
 import type * as messaging_channels from "../messaging/channels.js";
 import type * as messaging_deliver from "../messaging/deliver.js";
@@ -126,6 +128,7 @@ import type * as traceability from "../traceability.js";
 import type * as units from "../units.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
+import type * as waterQuality from "../waterQuality.js";
 import type * as weather from "../weather.js";
 import type * as webhooks from "../webhooks.js";
 
@@ -159,6 +162,7 @@ declare const fullApi: ApiFromModules<{
   dailyRecords: typeof dailyRecords;
   emailVerification: typeof emailVerification;
   emails: typeof emails;
+  equipment: typeof equipment;
   expenses: typeof expenses;
   farmLocations: typeof farmLocations;
   feed: typeof feed;
@@ -217,6 +221,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tokens": typeof lib_tokens;
   "lib/traceability": typeof lib_traceability;
   "lib/unitStatus": typeof lib_unitStatus;
+  "lib/waterQuality": typeof lib_waterQuality;
   memberships: typeof memberships;
   "messaging/channels": typeof messaging_channels;
   "messaging/deliver": typeof messaging_deliver;
@@ -254,6 +259,7 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   userAccounts: typeof userAccounts;
   users: typeof users;
+  waterQuality: typeof waterQuality;
   weather: typeof weather;
   webhooks: typeof webhooks;
 }>;

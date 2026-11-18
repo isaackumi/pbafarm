@@ -93,6 +93,12 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `emailVerification.requestCode` | `account` | self | self | self | self | self |
 | `emailVerification.status` | `account` | self | self | self | self | self |
 | `emailVerification.verify` | `account` | self | self | self | self | self |
+| `equipment.create` | `org.sites.manage` | yes | yes | no | no | no |
+| `equipment.due` | `production.view` | yes | yes | yes | yes | yes |
+| `equipment.list` | `production.view` | yes | yes | yes | yes | yes |
+| `equipment.listInspections` | `production.view` | yes | yes | yes | yes | yes |
+| `equipment.logInspection` | `production.daily.record` | yes | yes | yes | yes | no |
+| `equipment.update` | `org.sites.manage` | yes | yes | no | no | no |
 | `expenses.create` | `finance.expenses.record` | yes | yes | yes | no | no |
 | `expenses.createCategory` | `finance.expenses.manage` | yes | yes | no | no | no |
 | `expenses.list` | `finance.view` | yes | yes | yes | no | yes |
@@ -311,6 +317,14 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `users.reactivate` | `org.members.manage` | yes | yes | no | no | no |
 | `users.setPhone` | `org.members.manage` | yes | yes | no | no | no |
 | `users.update` | `org.members.manage` | yes | yes | no | no | no |
+| `waterQuality.latestByUnit` | `production.view` | yes | yes | yes | yes | yes |
+| `waterQuality.listForUnit` | `production.view` | yes | yes | yes | yes | yes |
+| `waterQuality.listWaterEvents` | `production.view` | yes | yes | yes | yes | yes |
+| `waterQuality.logWaterEvent` | `production.daily.record` | yes | yes | yes | yes | no |
+| `waterQuality.record` | `production.daily.record` | yes | yes | yes | yes | no |
+| `waterQuality.remove` | `production.daily.record` | yes | yes | yes | yes | no |
+| `waterQuality.setThreshold` | `org.settings.manage` | yes | yes | no | no | no |
+| `waterQuality.thresholds` | `production.view` | yes | yes | yes | yes | yes |
 | `weather.forSites` | `org.view` | yes | yes | yes | yes | yes |
 | `weather.refreshSite` | `allowlisted` | see test | see test | see test | see test | see test |
 | `webhooks.create` | `allowlisted` | see test | see test | see test | see test | see test |

@@ -538,6 +538,193 @@ const schema = defineSchema({
     .index('by_companyId', ['companyId'])
     .index('by_companyId_and_locationId', ['companyId', 'locationId']),
 
+  /**
+   * Water-quality log (Phase 6, M15). One row per measurement event with a
+   * field per parameter. `source` says where it came from; rows mirrored
+   * from daily/bi-weekly records carry `sourceId` so edits stay in step.
+   * Sensor readings stay in `sensorReadings` and are merged on read.
+   */
+  waterQualityReadings: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    measuredAt: v.number(),
+    /** Site-local calendar day of measuredAt (YYYY-MM-DD). */
+    date: v.string(),
+    dissolvedOxygen: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
+    ph: v.optional(v.number()),
+    ammonia: v.optional(v.number()),
+    nitrite: v.optional(v.number()),
+    nitrate: v.optional(v.number()),
+    salinity: v.optional(v.number()),
+    turbidityNtu: v.optional(v.number()),
+    secchiCm: v.optional(v.number()),
+    alkalinity: v.optional(v.number()),
+    co2: v.optional(v.number()),
+    /** Depth the sample was taken at (m), for stratified cages and ponds. */
+    sampleDepthM: v.optional(v.number()),
+    source: v.union(
+      v.literal('manual'),
+      v.literal('sensor'),
+      v.literal('daily_record'),
+      v.literal('biweekly_record'),
+    ),
+    sourceId: v.optional(v.string()),
+    /** Parameters outside their thresholds when recorded. */
+    breachCount: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+  })
+    .index('by_unitId_and_measuredAt', ['unitId', 'measuredAt'])
+    .index('by_companyId_and_measuredAt', ['companyId', 'measuredAt'])
+    .index('by_sourceId', ['sourceId']),
+
+  /** Organization overrides of the default water-quality thresholds. */
+  waterQualityThresholds: defineTable({
+    companyId: v.id('companies'),
+    /** A unit type, or 'all' for every type. */
+    unitType: v.union(unitTypeValidator, v.literal('all')),
+    parameter: v.string(),
+    min: v.optional(v.number()),
+    max: v.optional(v.number()),
+    updatedBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  }).index('by_companyId', ['companyId']),
+
+  /**
+   * Pond water management and water treatments (POND-002): fill, drain,
+   * exchange, liming, fertilization, treatment, aeration. Products can be
+   * issued from non-feed inventory (Phase 9).
+   */
+  waterManagementLogs: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    date: v.string(),
+    kind: v.union(
+      v.literal('fill'),
+      v.literal('drain'),
+      v.literal('exchange'),
+      v.literal('liming'),
+      v.literal('fertilization'),
+      v.literal('treatment'),
+      v.literal('aeration'),
+      v.literal('other'),
+    ),
+    /** Share of the water replaced (exchange). */
+    exchangePct: v.optional(v.number()),
+    volumeM3: v.optional(v.number()),
+    /** Hours run (aeration) or duration of the event. */
+    hours: v.optional(v.number()),
+    product: v.optional(v.string()),
+    quantity: v.optional(v.number()),
+    quantityUnit: v.optional(v.string()),
+    inventoryItemId: v.optional(v.id('inventoryItems')),
+    inventoryMovementId: v.optional(v.id('inventoryMovements')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    createdAt: v.number(),
+  })
+    .index('by_unitId_and_date', ['unitId', 'date'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
+  /**
+   * Equipment registry (RAS-002): pumps, blowers, aerators, biofilters,
+   * nets, oxygen cones and sensors, attached to a unit or a group.
+   */
+  equipment: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.optional(v.id('cages')),
+    unitGroupId: v.optional(v.id('unitGroups')),
+    name: v.string(),
+    kind: v.union(
+      v.literal('pump'),
+      v.literal('blower'),
+      v.literal('aerator'),
+      v.literal('biofilter'),
+      v.literal('mechanical_filter'),
+      v.literal('uv'),
+      v.literal('oxygen_cone'),
+      v.literal('net'),
+      v.literal('mooring'),
+      v.literal('feeder'),
+      v.literal('generator'),
+      v.literal('sensor'),
+      v.literal('other'),
+    ),
+    status: v.union(
+      v.literal('in_service'),
+      v.literal('standby'),
+      v.literal('faulty'),
+      v.literal('under_maintenance'),
+      v.literal('retired'),
+    ),
+    make: v.optional(v.string()),
+    model: v.optional(v.string()),
+    serialNumber: v.optional(v.string()),
+    /** Free-text rating, e.g. "2.2 kW, 40 m³/h" or "mesh 25 mm". */
+    rating: v.optional(v.string()),
+    installedOn: v.optional(v.string()),
+    maintenanceIntervalDays: v.optional(v.number()),
+    lastMaintainedOn: v.optional(v.string()),
+    nextMaintenanceDue: v.optional(v.string()),
+    /** Spare parts kept for it (non-feed inventory items, Phase 9). */
+    sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_unitId', ['unitId'])
+    .index('by_companyId_and_nextMaintenanceDue', ['companyId', 'nextMaintenanceDue']),
+
+  /**
+   * Net inspections, maintenance, repairs, cleaning and calibration
+   * (CAGE-002, RAS-002), on a unit and/or a piece of equipment.
+   */
+  unitInspections: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.optional(v.id('cages')),
+    equipmentId: v.optional(v.id('equipment')),
+    kind: v.union(
+      v.literal('net_inspection'),
+      v.literal('maintenance'),
+      v.literal('repair'),
+      v.literal('cleaning'),
+      v.literal('calibration'),
+      v.literal('inspection'),
+    ),
+    date: v.string(),
+    result: v.union(v.literal('ok'), v.literal('needs_attention'), v.literal('failed')),
+    /** Checklist answers (at most 30). */
+    checklist: v.optional(
+      v.array(v.object({ item: v.string(), ok: v.boolean(), note: v.optional(v.string()) })),
+    ),
+    findings: v.optional(v.string()),
+    actionsTaken: v.optional(v.string()),
+    nextDueOn: v.optional(v.string()),
+    performedBy: v.optional(v.string()),
+    cost: v.optional(v.number()),
+    /** Spare parts issued from inventory for this job (at most 20). */
+    partsUsed: v.optional(
+      v.array(
+        v.object({
+          itemId: v.id('inventoryItems'),
+          quantity: v.number(),
+          movementId: v.optional(v.id('inventoryMovements')),
+        }),
+      ),
+    ),
+    createdBy: v.optional(v.id('users')),
+    createdAt: v.number(),
+  })
+    .index('by_unitId_and_date', ['unitId', 'date'])
+    .index('by_equipmentId_and_date', ['equipmentId', 'date'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
   feedSuppliers: defineTable({
     name: v.string(),
     abbreviation: v.optional(v.string()),
