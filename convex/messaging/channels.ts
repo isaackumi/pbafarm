@@ -26,6 +26,7 @@ import { rateLimiter, retryAfterText } from '../lib/rateLimits'
 import { adapterCatalog, getAdapter, platformDefaultAvailable } from './providers'
 import type { Credentials } from './providers'
 import { messagingChannel, messagingProvider, type MessagingChannel } from './validators'
+import { assertChannelChangeAllowed } from './policy'
 
 /**
  * Company messaging channels (INT-001, doc 18).
@@ -176,6 +177,7 @@ export const saveChannel = mutation({
       .first()
 
     if (existing) {
+      await assertChannelChangeAllowed(ctx, companyId, existing.channel)
       const providerChanged = existing.provider !== args.provider
       if (providerChanged) {
         // The stored credentials belong to the old provider.
@@ -238,6 +240,7 @@ export const disableChannel = mutation({
   handler: async (ctx, { channelId }) => {
     const { user, companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)
+    await assertChannelChangeAllowed(ctx, companyId, row.channel)
     await ctx.db.patch(channelId, { status: 'disabled', updatedBy: user._id, updatedAt: Date.now() })
     await logAudit(ctx, {
       actionType: 'messaging_channel_disable',
@@ -256,6 +259,7 @@ export const removeChannel = mutation({
   handler: async (ctx, { channelId }) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)
+    await assertChannelChangeAllowed(ctx, companyId, row.channel)
     const secret = await ctx.db
       .query('integrationSecrets')
       .withIndex('by_channel', (q) => q.eq('channelId', channelId))
@@ -292,6 +296,8 @@ export const updatePreferences = mutation({
     if (args.usePlatformDefaultSms !== undefined) messaging.usePlatformDefaultSms = args.usePlatformDefaultSms
     if (args.usePlatformDefaultWhatsapp !== undefined) messaging.usePlatformDefaultWhatsapp = args.usePlatformDefaultWhatsapp
     if (args.usePlatformDefaultEmail !== undefined) messaging.usePlatformDefaultEmail = args.usePlatformDefaultEmail
+    if (args.usePlatformDefaultSms === false) await assertChannelChangeAllowed(ctx, companyId, 'sms', true)
+    if (args.usePlatformDefaultWhatsapp === false) await assertChannelChangeAllowed(ctx, companyId, 'whatsapp', true)
     const next = {
       ...settings,
       messaging,
@@ -343,6 +349,7 @@ export const storeCredentials = internalMutation({
     if (row.provider !== args.provider) {
       throw new Error('The provider changed while saving. Enter the credentials again.')
     }
+    await assertChannelChangeAllowed(ctx, companyId, row.channel)
     const now = Date.now()
     const existing = await ctx.db
       .query('integrationSecrets')

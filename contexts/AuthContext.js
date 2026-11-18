@@ -109,11 +109,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated || !convexUser || typeof window === 'undefined') return
     try {
-      writeCachedUser(window.localStorage, convexUser)
+      writeCachedUser(window.localStorage, convexUser, Date.now(), authToken)
     } catch {
       // storage blocked
     }
-  }, [isAuthenticated, convexUser])
+  }, [isAuthenticated, convexUser, authToken])
 
   const sourceUser = offlineMode
     ? offlineUser
@@ -124,7 +124,8 @@ export function AuthProvider({ children }) {
   /**
    * What this account may do right now, mirroring requireUser on the server:
    * 'ok' | 'USER_INACTIVE' | 'COMPANY_NOT_APPROVED' (both sign out)
-   * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'NO_COMPANY' (only /register-company)
+   * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'MFA_REQUIRED' (only /verify)
+   * | 'NO_COMPANY' (only /register-company)
    */
   const accessState = useMemo(() => accessStateOf(sourceUser), [sourceUser])
 
@@ -143,6 +144,12 @@ export function AuthProvider({ children }) {
       accessState,
       activeLocationId: sourceUser.activeLocationId,
       locationIds: sourceUser.locationIds,
+      // Two-step verification (SEC-007)
+      mfaRequired: sourceUser.mfaRequired === true,
+      mfaChannels: sourceUser.mfaChannels || [],
+      mfaDefaultChannel: sourceUser.mfaDefaultChannel || null,
+      hasPhone: sourceUser.hasPhone === true,
+      maskedPhone: sourceUser.maskedPhone || null,
       offline: offlineMode,
       // Compatibility with former Supabase user shape
       user_metadata: {
@@ -192,6 +199,28 @@ export function AuthProvider({ children }) {
       return { data: { user: true }, error: null }
     } catch (error) {
       return { data: null, error }
+    }
+  }
+
+  /**
+   * Phone sign-in (SEC-006). `send` always resolves the same way whether or
+   * not the number is registered; `verify` resolves { signedIn }.
+   */
+  const sendPhoneCode = async (phone) => {
+    try {
+      await signIn('phone-otp', { flow: 'send', phone })
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
+  const verifyPhoneCode = async (phone, code) => {
+    try {
+      const result = await signIn('phone-otp', { flow: 'verify', phone, code })
+      return { signedIn: result?.signingIn === true, error: null }
+    } catch (error) {
+      return { signedIn: false, error }
     }
   }
 
@@ -314,6 +343,8 @@ export function AuthProvider({ children }) {
     offlineMode,
     signInWithEmail,
     signInWithGoogle,
+    sendPhoneCode,
+    verifyPhoneCode,
     signUpWithEmail,
     signOut,
     updateUserMetadata,
