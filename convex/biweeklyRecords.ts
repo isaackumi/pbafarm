@@ -8,6 +8,7 @@ import { syncCageAbw } from './lib/growth'
 import { tagBiweekly } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
+import { userError } from './lib/errors'
 
 function toClient(r: any) {
   return {
@@ -184,6 +185,122 @@ export const create = mutation({
       newValues: args,
     })
     return id
+  },
+})
+
+/** A batch code unused by this company: BW<yymmdd><4 random digits>. */
+async function freshBatchCode(
+  ctx: MutationCtx,
+  companyId: Id<'companies'> | undefined,
+  date: string,
+  used: Set<string>,
+) {
+  const day = date.replace(/-/g, '').slice(2, 8)
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const code = `BW${day}${Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, '0')}`
+    if (!used.has(code) && !(await batchCodeTaken(ctx, companyId, code))) return code
+  }
+  throw userError('CONFLICT', 'Could not create a batch code. Try again.')
+}
+
+/**
+ * Field sampling for many cages in one save (MOBILE-005). One line per cage:
+ * the fish counted and their total weight in grams; ABW is computed here.
+ * All lines save or none do. Batch codes are generated when not given.
+ */
+export const createBatch = mutation({
+  args: {
+    date: v.string(),
+    records: v.array(
+      v.object({
+        cageId: v.id('cages'),
+        totalFishCount: v.number(),
+        totalWeight: v.number(),
+        batchCode: v.optional(v.string()),
+        dissolvedOxygen: v.optional(v.number()),
+        temperatureC: v.optional(v.number()),
+        secchiCm: v.optional(v.number()),
+      }),
+    ),
+  },
+  handler: async (ctx, { date, records }) => {
+    const user = await requireUser(ctx)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw userError('VALIDATION', 'Choose a valid sampling date')
+    }
+    if (!records.length) throw userError('VALIDATION', 'Add at least one cage line')
+    if (records.length > 100) {
+      throw userError('VALIDATION', 'A batch can hold at most 100 lines')
+    }
+    const companyId = await writeCompanyId(user)
+    const seen = new Set<Id<'cages'>>()
+    const usedCodes = new Set<string>()
+    const ids: Id<'biweeklyRecords'>[] = []
+    const now = Date.now()
+
+    for (const [i, rec] of records.entries()) {
+      const line = `Line ${i + 1}`
+      const cage = await ctx.db.get(rec.cageId)
+      assertOwns(user, cage, `${line}: cage`)
+      if (seen.has(rec.cageId)) {
+        throw userError('VALIDATION', `${line} (${cage.name}): cage appears more than once`)
+      }
+      seen.add(rec.cageId)
+      if (!Number.isInteger(rec.totalFishCount) || rec.totalFishCount <= 0) {
+        throw userError('VALIDATION', `${line} (${cage.name}): fish counted must be a whole number above 0`)
+      }
+      if (!(rec.totalWeight > 0)) {
+        throw userError('VALIDATION', `${line} (${cage.name}): total weight must be above 0`)
+      }
+      let batchCode = rec.batchCode?.trim()
+      if (batchCode) {
+        if (usedCodes.has(batchCode) || (await batchCodeTaken(ctx, companyId, batchCode))) {
+          throw userError('DUPLICATE', `${line} (${cage.name}): batch code ${batchCode} already exists`)
+        }
+      } else {
+        batchCode = await freshBatchCode(ctx, companyId, date, usedCodes)
+      }
+      usedCodes.add(batchCode)
+      const averageBodyWeight =
+        Math.round((rec.totalWeight / rec.totalFishCount) * 100) / 100
+
+      const id = await ctx.db.insert('biweeklyRecords', {
+        cageId: rec.cageId,
+        date,
+        batchCode,
+        averageBodyWeight,
+        totalFishCount: rec.totalFishCount,
+        totalWeight: rec.totalWeight,
+        dissolvedOxygen: rec.dissolvedOxygen,
+        temperatureC: rec.temperatureC,
+        secchiCm: rec.secchiCm,
+        locationId: cage.locationId,
+        companyId,
+        createdBy: user._id,
+        updatedAt: now,
+      })
+      await ctx.db.insert('biweeklySampling', {
+        biweeklyRecordId: id,
+        samplingNumber: 1,
+        fishCount: rec.totalFishCount,
+        totalWeight: rec.totalWeight,
+        averageBodyWeight,
+        createdBy: user._id,
+        updatedAt: now,
+      })
+      ids.push(id)
+    }
+    for (const cageId of seen) {
+      await syncCageAbw(ctx, cageId)
+    }
+    await logAudit(ctx, {
+      actionType: 'create_batch',
+      tableName: 'biweeklyRecords',
+      newValues: { date, count: ids.length },
+    })
+    return ids
   },
 })
 

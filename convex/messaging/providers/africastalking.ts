@@ -1,10 +1,7 @@
-import {
-  isRetryableStatus,
-  networkFailure,
-  providerError,
-  readJson,
-  type ProviderAdapter,
-} from './types'
+import * as Effect from 'effect/Effect'
+import * as Schema from 'effect/Schema'
+import { ProviderRejected, decodeBody, providerPost, runSend } from './send'
+import type { ProviderAdapter } from './types'
 
 /**
  * Africa's Talking SMS.
@@ -22,6 +19,24 @@ import {
  * though the HTTP status is 201. VERIFY against the docs page before go-live.
  */
 const SUCCESS_CODES = new Set([100, 101, 102])
+
+/** 201 body: { SMSMessageData: { Message, Recipients: [{ statusCode, status, messageId }] } }. */
+const AtResponse = Schema.Struct({
+  SMSMessageData: Schema.optional(
+    Schema.Struct({
+      Message: Schema.optional(Schema.Unknown),
+      Recipients: Schema.optional(
+        Schema.Array(
+          Schema.Struct({
+            statusCode: Schema.optional(Schema.Unknown),
+            status: Schema.optional(Schema.Unknown),
+            messageId: Schema.optional(Schema.NullOr(Schema.String)),
+          }),
+        ),
+      ),
+    }),
+  ),
+})
 
 export const africastalking: ProviderAdapter = {
   id: 'africastalking',
@@ -42,15 +57,15 @@ export const africastalking: ProviderAdapter = {
   senderLabel: 'Sender ID or short code (optional)',
   senderRequired: false,
 
-  async send(input, creds, config, fetchImpl = fetch) {
+  send(input, creds, config, fetchImpl) {
     const username = config.settings.username ?? ''
     const host =
       username === 'sandbox' ? 'api.sandbox.africastalking.com' : 'api.africastalking.com'
     const form = new URLSearchParams({ username, to: input.to, message: input.body })
     if (config.senderId) form.set('from', config.senderId)
-    try {
-      const res = await fetchImpl(`https://${host}/version1/messaging`, {
-        method: 'POST',
+    const program = Effect.gen(function* () {
+      const res = yield* providerPost({
+        url: `https://${host}/version1/messaging`,
         headers: {
           apiKey: creds.apiKey,
           Accept: 'application/json',
@@ -58,25 +73,22 @@ export const africastalking: ProviderAdapter = {
         },
         body: form.toString(),
       })
-      const { json, text } = await readJson(res)
-      if (!res.ok) {
-        return { ok: false, error: providerError(res.status, text), retryable: isRetryableStatus(res.status) }
-      }
-      const recipient = json?.SMSMessageData?.Recipients?.[0]
+      const data = decodeBody(AtResponse, res)?.SMSMessageData
+      const recipient = data?.Recipients?.[0]
       if (!recipient) {
-        const message = String(json?.SMSMessageData?.Message ?? text).slice(0, 160)
-        return { ok: false, error: `Not sent: ${message}`, retryable: false }
+        const message = String(data?.Message ?? res.text).slice(0, 160)
+        return yield* Effect.fail(new ProviderRejected({ message: `Not sent: ${message}`, retryable: false }))
       }
       if (!SUCCESS_CODES.has(Number(recipient.statusCode))) {
-        return {
-          ok: false,
-          error: `Africa's Talking ${recipient.statusCode}: ${String(recipient.status ?? '').slice(0, 120)}`,
-          retryable: Number(recipient.statusCode) >= 500,
-        }
+        return yield* Effect.fail(
+          new ProviderRejected({
+            message: `Africa's Talking ${recipient.statusCode}: ${String(recipient.status ?? '').slice(0, 120)}`,
+            retryable: Number(recipient.statusCode) >= 500,
+          }),
+        )
       }
-      return { ok: true, providerMessageId: recipient.messageId ?? undefined }
-    } catch (err) {
-      return networkFailure(err)
-    }
+      return { providerMessageId: recipient.messageId ?? undefined }
+    })
+    return runSend(program, fetchImpl)
   },
 }
