@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { query, mutation, internalMutation } from './_generated/server'
 import { writeCompanyId, logAudit } from './lib/tenancy'
@@ -125,7 +126,7 @@ export const create = internalMutation({
       companyId: targetUser.companyId,
     })
 
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       companyId: targetUser.companyId,
       actionType: 'create',
       tableName: 'notifications',
@@ -167,7 +168,7 @@ export const createBulk = internalMutation({
       notificationIds.push(id)
     }
 
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       actionType: 'create_bulk',
       tableName: 'notifications',
       newValues: { ...args, createdCount: notificationIds.length },

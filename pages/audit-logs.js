@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { PageHeader, Button, Select, StatCard, EmptyState } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
+import AuditChainStatus from '../components/AuditChainStatus'
 
 function AuditLogsContent() {
   const { user } = useAuth()
@@ -61,6 +62,8 @@ function AuditLogsContent() {
           </Button>
         }
       />
+
+      <AuditChainStatus />
 
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:max-w-3xl">
         <Select

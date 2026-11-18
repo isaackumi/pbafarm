@@ -47,4 +47,12 @@ crons.cron('fetch site weather', '0 3 * * *', internal.weather.refreshAll, {})
 // Expired document download tokens (TRACE-005).
 crons.cron('prune file download tokens', '15 4 * * *', internal.files.pruneDownloadTokens, {})
 
+// 02:15 UTC: verify every organization's audit hash chain (TRACE-007).
+crons.cron('verify audit chains', '15 2 * * *', internal.audit.verifyAll, {})
+
+// 04:30 UTC: data governance (ENT-005): finish deletion requests past their
+// grace period, purge audit rows past retention, delete expired exports.
+crons.cron('process data requests', '30 4 * * *', internal.governance.processDueRequests, {})
+crons.cron('prune data exports', '45 4 * * *', internal.governance.pruneExports, {})
+
 export default crons

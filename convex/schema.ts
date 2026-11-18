@@ -162,6 +162,8 @@ const schema = defineSchema({
     /** Assigned farm sites; empty/undefined = all company locations. */
     locationIds: v.optional(v.array(v.id('farmLocations'))),
     activeLocationId: v.optional(v.id('farmLocations')),
+    /** Set when the account was anonymized after a deletion request (ENT-005). */
+    deletedAt: v.optional(v.number()),
   })
     .index('email', ['email'])
     // Same name as the Convex Auth users table: phone sign-in looks users up by E.164 phone.
@@ -1099,11 +1101,108 @@ const schema = defineSchema({
     companyId: v.optional(v.id('companies')),
     /** Set when the change came through the public API (INT-004). */
     apiKeyId: v.optional(v.id('apiKeys')),
+    /**
+     * Hash chain per company (TRACE-007, convex/lib/auditChain.ts): position,
+     * the previous row's hash, write time and SHA-256 over the canonical row.
+     * Absent on rows written before TRACE-007 ("unchained").
+     */
+    seq: v.optional(v.number()),
+    prevHash: v.optional(v.string()),
+    hash: v.optional(v.string()),
+    at: v.optional(v.number()),
   })
     .index('by_user', ['userId'])
     .index('by_table', ['tableName'])
     .index('by_company', ['companyId'])
-    .index('by_company_and_tableName', ['companyId', 'tableName']),
+    .index('by_company_and_tableName', ['companyId', 'tableName'])
+    .index('by_companyId_and_seq', ['companyId', 'seq']),
+
+  /** Last link of each company's audit hash chain (TRACE-007). */
+  auditChainHeads: defineTable({
+    companyId: v.id('companies'),
+    seq: v.number(),
+    hash: v.string(),
+    updatedAt: v.number(),
+  }).index('by_companyId', ['companyId']),
+
+  /** Results of walking a company's audit chain (TRACE-007). */
+  auditChainVerifications: defineTable({
+    companyId: v.id('companies'),
+    status: v.union(v.literal('running'), v.literal('ok'), v.literal('broken')),
+    /** Rows checked so far. */
+    checkedCount: v.number(),
+    /** Last verified link, for continuing in the next batch. */
+    lastSeq: v.number(),
+    lastHash: v.optional(v.string()),
+    brokenAtSeq: v.optional(v.number()),
+    reason: v.optional(v.string()),
+    requestedBy: v.optional(v.id('users')),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  }).index('by_companyId', ['companyId']),
+
+  /** Organization data exports (zip of JSON + CSV per table), kept 7 days. */
+  dataExports: defineTable({
+    companyId: v.id('companies'),
+    requestedBy: v.id('users'),
+    status: v.union(
+      v.literal('queued'),
+      v.literal('running'),
+      v.literal('ready'),
+      v.literal('failed'),
+      v.literal('expired'),
+    ),
+    storageId: v.optional(v.id('_storage')),
+    sizeBytes: v.optional(v.number()),
+    /** Rows written per table. */
+    tableCounts: v.optional(v.record(v.string(), v.number())),
+    /** Tables cut at the per-table row cap. */
+    truncatedTables: v.optional(v.array(v.string())),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_status_and_expiresAt', ['status', 'expiresAt']),
+
+  /**
+   * Organization and account deletion requests (ENT-005). Platform admins
+   * approve; the work happens after a grace period (lib/governance).
+   */
+  dataRequests: defineTable({
+    kind: v.union(v.literal('org_deletion'), v.literal('account_deletion')),
+    companyId: v.optional(v.id('companies')),
+    /** Requester; for an account deletion, the account to delete. */
+    userId: v.id('users'),
+    status: v.union(
+      v.literal('requested'),
+      v.literal('cancelled'),
+      v.literal('approved'),
+      v.literal('rejected'),
+      v.literal('in_progress'),
+      v.literal('completed'),
+    ),
+    reason: v.optional(v.string()),
+    requestedAt: v.number(),
+    decidedBy: v.optional(v.id('users')),
+    decidedAt: v.optional(v.number()),
+    decisionNote: v.optional(v.string()),
+    /** approvedAt + grace; work starts after this. */
+    graceEndsAt: v.optional(v.number()),
+    /** Company status before approval, restored if cancelled in the grace period. */
+    previousCompanyStatus: v.optional(v.string()),
+    completedAt: v.optional(v.number()),
+    /** Rows deleted per table (org deletions). */
+    purgedCounts: v.optional(v.record(v.string(), v.number())),
+    /** Audit rows are kept until then, and purged after. */
+    auditRetainUntil: v.optional(v.number()),
+    auditPurgedAt: v.optional(v.number()),
+  })
+    .index('by_status_and_graceEndsAt', ['status', 'graceEndsAt'])
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_userId_and_status', ['userId', 'status'])
+    .index('by_status_and_auditRetainUntil', ['status', 'auditRetainUntil']),
 
   /**
    * A company's own messaging provider per channel (INT-001, doc 18). Holds

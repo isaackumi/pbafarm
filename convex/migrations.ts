@@ -14,6 +14,7 @@
  * `complete: false` and running the same command again picks up the rest,
  * because each run only touches rows that still have no companyId.
  */
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { internalMutation, internalQuery } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -245,7 +246,7 @@ export const assignUnscopedToCompany = internalMutation({
       userIds: users.map((u) => u._id),
       activeLocationFixed,
     }
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       actionType: 'migration_m1_assign_company',
       tableName: 'companies',
       recordId: companyId,
@@ -320,7 +321,7 @@ export const repairStaleCageWeight = internalMutation({
       if (dryRun) continue
 
       await ctx.db.patch(cage._id, { currentWeight: target, updatedAt: Date.now() })
-      await ctx.db.insert('auditLogs', {
+      await insertAuditLog(ctx, {
         actionType: 'migration',
         tableName: 'cages',
         recordId: cage._id,
@@ -382,7 +383,7 @@ export const tagSamplingPageHarvests = internalMutation({
       if (dryRun) continue
 
       await ctx.db.patch(h._id, { source: 'sampling_page' })
-      await ctx.db.insert('auditLogs', {
+      await insertAuditLog(ctx, {
         actionType: 'migration',
         tableName: 'harvestRecords',
         recordId: h._id,

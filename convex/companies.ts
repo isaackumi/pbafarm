@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
@@ -139,7 +140,7 @@ async function platformAudit(
   companyId: Id<'companies'>,
   row: { actionType: string; newValues?: unknown; locationId?: Id<'farmLocations'> },
 ) {
-  await ctx.db.insert('auditLogs', {
+  await insertAuditLog(ctx, {
     userId: actor._id,
     companyId,
     actionType: row.actionType,

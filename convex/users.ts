@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
@@ -45,7 +46,7 @@ async function insertAudit(
     newValues?: unknown
   },
 ) {
-  await ctx.db.insert('auditLogs', row)
+  await insertAuditLog(ctx, row)
 }
 
 function isActiveAdmin(u: Doc<'users'>) {

@@ -18,6 +18,7 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { applyBrandToDocument } from '../contexts/CompanySettingsContext'
 import OrgProfileCard from '../components/OrgProfileCard'
+import DataPrivacyCard from '../components/DataPrivacyCard'
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'farm', label: 'Farm rules' },
   { id: 'stocking', label: 'Stocking rules' },
   { id: 'feed', label: 'Feed & inventory' },
+  { id: 'data', label: 'Data and privacy' },
 ]
 
 function emptyDraft() {
@@ -442,6 +444,7 @@ function CompanySettings() {
             </FormCard>
           )}
           {tab === 'profile' && <OrgProfileCard />}
+          {tab === 'data' && <DataPrivacyCard />}
 
           {tab === 'branding' && (
             <FormCard title="Branding & theme">

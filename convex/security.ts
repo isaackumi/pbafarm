@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { internalMutation, mutation, query } from './_generated/server'
 import { getAuthSessionId } from '@convex-dev/auth/server'
@@ -131,7 +132,7 @@ export const clearPolicyForCompany = internalMutation({
         },
       },
     })
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       companyId,
       actionType: 'security_policy_cleared',
       tableName: 'companies',

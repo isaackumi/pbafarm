@@ -58,7 +58,8 @@ describe('M1 assignUnscopedToCompany', () => {
     const fromSchema = Object.entries((schema as any).tables)
       .filter(([name, def]: [string, any]) => {
         const field = def.validator?.fields?.companyId
-        return name !== 'users' && field && field.isOptional === 'optional'
+        // dataRequests: an account deletion of a company-less user has no company by design.
+        return name !== 'users' && name !== 'dataRequests' && field && field.isOptional === 'optional'
       })
       .map(([name]) => name)
       .sort()

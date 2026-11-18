@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { getAuthSessionId } from '@convex-dev/auth/server'
 import { action, internalMutation } from './_generated/server'
@@ -196,7 +197,7 @@ export const checkChallenge = internalMutation({
     if (row.purpose === 'enrol' && row.pendingPhone) {
       await assertPhoneFree(ctx, row.pendingPhone, user._id)
       await ctx.db.patch(user._id, { phone: row.pendingPhone, phoneVerificationTime: now })
-      await ctx.db.insert('auditLogs', {
+      await insertAuditLog(ctx, {
         userId: user._id,
         companyId: user.companyId,
         actionType: 'phone_enrol',
@@ -206,7 +207,7 @@ export const checkChallenge = internalMutation({
         newValues: { phone: maskPhone(row.pendingPhone) },
       })
     }
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: user._id,
       companyId: user.companyId,
       actionType: 'mfa_verify',
