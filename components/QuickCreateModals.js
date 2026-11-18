@@ -5,6 +5,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 import FarmLocationSelect from './FarmLocationSelect'
 import FeedTypeField from './FeedTypeField'
 import BagSizeField, {
@@ -23,17 +24,13 @@ function ModalShell({ title, subtitle, onClose, children }) {
 
   useEffect(() => {
     setMounted(true)
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = prevOverflow
-      window.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [])
+  const panelRef = useDialogA11y({ open: mounted, onClose })
 
   if (!mounted) return null
 
@@ -47,6 +44,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-foam-deep bg-surface text-chart-ink shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >

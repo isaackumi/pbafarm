@@ -24,7 +24,29 @@ const SHELL_PAGES = [
   '/dashboard',
   '/login',
 ]
-const SHELL_FILES = ['/manifest.webmanifest', '/icon.svg']
+const SHELL_FILES = [
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+]
+
+// Runtime entries (pages visited, lazy chunks) beyond the precache are capped
+// so a long-lived install does not grow without bound.
+const MAX_ENTRIES = 250
+const KEEP = new Set([...SHELL_PAGES, ...SHELL_FILES])
+
+async function putBounded(key, res) {
+  const cache = await caches.open(VERSION)
+  await cache.put(key, res)
+  const keys = await cache.keys()
+  const extra = keys.length - MAX_ENTRIES
+  if (extra <= 0) return
+  // cache.keys() is in insertion order: drop the oldest non-shell entries.
+  const victims = keys.filter((k) => !KEEP.has(new URL(k.url).pathname)).slice(0, extra)
+  await Promise.all(victims.map((k) => cache.delete(k)))
+}
 
 function cacheable(res) {
   return res && res.ok && res.type === 'basic' && !res.redirected
@@ -60,8 +82,20 @@ async function precache() {
   )
 }
 
+// First install takes over at once. A newer build waits while an older one
+// controls open pages; the page offers "Reload" (components/AppUpdatePrompt.js)
+// and sends SKIP_WAITING, so nobody loses a half-filled form to an update.
 self.addEventListener('install', (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()))
+  event.waitUntil(
+    precache().then(() => {
+      if (!self.registration.active) return self.skipWaiting()
+      return undefined
+    }),
+  )
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
@@ -94,10 +128,7 @@ self.addEventListener('fetch', (event) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            if (cacheable(res)) {
-              const copy = res.clone()
-              caches.open(VERSION).then((c) => c.put(req, copy))
-            }
+            if (cacheable(res)) putBounded(req, res.clone()).catch(() => {})
             return res
           }),
       ),
@@ -110,10 +141,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (cacheable(res)) {
-            const copy = res.clone()
-            caches.open(VERSION).then((c) => c.put(url.pathname, copy))
-          }
+          if (cacheable(res)) putBounded(url.pathname, res.clone()).catch(() => {})
           return res
         })
         .catch(() =>

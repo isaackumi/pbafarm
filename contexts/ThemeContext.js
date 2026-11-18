@@ -2,9 +2,39 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
+export const CONTRAST_KEY = 'pbafarm:contrast'
+
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('light')
   const [systemTheme, setSystemTheme] = useState('light')
+  // Outdoor mode (UX-006): 'high' contrast for bright sun, kept per device.
+  const [contrast, setContrastState] = useState('normal')
+
+  useEffect(() => {
+    let saved = null
+    try {
+      saved = localStorage.getItem(CONTRAST_KEY)
+    } catch {
+      // storage blocked
+    }
+    if (saved === 'high') setContrastState('high')
+  }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (contrast === 'high') document.documentElement.dataset.contrast = 'high'
+    else delete document.documentElement.dataset.contrast
+  }, [contrast])
+
+  const setContrast = (next) => {
+    const value = next === 'high' ? 'high' : 'normal'
+    setContrastState(value)
+    try {
+      localStorage.setItem(CONTRAST_KEY, value)
+    } catch {
+      // storage blocked: applies for this visit only
+    }
+  }
 
   // Check system theme preference
   useEffect(() => {
@@ -59,7 +89,9 @@ export function ThemeProvider({ children }) {
     systemTheme,
     updateTheme,
     toggleTheme,
-    useSystemTheme
+    useSystemTheme,
+    contrast,
+    setContrast,
   }
 
   return (

@@ -423,7 +423,15 @@
     "related": "Related",
     "breadcrumb": "Breadcrumb",
     "loadingApp": "Loading application",
-    "loadingDashboard": "Loading dashboard"
+    "loadingDashboard": "Loading dashboard",
+    "outdoorMode": "Outdoor mode",
+    "outdoorModeHint": "Stronger borders and larger text for bright sun",
+    "on": "On",
+    "off": "Off",
+    "askAdmin": "Ask a farm manager or admin to set this up.",
+    "loadFailed": "This could not load",
+    "tryAgain": "Try again",
+    "loading": "Loading…"
   },
   "species": {
     "title": "Species",
@@ -459,5 +467,52 @@
     "toG": "To (g)",
     "removeGrade": "Remove grade {code}",
     "addGrade": "Add grade"
+  },
+  "csvImport": {
+    "title": {
+      "daily": "Daily CSV",
+      "biweekly": "Bi-weekly CSV"
+    },
+    "header": "Header row: {columns}",
+    "file": "CSV file",
+    "fileHint": "Comma or semicolon separated. Dates as YYYY-MM-DD. Quoted fields may contain commas.",
+    "chooseFile": "Choose a CSV file first.",
+    "upload": "Upload CSV",
+    "uploading": "Uploading…",
+    "failed": "Bulk upload failed",
+    "empty": "The file is empty.",
+    "unclosedQuote": "A quoted field starting on line {line} is never closed.",
+    "summary": "Saved {inserted} of {rows} rows.",
+    "existing": {
+      "one": "{count} row was already on record and was not saved again.",
+      "other": "{count} rows were already on record and were not saved again."
+    },
+    "skippedTitle": {
+      "one": "{count} row skipped:",
+      "other": "{count} rows skipped:"
+    },
+    "lineReason": "Line {line}: {reason}",
+    "reason": {
+      "missingCage": "no cage name",
+      "unknownCage": "no cage named \"{value}\"",
+      "missingDate": "no date",
+      "badDate": "\"{value}\" is not a date (use YYYY-MM-DD)",
+      "futureDate": "{value} is in the future",
+      "badNumber": "{column} must be a number of 0 or more",
+      "badWholeNumber": "{column} must be a whole number of 0 or more",
+      "badPositive": "{column} must be more than 0",
+      "unknownFeedType": "no feed type named \"{value}\"",
+      "feedTypeRequired": "feed_type is required when feed_amount is more than 0",
+      "duplicateRow": "repeats an earlier row ({value})"
+    }
+  },
+  "scan": {
+    "openingCode": "Opening cage {code}…",
+    "unknownCode": "No cage on this farm has the code {code}"
+  },
+  "pwa": {
+    "updateReady": "A new version of PBA Farm is ready.",
+    "reload": "Reload",
+    "later": "Later"
   }
 }

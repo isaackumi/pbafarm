@@ -22,6 +22,8 @@ import {
   Textarea,
 } from './ui'
 import { localToday } from '../lib/format'
+import { getActiveLocationId } from '../lib/locationScope'
+import { readReferenceList, saveReferenceData } from '../lib/referenceCache'
 import { usePermission } from '../hooks/usePermission'
 import CustomFields, { CustomFieldValues, customPayload } from './CustomFields'
 import { useT } from '../lib/i18n/context'
@@ -111,16 +113,12 @@ const HarvestForm = ({ onComplete }) => {
         const { data, error } = await cageService.getActiveCages()
         if (error) throw error
         setCages(data || [])
+        saveReferenceData(user?.id, getActiveLocationId(), { cages: data || [] })
       } catch (error) {
-        // No signal: the cage list daily entry saved on this device last time.
-        let cached = null
-        try {
-          cached = JSON.parse(localStorage.getItem('pbafarm:daily-entry:lookups') || 'null')
-        } catch {
-          cached = null
-        }
-        if (cached?.cages) {
-          setCages(cached.cages)
+        // No signal: the cage list this user last saw on this device.
+        const cached = readReferenceList(user?.id, getActiveLocationId(), 'cages')
+        if (cached) {
+          setCages(cached)
         } else {
           console.error('Error fetching cages:', error)
           showToast(t('harvest.errorFetchingCages'), 'error')
@@ -131,7 +129,7 @@ const HarvestForm = ({ onComplete }) => {
     }
 
     fetchCages()
-  }, [showToast, t])
+  }, [showToast, t, user?.id])
 
   // Work out FCR from the feed logged since stocking once cage, date and weight are known.
   useEffect(() => {

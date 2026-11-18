@@ -12,6 +12,7 @@ import { getActiveLocationId } from '../lib/locationScope'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import { localToday } from '../lib/format'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 const emptyEntry = (overrides = {}) => ({
   feed_type_id: '',
@@ -77,17 +78,13 @@ export default function FeedPurchaseModal({
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !saving) onClose?.()
-    }
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = prev
-      window.removeEventListener('keydown', onKey)
     }
-  }, [open, saving, onClose])
+  }, [open])
+  const panelRef = useDialogA11y({ open, onClose, canClose: !saving })
 
   const handleAddFeedEntry = () => {
     if (
@@ -197,6 +194,7 @@ export default function FeedPurchaseModal({
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
       <div
+        ref={panelRef}
         className="page-card-xl max-h-[90vh] w-full max-w-4xl overflow-y-auto"
         role="dialog"
         aria-modal="true"

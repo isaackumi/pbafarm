@@ -1,8 +1,10 @@
 // components/LogoutConfirmationModal.js
 import React from 'react'
 import { Button } from './ui'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
+  const panelRef = useDialogA11y({ open: isOpen, onClose })
   if (!isOpen) return null
 
   return (
@@ -12,6 +14,7 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
         onClick={onClose}
       ></div>
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="logout-confirm-title"

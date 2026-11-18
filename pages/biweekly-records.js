@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState } from '../components/ui'
+import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { biweeklyRecordService, cageService } from '../lib/databaseService'
 import {
   Search,
@@ -213,10 +213,7 @@ export default function BiweeklyRecords() {
       <ProtectedRoute>
         <Layout title="Bi-weekly records">
           <div className="page-card p-8">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-lake border-t-transparent"></div>
-              <p className="mt-4 text-lg text-muted">Loading bi-weekly records…</p>
-            </div>
+            <LoadingState label="Loading bi-weekly records…" />
           </div>
         </Layout>
       </ProtectedRoute>
@@ -318,27 +315,9 @@ export default function BiweeklyRecords() {
                 </h3>
               </div>
 
-              {error && (
-                <div className="p-6">
-                  <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-signal">Error</h3>
-                        <div className="mt-2 text-sm text-signal">
-                          <p>{error}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {filteredRecords.length === 0 ? (
+              {error ? (
+                <ErrorState message={error} onRetry={fetchData} />
+              ) : filteredRecords.length === 0 ? (
                 <EmptyState
                   title="No bi-weekly records yet"
                   description="Records appear here once you enter a bi-weekly sampling."

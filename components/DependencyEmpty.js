@@ -7,6 +7,9 @@ import {
   QuickCreateStockingModal,
   QuickCreatePurchaseModal,
 } from './QuickCreateModals'
+import { usePermissions } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
+import { CREATE_PERMISSIONS, routePermission } from '../lib/routePermissions'
 
 const CREATE_MODALS = {
   cage: QuickCreateCageModal,
@@ -37,12 +40,19 @@ export default function DependencyEmpty({
   className = '',
 }) {
   const [openKind, setOpenKind] = useState(null)
+  const { can } = usePermissions()
+  const t = useT()
   const Modal = openKind ? CREATE_MODALS[openKind] : null
 
-  const primaryIsCreate = Boolean(createKind && CREATE_MODALS[createKind])
-  const secondaryIsCreate = Boolean(
-    secondaryCreateKind && CREATE_MODALS[secondaryCreateKind],
-  )
+  // UX-007: only offer shortcuts this member can actually use.
+  const canCreate = (kind) => Boolean(kind && CREATE_MODALS[kind] && can(CREATE_PERMISSIONS[kind]))
+  const canOpen = (link) => Boolean(link && can(routePermission(link)))
+  const primaryIsCreate = canCreate(createKind)
+  const secondaryIsCreate = canCreate(secondaryCreateKind)
+  const showPrimaryLink = !primaryIsCreate && canOpen(href) && Boolean(linkLabel)
+  const showSecondaryLink = !secondaryIsCreate && canOpen(secondaryHref) && Boolean(secondaryLabel)
+  const hadAction = Boolean(createKind || secondaryCreateKind || href || secondaryHref)
+  const noAction = hadAction && !primaryIsCreate && !secondaryIsCreate && !showPrimaryLink && !showSecondaryLink
 
   return (
     <>
@@ -51,6 +61,7 @@ export default function DependencyEmpty({
         role="status"
       >
         <p className="leading-snug">{message}</p>
+        {noAction && <p className="mt-1 text-amber-900">{t('ui.askAdmin')}</p>}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           {primaryIsCreate && (
             <button
@@ -66,7 +77,7 @@ export default function DependencyEmpty({
               {createLabel || linkLabel || 'Create'}
             </button>
           )}
-          {!primaryIsCreate && href && linkLabel && (
+          {showPrimaryLink && (
             <Link
               href={href}
               onClick={(e) => e.stopPropagation()}
@@ -91,7 +102,7 @@ export default function DependencyEmpty({
               {secondaryCreateLabel || secondaryLabel || 'Create'}
             </button>
           )}
-          {!secondaryIsCreate && secondaryHref && secondaryLabel && (
+          {showSecondaryLink && (
             <Link
               href={secondaryHref}
               onClick={(e) => e.stopPropagation()}

@@ -34,23 +34,10 @@ const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
 /** Sends entries queued on this device when the connection is back (MOBILE-002). */
 const OutboxSync = dynamic(() => import('../components/OutboxSync'), { ssr: false })
 
-function useServiceWorker() {
-  useEffect(() => {
-    // Production only: a service worker caching dev bundles makes hot reload lie.
-    if (process.env.NODE_ENV !== 'production') return
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
-    // A new URL per build installs a new worker, which drops the old build's cache.
-    const build = window.__NEXT_DATA__?.buildId || 'dev'
-    navigator.serviceWorker
-      .register(`/sw.js?v=${encodeURIComponent(build)}`)
-      .catch((err) => {
-        console.warn('Service worker registration failed', err)
-      })
-  }, [])
-}
+/** Service worker registration and the "new version" prompt (MOBILE-007). */
+const AppUpdatePrompt = dynamic(() => import('../components/AppUpdatePrompt'), { ssr: false })
 
 function AppWrapper({ Component, pageProps, router }) {
-  useServiceWorker()
   return (
     <ConvexAuthProvider client={convex}>
       {/* Self-hosted font faces for the CSS variables in globals.css (MOBILE-007). */}
@@ -74,6 +61,7 @@ function AppWrapper({ Component, pageProps, router }) {
                             <ErrorBoundary resetKey={router.asPath} silent>
                               <AiAssistant />
                             </ErrorBoundary>
+                            <AppUpdatePrompt />
                           </AuthWrapper>
                         </TourProvider>
                       </AnalyticsProvider>

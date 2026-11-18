@@ -42,7 +42,8 @@
   --foreground: var(--chart-ink);
   --input-text: var(--chart-ink);
   --input-bg: #ffffff;
-  --input-border: #d4d4d8;
+  /* 3.4:1 on white, 3.3:1 on --foam (WCAG 1.4.11 non-text contrast, UX-006) */
+  --input-border: #8a8a93;
   --input-focus: var(--lagoon-950);
   --card-border: rgba(24, 24, 27, 0.08);
 
@@ -75,7 +76,8 @@ html[data-theme='dark'] {
   --foreground: #f4f4f5;
   --input-text: #f4f4f5;
   --input-bg: #27272a;
-  --input-border: #52525b;
+  /* 3.6:1 on --input-bg */
+  --input-border: #7c7c85;
   --input-focus: #a1a1aa;
   --card-border: rgba(255, 255, 255, 0.12);
   --kelp: #4ade80;
@@ -101,6 +103,35 @@ html[data-theme='dark'] {
   --seq-5: #5598e7;
   --seq-6: #86b6ef;
   --seq-7: #cde2fb;
+}
+
+/*
+  Outdoor mode (UX-006): for bright sun. Stronger borders on cards and
+  dividers (>= 3:1), darker secondary text and larger helper text. Toggled
+  from the profile menu; stored per device (ThemeContext).
+*/
+html[data-contrast='high'] {
+  --muted: #3f3f46;
+  --input-border: #52525b;
+  --card-border: rgba(24, 24, 27, 0.55);
+}
+html[data-contrast='high'][data-theme='dark'] {
+  --muted: #f4f4f5;
+  --input-border: #a1a1aa;
+  --card-border: rgba(255, 255, 255, 0.5);
+}
+html[data-contrast='high'] :is(.border-foam-deep, .divide-foam-deep > * + *) {
+  border-color: #8a8a93;
+}
+html[data-contrast='high'][data-theme='dark'] :is(.border-foam-deep, .divide-foam-deep > * + *) {
+  border-color: #82828b;
+}
+html[data-contrast='high'] .text-xs {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+html[data-contrast='high'] body {
+  font-weight: 500;
 }
 
 html.dark body,
