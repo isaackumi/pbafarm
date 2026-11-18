@@ -8,6 +8,7 @@ import { Button } from './ui'
 import { convexSiteUrl } from '../lib/apiBase'
 import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
+import { sha256HexOfFile } from '../lib/fileHash'
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.txt,.xls,.xlsx,.doc,.docx'
 const MAX_BYTES = 10 * 1024 * 1024
@@ -41,15 +42,19 @@ export default function Attachments({ entityType, entityId, compact = false }) {
     }
     setBusy(true)
     try {
-      const url = await generateUploadUrl({ entityType, entityId })
-      const res = await fetch(url, {
+      const { uploadUrl, uploadId } = await generateUploadUrl({
+        entityType,
+        entityId,
+        sha256: await sha256HexOfFile(file),
+      })
+      const res = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
       })
       if (!res.ok) throw new Error('Upload failed. Try again.')
       const { storageId } = await res.json()
-      const out = await attach({ entityType, entityId, storageId, name: file.name })
+      const out = await attach({ entityType, entityId, uploadId, storageId, name: file.name })
       if (!out.ok) throw new Error(out.message)
       showToast('success', `${file.name} attached`)
     } catch (err) {

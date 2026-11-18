@@ -3,6 +3,9 @@ import { QueryCtx, MutationCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { getMembership } from './memberships'
+import { actingUser, isMutationCtx, liveActAsSession, markAudited } from './actAs'
+import { insertAuditLog } from './auditChain'
+import { userError } from './errors'
 
 export {
   AUTH_ERROR_CODES,
@@ -22,14 +25,22 @@ type Ctx = QueryCtx | MutationCtx
  *   (pending, rejected, removed or missing); super_admin excepted
  *                                                     → COMPANY_NOT_APPROVED
  * - membership row for the active company not active   → NOT_A_MEMBER
- * - company requires two-step verification and this
+ * - company requires two-step verification, or the user
+ *   turned on an authenticator app (ENT-003), and this
  *   session is not verified (super_admins included)   → MFA_REQUIRED
  *   (users.current, the mfa.* functions and sign-out pass `allowPendingMfa`)
  * Company-less users pass here; the tenancy helpers give them no data.
+ *
+ * Support access (ENT-006, lib/actAs.ts): a super_admin with a live act-as
+ * session gets back a tenant-admin view of themselves in that organization.
+ * A read-only session refuses every mutation (ACT_AS_READ_ONLY) unless the
+ * caller passes `allowActAsReadOnly` (read-like mutations: download links);
+ * a write session audits each mutation once under the organization.
+ * `ignoreActAs` returns the real account (the actAs.* functions).
  */
 export async function requireUser(
   ctx: Ctx,
-  opts: { allowPendingMfa?: boolean } = {},
+  opts: { allowPendingMfa?: boolean; allowActAsReadOnly?: boolean; ignoreActAs?: boolean } = {},
 ): Promise<Doc<'users'>> {
   const userId = await getAuthUserId(ctx)
   if (!userId) {
@@ -60,10 +71,33 @@ export async function requireUser(
     }
     if (
       !opts.allowPendingMfa &&
-      company?.settings?.security?.require2fa === true &&
+      (company?.settings?.security?.require2fa === true || user.totpEnabledAt !== undefined) &&
       !(await sessionMfaVerified(ctx, user._id))
     ) {
       throw new Error(AUTH_ERROR_MESSAGES.MFA_REQUIRED)
+    }
+  }
+  if ((user.role ?? 'user') === 'super_admin' && !opts.ignoreActAs) {
+    const session = await liveActAsSession(ctx, user._id, Date.now())
+    if (session) {
+      if (isMutationCtx(ctx)) {
+        if (!session.allowWrites && !opts.allowActAsReadOnly) {
+          throw userError('FORBIDDEN', 'Support access is read-only. Start a new session with changes allowed.', {
+            reason: 'ACT_AS_READ_ONLY',
+          })
+        }
+        if (session.allowWrites && markAudited(ctx)) {
+          await insertAuditLog(ctx, {
+            userId: user._id,
+            companyId: session.companyId,
+            actAsSessionId: session._id,
+            actionType: 'act_as_mutation',
+            tableName: 'actAsSessions',
+            recordId: session._id,
+          })
+        }
+      }
+      return await actingUser(ctx, user, session)
     }
   }
   return user

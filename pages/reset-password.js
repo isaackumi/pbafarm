@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { Button, Field, Input } from '../components/ui'
+import { useHumanCheck } from '../components/HumanCheck'
 
 /**
  * Password reset by emailed code (SEC-005). Step 1 sends an 8-digit code;
@@ -18,6 +19,7 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const human = useHumanCheck('password_reset')
 
   const sendCode = async (e) => {
     e.preventDefault()
@@ -27,14 +29,18 @@ export default function ResetPassword() {
       const form = new FormData()
       form.set('email', email.trim().toLowerCase())
       form.set('flow', 'reset')
+      const humanTicket = await human.getTicket()
+      if (humanTicket) form.set('humanTicket', humanTicket)
       await signIn('password', form)
       setStep('code')
     } catch (err) {
-      const raw = err?.message || ''
+      const raw = err?.data?.message || err?.message || ''
       setError(
         raw.includes('InvalidAccountId')
           ? 'No account uses that email.'
-          : 'Could not send the code. Try again in a minute.',
+          : /human/i.test(raw)
+            ? raw
+            : 'Could not send the code. Try again in a minute.',
       )
     } finally {
       setBusy(false)
@@ -99,7 +105,8 @@ export default function ResetPassword() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </Field>
-              <Button type="submit" disabled={busy} size="lg" className="w-full">
+              {human.widget}
+              <Button type="submit" disabled={busy || !human.ready} size="lg" className="w-full">
                 {busy ? 'Sending…' : 'Send code'}
               </Button>
             </form>

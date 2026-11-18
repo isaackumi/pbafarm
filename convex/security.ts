@@ -57,14 +57,17 @@ export const updatePolicy = mutation({
     const label = (c: 'sms' | 'whatsapp') => (c === 'sms' ? 'SMS' : 'WhatsApp')
 
     if (next.require2fa) {
-      if (!(await channelAvailable(ctx, companyId, next.twoFactorChannel))) {
+      // An authenticator app (ENT-003) is a way out that needs no channel:
+      // with one, members verify by app and the channel is optional.
+      const adminHasApp = me.totpEnabledAt !== undefined
+      if (!adminHasApp && !(await channelAvailable(ctx, companyId, next.twoFactorChannel))) {
         throw new Error(
-          `Set up and test a ${label(next.twoFactorChannel)} channel in Messaging before requiring two-step verification.`,
+          `Set up and test a ${label(next.twoFactorChannel)} channel in Messaging, or set up an authenticator app on your account, before requiring two-step verification.`,
         )
       }
-      if (!before.require2fa && !me.phone) {
+      if (!before.require2fa && !me.phone && !adminHasApp) {
         throw new Error(
-          'Add your own phone number first (Users page) so you can verify your next sign-in.',
+          'Add your own phone number first (Users page), or set up an authenticator app (Account), so you can verify your next sign-in.',
         )
       }
     }

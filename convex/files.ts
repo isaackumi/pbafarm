@@ -2,10 +2,14 @@
  * Document register (TRACE-005, D-016): files attached to treatments, harvest
  * lots, dispatches, compliance records and biosecurity entries.
  *
- * Upload: the client asks for a Convex upload URL (only after the record is
- * checked to be the caller's company's), uploads the bytes, then calls
- * `attach`, which checks type, size and freshness of the stored file and
- * registers it. Download: `requestDownload` issues a token valid for a few
+ * Upload (CF-004, doc 16 §9.1): `generateUploadUrl` checks the record is the
+ * caller's company's and records an upload binding (`fileUploads`: company,
+ * uploader, record, expiry) next to the Convex upload URL. The client uploads
+ * the bytes, then calls `attach` with the binding id: only the member who
+ * asked for it, in that company, for that record, before expiry, can claim a
+ * storage id with it; the stored bytes must match the SHA-256 declared with
+ * the binding, and a storage id is claimed once. `attach` then checks
+ * type, size and freshness of the stored file and registers it. Download: `requestDownload` issues a token valid for a few
  * minutes to a member of the owning company; GET /files/download?token=…
  * streams the bytes. Storage URLs are never handed out.
  */
@@ -95,13 +99,42 @@ function fileRow(f: Doc<'files'>) {
   }
 }
 
+/** _storage.sha256 is base64 in the runtime (hex in some docs): compare as hex. */
+export function sha256ToHex(value: string): string {
+  const v = value.trim()
+  if (/^[0-9a-f]{64}$/i.test(v)) return v.toLowerCase()
+  try {
+    const bin = atob(v)
+    return Array.from(bin, (c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+  } catch {
+    return ''
+  }
+}
+
 export const generateUploadUrl = mutation({
-  args: { entityType: fileEntityType, entityId: v.string() },
-  returns: v.string(),
-  handler: async (ctx, { entityType, entityId }) => {
+  args: {
+    entityType: fileEntityType,
+    entityId: v.string(),
+    /** SHA-256 (hex) of the file about to be uploaded (lib/fileHash.js). */
+    sha256: v.string(),
+  },
+  returns: v.object({ uploadUrl: v.string(), uploadId: v.id('fileUploads') }),
+  handler: async (ctx, { entityType, entityId, sha256 }) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
-    await ownedEntity(ctx, user, entityType, entityId)
-    return await ctx.storage.generateUploadUrl()
+    const owner = await ownedEntity(ctx, user, entityType, entityId)
+    if (!/^[0-9a-f]{64}$/i.test(sha256)) throw userError('VALIDATION', 'Invalid file checksum')
+    const now = Date.now()
+    const uploadId = await ctx.db.insert('fileUploads', {
+      companyId: owner.companyId,
+      uploadedBy: user._id,
+      entityType,
+      entityId,
+      status: 'pending',
+      sha256: sha256.toLowerCase(),
+      createdAt: now,
+      expiresAt: now + CLAIM_WINDOW_MS,
+    })
+    return { uploadUrl: await ctx.storage.generateUploadUrl(), uploadId }
   },
 })
 
@@ -109,6 +142,8 @@ export const attach = mutation({
   args: {
     entityType: fileEntityType,
     entityId: v.string(),
+    /** The binding generateUploadUrl returned with the upload URL. */
+    uploadId: v.id('fileUploads'),
     storageId: v.id('_storage'),
     name: v.string(),
   },
@@ -116,14 +151,41 @@ export const attach = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, args.entityType, args.entityId)
+    const notFound = () => userError('NOT_FOUND', 'File not found. Upload it again.')
+    // The binding must be this member's, in this company, for this record,
+    // unused and unexpired (CF-004): another company's upload cannot be claimed.
+    const upload = await ctx.db.get(args.uploadId)
+    if (
+      !upload ||
+      upload.status !== 'pending' ||
+      upload.uploadedBy !== user._id ||
+      upload.companyId !== owner.companyId ||
+      upload.entityType !== args.entityType ||
+      upload.entityId !== args.entityId ||
+      upload.expiresAt < Date.now()
+    ) {
+      throw notFound()
+    }
     const taken = await ctx.db
       .query('files')
       .withIndex('by_storageId', (q) => q.eq('storageId', args.storageId))
       .first()
-    if (taken) throw userError('NOT_FOUND', 'File not found. Upload it again.')
+    if (taken) throw notFound()
+    const bound = await ctx.db
+      .query('fileUploads')
+      .withIndex('by_storageId', (q) => q.eq('storageId', args.storageId))
+      .first()
+    if (bound) throw notFound()
     const meta = await ctx.db.system.get(args.storageId)
-    if (!meta || Date.now() - meta._creationTime > CLAIM_WINDOW_MS) {
-      throw userError('NOT_FOUND', 'File not found. Upload it again.')
+    // Uploaded after the binding was made, within its window, with the bytes
+    // the binding was made for (a leaked storage id alone is not enough).
+    if (
+      !meta ||
+      meta._creationTime < upload._creationTime ||
+      meta._creationTime > upload.expiresAt ||
+      sha256ToHex(meta.sha256) !== upload.sha256
+    ) {
+      throw notFound()
     }
     // The type the upload was sent with; older clients may not set one.
     const mime =
@@ -162,6 +224,7 @@ export const attach = mutation({
       uploadedBy: user._id,
       createdAt: Date.now(),
     })
+    await ctx.db.patch(upload._id, { status: 'attached', storageId: args.storageId, fileId: id })
     await logAudit(ctx, {
       actionType: 'file_attached',
       tableName: 'files',
@@ -195,7 +258,7 @@ export const requestDownload = mutation({
   args: { fileId: v.id('files') },
   returns: v.object({ path: v.string(), expiresAt: v.number() }),
   handler: async (ctx, { fileId }) => {
-    const { user } = await requireMember(ctx, { permission: 'org.view' })
+    const { user } = await requireMember(ctx, { permission: 'org.view', allowActAsReadOnly: true })
     const file = await ctx.db.get(fileId)
     // Only members of the owning company (super_admins included only when it is their active company).
     if (!file || !user.companyId || file.companyId !== user.companyId) {
@@ -252,17 +315,27 @@ export const resolveDownload = internalQuery({
   },
 })
 
-/** Delete expired download tokens (daily cron), bounded per run. */
+/**
+ * Delete expired download tokens and upload bindings (daily cron), bounded per
+ * run. Attached bindings past expiry are no longer needed: files.by_storageId
+ * keeps a storage id from being claimed twice.
+ */
 export const pruneDownloadTokens = internalMutation({
   args: {},
   returns: v.object({ deleted: v.number() }),
   handler: async (ctx) => {
+    const now = Date.now()
     const expired = await ctx.db
       .query('fileDownloadTokens')
-      .withIndex('by_expiresAt', (q) => q.lt('expiresAt', Date.now()))
+      .withIndex('by_expiresAt', (q) => q.lt('expiresAt', now))
       .take(1000)
     for (const t of expired) await ctx.db.delete(t._id)
-    return { deleted: expired.length }
+    const uploads = await ctx.db
+      .query('fileUploads')
+      .withIndex('by_expiresAt', (q) => q.lt('expiresAt', now))
+      .take(1000)
+    for (const u of uploads) await ctx.db.delete(u._id)
+    return { deleted: expired.length + uploads.length }
   },
 })
 

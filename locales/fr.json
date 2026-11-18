@@ -142,6 +142,7 @@
       "forgot": "Mot de passe oublié ?",
       "noAccount": "Pas de compte ?",
       "createOne": "Créer un compte",
+      "sso": "Se connecter avec {name}",
       "method": "Méthode de connexion",
       "tabEmail": "E-mail",
       "tabPhone": "Téléphone",
@@ -164,7 +165,10 @@
       "phoneHint": "Par exemple 024 412 3456.",
       "sendBy": "Envoyer le code par",
       "codeSent": "Code envoyé par {channel} au {to}. Il expire dans 10 minutes.",
-      "chooseAnother": "Choisir une autre méthode"
+      "chooseAnother": "Choisir une autre méthode",
+      "useText": "Recevoir plutôt un code par SMS",
+      "useApp": "Utiliser mon application d’authentification",
+      "setUpApp": "Utiliser plutôt une application d’authentification"
     },
     "verifyEmail": {
       "title": "Vérifiez votre e-mail",

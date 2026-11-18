@@ -14,6 +14,7 @@ import {
   isEmpty,
   visibleDefs,
 } from '../convex/lib/customFieldRules'
+import { sha256HexOfFile } from '../lib/fileHash'
 
 /**
  * Custom fields (D-007, CUSTOM-001): one renderer for every entity's forms and
@@ -62,11 +63,15 @@ function PhotoInput({ def, value, onChange, id }) {
     if (file.size > 10 * 1024 * 1024) return showToast('error', 'Photos can be at most 10 MB')
     setBusy(true)
     try {
-      const url = await generateUploadUrl({ entityType: 'customFieldDefs', entityId: def._id })
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': file.type || 'image/jpeg' }, body: file })
+      const { uploadUrl, uploadId } = await generateUploadUrl({
+        entityType: 'customFieldDefs',
+        entityId: def._id,
+        sha256: await sha256HexOfFile(file),
+      })
+      const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type || 'image/jpeg' }, body: file })
       if (!res.ok) throw new Error('Upload failed. Try again.')
       const { storageId } = await res.json()
-      const out = await attach({ entityType: 'customFieldDefs', entityId: def._id, storageId, name: file.name })
+      const out = await attach({ entityType: 'customFieldDefs', entityId: def._id, uploadId, storageId, name: file.name })
       if (!out.ok) throw new Error(out.message)
       onChange(out.id)
     } catch (err) {

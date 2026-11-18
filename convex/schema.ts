@@ -227,6 +227,8 @@ const schema = defineSchema({
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
+    /** Authenticator app confirmed (ENT-003): every new session must pass two-step verification. */
+    totpEnabledAt: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: v.optional(
       v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')),
@@ -1379,6 +1381,8 @@ const schema = defineSchema({
     companyId: v.optional(v.id('companies')),
     /** Set when the change came through the public API (INT-004). */
     apiKeyId: v.optional(v.id('apiKeys')),
+    /** Set when a super-admin wrote this during support access (ENT-006). */
+    actAsSessionId: v.optional(v.id('actAsSessions')),
     /**
      * Hash chain per company (TRACE-007, convex/lib/auditChain.ts): position,
      * the previous row's hash, write time and SHA-256 over the canonical row.
@@ -1557,10 +1561,76 @@ const schema = defineSchema({
     lastSentAt: v.optional(v.number()),
     verifiedAt: v.optional(v.number()),
     /** otp: code entered; phone_login: signed in by phone code; policy_enable: the admin who turned 2FA on, in that session. */
-    method: v.optional(v.union(v.literal('otp'), v.literal('phone_login'), v.literal('policy_enable'))),
+    method: v.optional(
+      v.union(
+        v.literal('otp'),
+        v.literal('phone_login'),
+        v.literal('policy_enable'),
+        v.literal('totp'),
+        v.literal('recovery_code'),
+      ),
+    ),
   })
     .index('by_session', ['sessionId'])
     .index('by_user', ['userId']),
+
+  /**
+   * Authenticator-app factor (ENT-003, TOTP RFC 6238). One row per user;
+   * `confirmedAt` is set once the first code is entered. `lastStep` blocks
+   * replay of a code within its 30 s window.
+   */
+  mfaTotp: defineTable({
+    userId: v.id('users'),
+    /** Base32 secret, AES-GCM encrypted with the deployment key (lib/crypto, AAD `totp:<userId>`). */
+    secretEnc: v.object({ ciphertext: v.string(), iv: v.string(), keyVersion: v.number() }),
+    confirmedAt: v.optional(v.number()),
+    lastStep: v.optional(v.number()),
+    failedAttempts: v.optional(v.number()),
+    lockedUntil: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index('by_userId', ['userId']),
+
+  /** Single-use recovery codes for the TOTP factor, stored as SHA-256 hashes. */
+  mfaRecoveryCodes: defineTable({
+    userId: v.id('users'),
+    codeHash: v.string(),
+    usedAt: v.optional(v.number()),
+  })
+    .index('by_userId', ['userId'])
+    .index('by_userId_and_codeHash', ['userId', 'codeHash']),
+
+  /**
+   * Super-admin support access to one organization (ENT-006, doc 07 §3.8).
+   * While a row is live (no endedAt, expiresAt ahead) requireUser resolves the
+   * admin into `companyId` as a tenant admin; read-only unless allowWrites.
+   * Started, ended and every write are audited under the tenant.
+   */
+  actAsSessions: defineTable({
+    adminUserId: v.id('users'),
+    companyId: v.id('companies'),
+    reason: v.string(),
+    allowWrites: v.boolean(),
+    startedAt: v.number(),
+    expiresAt: v.number(),
+    endedAt: v.optional(v.number()),
+    endedReason: v.optional(v.union(v.literal('stopped'), v.literal('expired'), v.literal('replaced'))),
+  })
+    .index('by_adminUserId_and_endedAt', ['adminUserId', 'endedAt'])
+    .index('by_companyId_and_startedAt', ['companyId', 'startedAt']),
+
+  /**
+   * Single-use proof that a Turnstile challenge passed (CF-003, doc 17 §Stage 2).
+   * Written by humanVerification.verifyHuman, consumed by sign-up, password
+   * reset, company registration and invite acceptance. Stored hashed.
+   */
+  humanTickets: defineTable({
+    ticketHash: v.string(),
+    purpose: v.string(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+  })
+    .index('by_ticketHash', ['ticketHash'])
+    .index('by_expiresAt', ['expiresAt']),
 
   notifications: defineTable({
     userId: v.id('users'),
@@ -2409,6 +2479,29 @@ const schema = defineSchema({
     expiresAt: v.number(),
   })
     .index('by_tokenHash', ['tokenHash'])
+    .index('by_expiresAt', ['expiresAt']),
+
+  /**
+   * Upload binding (CF-004, doc 16 §9.1): files.generateUploadUrl records who
+   * may attach an upload, for which record, until when. files.attach needs the
+   * caller's own pending row and binds the storage id to it, so an upload can
+   * only be claimed by the member (and company) that asked for it.
+   */
+  fileUploads: defineTable({
+    companyId: v.id('companies'),
+    uploadedBy: v.id('users'),
+    entityType: fileEntityType,
+    entityId: v.string(),
+    status: v.union(v.literal('pending'), v.literal('attached')),
+    /** SHA-256 (hex) of the bytes the client said it would upload; must match _storage. */
+    sha256: v.string(),
+    /** Set when attached. */
+    storageId: v.optional(v.id('_storage')),
+    fileId: v.optional(v.id('files')),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_storageId', ['storageId'])
     .index('by_expiresAt', ['expiresAt']),
 
   /** Biosecurity log per site (TRACE-006): visitors, vehicles, disinfection. */

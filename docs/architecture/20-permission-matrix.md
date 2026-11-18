@@ -6,6 +6,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 
 | Function | Permission | Owner | Admin | Manager | Field staff | Viewer |
 |---|---|---|---|---|---|---|
+| `actAs.listForCompany` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.start` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.status` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.stop` | `allowlisted` | see test | see test | see test | see test | see test |
 | `analytics.comparison` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.cycles` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.growth` | `reports.view` | yes | yes | yes | yes | yes |
@@ -201,6 +205,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `health.create` | `production.health.record` | yes | yes | yes | yes | no |
 | `health.list` | `production.view` | yes | yes | yes | yes | yes |
 | `health.remove` | `production.records.delete` | yes | yes | no | no | no |
+| `humanVerification.verify` | `allowlisted` | see test | see test | see test | see test | see test |
 | `inventory.createAdjustment` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.createTransfer` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.listAlerts` | `inventory.view` | yes | yes | yes | yes | yes |
@@ -250,6 +255,13 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `mfa.startChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.verifyChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.confirmEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.disable` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.redeemRecoveryCode` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.regenerateRecoveryCodes` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.status` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.verify` | `allowlisted` | see test | see test | see test | see test | see test |
 | `notificationPreferences.mine` | `account` | self | self | self | self | self |
 | `notificationPreferences.update` | `account` | self | self | self | self | self |
 | `notifications.deleteNotification` | `account` | self | self | self | self | self |

@@ -20,6 +20,7 @@ import { requireUser } from './authz'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { userError } from './errors'
 import { activeMembership } from './memberships'
+import { actAsSessionOf } from './actAs'
 import {
   PERMISSIONS,
   ROLE_TEMPLATES,
@@ -61,6 +62,20 @@ function forbidden(permission: string): never {
 
 /** Permissions and scope of a user in their active organization. */
 export async function memberContext(ctx: Ctx, user: Doc<'users'>): Promise<MemberContext> {
+  // Support access (ENT-006): every permission, every site, this organization only.
+  const actAs = actAsSessionOf(user)
+  if (actAs) {
+    return {
+      user,
+      companyId: actAs.companyId,
+      membership: null,
+      roleKey: 'owner',
+      roleName: 'Platform support',
+      permissions: new Set(PERMISSIONS),
+      siteScope: 'all',
+      isPlatformAdmin: false,
+    }
+  }
   if ((user.role ?? 'user') === 'super_admin') {
     return {
       user,
@@ -134,9 +149,14 @@ export function assertSiteInScope(m: MemberContext, locationId: Id<'farmLocation
  */
 export async function requireMember(
   ctx: Ctx,
-  opts: { permission: Permission; locationId?: Id<'farmLocations'> | null },
+  opts: {
+    permission: Permission
+    locationId?: Id<'farmLocations'> | null
+    /** Read-like mutation allowed during read-only support access (ENT-006). */
+    allowActAsReadOnly?: boolean
+  },
 ): Promise<MemberContext> {
-  const user = await requireUser(ctx)
+  const user = await requireUser(ctx, { allowActAsReadOnly: opts.allowActAsReadOnly })
   const m = await memberContext(ctx, user)
   if (!m.isPlatformAdmin && !m.companyId) {
     throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)

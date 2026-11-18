@@ -22,6 +22,7 @@ import {
 } from './lib/farmRules'
 import { terminologyOf } from './lib/terminology'
 import { can, memberContext, requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
+import { assertHumanTicket } from './humanVerification'
 
 /** A file must be claimed as a logo within this long of its upload. */
 const LOGO_CLAIM_WINDOW_MS = 60 * 60 * 1000
@@ -374,10 +375,13 @@ export const register = mutation({
     contactEmail: v.optional(v.string()),
     contactPhone: v.optional(v.string()),
     abbreviation: v.optional(v.string()),
+    /** Turnstile ticket from humanVerification.verify (CF-003). */
+    humanTicket: v.optional(v.string()),
   },
   returns: v.id('companies'),
   handler: async (ctx, args) => {
     const user = await requireAccount(ctx)
+    await assertHumanTicket(ctx, args.humanTicket, 'register_company')
 
     const name = args.name.trim()
     if (!name) throw new Error('Company name is required')

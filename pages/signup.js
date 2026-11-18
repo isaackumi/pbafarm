@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
 import { Button, Field, Input } from '../components/ui'
 import { safeNextPath } from '../lib/safeRedirect'
+import { useHumanCheck } from '../components/HumanCheck'
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
@@ -13,6 +14,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { signUpWithEmail, user } = useAuth()
+  const human = useHumanCheck('signup')
   const router = useRouter()
 
   if (user) {
@@ -37,7 +39,16 @@ export default function SignUp() {
       return
     }
 
-    const { error: signUpError } = await signUpWithEmail(email, password, fullName)
+    let humanTicket = null
+    try {
+      humanTicket = await human.getTicket()
+    } catch (err) {
+      setError(err?.data?.message || err.message || 'Human check failed')
+      setLoading(false)
+      return
+    }
+
+    const { error: signUpError } = await signUpWithEmail(email, password, fullName, humanTicket)
 
     if (signUpError) {
       setError(signUpError.message || 'Sign up failed')
@@ -116,7 +127,9 @@ export default function SignUp() {
               />
             </Field>
 
-            <Button type="submit" disabled={loading} size="lg" className="w-full">
+            {human.widget}
+
+            <Button type="submit" disabled={loading || !human.ready} size="lg" className="w-full">
               {loading ? 'Creating account…' : 'Create account'}
             </Button>
           </form>

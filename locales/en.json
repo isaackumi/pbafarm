@@ -142,6 +142,7 @@
       "forgot": "Forgot password?",
       "noAccount": "No account?",
       "createOne": "Create one",
+      "sso": "Sign in with {name}",
       "method": "Sign-in method",
       "tabEmail": "Email",
       "tabPhone": "Phone",
@@ -164,7 +165,10 @@
       "phoneHint": "For example 024 412 3456.",
       "sendBy": "Send the code by",
       "codeSent": "Code sent by {channel} to {to}. It expires in 10 minutes.",
-      "chooseAnother": "Choose another way"
+      "chooseAnother": "Choose another way",
+      "useText": "Get a code by text message instead",
+      "useApp": "Use my authenticator app",
+      "setUpApp": "Use an authenticator app instead"
     },
     "verifyEmail": {
       "title": "Verify your email",

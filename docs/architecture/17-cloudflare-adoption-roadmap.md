@@ -65,6 +65,8 @@ Retrieved 2026-11-18; `[Sn]` ids refer to the source table in doc 14. Cost figur
 | Rollback | Feature flag `TURNSTILE_REQUIRED=false` in Convex env: action still runs, mutation skips the check. |
 | Cost | $0 (Free: 20 widgets, unlimited challenges) [S27]. |
 
+Implemented (CF-003): the ticket check wraps the Password provider's `authorize` (the `profile` callback is synchronous); the rollback flag is simply unsetting `TURNSTILE_SECRET_KEY`. Not yet done: the post-failure widget on `pages/login.js` and per-email rate limits.
+
 ### Stage 3 — `files` abstraction on Convex storage (CF-004)
 
 | Item | Detail |
@@ -74,6 +76,8 @@ Retrieved 2026-11-18; `[Sn]` ids refer to the source table in doc 14. Cost figur
 | Exit criteria | Tests: member of company A cannot obtain an upload or download URL for a subject of company B; `pending` uploads older than 24 h are removed; document downloads audited. Measured: average stored photo size, files per org per month (replaces doc 16 assumptions). |
 | Rollback | Additive; feature flags per file feature. |
 | Cost | Inside Convex Pro allowances until ~10–20 orgs, then cents to tens of dollars per month (doc 16 §2). |
+
+Partly implemented (CF-004): the existing `files` table gained an upload binding (`fileUploads`: company, uploader, entity, declared SHA-256, 1 h expiry). `files.attach` accepts a storage id only through the caller's own pending binding, uploaded inside its window, with matching bytes; expired bindings are pruned daily. Logo uploads, compression and thumbnails remain open.
 
 ### Stage 4 — R2 provider (CF-005, CF-006)
 

@@ -30,6 +30,7 @@ export type AuditRow = {
   locationId?: Id<'farmLocations'>
   companyId?: Id<'companies'>
   apiKeyId?: Id<'apiKeys'>
+  actAsSessionId?: Id<'actAsSessions'>
 }
 
 /** JSON with sorted keys and no undefined values: one string per value. */

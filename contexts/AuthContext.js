@@ -150,6 +150,10 @@ export function AuthProvider({ children }) {
       mfaDefaultChannel: sourceUser.mfaDefaultChannel || null,
       hasPhone: sourceUser.hasPhone === true,
       maskedPhone: sourceUser.maskedPhone || null,
+      mfaTotp: sourceUser.mfaTotp === true,
+      // Support access (ENT-006): role/companyId above are the acted-as ones.
+      realRole: sourceUser.realRole || sourceUser.role || 'user',
+      actingAs: sourceUser.actingAs ?? null,
       offline: offlineMode,
       // Compatibility with former Supabase user shape
       user_metadata: {
@@ -188,13 +192,14 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signUpWithEmail = async (email, password, fullName) => {
+  const signUpWithEmail = async (email, password, fullName, humanTicket) => {
     try {
       const formData = new FormData()
       formData.set('email', email)
       formData.set('password', password)
       formData.set('flow', 'signUp')
       if (fullName) formData.set('name', fullName)
+      if (humanTicket) formData.set('humanTicket', humanTicket)
       await signIn('password', formData)
       return { data: { user: true }, error: null }
     } catch (error) {

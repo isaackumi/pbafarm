@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '../../components/ui'
 import { errorMessage } from '../../lib/errorMessage'
+import { useHumanCheck } from '../../components/HumanCheck'
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -24,6 +25,7 @@ export default function AcceptInvite() {
   const accept = useMutation(api.memberships.acceptInvite)
   const decline = useMutation(api.memberships.declineInvite)
   const switchActive = useMutation(api.memberships.switchActive)
+  const human = useHumanCheck('invite_accept')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(null)
@@ -33,7 +35,8 @@ export default function AcceptInvite() {
     setBusy(true)
     setError('')
     try {
-      const r = await accept({ token })
+      const humanTicket = await human.getTicket()
+      const r = await accept(humanTicket ? { token, humanTicket } : { token })
       setDone(r)
     } catch (err) {
       setError(errorMessage(err, 'Could not accept the invite'))
@@ -112,7 +115,8 @@ export default function AcceptInvite() {
   } else {
     body = (
       <>
-        <Button size="lg" className="w-full" disabled={busy} onClick={onAccept}>
+        {human.widget}
+        <Button size="lg" className="w-full" disabled={busy || !human.ready} onClick={onAccept}>
           {busy ? 'Joining…' : `Join ${info.companyName}`}
         </Button>
         <Button size="lg" variant="ghost" className="w-full" disabled={busy} onClick={onDecline}>
