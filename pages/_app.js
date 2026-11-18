@@ -110,6 +110,9 @@ function AuthWrapper({ children }) {
   const { user, initialized, loading, accessState, signOut } = useAuth()
   const router = useRouter()
   const signingOut = useRef(false)
+  // AuthContext's signOut is a new function every render; keep callbacks stable.
+  const signOutRef = useRef(signOut)
+  signOutRef.current = signOut
 
   const publicRoutes = ['/login', '/signup', '/reset-password', '/verify-email']
   const currentPath = router.pathname
@@ -120,13 +123,13 @@ function AuthWrapper({ children }) {
       if (signingOut.current) return
       signingOut.current = true
       try {
-        await signOut()
+        await signOutRef.current()
       } finally {
         signingOut.current = false
         router.replace(`/login?reason=${encodeURIComponent(code)}`)
       }
     },
-    [signOut, router],
+    [router],
   )
 
   // Mutations/actions refused with a sign-out code (USER_INACTIVE, COMPANY_NOT_APPROVED).
