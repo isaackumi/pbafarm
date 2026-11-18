@@ -5,12 +5,12 @@ import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
-import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
+import { applyStockChange, bagsFromKg, binKg, changeBin } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
 import { emitDomainEvent } from './lib/events'
 import { mirrorRecordReading } from './waterQuality'
 import { isBusinessDate, todayFor } from './lib/dates'
-import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
+import { beginStockWrite, refreshHarvestFcrs, shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
 import {
   mergeSettings,
@@ -75,28 +75,29 @@ async function deductDailyFeed(
     date: string
     allowNegative?: boolean
     overrideReason?: string
-    /** Admin reason to record feed already issued to this cage on this date. */
-    feedOverlapReason?: string
-    /** The record already held feed for this cage and date (an edit). */
-    skipOverlapCheck?: boolean
   },
 ) {
   if (!args.feedTypeId || !(args.feedAmount > 0)) return
-
-  if (!args.skipOverlapCheck) {
-    await assertFeedNotAlreadyRecorded(ctx, {
-      user,
-      cageId: args.cageId,
-      date: args.date,
-      writing: 'daily',
-      overrideReason: args.feedOverlapReason,
-    })
-  }
 
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType) throw userError('NOT_FOUND', 'Feed type not found')
 
   const cage = await ctx.db.get(args.cageId)
+  // Consumption (PROD-000h): feed issued to the cage earlier is fed from its
+  // bin first; only the rest comes out of the store now.
+  const inBin = await binKg(ctx, args.cageId, args.feedTypeId)
+  const fromBinKg = Math.round(Math.min(inBin, args.feedAmount) * 1000) / 1000
+  const fromStoreKg = Math.round((args.feedAmount - fromBinKg) * 1000) / 1000
+  const companyId = feedType.companyId ?? user.companyId
+  if (fromBinKg > 0) {
+    await changeBin(ctx, {
+      cageId: args.cageId,
+      feedTypeId: args.feedTypeId,
+      deltaKg: -fromBinKg,
+      companyId,
+      locationId: cage?.locationId,
+    })
+  }
   const bags = bagsFromKg(args.feedAmount, feedType.bagSizeKg)
   const usageId = await ctx.db.insert('feedUsage', {
     feedTypeId: args.feedTypeId,
@@ -106,17 +107,19 @@ async function deductDailyFeed(
     usageDate: args.date,
     source: 'daily',
     dailyRecordId: args.dailyRecordId,
+    ...(fromBinKg > 0 ? { fromBinKg } : {}),
     notes: `Daily record ${args.date}`,
     locationId: cage?.locationId,
-    companyId: feedType.companyId ?? user.companyId,
+    companyId,
     updatedAt: Date.now(),
   })
 
+  if (!(fromStoreKg > 0)) return
   await applyStockChange(ctx, {
     user,
     feedTypeId: args.feedTypeId,
-    deltaKg: -args.feedAmount,
-    bags,
+    deltaKg: -fromStoreKg,
+    bags: bagsFromKg(fromStoreKg, feedType.bagSizeKg),
     transactionType: 'daily_usage',
     referenceId: String(args.dailyRecordId),
     notes: `Daily feed ${args.date} (usage ${usageId})`,
@@ -144,14 +147,29 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
     .query('feedUsage')
     .withIndex('by_cage', (q: any) => q.eq('cageId', dailyRecord.cageId))
     .collect()
+  let linked = false
   for (const u of usage) {
     if (u.source !== 'daily') continue
     const mine = u.dailyRecordId
       ? u.dailyRecordId === dailyRecord._id
       : u.usageDate === dailyRecord.date
-    if (mine) await ctx.db.delete(u._id)
+    if (!mine) continue
+    if (u.dailyRecordId) linked = true
+    // Feed that came from the cage bin goes back to the bin (PROD-000h).
+    if (u.fromBinKg && u.fromBinKg > 0 && u.companyId) {
+      await changeBin(ctx, {
+        cageId: dailyRecord.cageId,
+        feedTypeId: u.feedTypeId,
+        deltaKg: u.fromBinKg,
+        companyId: u.companyId,
+        locationId: u.locationId,
+      })
+    }
+    await ctx.db.delete(u._id)
   }
 
+  // Fed entirely from the cage bin: nothing left the store for this record.
+  if (!prior.length && linked) return
   if (!prior.length) {
     // Legacy record written before the ledger: restore by amount.
     if (dailyRecord.feedTypeId && dailyRecord.feedAmount > 0) {
@@ -351,6 +369,7 @@ type DailyRecordInput = {
   secchiCm?: number
   allowNegative?: boolean
   overrideReason?: string
+  /** Accepted from older clients and ignored (PROD-000h). */
   feedOverlapReason?: string
   custom?: Record<string, unknown>
 }
@@ -390,7 +409,7 @@ export async function insertDailyRecord(
   const {
     allowNegative,
     overrideReason,
-    feedOverlapReason,
+    feedOverlapReason: _ignoredOverlapReason,
     dissolvedOxygen,
     temperatureC,
     secchiCm,
@@ -398,6 +417,7 @@ export async function insertDailyRecord(
     custom: rawCustom,
     ...recordFields
   } = args
+  void _ignoredOverlapReason
   const custom = await validateCustom(ctx, {
     companyId: cage.companyId,
     entity: 'dailyRecords',
@@ -421,13 +441,15 @@ export async function insertDailyRecord(
     createdBy: user._id,
   })
 
+  const write = await beginStockWrite(ctx, [cage], user._id)
   if (args.mortality && cage.currentCount != null) {
     await ctx.db.patch(args.cageId, {
       currentCount: Math.max(0, cage.currentCount - args.mortality),
       updatedAt: Date.now(),
     })
   }
-  await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
+  const inserted = (await ctx.db.get(id))!
+  await write.post((o) => shadowDailyRecord(ctx, inserted, user._id, false, o))
   // Water values also go to the water-quality log (Phase 6 dual-write).
   await mirrorRecordReading(ctx, 'daily_record', id, await ctx.db.get(id))
 
@@ -512,8 +534,8 @@ export async function insertDailyRecord(
     date: args.date,
     allowNegative,
     overrideReason,
-    feedOverlapReason,
   })
+  if (args.feedAmount > 0) await refreshHarvestFcrs(ctx, args.cageId, args.date)
 
   await refreshUnitDays(ctx, [{ unitId: args.cageId, date: args.date }])
   await logAudit(ctx, {
@@ -542,7 +564,7 @@ export const create = mutation({
     secchiCm: v.optional(v.number()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
-    /** Admin only: save feed already issued to this cage on this date. */
+    /** Accepted from older clients and ignored (PROD-000h). */
     feedOverlapReason: v.optional(v.string()),
     custom: v.optional(customValues),
   },
@@ -576,7 +598,7 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
-    /** Admin only: save feed already issued to this cage on this date. */
+    /** Accepted from older clients and ignored (PROD-000h). */
     feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -707,13 +729,13 @@ export const update = mutation({
     }),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
-    /** Admin only: save feed already issued to this cage on this date. */
+    /** Accepted from older clients and ignored (PROD-000h). */
     feedOverlapReason: v.optional(v.string()),
   },
   returns: v.object({ id: v.id('dailyRecords'), warnings: v.array(v.string()) }),
   handler: async (
     ctx,
-    { id, patch: rawPatch, allowNegative, overrideReason, feedOverlapReason },
+    { id, patch: rawPatch, allowNegative, overrideReason },
   ) => {
     const { user } = await requireMember(ctx, { permission: 'production.daily.correct' })
     const existing = await ctx.db.get(id)
@@ -782,6 +804,7 @@ export const update = mutation({
       (patch.date !== undefined && patch.date !== existing.date)
     if (mortalityTouched) {
       const cage = await ctx.db.get(existing.cageId)
+      const write = await beginStockWrite(ctx, [cage], user._id)
       if (cage && cage.currentCount != null) {
         const oldIn = await inCurrentCycle(ctx, cage, existing.date)
         const newIn = await inCurrentCycle(ctx, cage, patch.date ?? existing.date)
@@ -798,7 +821,8 @@ export const update = mutation({
           })
         }
       }
-      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, true)
+      const updated = (await ctx.db.get(id))!
+      await write.post((o) => shadowDailyRecord(ctx, updated, user._id, true, o))
     }
 
     if (feedTouched) {
@@ -815,11 +839,11 @@ export const update = mutation({
         date: updated.date,
         allowNegative,
         overrideReason,
-        feedOverlapReason,
-        // Re-posting feed this record already held for the same cage and day
-        // is not a second recording.
-        skipOverlapCheck: existing.feedAmount > 0 && updated.date === existing.date,
       })
+    }
+    if (feedTouched || mortalityTouched) {
+      const from = [existing.date, patch.date ?? existing.date].sort()[0]
+      await refreshHarvestFcrs(ctx, existing.cageId, from)
     }
 
     await refreshUnitDays(ctx, [
@@ -850,6 +874,7 @@ export const remove = mutation({
     await reverseDailyFeed(ctx, user, existing)
     // Give back the fish this record had counted as dead (current cycle only).
     const warnings: string[] = []
+    const write = await beginStockWrite(ctx, [await ctx.db.get(existing.cageId)], user._id)
     if (existing.mortality > 0) {
       const cage = await ctx.db.get(existing.cageId)
       if (cage && cage.currentCount != null) {
@@ -863,14 +888,12 @@ export const remove = mutation({
         }
       }
     }
-    await shadowReverse(
-      ctx,
-      await ctx.db.get(existing.cageId),
-      { sourceTable: 'dailyRecords', sourceId: id },
-      'Daily record deleted',
-      user._id,
+    const cageNow = await ctx.db.get(existing.cageId)
+    await write.post((o) =>
+      shadowReverse(ctx, cageNow, { sourceTable: 'dailyRecords', sourceId: id }, 'Daily record deleted', user._id, o),
     )
     await ctx.db.delete(id)
+    await refreshHarvestFcrs(ctx, existing.cageId, existing.date)
     await mirrorRecordReading(ctx, 'daily_record', id, null)
     await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {
@@ -900,11 +923,11 @@ export const createMany = mutation({
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
-    /** Admin only: save feed already issued to this cage on this date. */
+    /** Accepted from older clients and ignored (PROD-000h). */
     feedOverlapReason: v.optional(v.string()),
   },
   returns: v.array(v.id('dailyRecords')),
-  handler: async (ctx, { records, allowNegative, overrideReason, feedOverlapReason }) => {
+  handler: async (ctx, { records, allowNegative, overrideReason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.import' })
     // Bulk import takes caller-supplied price and cost (doc 07 V9): production.import.
     const ids = []
@@ -935,13 +958,15 @@ export const createMany = mutation({
         createdBy: user._id,
       })
 
+      const write = await beginStockWrite(ctx, [cage], user._id)
       if (record.mortality && cage.currentCount != null) {
         await ctx.db.patch(record.cageId, {
           currentCount: Math.max(0, cage.currentCount - record.mortality),
           updatedAt: Date.now(),
         })
       }
-      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
+      const inserted = (await ctx.db.get(id))!
+      await write.post((o) => shadowDailyRecord(ctx, inserted, user._id, false, o))
       await mirrorRecordReading(ctx, 'daily_record', id, await ctx.db.get(id))
 
       await deductDailyFeed(ctx, user, {
@@ -952,8 +977,8 @@ export const createMany = mutation({
         date: record.date,
         allowNegative,
         overrideReason,
-        feedOverlapReason,
       })
+      if (record.feedAmount > 0) await refreshHarvestFcrs(ctx, record.cageId, record.date)
       await refreshUnitDays(ctx, [{ unitId: record.cageId, date: record.date }])
       ids.push(id)
     }

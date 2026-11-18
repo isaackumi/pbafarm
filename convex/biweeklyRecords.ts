@@ -6,7 +6,7 @@ import { mirrorRecordReading } from './waterQuality'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { syncCageAbw } from './lib/growth'
-import { tagBiweekly } from './lib/productionDualWrite'
+import { refreshHarvestFcrs, tagBiweekly } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
@@ -195,6 +195,7 @@ export const create = mutation({
     await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
     // The latest sample becomes the cage's current fish weight.
     await syncCageAbw(ctx, args.cageId)
+    await refreshHarvestFcrs(ctx, args.cageId, args.date)
     await refreshUnitDays(ctx, [{ unitId: args.cageId, date: args.date }])
 
     await logAudit(ctx, {
@@ -346,7 +347,9 @@ export async function saveSamplingBatch(
         updatedAt: now,
       })
       ids.push(id)
+      await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
       await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
+      await refreshHarvestFcrs(ctx, rec.cageId, date)
       await refreshUnitDays(ctx, [{ unitId: rec.cageId, date }])
     }
     for (const cageId of seen) {
@@ -423,6 +426,7 @@ export const createMany = mutation({
       })
       await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
       await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
+      await refreshHarvestFcrs(ctx, record.cageId, record.date)
       await refreshUnitDays(ctx, [{ unitId: record.cageId, date: record.date }])
       ids.push(id)
     }
@@ -485,6 +489,8 @@ export const update = mutation({
     })
     await syncCageAbw(ctx, existing.cageId)
     await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+    // A sample's ABW feeds the gain behind each later harvest's FCR (PROD-009).
+    await refreshHarvestFcrs(ctx, existing.cageId, [existing.date, patch.date ?? existing.date].sort()[0])
     await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
     await refreshUnitDays(ctx, [
       { unitId: existing.cageId, date: existing.date },
@@ -523,6 +529,7 @@ export const remove = mutation({
     await ctx.db.delete(id)
     await mirrorRecordReading(ctx, 'biweekly_record', id, null)
     await syncCageAbw(ctx, existing.cageId)
+    await refreshHarvestFcrs(ctx, existing.cageId, existing.date)
     await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {
       actionType: 'delete',

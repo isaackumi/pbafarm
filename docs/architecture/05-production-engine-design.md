@@ -439,6 +439,8 @@ The last rule means counts shown to users do not change on cutover day; history 
 | 5 | Reads switch: `cages.growth` → `occupancyKpis`; reports, dashboard, AI context → rollups + engine KPIs; `harvest.suggestFcr` → computed FCR | engine | Old `cageCycleGrowth` unused |
 | 6 | Legacy fields frozen: `harvestRecords.cageEffect` kept for old rows, never written; `stockingHistory.closedAt` written by the engine as a cache of occupancy close | engine | — |
 
+**Status (PROD-004, 2026-11-18).** Step 4 is done for every writer listed above and for the cage count edit, per cage: `beginStockWrite` (`convex/lib/productionDualWrite.ts`) gives the engine (strict, cache `engine`) the write when the cage's ledger is in step with its count; a cage that predates the ledger (no events, stocking history) stays on dual-write until backfilled. The legacy computation still runs as a parity oracle: on a mismatch the engine's count stands and a `PROD-004 parity` warning is logged and returned. Rollback is the deployment env var `PRODUCTION_ENGINE_CUTOVER=off`. `harvest.suggestFcr` is computed from the ledger (step 5, PROD-009).
+
 ### 9.3 Compatibility shims
 
 - Public function names and argument shapes are unchanged; returns gain fields (`batch_id`, `batch_number`) without removing any.

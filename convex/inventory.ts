@@ -9,7 +9,7 @@ import {
   logAudit,
   writeLocationId,
 } from './lib/tenancy'
-import { applyStockChange, bagsFromKg, siteStock, transferFeedStock } from './lib/feedLedger'
+import { applyStockChange, bagsFromKg, binKg, changeBin, siteStock, transferFeedStock } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
 
@@ -394,6 +394,32 @@ export const reverseTransaction = mutation({
       .first()
     if (priorReversal) {
       throw new Error('This transaction has already been reversed.')
+    }
+
+    // An issue to a cage put the feed in the cage's bin (PROD-000h); it can only
+    // come back to the store if it is still there, not if it has been fed.
+    if (txn.transactionType === 'issue' && txn.referenceId) {
+      const usageId = ctx.db.normalizeId('feedUsage', txn.referenceId)
+      const usage = usageId ? await ctx.db.get(usageId) : null
+      if (usage?.cageId && !usage.deletedAt && usage.source === 'issue') {
+        const inBin = await binKg(ctx, usage.cageId, txn.feedTypeId)
+        const issued = Math.abs(txn.quantityKg)
+        if (inBin + 1e-6 < issued) {
+          throw new Error(
+            `Only ${Math.round(inBin * 10) / 10} kg of this issue is still in the cage bin; the rest has been fed in daily entries. Correct those daily entries first.`,
+          )
+        }
+        const companyId = usage.companyId ?? txn.companyId
+        if (companyId) {
+          await changeBin(ctx, {
+            cageId: usage.cageId,
+            feedTypeId: txn.feedTypeId,
+            deltaKg: -issued,
+            companyId,
+            locationId: usage.locationId,
+          })
+        }
+      }
     }
 
     const { transactionId, previousStock, nextStock } = await applyStockChange(ctx, {

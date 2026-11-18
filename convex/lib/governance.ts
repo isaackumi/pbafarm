@@ -64,6 +64,7 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'feedingPlans', index: 'by_companyId_and_speciesKey' },
   { table: 'feedPurchases', index: 'by_company' },
   { table: 'feedUsage', index: 'by_company' },
+  { table: 'cageFeedBins', index: 'by_company' },
   { table: 'dailyRecords', index: 'by_company' },
   { table: 'biweeklyRecords', index: 'by_company' },
   { table: 'harvestRecords', index: 'by_company' },

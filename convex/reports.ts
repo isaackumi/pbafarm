@@ -319,11 +319,12 @@ export const exportBundle = query({
       totals: {
         daily_records_count: dailyRecords.length,
         biweekly_records_count: biweeklyRecords.length,
-        harvest_records_count: harvestRecords.length,
+        // Pre-harvest samples (PROD-000g) are listed but are not harvests.
+        harvest_records_count: harvestRecords.filter(isRealHarvest).length,
         total_mortality: dailyRecords.reduce((sum, r) => sum + r.mortality, 0),
         total_feed_usage: dailyRecords.reduce((sum, r) => sum + r.feedAmount, 0),
         total_feed_cost: dailyRecords.reduce((sum, r) => sum + r.feedCost, 0),
-        total_harvest_weight: harvestRecords.reduce((sum, r) => sum + r.totalWeight, 0),
+        total_harvest_weight: harvestRecords.filter(isRealHarvest).reduce((sum, r) => sum + r.totalWeight, 0),
         // Same definitions as the dashboard and report (convex/lib/kpi.ts).
         fcr: periodHarvestFcr(harvestRecords.filter(isRealHarvest).map(harvestRow)),
         growth_g_day: periodGrowthPerDay(biweeklyRecords.map(sampleRow)),

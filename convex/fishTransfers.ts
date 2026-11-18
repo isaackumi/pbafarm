@@ -18,7 +18,7 @@ import {
   classifyDestination,
   sourceCagePatchAfterTransfer,
 } from './lib/fishTransferLogic'
-import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
+import { beginStockWrite, shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 import { assertDifferentApprover, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 
@@ -438,9 +438,15 @@ export const createFishTransfer = mutation({
     })
 
     if (status === 'approved') {
-      const transfer = await ctx.db.get(transferId)
+      const transfer = (await ctx.db.get(transferId))!
+      const write = await beginStockWrite(
+        ctx,
+        [await ctx.db.get(transfer.sourceCageId), await ctx.db.get(transfer.destinationCageId)],
+        user._id,
+      )
       await applyFishTransfer(ctx, transfer, { linkedJustCreated: true })
-      await shadowTransfer(ctx, (await ctx.db.get(transferId))!, user._id)
+      const posted = (await ctx.db.get(transferId))!
+      await write.post((o) => shadowTransfer(ctx, posted, user._id, o))
     }
 
     await logAudit(ctx, {
@@ -485,9 +491,15 @@ export const approveFishTransfer = mutation({
       updatedAt: now,
     })
 
-    const updated = await ctx.db.get(id)
+    const updated = (await ctx.db.get(id))!
+    const write = await beginStockWrite(
+      ctx,
+      [await ctx.db.get(updated.sourceCageId), await ctx.db.get(updated.destinationCageId)],
+      user._id,
+    )
     await applyFishTransfer(ctx, updated)
-    await shadowTransfer(ctx, (await ctx.db.get(id))!, user._id)
+    const posted = (await ctx.db.get(id))!
+    await write.post((o) => shadowTransfer(ctx, posted, user._id, o))
 
     await logAudit(ctx, {
       actionType: 'approve',
@@ -613,6 +625,7 @@ export const reverseFishTransfer = mutation({
     }
 
     const now = Date.now()
+    const write = await beginStockWrite(ctx, [source, dest], user._id)
     await ctx.db.patch(source._id, {
       currentCount: (source.currentCount ?? 0) + transfer.quantity,
       ...(source.status === 'empty' || source.status === 'fallow' ? { status: 'active' as const } : {}),
@@ -635,12 +648,15 @@ export const reverseFishTransfer = mutation({
       reversalReason: reason.trim(),
       updatedAt: now,
     })
-    const { warnings } = await shadowReverse(
-      ctx,
-      source,
-      { sourceTable: 'fishTransfers', sourceId: id },
-      `Transfer reversed: ${reason.trim()}`,
-      user._id,
+    const { warnings } = await write.post((o) =>
+      shadowReverse(
+        ctx,
+        source,
+        { sourceTable: 'fishTransfers', sourceId: id },
+        `Transfer reversed: ${reason.trim()}`,
+        user._id,
+        o,
+      ),
     )
     await logAudit(ctx, {
       actionType: 'reverse',

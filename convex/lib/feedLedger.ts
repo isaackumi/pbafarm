@@ -169,90 +169,52 @@ export async function deductInventoryLots(
   return taken
 }
 
-/** Kg issued from the store to this cage on this date and not reversed since. */
-async function issuedKg(ctx: MutationCtx, cageId: Id<'cages'>, date: string) {
-  const usage = await ctx.db
-    .query('feedUsage')
-    .withIndex('by_cage', (q) => q.eq('cageId', cageId))
-    .collect()
-  let kg = 0
-  for (const u of usage) {
-    if (u.deletedAt || u.source !== 'issue' || u.usageDate !== date) continue
-    const txns = await ctx.db
-      .query('feedInventoryTransactions')
-      .withIndex('by_reference', (q) => q.eq('referenceId', String(u._id)))
-      .collect()
-    const issue = txns.find((t) => t.transactionType === 'issue')
-    if (issue) {
-      const reversed = await ctx.db
-        .query('feedInventoryTransactions')
-        .withIndex('by_reference', (q) => q.eq('referenceId', String(issue._id)))
-        .filter((q) => q.eq(q.field('transactionType'), 'reversal'))
-        .first()
-      if (reversed) continue
-    }
-    kg += u.quantity || 0
-  }
-  return kg
+/**
+ * Cage-side feed bins (doc 09 S14, PROD-000h; Q-003 assumed answer
+ * 2026-11-18). A feed issue to a cage moves stock from the store to the
+ * cage's bin: it is not consumption and does not count in FCR. The daily
+ * entry's feed is the consumption: it is taken from the cage's bin of that
+ * feed type first and only the rest from the store, so feed that was issued
+ * and then fed is deducted from the store once.
+ */
+export async function cageBin(ctx: QueryCtx | MutationCtx, cageId: Id<'cages'>, feedTypeId: Id<'feedTypes'>) {
+  return await ctx.db
+    .query('cageFeedBins')
+    .withIndex('by_cage_and_feedTypeId', (q) => q.eq('cageId', cageId).eq('feedTypeId', feedTypeId))
+    .unique()
 }
 
-/**
- * Interim guard for doc 09 S14 (OPEN-QUESTIONS Q-003): a feed issue to a cage
- * and the daily entry's feed for the same cage and date both deduct stock, so
- * recording the same feed both ways counts it twice. Whichever is recorded
- * second is refused unless an admin gives an override reason (for a genuine
- * extra ration), which is written to the audit log.
- */
-export async function assertFeedNotAlreadyRecorded(
+/** Kg of this feed in the cage's bin. */
+export async function binKg(ctx: QueryCtx | MutationCtx, cageId: Id<'cages'>, feedTypeId: Id<'feedTypes'>) {
+  return (await cageBin(ctx, cageId, feedTypeId))?.quantityKg ?? 0
+}
+
+/** Add (positive) or take (negative) kg from a cage's bin; never below zero. */
+export async function changeBin(
   ctx: MutationCtx,
   args: {
-    user: Doc<'users'>
     cageId: Id<'cages'>
-    date: string
-    writing: 'issue' | 'daily'
-    overrideReason?: string
+    feedTypeId: Id<'feedTypes'>
+    deltaKg: number
+    companyId: Id<'companies'>
+    locationId?: Id<'farmLocations'>
   },
 ) {
-  let existingKg = 0
-  if (args.writing === 'daily') {
-    existingKg = await issuedKg(ctx, args.cageId, args.date)
-  } else {
-    const rec = await ctx.db
-      .query('dailyRecords')
-      .withIndex('by_cage_date', (q) => q.eq('cageId', args.cageId).eq('date', args.date))
-      .first()
-    existingKg = rec?.feedAmount ?? 0
-  }
-  if (!(existingKg > 0)) return
-
-  if (args.overrideReason?.trim()) {
-    await assertUserCan(ctx, args.user, 'inventory.adjust')
-    const cage = await ctx.db.get(args.cageId)
-    await logAudit(ctx, {
-      actionType: 'feed_overlap_override',
-      tableName: args.writing === 'daily' ? 'daily_records' : 'feedUsage',
-      recordId: String(args.cageId),
-      newValues: {
-        cageId: args.cageId,
-        date: args.date,
-        writing: args.writing,
-        alreadyRecordedKg: existingKg,
-        reason: args.overrideReason.trim(),
-      },
-      locationId: cage?.locationId,
+  const bin = await cageBin(ctx, args.cageId, args.feedTypeId)
+  const next = Math.round(((bin?.quantityKg ?? 0) + args.deltaKg) * 1000) / 1000
+  if (next < 0) throw userError('INSUFFICIENT_STOCK', 'Not enough feed in the cage bin')
+  if (bin) await ctx.db.patch(bin._id, { quantityKg: next, updatedAt: Date.now() })
+  else if (next > 0) {
+    await ctx.db.insert('cageFeedBins', {
+      companyId: args.companyId,
+      locationId: args.locationId,
+      cageId: args.cageId,
+      feedTypeId: args.feedTypeId,
+      quantityKg: next,
+      updatedAt: Date.now(),
     })
-    return
   }
-
-  const cage = await ctx.db.get(args.cageId)
-  const name = cage?.name ?? 'this cage'
-  const kg = round1(existingKg)
-  throw userError(
-    'CONFLICT',
-    args.writing === 'daily'
-      ? `Feed for cage ${name} on ${args.date} was already issued from the store (${kg} kg). Recording it in the daily entry as well would deduct the stock twice. Enter 0 feed here, or ask an admin to save it with an override reason.`
-      : `Feed for cage ${name} on ${args.date} is already recorded in the daily entry (${kg} kg). Issuing it as well would deduct the stock twice. Correct the daily entry instead, or ask an admin to issue it with an override reason.`,
-  )
+  return next
 }
 
 /**

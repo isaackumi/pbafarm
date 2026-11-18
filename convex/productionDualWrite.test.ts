@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
@@ -85,9 +85,18 @@ async function setup() {
   return { t, as, ids, state, expectInStep, stock }
 }
 
-describe('dual-write keeps the ledger in step with the cage count', () => {
-  test('through stocking, top-up, deaths, transfers, harvests, edits and deletes', async () => {
-    const { t, as, ids, expectInStep, stock } = await setup()
+/**
+ * A whole cycle through every stock writer. Returns the counts after each
+ * step so the cutover run can be compared with the legacy run.
+ */
+async function fullCycle() {
+    const { t, as, ids, expectInStep: inStep, stock } = await setup()
+    const trail: unknown[] = []
+    const expectInStep = async () => {
+      const st = await inStep()
+      trail.push(st)
+      return st
+    }
 
     const stockingA = await stock(ids.A, 10_000, '2026-05-01')
     let s = await expectInStep()
@@ -199,6 +208,67 @@ describe('dual-write keeps the ledger in step with the cage count', () => {
     await as.mutation(api.cages.update, { id: ids.A, patch: { currentCount: 6550 } })
     s = await expectInStep()
     expect(s.A.cage).toBe(6550)
+    return { t, ids, trail }
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.restoreAllMocks()
+})
+
+describe('dual-write keeps the ledger in step with the cage count', () => {
+  test('through stocking, top-up, deaths, transfers, harvests, edits and deletes', async () => {
+    await fullCycle()
+  })
+
+  test('cutover (PROD-004): the engine-written counts equal the legacy computation at every step', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const engineRun = await fullCycle()
+    expect(warn.mock.calls.filter((c) => String(c[0]).startsWith('PROD-004'))).toEqual([])
+    vi.stubEnv('PRODUCTION_ENGINE_CUTOVER', 'off')
+    const legacyRun = await fullCycle()
+    expect(engineRun.trail).toEqual(legacyRun.trail)
+  })
+
+  test('cutover: a cage whose count predates the ledger stays on the legacy count', async () => {
+    const { t, as, ids } = await setup()
+    // Stocked before the ledger existed: a count and a stocking, no events.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(ids.A, { currentCount: 800, status: 'active', stockingDate: '2026-01-01' })
+      await ctx.db.insert('stockingHistory', {
+        cageId: ids.A,
+        batchNumber: 'OLD-1',
+        stockingDate: '2026-01-01',
+        fishCount: 800,
+        initialAbw: 10,
+        initialBiomass: 8,
+        status: 'approved',
+        companyId: ids.companyId,
+      })
+    })
+    const [d] = await as.mutation(api.dailyRecords.createBatch, {
+      date: '2026-02-01',
+      records: [{ cageId: ids.A, feedAmount: 0, mortality: 30 }],
+    })
+    expect((await t.run((ctx) => ctx.db.get(ids.A)))!.currentCount).toBe(770)
+    await as.mutation(api.dailyRecords.remove, { id: d })
+    expect((await t.run((ctx) => ctx.db.get(ids.A)))!.currentCount).toBe(800)
+  })
+
+  test('cutover: the engine refuses a change that would take a cage below zero fish', async () => {
+    const { t, as, ids, stock } = await setup()
+    await stock(ids.A, 1000, '2026-03-01')
+    await expect(
+      as.mutation(api.harvest.create, {
+        cageId: ids.A,
+        harvestDate: '2026-04-01',
+        averageBodyWeight: 300,
+        totalWeight: 360,
+        estimatedCount: 1200,
+        harvestType: 'partial',
+      }),
+    ).rejects.toThrow()
+    expect((await t.run((ctx) => ctx.db.get(ids.A)))!.currentCount).toBe(1000)
   })
 
   test('an old daily record edited after harvest and restock changes neither cycle’s live count', async () => {
@@ -395,5 +465,58 @@ describe('M6/M7 backfill and reconciliation', () => {
     )
     expect(notes).toHaveLength(1)
     expect(notes[0].message).toMatch(/1 cage differs from the stock ledger: A \(cage 8,930, ledger 0\)/)
+  })
+})
+
+describe('harvest FCR is computed from the ledger and kept current (PROD-009)', () => {
+  test('previewed in the form, stored on save, recomputed when feed or stocking change', async () => {
+    const { t, as, ids, stock } = await setup()
+    // 1,000 fish at 10 g: 10 kg stocked.
+    const stockingId = await stock(ids.A, 1000, '2026-03-01')
+    const [d] = await as.mutation(api.dailyRecords.createBatch, {
+      date: '2026-03-10',
+      records: [{ cageId: ids.A, feedAmount: 290, feedTypeId: ids.feedTypeId, mortality: 0 }],
+    })
+    const harvest = { cageId: ids.A, harvestDate: '2026-04-01', totalWeight: 300, estimatedCount: 1000 }
+
+    // The form shows the computed value with its inputs before saving.
+    const preview = await as.query(api.harvest.suggestFcr, { ...harvest, harvestType: 'complete' })
+    expect(preview).toMatchObject({ source: 'ledger', method: 'complete', feed_kg: 290, gain_kg: 290, fcr: 1 })
+
+    // A typed FCR is not needed; the stored value comes from the ledger.
+    const { id } = await as.mutation(api.harvest.create, {
+      ...harvest,
+      averageBodyWeight: 300,
+      harvestType: 'complete',
+    })
+    const fcr = async () => (await t.run((ctx) => ctx.db.get(id)))!.fcr
+    expect(await fcr()).toBe(1)
+
+    await as.mutation(api.dailyRecords.update, { id: d, patch: { feedAmount: 580 } })
+    expect(await fcr()).toBe(2)
+
+    // 1,000 fish at 60 g: 60 kg stocked, so 240 kg gained.
+    await as.mutation(api.stocking.updateStocking, { id: stockingId, patch: { initialAbw: 60, initialBiomass: 60 } })
+    expect(await fcr()).toBeCloseTo(580 / 240, 2)
+
+    await as.mutation(api.dailyRecords.remove, { id: d })
+    expect(await fcr()).toBe(0)
+  })
+
+  test('suggestFcr says nothing about another company’s cage', async () => {
+    const { t, ids } = await setup()
+    const outsider = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert('companies', {
+        name: 'Other',
+        code: 'OTH',
+        status: 'approved',
+        createdAt: Date.now(),
+      })
+      return await ctx.db.insert('users', { email: 'o@x.com', role: 'admin', companyId })
+    })
+    const other = t.withIdentity({ subject: `${outsider}|s` })
+    expect(
+      await other.query(api.harvest.suggestFcr, { cageId: ids.A, harvestDate: '2026-04-01', totalWeight: 300 }),
+    ).toBeNull()
   })
 })
