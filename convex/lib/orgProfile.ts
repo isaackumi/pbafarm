@@ -12,6 +12,9 @@ export const ORG_PROFILE_DEFAULTS = {
   defaultLocale: 'en-GH',
 }
 
+/** UI languages with a committed catalog in /locales (I18N-002). */
+export const SUPPORTED_UI_LOCALES = ['en', 'fr'] as const
+
 export type OrgProfile = typeof ORG_PROFILE_DEFAULTS
 
 export function orgProfile(

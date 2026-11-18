@@ -7,6 +7,7 @@ import { requireUser, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { retimeScheduleRules } from './automation/engine'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
+import { isCurrencyCode } from './lib/currencies'
 import { activateMembership, upsertMembership } from './lib/memberships'
 import {
   isValidCountry,
@@ -320,9 +321,9 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         false,
     },
     locale: {
-      currency: (['GHS', 'USD', 'EUR'].includes(locale.currency)
+      currency: isCurrencyCode(locale.currency)
         ? locale.currency
-        : DEFAULT_SETTINGS.locale.currency) as 'GHS' | 'USD' | 'EUR',
+        : DEFAULT_SETTINGS.locale.currency,
     },
   }
 }

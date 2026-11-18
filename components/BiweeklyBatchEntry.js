@@ -14,6 +14,7 @@ import DependencyEmpty from './DependencyEmpty'
 import QrScanner from './QrScanner'
 import { useToast } from './Toast'
 import CustomFields, { customPayload } from './CustomFields'
+import { useT } from '../lib/i18n/context'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const idOf = (x) => x?.id || x?._id
@@ -50,6 +51,7 @@ export const lineAbw = (line) => {
 export default function BiweeklyBatchEntry() {
   const router = useRouter()
   const { showToast } = useToast()
+  const t = useT()
   const { user } = useAuth()
   const online = useOnline()
   const [cages, setCages] = useState([])
@@ -90,7 +92,7 @@ export default function BiweeklyBatchEntry() {
   }, [])
 
   const cageById = useMemo(() => new Map(cages.map((c) => [idOf(c), c])), [cages])
-  const cageName = (id) => cageById.get(id)?.name || 'Unknown cage'
+  const cageName = (id) => cageById.get(id)?.name || t('biweekly.unknownCage')
   const selected = new Set(lines.map((l) => l.cageId))
 
   const setLines = (updater) =>
@@ -136,21 +138,21 @@ export default function BiweeklyBatchEntry() {
     setScanOpen(false)
     const hit = parseCageScan(text, cages)
     if (!hit) {
-      showToast('No cage on this farm matches that label', 'error')
+      showToast(t('common.noCageMatchesLabel'), 'error')
       return
     }
     addCages(hit.cageIds)
-    showToast(`Added ${hit.cageIds.map(cageName).join(', ')}`, 'success')
+    showToast(t('common.added', { names: hit.cageIds.map(cageName).join(', ') }), 'success')
   }
 
   const validate = () => {
-    if (!formData.date) return ['Choose a sampling date', null]
-    if (!lines.length) return ['Select at least one cage', null]
+    if (!formData.date) return [t('biweekly.chooseDate'), null]
+    if (!lines.length) return [t('entry.selectAtLeastOne'), null]
     for (const [i, l] of lines.entries()) {
-      const label = `Line ${i + 1} (${cageName(l.cageId)})`
+      const label = t('biweekly.lineLabel', { n: i + 1, name: cageName(l.cageId) })
       const n = Number(l.fishCount)
-      if (!Number.isInteger(n) || n <= 0) return [`${label}: enter how many fish were weighed`, i]
-      if (!(Number(l.totalWeight) > 0)) return [`${label}: enter their total weight`, i]
+      if (!Number.isInteger(n) || n <= 0) return [t('biweekly.errCount', { label }), i]
+      if (!(Number(l.totalWeight) > 0)) return [t('biweekly.errWeight', { label }), i]
     }
     return ['', null]
   }
@@ -192,8 +194,8 @@ export default function BiweeklyBatchEntry() {
       setFormData({ ...DEFAULTS, date: isoDay(), showWater: formData.showWater })
       showToast(
         res.queued
-          ? 'No connection. Saved on this device and will send when you are back online'
-          : `Saved sampling for ${n} cage${n === 1 ? '' : 's'}`,
+          ? t('common.queuedOffline')
+          : t('biweekly.saved', { count: n }),
         res.queued ? 'info' : 'success',
       )
     } catch (err) {
@@ -208,8 +210,8 @@ export default function BiweeklyBatchEntry() {
 
   return (
     <FormCard
-      title="Bi-weekly sampling"
-      subtitle="Pick or scan the cages, weigh a sample from each, save them together. Your draft stays on this device."
+      title={t('biweekly.title')}
+      subtitle={t('biweekly.subtitle')}
     >
       <QrScanner open={scanOpen} onClose={() => setScanOpen(false)} onResult={onScan} />
       <OutboxPanel compact online={online} kinds={['biweekly-batch']} />
@@ -224,9 +226,9 @@ export default function BiweeklyBatchEntry() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        <FormSection title="Date">
+        <FormSection title={t('entry.date')}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Sampling date" htmlFor="bw-date" required hint="Applies to every line">
+            <Field label={t('biweekly.samplingDate')} htmlFor="bw-date" required hint={t('common.appliesToEveryLine')}>
               <Input
                 id="bw-date"
                 type="date"
@@ -245,17 +247,17 @@ export default function BiweeklyBatchEntry() {
                 onChange={handleChange}
                 className="h-5 w-5 rounded border-input-border"
               />
-              Record water quality (DO, temperature, Secchi)
+              {t('biweekly.recordWater')}
             </label>
           </div>
         </FormSection>
 
-        <FormSection title="Cages" description="Tap a cage to add a line for it">
+        <FormSection title={t('common.cages')} description={t('common.tapCageToAdd')}>
           {ready && cages.length === 0 ? (
             <DependencyEmpty
-              message="Sampling needs an active (stocked) cage."
+              message={t('biweekly.needsCage')}
               createKind="cage"
-              createLabel="Create a cage"
+              createLabel={t('entry.createCage')}
               onCreated={loadCages}
             />
           ) : (
@@ -289,7 +291,7 @@ export default function BiweeklyBatchEntry() {
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setScanOpen(true)}>
                   <ScanLine size={14} aria-hidden />
-                  Scan cage
+                  {t('entry.scanCage')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -297,7 +299,7 @@ export default function BiweeklyBatchEntry() {
                   onClick={() => addCages(cages.map(idOf))}
                   disabled={!cages.length}
                 >
-                  Select all
+                  {t('entry.selectAll')}
                 </Button>
               </div>
             </>
@@ -305,11 +307,11 @@ export default function BiweeklyBatchEntry() {
         </FormSection>
 
         <FormSection
-          title={`Lines${lines.length ? ` (${lines.length})` : ''}`}
-          description="Weigh a sample of fish together; ABW is total weight ÷ fish counted"
+          title={lines.length ? t('common.linesCount', { count: lines.length }) : t('common.lines')}
+          description={t('biweekly.linesDescription')}
         >
           {lines.length === 0 ? (
-            <p className="text-sm text-muted">No cages selected yet</p>
+            <p className="text-sm text-muted">{t('common.noCagesSelected')}</p>
           ) : (
             <div className="space-y-3">
               {lines.map((line, i) => {
@@ -330,21 +332,21 @@ export default function BiweeklyBatchEntry() {
                       </p>
                       <p className="text-sm tabular-nums text-muted">
                         {abw != null ? (
-                          <span className="text-chart-ink font-medium">{abw.toFixed(1)} g ABW</span>
+                          <span className="text-chart-ink font-medium">{t('biweekly.abw', { value: abw.toFixed(1) })}</span>
                         ) : last != null ? (
-                          `Last ${last.toFixed(1)} g`
+                          t('biweekly.last', { value: last.toFixed(1) })
                         ) : null}
                       </p>
                       <button
                         type="button"
                         onClick={() => setLines((ls) => ls.filter((l) => l.key !== line.key))}
-                        aria-label={`Remove ${cageName(line.cageId)}`}
+                        aria-label={t('entry.removeCage', { name: cageName(line.cageId) })}
                         className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-signal/10 hover:text-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                       >
                         <Trash2 size={18} aria-hidden />
                       </button>
                     </div>
-                    <Field label="Fish weighed" htmlFor={`bw-n-${line.key}`} className="md:col-span-3">
+                    <Field label={t('biweekly.fishWeighed')} htmlFor={`bw-n-${line.key}`} className="md:col-span-3">
                       <Input
                         id={`bw-n-${line.key}`}
                         type="number"
@@ -357,7 +359,7 @@ export default function BiweeklyBatchEntry() {
                         className="tabular-nums"
                       />
                     </Field>
-                    <Field label="Total weight (g)" htmlFor={`bw-w-${line.key}`} className="md:col-span-3">
+                    <Field label={t('biweekly.totalWeightG')} htmlFor={`bw-w-${line.key}`} className="md:col-span-3">
                       <Input
                         id={`bw-w-${line.key}`}
                         type="number"
@@ -372,7 +374,7 @@ export default function BiweeklyBatchEntry() {
                     </Field>
                     {formData.showWater && (
                       <>
-                        <Field label="DO (mg/L)" htmlFor={`bw-do-${line.key}`} className="md:col-span-2">
+                        <Field label={t('entry.doMgL')} htmlFor={`bw-do-${line.key}`} className="md:col-span-2">
                           <Input
                             id={`bw-do-${line.key}`}
                             type="number"
@@ -384,7 +386,7 @@ export default function BiweeklyBatchEntry() {
                             className="tabular-nums"
                           />
                         </Field>
-                        <Field label="Temp (°C)" htmlFor={`bw-t-${line.key}`} className="md:col-span-2">
+                        <Field label={t('entry.tempC')} htmlFor={`bw-t-${line.key}`} className="md:col-span-2">
                           <Input
                             id={`bw-t-${line.key}`}
                             type="number"
@@ -395,7 +397,7 @@ export default function BiweeklyBatchEntry() {
                             className="tabular-nums"
                           />
                         </Field>
-                        <Field label="Secchi (cm)" htmlFor={`bw-s-${line.key}`} className="col-span-2 md:col-span-2">
+                        <Field label={t('entry.secchiCm')} htmlFor={`bw-s-${line.key}`} className="col-span-2 md:col-span-2">
                           <Input
                             id={`bw-s-${line.key}`}
                             type="number"
@@ -425,7 +427,7 @@ export default function BiweeklyBatchEntry() {
                         size="sm"
                         href={`/biweekly-entry?mode=detailed&cage=${encodeURIComponent(line.cageId)}`}
                       >
-                        Several samples for this cage
+                        {t('biweekly.severalSamples')}
                       </Button>
                     </div>
                   </div>
@@ -438,16 +440,15 @@ export default function BiweeklyBatchEntry() {
         <StickyActions>
           {lines.length > 0 && (
             <p className="text-sm text-muted mr-auto tabular-nums">
-              {totals.done} of {lines.length} cage{lines.length === 1 ? '' : 's'} ready,{' '}
-              {totals.fish} fish weighed
+              {t('biweekly.ready', { done: totals.done, count: lines.length, fish: totals.fish })}
             </p>
           )}
           <Button type="submit" size="lg" disabled={saving || !lines.length} className="ml-auto">
             {saving
-              ? 'Saving…'
+              ? t('common.saving')
               : lines.length
-                ? `Save ${lines.length} sample${lines.length === 1 ? '' : 's'}`
-                : 'Save samples'}
+                ? t('biweekly.saveN', { count: lines.length })
+                : t('biweekly.saveSamples')}
           </Button>
         </StickyActions>
       </form>

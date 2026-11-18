@@ -1,5 +1,6 @@
 /** Shared UI primitives — Harbor Soft light dashboard */
 import Link from 'next/link'
+import { useT } from '../../lib/i18n/context'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
@@ -98,7 +99,9 @@ export function StatCard({ label, value, unit, hint, icon: Icon, tone = 'default
   )
 }
 
-export function HealthMeter({ score, label = 'Farm health' }) {
+export function HealthMeter({ score, label }) {
+  const t = useT()
+  label = label ?? t('ui.farmHealth')
   const clamped = Math.max(0, Math.min(100, Number(score) || 0))
   return (
     <Card className="min-h-[7.5rem]">
@@ -158,9 +161,10 @@ export function TabBar({ tabs, active, onChange }) {
 }
 
 export function Breadcrumbs({ items = [] }) {
+  const t = useT()
   if (!items.length) return null
   return (
-    <nav aria-label="Breadcrumb" className="mb-3">
+    <nav aria-label={t('ui.breadcrumb')} className="mb-3">
       <ol className="flex flex-wrap items-center gap-1.5 text-sm">
         {items.map((item, i) => {
           const last = i === items.length - 1
@@ -202,6 +206,7 @@ export function PageHeader({
   related = [],
   showTitle = true,
 }) {
+  const t = useT()
   return (
     <div className="mb-8">
       <Breadcrumbs items={breadcrumbs} />
@@ -228,11 +233,11 @@ export function PageHeader({
       </div>
       {related.length > 0 && (
         <nav
-          aria-label="Related pages"
+          aria-label={t('ui.relatedPages')}
           className="mt-5 flex flex-wrap items-center gap-2 border-t border-foam-deep pt-4"
         >
           <span className="text-sm text-muted mr-1">
-            Related
+            {t('ui.related')}
           </span>
           {related.map((item) => (
             <Link
@@ -393,11 +398,12 @@ export function Skeleton({ className = '' }) {
 
 /** Full app chrome skeleton — sidebar + header + content placeholders. */
 export function AppShellSkeleton() {
+  const t = useT()
   return (
     <div
       className="min-h-screen bg-foam"
       aria-busy="true"
-      aria-label="Loading application"
+      aria-label={t('ui.loadingApp')}
     >
       <aside
         className="fixed top-0 left-0 h-screen w-64 border-r border-zinc-800 bg-zinc-900 p-3 space-y-4"
@@ -459,11 +465,12 @@ export function AppShellSkeleton() {
 }
 
 export function DashboardSkeleton() {
+  const t = useT()
   return (
     <div
       className="space-y-6 max-w-[1400px]"
       aria-busy="true"
-      aria-label="Loading dashboard"
+      aria-label={t('ui.loadingDashboard')}
     >
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div className="space-y-3 w-full max-w-md">

@@ -19,7 +19,7 @@ import FarmLocationSelect from './FarmLocationSelect'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
-import { FISH_SPECIES } from '../lib/fishSpecies'
+import { useSpeciesOptions } from '../hooks/useSpeciesOptions'
 import { localToday } from '../lib/format'
 import CustomFields, { customPayload } from './CustomFields'
 import { DEFAULT_SETTINGS, densityStatus } from '../convex/lib/farmRules'
@@ -52,6 +52,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     'stocking-create',
     STOCKING_DEFAULTS,
   )
+  const speciesOptions = useSpeciesOptions(formData.species)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [warn, setWarn] = useState([])
@@ -292,7 +293,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
                 onChange={handleChange}
                 required
               >
-                {FISH_SPECIES.map((s) => (
+                {speciesOptions.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>

@@ -14,7 +14,7 @@ import BagSizeField, {
 import { useCurrency } from '../hooks/useCurrency'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
-import { FISH_SPECIES } from '../lib/fishSpecies'
+import { useSpeciesOptions } from '../hooks/useSpeciesOptions'
 import { buildFeedTypeDescription, normalizeBagSizeKg } from '../lib/feedTypeMeta'
 import { localToday } from '../lib/format'
 
@@ -536,6 +536,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
     notes: '',
     _batchAuto: true,
   })
+  const speciesOptions = useSpeciesOptions(form.species)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showCageCreate, setShowCageCreate] = useState(false)
@@ -703,7 +704,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               onChange={setField('species')}
               required
             >
-              {FISH_SPECIES.map((s) => (
+              {speciesOptions.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
