@@ -66,6 +66,7 @@ const MENU_SECTIONS = {
       { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
       { title: 'Harvest Lots', path: '/trace', icon: Package },
+      { title: 'Compliance', path: '/compliance', icon: ClipboardList },
       { title: 'Sales', path: '/sales', icon: ShoppingCart, tourId: 'sales' },
       { title: 'Expenses', path: '/expenses', icon: Receipt },
       { title: 'Health', path: '/health', icon: HeartPulse, tourId: 'health' },
