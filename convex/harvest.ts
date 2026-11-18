@@ -6,6 +6,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr } from './lib/growth'
+import { harvestIsCurrent } from './lib/cycles'
 
 function toClientHarvestRecord(r: any) {
   return {
@@ -143,7 +144,13 @@ async function applyHarvestToCage(
     .withIndex('by_cage', (q) => q.eq('cageId', cageId))
     .collect()
   const open = stockings
-    .filter((s) => s.status === 'approved' && !s.deletedAt && !s.closedAt)
+    .filter(
+      (s) =>
+        s.status === 'approved' &&
+        !s.deletedAt &&
+        !s.closedAt &&
+        s.stockingDate <= harvest.harvestDate,
+    )
     .sort((a, b) => b.stockingDate.localeCompare(a.stockingDate))[0]
   if (open) await ctx.db.patch(open._id, { closedAt: harvest.harvestDate })
 
@@ -172,10 +179,10 @@ async function undoHarvestOnCage(
   const patch: Record<string, unknown> = { updatedAt: Date.now() }
   if (effect.statusBefore !== undefined) {
     // Only reopen the cage if nothing else has happened to it since.
-    if (cage.status === 'harvested') {
-      patch.status = effect.statusBefore
-      if (effect.countBefore !== undefined) patch.currentCount = effect.countBefore
-    }
+    // Only reopen the cage (and its cycle) if nothing else has happened to it since.
+    if (cage.status !== 'harvested') return
+    patch.status = effect.statusBefore
+    if (effect.countBefore !== undefined) patch.currentCount = effect.countBefore
     if (effect.closedStockingId) {
       const st = await ctx.db.get(effect.closedStockingId)
       if (st) await ctx.db.patch(effect.closedStockingId, { closedAt: undefined })
@@ -288,7 +295,17 @@ export const update = mutation({
       (patch.harvestType !== undefined && patch.harvestType !== existing.harvestType) ||
       (patch.estimatedCount !== undefined && patch.estimatedCount !== existing.estimatedCount)
     let cageEffect = existing.cageEffect
-    if (cageTouched) {
+    // Once the cage has moved on (restocked, or harvested again), this harvest
+    // belongs to a closed cycle: correct the record, leave the live cage alone.
+    const current = cageTouched
+      ? await harvestIsCurrent(ctx, existing, existing.cageEffect?.closedStockingId)
+      : false
+    if (cageTouched && !current) {
+      warnings.push(
+        'The cage has been restocked or harvested again since this harvest, so its current fish count was not changed',
+      )
+    }
+    if (cageTouched && current) {
       await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
       cageEffect = await applyHarvestToCage(
         ctx,
@@ -331,8 +348,10 @@ export const remove = mutation({
     for (const s of samples) {
       await ctx.db.delete(s._id)
     }
-    // Put the fish back and reopen the cage if this harvest emptied it.
-    await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
+    // Put the fish back and reopen the cage if this harvest emptied it, unless
+    // the cage has since moved on to a new cycle.
+    const current = await harvestIsCurrent(ctx, existing, existing.cageEffect?.closedStockingId)
+    if (current) await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',

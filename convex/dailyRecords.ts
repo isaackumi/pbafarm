@@ -5,6 +5,7 @@ import type { MutationCtx } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
+import { inCurrentCycle } from './lib/cycles'
 import {
   mergeSettings,
   dailyMortalityPct,
@@ -524,15 +525,25 @@ export const update = mutation({
 
     await ctx.db.patch(id, patch)
 
-    // A corrected death count moves the cage's live fish count by the difference.
-    if (patch.mortality !== undefined && patch.mortality !== existing.mortality) {
+    // Deaths only move the live fish count for records in the cage's current
+    // cycle; a record from an earlier cycle is corrected on its own.
+    const mortalityTouched =
+      (patch.mortality !== undefined && patch.mortality !== existing.mortality) ||
+      (patch.date !== undefined && patch.date !== existing.date)
+    if (mortalityTouched) {
       const cage = await ctx.db.get(existing.cageId)
       if (cage && cage.currentCount != null) {
-        const diff = patch.mortality - (existing.mortality || 0)
-        await ctx.db.patch(existing.cageId, {
-          currentCount: Math.max(0, cage.currentCount - diff),
-          updatedAt: Date.now(),
-        })
+        const oldIn = await inCurrentCycle(ctx, cage, existing.date)
+        const newIn = await inCurrentCycle(ctx, cage, patch.date ?? existing.date)
+        const delta =
+          (newIn ? (patch.mortality ?? existing.mortality ?? 0) : 0) -
+          (oldIn ? existing.mortality || 0 : 0)
+        if (delta !== 0) {
+          await ctx.db.patch(existing.cageId, {
+            currentCount: Math.max(0, cage.currentCount - delta),
+            updatedAt: Date.now(),
+          })
+        }
       }
     }
 
@@ -575,10 +586,10 @@ export const remove = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     await reverseDailyFeed(ctx, user, existing)
-    // Give back the fish this record had counted as dead.
+    // Give back the fish this record had counted as dead (current cycle only).
     if (existing.mortality > 0) {
       const cage = await ctx.db.get(existing.cageId)
-      if (cage && cage.currentCount != null) {
+      if (cage && cage.currentCount != null && (await inCurrentCycle(ctx, cage, existing.date))) {
         await ctx.db.patch(existing.cageId, {
           currentCount: cage.currentCount + existing.mortality,
           updatedAt: Date.now(),
