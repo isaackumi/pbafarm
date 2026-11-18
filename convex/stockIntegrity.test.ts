@@ -504,3 +504,91 @@ describe('S13: ledger reversals', () => {
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(950)
   })
 })
+
+describe('S12: the sampling page no longer records a harvest (interim)', () => {
+  const today = new Date().toISOString().split('T')[0]
+  const harvestRows = (t: any) => t.run((ctx: any) => ctx.db.query('harvestRecords').collect())
+
+  test('saving a sample writes a sampling row only', async () => {
+    const { t, as, b } = await setup()
+    const res = await as.mutation(api.harvest.createFromSampling, {
+      cageId: b.cageId,
+      date: today,
+      weight: 45,
+      fishCount: 100,
+      sizes: { Reg: 60, Eco: 40 },
+    })
+    expect(res.harvestId).toBeNull()
+    expect(await harvestRows(t)).toHaveLength(0)
+    const sample = await getDoc(t, res.samplingId)
+    expect(sample.harvestId).toBeUndefined()
+    expect(sample.cageId).toBe(b.cageId)
+    expect(sample.weight).toBe(45)
+    expect((await getDoc(t, b.cageId)).currentCount).toBe(5000)
+    expect(await as.query(api.harvest.listSampling, { cageId: b.cageId })).toHaveLength(1)
+  })
+
+  test('old sampling-page harvests are left out of harvest KPIs once tagged', async () => {
+    const { t, as, b, companyId } = await setup()
+    const legacyId = await t.run(async (ctx: any) => {
+      // What createFromSampling used to write: a complete harvest, FCR 1.5,
+      // no cage effect, plus a sampling row pointing at it.
+      const harvestId = await ctx.db.insert('harvestRecords', {
+        cageId: b.cageId,
+        harvestDate: today,
+        averageBodyWeight: 0.45,
+        totalWeight: 45,
+        estimatedCount: 100,
+        fcr: 1.5,
+        harvestType: 'complete',
+        status: 'completed',
+        companyId,
+      })
+      await ctx.db.insert('harvestSampling', {
+        harvestId,
+        cageId: b.cageId,
+        date: today,
+        weight: 45,
+        fishCount: 100,
+        samples: {},
+        companyId,
+      })
+      // An old real harvest (before harvests recorded their cage effect).
+      await ctx.db.insert('harvestRecords', {
+        cageId: b.cageId,
+        harvestDate: today,
+        averageBodyWeight: 450,
+        totalWeight: 2000,
+        estimatedCount: 4444,
+        fcr: 1.5,
+        harvestType: 'partial',
+        status: 'completed',
+        companyId,
+      })
+      return harvestId
+    })
+    expect((await as.query(api.reports.dashboardKpis, {})).harvest_weight_kg).toBe(2045)
+
+    // M0-c dry run finds only the sampling-page row and writes nothing.
+    const dry = await t.mutation(internal.migrations.tagSamplingPageHarvests, {})
+    expect(dry.dryRun).toBe(true)
+    expect(dry.changes.map((c: any) => c.harvestId)).toEqual([legacyId])
+    expect((await getDoc(t, legacyId)).source).toBeUndefined()
+
+    await t.mutation(internal.migrations.tagSamplingPageHarvests, { dryRun: false })
+    expect((await getDoc(t, legacyId)).source).toBe('sampling_page')
+    expect((await as.query(api.reports.dashboardKpis, {})).harvest_weight_kg).toBe(2000)
+    const summary = await as.query(api.reports.dashboardSummary, {})
+    expect(summary.recent_harvest_weight_kg).toBe(2000)
+    expect(summary.recent_harvest_count).toBe(1)
+    const report = await as.query(api.reports.productionReport, {
+      reportType: 'summary',
+      startDate: today,
+      endDate: today,
+      cageIds: [b.cageId],
+    })
+    expect(report.summary.harvest_weight_kg).toBe(2000)
+    // A second run has nothing left to tag.
+    expect((await t.mutation(internal.migrations.tagSamplingPageHarvests, {})).count).toBe(0)
+  })
+})

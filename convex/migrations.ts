@@ -68,3 +68,65 @@ export const repairStaleCageWeight = internalMutation({
     return { dryRun, count: changes.length, changes }
   },
 })
+
+/**
+ * M0-c: tag the harvest records the old /harvest-sampling page wrote
+ * (`harvest.createFromSampling`) with `source: 'sampling_page'`, so harvest
+ * KPIs leave them out (doc 09 S12). The records are not deleted.
+ *
+ * Fingerprint of such a record: FCR exactly 1.5, no `cageEffect` (the page
+ * never touched the cage), and a `harvestSampling` row pointing at it with the
+ * same date, total weight and fish count. Review the dry-run list before
+ * writing: an old real harvest that happens to match all of these would be
+ * tagged too.
+ */
+export const tagSamplingPageHarvests = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun = true }) => {
+    const changes: Array<{
+      harvestId: string
+      cageId: string
+      harvestDate: string
+      totalWeight: number
+      estimatedCount: number
+    }> = []
+
+    for await (const h of ctx.db.query('harvestRecords')) {
+      if (h.source || h.cageEffect || h.fcr !== 1.5) continue
+      const samples = await ctx.db
+        .query('harvestSampling')
+        .withIndex('by_harvest', (q) => q.eq('harvestId', h._id))
+        .collect()
+      const match = samples.some(
+        (s) =>
+          s.cageId === h.cageId &&
+          s.date === h.harvestDate &&
+          s.weight === h.totalWeight &&
+          s.fishCount === h.estimatedCount,
+      )
+      if (!match) continue
+
+      changes.push({
+        harvestId: h._id,
+        cageId: h.cageId,
+        harvestDate: h.harvestDate,
+        totalWeight: h.totalWeight,
+        estimatedCount: h.estimatedCount,
+      })
+      if (dryRun) continue
+
+      await ctx.db.patch(h._id, { source: 'sampling_page' })
+      await ctx.db.insert('auditLogs', {
+        actionType: 'migration',
+        tableName: 'harvestRecords',
+        recordId: h._id,
+        previousValues: { source: null },
+        newValues: { source: 'sampling_page', migration: 'M0-c' },
+        locationId: h.locationId,
+        companyId: h.companyId,
+      })
+    }
+
+    return { dryRun, count: changes.length, changes }
+  },
+})

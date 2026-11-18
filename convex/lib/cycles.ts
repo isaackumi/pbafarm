@@ -29,6 +29,13 @@ export async function inCurrentCycle(ctx: Ctx, cage: Doc<'cages'>, date: string)
   return start != null && date >= start
 }
 
+/**
+ * Whether a harvest record is a real harvest for KPIs and cycle logic.
+ * Records written by the old /harvest-sampling page (tagged by migration
+ * M0-c) are samples, not harvests (doc 09 S12).
+ */
+export const isRealHarvest = (h: { source?: string }) => h.source !== 'sampling_page'
+
 /** Is `a` (date + creation time) later than `b`? Same-day ties go to whichever was entered later. */
 const isAfter = (aDate: string, aCreated: number, bDate: string, bCreated: number) =>
   aDate > bDate || (aDate === bDate && aCreated > bCreated)
@@ -66,6 +73,7 @@ export async function harvestIsCurrent(
   const laterComplete = harvests.some(
     (h) =>
       h._id !== harvest._id &&
+      isRealHarvest(h) &&
       h.harvestType === 'complete' &&
       isAfter(h.harvestDate, h._creationTime, harvest.harvestDate, harvest._creationTime),
   )

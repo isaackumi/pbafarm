@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { query } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { listForCompany, listForCompanyAndLocation } from './lib/tenancy'
+import { isRealHarvest } from './lib/cycles'
 
 export const dashboardSummary = query({
   args: {
@@ -52,11 +53,9 @@ export const dashboardSummary = query({
 
     // Get harvest count in period
     let harvestRecords = await ctx.db.query('harvestRecords').collect()
-    harvestRecords = await listForCompanyAndLocation(
-      user,
-      harvestRecords,
-      args.locationId,
-    )
+    harvestRecords = (
+      await listForCompanyAndLocation(user, harvestRecords, args.locationId)
+    ).filter(isRealHarvest)
     const recentHarvestCount = harvestRecords
       .filter((h) => h.harvestDate >= cutoffDateStr).length
 
@@ -152,7 +151,9 @@ export const dashboardKpis = query({
     }
 
     let harvests = await ctx.db.query('harvestRecords').collect()
-    harvests = await listForCompanyAndLocation(user, harvests, args.locationId)
+    harvests = (await listForCompanyAndLocation(user, harvests, args.locationId)).filter(
+      isRealHarvest,
+    )
     const periodHarvests = harvests.filter((h) => h.harvestDate >= cutoffDateStr)
     const fcrValues = periodHarvests
       .map((h) => h.fcr)
@@ -411,6 +412,7 @@ export const productionReport = query({
     harvests = await listForCompany(user, harvests)
     harvests = harvests.filter(
       (h) =>
+        isRealHarvest(h) &&
         idSet.has(String(h.cageId)) &&
         h.harvestDate >= args.startDate &&
         h.harvestDate <= args.endDate,
@@ -588,10 +590,12 @@ export const getCagePnL = query({
     if (args.dateFrom) daily = daily.filter((r) => r.date >= args.dateFrom!)
     if (args.dateTo) daily = daily.filter((r) => r.date <= args.dateTo!)
 
-    let harvests = await ctx.db
-      .query('harvestRecords')
-      .withIndex('by_cage', (q) => q.eq('cageId', args.cageId))
-      .collect()
+    let harvests = (
+      await ctx.db
+        .query('harvestRecords')
+        .withIndex('by_cage', (q) => q.eq('cageId', args.cageId))
+        .collect()
+    ).filter(isRealHarvest)
     if (args.dateFrom)
       harvests = harvests.filter((r) => r.harvestDate >= args.dateFrom!)
     if (args.dateTo)
@@ -664,10 +668,12 @@ export const listCagePnL = query({
       if (args.dateFrom) sales = sales.filter((s) => s.saleDate >= args.dateFrom!)
       if (args.dateTo) sales = sales.filter((s) => s.saleDate <= args.dateTo!)
 
-      let harvests = await ctx.db
-        .query('harvestRecords')
-        .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
-        .collect()
+      let harvests = (
+        await ctx.db
+          .query('harvestRecords')
+          .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
+          .collect()
+      ).filter(isRealHarvest)
       if (args.dateFrom)
         harvests = harvests.filter((r) => r.harvestDate >= args.dateFrom!)
       if (args.dateTo)
