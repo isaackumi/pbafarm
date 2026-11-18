@@ -50,6 +50,8 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'unitInspections', index: 'by_companyId_and_date' },
   { table: 'feedSuppliers', index: 'by_company' },
   { table: 'feedTypes', index: 'by_company' },
+  { table: 'species', index: 'by_companyId_and_key' },
+  { table: 'customFieldDefs', index: 'by_companyId_and_entity_and_sortOrder' },
   { table: 'feedPurchases', index: 'by_company' },
   { table: 'feedUsage', index: 'by_company' },
   { table: 'dailyRecords', index: 'by_company' },
