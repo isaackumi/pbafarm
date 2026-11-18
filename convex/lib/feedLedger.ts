@@ -2,6 +2,7 @@ import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 import { requireRole } from './authz'
 import { assertOwns, logAudit } from './tenancy'
+import { emitDomainEvent } from './events'
 import { mergeSettings } from './farmRules'
 
 export type StockTxnType =
@@ -376,6 +377,30 @@ export async function applyStockChange(
     currentStock: nextStock,
     updatedAt: now,
   })
+
+  // Edge-triggered: only the change that takes stock to or below the minimum.
+  const minimum = feedType.minimumStock ?? 0
+  if (
+    companyId &&
+    args.deltaKg < 0 &&
+    minimum > 0 &&
+    feedType.currentStock > minimum &&
+    nextStock <= minimum
+  ) {
+    await emitDomainEvent(ctx, 'inventory.stock.low', {
+      companyId,
+      subject: { table: 'feedTypes', id: String(feedType._id) },
+      locationId: args.locationId,
+      actorUserId: args.user._id,
+      data: {
+        feedTypeId: String(feedType._id),
+        feedTypeName: feedType.name,
+        stockKg: Math.round(nextStock * 1000) / 1000,
+        minimumKg: minimum,
+        transactionType: args.transactionType,
+      },
+    })
+  }
 
   if (args.allowNegative && nextStock < 0) {
     await logAudit(ctx, {

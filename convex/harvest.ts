@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { emitDomainEvent } from './lib/events'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
@@ -299,6 +300,24 @@ export const create = mutation({
       newValues: args,
       locationId: cage.locationId,
     })
+    if (companyId) {
+      await emitDomainEvent(ctx, 'stock.harvested', {
+        companyId,
+        subject: { table: 'harvestRecords', id: String(id) },
+        locationId: cage.locationId,
+        actorUserId: user._id,
+        businessDate: args.harvestDate,
+        data: {
+          cageId: String(args.cageId),
+          cageName: cage.name,
+          harvestType: args.harvestType ?? 'complete',
+          totalWeightKg: args.totalWeight,
+          estimatedCount: args.estimatedCount,
+          averageBodyWeightG: args.averageBodyWeight,
+          fcr: args.fcr,
+        },
+      })
+    }
     return { id, warnings }
   },
 })

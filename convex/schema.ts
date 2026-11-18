@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
+import { integrationTables } from './integrations/tables'
 
 const cageStatus = v.union(
   v.literal('active'),
@@ -46,6 +47,7 @@ export const batchOrigin = v.union(
 
 const schema = defineSchema({
   ...authTables,
+  ...integrationTables,
 
   users: defineTable({
     name: v.optional(v.string()),
@@ -643,6 +645,8 @@ const schema = defineSchema({
     newValues: v.optional(v.any()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
+    /** Set when the change came through the public API (INT-004). */
+    apiKeyId: v.optional(v.id('apiKeys')),
   })
     .index('by_user', ['userId'])
     .index('by_table', ['tableName'])

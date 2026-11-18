@@ -47,6 +47,10 @@ import type * as mfa from "../mfa.js";
 import type * as phoneAuth from "../phoneAuth.js";
 import type * as security from "../security.js";
 import type * as users from "../users.js";
+import type * as integrations_apiHttp from "../integrations/apiHttp.js";
+import type * as publicApi from "../publicApi.js";
+import type * as events from "../events.js";
+import type * as apiKeys from "../apiKeys.js";
 
 import type {
   ApiFromModules,
@@ -94,6 +98,10 @@ declare const fullApi: ApiFromModules<{
   phoneAuth: typeof phoneAuth;
   security: typeof security;
   users: typeof users;
+  "integrations/apiHttp": typeof integrations_apiHttp;
+  publicApi: typeof publicApi;
+  events: typeof events;
+  apiKeys: typeof apiKeys;
 }>;
 
 /**

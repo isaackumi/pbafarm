@@ -13,4 +13,11 @@ crons.cron(
   {},
 )
 
+// Domain-event outbox (convex/events.ts): webhooks and automation consume
+// events within a minute of the change.
+crons.interval('dispatch domain events', { minutes: 1 }, internal.events.dispatchPending, {})
+
+// Public API idempotency keys are kept 30 days (INT-004).
+crons.cron('prune api idempotency keys', '30 3 * * *', internal.publicApi.pruneIdempotencyKeys, {})
+
 export default crons

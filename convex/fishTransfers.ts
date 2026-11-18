@@ -1,11 +1,12 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
-import type { Doc } from './_generated/dataModel'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
 import { scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
+import { emitDomainEvent } from './lib/events'
 import {
   mergeSettings,
   assertStockingAllowed,
@@ -48,6 +49,34 @@ async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
  * the destination cage, so only the source side is applied. A rejected linked
  * row means the transfer can no longer be approved.
  */
+/** One `transfer.approved` event when a transfer takes effect (doc 07 §4). */
+async function emitTransferApproved(
+  ctx: MutationCtx,
+  transfer: Doc<'fishTransfers'>,
+  actorUserId: Id<'users'>,
+) {
+  if (!transfer.companyId) return
+  const [source, dest] = await Promise.all([
+    ctx.db.get(transfer.sourceCageId),
+    ctx.db.get(transfer.destinationCageId),
+  ])
+  await emitDomainEvent(ctx, 'transfer.approved', {
+    companyId: transfer.companyId,
+    subject: { table: 'fishTransfers', id: String(transfer._id) },
+    locationId: transfer.sourceLocationId ?? source?.locationId,
+    actorUserId,
+    businessDate: transfer.transferDate,
+    data: {
+      sourceCageId: String(transfer.sourceCageId),
+      sourceCageName: source?.name ?? null,
+      destinationCageId: String(transfer.destinationCageId),
+      destinationCageName: dest?.name ?? null,
+      quantity: transfer.quantity,
+      transferType: transfer.transferType,
+    },
+  })
+}
+
 async function applyFishTransfer(
   ctx: any,
   transfer: any,
@@ -437,6 +466,7 @@ export const createFishTransfer = mutation({
     if (status === 'approved') {
       const transfer = await ctx.db.get(transferId)
       await applyFishTransfer(ctx, transfer, { linkedJustCreated: true })
+      if (transfer) await emitTransferApproved(ctx, transfer, user._id)
     }
 
     await logAudit(ctx, {
@@ -488,6 +518,7 @@ export const approveFishTransfer = mutation({
       recordId: id,
       newValues: { status: 'approved' },
     })
+    await emitTransferApproved(ctx, transfer, user._id)
   },
 })
 
