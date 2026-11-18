@@ -9,6 +9,7 @@ import {
   assertStockingAllowed,
   assertTopupAllowed,
 } from './lib/farmRules'
+import { assertNoOtherOpenStocking } from './lib/cycles'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -445,6 +446,20 @@ export const approveStocking = mutation({
       throw new Error('Only pending stockings can be approved')
     }
     await assertNotTransferLinked(ctx, { stockingId: id })
+
+    // Re-check against the cage as it is now: it may have been stocked since
+    // this request was made (doc 09 S9).
+    const cage = await ctx.db.get(stocking.cageId)
+    if (!cage) throw new Error('Cage not found')
+    const rules = await loadRules(ctx, stocking.companyId ?? cage.companyId)
+    assertStockingAllowed({
+      cage,
+      fishCount: stocking.fishCount,
+      abw: stocking.initialAbw,
+      rules: rules.stockingRules,
+      farmRules: rules.farmRules,
+    })
+    await assertNoOtherOpenStocking(ctx, cage, id)
 
     const now = Date.now()
 

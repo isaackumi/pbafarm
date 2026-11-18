@@ -212,3 +212,95 @@ describe('S3: transfer into an empty cage, linked stocking approved directly', (
     expect((await getDoc(t, b.cageId)).currentCount).toBe(5500)
   })
 })
+
+describe('S9: two stockings approved for the same cage', () => {
+  const stockingArgs = (cageId: any, fishCount: number) => ({
+    cageId,
+    stockingDate: '2026-11-01',
+    fishCount,
+    initialAbw: 5,
+    initialBiomass: fishCount / 200,
+  })
+
+  test('the second approval is refused and the first count stands', async () => {
+    const { t, as, emptyId } = await setup()
+    const first = await as.mutation(api.stocking.createStocking, stockingArgs(emptyId, 4000))
+    const second = await as.mutation(api.stocking.createStocking, stockingArgs(emptyId, 6000))
+
+    await as.mutation(api.stocking.approveStocking, { id: first })
+    await expect(as.mutation(api.stocking.approveStocking, { id: second })).rejects.toThrow(
+      /cannot be stocked/,
+    )
+    const cage = await getDoc(t, emptyId)
+    expect(cage.currentCount).toBe(4000)
+    expect(cage.initialCount).toBe(4000)
+    expect((await getDoc(t, second)).status).toBe('pending_approval')
+  })
+
+  test('a transfer into a cage stocked since the transfer was created is refused', async () => {
+    const { t, as, a, emptyId } = await setup()
+    const pending = await as.mutation(api.stocking.createStocking, stockingArgs(emptyId, 4000))
+    const transferId = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, emptyId, 3000))
+    await as.mutation(api.stocking.approveStocking, { id: pending })
+
+    await expect(as.mutation(api.fishTransfers.approveFishTransfer, { id: transferId })).rejects.toThrow(
+      /cannot be stocked/,
+    )
+    expect((await getDoc(t, a.cageId)).currentCount).toBe(10000)
+    expect((await getDoc(t, emptyId)).currentCount).toBe(4000)
+  })
+
+  test('a transfer top-up into a cage harvested since the transfer was created is refused', async () => {
+    const { t, as, a, b } = await setup()
+    const transferId = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, b.cageId, 2000))
+    await as.mutation(api.harvest.create, {
+      cageId: b.cageId,
+      harvestDate: '2026-11-05',
+      averageBodyWeight: 450,
+      totalWeight: 2250,
+      estimatedCount: 5000,
+      fcr: 1.5,
+      harvestType: 'complete',
+    })
+
+    await expect(as.mutation(api.fishTransfers.approveFishTransfer, { id: transferId })).rejects.toThrow(
+      /has been harvested since/,
+    )
+    expect((await getDoc(t, a.cageId)).currentCount).toBe(10000)
+    expect((await getDoc(t, b.cageId)).currentCount).toBe(0)
+  })
+
+  test('refused when another approved stocking is still open, even if the status rules allow it', async () => {
+    const { t, as, b, companyId } = await setup()
+    // A farm that lets active cages be stocked.
+    await t.run((ctx: any) =>
+      ctx.db.patch(companyId, {
+        settings: {
+          aiAssistantEnabled: false,
+          stockingRules: {
+            requireApprovalForStocking: true,
+            requireApprovalForTopup: true,
+            enforceCageCapacity: true,
+            allowStockOnlyEmptyStatuses: ['empty', 'fallow', 'harvested', 'active'],
+          },
+        },
+      }),
+    )
+    const id = await as.mutation(api.stocking.createStocking, stockingArgs(b.cageId, 3000))
+    await expect(as.mutation(api.stocking.approveStocking, { id })).rejects.toThrow(
+      /already has an open stocking/,
+    )
+    expect((await getDoc(t, b.cageId)).currentCount).toBe(5000)
+  })
+
+  test('an old stocking never closed by a harvest does not block restocking a harvested cage', async () => {
+    const { t, as, b } = await setup()
+    // Harvested before harvests closed stockings: the old row has no closedAt.
+    await t.run((ctx: any) => ctx.db.patch(b.cageId, { status: 'harvested', currentCount: 0 }))
+    const id = await as.mutation(api.stocking.createStocking, stockingArgs(b.cageId, 3000))
+    await as.mutation(api.stocking.approveStocking, { id })
+    const cage = await getDoc(t, b.cageId)
+    expect(cage.status).toBe('active')
+    expect(cage.currentCount).toBe(3000)
+  })
+})

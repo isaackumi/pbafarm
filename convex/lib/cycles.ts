@@ -75,3 +75,33 @@ export async function harvestIsCurrent(
   if (harvest.harvestType === 'complete') return cage.status === 'harvested'
   return true
 }
+
+/**
+ * Refuse to start a new cycle on a cage whose current cycle is still running:
+ * another approved stocking without `closedAt` while the cage is not sitting
+ * empty. Stockings from before harvests closed their cycle have no `closedAt`,
+ * so an unclosed stocking on a harvested/empty/fallow cage is not counted.
+ */
+export async function assertNoOtherOpenStocking(
+  ctx: Ctx,
+  cage: Doc<'cages'>,
+  exceptStockingId?: Id<'stockingHistory'>,
+) {
+  if (cage.status && EMPTY_STATUSES.has(cage.status)) return
+  const rows = await ctx.db
+    .query('stockingHistory')
+    .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
+    .collect()
+  const open = rows.find(
+    (s) =>
+      s._id !== exceptStockingId &&
+      s.status === 'approved' &&
+      !s.deletedAt &&
+      !s.closedAt,
+  )
+  if (open) {
+    throw new Error(
+      `Cage ${cage.name} already has an open stocking (batch ${open.batchNumber}). Harvest the cage before stocking it again, or record these fish as a top-up.`,
+    )
+  }
+}

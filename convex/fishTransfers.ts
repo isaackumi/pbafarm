@@ -7,6 +7,7 @@ import {
   assertStockingAllowed,
   assertTopupAllowed,
 } from './lib/farmRules'
+import { assertNoOtherOpenStocking } from './lib/cycles'
 import {
   deriveTransferType,
   transferBiomassKg,
@@ -106,6 +107,32 @@ async function applyFishTransfer(
   }
   const applies = (row: any) =>
     opts.linkedJustCreated || row.status === 'pending_approval'
+
+  // At approval time, re-check the destination as it is now: it may have been
+  // stocked or harvested since the transfer was requested (doc 09 S9).
+  if (!opts.linkedJustCreated) {
+    if (stocking && applies(stocking)) {
+      const destCage = await ctx.db.get(stocking.cageId)
+      if (!destCage) throw new Error('Destination cage not found')
+      const rules = await loadRules(ctx, transfer.companyId ?? destCage.companyId)
+      assertStockingAllowed({
+        cage: destCage,
+        fishCount: stocking.fishCount,
+        abw: stocking.initialAbw,
+        rules: rules.stockingRules,
+        farmRules: rules.farmRules,
+      })
+      await assertNoOtherOpenStocking(ctx, destCage, stocking._id)
+    }
+    if (topup && applies(topup)) {
+      const destStocking = await ctx.db.get(topup.stockingId)
+      if (destStocking?.closedAt) {
+        throw new Error(
+          'The destination cage has been harvested since this transfer was requested. Reject the transfer and create a new one.',
+        )
+      }
+    }
+  }
 
   const now = Date.now()
   const sourcePatch = sourceCagePatchAfterTransfer({
