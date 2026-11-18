@@ -1,10 +1,17 @@
-import {
-  isRetryableStatus,
-  networkFailure,
-  providerError,
-  readJson,
-  type ProviderAdapter,
-} from './types'
+import * as Effect from 'effect/Effect'
+import * as Schema from 'effect/Schema'
+import { decodeBody, providerPost, runSend } from './send'
+import { providerError, type ProviderAdapter } from './types'
+
+/** Error body: { error: { code, message } }. Success: { messages: [{ id }] }. */
+const GraphError = Schema.Struct({
+  error: Schema.optional(
+    Schema.Struct({ code: Schema.optional(Schema.Unknown), message: Schema.optional(Schema.Unknown) }),
+  ),
+})
+const GraphSent = Schema.Struct({
+  messages: Schema.optional(Schema.Array(Schema.Struct({ id: Schema.optional(Schema.NullOr(Schema.String)) }))),
+})
 
 /**
  * Meta WhatsApp Cloud API.
@@ -57,7 +64,7 @@ export const whatsappCloud: ProviderAdapter = {
   senderLabel: 'Display number (for your reference)',
   senderRequired: false,
 
-  async send(input, creds, config, fetchImpl = fetch) {
+  async send(input, creds, config, fetchImpl) {
     const phoneNumberId = config.settings.phoneNumberId ?? ''
     const code = input.otpCode
     if (!code) {
@@ -81,29 +88,26 @@ export const whatsappCloud: ProviderAdapter = {
         ],
       },
     }
-    try {
-      const res = await fetchImpl(
-        `https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(phoneNumberId)}/messages`,
+    const program = Effect.gen(function* () {
+      const res = yield* providerPost(
         {
-          method: 'POST',
+          url: `https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(phoneNumberId)}/messages`,
           headers: {
             Authorization: `Bearer ${creds.accessToken ?? ''}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
         },
+        (status, json, text) => {
+          const decoded = Schema.decodeUnknownOption(GraphError)(json)
+          const err = decoded._tag === 'Some' ? decoded.value.error : undefined
+          return err?.message
+            ? `WhatsApp ${err.code ?? status}: ${String(err.message).slice(0, 160)}`
+            : providerError(status, text)
+        },
       )
-      const { json, text } = await readJson(res)
-      if (!res.ok) {
-        const err = json?.error
-        const detail = err?.message
-          ? `WhatsApp ${err.code ?? res.status}: ${String(err.message).slice(0, 160)}`
-          : providerError(res.status, text)
-        return { ok: false, error: detail, retryable: isRetryableStatus(res.status) }
-      }
-      return { ok: true, providerMessageId: json?.messages?.[0]?.id ?? undefined }
-    } catch (err) {
-      return networkFailure(err)
-    }
+      return { providerMessageId: decodeBody(GraphSent, res)?.messages?.[0]?.id ?? undefined }
+    })
+    return runSend(program, fetchImpl)
   },
 }

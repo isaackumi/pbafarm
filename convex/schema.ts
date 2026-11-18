@@ -12,6 +12,38 @@ const cageStatus = v.union(
   v.literal('empty'),
 )
 
+/** Production engine (D-004, docs/architecture/05). */
+export const stockEventType = v.union(
+  v.literal('stock_in'),
+  v.literal('mortality'),
+  v.literal('transfer_out'),
+  v.literal('transfer_in'),
+  v.literal('harvest'),
+  v.literal('grading_split'),
+  v.literal('merge'),
+  v.literal('count_adjustment'),
+  v.literal('reversal'),
+)
+
+export const stockSourceTable = v.union(
+  v.literal('stockingHistory'),
+  v.literal('topupHistory'),
+  v.literal('fishTransfers'),
+  v.literal('dailyRecords'),
+  v.literal('harvestRecords'),
+  v.literal('stockOperations'),
+  v.literal('legacyBackfill'),
+)
+
+export const batchOrigin = v.union(
+  v.literal('stocking'),
+  v.literal('transfer_split'),
+  v.literal('grading_split'),
+  v.literal('merge'),
+  v.literal('hatchery'),
+  v.literal('legacy'),
+)
+
 const schema = defineSchema({
   ...authTables,
 
@@ -278,6 +310,8 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     /** Active culture species (set from stocking). */
     species: v.optional(v.string()),
+    /** Engine cache: the batch whose occupancy is open in this cage. */
+    currentBatchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -377,6 +411,8 @@ const schema = defineSchema({
     temperatureC: v.optional(v.number()),
     /** Secchi disk depth (cm). */
     secchiCm: v.optional(v.number()),
+    /** Batch in the cage on `date` (production engine). */
+    batchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -399,6 +435,8 @@ const schema = defineSchema({
     dissolvedOxygen: v.optional(v.number()),
     temperatureC: v.optional(v.number()),
     secchiCm: v.optional(v.number()),
+    /** Batch in the cage on `date` (production engine). */
+    batchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -450,6 +488,17 @@ const schema = defineSchema({
      * for reference but left out of harvest KPIs. Unset = harvest form.
      */
     source: v.optional(v.string()),
+    /** Batch harvested (production engine). */
+    batchId: v.optional(v.id('batches')),
+    /** Inputs of the FCR computed from the ledger at save time (TD-060). */
+    fcrInputs: v.optional(
+      v.object({
+        feedKg: v.number(),
+        gainKg: v.number(),
+        method: v.union(v.literal('complete'), v.literal('interim')),
+        efcr: v.union(v.number(), v.null()),
+      }),
+    ),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -545,6 +594,8 @@ const schema = defineSchema({
     closedAt: v.optional(v.string()),
     /** Culture species code (e.g. nile_tilapia). */
     species: v.optional(v.string()),
+    /** The batch this stocking opened (production engine). */
+    batchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -573,6 +624,8 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     notes: v.optional(v.string()),
+    /** Batch the fish were added to (production engine). */
+    batchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -609,11 +662,22 @@ const schema = defineSchema({
     createdBy: v.optional(v.id('users')),
     approvedBy: v.optional(v.id('users')),
     approvedAt: v.optional(v.number()),
+    /** Source batch moved (production engine). */
+    batchId: v.optional(v.id('batches')),
+    /** Lines of one multi-destination transfer share this id. */
+    transferGroupId: v.optional(v.string()),
+    /** move: the batch continues in the destination; merge: joins the batch already there. */
+    mode: v.optional(v.union(v.literal('move'), v.literal('merge'))),
+    /** Set when an approved transfer was reversed (doc 09 S1). */
+    reversedAt: v.optional(v.number()),
+    reversedBy: v.optional(v.id('users')),
+    reversalReason: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index('by_company', ['companyId'])
     .index('by_status', ['status'])
     .index('by_company_and_status', ['companyId', 'status'])
+    .index('by_companyId_and_transferGroupId', ['companyId', 'transferGroupId'])
     .index('by_source_cage', ['sourceCageId'])
     .index('by_destination_cage', ['destinationCageId'])
     .index('by_company_location', ['companyId', 'sourceLocationId'])
@@ -796,6 +860,92 @@ const schema = defineSchema({
     .index('by_company_and_date', ['companyId', 'date'])
     .index('by_company_and_withdrawalUntil', ['companyId', 'withdrawalUntil'])
     .index('by_date', ['date']),
+
+  /**
+   * A cohort of fish with one origin and species that can live in one or
+   * several cages over time (D-004). Children of a grading or transfer split
+   * list their parents; a merge adds the merged batch to the target's parents.
+   */
+  batches: defineTable({
+    companyId: v.id('companies'),
+    batchNumber: v.string(),
+    speciesCode: v.optional(v.string()),
+    origin: batchOrigin,
+    /** Bounded: at most 20, enforced by the engine. */
+    parentBatchIds: v.optional(v.array(v.id('batches'))),
+    status: v.union(v.literal('active'), v.literal('closed')),
+    openedOn: v.string(),
+    closedOn: v.optional(v.string()),
+    homeLocationId: v.optional(v.id('farmLocations')),
+    legacyStockingId: v.optional(v.id('stockingHistory')),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_batchNumber', ['companyId', 'batchNumber'])
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_legacyStockingId', ['legacyStockingId']),
+
+  /**
+   * Append-only fish ledger (D-004). Rows are never patched or deleted; a
+   * correction is a `reversal` row. Only convex/lib/productionEngine.ts writes
+   * this table.
+   */
+  stockEvents: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    batchId: v.id('batches'),
+    type: stockEventType,
+    /** Set when type === 'reversal'. */
+    reversedType: v.optional(stockEventType),
+    /** Signed whole number of fish. */
+    qtyDelta: v.number(),
+    /** Signed kg. */
+    biomassKgDelta: v.number(),
+    abwG: v.optional(v.number()),
+    abwSource: v.optional(v.union(v.literal('measured'), v.literal('estimated'))),
+    /** Business date, YYYY-MM-DD. */
+    eventDate: v.string(),
+    /** 0 inflows, 1 adjustments (+), 2 mortality and adjustments (−), 3 outflows. */
+    intraDayOrder: v.number(),
+    sourceTable: stockSourceTable,
+    sourceId: v.string(),
+    /** 'closeout' marks the derived adjustment that empties a fully harvested occupancy. */
+    component: v.optional(v.string()),
+    counterpartUnitId: v.optional(v.id('cages')),
+    counterpartBatchId: v.optional(v.id('batches')),
+    reversesEventId: v.optional(v.id('stockEvents')),
+    reason: v.optional(v.string()),
+    /** Server time the event was recorded ("known at"). */
+    recordedAt: v.number(),
+    recordedBy: v.optional(v.id('users')),
+  })
+    .index('by_unitId_and_eventDate', ['unitId', 'eventDate'])
+    .index('by_unitId_and_batchId_and_eventDate', ['unitId', 'batchId', 'eventDate'])
+    .index('by_batchId_and_eventDate', ['batchId', 'eventDate'])
+    .index('by_companyId_and_eventDate', ['companyId', 'eventDate'])
+    .index('by_sourceTable_and_sourceId', ['sourceTable', 'sourceId'])
+    .index('by_reversesEventId', ['reversesEventId']),
+
+  /** Source document for engine-only operations: grading, merge, count adjustment. */
+  stockOperations: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    kind: v.union(
+      v.literal('grading_split'),
+      v.literal('merge'),
+      v.literal('count_adjustment'),
+    ),
+    operationDate: v.string(),
+    status: v.union(v.literal('approved'), v.literal('reversed')),
+    unitId: v.optional(v.id('cages')),
+    reason: v.optional(v.string()),
+    idempotencyKey: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_operationDate', ['companyId', 'operationDate'])
+    .index('by_companyId_and_idempotencyKey', ['companyId', 'idempotencyKey']),
 
   /**
    * Operating expenses (INV-007). Cost centre is the company, optionally a

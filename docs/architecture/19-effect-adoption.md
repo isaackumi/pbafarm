@@ -40,10 +40,10 @@ Research date for every external fact below: **2026-11-18**.
 ## 3. Where Effect is used, and where it is not
 
 **Use Effect for:**
-- Integration providers and adapters (SMS, WhatsApp, email, payments, weather, IoT vendors): typed provider errors, retry on transient failures, timeouts, Layers per provider, Schema for responses.
+- Integration providers and adapters (SMS, WhatsApp, email, payments, weather, IoT vendors): typed provider errors, retry on transient failures, timeouts, Layers per provider, Schema for responses. **Pilot: messaging adapters (PLAT-007), see §8.**
 - Inbound webhooks (`httpAction`): Schema-decode the payload, verify signatures, map failures to HTTP status codes.
 - Automation engine runs (D-008): an action that runs a rule's steps with per-step timeout/retry and a typed outcome stored on `automationRuns`.
-- AI proxy (`pages/api/llm/chat.js`, and a future Convex action): provider calls with timeout/retry, Schema-validated request and response. Pilot: PLAT-006.
+- AI proxy (`pages/api/llm/chat.js`, and a future Convex action): provider calls with timeout/retry, Schema-validated request and response (PLAT-006).
 - IoT ingestion: decode and validate device batches; reject per reading with typed reasons.
 - Complex pure domain pipelines (KPI / production-engine calculations) **only if** it removes code; run them with `runEffectSync`.
 
@@ -111,7 +111,13 @@ Research date for every external fact below: **2026-11-18**.
 | ID | Item | State |
 |---|---|---|
 | PLAT-005 | Foundation: `effect` dependency, `convex/lib/effect.ts`, `convex/lib/effectHttp.ts`, lint rule, tests, this doc | Implemented |
-| PLAT-006 | Pilot: AI proxy (`pages/api/llm/chat.js`) on Effect: Schema-validated body, timeout + retry, typed provider errors | Designed |
-| PLAT-007 | Convert messaging provider adapters (`convex/messaging/providers/*`, branch `feat/messaging-channels`) to Effect services once that branch is on `main` | Not started (waiting on INT-001 merge) |
+| PLAT-006 | AI proxy (`pages/api/llm/chat.js`) on Effect: Schema-validated request body, per-attempt timeout + transient-only retry, typed provider errors, Schema-validated provider responses | Not started (next candidate) |
+| PLAT-007 | **Pilot:** messaging provider adapters (`convex/messaging/providers/*`) on Effect | Implemented |
 
-Notes for PLAT-007: one `Context.Service` per channel kind (`SmsSender`, `WhatsAppSender`, `EmailSender`), one Layer per vendor (Hubtel, Africa's Talking, Twilio, Meta Cloud, Resend); provider responses decoded with Schema; `retries` limited to 5xx and network errors before the request is accepted. **Do not retry timeouts on sends** (duplicate SMS) unless the vendor supports an idempotency key; map vendor 4xx to `UserFacingError('VALIDATION', …)` and 401/403 to a credentials error shown in messaging settings.
+**PLAT-007 (pilot) as built.** `convex/messaging/providers/send.ts` holds the shared pieces: tagged `ProviderRejected` (provider answered and refused; carries `retryable`) and `ProviderUnavailable` (network, timeout, 429, 5xx); `providerPost` (wraps `requestJson` with the send policy and turns HTTP errors into those tags, using each vendor's error-message format); `decodeBody` (Schema check of 2xx bodies); `runSend` (provides the `Fetch` service and returns the existing `SendResult`, never throws). Each adapter's `send` is now an `Effect.gen` program; the `ProviderAdapter` interface, request shapes, messages and `retryable` flags are unchanged, so `deliver.ts` and `channels.ts` did not change.
+- Retry: 5xx and connection errors, 2 retries, jittered backoff from 300 ms. 4xx never (429 still reported `retryable: true` to the caller).
+- Timeout: 10 s per attempt; the fetch is aborted. **Timeouts are not retried** for sends: the provider may already have accepted the message, and none of these SMS/WhatsApp vendors take an idempotency key, so a retry could send a second code. This is a deliberate exception to "retry timeouts" for non-idempotent POSTs (§4 rule 4).
+- Schema: 2xx bodies are decoded per vendor; a body that does not match is treated as carrying no information (the old optional-chaining behaviour), so a vendor changing fields cannot break a send; a message id of the wrong type is dropped.
+- Not done (follow-up): one `Context.Service` per channel kind with a Layer per vendor. The adapter registry (`ADAPTERS`) already plays that role and callers pick the vendor at runtime from the company's channel row, so services would add indirection without removing code today. Revisit when automation runs (D-008) need to swap senders in tests.
+
+**PLAT-006 notes for the next agent.** Move the provider calls out of `lib/llmClient.js` (which is also bundled for the browser and must stay Effect-free) into a server-only module (e.g. `convex/lib/llmProviders.ts`, reusable from a Convex action later), built on `requestJsonAs`: per-attempt timeout ~30 s, 1–2 retries on 5xx/network/timeout (chat completions are safe to repeat), Schema for the request body envelope in `pages/api/llm/chat.js` (keep `lib/llmProxyGuard.js#validateMessages` as the authority for message caps and its exact messages), Schema for each provider's response, and the same error texts as today (`Empty response from model`, `Gemini request failed (status)`, …). Gemini puts the key in the query string: `effectHttp` already redacts URLs in errors.

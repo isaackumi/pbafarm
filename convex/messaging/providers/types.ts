@@ -69,16 +69,11 @@ export function basicAuth(user: string, pass: string): string {
   return `Basic ${btoa(`${user}:${pass}`)}`
 }
 
-export async function readJson(res: Response): Promise<{ json: any; text: string }> {
-  const text = await res.text()
-  try {
-    return { json: JSON.parse(text), text }
-  } catch {
-    return { json: null, text }
-  }
+export function networkErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  return `Network error: ${message.slice(0, 160)}`
 }
 
 export function networkFailure(err: unknown): SendResult {
-  const message = err instanceof Error ? err.message : String(err)
-  return { ok: false, error: `Network error: ${message.slice(0, 160)}`, retryable: true }
+  return { ok: false, error: networkErrorMessage(err), retryable: true }
 }
