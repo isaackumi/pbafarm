@@ -210,9 +210,16 @@ describe('email verification', () => {
     expect(await codeOf(as(loner).mutation(api.emailVerification.verify, { code }))).toMatch(/Too many attempts/)
   })
 
-  test('the email adapter logs without a provider key and uses Resend with one', () => {
+  test('account emails use the platform default email channel, else the log', () => {
     expect(pickEmailAdapter({}).name).toBe('log')
-    expect(pickEmailAdapter({ RESEND_API_KEY: 'k' }).name).toBe('resend')
+    expect(pickEmailAdapter({ RESEND_API_KEY: 'k' }).name).toBe('log')
+    expect(
+      pickEmailAdapter({
+        PLATFORM_EMAIL_PROVIDER: 'resend',
+        PLATFORM_EMAIL_SENDER: 'PBA <a@b.c>',
+        PLATFORM_RESEND_API_KEY: 'k',
+      }).name,
+    ).toBe('resend')
   })
 })
 

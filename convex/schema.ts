@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
+import { messagingChannel, messagingProvider } from './messaging/validators'
 
 const cageStatus = v.union(
   v.literal('active'),
@@ -159,6 +160,17 @@ const schema = defineSchema({
             currency: v.optional(
               v.union(v.literal('GHS'), v.literal('USD'), v.literal('EUR')),
             ),
+          }),
+        ),
+        /** ISO 3166 alpha-2 used to read local phone numbers (INT-001). Default 'GH'. */
+        defaultCountryCode: v.optional(v.string()),
+        /** Messaging preferences (INT-001); channels live in messagingChannels. */
+        messaging: v.optional(
+          v.object({
+            /** Use the platform's channel when the company has none (default true). */
+            usePlatformDefaultSms: v.optional(v.boolean()),
+            usePlatformDefaultWhatsapp: v.optional(v.boolean()),
+            usePlatformDefaultEmail: v.optional(v.boolean()),
           }),
         ),
         updatedAt: v.optional(v.number()),
@@ -609,6 +621,45 @@ const schema = defineSchema({
     .index('by_company', ['companyId'])
     .index('by_company_and_tableName', ['companyId', 'tableName']),
 
+  /**
+   * A company's own messaging provider per channel (INT-001, doc 18). Holds
+   * only non-secret configuration; credentials are in integrationSecrets.
+   */
+  messagingChannels: defineTable({
+    companyId: v.id('companies'),
+    channel: messagingChannel,
+    provider: messagingProvider,
+    status: v.union(v.literal('draft'), v.literal('verified'), v.literal('disabled')),
+    /** Sender ID, from-number or from-address shown to recipients. */
+    senderId: v.optional(v.string()),
+    /** Non-secret provider settings (phone number id, template name, ...). */
+    settings: v.optional(v.record(v.string(), v.string())),
+    /** Non-secret hint for the write-only UI, e.g. "…4F2a". */
+    credentialHint: v.optional(v.string()),
+    credentialsSetAt: v.optional(v.number()),
+    lastTestAt: v.optional(v.number()),
+    /** 'ok' or a short provider error (never contains credentials). */
+    lastTestResult: v.optional(v.string()),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_company_and_channel', ['companyId', 'channel']),
+
+  /**
+   * Encrypted provider credentials (AES-256-GCM, key in the Convex env).
+   * Written only by internal mutations and read only by internal functions:
+   * no public query or mutation touches this table (tested).
+   */
+  integrationSecrets: defineTable({
+    companyId: v.id('companies'),
+    channelId: v.id('messagingChannels'),
+    /** base64 AES-GCM ciphertext (with tag) of the JSON credentials. */
+    ciphertext: v.string(),
+    /** base64 12-byte IV, random per encryption. */
+    iv: v.string(),
+    keyVersion: v.number(),
+    updatedAt: v.number(),
+  }).index('by_channel', ['channelId']),
+
   notifications: defineTable({
     userId: v.id('users'),
     title: v.string(),
@@ -694,6 +745,41 @@ const schema = defineSchema({
     .index('by_company_and_date', ['companyId', 'date'])
     .index('by_company_and_withdrawalUntil', ['companyId', 'withdrawalUntil'])
     .index('by_date', ['date']),
+
+  /**
+   * Operating expenses (INV-007). Cost centre is the company, optionally a
+   * site, a cage and a production cycle (the cage's stocking record) — until
+   * Phase 4 adds `batches`, the stocking is the cycle. `category` is a
+   * built-in key (lib/costing EXPENSE_CATEGORIES) or a custom
+   * `expenseCategories.key`. `currency` is the company currency when saved.
+   */
+  expenses: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    cageId: v.optional(v.id('cages')),
+    stockingId: v.optional(v.id('stockingHistory')),
+    category: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    date: v.string(),
+    supplierId: v.optional(v.id('feedSuppliers')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    deletedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_company_and_date', ['companyId', 'date'])
+    .index('by_company_and_cage', ['companyId', 'cageId'])
+    .index('by_company_and_stocking', ['companyId', 'stockingId']),
+
+  /** Company-defined expense categories, alongside the built-in ones. */
+  expenseCategories: defineTable({
+    companyId: v.id('companies'),
+    key: v.string(),
+    label: v.string(),
+    active: v.boolean(),
+    updatedAt: v.number(),
+  }).index('by_company_and_key', ['companyId', 'key']),
 })
 
 export default schema

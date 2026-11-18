@@ -308,6 +308,17 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
   }
 }
 
+/**
+ * Settings that publishSettings must carry over unchanged: the draft does not
+ * contain them, and publishing rebuilds `settings` from the draft.
+ */
+function preservedSettings(settings: Doc<'companies'>['settings']) {
+  const out: Partial<NonNullable<Doc<'companies'>['settings']>> = {}
+  if (settings?.defaultCountryCode !== undefined) out.defaultCountryCode = settings.defaultCountryCode
+  if (settings?.messaging !== undefined) out.messaging = settings.messaging
+  return out
+}
+
 function numOr(v: any, fallback: number) {
   const n = Number(v)
   return Number.isFinite(n) ? n : fallback
@@ -931,6 +942,8 @@ export const publishSettings = mutation({
 
     const nextSettings = {
       ...settingsFromDraft(draft, company.settings?.aiAssistantEnabled),
+      // Managed on their own settings screens, not through the draft (INT-001).
+      ...preservedSettings(company.settings),
       updatedAt: Date.now(),
       updatedBy: user._id,
     }

@@ -1,20 +1,21 @@
 /**
- * Platform email adapter (D-009, INT-002 email slice).
+ * Platform email for account emails: invites, email verification and password
+ * reset (INT-002 email slice, D-009).
  *
- * One interface, picked from the environment:
- * - RESEND_API_KEY set  → Resend HTTP API (sender EMAIL_FROM, default "PBA Farm <no-reply@pbafarm.app>")
- * - otherwise           → log adapter: prints the message to the Convex logs, so
- *                         dev and test deployments work without a provider.
- *
- * When the messaging-channels work lands (convex/messaging/*), its platform
- * default email channel should implement EmailAdapter and replace pickEmailAdapter.
- * send() uses fetch: call it from actions only.
+ * Account emails are not sent on a tenant's behalf, so they always use the
+ * platform default email channel from convex/messaging (doc 18 §6):
+ *   PLATFORM_EMAIL_PROVIDER=resend
+ *   PLATFORM_EMAIL_SENDER="PBA Farm <no-reply@your-domain>"
+ *   PLATFORM_RESEND_API_KEY=re_…
+ * Without it the log adapter prints the message to the Convex logs, so dev and
+ * test deployments work without a provider. send() uses fetch: actions only.
  */
+import { platformChannelFromEnv } from '../messaging/providers'
+
 export type EmailMessage = {
   to: string
   subject: string
   text: string
-  html?: string
 }
 
 export interface EmailAdapter {
@@ -29,38 +30,22 @@ export const logEmailAdapter: EmailAdapter = {
   },
 }
 
-export function resendEmailAdapter(apiKey: string, from: string): EmailAdapter {
-  return {
-    name: 'resend',
-    async send(message) {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from,
-          to: [message.to],
-          subject: message.subject,
-          text: message.text,
-          ...(message.html ? { html: message.html } : {}),
-        }),
-      })
-      if (!res.ok) {
-        const body = await res.text().catch(() => '')
-        throw new Error(`Email provider refused the message (${res.status}): ${body.slice(0, 200)}`)
-      }
-    },
-  }
-}
-
 export function pickEmailAdapter(
   env: Record<string, string | undefined> = process.env,
 ): EmailAdapter {
-  const key = env.RESEND_API_KEY
-  if (key) return resendEmailAdapter(key, env.EMAIL_FROM || 'PBA Farm <no-reply@pbafarm.app>')
-  return logEmailAdapter
+  const platform = platformChannelFromEnv('email', env)
+  if (!platform) return logEmailAdapter
+  return {
+    name: platform.adapter.id,
+    async send(message) {
+      const result = await platform.adapter.send(
+        { channel: 'email', to: message.to, subject: message.subject, body: message.text },
+        platform.creds,
+        platform.config,
+      )
+      if (!result.ok) throw new Error(`Email not sent: ${result.error}`)
+    },
+  }
 }
 
 /** Public base URL of the web app, for links in emails (SITE_URL). */
