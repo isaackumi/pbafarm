@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, FormPage } from '../components/ui'
+import { PageHeader, Button, FormPage, Field, Input, Select } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
-import { Search, Filter, X, Calendar, MapPin, Fish, TrendingUp, Activity } from 'lucide-react'
+import { Search, Filter, X, Calendar, MapPin } from 'lucide-react'
 import { cageService } from '../lib/databaseService'
 
 export default function BiweeklyEntryPage() {
@@ -132,9 +132,9 @@ function BiweeklyEntry() {
 
   if (loading) {
     return (
-      <Layout title="Bi-weekly Entry">
+      <Layout title="Bi-weekly entry">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake"></div>
         </div>
       </Layout>
     )
@@ -142,7 +142,7 @@ function BiweeklyEntry() {
 
   if (selectedCage) {
     return (
-      <Layout title="Bi-weekly Entry">
+      <Layout title="Bi-weekly entry">
         <FormPage width="full">
           <PageHeader
             showTitle={false}
@@ -163,7 +163,7 @@ function BiweeklyEntry() {
                 size="sm"
                 onClick={() => setSelectedCage(null)}
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden />
                 Back to cages
               </Button>
             }
@@ -181,7 +181,7 @@ function BiweeklyEntry() {
   }
 
   return (
-    <Layout title="Bi-weekly Entry">
+    <Layout title="Bi-weekly entry">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -203,126 +203,124 @@ function BiweeklyEntry() {
       />
 
         {/* Enhanced Search and Filters */}
-        <div className="mb-6 page-card-sm border border-foam-deep p-4">
+        <div className="mb-6 page-card p-4">
           <div className="space-y-4">
             {/* Search Bar */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-muted" />
+                <Search className="h-4 w-4 text-muted" aria-hidden />
               </div>
-              <input
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cages by name, code, or location..."
-                className="block w-full pl-10 pr-3 py-3 border border-input-border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800 text-sm"
+                placeholder="Search by name, code or location"
+                aria-label="Search cages"
+                className="pl-10"
               />
             </div>
 
             {/* Filter Toggle */}
             <div className="flex items-center justify-between">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-2 text-sm font-medium text-chart-ink bg-foam border border-input-border rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-lagoon-800"
+                aria-expanded={showFilters}
               >
-                <Filter className="w-4 h-4 mr-2" />
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-              </button>
+                <Filter className="w-4 h-4" aria-hidden />
+                {showFilters ? 'Hide filters' : 'Show filters'}
+              </Button>
 
               {(searchQuery || statusFilter !== 'active' || locationFilter !== 'all' || sizeFilter !== 'all' || growthFilter !== 'all') && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-lagoon-800 hover:text-lagoon-950"
-                >
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-lake">
                   Clear all filters
-                </button>
+                </Button>
               )}
             </div>
 
             {/* Advanced Filters */}
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-foam-deep">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">Status</label>
-                  <select
+                <Field label="Status" htmlFor="biweekly-entry-status">
+                  <Select
+                    id="biweekly-entry-status"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-input-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Status</option>
+                    <option value="all">All statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="maintenance">Maintenance</option>
                     <option value="harvested">Harvested</option>
-                  </select>
-                </div>
+                  </Select>
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">Location</label>
-                  <select
+                <Field label="Location" htmlFor="biweekly-entry-location">
+                  <Select
+                    id="biweekly-entry-location"
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-input-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Locations</option>
+                    <option value="all">All locations</option>
                     {uniqueLocations.map(location => (
                       <option key={location} value={location}>{location}</option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">Size</label>
-                  <select
+                <Field label="Size" htmlFor="biweekly-entry-size">
+                  <Select
+                    id="biweekly-entry-size"
                     value={sizeFilter}
                     onChange={(e) => setSizeFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-input-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Sizes</option>
+                    <option value="all">All sizes</option>
                     <option value="Small (<50m³)">Small (&lt;50m³)</option>
                     <option value="Medium (50-100m³)">Medium (50-100m³)</option>
                     <option value="Large (>100m³)">Large (&gt;100m³)</option>
-                  </select>
-                </div>
+                  </Select>
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">Growth Rate</label>
-                  <select
+                <Field label="Growth rate" htmlFor="biweekly-entry-growth-rate">
+                  <Select
+                    id="biweekly-entry-growth-rate"
                     value={growthFilter}
                     onChange={(e) => setGrowthFilter(e.target.value)}
-                    className="block w-full px-3 py-2 text-sm border-input-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Growth Rates</option>
+                    <option value="all">All growth rates</option>
                     <option value="Low (<50%)">Low (&lt;50%)</option>
                     <option value="Medium (50-100%)">Medium (50-100%)</option>
                     <option value="High (>100%)">High (&gt;100%)</option>
-                  </select>
-                </div>
+                  </Select>
+                </Field>
               </div>
             )}
 
             {/* Sort Options */}
-            <div className="flex items-center space-x-4 pt-4 border-t border-foam-deep">
-              <label className="text-sm font-medium text-chart-ink">Sort by:</label>
-              <select
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-foam-deep">
+              <label htmlFor="biweekly-sort" className="text-sm font-semibold text-chart-ink">Sort by</label>
+              <Select
+                id="biweekly-sort"
                 value={sortBy}
                 onChange={(e) => handleSort(e.target.value)}
-                className="block px-3 py-2 text-sm border-input-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lagoon-800 focus:border-lagoon-800"
+                className="w-auto"
               >
                 <option value="name">Name</option>
                 <option value="code">Code</option>
                 <option value="location">Location</option>
                 <option value="status">Status</option>
                 <option value="size">Size</option>
-                <option value="growth_rate">Growth Rate</option>
-                <option value="stocking_date">Stocking Date</option>
-              </select>
-              <button
+                <option value="growth_rate">Growth rate</option>
+                <option value="stocking_date">Stocking date</option>
+              </Select>
+              <Button
+                variant="secondary"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-2 text-sm border border-input-border rounded-lg hover:bg-foam-deep/40"
+                aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -344,16 +342,17 @@ function BiweeklyEntry() {
             return (
               <button
                 key={cage.id}
+                type="button"
                 onClick={() => setSelectedCage(cage)}
-                className="relative block w-full bg-white border border-foam-deep rounded-xl hover:border-lagoon-800 hover:ring-2 hover:ring-lagoon-800 hover:shadow-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-lagoon-800"
+                className="relative block w-full text-left bg-surface border border-foam-deep rounded-xl shadow-sm hover:border-lake transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
               >
                 {/* Header */}
-                <div className="p-6 border-b border-gray-100">
+                <div className="p-5 border-b border-foam-deep">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-chart-ink truncate">{cage.name}</h3>
+                      <h3 className="font-display text-lg font-medium text-chart-ink truncate">{cage.name}</h3>
                       {cage.code && (
-                        <p className="text-sm text-muted font-mono">{cage.code}</p>
+                        <p className="text-sm text-muted font-data">{cage.code}</p>
                       )}
                     </div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -375,12 +374,12 @@ function BiweeklyEntry() {
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-4">
+                <div className="p-5 space-y-4">
                   {/* DOC and Stocking Info */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center text-sm text-muted">
                       <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
-                      <span>DOC: {doc ? `${doc} days` : 'Not stocked'}</span>
+                      <span className="tabular-nums">DOC: {doc ? `${doc} days` : 'Not stocked'}</span>
                     </div>
                     {cage.stocking_date && (
                       <span className="text-xs text-muted">
@@ -391,44 +390,44 @@ function BiweeklyEntry() {
 
                   {/* Size and Capacity */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-foam-deep/40 rounded-lg">
-                      <div className="text-sm font-medium text-chart-ink">
+                    <div className="text-center p-3 bg-foam rounded-lg">
+                      <div className="text-sm font-medium text-chart-ink tabular-nums">
                         {cage.size ? `${cage.size}m³` : 'N/A'}
                       </div>
                       <div className="text-xs text-muted">{sizeCategory}</div>
                     </div>
-                    <div className="text-center p-3 bg-foam-deep/40 rounded-lg">
-                      <div className="text-sm font-medium text-chart-ink">
+                    <div className="text-center p-3 bg-foam rounded-lg">
+                      <div className="text-sm font-medium text-chart-ink tabular-nums">
                         {cage.current_count || cage.initial_count || 'N/A'}
                       </div>
-                      <div className="text-xs text-muted">Fish Count</div>
+                      <div className="text-xs text-muted">Fish count</div>
                     </div>
                   </div>
 
                   {/* Growth Metrics */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted">Growth Rate:</span>
-                      <span className={`font-medium ${
-                        cage.growth_rate > 100 ? 'text-green-600' :
-                        cage.growth_rate > 50 ? 'text-yellow-600' :
+                      <span className="text-muted">Growth rate</span>
+                      <span className={`font-medium tabular-nums ${
+                        cage.growth_rate > 100 ? 'text-kelp' :
+                        cage.growth_rate > 50 ? 'text-amber-700 dark:text-amber-300' :
                         'text-muted'
                       }`}>
                         {cage.growth_rate ? `${cage.growth_rate}%` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted">Current Weight:</span>
-                      <span className="font-medium text-chart-ink">
+                      <span className="text-muted">Current weight</span>
+                      <span className="font-medium text-chart-ink tabular-nums">
                         {cage.current_weight ? `${cage.current_weight}g` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted">Mortality Rate:</span>
-                      <span className={`font-medium ${
-                        cage.mortality_rate > 10 ? 'text-red-600' :
-                        cage.mortality_rate > 5 ? 'text-yellow-600' :
-                        'text-green-600'
+                      <span className="text-muted">Mortality rate</span>
+                      <span className={`font-medium tabular-nums ${
+                        cage.mortality_rate > 10 ? 'text-signal' :
+                        cage.mortality_rate > 5 ? 'text-amber-700 dark:text-amber-300' :
+                        'text-kelp'
                       }`}>
                         {cage.mortality_rate ? `${cage.mortality_rate}%` : 'N/A'}
                       </span>
@@ -437,10 +436,10 @@ function BiweeklyEntry() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-3 bg-foam-deep/40 rounded-b-xl">
+                <div className="px-5 py-3 bg-foam rounded-b-xl">
                   <div className="text-center">
-                    <span className="text-sm font-medium text-lagoon-800">
-                      Click to enter bi-weekly data
+                    <span className="text-sm font-medium text-lake">
+                      Enter bi-weekly data
                     </span>
                   </div>
                 </div>
@@ -451,20 +450,12 @@ function BiweeklyEntry() {
 
         {filteredCages.length === 0 && (
           <div className="text-center py-12">
-            <div className="mx-auto h-12 w-12 text-muted">
-              <Search className="h-12 w-12" />
-            </div>
-            <h3 className="mt-2 text-sm font-medium text-chart-ink">No cages found</h3>
+            <h3 className="text-base font-semibold text-chart-ink">No cages found</h3>
             <p className="mt-1 text-sm text-muted">
               Try adjusting your search or filter criteria.
             </p>
             <div className="mt-6">
-              <button
-                onClick={clearFilters}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
-              >
-                Clear all filters
-              </button>
+              <Button onClick={clearFilters}>Clear all filters</Button>
             </div>
           </div>
         )}

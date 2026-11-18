@@ -1,6 +1,6 @@
 // components/LogoutConfirmationModal.js
 import React from 'react'
-import { LogOut } from 'lucide-react'
+import { Button } from './ui'
 
 const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null
@@ -11,36 +11,29 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
         className="fixed inset-0 modal-backdrop"
         onClick={onClose}
       ></div>
-      <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-        <div className="text-center mb-4">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-            <LogOut className="h-6 w-6 text-red-600" />
-          </div>
-          <h3 className="mt-3 text-lg font-medium text-chart-ink">
-            Confirm Logout
-          </h3>
-          <div className="mt-2">
-            <p className="text-sm text-muted">
-              Are you sure you want to log out from your account?
-            </p>
-          </div>
-        </div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-confirm-title"
+        className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
+      >
+        <h3
+          id="logout-confirm-title"
+          className="text-lg font-semibold text-chart-ink"
+        >
+          Log out?
+        </h3>
+        <p className="mt-2 text-sm text-muted">
+          You will need to sign in again to use the app.
+        </p>
 
-        <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-3 w-full inline-flex justify-center rounded-lg border border-input-border shadow-sm px-4 py-2 bg-white text-base font-medium text-chart-ink hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 sm:mt-0 sm:col-start-1 sm:text-sm"
-          >
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm"
-          >
-            Logout
-          </button>
+          </Button>
+          <Button variant="danger" onClick={onConfirm}>
+            Log out
+          </Button>
         </div>
       </div>
     </div>

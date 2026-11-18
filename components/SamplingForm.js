@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from './Toast'
+import { Button, Field, FormActions, FormSection, Input, Select } from './ui'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g above' },
@@ -88,69 +89,58 @@ const SamplingForm = ({ harvestId, onComplete }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium text-chart-ink">Harvest Sampling Data</h3>
-
-        <div>
-          <label className="block text-sm font-medium text-chart-ink mb-1">
-            Crate Size
-          </label>
-          <select
+      <FormSection title="Harvest sampling">
+        <Field label="Crate size" htmlFor="sampling-crate" className="max-w-xs">
+          <Select
+            id="sampling-crate"
             value={formData.crateSize}
             onChange={(e) => handleCrateSizeChange(e.target.value)}
-            className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
           >
             <option value="50">50 kg</option>
             <option value="25">25 kg</option>
-          </select>
-        </div>
+          </Select>
+        </Field>
 
         <div>
-          <label className="block text-sm font-medium text-chart-ink mb-2">
-            Sampling Data
-          </label>
-          <div className="overflow-x-auto">
+          <p className="text-sm font-semibold text-chart-ink mb-2">Samples</p>
+          <div className="overflow-x-auto rounded-xl border border-foam-deep">
             <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
+              <thead className="bg-foam">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                    Size
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">Size</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">Range</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
+                    Quantity per crate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                    Range
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                    Quantity per Crate
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                    ABW (g)
-                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">ABW (g)</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-foam-deep">
+              <tbody className="bg-surface divide-y divide-foam-deep">
                 {formData.samples.map((sample, index) => (
                   <tr key={sample.category}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink">
                       {sample.category}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-muted">
                       {sample.range}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[8rem]">
+                      <Input
                         type="number"
+                        aria-label={`${sample.category} quantity per crate`}
                         value={sample.quantity}
                         onChange={(e) => handleSamplingDataChange(index, 'quantity', e.target.value)}
-                        className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                        className="tabular-nums"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[8rem]">
+                      <Input
                         type="number"
+                        aria-label={`${sample.category} ABW in grams`}
                         value={sample.abw}
                         onChange={(e) => handleSamplingDataChange(index, 'abw', e.target.value)}
                         step="0.1"
-                        className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                        className="tabular-nums"
                       />
                     </td>
                   </tr>
@@ -159,26 +149,18 @@ const SamplingForm = ({ harvestId, onComplete }) => {
             </table>
           </div>
         </div>
-      </div>
+      </FormSection>
 
-      <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={() => onComplete()}
-          className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-        >
+      <FormActions className="justify-end">
+        <Button type="button" variant="secondary" onClick={() => onComplete()}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-        >
-          {loading ? 'Saving...' : 'Save Sampling Data'}
-        </button>
-      </div>
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving…' : 'Save sampling'}
+        </Button>
+      </FormActions>
     </form>
   )
 }
 
-export default SamplingForm 
+export default SamplingForm

@@ -9,9 +9,9 @@ import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 
 function statusBadge(status) {
-  if (status === 'approved') return 'bg-green-100 text-green-900'
-  if (status === 'pending_approval') return 'bg-amber-100 text-amber-900'
-  if (status === 'rejected') return 'bg-red-100 text-red-900'
+  if (status === 'approved') return 'bg-kelp/10 text-kelp'
+  if (status === 'pending_approval') return 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
+  if (status === 'rejected') return 'bg-signal/10 text-signal'
   return 'bg-foam-deep text-chart-ink'
 }
 
@@ -86,7 +86,7 @@ function FishTransfersContent() {
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="text-lg font-semibold text-chart-ink">
+            <h2 className="font-display text-lg font-medium text-chart-ink">
               Transfer history
             </h2>
             <div className="w-48">
@@ -108,9 +108,9 @@ function FishTransfersContent() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted">No transfers yet.</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-foam-deep bg-white">
+            <div className="overflow-x-auto rounded-xl border border-foam-deep bg-surface">
               <table className="min-w-full divide-y divide-foam-deep text-sm">
-                <thead className="bg-foam-deep/40">
+                <thead className="bg-foam text-muted">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Date</th>
                     <th className="px-4 py-3 text-left font-medium">From → To</th>
@@ -126,7 +126,7 @@ function FishTransfersContent() {
                 <tbody className="divide-y divide-foam-deep">
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="px-4 py-3 whitespace-nowrap font-data">
+                      <td className="px-4 py-3 whitespace-nowrap font-data tabular-nums">
                         {row.transferDate}
                       </td>
                       <td className="px-4 py-3">
@@ -138,10 +138,10 @@ function FishTransfersContent() {
                           {row.destinationCageName || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-data">
+                      <td className="px-4 py-3 text-right font-data tabular-nums">
                         {(row.quantity || 0).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-data">
+                      <td className="px-4 py-3 text-right font-data tabular-nums">
                         {(row.abw || 0).toFixed(1)}g
                       </td>
                       <td className="px-4 py-3 capitalize">{row.transferType}</td>
@@ -194,7 +194,7 @@ function FishTransfersContent() {
 export default function FishTransfersPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Fish Transfers">
+      <Layout title="Fish transfers">
         <FishTransfersContent />
       </Layout>
     </ProtectedRoute>

@@ -10,6 +10,7 @@ import { formatCurrency } from '../lib/currencyUtils'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
 import { useToast } from './Toast'
+import { Button, Field, Input, Select, Textarea } from './ui'
 
 const emptyEntry = (overrides = {}) => ({
   feed_type_id: '',
@@ -201,7 +202,7 @@ export default function FeedPurchaseModal({
         aria-labelledby="feed-purchase-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-foam-deep px-6 py-4">
+        <div className="border-b border-foam-deep px-4 py-4 sm:px-6">
           <h3
             id="feed-purchase-title"
             className="text-lg font-medium text-chart-ink"
@@ -209,17 +210,15 @@ export default function FeedPurchaseModal({
             {title}
           </h3>
         </div>
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6">
           <div className="mb-6">
             <LocationMetaField />
           </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-chart-ink">
-                Supplier <span className="text-signal">*</span>
-              </label>
-              <select
+          <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <Field label="Supplier" htmlFor="fpm-supplier" required>
+              <Select
+                id="fpm-supplier"
                 value={purchaseData.supplier_id}
                 onChange={(e) =>
                   setPurchaseData((prev) => ({
@@ -227,7 +226,6 @@ export default function FeedPurchaseModal({
                     supplier_id: e.target.value,
                   }))
                 }
-                className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 required
               >
                 <option value="">Select supplier</option>
@@ -239,13 +237,11 @@ export default function FeedPurchaseModal({
                     {supplier.name}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-chart-ink">
-                Purchase Date <span className="text-signal">*</span>
-              </label>
-              <input
+              </Select>
+            </Field>
+            <Field label="Purchase date" htmlFor="fpm-date" required>
+              <Input
+                id="fpm-date"
                 type="date"
                 value={purchaseData.purchase_date}
                 onChange={(e) =>
@@ -254,21 +250,20 @@ export default function FeedPurchaseModal({
                     purchase_date: e.target.value,
                   }))
                 }
-                className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 required
               />
-            </div>
+            </Field>
           </div>
 
           <div className="mb-6">
             <h4 className="mb-3 text-sm font-medium text-chart-ink">
-              Feed Entries
+              Feed entries
             </h4>
             <div className="space-y-3">
               {purchaseData.feed_entries.map((entry, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 rounded-lg bg-foam-deep/40 p-3"
+                  className="flex items-center gap-4 rounded-lg border border-foam-deep bg-foam p-3"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-chart-ink">
@@ -276,7 +271,7 @@ export default function FeedPurchaseModal({
                         (ft) => (ft.id || ft._id) === entry.feed_type_id,
                       )?.name || 'Feed'}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-muted tabular-nums">
                       {entry.number_of_bags} × {entry.bag_size || DEFAULT_BAG_SIZE_KG} kg bags (
                       {entry.quantity_kg ??
                         Number(entry.number_of_bags) *
@@ -285,13 +280,14 @@ export default function FeedPurchaseModal({
                       {formatCurrency(entry.total_amount)}
                     </p>
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleRemoveFeedEntry(index)}
-                    className="shrink-0 text-sm font-medium text-signal hover:opacity-80"
+                    className="shrink-0 text-signal"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               {purchaseData.feed_entries.length === 0 && (
@@ -304,14 +300,12 @@ export default function FeedPurchaseModal({
 
           <div className="mb-6 rounded-lg border border-foam-deep p-4">
             <h4 className="mb-3 text-sm font-medium text-chart-ink">
-              Add Feed Entry
+              Add feed entry
             </h4>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink">
-                  Feed Type
-                </label>
-                <select
+              <Field label="Feed type" htmlFor="fpm-feed-type">
+                <Select
+                  id="fpm-feed-type"
                   value={currentFeedEntry.feed_type_id}
                   onChange={(e) => {
                     const id = e.target.value
@@ -332,7 +326,6 @@ export default function FeedPurchaseModal({
                       )
                     }
                   }}
-                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 >
                   <option value="">Select feed type</option>
                   {activeFeedTypes.map((type) => (
@@ -343,13 +336,11 @@ export default function FeedPurchaseModal({
                       {type.name}
                     </option>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink">
-                  Number of Bags
-                </label>
-                <input
+                </Select>
+              </Field>
+              <Field label="Number of bags" htmlFor="fpm-bags">
+                <Input
+                  id="fpm-bags"
                   type="number"
                   value={currentFeedEntry.number_of_bags}
                   onChange={(e) =>
@@ -358,16 +349,14 @@ export default function FeedPurchaseModal({
                       number_of_bags: e.target.value,
                     }))
                   }
-                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                  className="font-data tabular-nums"
                   min="1"
                   step="0.01"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink">
-                  Price per bag (₵)
-                </label>
-                <input
+              </Field>
+              <Field label="Price per bag (₵)" htmlFor="fpm-price">
+                <Input
+                  id="fpm-price"
                   type="number"
                   value={currentFeedEntry.price_per_bag}
                   onChange={(e) =>
@@ -376,19 +365,19 @@ export default function FeedPurchaseModal({
                       price_per_bag: e.target.value,
                     }))
                   }
-                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                  className="font-data tabular-nums"
                   min="0"
                   step="0.01"
                 />
-              </div>
+              </Field>
               <div className="flex items-end">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={handleAddFeedEntry}
-                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950"
+                  className="w-full"
                 >
-                  Add Entry
-                </button>
+                  Add entry
+                </Button>
               </div>
             </div>
             <div className="mt-4">
@@ -405,11 +394,9 @@ export default function FeedPurchaseModal({
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-chart-ink">
-              Notes
-            </label>
-            <textarea
+          <Field label="Notes" htmlFor="fpm-notes" className="mb-6">
+            <Textarea
+              id="fpm-notes"
               value={purchaseData.notes}
               onChange={(e) =>
                 setPurchaseData((prev) => ({
@@ -418,37 +405,31 @@ export default function FeedPurchaseModal({
                 }))
               }
               rows={3}
-              className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
             />
-          </div>
+          </Field>
 
           <div className="mb-6">
-            <div className="flex items-center justify-between rounded-lg bg-foam-deep/40 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-foam-deep bg-foam p-4">
               <span className="text-sm font-medium text-chart-ink">
-                Total Amount:
+                Total amount
               </span>
-              <span className="text-lg font-semibold text-chart-ink">
+              <span className="text-lg font-semibold text-chart-ink tabular-nums">
                 {formatCurrency(purchaseData.total_amount)}
               </span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button
+              variant="secondary"
               disabled={saving}
               onClick={onClose}
-              className="rounded-lg border border-input-border bg-surface px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40 disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950 disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : 'Save Purchase'}
-            </button>
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : 'Save purchase'}
+            </Button>
           </div>
         </form>
       </div>

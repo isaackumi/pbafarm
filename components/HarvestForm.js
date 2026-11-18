@@ -5,6 +5,16 @@ import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import LocationMetaField from './LocationMetaField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
+import {
+  Button,
+  Card,
+  Field,
+  FormActions,
+  FormSection,
+  Input,
+  Select,
+  Textarea,
+} from './ui'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g above' },
@@ -249,25 +259,31 @@ const HarvestForm = ({ onComplete }) => {
       ? formData.sizeBreakdown
       : HARVEST_DEFAULTS.sizeBreakdown
 
+  const previewRow = (label, value) => (
+    <div className="flex justify-between gap-4 py-2 border-b border-foam-deep text-sm">
+      <dt className="text-muted">{label}</dt>
+      <dd className="font-medium text-chart-ink tabular-nums text-right">{value}</dd>
+    </div>
+  )
+
   return (
-    <div className="page-card p-6">
+    <Card>
       {!showPreview ? (
         <form onSubmit={handleSubmit} noValidate className="space-y-8">
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium text-chart-ink">Harvest Information</h3>
-            <p className="text-sm text-muted -mt-4">Drafts survive a browser refresh.</p>
-
+          <FormSection
+            title="Harvest details"
+            description="Drafts survive a browser refresh."
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <LocationMetaField />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">Cage</label>
-                <select
+              <Field label="Cage" htmlFor="harvest-cage" required>
+                <Select
+                  id="harvest-cage"
                   name="cageId"
                   value={formData.cageId}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                   disabled={cagesReady && cages.length === 0}
                 >
@@ -281,7 +297,7 @@ const HarvestForm = ({ onComplete }) => {
                       {cage.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {cagesReady && cages.length === 0 && (
                   <DependencyEmpty
                     message="Harvest needs an active cage with fish. Stock a cage first (approve if required)."
@@ -304,87 +320,73 @@ const HarvestForm = ({ onComplete }) => {
                     }}
                   />
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Harvest Date
-                </label>
-                <input
+              <Field label="Harvest date" htmlFor="harvest-date" required>
+                <Input
+                  id="harvest-date"
                   type="date"
                   name="harvestDate"
                   value={formData.harvestDate}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Harvest Type
-                </label>
-                <select
+              <Field label="Harvest type" htmlFor="harvest-type" required>
+                <Select
+                  id="harvest-type"
                   name="harvestType"
                   value={formData.harvestType}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 >
-                  <option value="complete">Complete Harvest</option>
-                  <option value="partial">Partial Harvest</option>
-                </select>
-              </div>
+                  <option value="complete">Complete harvest</option>
+                  <option value="partial">Partial harvest</option>
+                </Select>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Total Weight (kg)
-                </label>
-                <input
+              <Field label="Total weight (kg)" htmlFor="harvest-total" required>
+                <Input
+                  id="harvest-total"
                   type="number"
                   name="totalWeight"
                   value={formData.totalWeight}
                   onChange={handleChange}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="tabular-nums"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Average Body Weight (g)
-                </label>
-                <input
+              <Field label="Average body weight (g)" htmlFor="harvest-abw" required>
+                <Input
+                  id="harvest-abw"
                   type="number"
                   name="averageBodyWeight"
                   value={formData.averageBodyWeight}
                   onChange={handleChange}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="tabular-nums"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Estimated Count
-                </label>
-                <input
+              <Field label="Estimated count" htmlFor="harvest-count" required>
+                <Input
+                  id="harvest-count"
                   type="number"
                   name="estimatedCount"
                   value={formData.estimatedCount}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="tabular-nums"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  FCR (Feed Conversion Ratio)
-                </label>
-                <input
+              <Field label="FCR (feed conversion ratio)" htmlFor="harvest-fcr" required>
+                <Input
+                  id="harvest-fcr"
                   type="number"
                   name="fcr"
                   value={formData.fcr}
@@ -393,11 +395,11 @@ const HarvestForm = ({ onComplete }) => {
                     handleChange(e)
                   }}
                   step="0.01"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="tabular-nums"
                   required
                 />
                 {fcrCalc && (
-                  <p className="mt-1 text-xs text-muted tabular-nums">
+                  <p className="text-xs text-muted tabular-nums">
                     {fcrCalc.fcr != null
                       ? `Calculated ${fcrCalc.fcr.toFixed(2)}: ${Number(fcrCalc.feed_kg).toLocaleString()} kg feed since ${fcrCalc.stocking_date}, ${Number(fcrCalc.stocked_biomass_kg || 0).toLocaleString()} kg stocked`
                       : 'Not enough feed or growth logged to calculate FCR. Enter it by hand'}
@@ -418,170 +420,130 @@ const HarvestForm = ({ onComplete }) => {
                     )}
                   </p>
                 )}
-              </div>
+              </Field>
             </div>
+          </FormSection>
 
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Size Breakdown (kg)
-              </label>
-              <p className="text-xs text-muted mb-2 tabular-nums">
-                Optional. Leave grades you didn&apos;t sort blank.
-                {calculateTotalWeight() > 0 &&
-                  ` Grades add up to ${calculateTotalWeight().toLocaleString()} kg${
-                    formData.totalWeight ? '' : ', used as the total weight'
-                  }.`}
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {sizeBreakdown.map((size, index) => (
-                  <div key={size.category}>
-                    <label className="block text-sm text-muted mb-1">
-                      {size.category} ({size.range})
-                    </label>
-                    <input
-                      type="number"
-                      value={size.weight}
-                      onChange={(e) => handleSizeBreakdownChange(index, e.target.value)}
-                      step="0.01"
-                      min="0"
-                      inputMode="decimal"
-                      placeholder="0"
-                      className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                    />
-                  </div>
-                ))}
-              </div>
+          <FormSection title="Size breakdown (kg)">
+            <p className="text-xs text-muted -mt-2 tabular-nums">
+              Optional. Leave grades you didn&apos;t sort blank.
+              {calculateTotalWeight() > 0 &&
+                ` Grades add up to ${calculateTotalWeight().toLocaleString()} kg${
+                  formData.totalWeight ? '' : ', used as the total weight'
+                }.`}
+            </p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {sizeBreakdown.map((size, index) => (
+                <Field
+                  key={size.category}
+                  label={`${size.category} (${size.range})`}
+                  htmlFor={`harvest-grade-${size.category}`}
+                >
+                  <Input
+                    id={`harvest-grade-${size.category}`}
+                    type="number"
+                    value={size.weight}
+                    onChange={(e) => handleSizeBreakdownChange(index, e.target.value)}
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    placeholder="0"
+                    className="tabular-nums"
+                  />
+                </Field>
+              ))}
             </div>
+          </FormSection>
 
-            <div>
-              <label className="block text-sm font-medium text-chart-ink mb-1">Notes</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                rows="3"
-                className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="Optional notes about the harvest"
-              />
-            </div>
-          </div>
+          <Field label="Notes" htmlFor="harvest-notes">
+            <Textarea
+              id="harvest-notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Optional notes about the harvest"
+            />
+          </Field>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => onComplete()}
-              className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-            >
+          <FormActions className="justify-end">
+            <Button type="button" variant="secondary" onClick={() => onComplete()}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || cages.length === 0}
-              className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800 disabled:opacity-60"
-            >
-              Preview Harvest Record
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" disabled={loading || cages.length === 0}>
+              Review harvest
+            </Button>
+          </FormActions>
         </form>
       ) : (
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-chart-ink border-b pb-4 mb-6">
-            Harvest Record Preview
+          <h3 className="font-display text-lg font-medium text-chart-ink">
+            Check the harvest before saving
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Cage:</span>{' '}
-              {selectedCageObject?.name || 'N/A'}
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Harvest Date:</span>{' '}
-              {formData.harvestDate}
-            </p>
-            {selectedCageObject?.stocking_date && (
-              <p className="text-chart-ink">
-                <span className="font-medium text-chart-ink">Stocking Date:</span>{' '}
-                {selectedCageObject.stocking_date}
-              </p>
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            {previewRow('Cage', selectedCageObject?.name || 'N/A')}
+            {previewRow('Harvest date', formData.harvestDate)}
+            {selectedCageObject?.stocking_date &&
+              previewRow('Stocking date', selectedCageObject.stocking_date)}
+            {previewRow('Days of culture (DOC)', cageDoc)}
+            {previewRow(
+              'Harvest type',
+              formData.harvestType === 'complete' ? 'Complete harvest' : 'Partial harvest',
             )}
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Days of Culture (DOC):</span>{' '}
-              {cageDoc}
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Harvest Type:</span>{' '}
-              {formData.harvestType === 'complete' ? 'Complete Harvest' : 'Partial Harvest'}
-            </p>
-            <p className="md:col-span-2 rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink">
-              {formData.harvestType === 'complete'
-                ? `Saving empties ${selectedCageObject?.name || 'this cage'}: its fish count goes to 0, it is marked harvested and its stocking cycle closes.`
-                : `Saving takes ${Number(formData.estimatedCount || 0).toLocaleString()} fish off ${selectedCageObject?.name || 'this cage'}'s count.`}
-              {selectedCageObject?.current_count != null &&
-                ` On record now: ${Number(selectedCageObject.current_count).toLocaleString()} fish.`}
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Total Weight (kg):</span>{' '}
-              {formData.totalWeight} kg
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Average Body Weight (g):</span>{' '}
-              {formData.averageBodyWeight} g
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">Estimated Count:</span>{' '}
-              {formData.estimatedCount}
-            </p>
-            <p className="text-chart-ink">
-              <span className="font-medium text-chart-ink">FCR:</span> {formData.fcr}
-            </p>
-          </div>
+            {previewRow('Total weight', `${formData.totalWeight} kg`)}
+            {previewRow('Average body weight', `${formData.averageBodyWeight} g`)}
+            {previewRow('Estimated count', formData.estimatedCount)}
+            {previewRow('FCR', formData.fcr)}
+          </dl>
 
-          <div className="border-t pt-6 mt-6">
-            <h4 className="text-lg font-medium text-chart-ink mb-4">Size Breakdown (kg)</h4>
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <p className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink tabular-nums">
+            {formData.harvestType === 'complete'
+              ? `Saving empties ${selectedCageObject?.name || 'this cage'}: its fish count goes to 0, it is marked harvested and its stocking cycle closes.`
+              : `Saving takes ${Number(formData.estimatedCount || 0).toLocaleString()} fish off ${selectedCageObject?.name || 'this cage'}'s count.`}
+            {selectedCageObject?.current_count != null &&
+              ` On record now: ${Number(selectedCageObject.current_count).toLocaleString()} fish.`}
+          </p>
+
+          <div>
+            <h4 className="text-base font-medium text-chart-ink mb-3">Size breakdown (kg)</h4>
+            <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {sizeBreakdown.map((size) => (
                 <li
                   key={size.category}
-                  className="bg-foam-deep/40 p-3 rounded-lg text-sm text-gray-800"
+                  className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink"
                 >
-                  <span className="font-medium">
-                    {size.category} ({size.range}):
-                  </span>{' '}
-                  {size.weight || '0'} kg
+                  <span className="text-muted">
+                    {size.category} ({size.range})
+                  </span>
+                  <span className="block font-medium tabular-nums">
+                    {size.weight || '0'} kg
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
 
           {formData.notes && (
-            <div className="border-t pt-6 mt-6">
-              <h4 className="text-lg font-medium text-chart-ink mb-2">Notes</h4>
-              <p className="text-sm text-chart-ink bg-foam-deep/40 p-3 rounded-lg">
+            <div>
+              <h4 className="text-base font-medium text-chart-ink mb-2">Notes</h4>
+              <p className="text-sm text-chart-ink bg-foam p-3 rounded-lg">
                 {formData.notes}
               </p>
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 mt-8">
-            <button
-              type="button"
-              onClick={handleEdit}
-              className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-            >
+          <FormActions className="justify-end">
+            <Button type="button" variant="secondary" onClick={handleEdit}>
               Edit
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmSave}
-              disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-            >
-              {loading ? 'Saving...' : 'Confirm Save'}
-            </button>
-          </div>
+            </Button>
+            <Button type="button" onClick={handleConfirmSave} disabled={loading}>
+              {loading ? 'Saving…' : 'Save harvest'}
+            </Button>
+          </FormActions>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

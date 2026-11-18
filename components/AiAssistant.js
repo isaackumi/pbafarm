@@ -11,6 +11,7 @@ import {
   chatCompletion,
   fetchLlmEnvStatus,
 } from '../lib/llmClient'
+import { Button, Field, Input, Select } from './ui'
 
 function TypingDots() {
   return (
@@ -22,7 +23,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-2 w-2 rounded-full bg-lagoon-800 ai-typing-dot"
+          className="inline-block h-2 w-2 rounded-full bg-muted ai-typing-dot"
           style={{ animationDelay: `${i * 160}ms` }}
         />
       ))}
@@ -225,15 +226,12 @@ ${JSON.stringify(farmContext, null, 2)}`
     }
   }
 
-  const fieldClass =
-    'w-full border border-input-border rounded-lg px-2 py-1.5 text-sm font-medium bg-white transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800'
-
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-lagoon-800 text-white shadow-lg flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-lagoon-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lagoon-800"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-lagoon-950 text-white shadow-md flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lake"
         aria-label={open ? 'Close assistant' : 'Open assistant'}
         aria-expanded={open}
       >
@@ -246,14 +244,14 @@ ${JSON.stringify(farmContext, null, 2)}`
 
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-50 w-[min(100vw-2rem,22rem)] h-[min(70vh,28rem)] bg-surface border border-foam-deep rounded-2xl shadow-xl flex flex-col overflow-hidden"
+          className="fixed bottom-24 right-6 z-50 w-[min(100vw-2rem,22rem)] h-[min(70vh,28rem)] bg-surface border border-foam-deep rounded-xl shadow-xl flex flex-col overflow-hidden"
           role="dialog"
           aria-label="Farm assistant"
         >
-          <div className="px-4 py-3 bg-lagoon-950 text-white flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 border-b border-foam-deep flex items-center justify-between shrink-0">
             <div className="min-w-0">
-              <p className="font-display font-semibold text-sm">Assistant</p>
-              <p className="text-xs text-white/70 font-medium truncate">
+              <p className="font-display font-medium text-sm text-chart-ink">Assistant</p>
+              <p className="text-xs text-muted truncate">
                 {provider.label}
                 {hasLocalKey
                   ? ' · key in browser'
@@ -265,7 +263,7 @@ ${JSON.stringify(farmContext, null, 2)}`
             <button
               type="button"
               onClick={() => setShowKey((s) => !s)}
-              className="p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="h-10 w-10 inline-flex items-center justify-center rounded-lg text-muted cursor-pointer transition-colors duration-200 hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
               aria-label="Provider and API key settings"
               aria-expanded={showKey}
             >
@@ -274,72 +272,68 @@ ${JSON.stringify(farmContext, null, 2)}`
           </div>
 
           {showKey && (
-            <div className="p-3 border-b border-foam-deep bg-foam space-y-2 max-h-56 overflow-y-auto shrink-0">
-              <label className="block text-xs font-semibold text-chart-ink">
-                Provider
-              </label>
-              <select
-                value={settings.provider}
-                onChange={(e) => selectProvider(e.target.value)}
-                className={fieldClass}
-              >
-                {Object.values(LLM_PROVIDERS).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+            <div className="p-3 border-b border-foam-deep bg-foam space-y-3 max-h-64 overflow-y-auto shrink-0">
+              <Field label="Provider" htmlFor="ai-provider">
+                <Select
+                  id="ai-provider"
+                  value={settings.provider}
+                  onChange={(e) => selectProvider(e.target.value)}
+                >
+                  {Object.values(LLM_PROVIDERS).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
               {settings.provider === 'custom' && (
-                <>
-                  <label className="block text-xs font-semibold text-chart-ink">
-                    Base URL
-                  </label>
-                  <input
+                <Field label="Base URL" htmlFor="ai-base-url">
+                  <Input
+                    id="ai-base-url"
                     type="url"
                     value={draftBaseUrl}
                     onChange={(e) => setDraftBaseUrl(e.target.value)}
                     placeholder="https://api.example.com/v1"
-                    className={fieldClass}
                   />
-                </>
+                </Field>
               )}
 
-              <label className="block text-xs font-semibold text-chart-ink">
-                API key
-              </label>
-              <input
-                type="password"
-                value={draftKey}
-                onChange={(e) => setDraftKey(e.target.value)}
-                placeholder={provider.keyPlaceholder}
-                className={fieldClass}
-                autoComplete="off"
-              />
+              <Field label="API key" htmlFor="ai-api-key">
+                <Input
+                  id="ai-api-key"
+                  type="password"
+                  value={draftKey}
+                  onChange={(e) => setDraftKey(e.target.value)}
+                  placeholder={provider.keyPlaceholder}
+                  autoComplete="off"
+                />
+              </Field>
 
-              <label className="block text-xs font-semibold text-chart-ink">
-                Model
-              </label>
-              {provider.models.length > 0 && (
-                <select
-                  value={draftModel}
-                  onChange={(e) => setDraftModel(e.target.value)}
-                  className={fieldClass}
-                >
-                  {provider.models.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                type="text"
-                value={draftModel}
-                onChange={(e) => setDraftModel(e.target.value)}
-                placeholder={provider.defaultModel}
-                className={fieldClass}
-              />
+              <Field label="Model" htmlFor="ai-model">
+                <div className="space-y-2">
+                  {provider.models.length > 0 && (
+                    <Select
+                      aria-label="Pick a model"
+                      value={draftModel}
+                      onChange={(e) => setDraftModel(e.target.value)}
+                    >
+                      {provider.models.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                  <Input
+                    id="ai-model"
+                    type="text"
+                    value={draftModel}
+                    onChange={(e) => setDraftModel(e.target.value)}
+                    placeholder={provider.defaultModel}
+                  />
+                </div>
+              </Field>
               <p className="text-xs text-muted">
                 Prefer server env keys (e.g. GEMINI_API_KEY in .env.local). A
                 key saved here overrides env for this browser only.
@@ -347,20 +341,17 @@ ${JSON.stringify(farmContext, null, 2)}`
               </p>
 
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={saveKey}
-                  className="flex-1 bg-lagoon-800 text-white text-xs font-semibold py-1.5 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-lagoon-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:ring-offset-1"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
+                <Button size="sm" onClick={saveKey} className="flex-1">
+                  Save settings
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={clearKey}
-                  className="px-3 text-xs font-semibold text-signal cursor-pointer transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal rounded"
+                  className="!text-signal"
                 >
                   Clear all
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -369,9 +360,9 @@ ${JSON.stringify(farmContext, null, 2)}`
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`text-sm font-medium leading-relaxed rounded-lg px-3 py-2 max-w-[90%] ${
+                className={`text-sm leading-relaxed rounded-lg px-3 py-2 max-w-[90%] ${
                   m.role === 'user'
-                    ? 'ml-auto bg-lagoon-800 text-white'
+                    ? 'ml-auto bg-lake-soft text-chart-ink'
                     : 'mr-auto bg-foam text-chart-ink border border-foam-deep'
                 }`}
               >
@@ -386,7 +377,7 @@ ${JSON.stringify(farmContext, null, 2)}`
           </div>
 
           <div className="p-3 border-t border-foam-deep flex gap-2 shrink-0">
-            <input
+            <Input
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -397,15 +388,14 @@ ${JSON.stringify(farmContext, null, 2)}`
                 }
               }}
               placeholder="Ask about your farm…"
-              className="flex-1 border border-input-border rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800"
+              className="flex-1 min-w-0"
               aria-label="Message to assistant"
               disabled={busy}
             />
-            <button
-              type="button"
+            <Button
               onClick={send}
               disabled={busy || !input.trim()}
-              className="h-10 w-10 rounded-lg bg-kelp text-white flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-kelp-soft disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp focus-visible:ring-offset-1"
+              className="w-11 shrink-0 !px-0"
               aria-label="Send message"
             >
               {busy ? (
@@ -413,7 +403,7 @@ ${JSON.stringify(farmContext, null, 2)}`
               ) : (
                 <Send className="h-4 w-4" aria-hidden />
               )}
-            </button>
+            </Button>
           </div>
         </div>
       )}

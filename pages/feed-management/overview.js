@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
   Package,
   BarChart2,
@@ -10,7 +9,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard } from '../../components/ui'
+import { PageHeader, StatCard, Button } from '../../components/ui'
 import { useMoney } from '../../lib/money'
 import { useToast } from '../../components/Toast'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
@@ -166,7 +165,7 @@ function FeedManagementOverview() {
     }))
   }
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   return (
     <Layout title="Feed Management Overview">
@@ -185,54 +184,31 @@ function FeedManagementOverview() {
           { label: 'Stock levels', href: '/stock-levels' },
         ]}
         actions={
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="secondary" onClick={fetchData}>
+            <RefreshCw className="w-4 h-4" aria-hidden />
             Refresh
-          </button>
+          </Button>
         }
       />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Link href="/feed-purchases">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
-            >
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              Record Purchase
-            </button>
-          </Link>
-          <Link href="/feed-issue">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-kelp hover:opacity-90"
-            >
-              <Scale className="w-5 h-5 mr-2" />
-              Issue feed
-            </button>
-          </Link>
-          <Link href="/feed-types">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-950 hover:bg-lagoon-800"
-            >
-              <Package className="w-5 h-5 mr-2" />
-              Feed types
-            </button>
-          </Link>
-          <Link href="/feed-suppliers">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
-            >
-              <BarChart2 className="w-5 h-5 mr-2" />
-              Suppliers
-            </button>
-          </Link>
+          <Button href="/feed-purchases" variant="secondary" className="w-full">
+            <ShoppingCart className="w-4 h-4" aria-hidden />
+            Record purchase
+          </Button>
+          <Button href="/feed-issue" variant="secondary" className="w-full">
+            <Scale className="w-4 h-4" aria-hidden />
+            Issue feed
+          </Button>
+          <Button href="/feed-types" variant="secondary" className="w-full">
+            <Package className="w-4 h-4" aria-hidden />
+            Feed types
+          </Button>
+          <Button href="/feed-suppliers" variant="secondary" className="w-full">
+            <BarChart2 className="w-4 h-4" aria-hidden />
+            Suppliers
+          </Button>
         </div>
 
         {/* Key Metrics */}
@@ -266,8 +242,8 @@ function FeedManagementOverview() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Feed Usage Trend */}
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed Usage Trend</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed usage trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={usageData}>
@@ -291,8 +267,8 @@ function FeedManagementOverview() {
           </div>
 
           {/* Feed Cost Distribution */}
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed Cost Distribution</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed cost distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -321,8 +297,8 @@ function FeedManagementOverview() {
           </div>
 
           {/* Supplier Distribution */}
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Supplier Distribution</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Supplier distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={supplierData}>
@@ -331,15 +307,15 @@ function FeedManagementOverview() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" fill="#8884d8" />
+                  <Bar dataKey="value" fill="var(--lake)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Low Stock Alerts */}
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Low Stock Alerts</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Low stock alerts</h3>
             <div className="space-y-4">
               {feedTypes
                 .filter(type => type.current_stock <= type.minimum_stock * 1.2)
@@ -350,19 +326,19 @@ function FeedManagementOverview() {
                   >
                     <div>
                       <p className="font-medium text-chart-ink">{type.name}</p>
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted tabular-nums">
                         Current: {type.current_stock.toFixed(2)} kg | Minimum:{' '}
                         {type.minimum_stock.toFixed(2)} kg
                       </p>
                     </div>
-                    <Link href="/feed-purchases">
-                      <button
-                        type="button"
-                        className="text-sm font-semibold text-signal hover:opacity-80 shrink-0"
-                      >
-                        Order Now
-                      </button>
-                    </Link>
+                    <Button
+                      href="/feed-purchases"
+                      variant="ghost"
+                      size="sm"
+                      className="text-signal shrink-0"
+                    >
+                      Order now
+                    </Button>
                   </div>
                 ))}
             </div>
@@ -371,16 +347,16 @@ function FeedManagementOverview() {
 
         {/* Recent Activity */}
         <div className="page-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-foam-deep">
-            <h3 className="text-lg font-medium text-chart-ink">Recent Activity</h3>
+          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+            <h3 className="text-lg font-medium text-chart-ink">Recent activity</h3>
           </div>
           <div className="divide-y divide-foam-deep">
             {feedTypes.slice(0, 5).map(type => (
-              <div key={type.id} className="px-6 py-4">
-                <div className="flex items-center justify-between">
+              <div key={type.id} className="px-4 sm:px-6 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium text-chart-ink">{type.name}</p>
-                    <p className="text-sm text-muted">
+                    <p className="text-sm text-muted tabular-nums">
                       Stock: {type.current_stock.toFixed(2)} kg | Price: {money(type.price_per_kg)}/kg
                     </p>
                   </div>

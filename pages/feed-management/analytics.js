@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
-import { PageHeader } from '../../components/ui'
+import { PageHeader, StatCard, Card, Select } from '../../components/ui'
 import { feedService } from '../../lib/feedService'
 import { useMoney } from '../../lib/money'
 
@@ -59,16 +59,17 @@ const FeedAnalytics = () => {
               { label: 'Overview', href: '/feed-management/overview' },
             ]}
             actions={
-              <select
+              <Select
+                aria-label="Time range"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm min-h-10"
+                className="w-auto"
               >
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last 30 days</option>
                 <option value="90d">Last 90 days</option>
                 <option value="1y">Last year</option>
-              </select>
+              </Select>
             }
           />
 
@@ -76,81 +77,72 @@ const FeedAnalytics = () => {
             <p className="text-muted text-sm">Loading analytics…</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h3 className="text-sm font-semibold text-muted">Total Usage</h3>
-                  <p className="text-2xl font-semibold text-lagoon-800 font-data mt-1">
-                    {analytics.usageStats?.totalUsage?.toFixed(1) || '0'} kg
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h3 className="text-sm font-semibold text-muted">Total Cost</h3>
-                  <p className="text-2xl font-semibold text-kelp font-data mt-1">
-                    {money(analytics.costAnalysis?.totalCost || 0)}
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h3 className="text-sm font-semibold text-muted">Avg Cost/kg</h3>
-                  <p className="text-2xl font-semibold text-chart-ink font-data mt-1">
-                    {money(analytics.costAnalysis?.averageCostPerKg || 0)}
-                  </p>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h3 className="text-sm font-semibold text-muted">Low Stock Alerts</h3>
-                  <p className="text-2xl font-semibold text-signal font-data mt-1">
-                    {analytics.lowStockAlerts.length}
-                  </p>
-                </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <StatCard
+                  label="Total usage"
+                  value={analytics.usageStats?.totalUsage?.toFixed(1) || '0'}
+                  unit="kg"
+                />
+                <StatCard
+                  label="Total cost"
+                  value={money(analytics.costAnalysis?.totalCost || 0)}
+                />
+                <StatCard
+                  label="Average cost per kg"
+                  value={money(analytics.costAnalysis?.averageCostPerKg || 0)}
+                />
+                <StatCard
+                  label="Low stock alerts"
+                  value={analytics.lowStockAlerts.length}
+                  tone={analytics.lowStockAlerts.length > 0 ? 'warn' : 'default'}
+                />
               </div>
 
               {analytics.lowStockAlerts.length > 0 && (
-                <div className="page-card p-6 mb-8">
-                  <h2 className="text-lg font-semibold mb-4 text-signal">Low Stock Alerts</h2>
+                <Card className="mb-8">
+                  <h2 className="text-lg font-medium mb-4 text-signal">Low stock alerts</h2>
                   <div className="space-y-2">
                     {analytics.lowStockAlerts.map((alert, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center gap-4 p-3 rounded-xl border border-signal/25 bg-signal/10"
+                        className="flex flex-wrap justify-between items-center gap-x-4 gap-y-1 p-3 rounded-xl border border-signal/25 bg-signal/10"
                       >
                         <span className="font-medium text-chart-ink">{alert.name}</span>
-                        <span className="text-signal text-sm font-data shrink-0">
-                          {alert.currentStock} kg remaining (Min: {alert.minimumStock} kg)
+                        <span className="text-signal text-sm font-data tabular-nums shrink-0">
+                          {alert.currentStock} kg remaining (min {alert.minimumStock} kg)
                         </span>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h2 className="text-lg font-semibold mb-4">Usage by Feed Type</h2>
+                <Card>
+                  <h2 className="text-lg font-medium text-chart-ink mb-4">Usage by feed type</h2>
                   <div className="space-y-3">
                     {analytics.usageStats?.byFeedType &&
                       Object.entries(analytics.usageStats.byFeedType).map(([type, usage]) => (
-                        <div key={type} className="flex justify-between">
+                        <div key={type} className="flex justify-between gap-4">
                           <span>{type}</span>
-                          <span className="font-semibold font-data">{usage.toFixed(1)} kg</span>
+                          <span className="font-medium font-data tabular-nums">{usage.toFixed(1)} kg</span>
                         </div>
                       ))}
                   </div>
-                </div>
+                </Card>
 
-                <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
-                  <h2 className="text-lg font-semibold mb-4">Usage by Cage</h2>
+                <Card>
+                  <h2 className="text-lg font-medium text-chart-ink mb-4">Usage by cage</h2>
                   <div className="space-y-3">
                     {analytics.usageStats?.byCage &&
                       Object.entries(analytics.usageStats.byCage).map(([cage, usage]) => (
-                        <div key={cage} className="flex justify-between">
+                        <div key={cage} className="flex justify-between gap-4">
                           <span>{cage}</span>
-                          <span className="font-semibold font-data">{usage.toFixed(1)} kg</span>
+                          <span className="font-medium font-data tabular-nums">{usage.toFixed(1)} kg</span>
                         </div>
                       ))}
                   </div>
-                </div>
+                </Card>
               </div>
             </>
           )}

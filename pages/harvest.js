@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
+import { PageHeader, Button, Field, Input } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
@@ -193,7 +193,7 @@ const HarvestPage = () => {
           : record.cages?.name || '—'
     },
     {
-      header: 'Harvest Date',
+      header: 'Harvest date',
       accessor: record => new Date(record.harvest_date).toLocaleDateString()
     },
     {
@@ -205,7 +205,7 @@ const HarvestPage = () => {
       accessor: record => record.status
     },
     {
-      header: 'Total Weight (kg)',
+      header: 'Total weight (kg)',
       accessor: record => record.total_weight
     },
     {
@@ -215,21 +215,21 @@ const HarvestPage = () => {
           <button
             type="button"
             onClick={() => handleEditHarvest(record)}
-            className="text-lagoon-800 hover:text-lagoon-950"
+            className="text-lake hover:underline underline-offset-2 min-h-9"
           >
             Edit
           </button>
           <button
             type="button"
             onClick={() => handleAddSampling(record)}
-            className="text-lagoon-800 hover:text-lagoon-950"
+            className="text-lake hover:underline underline-offset-2 min-h-9"
           >
-            Add Sampling
+            Add sampling
           </button>
           <button
             type="button"
             onClick={() => setDeleteConfirm(record)}
-            className="text-signal hover:opacity-80"
+            className="text-signal hover:underline underline-offset-2 min-h-9"
           >
             Delete
           </button>
@@ -240,7 +240,7 @@ const HarvestPage = () => {
 
   return (
     <ProtectedRoute>
-      <Layout title="Harvest Management">
+      <Layout title="Harvest">
         <PageHeader
           showTitle={false}
           breadcrumbs={[
@@ -260,21 +260,15 @@ const HarvestPage = () => {
                 Sales
               </Button>
               <Button href="/harvest-sampling" variant="secondary" size="sm">
-                <PlusCircle className="w-4 h-4" />
-                Harvest Sampling
+                <PlusCircle className="w-4 h-4" aria-hidden />
+                Harvest sampling
               </Button>
-              <button
-                onClick={handleExport}
-                className="inline-flex items-center px-3 py-2 border border-foam-deep rounded-xl shadow-sm text-sm font-semibold text-chart-ink bg-white hover:bg-foam min-h-10"
-              >
+              <Button variant="secondary" size="sm" onClick={handleExport}>
                 Export
-              </button>
-              <button
-                onClick={handleAddHarvest}
-                className="inline-flex items-center px-3 py-2 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-              >
-                Add Harvest
-              </button>
+              </Button>
+              <Button size="sm" onClick={handleAddHarvest}>
+                Add harvest
+              </Button>
             </>
           }
         />
@@ -282,57 +276,46 @@ const HarvestPage = () => {
           {/* Filters */}
           <div className="page-card p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Search
-                </label>
-                <input
+              <Field label="Search" htmlFor="harvest-search">
+                <Input
+                  id="harvest-search"
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by cage name or code"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  placeholder="Cage name or code"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Start Date
-                </label>
-                <input
+              </Field>
+              <Field label="Start date" htmlFor="harvest-start">
+                <Input
+                  id="harvest-start"
                   type="date"
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  End Date
-                </label>
-                <input
+              </Field>
+              <Field label="End date" htmlFor="harvest-end">
+                <Input
+                  id="harvest-end"
                   type="date"
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
             </div>
           </div>
 
           {/* Content */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
-              <p className="mt-4 text-muted">Loading harvest records...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent mx-auto"></div>
+              <p className="mt-4 text-muted">Loading harvest records…</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700">{error}</p>
+            <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
+              <p className="text-signal">{error}</p>
             </div>
           ) : showHarvestForm ? (
-            <div className="page-card p-6">
-              <HarvestForm onComplete={handleHarvestComplete} />
-            </div>
+            <HarvestForm onComplete={handleHarvestComplete} />
           ) : showSamplingForm ? (
             <div className="page-card p-6">
               <SamplingForm
@@ -341,27 +324,27 @@ const HarvestPage = () => {
               />
             </div>
           ) : (
-            <div className="page-card overflow-hidden">
+            <div className="page-card overflow-x-auto">
               <table className="min-w-full divide-y divide-foam-deep">
-                <thead className="bg-foam-deep/40">
+                <thead className="bg-foam">
                   <tr>
                     {columns.map((column, index) => (
                       <th
                         key={index}
-                        className="px-6 py-3 text-left text-xs font-medium text-muted"
+                        className="px-4 py-3 text-left text-xs font-medium text-muted"
                       >
                         {column.header}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-foam-deep">
+                <tbody className="bg-surface divide-y divide-foam-deep">
                   {filteredRecords.map((record, index) => (
                     <tr key={record.id}>
                       {columns.map((column, index) => (
                         <td
                           key={index}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-chart-ink"
+                          className="px-4 py-3 whitespace-nowrap text-sm text-chart-ink tabular-nums"
                         >
                           {column.accessor(record)}
                         </td>

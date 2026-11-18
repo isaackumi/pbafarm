@@ -4,6 +4,7 @@ import { feedTypeService } from '../lib/feedTypeService'
 import FeedTypeField from './FeedTypeField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
+import { Button, Field, Input, Select, Textarea } from './ui'
 
 const DAILY_ENTRY_DEFAULTS = {
   date: new Date().toISOString().split('T')[0],
@@ -93,25 +94,27 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-surface border border-foam-deep p-6 rounded-lg shadow-sm">
-      <h2 className="text-xl font-semibold text-chart-ink mb-4">Daily entry</h2>
-      <p className="text-xs text-muted mb-4 -mt-2">Drafts survive a browser refresh.</p>
+    <div className="max-w-md mx-auto bg-surface border border-foam-deep p-6 rounded-xl shadow-sm">
+      <h2 className="text-xl font-semibold text-chart-ink mb-1">Daily entry</h2>
+      <p className="text-xs text-muted mb-4">Drafts survive a browser refresh.</p>
       {error && (
-        <div className="mb-4 text-sm text-signal border border-signal/20 bg-signal/10 rounded p-2">
+        <div
+          role="alert"
+          className="mb-4 text-sm text-signal border border-signal/20 bg-signal/10 rounded-lg p-3"
+        >
           {error}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
-          <input
+        <Field label="Date" htmlFor="daily-entry-date" required>
+          <Input
+            id="daily-entry-date"
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full border border-input-border rounded px-3 py-2"
             required
           />
-        </div>
+        </Field>
         <FeedTypeField
           id="feedTypeId"
           name="feedTypeId"
@@ -137,109 +140,99 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
             }
           }}
         />
-        <div>
-          <label className="block text-sm font-medium mb-1">Feed amount (kg)</label>
-          <input
+        <Field label="Feed amount (kg)" htmlFor="daily-entry-feed">
+          <Input
+            id="daily-entry-feed"
             type="number"
             step="0.1"
             value={formData.feedAmount}
             onChange={(e) => setFormData({ ...formData, feedAmount: e.target.value })}
-            className="w-full border border-input-border rounded px-3 py-2 font-data"
+            className="font-data tabular-nums"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Mortality</label>
-          <input
+        </Field>
+        <Field label="Mortality" htmlFor="daily-entry-mortality">
+          <Input
+            id="daily-entry-mortality"
             type="number"
             value={formData.mortality}
             onChange={(e) => setFormData({ ...formData, mortality: e.target.value })}
-            className="w-full border border-input-border rounded px-3 py-2 font-data"
+            className="font-data tabular-nums"
           />
-        </div>
+        </Field>
         {Number(formData.mortality) > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Mortality cause</label>
-            <select
+          <Field label="Mortality cause" htmlFor="daily-entry-cause">
+            <Select
+              id="daily-entry-cause"
               value={formData.mortalityCause}
               onChange={(e) =>
                 setFormData({ ...formData, mortalityCause: e.target.value })
               }
-              className="w-full border border-input-border rounded px-3 py-2"
             >
               {MORTALITY_CAUSES.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
         )}
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">DO (mg/L)</label>
-            <input
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="DO (mg/L)" htmlFor="daily-entry-do">
+            <Input
+              id="daily-entry-do"
               type="number"
               step="0.1"
               value={formData.dissolvedOxygen}
               onChange={(e) =>
                 setFormData({ ...formData, dissolvedOxygen: e.target.value })
               }
-              className="w-full border border-input-border rounded px-3 py-2 font-data"
-              placeholder="opt."
+              className="font-data tabular-nums"
+              placeholder="Optional"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Temp (°C)</label>
-            <input
+          </Field>
+          <Field label="Temp (°C)" htmlFor="daily-entry-temp">
+            <Input
+              id="daily-entry-temp"
               type="number"
               step="0.1"
               value={formData.temperatureC}
               onChange={(e) =>
                 setFormData({ ...formData, temperatureC: e.target.value })
               }
-              className="w-full border border-input-border rounded px-3 py-2 font-data"
-              placeholder="opt."
+              className="font-data tabular-nums"
+              placeholder="Optional"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Secchi (cm)</label>
-            <input
+          </Field>
+          <Field label="Secchi (cm)" htmlFor="daily-entry-secchi">
+            <Input
+              id="daily-entry-secchi"
               type="number"
               step="1"
               value={formData.secchiCm}
               onChange={(e) =>
                 setFormData({ ...formData, secchiCm: e.target.value })
               }
-              className="w-full border border-input-border rounded px-3 py-2 font-data"
-              placeholder="opt."
+              className="font-data tabular-nums"
+              placeholder="Optional"
             />
-          </div>
+          </Field>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Notes</label>
-          <textarea
+        <Field label="Notes" htmlFor="daily-entry-notes">
+          <Textarea
+            id="daily-entry-notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            className="w-full border border-input-border rounded px-3 py-2"
-            rows="3"
+            rows={3}
           />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-lagoon-800 text-white px-4 py-2 rounded hover:bg-lagoon-950 disabled:opacity-60"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+        </Field>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save entry'}
+          </Button>
           {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-foam-deep text-chart-ink px-4 py-2 rounded"
-            >
+            <Button variant="secondary" onClick={onCancel}>
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </form>

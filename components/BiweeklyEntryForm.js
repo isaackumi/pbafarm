@@ -180,26 +180,26 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-foam-deep bg-foam p-4">
           <div>
-            <p className="text-xs font-semibold text-muted">
+            <p className="text-xs text-muted">
               Total fish
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
               {totalFish.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted">
+            <p className="text-xs text-muted">
               Total weight
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
               {totalWeight.toFixed(2)}g
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted">
+            <p className="text-xs text-muted">
               Average ABW
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
               {calculateAverageABW().toFixed(2)}g
             </p>
           </div>
@@ -250,7 +250,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                 step="0.1"
                 value={dissolvedOxygen}
                 onChange={(e) => setDissolvedOxygen(e.target.value)}
-                className="font-data"
+                className="font-data tabular-nums"
               />
             </Field>
             <Field label="Temperature (°C)" htmlFor="bw-temp">
@@ -260,7 +260,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                 step="0.1"
                 value={temperatureC}
                 onChange={(e) => setTemperatureC(e.target.value)}
-                className="font-data"
+                className="font-data tabular-nums"
               />
             </Field>
             <Field label="Secchi (cm)" htmlFor="bw-secchi">
@@ -270,7 +270,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                 step="1"
                 value={secchiCm}
                 onChange={(e) => setSecchiCm(e.target.value)}
-                className="font-data"
+                className="font-data tabular-nums"
               />
             </Field>
           </div>
@@ -291,7 +291,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             {samplings.map((sampling, index) => (
               <div
                 key={sampling.id}
-                className="rounded-xl border border-foam-deep bg-white p-4 sm:p-5"
+                className="rounded-xl border border-foam-deep bg-surface p-4 sm:p-5"
               >
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-semibold text-chart-ink">
@@ -301,8 +301,9 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                     <button
                       type="button"
                       onClick={() => removeSampling(index)}
-                      className="text-signal hover:opacity-80 p-1.5 rounded-lg hover:bg-signal/10"
+                      className="text-signal p-2.5 rounded-lg hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                       title="Remove sample"
+                      aria-label="Remove sample"
                     >
                       <Trash className="w-4 h-4" />
                     </button>
@@ -318,7 +319,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                         updateSampling(index, 'fish_count', e.target.value)
                       }
                       min="0"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       placeholder="Count"
                     />
                   </Field>
@@ -332,7 +333,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                       }
                       min="0"
                       step="0.01"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       placeholder="0.00"
                     />
                   </Field>
