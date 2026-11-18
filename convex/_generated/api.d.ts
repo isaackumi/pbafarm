@@ -10,6 +10,7 @@
 
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
+import type * as approvalAlerts from "../approvalAlerts.js";
 import type * as assistant from "../assistant.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
@@ -83,6 +84,7 @@ import type * as lib_insights from "../lib/insights.js";
 import type * as lib_kpi from "../lib/kpi.js";
 import type * as lib_llmProviders from "../lib/llmProviders.js";
 import type * as lib_memberships from "../lib/memberships.js";
+import type * as lib_notify from "../lib/notify.js";
 import type * as lib_orgProfile from "../lib/orgProfile.js";
 import type * as lib_permissionCatalog from "../lib/permissionCatalog.js";
 import type * as lib_permissions from "../lib/permissions.js";
@@ -116,6 +118,7 @@ import type * as messaging_providers_whatsappCloud from "../messaging/providers/
 import type * as messaging_validators from "../messaging/validators.js";
 import type * as mfa from "../mfa.js";
 import type * as migrations from "../migrations.js";
+import type * as notificationDispatch from "../notificationDispatch.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as notifications from "../notifications.js";
 import type * as nursery from "../nursery.js";
@@ -153,6 +156,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
+  approvalAlerts: typeof approvalAlerts;
   assistant: typeof assistant;
   audit: typeof audit;
   auth: typeof auth;
@@ -226,6 +230,7 @@ declare const fullApi: ApiFromModules<{
   "lib/kpi": typeof lib_kpi;
   "lib/llmProviders": typeof lib_llmProviders;
   "lib/memberships": typeof lib_memberships;
+  "lib/notify": typeof lib_notify;
   "lib/orgProfile": typeof lib_orgProfile;
   "lib/permissionCatalog": typeof lib_permissionCatalog;
   "lib/permissions": typeof lib_permissions;
@@ -259,6 +264,7 @@ declare const fullApi: ApiFromModules<{
   "messaging/validators": typeof messaging_validators;
   mfa: typeof mfa;
   migrations: typeof migrations;
+  notificationDispatch: typeof notificationDispatch;
   notificationPreferences: typeof notificationPreferences;
   notifications: typeof notifications;
   nursery: typeof nursery;

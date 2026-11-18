@@ -1,5 +1,6 @@
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation, internalMutation } from './_generated/server'
 import { writeCompanyId, logAudit } from './lib/tenancy'
 import { requireAccount } from './lib/permissions'
@@ -19,6 +20,9 @@ function toClient(n: any) {
   }
 }
 
+const MAX_LIST = 200
+
+/** Newest first. Reactive: the bell subscribes to it (AUTO-003). */
 export const listForCurrentUser = query({
   args: {
     limit: v.optional(v.number()),
@@ -26,39 +30,56 @@ export const listForCurrentUser = query({
   },
   handler: async (ctx, args) => {
     const user = await requireAccount(ctx)
-    
-    let notifications = await ctx.db
-      .query('notifications')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .collect()
-
-    if (args.unreadOnly) {
-      notifications = notifications.filter((n) => !n.read)
-    }
-
-    // Sort by creation time descending (newest first)
-    notifications = notifications.sort((a, b) => b._creationTime - a._creationTime)
-
-    if (args.limit) {
-      notifications = notifications.slice(0, args.limit)
-    }
-
-    return notifications.map(toClient)
+    const limit = Math.max(1, Math.min(Math.floor(args.limit ?? 50), MAX_LIST))
+    const rows = args.unreadOnly
+      ? await ctx.db
+          .query('notifications')
+          .withIndex('by_user_read', (q) => q.eq('userId', user._id).eq('read', false))
+          .order('desc')
+          .take(limit)
+      : await ctx.db
+          .query('notifications')
+          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .order('desc')
+          .take(limit)
+    return rows.map(toClient)
   },
 })
 
+/** Notifications page: newest first, paginated. */
+export const listPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    unreadOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { paginationOpts, unreadOnly }) => {
+    const user = await requireAccount(ctx)
+    const page = unreadOnly
+      ? await ctx.db
+          .query('notifications')
+          .withIndex('by_user_read', (q) => q.eq('userId', user._id).eq('read', false))
+          .order('desc')
+          .paginate(paginationOpts)
+      : await ctx.db
+          .query('notifications')
+          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .order('desc')
+          .paginate(paginationOpts)
+    return { ...page, page: page.page.map(toClient) }
+  },
+})
+
+/** Unread count, capped at 100 (the UI shows "99+"). */
 export const getUnreadCount = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
-    
-    const unreadNotifications = await ctx.db
+    const unread = await ctx.db
       .query('notifications')
       .withIndex('by_user_read', (q) => q.eq('userId', user._id).eq('read', false))
-      .collect()
-
-    return unreadNotifications.length
+      .take(100)
+    return unread.length
   },
 })
 

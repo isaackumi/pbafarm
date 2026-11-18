@@ -20,6 +20,7 @@ import {
 } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -132,7 +133,7 @@ function blankDraft(data) {
     name: '',
     description: '',
     enabled: true,
-    trigger: { kind: 'event', eventType: data.eventTypes[0]?.type || 'daily.recorded' },
+    trigger: { kind: 'event', eventType: data.eventTypes[0]?.type || `daily.recorded` },
     match: 'all',
     conditions: [],
     actions: [blankNotify()],
@@ -916,6 +917,108 @@ function Settings({ data }) {
   )
 }
 
+function ApprovalAlerts() {
+  const t = useT()
+  const data = useQuery(api.approvalAlerts.settings)
+  const update = useMutation(api.approvalAlerts.updateSettings)
+  const { busy, run } = useRun()
+  const [draft, setDraft] = useState(null)
+  if (!data) return <Skeleton className="h-40" />
+  const form = draft ?? data.settings
+  const set = (patch) => setDraft({ ...form, ...patch })
+  const toggle = (key, channel) =>
+    set({ [key]: form[key].includes(channel) ? form[key].filter((c) => c !== channel) : [...form[key], channel] })
+  const channelBoxes = (key) => (
+    <div className="flex flex-wrap gap-4">
+      {CHANNELS.map(([id]) => (
+        <label key={id} className="inline-flex items-center gap-2 text-sm text-chart-ink min-h-11 sm:min-h-0">
+          <input
+            type="checkbox"
+            checked={form[key].includes(id)}
+            onChange={() => toggle(key, id)}
+            disabled={!form.enabled}
+          />
+          {t(`notifications.channel.${id}`)}
+        </label>
+      ))}
+    </div>
+  )
+  const save = async () => {
+    const ok = await run(
+      'approvals',
+      () =>
+        update({
+          enabled: form.enabled,
+          channels: form.channels,
+          escalateAfterHours: Number(form.escalateAfterHours) || 0,
+          escalationChannels: form.escalationChannels,
+        }),
+      t('notifications.approvals.saved'),
+    )
+    if (ok) setDraft(null)
+  }
+  return (
+    <Card>
+      <CardHeader
+        title={t('notifications.approvals.title')}
+        subtitle={t('notifications.approvals.intro')}
+        action={
+          <Switch
+            checked={form.enabled}
+            onChange={(enabled) => set({ enabled })}
+            label={t('notifications.approvals.enabled')}
+          />
+        }
+      />
+      <div className="mt-4 space-y-4">
+        <Field label={t('notifications.approvals.channels')}>{channelBoxes('channels')}</Field>
+        <Field label={t('notifications.approvals.escalateAfter')} htmlFor="approval-escalate">
+          <Input
+            id="approval-escalate"
+            type="number"
+            min={0}
+            max={336}
+            className="max-w-32"
+            value={form.escalateAfterHours}
+            disabled={!form.enabled}
+            onChange={(e) => set({ escalateAfterHours: e.target.value })}
+          />
+        </Field>
+        {Number(form.escalateAfterHours) > 0 && (
+          <Field label={t('notifications.approvals.escalationChannels')}>{channelBoxes('escalationChannels')}</Field>
+        )}
+        <div className="flex justify-end">
+          <Button disabled={!draft || busy === 'approvals'} onClick={save}>
+            {t('notifications.approvals.save')}
+          </Button>
+        </div>
+      </div>
+      <div className="mt-6 border-t border-foam-deep pt-4">
+        <p className="text-sm font-medium text-chart-ink">{t('notifications.approvals.recent')}</p>
+        {data.recent.length ? (
+          <ul className="mt-2 divide-y divide-foam-deep">
+            {data.recent.map((d) => (
+              <li key={d.id} className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="text-chart-ink">{d.title}</div>
+                  <div className="text-xs text-muted">
+                    {fmtTime(d.createdAt)} ·{' '}
+                    {t('notifications.approvals.counts', { sent: d.sent, failed: d.failed, skipped: d.skipped })}
+                  </div>
+                  {d.error && <div className="text-xs text-signal break-words">{d.error}</div>}
+                </div>
+                <Pill status={d.status} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-muted">{t('notifications.approvals.noRecent')}</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function Templates({ data }) {
   const create = useMutation(api.automation.rules.createFromTemplate)
   const { busy, run } = useRun()
@@ -984,6 +1087,7 @@ export default function AutomationsPage() {
           ) : (
             <div className="space-y-6">
               <Settings data={data} />
+              <ApprovalAlerts />
               <TabBar
                 tabs={[
                   { id: 'rules', label: `Rules (${data.rules.length})` },

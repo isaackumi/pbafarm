@@ -86,6 +86,7 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'domainEvents', index: 'by_company_and_createdAt' },
   { table: 'automationRules', index: 'by_company' },
   { table: 'automationRuns', index: 'by_company_and_createdAt' },
+  { table: 'notificationDispatches', index: 'by_company_and_createdAt' },
   { table: 'tasks', index: 'by_company_and_status' },
   { table: 'unitDailyStats', index: 'by_companyId_and_date' },
   { table: 'batchStats', index: 'by_companyId_and_lastDate' },
