@@ -1,5 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import {
@@ -7,6 +9,7 @@ import {
   assertStockingAllowed,
   assertTopupAllowed,
 } from './lib/farmRules'
+import { assertNoOtherOpenStocking } from './lib/cycles'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -41,6 +44,48 @@ async function allocateBatchNumber(
   let n = 2
   while (existing.has(`${base}-${n}`)) n += 1
   return `${base}-${n}`
+}
+
+/**
+ * The fish transfer that created this stocking or top-up, if any. Such rows
+ * are approved or rejected through the transfer, never on their own:
+ * approving one directly would put the fish in the destination cage without
+ * taking them out of the source (doc 09 S2/S3).
+ */
+async function linkedTransfer(
+  ctx: QueryCtx,
+  link: { stockingId?: Id<'stockingHistory'>; topupId?: Id<'topupHistory'> },
+) {
+  if (link.stockingId) {
+    return await ctx.db
+      .query('fishTransfers')
+      .withIndex('by_destinationStockingId', (q) =>
+        q.eq('destinationStockingId', link.stockingId),
+      )
+      .first()
+  }
+  if (link.topupId) {
+    return await ctx.db
+      .query('fishTransfers')
+      .withIndex('by_destinationTopupId', (q) =>
+        q.eq('destinationTopupId', link.topupId),
+      )
+      .first()
+  }
+  return null
+}
+
+async function assertNotTransferLinked(
+  ctx: QueryCtx,
+  link: { stockingId?: Id<'stockingHistory'>; topupId?: Id<'topupHistory'> },
+) {
+  const transfer = await linkedTransfer(ctx, link)
+  if (transfer) {
+    const what = link.stockingId ? 'stocking' : 'top-up'
+    throw new Error(
+      `This ${what} was created by a fish transfer. Approve or reject the transfer on the Approvals page instead.`,
+    )
+  }
 }
 
 const stockingStatus = v.union(
@@ -164,8 +209,10 @@ export const getStocking = query({
         .collect()
     ).filter((t) => t.status === 'approved' || t.status === 'pending_approval')
 
+    const transfer = await linkedTransfer(ctx, { stockingId: id })
     return {
       ...toClientStocking(stocking),
+      transfer_id: transfer?._id ?? null,
       cage: cage
         ? {
             id: cage._id,
@@ -204,8 +251,10 @@ export const getTopup = query({
       }
     }
 
+    const transfer = await linkedTransfer(ctx, { topupId: id })
     return {
       ...toClientTopup(topup),
+      transfer_id: transfer?._id ?? null,
       stocking: stocking
         ? {
             id: stocking._id,
@@ -280,6 +329,8 @@ export const createStocking = mutation({
         initialCount: args.fishCount,
         currentCount: args.fishCount,
         initialAbw: args.initialAbw,
+        // New cycle: weight starts at the stocking ABW, not the last cycle's.
+        currentWeight: args.initialAbw,
         status: 'active',
         species: species || cage.species,
         updatedAt: Date.now(),
@@ -396,6 +447,21 @@ export const approveStocking = mutation({
     if (stocking.status !== 'pending_approval') {
       throw new Error('Only pending stockings can be approved')
     }
+    await assertNotTransferLinked(ctx, { stockingId: id })
+
+    // Re-check against the cage as it is now: it may have been stocked since
+    // this request was made (doc 09 S9).
+    const cage = await ctx.db.get(stocking.cageId)
+    if (!cage) throw new Error('Cage not found')
+    const rules = await loadRules(ctx, stocking.companyId ?? cage.companyId)
+    assertStockingAllowed({
+      cage,
+      fishCount: stocking.fishCount,
+      abw: stocking.initialAbw,
+      rules: rules.stockingRules,
+      farmRules: rules.farmRules,
+    })
+    await assertNoOtherOpenStocking(ctx, cage, id)
 
     const now = Date.now()
 
@@ -412,6 +478,8 @@ export const approveStocking = mutation({
       initialCount: stocking.fishCount,
       currentCount: stocking.fishCount,
       initialAbw: stocking.initialAbw,
+      // New cycle: weight starts at the stocking ABW, not the last cycle's.
+      currentWeight: stocking.initialAbw,
       status: 'active',
       species: stocking.species,
       updatedAt: now,
@@ -443,6 +511,7 @@ export const rejectStocking = mutation({
     if (stocking.status !== 'pending_approval') {
       throw new Error('Only pending stockings can be rejected')
     }
+    await assertNotTransferLinked(ctx, { stockingId: id })
 
     await ctx.db.patch(id, {
       status: 'rejected',
@@ -563,6 +632,7 @@ export const approveTopup = mutation({
     if (topup.status !== 'pending_approval') {
       throw new Error('Only pending topups can be approved')
     }
+    await assertNotTransferLinked(ctx, { topupId: id })
 
     const stocking = await ctx.db.get(topup.stockingId)
     if (!stocking) throw new Error('Associated stocking record not found')
@@ -611,6 +681,7 @@ export const rejectTopup = mutation({
     if (topup.status !== 'pending_approval') {
       throw new Error('Only pending topups can be rejected')
     }
+    await assertNotTransferLinked(ctx, { topupId: id })
 
     await ctx.db.patch(id, {
       status: 'rejected',

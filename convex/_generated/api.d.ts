@@ -23,6 +23,7 @@ import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_authz from "../lib/authz.js";
+import type * as lib_cycles from "../lib/cycles.js";
 import type * as lib_farmRules from "../lib/farmRules.js";
 import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   inventory: typeof inventory;
   "lib/authz": typeof lib_authz;
+  "lib/cycles": typeof lib_cycles;
   "lib/farmRules": typeof lib_farmRules;
   "lib/feedLedger": typeof lib_feedLedger;
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;

@@ -68,7 +68,10 @@ function TopupDetails() {
     )
   }
 
-  const canModerate = hasRole('admin') && topup.status === 'pending_approval'
+  // Transfer-linked top-ups are approved or rejected through the transfer.
+  const linkedToTransfer = Boolean(topup.transfer_id)
+  const canModerate =
+    hasRole('admin') && topup.status === 'pending_approval' && !linkedToTransfer
   const biomass = (Number(topup.fish_count || 0) * Number(topup.abw || 0)) / 1000
 
   const onApprove = async () => {
@@ -203,6 +206,17 @@ function TopupDetails() {
               </dd>
             </div>
           </dl>
+
+          {linkedToTransfer && topup.status === 'pending_approval' && (
+            <p className="pt-2 border-t border-foam-deep text-sm text-muted">
+              This top-up was created by a fish transfer. Approve or reject the
+              transfer on the{' '}
+              <Link href="/approvals" className="text-lagoon-800 underline-offset-2 hover:underline">
+                Approvals
+              </Link>{' '}
+              page so the fish leave the source cage at the same time.
+            </p>
+          )}
 
           {canModerate && (
             <div className="flex flex-wrap gap-3 pt-2 border-t border-foam-deep">
