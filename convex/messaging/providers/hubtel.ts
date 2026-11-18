@@ -1,11 +1,7 @@
-import {
-  basicAuth,
-  isRetryableStatus,
-  networkFailure,
-  providerError,
-  readJson,
-  type ProviderAdapter,
-} from './types'
+import * as Effect from 'effect/Effect'
+import * as Schema from 'effect/Schema'
+import { ProviderRejected, decodeBody, providerPost, runSend } from './send'
+import { basicAuth, type ProviderAdapter } from './types'
 
 /**
  * Hubtel SMS (Ghana).
@@ -22,6 +18,13 @@ import {
  * The GET "quick send" puts the secret in the URL and is not used.
  */
 const HOSTS = ['sms.hubtel.com', 'smsc.hubtel.com']
+
+/** 200/201 body: { messageId, status (0 = submitted), statusDescription }. */
+const HubtelResponse = Schema.Struct({
+  messageId: Schema.optional(Schema.NullOr(Schema.String)),
+  status: Schema.optional(Schema.Unknown),
+  statusDescription: Schema.optional(Schema.Unknown),
+})
 
 export const hubtel: ProviderAdapter = {
   id: 'hubtel',
@@ -43,11 +46,11 @@ export const hubtel: ProviderAdapter = {
   senderLabel: 'Sender ID (approved by Hubtel, max 11 characters)',
   senderRequired: true,
 
-  async send(input, creds, config, fetchImpl = fetch) {
+  send(input, creds, config, fetchImpl) {
     const host = HOSTS.includes(config.settings.host) ? config.settings.host : HOSTS[0]
-    try {
-      const res = await fetchImpl(`https://${host}/v1/messages/send`, {
-        method: 'POST',
+    const program = Effect.gen(function* () {
+      const res = yield* providerPost({
+        url: `https://${host}/v1/messages/send`,
         headers: {
           Authorization: basicAuth(creds.clientId, creds.clientSecret),
           'Content-Type': 'application/json',
@@ -59,20 +62,17 @@ export const hubtel: ProviderAdapter = {
           Content: input.body,
         }),
       })
-      const { json, text } = await readJson(res)
-      if (!res.ok) {
-        return { ok: false, error: providerError(res.status, text), retryable: isRetryableStatus(res.status) }
+      const body = decodeBody(HubtelResponse, res)
+      if (typeof body?.status === 'number' && body.status !== 0) {
+        return yield* Effect.fail(
+          new ProviderRejected({
+            message: `Hubtel status ${body.status}: ${String(body.statusDescription ?? '').slice(0, 160)}`,
+            retryable: false,
+          }),
+        )
       }
-      if (json && typeof json.status === 'number' && json.status !== 0) {
-        return {
-          ok: false,
-          error: `Hubtel status ${json.status}: ${String(json.statusDescription ?? '').slice(0, 160)}`,
-          retryable: false,
-        }
-      }
-      return { ok: true, providerMessageId: json?.messageId ?? undefined }
-    } catch (err) {
-      return networkFailure(err)
-    }
+      return { providerMessageId: body?.messageId ?? undefined }
+    })
+    return runSend(program, fetchImpl)
   },
 }
