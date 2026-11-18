@@ -17,6 +17,7 @@ import { Provider } from 'react-redux'
 import { store } from '../store'
 import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
+import ErrorBoundary from '../components/ErrorBoundary'
 import '../styles/globals.css'
 import '../styles/tour.css'
 
@@ -36,7 +37,7 @@ function useServiceWorker() {
   }, [])
 }
 
-function AppWrapper({ Component, pageProps }) {
+function AppWrapper({ Component, pageProps, router }) {
   useServiceWorker()
   return (
     <ConvexAuthProvider client={convex}>
@@ -52,8 +53,12 @@ function AppWrapper({ Component, pageProps }) {
                       <AnalyticsProvider>
                         <TourProvider>
                           <AuthWrapper>
-                            <Component {...pageProps} />
-                            <AiAssistant />
+                            <ErrorBoundary resetKey={router.asPath}>
+                              <Component {...pageProps} />
+                            </ErrorBoundary>
+                            <ErrorBoundary resetKey={router.asPath} silent>
+                              <AiAssistant />
+                            </ErrorBoundary>
                           </AuthWrapper>
                         </TourProvider>
                       </AnalyticsProvider>
