@@ -1,36 +1,10 @@
 import type { QueryCtx, MutationCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 
-/** Standard aquaculture growth formulas. Weights in grams, biomass in kg. */
+import { biomassKg, fcr, sgr, adg, daysBetween, round } from './kpi'
 
-export const biomassKg = (count: number, abwG: number) =>
-  count > 0 && abwG > 0 ? (count * abwG) / 1000 : 0
-
-/** Feed conversion ratio: kg feed per kg of fish gained. Null when there is no gain. */
-export function fcr(feedKg: number, gainKg: number): number | null {
-  if (!(feedKg > 0) || !(gainKg > 0)) return null
-  return feedKg / gainKg
-}
-
-/** Specific growth rate, % body weight per day. */
-export function sgr(abwStart: number, abwEnd: number, days: number): number | null {
-  if (!(abwStart > 0) || !(abwEnd > 0) || !(days > 0)) return null
-  return ((Math.log(abwEnd) - Math.log(abwStart)) / days) * 100
-}
-
-/** Average daily gain, grams per fish per day. */
-export function adg(abwStart: number, abwEnd: number, days: number): number | null {
-  if (!(abwStart > 0) || !(abwEnd > 0) || !(days > 0)) return null
-  return (abwEnd - abwStart) / days
-}
-
-export function daysBetween(fromIso: string, toIso: string): number {
-  const ms = new Date(`${toIso}T12:00:00Z`).getTime() - new Date(`${fromIso}T12:00:00Z`).getTime()
-  return Math.max(0, Math.round(ms / 86_400_000))
-}
-
-const round = (n: number | null, dp: number) =>
-  n == null || !Number.isFinite(n) ? null : Math.round(n * 10 ** dp) / 10 ** dp
+/** Formulas live in ./kpi (one definition each, PROD-008); re-exported for older imports. */
+export { biomassKg, fcr, sgr, adg, daysBetween }
 
 type Ctx = QueryCtx | MutationCtx
 
