@@ -97,6 +97,7 @@ function fileRow(f: Doc<'files'>) {
 
 export const generateUploadUrl = mutation({
   args: { entityType: fileEntityType, entityId: v.string() },
+  returns: v.string(),
   handler: async (ctx, { entityType, entityId }) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     await ownedEntity(ctx, user, entityType, entityId)
@@ -111,6 +112,7 @@ export const attach = mutation({
     storageId: v.id('_storage'),
     name: v.string(),
   },
+  returns: v.union(v.object({ ok: v.literal(false), code: v.literal('VALIDATION'), message: v.string() }), v.object({ ok: v.literal(true), id: v.id('files') })),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, args.entityType, args.entityId)
@@ -191,6 +193,7 @@ export const list = query({
 /** A download path valid for a few minutes, only for the owning company's members. */
 export const requestDownload = mutation({
   args: { fileId: v.id('files') },
+  returns: v.object({ path: v.string(), expiresAt: v.number() }),
   handler: async (ctx, { fileId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     const file = await ctx.db.get(fileId)
@@ -213,6 +216,7 @@ export const requestDownload = mutation({
 
 export const remove = mutation({
   args: { fileId: v.id('files') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { fileId }) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const file = await ctx.db.get(fileId)
@@ -235,6 +239,7 @@ export const remove = mutation({
 /** The file a download token grants, if the token is live and the file still exists. */
 export const resolveDownload = internalQuery({
   args: { tokenHash: v.string(), now: v.number() },
+  returns: v.union(v.object({ storageId: v.id('_storage'), name: v.string(), mime: v.string() }), v.null()),
   handler: async (ctx, { tokenHash, now }) => {
     const grant = await ctx.db
       .query('fileDownloadTokens')
@@ -250,6 +255,7 @@ export const resolveDownload = internalQuery({
 /** Delete expired download tokens (daily cron), bounded per run. */
 export const pruneDownloadTokens = internalMutation({
   args: {},
+  returns: v.object({ deleted: v.number() }),
   handler: async (ctx) => {
     const expired = await ctx.db
       .query('fileDownloadTokens')

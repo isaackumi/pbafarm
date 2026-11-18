@@ -99,6 +99,7 @@ export async function createRun(
 /** Fan an event out to the company's enabled rules for its type. */
 export const dispatchEvent = internalMutation({
   args: { eventId: v.id('domainEvents') },
+  returns: v.object({ runs: v.number() }),
   handler: async (ctx, { eventId }) => {
     const ev = await ctx.db.get(eventId)
     if (!ev || ev.processedBy?.includes('automation')) return { runs: 0 }
@@ -136,6 +137,7 @@ export const dispatchEvent = internalMutation({
 /** Every few minutes (crons.ts): queue due schedule rules, advance them. */
 export const tick = internalMutation({
   args: {},
+  returns: v.object({ queued: v.number(), more: v.boolean() }),
   handler: async (ctx): Promise<{ queued: number; more: boolean }> => {
     const now = Date.now()
     const due = await ctx.db
@@ -472,6 +474,7 @@ export const finishRun = internalMutation({
       }),
     ),
   },
+  returns: v.null(),
   handler: async (ctx, { runId, outcomes }) => {
     const run = await ctx.db.get(runId)
     if (!run) return null
@@ -499,6 +502,7 @@ export const finishRun = internalMutation({
 /** The attempt crashed before sending (bug or transient database error). */
 export const failRun = internalMutation({
   args: { runId: v.id('automationRuns'), error: v.string() },
+  returns: v.null(),
   handler: async (ctx, { runId, error }) => {
     const run = await ctx.db.get(runId)
     if (!run) return null
@@ -518,6 +522,7 @@ export const EVENT_RETENTION_DAYS = 30
 
 export const pruneEvents = internalMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx): Promise<number> => {
     const cutoff = Date.now() - EVENT_RETENTION_DAYS * 86_400_000
     const old = await ctx.db
@@ -533,6 +538,7 @@ export const pruneEvents = internalMutation({
 /** One attempt of a run. Scheduled by createRun, retries and re-runs. */
 export const executeRun = internalAction({
   args: { runId: v.id('automationRuns') },
+  returns: v.null(),
   handler: async (ctx, { runId }) => {
     let plan: Plan | null
     try {

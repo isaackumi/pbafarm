@@ -552,6 +552,7 @@ export const createSampling = internalMutation({
 /** Daily cleanup: idempotency keys older than 30 days (doc 10 retention). */
 export const pruneIdempotencyKeys = internalMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
     const old = await ctx.db

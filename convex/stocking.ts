@@ -17,7 +17,7 @@ import { assertDifferentApprover, assertUserCan, requireMember } from './lib/per
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 
-async function loadRules(ctx: any, companyId: any) {
+async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) {
   if (!companyId) return mergeSettings(undefined)
   const company = await ctx.db.get(companyId)
   return mergeSettings(company?.settings)
@@ -307,6 +307,7 @@ export const createStocking = mutation({
     species: v.optional(v.string()),
     custom: v.optional(customValues),
   },
+  returns: v.id('stockingHistory'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const cage = await ctx.db.get(args.cageId)
@@ -384,6 +385,7 @@ export const suggestBatchNumber = query({
     cageId: v.id('cages'),
     stockingDate: v.optional(v.string()),
   },
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.cageId)
@@ -412,6 +414,7 @@ export const updateStocking = mutation({
       custom: v.optional(customValues),
     }),
   },
+  returns: v.id('stockingHistory'),
   handler: async (ctx, { id, patch: rawPatch }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const stocking = await ctx.db.get(id)
@@ -449,6 +452,7 @@ export const removeStocking = mutation({
     id: v.id('stockingHistory'),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     const stocking = await ctx.db.get(id)
@@ -477,6 +481,7 @@ export const removeStocking = mutation({
 
 export const approveStocking = mutation({
   args: { id: v.id('stockingHistory') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
@@ -542,6 +547,7 @@ export const rejectStocking = mutation({
     id: v.id('stockingHistory'),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
@@ -608,6 +614,7 @@ export const createTopup = mutation({
     transferSupervisor: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('topupHistory'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const stocking = await ctx.db.get(args.stockingId)
@@ -663,6 +670,7 @@ export const createTopup = mutation({
 
 export const approveTopup = mutation({
   args: { id: v.id('topupHistory') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
@@ -713,6 +721,7 @@ export const rejectTopup = mutation({
     id: v.id('topupHistory'),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     

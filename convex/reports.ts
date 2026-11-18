@@ -889,6 +889,7 @@ export const dailySeries = query({
     to: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(v.object({ date: v.string(), feed_kg: v.number(), feed_cost: v.number(), mortality: v.number() })),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)

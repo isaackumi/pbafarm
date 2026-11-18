@@ -86,6 +86,7 @@ export const changePassword = action({
     currentPassword: v.string(),
     newPassword: v.string(),
   },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) throw new Error('Not authenticated')

@@ -289,6 +289,7 @@ export const transferGroup = mutation({
     transferSupervisor: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.object({ transferGroupId: v.string(), ids: v.array(v.id('fishTransfers')), warnings: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     if (!DATE_RE.test(args.transferDate)) throw userError('VALIDATION', 'Choose a transfer date')
@@ -447,6 +448,7 @@ export const grade = mutation({
     culls: v.optional(v.number()),
     reason: v.optional(v.string()),
   },
+  returns: v.object({ operationId: v.id('stockOperations'), childBatchIds: v.array(v.id('batches')), unaccounted: v.number(), warnings: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     if (!DATE_RE.test(args.date)) throw userError('VALIDATION', 'Choose a grading date')

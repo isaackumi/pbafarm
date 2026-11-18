@@ -19,6 +19,7 @@ const MAX_ATTEMPTS = 5
 
 export const status = query({
   args: {},
+  returns: v.object({ email: v.union(v.string(), v.null()), verified: v.boolean() }),
   handler: async (ctx) => {
     const me = await requireAccount(ctx)
     return {
@@ -30,6 +31,7 @@ export const status = query({
 
 export const requestCode = mutation({
   args: {},
+  returns: v.object({ alreadyVerified: v.boolean() }),
   handler: async (ctx) => {
     const me = await requireAccount(ctx)
     if (!me.email) throw userError('VALIDATION', 'Your account has no email on file')
@@ -64,6 +66,7 @@ export const requestCode = mutation({
 
 export const verify = mutation({
   args: { code: v.string() },
+  returns: v.object({ verified: v.boolean() }),
   handler: async (ctx, { code }) => {
     const me = await requireAccount(ctx)
     if (me.emailVerificationTime) return { verified: true }

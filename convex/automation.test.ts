@@ -381,7 +381,7 @@ describe('rule administration', () => {
     ).rejects.toThrow(/HH:MM/)
     const overview = await as(adminId).query(api.automation.rules.overview, {})
     expect(overview.rules).toHaveLength(1)
-    expect(overview.templates.find((x: any) => x.key === 'withdrawal_ending').inUse).toBe(true)
+    expect(overview.templates.find((x: any) => x.key === 'withdrawal_ending')?.inUse).toBe(true)
     expect((await as(otherAdminId).query(api.automation.rules.overview, {})).rules).toHaveLength(0)
     // Disabling removes it from the schedule.
     await as(adminId).mutation(api.automation.rules.setEnabled, { ruleId, enabled: false })

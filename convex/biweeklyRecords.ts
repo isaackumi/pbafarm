@@ -146,6 +146,7 @@ export const create = mutation({
     ),
     custom: v.optional(customValues),
   },
+  returns: v.id('biweeklyRecords'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.sampling.record' })
     const cage = await ctx.db.get(args.cageId)
@@ -401,6 +402,7 @@ export const createMany = mutation({
       }),
     ),
   },
+  returns: v.array(v.id('biweeklyRecords')),
   handler: async (ctx, { records }) => {
     const { user } = await requireMember(ctx, { permission: 'production.import' })
     // Bulk import bypasses per-record review (doc 07 V9): production.import.
@@ -448,6 +450,7 @@ export const update = mutation({
       custom: v.optional(customValues),
     }),
   },
+  returns: v.id('biweeklyRecords'),
   handler: async (ctx, { id, patch: rawPatch }) => {
     const { user } = await requireMember(ctx, { permission: 'production.sampling.correct' })
     const existing = await ctx.db.get(id)
@@ -500,6 +503,7 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id('biweeklyRecords') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)

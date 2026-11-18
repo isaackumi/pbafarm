@@ -103,6 +103,7 @@ export const logBiosecurity = mutation({
     entryControlsDone: v.optional(v.boolean()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('biosecurityLogs'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const companyId = await writeCompanyId(user)
@@ -143,6 +144,7 @@ export const logBiosecurity = mutation({
 
 export const removeBiosecurity = mutation({
   args: { id: v.id('biosecurityLogs') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const row = await ctx.db.get(id)
@@ -194,6 +196,7 @@ export const listTemplates = query({
 /** Add the built-in templates the company does not have yet (idempotent). */
 export const seedDefaultTemplates = mutation({
   args: {},
+  returns: v.object({ added: v.array(v.string()) }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
@@ -212,6 +215,7 @@ export const createTemplate = mutation({
     frequency: complianceFrequency,
     items: v.array(v.string()),
   },
+  returns: v.id('complianceTemplates'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
@@ -239,6 +243,7 @@ export const createTemplate = mutation({
 
 export const setTemplateActive = mutation({
   args: { id: v.id('complianceTemplates'), active: v.boolean() },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { id, active }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const t = await ctx.db.get(id)
@@ -313,6 +318,7 @@ export const complete = mutation({
     answers: v.array(v.object({ itemId: v.string(), ok: v.boolean(), note: v.optional(v.string()) })),
     notes: v.optional(v.string()),
   },
+  returns: v.object({ id: v.id('complianceRecords'), period: v.string(), passed: v.boolean() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const companyId = await writeCompanyId(user)

@@ -21,7 +21,7 @@ import {
 import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 import { assertDifferentApprover, requireMember } from './lib/permissions'
 
-async function loadRules(ctx: any, companyId: any) {
+async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) {
   if (!companyId) return mergeSettings(undefined)
   const company = await ctx.db.get(companyId)
   return mergeSettings(company?.settings)
@@ -287,6 +287,7 @@ export const createFishTransfer = mutation({
     transferSupervisor: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('fishTransfers'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.request' })
     if (args.sourceCageId === args.destinationCageId) {
@@ -461,6 +462,7 @@ export const createFishTransfer = mutation({
 
 export const approveFishTransfer = mutation({
   args: { id: v.id('fishTransfers') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
 
@@ -499,6 +501,7 @@ export const rejectFishTransfer = mutation({
     id: v.id('fishTransfers'),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
 
@@ -562,6 +565,7 @@ export const reverseFishTransfer = mutation({
     id: v.id('fishTransfers'),
     reason: v.string(),
   },
+  returns: v.object({ ok: v.boolean(), warnings: v.array(v.string()) }),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     const transfer = await ctx.db.get(id)

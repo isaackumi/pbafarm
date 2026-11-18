@@ -480,6 +480,7 @@ export const m2BackfillMemberships = internalMutation({
  */
 export const m2VerifyMemberships = internalQuery({
   args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.object({ checked: v.number(), problems: v.array(v.object({ userId: v.id('users'), problem: v.string() })), isDone: v.boolean(), continueCursor: v.string() }),
   handler: async (ctx, { cursor = null }) => {
     const page = await ctx.db.query('users').paginate({ numItems: 500, cursor })
     const problems: Array<{ userId: Id<'users'>; problem: string }> = []
@@ -643,6 +644,7 @@ export const seedComplianceTemplates = internalMutation({
     dryRun: v.optional(v.boolean()),
     cursor: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({ dryRun: v.boolean(), count: v.number(), added: v.array(v.object({ companyId: v.id('companies'), keys: v.array(v.string()) })), isDone: v.boolean(), continueCursor: v.string() }),
   handler: async (ctx, { dryRun = true, cursor = null }) => {
     const page = await ctx.db.query('companies').paginate({ numItems: 100, cursor })
     const added: Array<{ companyId: Id<'companies'>; keys: string[] }> = []

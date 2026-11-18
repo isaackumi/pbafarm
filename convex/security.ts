@@ -116,6 +116,7 @@ export const updatePolicy = mutation({
  */
 export const clearPolicyForCompany = internalMutation({
   args: { companyId: v.id('companies') },
+  returns: v.null(),
   handler: async (ctx, { companyId }) => {
     const company = await ctx.db.get(companyId)
     if (!company) throw new Error('Company not found')

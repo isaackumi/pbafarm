@@ -85,6 +85,7 @@ export const create = mutation({
     administeredBy: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('healthTreatments'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const cage = await ctx.db.get(args.cageId)
@@ -134,6 +135,7 @@ export const create = mutation({
 
 export const remove = mutation({
   args: { id: v.id('healthTreatments') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)

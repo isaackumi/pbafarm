@@ -16,6 +16,7 @@ const DIRTY_BATCH = 10
 /** Drain the dirty queue (cron every 5 minutes; continues itself while work remains). */
 export const processDirty = internalMutation({
   args: { now: v.optional(v.number()) },
+  returns: v.object({ processed: v.number(), more: v.boolean() }),
   handler: async (ctx, args) => {
     const r = await processDirtyQueue(ctx, DIRTY_BATCH, args.now)
     if (r.more) await ctx.scheduler.runAfter(0, internal.rollups.processDirty, {})
@@ -29,6 +30,7 @@ export const processDirty = internalMutation({
  */
 export const queueOpen = internalMutation({
   args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.object({ queued: v.number(), done: v.boolean() }),
   handler: async (ctx, args) => {
     const page = await ctx.db
       .query('companies')

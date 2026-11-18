@@ -109,7 +109,7 @@ async function hatcherySetup() {
       larvaeCount: larvae,
       larvalUnitId: unitId,
     })
-    return { ...b, spawningEventId, lotId, ...hatch }
+    return { ...b, spawningEventId, ...hatch }
   }
   const ledger = (unitId: Id<'cages'>) =>
     t.run(async (ctx) => {

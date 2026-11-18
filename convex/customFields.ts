@@ -203,6 +203,7 @@ export const save = mutation({
     type: customFieldType,
     ...defFields,
   },
+  returns: v.id('customFieldDefs'),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'customization.manage' })
     const companyId = m.companyId
@@ -274,6 +275,7 @@ export const save = mutation({
 /** Archive (values stay on records, inert) or restore a field. */
 export const setArchived = mutation({
   args: { id: v.id('customFieldDefs'), archived: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, { id, archived }) => {
     const m = await requireMember(ctx, { permission: 'customization.manage' })
     const def = await ctx.db.get(id)
@@ -297,6 +299,7 @@ export const setArchived = mutation({
 /** Put an entity's fields in this order. */
 export const reorder = mutation({
   args: { entity: customEntityValidator, ids: v.array(v.id('customFieldDefs')) },
+  returns: v.null(),
   handler: async (ctx, { entity, ids }) => {
     const m = await requireMember(ctx, { permission: 'customization.manage' })
     if (ids.length > 500) bad('Too many fields')

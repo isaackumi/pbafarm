@@ -107,6 +107,7 @@ export const create = mutation({
     basedOn: v.optional(v.string()),
     permissions: v.array(v.string()),
   },
+  returns: v.id('roles'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireMember(ctx, { permission: 'org.roles.manage' })
     if (!companyId) throw userError('VALIDATION', 'No company linked')
@@ -154,6 +155,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     permissions: v.optional(v.array(v.string())),
   },
+  returns: v.id('roles'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireMember(ctx, { permission: 'org.roles.manage' })
     const role = await loadCustomRole(ctx, companyId, args.roleId)
@@ -176,6 +178,7 @@ export const update = mutation({
 /** Archive a custom role; refused while members still hold it. */
 export const archive = mutation({
   args: { roleId: v.id('roles') },
+  returns: v.id('roles'),
   handler: async (ctx, { roleId }) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.roles.manage' })
     const role = await loadCustomRole(ctx, companyId, roleId)

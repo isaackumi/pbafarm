@@ -21,6 +21,7 @@ const PAGE = 50
 
 export const seedBuiltInRules = internalMutation({
   args: { dryRun: v.optional(v.boolean()), cursor: v.optional(v.string()) },
+  returns: v.object({ dryRun: v.boolean(), companies: v.array(v.object({ name: v.string(), alreadyOnEngine: v.boolean(), created: v.array(v.string()) })), isDone: v.boolean(), continueCursor: v.string() }),
   handler: async (ctx, { dryRun, cursor }) => {
     const dry = dryRun !== false
     const page = await ctx.db

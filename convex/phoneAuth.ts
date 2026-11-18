@@ -58,6 +58,7 @@ async function userByPhone(ctx: MutationCtx, phone: string) {
  */
 export const issueLoginCode = internalMutation({
   args: { phone: v.string(), code: v.string(), codeHash: v.string() },
+  returns: v.null(),
   handler: async (ctx, { phone, code, codeHash }) => {
     // Limits are consumed for every number, known or not.
     for (const name of ['loginCodePerPhone', 'loginCodePerPhoneDaily'] as const) {
@@ -108,6 +109,7 @@ export const deliverLoginCode = internalAction({
     phone: v.string(),
     code: v.string(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const result = await deliverMessage(ctx, args.companyId, {
       to: args.phone,
@@ -128,6 +130,7 @@ export const deliverLoginCode = internalAction({
  */
 export const verifyLoginCode = internalMutation({
   args: { phone: v.string(), codeHash: v.string() },
+  returns: v.union(v.object({ userId: v.id('users'), sessionId: v.id('authSessions') }), v.null()),
   handler: async (ctx, { phone, codeHash }) => {
     const row = await ctx.db
       .query('phoneLoginCodes')

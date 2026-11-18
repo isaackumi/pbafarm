@@ -155,6 +155,7 @@ export const list = query({
 /** Register equipment (admin). */
 export const create = mutation({
   args: equipmentFields,
+  returns: v.id('equipment'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const companyId = user.companyId
@@ -233,6 +234,7 @@ export const update = mutation({
       custom: v.optional(customValues),
     }),
   },
+  returns: v.id('equipment'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)

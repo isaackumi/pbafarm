@@ -39,6 +39,7 @@ export const update = mutation({
     email: v.boolean(),
     quietHours: v.optional(v.union(quietHours, v.null())),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireAccount(ctx)
     const qh = args.quietHours ?? undefined

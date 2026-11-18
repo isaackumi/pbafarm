@@ -49,6 +49,7 @@ export const listForCurrentUser = query({
 
 export const getUnreadCount = query({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     
@@ -63,6 +64,7 @@ export const getUnreadCount = query({
 
 export const markRead = mutation({
   args: { id: v.id('notifications') },
+  returns: v.id('notifications'),
   handler: async (ctx, { id }) => {
     const user = await requireAccount(ctx)
     const notification = await ctx.db.get(id)
@@ -80,6 +82,7 @@ export const markRead = mutation({
 
 export const markAllRead = mutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     
@@ -111,6 +114,7 @@ export const create = internalMutation({
     type: v.optional(v.string()),
     link: v.optional(v.string()),
   },
+  returns: v.id('notifications'),
   handler: async (ctx, args) => {
     // Inherit the recipient's company context
     const targetUser = await ctx.db.get(args.userId)
@@ -147,6 +151,7 @@ export const createBulk = internalMutation({
     type: v.optional(v.string()),
     link: v.optional(v.string()),
   },
+  returns: v.array(v.id('notifications')),
   handler: async (ctx, args) => {
     const notificationIds = []
 
@@ -180,6 +185,7 @@ export const createBulk = internalMutation({
 
 export const deleteNotification = mutation({
   args: { id: v.id('notifications') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const user = await requireAccount(ctx)
     const notification = await ctx.db.get(id)

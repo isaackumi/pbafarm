@@ -105,6 +105,7 @@ const waterBodyFields = {
 
 export const createWaterBody = mutation({
   args: waterBodyFields,
+  returns: v.id('waterBodies'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     checkCoords(args.latitude, args.longitude)
@@ -136,6 +137,7 @@ export const updateWaterBody = mutation({
       active: v.optional(v.boolean()),
     }),
   },
+  returns: v.id('waterBodies'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
@@ -201,6 +203,7 @@ const groupFields = {
 
 export const createGroup = mutation({
   args: groupFields,
+  returns: v.id('unitGroups'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     checkCoords(args.latitude, args.longitude)
@@ -238,6 +241,7 @@ export const updateGroup = mutation({
       active: v.optional(v.boolean()),
     }),
   },
+  returns: v.id('unitGroups'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
@@ -266,6 +270,7 @@ export const assignToGroup = mutation({
     unitIds: v.array(v.id('cages')),
     groupId: v.optional(v.id('unitGroups')),
   },
+  returns: v.number(),
   handler: async (ctx, { unitIds, groupId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     if (unitIds.length > 200) throw new Error('Assign at most 200 units at a time')
@@ -351,6 +356,7 @@ export const setStatus = mutation({
     status: unitStatus,
     reason: v.optional(v.string()),
   },
+  returns: v.id('cages'),
   handler: async (ctx, { id, status, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stock.adjust' })
     const unit = await ctx.db.get(id)

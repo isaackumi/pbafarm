@@ -190,6 +190,7 @@ export const insertEndpoint = internalMutation({
     keyVersion: v.number(),
     hint: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, args.endpointId)
@@ -222,6 +223,7 @@ export const insertEndpoint = internalMutation({
 /** Internal: create the endpoint row (secret stored right after by the action). */
 export const createEndpointRow = internalMutation({
   args: { url: v.string(), description: v.optional(v.string()), eventTypes: v.array(v.string()) },
+  returns: v.object({ id: v.id('webhookEndpoints'), companyId: v.id('companies') }),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireWebhookAdmin(ctx)
     const url = cleanUrl(args.url)
@@ -262,6 +264,7 @@ export const createEndpointRow = internalMutation({
 /** Internal: turn a newly created endpoint on once its secret is stored. */
 export const activateNew = internalMutation({
   args: { endpointId: v.id('webhookEndpoints') },
+  returns: v.null(),
   handler: async (ctx, { endpointId }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, endpointId)
@@ -287,6 +290,7 @@ export const create = action({
     description: v.optional(v.string()),
     eventTypes: v.array(v.string()),
   },
+  returns: v.object({ id: v.id('webhookEndpoints'), secret: v.string() }),
   handler: async (ctx, args): Promise<{ id: Id<'webhookEndpoints'>; secret: string }> => {
     if (!readEncryptionKey()) throw new Error(MISSING_KEY_MESSAGE)
     const { id, companyId }: { id: Id<'webhookEndpoints'>; companyId: Id<'companies'> } =
@@ -307,6 +311,7 @@ export const create = action({
 /** Internal: owner check for an action on an endpoint. */
 export const endpointOwner = internalQuery({
   args: { endpointId: v.id('webhookEndpoints') },
+  returns: v.object({ companyId: v.id('companies'), url: v.string(), eventTypes: v.array(v.string()) }),
   handler: async (ctx, { endpointId }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, endpointId)
@@ -317,6 +322,7 @@ export const endpointOwner = internalQuery({
 /** Replace the signing secret; the old one stops working at once. */
 export const rotateSecret = action({
   args: { endpointId: v.id('webhookEndpoints') },
+  returns: v.object({ secret: v.string() }),
   handler: async (ctx, { endpointId }): Promise<{ secret: string }> => {
     const owner: { companyId: Id<'companies'>; url: string; eventTypes: string[] } =
       await ctx.runQuery(internal.webhooks.endpointOwner, { endpointId })
@@ -341,6 +347,7 @@ export const update = mutation({
     eventTypes: v.optional(v.array(v.string())),
     enabled: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, args.endpointId)
@@ -373,6 +380,7 @@ export const update = mutation({
 /** Delete an endpoint and its secret. Its delivery log is removed by retention. */
 export const remove = mutation({
   args: { endpointId: v.id('webhookEndpoints') },
+  returns: v.null(),
   handler: async (ctx, { endpointId }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, endpointId)
@@ -425,6 +433,7 @@ async function queueDelivery(
  */
 export const fanOut = internalMutation({
   args: { eventId: v.id('domainEvents') },
+  returns: v.null(),
   handler: async (ctx, { eventId }) => {
     const event = await ctx.db.get(eventId)
     if (!event) return null
@@ -502,6 +511,7 @@ export async function queueRuleWebhook(
 /** Send a `webhook.test` ping to an endpoint now. */
 export const sendTest = mutation({
   args: { endpointId: v.id('webhookEndpoints') },
+  returns: v.id('webhookDeliveries'),
   handler: async (ctx, { endpointId }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, endpointId)
@@ -524,6 +534,7 @@ export const sendTest = mutation({
 /** Send a delivery again as a new delivery (same payload and event id). */
 export const redeliver = mutation({
   args: { deliveryId: v.id('webhookDeliveries') },
+  returns: v.id('webhookDeliveries'),
   handler: async (ctx, { deliveryId }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const row = await ctx.db.get(deliveryId)
@@ -585,6 +596,7 @@ export const recordAttempt = internalMutation({
     /** Stop retrying (e.g. the endpoint was turned off). */
     final: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, a) => {
     const delivery = await ctx.db.get(a.deliveryId)
     if (!delivery || delivery.status !== 'pending') return null
@@ -667,6 +679,7 @@ function describeHttpError(e: HttpTransportError): { status?: number; message: s
 /** Sign and POST one delivery; one attempt (with quick transient retries). */
 export const deliver = internalAction({
   args: { deliveryId: v.id('webhookDeliveries') },
+  returns: v.null(),
   handler: async (ctx, { deliveryId }) => {
     const job = await ctx.runQuery(internal.webhooks.loadForDelivery, { deliveryId })
     if (!job) return null
@@ -727,6 +740,7 @@ export const deliver = internalAction({
 /** Retention: deliveries older than 30 days, in batches. */
 export const pruneDeliveries = internalMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
     const old = await ctx.db

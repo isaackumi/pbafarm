@@ -188,6 +188,7 @@ export const createBroodstock = mutation({
     origin: broodstockOrigin,
     status: v.optional(broodstockStatus),
   },
+  returns: v.id('broodstock'),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.broodstock.manage')
     const code = args.code.trim()
@@ -250,6 +251,7 @@ export const updateBroodstock = mutation({
     count: v.optional(v.number()),
     status: v.optional(broodstockStatus),
   },
+  returns: v.id('broodstock'),
   handler: async (ctx, { id, ...args }) => {
     const m = await requireHatchery(ctx, 'hatchery.broodstock.manage')
     const b = ownDoc(m, await ctx.db.get(id), 'Broodstock')
@@ -732,6 +734,7 @@ export const recordHatch = idempotentMutation('hatchery.recordHatch', {
 
 export const markLotFailed = mutation({
   args: { lotId: v.id('incubationLots'), date: v.string(), reason: v.string() },
+  returns: v.id('incubationLots'),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.spawning.record')
     const lot = ownDoc(m, await ctx.db.get(args.lotId), 'Incubation lot')
@@ -767,6 +770,7 @@ export const markLotFailed = mutation({
  */
 export const reverseHatch = mutation({
   args: { lotId: v.id('incubationLots'), reason: v.string() },
+  returns: v.object({ reversed: v.number() }),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.correct')
     const lot = ownDoc(m, await ctx.db.get(args.lotId), 'Incubation lot')

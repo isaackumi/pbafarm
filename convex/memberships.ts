@@ -70,6 +70,7 @@ export const listMine = query({
 /** Make another organization (where I have an active membership) my active one. */
 export const switchActive = mutation({
   args: { companyId: v.id('companies') },
+  returns: v.object({ companyId: v.id('companies') }),
   handler: async (ctx, { companyId }) => {
     const me = await requireAccount(ctx)
     if (me.companyId === companyId) return { companyId }
@@ -230,6 +231,7 @@ async function assertAdminChange(
  */
 export const setRole = mutation({
   args: { userId: v.id('users'), roleKey: v.optional(v.string()), roleId: v.optional(v.id('roles')) },
+  returns: v.object({ roleKey: v.string() }),
   handler: async (ctx, args) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
     const { userId } = args
@@ -278,6 +280,7 @@ export const setSites = mutation({
     allLocations: v.boolean(),
     locationIds: v.optional(v.array(v.id('farmLocations'))),
   },
+  returns: v.object({ allLocations: v.boolean(), locationIds: v.array(v.id('farmLocations')) }),
   handler: async (ctx, args) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
     const { user, membership } = await loadTarget(ctx, companyId, args.userId)
@@ -412,6 +415,7 @@ export const inviteInfo = query({
  */
 export const acceptInvite = mutation({
   args: { token: v.string() },
+  returns: v.object({ companyId: v.id('companies'), activated: v.boolean() }),
   handler: async (ctx, { token }) => {
     const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
@@ -464,6 +468,7 @@ export const acceptInvite = mutation({
 
 export const declineInvite = mutation({
   args: { token: v.string() },
+  returns: v.object({ declined: v.boolean() }),
   handler: async (ctx, { token }) => {
     const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
@@ -509,6 +514,7 @@ export const listInvites = query({
 
 export const revokeInvite = mutation({
   args: { inviteId: v.id('userInvites') },
+  returns: v.id('userInvites'),
   handler: async (ctx, { inviteId }) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
     const invite = await ctx.db.get(inviteId)

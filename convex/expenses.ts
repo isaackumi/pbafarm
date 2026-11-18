@@ -96,6 +96,7 @@ export const listCategories = query({
 
 export const createCategory = mutation({
   args: { label: v.string() },
+  returns: v.id('expenseCategories'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const companyId = await writeCompanyId(user)
@@ -131,6 +132,7 @@ export const updateCategory = mutation({
     label: v.optional(v.string()),
     active: v.optional(v.boolean()),
   },
+  returns: v.id('expenseCategories'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)
@@ -250,6 +252,7 @@ const expenseFields = {
 
 export const create = mutation({
   args: expenseFields,
+  returns: v.id('expenses'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.record' })
     const companyId = await writeCompanyId(user)
@@ -307,6 +310,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
     custom: v.optional(customValues),
   },
+  returns: v.id('expenses'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)
@@ -357,6 +361,7 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id('expenses') },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)

@@ -116,7 +116,7 @@ function toClient(a: any, userLabel?: string | null) {
   }
 }
 
-async function labelForUser(ctx: any, userId: any) {
+async function labelForUser(ctx: QueryCtx, userId: Id<'users'> | undefined) {
   if (!userId) return null
   const u = await ctx.db.get(userId)
   if (!u) return String(userId)
@@ -264,7 +264,7 @@ export const getSummary = query({
       topUsers.push({
         userId,
         count,
-        label: await labelForUser(ctx, userId),
+        label: await labelForUser(ctx, userId as Id<'users'>),
       })
     }
 
@@ -320,6 +320,7 @@ async function startVerification(
  */
 export const verifyBatch = internalMutation({
   args: { verificationId: v.id('auditChainVerifications') },
+  returns: v.null(),
   handler: async (ctx, { verificationId }) => {
     const run = await ctx.db.get(verificationId)
     if (!run || run.status !== 'running') return null
@@ -377,6 +378,7 @@ export const verifyBatch = internalMutation({
 /** Daily: verify every company's chain (paged over chain heads). */
 export const verifyAll = internalMutation({
   args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.null(),
   handler: async (ctx, { cursor }) => {
     const page = await ctx.db
       .query('auditChainHeads')
@@ -392,6 +394,7 @@ export const verifyAll = internalMutation({
 /** Start a verification of the caller's organization chain now. */
 export const verifyChain = mutation({
   args: {},
+  returns: v.id('auditChainVerifications'),
   handler: async (ctx) => {
     const { user, companyId } = await requireMember(ctx, { permission: 'org.audit.view' })
     if (!companyId) throw new Error('No organization')

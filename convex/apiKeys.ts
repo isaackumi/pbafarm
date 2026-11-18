@@ -89,6 +89,7 @@ export const insertKey = internalMutation({
     prefix: v.string(),
     hash: v.string(),
   },
+  returns: v.id('apiKeys'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireApiAdmin(ctx)
     const name = args.name.trim()
@@ -147,6 +148,7 @@ export const create = action({
     locationIds: v.optional(v.array(v.id('farmLocations'))),
     expiresInDays: v.optional(v.number()),
   },
+  returns: v.object({ id: v.id('apiKeys'), key: v.string(), prefix: v.string() }),
   handler: async (ctx, args): Promise<{ id: Id<'apiKeys'>; key: string; prefix: string }> => {
     const prefix = randomBase62(API_KEY_PREFIX_LENGTH)
     const key = `pbk_${prefix}_${randomBase62(API_KEY_SECRET_LENGTH)}`
@@ -163,6 +165,7 @@ export const create = action({
 /** Revoke a key immediately. Revoked keys stay listed for the audit trail. */
 export const revoke = mutation({
   args: { keyId: v.id('apiKeys') },
+  returns: v.null(),
   handler: async (ctx, { keyId }) => {
     const { user, companyId } = await requireApiAdmin(ctx)
     const row = await ctx.db.get(keyId)

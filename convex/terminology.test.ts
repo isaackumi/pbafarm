@@ -77,7 +77,7 @@ describe('terminology settings', () => {
 
     // The settings query used by the app carries the words too.
     const effective = await as(admin).query(api.companies.getEffectiveSettings, {})
-    expect(effective.company.terminology).toEqual(saved)
+    expect(effective.company?.terminology).toEqual(saved)
 
     // Emptying the record restores the built-in labels.
     expect(await as(admin).mutation(api.terminology.update, { terms: {} })).toEqual({})

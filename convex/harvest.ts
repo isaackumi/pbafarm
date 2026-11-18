@@ -242,6 +242,7 @@ export const suggestFcr = query({
     harvestDate: v.string(),
     totalWeight: v.number(),
   },
+  returns: v.union(v.object({ fcr: v.union(v.number(), v.null()), feed_kg: v.number(), stocked_biomass_kg: v.union(v.number(), v.null()), stocking_date: v.string() }), v.null()),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.cageId)
@@ -343,6 +344,7 @@ export const update = mutation({
     }),
     withdrawalOverrideReason: v.optional(v.string()),
   },
+  returns: v.object({ id: v.id('harvestRecords'), warnings: v.array(v.string()) }),
   handler: async (ctx, { id, patch: rawPatch, withdrawalOverrideReason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.correct' })
     const existing = await ctx.db.get(id)
@@ -425,6 +427,7 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id('harvestRecords') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
@@ -475,6 +478,7 @@ export const createSampling = mutation({
     doc: v.optional(v.number()),
     abw: v.optional(v.number()),
   },
+  returns: v.id('harvestSampling'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const harvest = await ctx.db.get(args.harvestId)
@@ -524,6 +528,7 @@ export const createFromSampling = mutation({
    * only stores a sampling row. `harvestType` and `notes` are accepted for
    * older clients and ignored.
    */
+  returns: v.object({ harvestId: v.null(), samplingId: v.id('harvestSampling') }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const cage = await ctx.db.get(args.cageId)

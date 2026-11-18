@@ -260,7 +260,7 @@ describe('backfill', () => {
 
     const dry = await t.mutation(internal.rollups.backfill, {})
     expect(dry.dryRun).toBe(true)
-    expect(dry.wouldRebuild).toEqual(['2026-05-01', '2026-05-10', '2026-05-11'])
+    expect((dry as any).wouldRebuild).toEqual(['2026-05-01', '2026-05-10', '2026-05-11'])
     expect(await rows()).toHaveLength(0)
 
     await t.mutation(internal.rollups.backfill, { dryRun: false })

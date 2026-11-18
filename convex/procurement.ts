@@ -133,6 +133,7 @@ export const create = mutation({
     expectedDate: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('purchaseOrders'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const companyId = await writeCompanyId(user)
@@ -176,6 +177,7 @@ export const update = mutation({
     expectedDate: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('purchaseOrders'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const po = await loadPo(ctx, user, args.id)
@@ -197,6 +199,7 @@ export const update = mutation({
 
 export const markOrdered = mutation({
   args: { id: v.id('purchaseOrders') },
+  returns: v.id('purchaseOrders'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const po = await loadPo(ctx, user, args.id)
@@ -209,6 +212,7 @@ export const markOrdered = mutation({
 
 export const cancel = mutation({
   args: { id: v.id('purchaseOrders'), reason: v.optional(v.string()) },
+  returns: v.id('purchaseOrders'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const po = await loadPo(ctx, user, args.id)
@@ -245,6 +249,7 @@ export const receive = mutation({
       ),
     ),
   },
+  returns: v.object({ received: v.number() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const po = await loadPo(ctx, user, args.id)

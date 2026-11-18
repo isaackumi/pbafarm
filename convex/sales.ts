@@ -77,6 +77,7 @@ export const createCustomer = mutation({
     email: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('customers'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const name = args.name.trim()
@@ -113,6 +114,7 @@ export const updateCustomer = mutation({
       active: v.optional(v.boolean()),
     }),
   },
+  returns: v.id('customers'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const existing = await ctx.db.get(id)
@@ -236,6 +238,7 @@ export const createSale = mutation({
     /** Admin only: sell fish inside a treatment withdrawal period (PROD-012). */
     withdrawalOverrideReason: v.optional(v.string()),
   },
+  returns: v.id('sales'),
   handler: async (ctx, { withdrawalOverrideReason, ...args }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
     if (!(args.weightKg > 0)) throw new Error('Weight must be greater than zero')
@@ -355,6 +358,7 @@ export const updateSale = mutation({
       customerName: v.optional(v.string()),
     }),
   },
+  returns: v.id('sales'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
     const existing = await ctx.db.get(id)
@@ -412,6 +416,7 @@ export const updateSale = mutation({
 
 export const removeSale = mutation({
   args: { id: v.id('sales') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const existing = await ctx.db.get(id)
@@ -437,6 +442,7 @@ export const removeSale = mutation({
 /** Summary for a harvest: sold kg, revenue, remaining kg. */
 export const harvestSaleSummary = query({
   args: { harvestId: v.id('harvestRecords') },
+  returns: v.union(v.object({ harvest_id: v.id('harvestRecords'), harvest_weight_kg: v.number(), sold_kg: v.number(), remaining_kg: v.number(), revenue: v.number(), sale_count: v.number() }), v.null()),
   handler: async (ctx, { harvestId }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const harvest = await ctx.db.get(harvestId)
