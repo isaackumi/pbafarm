@@ -6,7 +6,12 @@ import {
   dailyMortalityPct,
   daysBetween,
   efcr,
+  eggsPerKgFemale,
+  fertilizationPct,
   flowsOf,
+  fryPerKgFemale,
+  hatchRatePct,
+  nurserySurvivalPct,
   gainKg,
   periodGrowthPerDay,
   periodHarvestFcr,
@@ -112,5 +117,25 @@ describe('kpi definitions (doc 05 §6)', () => {
     expect(blended.abwG).toBeCloseTo(250.39, 2)
     expect(blended.measured).toBe(false)
     expect(abwAsOf(events, [{ date: '2026-05-10', abwG: 280 }], '2026-05-20')).toMatchObject({ abwG: 280, measured: true })
+  })
+})
+
+describe('hatchery KPIs (HAT-002, NUR-001)', () => {
+  test('fertilization, hatch rate and fry per kg female', () => {
+    expect(fertilizationPct(800, 1000)).toBe(80)
+    expect(fertilizationPct(5, 0)).toBeNull()
+    expect(hatchRatePct(40_000, 50_000)).toBe(80)
+    expect(hatchRatePct(null, 50_000)).toBeNull()
+    expect(fryPerKgFemale(40_000, 2)).toBe(20_000)
+    expect(eggsPerKgFemale(60_000, 0)).toBeNull()
+  })
+
+  test('nursery survival counts survival-count adjustments as losses, not fish graded out', () => {
+    const f = flowsOf([
+      ev({ type: 'stock_in', qtyDelta: 10_000, eventDate: '2026-10-01' }),
+      ev({ type: 'count_adjustment', qtyDelta: -2_000, eventDate: '2026-10-05' }),
+      ev({ type: 'grading_split', qtyDelta: -3_000, eventDate: '2026-10-20' }),
+    ])
+    expect(nurserySurvivalPct(f)).toBe(80)
   })
 })

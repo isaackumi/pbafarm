@@ -64,6 +64,8 @@ export const stockSourceTable = v.union(
   v.literal('harvestRecords'),
   v.literal('stockOperations'),
   v.literal('legacyBackfill'),
+  /** Hatch of an incubation lot opens a larval batch (HAT-002). */
+  v.literal('incubationLots'),
 )
 
 /** Records a file can be attached to (D-016, TRACE-005). */
@@ -98,6 +100,29 @@ export const batchOrigin = v.union(
   v.literal('merge'),
   v.literal('hatchery'),
   v.literal('legacy'),
+)
+
+export const broodstockKind = v.union(v.literal('individual'), v.literal('group'))
+export const broodstockSex = v.union(
+  v.literal('female'),
+  v.literal('male'),
+  v.literal('mixed'),
+  v.literal('unknown'),
+)
+export const broodstockOrigin = v.union(
+  v.literal('wild'),
+  v.literal('farm'),
+  v.literal('purchased'),
+  v.literal('hatchery'),
+  v.literal('other'),
+)
+export const broodstockStatus = v.union(
+  v.literal('conditioning'),
+  v.literal('ready'),
+  v.literal('spent'),
+  v.literal('resting'),
+  v.literal('retired'),
+  v.literal('dead'),
 )
 
 const schema = defineSchema({
@@ -962,10 +987,15 @@ const schema = defineSchema({
     closedOn: v.optional(v.string()),
     homeLocationId: v.optional(v.id('farmLocations')),
     legacyStockingId: v.optional(v.id('stockingHistory')),
+    /** Hatched batches (origin 'hatchery'): the spawning and its broodstock (HAT-002). */
+    spawningEventId: v.optional(v.id('spawningEvents')),
+    /** Bounded: at most 50, enforced by convex/hatchery.ts. */
+    broodstockIds: v.optional(v.array(v.id('broodstock'))),
     createdBy: v.optional(v.id('users')),
     updatedAt: v.number(),
   })
     .index('by_companyId_and_batchNumber', ['companyId', 'batchNumber'])
+    .index('by_spawningEventId', ['spawningEventId'])
     .index('by_companyId_and_status', ['companyId', 'status'])
     .index('by_legacyStockingId', ['legacyStockingId']),
 
@@ -1010,6 +1040,105 @@ const schema = defineSchema({
     .index('by_companyId_and_eventDate', ['companyId', 'eventDate'])
     .index('by_sourceTable_and_sourceId', ['sourceTable', 'sourceId'])
     .index('by_reversesEventId', ['reversesEventId']),
+
+  /**
+   * Broodstock registry (HAT-001): one tagged fish (`kind: 'individual'`,
+   * count 1) or a group of fish kept and spawned together. `weightG` is the
+   * fish's weight, or the group's mean weight.
+   */
+  broodstock: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    /** Broodstock or conditioning tank the fish live in. */
+    unitId: v.optional(v.id('cages')),
+    kind: broodstockKind,
+    /** Tag, PIT number or group name; unique per company. */
+    code: v.string(),
+    pitTag: v.optional(v.string()),
+    speciesCode: v.optional(v.string()),
+    strain: v.optional(v.string()),
+    sex: broodstockSex,
+    count: v.number(),
+    weightG: v.optional(v.number()),
+    lengthCm: v.optional(v.number()),
+    origin: broodstockOrigin,
+    /** Supplier, wild site or source farm. */
+    originNote: v.optional(v.string()),
+    /** Grow-out batch the fish were selected from (origin 'farm'). */
+    originBatchId: v.optional(v.id('batches')),
+    acquiredOn: v.optional(v.string()),
+    status: broodstockStatus,
+    conditioningStartedOn: v.optional(v.string()),
+    lastSpawnedOn: v.optional(v.string()),
+    spawnCount: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_code', ['companyId', 'code'])
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_unitId', ['unitId']),
+
+  /**
+   * A spawning (HAT-002): the broodstock that spawned, how (natural or
+   * hormone-induced), and the egg collection. `femaleWeightKg` is a snapshot
+   * for fry per kg of female.
+   */
+  spawningEvents: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.optional(v.id('cages')),
+    spawnDate: v.string(),
+    method: v.union(v.literal('natural'), v.literal('induced'), v.literal('stripped')),
+    hormone: v.optional(v.string()),
+    hormoneDose: v.optional(v.string()),
+    /** At most 50 between the two lists. */
+    femaleIds: v.array(v.id('broodstock')),
+    maleIds: v.array(v.id('broodstock')),
+    femaleWeightKg: v.optional(v.number()),
+    speciesCode: v.optional(v.string()),
+    eggsCollected: v.optional(v.number()),
+    eggWeightG: v.optional(v.number()),
+    fertilizationPct: v.optional(v.number()),
+    collectedOn: v.optional(v.string()),
+    status: v.union(
+      v.literal('spawned'),
+      v.literal('incubating'),
+      v.literal('hatched'),
+      v.literal('failed'),
+    ),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_spawnDate', ['companyId', 'spawnDate'])
+    .index('by_companyId_and_status', ['companyId', 'status']),
+
+  /**
+   * Eggs of one spawning in one incubator (HAT-002). The hatch opens a larval
+   * batch through the production engine (`stockIn`, source 'incubationLots').
+   */
+  incubationLots: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    spawningEventId: v.id('spawningEvents'),
+    unitId: v.id('cages'),
+    startedOn: v.string(),
+    eggs: v.number(),
+    temperatureC: v.optional(v.number()),
+    status: v.union(v.literal('incubating'), v.literal('hatched'), v.literal('failed')),
+    hatchedOn: v.optional(v.string()),
+    larvaeCount: v.optional(v.number()),
+    hatchPct: v.optional(v.number()),
+    /** Unit the larvae were stocked into (defaults to the incubator). */
+    larvalUnitId: v.optional(v.id('cages')),
+    batchId: v.optional(v.id('batches')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_spawningEventId', ['spawningEventId']),
 
   /** Source document for engine-only operations: grading, merge, count adjustment. */
   stockOperations: defineTable({
