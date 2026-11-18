@@ -96,6 +96,7 @@ import type * as stocking from "../stocking.js";
 import type * as traceability from "../traceability.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
+import type * as webhooks from "../webhooks.js";
 import type * as integrations_apiHttp from "../integrations/apiHttp.js";
 import type * as publicApi from "../publicApi.js";
 import type * as apiKeys from "../apiKeys.js";
@@ -195,6 +196,7 @@ declare const fullApi: ApiFromModules<{
   traceability: typeof traceability;
   userAccounts: typeof userAccounts;
   users: typeof users;
+  webhooks: typeof webhooks;
   "integrations/apiHttp": typeof integrations_apiHttp;
   publicApi: typeof publicApi;
   apiKeys: typeof apiKeys;

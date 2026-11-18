@@ -101,6 +101,7 @@ function recipientsSummary(r, members) {
 }
 
 function actionSummary(a, members) {
+  if (a.kind === 'webhook') return 'Call a webhook'
   if (a.kind === 'create_task') return `Task for ${recipientsSummary(a.recipients, members)}`
   const ch = a.channels.map((c) => CHANNELS.find(([id]) => id === c)?.[1] || c).join(' + ')
   return `${ch} to ${recipientsSummary(a.recipients, members)}`
@@ -123,6 +124,8 @@ const blankTask = () => ({
   description: '',
   dueInHours: 24,
 })
+
+const blankWebhook = () => ({ kind: 'webhook', endpointId: '' })
 
 function blankDraft(data) {
   return {
@@ -177,6 +180,7 @@ function toArgs(draft) {
     return { ...out, value: coerce(c.value) }
   })
   const actions = draft.actions.map((a) => {
+    if (a.kind === 'webhook') return { kind: 'webhook', endpointId: a.endpointId }
     const recipients = {
       everyone: a.recipients.everyone || undefined,
       roles: a.recipients.everyone || !a.recipients.roles?.length ? undefined : a.recipients.roles,
@@ -400,6 +404,29 @@ function Recipients({ value, onChange, members, idx }) {
   )
 }
 
+function WebhookAction({ a, idx, onChange }) {
+  const hooks = useQuery(api.webhooks.overview)
+  const endpoints = hooks?.endpoints || []
+  return (
+    <Field
+      label="Webhook endpoint"
+      htmlFor={`aw-${idx}`}
+      required
+      hint="Sends the event (or the check result) as a signed POST. Add endpoints under Webhooks."
+    >
+      <Select id={`aw-${idx}`} value={a.endpointId} onChange={(e) => onChange({ ...a, endpointId: e.target.value })}>
+        <option value="">{hooks && !endpoints.length ? 'No endpoints yet' : 'Choose an endpoint'}</option>
+        {endpoints.map((ep) => (
+          <option key={ep.id} value={ep.id}>
+            {ep.description || ep.url}
+            {ep.status === 'active' ? '' : ' (off)'}
+          </option>
+        ))}
+      </Select>
+    </Field>
+  )
+}
+
 function ActionCard({ a, idx, onChange, onRemove, members, placeholders }) {
   return (
     <div className="space-y-4 rounded-lg border border-foam-deep p-4">
@@ -408,15 +435,22 @@ function ActionCard({ a, idx, onChange, onRemove, members, placeholders }) {
           aria-label="Action type"
           className="max-w-xs"
           value={a.kind}
-          onChange={(e) => onChange(e.target.value === 'create_task' ? blankTask() : blankNotify())}
+          onChange={(e) =>
+            onChange(
+              e.target.value === 'create_task' ? blankTask() : e.target.value === 'webhook' ? blankWebhook() : blankNotify(),
+            )
+          }
         >
           <option value="notify">Send a notification</option>
           <option value="create_task">Create a task</option>
+          <option value="webhook">Call a webhook</option>
         </Select>
         <Button variant="ghost" size="sm" onClick={onRemove}>
           Remove
         </Button>
       </div>
+
+      {a.kind === 'webhook' && <WebhookAction a={a} idx={idx} onChange={onChange} />}
 
       {a.kind === 'notify' && (
         <fieldset>
@@ -447,6 +481,8 @@ function ActionCard({ a, idx, onChange, onRemove, members, placeholders }) {
         </fieldset>
       )}
 
+      {a.kind !== 'webhook' && (
+      <>
       <Recipients value={a.recipients} onChange={(r) => onChange({ ...a, recipients: r })} members={members} idx={idx} />
 
       <Field label="Title" htmlFor={`at-${idx}`} required>
@@ -486,6 +522,8 @@ function ActionCard({ a, idx, onChange, onRemove, members, placeholders }) {
             />
           </Field>
         </>
+      )}
+      </>
       )}
     </div>
   )
