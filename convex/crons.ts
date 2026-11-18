@@ -17,4 +17,7 @@ crons.cron(
 // ledger and tell admins about any drift (PROD-005).
 crons.cron('stock ledger reconciliation', '30 1 * * *', internal.reconciliation.run, {})
 
+// Outbox replay keys older than 30 days (MOBILE-002).
+crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {})
+
 export default crons

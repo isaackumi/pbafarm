@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Button } from './ui'
 
 /**
- * Asked before sign-out when this user still has daily entries saved on the
+ * Asked before sign-out when this user still has field entries saved on the
  * device. Sign-out clears the device, so the entries must be sent or
  * deliberately discarded first.
  */
@@ -24,7 +24,7 @@ export default function SignOutOutboxDialog({
     return () => window.removeEventListener('keydown', onKey)
   }, [onCancel, sending])
 
-  const batches = `${count} batch${count === 1 ? '' : 'es'}`
+  const batches = `${count} entr${count === 1 ? 'y' : 'ies'}`
 
   return (
     <div
@@ -40,7 +40,7 @@ export default function SignOutOutboxDialog({
         </h2>
         <div id="signout-outbox-body" className="text-sm space-y-2">
           <p>
-            Daily entries saved on this phone are removed when you sign out.
+            Entries saved on this phone are removed when you sign out.
             Send them now, or discard them if they are no longer needed.
           </p>
           {!online && (
