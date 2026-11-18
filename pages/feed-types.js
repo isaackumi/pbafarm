@@ -26,6 +26,7 @@ import {
   clearFeedError
 } from '../store/slices/feedSlice'
 import { useCurrency } from '../hooks/useCurrency'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function FeedTypesPage() {
   return (
@@ -38,6 +39,8 @@ export default function FeedTypesPage() {
 function FeedTypes() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const dispatch = useDispatch()
   const { pricePerKgLabel: priceLabel, formatCurrency: fmt } = useCurrency()
   const { feedTypes, loading, error } = useSelector(state => state.feed)
@@ -326,16 +329,18 @@ function FeedTypes() {
                             <Edit className="w-4 h-4" aria-hidden />
                           </Button>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteConfirm(type)}
-                            className="text-signal"
-                            title="Delete feed type"
-                            aria-label="Delete feed type"
-                          >
-                            <Trash className="w-4 h-4" aria-hidden />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteConfirm(type)}
+                              className="text-signal"
+                              title="Delete feed type"
+                              aria-label="Delete feed type"
+                            >
+                              <Trash className="w-4 h-4" aria-hidden />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -526,12 +531,17 @@ function FeedTypes() {
                 />
               </Field>
 
-              <Field label={priceLabel} htmlFor="ft-edit-price-per-kg">
+              <Field
+                label={priceLabel}
+                htmlFor="ft-edit-price-per-kg"
+                hint={isAdmin ? undefined : 'Only an admin can change the price'}
+              >
                 <Input
                   id="ft-edit-price-per-kg"
                   type="number"
                   name="price_per_kg"
                   value={formData.price_per_kg}
+                  disabled={!isAdmin}
                   onChange={handleChange}
                   step="0.01"
                   min="0"

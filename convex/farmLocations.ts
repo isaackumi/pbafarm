@@ -193,15 +193,14 @@ const LOCATION_TABLES = [
 /**
  * One-shot: create Main farm per company (and greenfield), backfill ops rows,
  * and optionally promote distinct cage.location strings into extra sites.
+ * Reads and patches every company's rows, so it is internal (SEC-002, V4):
+ *   npx convex run farmLocations:backfillLocations '{"promoteCageLocationStrings":true}'
  */
-export const backfillLocations = mutation({
+export const backfillLocations = internalMutation({
   args: {
     promoteCageLocationStrings: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
-
     const companies = await ctx.db.query('companies').collect()
     const companyIds = new Set(
       companies.filter((c) => c.status === 'approved').map((c) => c._id),
@@ -316,7 +315,8 @@ export const backfillLocations = mutation({
       usersUpdated++
     }
 
-    await logAudit(ctx, {
+    // Run from the CLI, so there is no signed-in actor to record.
+    await ctx.db.insert('auditLogs', {
       actionType: 'backfill',
       tableName: 'farmLocations',
       newValues: { createdLocations, patched, usersUpdated },

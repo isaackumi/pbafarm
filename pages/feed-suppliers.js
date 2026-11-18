@@ -16,6 +16,7 @@ import Layout from '../components/Layout'
 import { PageHeader, Button, Field, Input } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 import { supplierService } from '../lib/supplierService'
 
 export default function FeedSuppliersPage() {
@@ -30,6 +31,8 @@ export default function FeedSuppliersPage() {
 function FeedSuppliers() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
 
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -247,16 +250,18 @@ function FeedSuppliers() {
                         <Edit className="w-4 h-4" aria-hidden />
                       </Button>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirm(supplier)}
-                        className="text-signal"
-                        title="Delete supplier"
-                        aria-label="Delete supplier"
-                      >
-                        <Trash className="w-4 h-4" aria-hidden />
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteConfirm(supplier)}
+                          className="text-signal"
+                          title="Delete supplier"
+                          aria-label="Delete supplier"
+                        >
+                          <Trash className="w-4 h-4" aria-hidden />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

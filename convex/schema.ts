@@ -32,7 +32,9 @@ const schema = defineSchema({
     /** Assigned farm sites; empty/undefined = all company locations. */
     locationIds: v.optional(v.array(v.id('farmLocations'))),
     activeLocationId: v.optional(v.id('farmLocations')),
-  }).index('email', ['email']),
+  })
+    .index('email', ['email'])
+    .index('by_companyId', ['companyId']),
 
   /** Physical farm sites under a company (ops + inventory scope). */
   farmLocations: defineTable({
@@ -136,6 +138,17 @@ const schema = defineSchema({
     updatedAt: v.number(),
     updatedBy: v.optional(v.id('users')),
   }).index('by_company', ['companyId']),
+
+  /**
+   * Logo files a company uploaded (SEC-002, doc 07 V11). setLogo records an
+   * upload the first time it sees it; publishSettings and logo deletion only
+   * accept files recorded for the caller's company.
+   */
+  logoUploads: defineTable({
+    companyId: v.id('companies'),
+    storageId: v.id('_storage'),
+    uploadedBy: v.id('users'),
+  }).index('by_storageId', ['storageId']),
 
   userInvites: defineTable({
     email: v.string(),
@@ -317,6 +330,7 @@ const schema = defineSchema({
   })
     .index('by_cage', ['cageId'])
     .index('by_batch_code', ['batchCode'])
+    .index('by_company_and_batchCode', ['companyId', 'batchCode'])
     .index('by_company', ['companyId'])
     .index('by_date', ['date'])
     .index('by_location', ['locationId'])

@@ -1,5 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { syncCageAbw } from './lib/growth'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
@@ -61,6 +63,26 @@ export const get = query({
   },
 })
 
+/**
+ * Whether another of this company's biweekly records already uses the batch
+ * code. Codes are unique per company, not globally (doc 07 V15): a global
+ * check told one tenant which codes another had used.
+ */
+async function batchCodeTaken(
+  ctx: MutationCtx,
+  companyId: Id<'companies'> | undefined,
+  batchCode: string,
+  exceptId?: Id<'biweeklyRecords'>,
+) {
+  const rows = await ctx.db
+    .query('biweeklyRecords')
+    .withIndex('by_company_and_batchCode', (q) =>
+      q.eq('companyId', companyId).eq('batchCode', batchCode),
+    )
+    .take(2)
+  return rows.some((r) => r._id !== exceptId)
+}
+
 export const create = mutation({
   args: {
     cageId: v.id('cages'),
@@ -87,13 +109,11 @@ export const create = mutation({
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
+    const companyId = await writeCompanyId(user)
 
-    // Check for unique batch code
-    const existing = await ctx.db
-      .query('biweeklyRecords')
-      .withIndex('by_batch_code', (q) => q.eq('batchCode', args.batchCode))
-      .first()
-    if (existing) throw new Error('Batch code already exists')
+    if (await batchCodeTaken(ctx, companyId, args.batchCode)) {
+      throw new Error('Batch code already exists')
+    }
 
     const now = Date.now()
     const { samples, ...recordData } = args
@@ -101,7 +121,7 @@ export const create = mutation({
     const id = await ctx.db.insert('biweeklyRecords', {
       ...recordData,
       locationId: cage.locationId,
-      companyId: (await writeCompanyId(user)) ?? cage.companyId,
+      companyId,
       createdBy: user._id,
       updatedAt: now,
     })
@@ -149,21 +169,20 @@ export const createMany = mutation({
   },
   handler: async (ctx, { records }) => {
     const user = await requireUser(ctx)
+    // Bulk import bypasses per-record review (doc 07 V9): admin only.
+    requireRole(user, 'admin')
+    const companyId = await writeCompanyId(user)
     const ids = []
     for (const record of records) {
       const cage = await ctx.db.get(record.cageId)
       assertOwns(user, cage, 'Cage')
-      const existing = await ctx.db
-        .query('biweeklyRecords')
-        .withIndex('by_batch_code', (q) => q.eq('batchCode', record.batchCode))
-        .first()
-      if (existing) continue
+      if (await batchCodeTaken(ctx, companyId, record.batchCode)) continue
 
       const now = Date.now()
       const id = await ctx.db.insert('biweeklyRecords', {
         ...record,
         locationId: cage.locationId,
-        companyId: (await writeCompanyId(user)) ?? cage.companyId,
+        companyId,
         createdBy: user._id,
         updatedAt: now,
       })
@@ -200,14 +219,12 @@ export const update = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     // Check batch code uniqueness if being updated
-    if (patch.batchCode && patch.batchCode !== existing.batchCode) {
-      const existingBatch = await ctx.db
-        .query('biweeklyRecords')
-        .withIndex('by_batch_code', (q) => q.eq('batchCode', patch.batchCode!))
-        .first()
-      if (existingBatch && existingBatch._id !== id) {
-        throw new Error('Batch code already exists')
-      }
+    if (
+      patch.batchCode &&
+      patch.batchCode !== existing.batchCode &&
+      (await batchCodeTaken(ctx, existing.companyId, patch.batchCode, id))
+    ) {
+      throw new Error('Batch code already exists')
     }
 
     await ctx.db.patch(id, {

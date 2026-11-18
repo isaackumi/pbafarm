@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
+import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
   bagsFromKg,
@@ -249,6 +249,9 @@ export const createFeedType = mutation({
     const opening = Math.max(0, args.currentStock ?? 0)
     // Opening stock is a stock adjustment — admin only (purchases are the normal path).
     if (opening > 0) requireRole(user, 'admin')
+    if (args.supplierId) {
+      assertOwns(user, await ctx.db.get(args.supplierId), 'Supplier')
+    }
     const id = await ctx.db.insert('feedTypes', {
       name: args.name,
       description: args.description,
@@ -302,6 +305,13 @@ export const updateFeedType = mutation({
     if (!existing) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    if (patch.supplierId !== undefined && patch.supplierId !== existing.supplierId) {
+      assertOwns(user, await ctx.db.get(patch.supplierId), 'Supplier')
+    }
+    // Price drives every feed cost from here on (doc 07 V9): admin only.
+    if (patch.pricePerKg !== undefined && patch.pricePerKg !== existing.pricePerKg) {
+      requireRole(user, 'admin')
+    }
 
     await ctx.db.patch(id, { ...patch, updatedAt: Date.now() })
     await logAudit(ctx, {

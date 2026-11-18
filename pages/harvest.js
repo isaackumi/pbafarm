@@ -7,9 +7,12 @@ import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
 import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 import { PlusCircle } from 'lucide-react'
 
 const HarvestPage = () => {
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const [harvestRecords, setHarvestRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -226,13 +229,15 @@ const HarvestPage = () => {
           >
             Add sampling
           </button>
-          <button
-            type="button"
-            onClick={() => setDeleteConfirm(record)}
-            className="text-signal hover:underline underline-offset-2 min-h-9"
-          >
-            Delete
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setDeleteConfirm(record)}
+              className="text-signal hover:underline underline-offset-2 min-h-9"
+            >
+              Delete
+            </button>
+          )}
         </div>
       )
     }

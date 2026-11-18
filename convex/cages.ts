@@ -252,6 +252,11 @@ export const update = mutation({
     if (patch.currentCount !== undefined || patch.initialCount !== undefined) {
       requireRole(user, 'admin')
     }
+    // Status is normally set by stocking and harvest; changing it by hand
+    // skips their checks (doc 07 V9): admin only.
+    if (patch.status !== undefined && patch.status !== existing.status) {
+      requireRole(user, 'admin')
+    }
 
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
     if (patch.locationId) {

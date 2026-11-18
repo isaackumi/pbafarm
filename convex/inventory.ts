@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
+import { assertOwns, listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
   bagsFromKg,
@@ -269,12 +269,12 @@ export const createTransfer = mutation({
 
     if (fromLocationId) {
       const loc = await ctx.db.get(fromLocationId)
-      if (!loc) throw new Error('From location not found')
+      assertOwns(user, loc, 'From location')
       fromLabel = fromLabel || loc.name
     }
     if (toLocationId) {
       const loc = await ctx.db.get(toLocationId)
-      if (!loc) throw new Error('To location not found')
+      assertOwns(user, loc, 'To location')
       toLabel = toLabel || loc.name
     }
 

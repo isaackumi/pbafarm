@@ -15,12 +15,15 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 
 const ICON_BTN =
   'inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake'
 
 export default function BiweeklyRecords() {
   const { showToast } = useToast()
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const [records, setRecords] = useState([])
   const [cages, setCages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -446,15 +449,17 @@ export default function BiweeklyRecords() {
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteRecord(record)}
-                                className={ICON_BTN + ' text-signal hover:bg-signal/10'}
-                                title="Delete"
-                                aria-label="Delete record"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteRecord(record)}
+                                  className={ICON_BTN + ' text-signal hover:bg-signal/10'}
+                                  title="Delete"
+                                  aria-label="Delete record"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

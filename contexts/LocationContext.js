@@ -21,7 +21,6 @@ export function LocationProvider({ children }) {
   const locations = useQuery(api.farmLocations.list, user ? {} : 'skip')
   const ensureDefault = useMutation(api.farmLocations.ensureDefault)
   const setActiveMutation = useMutation(api.farmLocations.setActiveLocation)
-  const backfill = useMutation(api.farmLocations.backfillLocations)
   const defaultBound = useRef(false)
 
   const activeFromServer = user?.activeLocationId
@@ -113,7 +112,6 @@ export function LocationProvider({ children }) {
       setActiveLocation,
       locationArgs,
       loading: Boolean(user) && locations === undefined,
-      runBackfill: (opts) => backfill(opts || {}),
     }),
     [
       locations,
@@ -122,7 +120,6 @@ export function LocationProvider({ children }) {
       setActiveLocation,
       locationArgs,
       user,
-      backfill,
     ],
   )
 
@@ -141,7 +138,6 @@ export function useLocation() {
       setActiveLocation: async () => {},
       locationArgs: {},
       loading: false,
-      runBackfill: async () => {},
     }
   }
   return ctx

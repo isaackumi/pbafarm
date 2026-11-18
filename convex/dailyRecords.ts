@@ -264,6 +264,9 @@ async function insertDailyRecord(
   if (args.feedAmount > 0 && !args.feedTypeId) {
     throw new Error('feedTypeId is required when feedAmount > 0')
   }
+  if (args.feedTypeId) {
+    assertOwns(user, await ctx.db.get(args.feedTypeId), 'Feed type')
+  }
 
   const existing = await ctx.db
     .query('dailyRecords')
@@ -450,6 +453,11 @@ export const createBatch = mutation({
         if (!feedType || feedType.deletedAt) {
           throw new Error(`${line} (${cage.name}): feed type not found`)
         }
+        try {
+          assertOwns(user, feedType, 'Feed type')
+        } catch {
+          throw new Error(`${line} (${cage.name}): feed type not found`)
+        }
         feedPrice = feedType.pricePerKg ?? 0
         feedTypeName = feedType.name
       }
@@ -514,6 +522,9 @@ export const update = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     const patch = { ...rawPatch }
+    if (patch.feedTypeId !== undefined) {
+      assertOwns(user, await ctx.db.get(patch.feedTypeId), 'Feed type')
+    }
     if (patch.mortality !== undefined && !(patch.mortality >= 0 && Number.isInteger(patch.mortality))) {
       throw new Error('Mortality must be a whole number, 0 or more')
     }
@@ -659,6 +670,8 @@ export const createMany = mutation({
   },
   handler: async (ctx, { records, allowNegative, overrideReason, feedOverlapReason }) => {
     const user = await requireUser(ctx)
+    // Bulk import takes caller-supplied price and cost (doc 07 V9): admin only.
+    requireRole(user, 'admin')
     const ids = []
     for (const record of records) {
       if (record.feedAmount > 0 && !record.feedTypeId) {
@@ -668,6 +681,9 @@ export const createMany = mutation({
       }
       const cage = await ctx.db.get(record.cageId)
       assertOwns(user, cage, 'Cage')
+      if (record.feedTypeId) {
+        assertOwns(user, await ctx.db.get(record.feedTypeId), 'Feed type')
+      }
       const existing = await ctx.db
         .query('dailyRecords')
         .withIndex('by_cage_date', (q) =>

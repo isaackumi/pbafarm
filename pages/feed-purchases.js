@@ -41,6 +41,7 @@ import BagSizeField, {
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../components/FeedPurchaseModal'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { feedService } from '../lib/feedService'
 import { supplierService } from '../lib/supplierService'
@@ -73,6 +74,9 @@ export default function FeedPurchasesPage() {
 function FeedPurchases() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { hasRole } = useAuth()
+  // Purchase edit and void are admin-only on the backend.
+  const isAdmin = Boolean(hasRole?.('admin'))
   const { activeLocationId, activeLocation, locations } = useLocation()
 
   const [feedTypes, setFeedTypes] = useState([])
@@ -1489,29 +1493,33 @@ function FeedPurchases() {
                         {purchase.batch_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditPurchase(purchase)}
-                            className="text-lake"
-                            title="Edit purchase"
-                            aria-label="Edit purchase"
-                          >
-                            <Edit className="w-4 h-4" aria-hidden />
-                          </Button>
+                        {isAdmin ? (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditPurchase(purchase)}
+                              className="text-lake"
+                              title="Edit purchase"
+                              aria-label="Edit purchase"
+                            >
+                              <Edit className="w-4 h-4" aria-hidden />
+                            </Button>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteConfirm(purchase)}
-                            className="text-signal"
-                            title="Delete purchase"
-                            aria-label="Delete purchase"
-                          >
-                            <Trash className="w-4 h-4" aria-hidden />
-                          </Button>
-                        </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteConfirm(purchase)}
+                              className="text-signal"
+                              title="Delete purchase"
+                              aria-label="Delete purchase"
+                            >
+                              <Trash className="w-4 h-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     </tr>
                   ))}

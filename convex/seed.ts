@@ -1,23 +1,32 @@
-import { mutation } from './_generated/server'
-import { requireUser } from './lib/authz'
-import { writeCompanyId, logAudit } from './lib/tenancy'
+import { v } from 'convex/values'
+import { internalMutation } from './_generated/server'
 
-export const seedDemo = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    
+/**
+ * Demo cages, feed, records for one company. Internal (SEC-002): run it from
+ * the CLI against a dev deployment, naming a user whose company gets the data:
+ *   npx convex run seed:seedDemo '{"email":"you@example.com"}'
+ */
+export const seedDemo = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const user = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', email.trim().toLowerCase()))
+      .unique()
+    if (!user) throw new Error(`No user found for email: ${email}`)
+    if (!user.companyId) throw new Error('That user has no company')
+    const companyId = user.companyId
+
     // Check if user already has cages
     const existingCages = await ctx.db
       .query('cages')
-      .withIndex('by_company', (q) => q.eq('companyId', user.companyId))
+      .withIndex('by_company', (q) => q.eq('companyId', companyId))
       .collect()
     
     if (existingCages.length > 0) {
       throw new Error('Demo data already exists - found existing cages')
     }
 
-    const companyId = await writeCompanyId(user)
     const now = Date.now()
     const today = new Date().toISOString().split('T')[0]
     
@@ -177,7 +186,10 @@ export const seedDemo = mutation({
       approvedAt: now,
     })
 
-    await logAudit(ctx, {
+    // Run from the CLI, so there is no signed-in actor to record.
+    await ctx.db.insert('auditLogs', {
+      userId: user._id,
+      companyId,
       actionType: 'seed_demo',
       tableName: 'system',
       newValues: {

@@ -1,7 +1,7 @@
 import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 import { requireRole } from './authz'
-import { logAudit } from './tenancy'
+import { assertOwns, logAudit } from './tenancy'
 import { mergeSettings } from './farmRules'
 
 export type StockTxnType =
@@ -274,6 +274,9 @@ export async function applyStockChange(
   if (!feedType || feedType.deletedAt) {
     throw new Error('Feed type not found')
   }
+  // Defensive (SEC-002, V1): never move another company's stock, whatever
+  // the caller checked.
+  assertOwns(args.user, feedType, 'Feed type')
 
   const companyId = feedType.companyId ?? args.user.companyId
   const feedRules = await loadFeedRules(ctx, companyId)

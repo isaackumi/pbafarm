@@ -27,6 +27,35 @@ async function insertAudit(
   await ctx.db.insert('auditLogs', row)
 }
 
+function isActiveAdmin(u: Doc<'users'>) {
+  const role = u.role ?? 'user'
+  return u.active !== false && (role === 'admin' || role === 'super_admin')
+}
+
+/**
+ * Refuse a change that would leave the target's company with no active admin
+ * (doc 07 V6). Super_admins who belong to the company count as admins: a
+ * company whose only admins are super_admins is fine.
+ */
+async function assertKeepsAnAdmin(ctx: MutationCtx, target: Doc<'users'>) {
+  if (!target.companyId || !isActiveAdmin(target)) return
+  const members = await ctx.db
+    .query('users')
+    .withIndex('by_companyId', (q) => q.eq('companyId', target.companyId))
+    .collect()
+  const others = members.filter((u) => u._id !== target._id && isActiveAdmin(u))
+  if (others.length === 0) {
+    throw new Error('The company must keep at least one active admin')
+  }
+}
+
+/** Only a super_admin may change a super_admin account (doc 07 V6). */
+function assertMayModify(me: Doc<'users'>, target: Doc<'users'>) {
+  if ((target.role ?? 'user') === 'super_admin' && (me.role ?? 'user') !== 'super_admin') {
+    throw new Error('Only a super_admin can change a super_admin account')
+  }
+}
+
 function toClient(u: any) {
   return {
     id: u._id,
@@ -149,6 +178,9 @@ export const update = mutation({
         throw new Error('Only super_admin can grant super_admin')
       }
     }
+    assertMayModify(me, target)
+    const nextRole = patch.role ?? target.role ?? 'user'
+    if (nextRole === 'user') await assertKeepsAnAdmin(ctx, target)
 
     await ctx.db.patch(id, patch)
     await logAudit(ctx, {
@@ -263,6 +295,8 @@ export const deactivate = mutation({
       }
     }
     if (target._id === me._id) throw new Error('Cannot deactivate yourself')
+    assertMayModify(me, target)
+    await assertKeepsAnAdmin(ctx, target)
     await ctx.db.patch(id, { active: false })
     // Sign them out everywhere now, not when their sessions expire.
     const sessionsRevoked = await revokeUserSessions(ctx, id)
@@ -288,6 +322,7 @@ export const reactivate = mutation({
         throw new Error('Access denied')
       }
     }
+    assertMayModify(me, target)
     await ctx.db.patch(id, { active: true })
     await logAudit(ctx, {
       actionType: 'reactivate',

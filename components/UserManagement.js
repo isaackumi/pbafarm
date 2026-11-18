@@ -322,6 +322,9 @@ const UserManagement = () => {
                 users.map((user) => {
                   const id = user._id || user.id
                   const isMe = id === (me?._id || me?.id)
+                  // Only a super_admin can change a super_admin account (backend).
+                  const locked =
+                    (user.role || 'user') === 'super_admin' && !hasRole?.('super_admin')
                   return (
                     <tr key={id} className="border-t border-foam-deep hover:bg-foam">
                       <td className="px-4 py-3 text-sm text-chart-ink">{user.name || '—'}</td>
@@ -330,13 +333,15 @@ const UserManagement = () => {
                         <Select
                           aria-label={`Role for ${user.name || user.email}`}
                           value={user.role || 'user'}
-                          disabled={savingId === id || isMe}
+                          disabled={savingId === id || isMe || locked}
                           onChange={(e) => handleRoleChange(id, e.target.value)}
                           className="min-w-[9rem]"
                         >
                           {ROLES.filter(
                             (r) =>
-                              r.value !== 'super_admin' || hasRole?.('super_admin'),
+                              r.value !== 'super_admin' ||
+                              hasRole?.('super_admin') ||
+                              locked,
                           ).map((r) => (
                             <option key={r.value} value={r.value}>
                               {r.label}
@@ -354,7 +359,7 @@ const UserManagement = () => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {!isMe && (
+                        {!isMe && !locked && (
                           <Button
                             type="button"
                             size="sm"

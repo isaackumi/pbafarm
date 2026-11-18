@@ -3,6 +3,7 @@ import { useMutation } from 'convex/react'
 import { AlertTriangle } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
@@ -56,6 +57,8 @@ export default function CageManageModals({
 }) {
   const { showToast } = useToast()
   const { locations, activeLocationId } = useLocation()
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const updateCage = useMutation(api.cages.update)
   const removeCage = useMutation(api.cages.remove)
 
@@ -206,9 +209,13 @@ export default function CageManageModals({
                   onChange={(e) => patchField('material', e.target.value)}
                 />
               </Field>
-              <Field label="Status">
+              <Field
+                label="Status"
+                hint={isAdmin ? undefined : 'Only an admin can change the status by hand'}
+              >
                 <Select
                   value={form.status}
+                  disabled={!isAdmin}
                   onChange={(e) => patchField('status', e.target.value)}
                 >
                   {STATUS_OPTIONS.map((s) => (
