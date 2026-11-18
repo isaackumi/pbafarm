@@ -32,11 +32,6 @@ const nextConfig = {
       },
       // Legacy inventory nested paths → real pages
       {
-        source: '/inventory/items',
-        destination: '/feed-types',
-        permanent: false,
-      },
-      {
         source: '/inventory/categories',
         destination: '/feed-types',
         permanent: false,
