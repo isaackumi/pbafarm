@@ -119,6 +119,7 @@ function Overview() {
         title="Water quality"
         breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Water quality' }]}
         description="Latest reading per unit. Out-of-range values follow the thresholds for each unit type."
+        actions={<Button size="sm" href="/water-entry">Quick entry</Button>}
         related={[{ label: 'Unit board', href: '/units' }, { label: 'Automations', href: '/automations' }]}
       />
       <Card padding={false}>

@@ -175,3 +175,18 @@ describe('harvesting units stay in daily pickers', () => {
     expect(active.map((c) => c.id)).toEqual([stocked])
   })
 })
+
+describe('site map points', () => {
+  test('placed units, groups and water bodies; unplaced members counted on the group', async () => {
+    const { admin, outsider, stocked, empty } = await setup()
+    const lake = await admin.mutation(api.units.createWaterBody, { name: 'Volta', kind: 'lake', latitude: 6.3, longitude: 0.05 })
+    const group = await admin.mutation(api.units.createGroup, { name: 'Line A', kind: 'cage_group', waterBodyId: lake, latitude: 6.301, longitude: 0.051 })
+    await admin.mutation(api.units.assignToGroup, { unitIds: [stocked, empty], groupId: group })
+    await admin.mutation(api.cages.update, { id: stocked, patch: { latitude: 6.3012, longitude: 0.0511 } })
+    const pts = await admin.query(api.units.mapPoints, {})
+    expect(pts.units).toMatchObject([{ name: 'C1', statusLabel: 'Stocked', fish: 4000 }])
+    expect(pts.groups).toMatchObject([{ name: 'Line A', unitCount: 2, stocked: 1, unplaced: 1 }])
+    expect(pts.waterBodies).toHaveLength(1)
+    expect(await outsider.query(api.units.mapPoints, {})).toMatchObject({ units: [], groups: [] })
+  })
+})

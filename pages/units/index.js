@@ -8,7 +8,7 @@ import { Button, EmptyState, PageHeader, StatCard } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
-import { unitLabel } from '../../lib/format'
+import { localToday, unitLabel } from '../../lib/format'
 
 const STATUS_TONE = {
   active: 'bg-kelp/10 text-kelp border-kelp/30',
@@ -21,7 +21,8 @@ const STATUS_TONE = {
 
 const DENSITY_TEXT = { over: 'text-signal', warn: 'text-amber-700 dark:text-amber-300' }
 
-function UnitTile({ u }) {
+function UnitTile({ u, wq, today }) {
+  const overdue = u.nextMaintenanceDate && u.nextMaintenanceDate < today
   return (
     <Link
       href={`/cages/${u._id}`}
@@ -44,6 +45,13 @@ function UnitTile({ u }) {
           {u.densityPct != null ? ` · ${Math.round(u.densityPct)}% of limit` : ''}
         </p>
       )}
+      {wq && (
+        <p className={`text-xs tabular-nums ${wq.breachCount ? 'text-signal' : 'text-muted'}`}>
+          {wq.values.dissolvedOxygen != null ? `DO ${wq.values.dissolvedOxygen} mg/L` : 'Water logged'} · {wq.date}
+          {wq.breachCount ? ' · out of range' : ''}
+        </p>
+      )}
+      {overdue && <p className="text-xs text-signal">Maintenance overdue</p>}
     </Link>
   )
 }
@@ -54,6 +62,9 @@ function Board() {
   const router = useRouter()
   const { locationArgs } = useLocation()
   const data = useQuery(api.units.board, user ? locationArgs : 'skip')
+  const latest = useQuery(api.waterQuality.latestByUnit, user ? locationArgs : 'skip')
+  const wqByUnit = useMemo(() => new Map((latest || []).map((r) => [r.unitId, r])), [latest])
+  const today = localToday()
   const focus = typeof router.query.group === 'string' ? router.query.group : null
 
   const sections = useMemo(() => {
@@ -80,6 +91,9 @@ function Board() {
           </>
         }
         related={[
+          { label: 'Site map', href: '/units/map' },
+          { label: 'Water entry', href: '/water-entry' },
+          { label: 'Inspection entry', href: '/inspection-entry' },
           { label: 'All units (table)', href: '/cages' },
           { label: 'Water quality', href: '/water-quality' },
           { label: 'Maintenance', href: '/maintenance' },
@@ -130,7 +144,7 @@ function Board() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 {s.units.map((u) => (
-                  <UnitTile key={u._id} u={u} />
+                  <UnitTile key={u._id} u={u} wq={wqByUnit.get(u._id)} today={today} />
                 ))}
               </div>
             )}

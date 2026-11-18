@@ -457,3 +457,61 @@ export const board = query({
     }
   },
 })
+
+/**
+ * Everything with coordinates, for the site map: sites, water bodies,
+ * groups and units (status and fish). A unit without its own position is
+ * counted at its group's.
+ */
+export const mapPoints = query({
+  args: { locationId: v.optional(v.id('farmLocations')) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const scope = tenantScope(user)
+    if (scope.kind !== 'company') return { sites: [], waterBodies: [], groups: [], units: [] }
+    const [sites, bodies, groups, units] = await Promise.all([
+      ctx.db
+        .query('farmLocations')
+        .withIndex('by_company', (q) => q.eq('companyId', scope.companyId))
+        .take(200),
+      companyWaterBodies(ctx, user),
+      companyGroups(ctx, user),
+      scopedRows(ctx, user, 'cages', { locationId: args.locationId }),
+    ])
+    const has = (r: { latitude?: number; longitude?: number }) => r.latitude != null && r.longitude != null
+    const live = units.filter((u) => !u.archivedAt)
+    return {
+      sites: sites
+        .filter((s) => s.active !== false && has(s) && (!args.locationId || s._id === args.locationId))
+        .map((s) => ({ _id: s._id, name: s.name, latitude: s.latitude!, longitude: s.longitude! })),
+      waterBodies: bodies
+        .filter((b) => b.active && has(b))
+        .map((b) => ({ _id: b._id, name: b.name, kind: b.kind, latitude: b.latitude!, longitude: b.longitude! })),
+      groups: groups
+        .filter((g) => g.active && has(g) && (!args.locationId || !g.locationId || g.locationId === args.locationId))
+        .map((g) => {
+          const members = live.filter((u) => u.unitGroupId === g._id)
+          return {
+            _id: g._id,
+            name: g.name,
+            kind: g.kind,
+            latitude: g.latitude!,
+            longitude: g.longitude!,
+            unitCount: members.length,
+            stocked: members.filter((u) => u.status === 'active' || u.status === 'harvesting').length,
+            unplaced: members.filter((u) => !has(u)).length,
+          }
+        }),
+      units: live.filter(has).map((u) => ({
+        _id: u._id,
+        name: u.name,
+        unitType: unitTypeOf(u),
+        status: u.status,
+        statusLabel: STATUS_LABELS[u.status as UnitStatus] ?? u.status,
+        fish: u.currentCount ?? 0,
+        latitude: u.latitude!,
+        longitude: u.longitude!,
+      })),
+    }
+  },
+})
