@@ -1,6 +1,6 @@
 /* PBA Farm service worker: keeps the app shell available with weak signal.
  * Data never goes through here. Convex runs on another origin and is skipped,
- * and unsent daily entries live in the page's own outbox (lib/offlineOutbox.js).
+ * and unsent field entries live in the page's own outbox (lib/offlineOutbox.js).
  *
  * The page registers `/sw.js?v=<Next build id>` (pages/_app.js), so every
  * deploy installs a new worker with its own cache, and `activate` deletes the
@@ -12,7 +12,16 @@ const VERSION = `${PREFIX}${BUILD}`
 
 // Pages a field worker needs with no signal. Their JS/CSS chunks are read
 // from the HTML and cached too, so a cold start offline can run them.
-const SHELL_PAGES = ['/daily-entry', '/dashboard', '/login']
+const SHELL_PAGES = [
+  '/daily-entry',
+  '/biweekly-entry',
+  '/feed-issue',
+  '/harvest',
+  '/outbox',
+  '/scan',
+  '/dashboard',
+  '/login',
+]
 const SHELL_FILES = ['/manifest.webmanifest', '/icon.svg']
 
 function cacheable(res) {

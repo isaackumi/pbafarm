@@ -3,6 +3,14 @@ import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
 import { integrationTables } from './integrations/tables'
+import {
+  automationAction,
+  automationCondition,
+  automationTrigger,
+  quietHours,
+  runDelivery,
+  runStatus,
+} from './automation/validators'
 
 /** Production unit kinds (D-003). Rows without unitType are cages. */
 export const unitTypeValidator = v.union(
@@ -1118,6 +1126,116 @@ const schema = defineSchema({
   })
     .index('by_company_and_item', ['companyId', 'itemId'])
     .index('by_company_and_date', ['companyId', 'date']),
+
+  /**
+   * Domain event outbox (AUTO-001, D-008). Written by convex/lib/events.ts
+   * emitDomainEvent in the same transaction as the change it describes;
+   * consumers (automation, webhooks) append their name to `processedBy`.
+   */
+  domainEvents: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    type: v.string(),
+    payload: v.record(v.string(), v.any()),
+    createdAt: v.number(),
+    processedBy: v.optional(v.array(v.string())),
+  })
+    .index('by_company_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
+
+  /** Automation rules (AUTO-002): trigger, conditions, actions. */
+  automationRules: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    description: v.optional(v.string()),
+    enabled: v.boolean(),
+    /** Set when created from a template (convex/automation/templates.ts). */
+    templateKey: v.optional(v.string()),
+    /** Built-in reminder that replaced the legacy daily digest. */
+    builtIn: v.optional(v.boolean()),
+    trigger: automationTrigger,
+    /** Flattened from trigger for indexing (event rules only). */
+    eventType: v.optional(v.string()),
+    /** 'all' (default) or 'any' of the conditions must hold. */
+    match: v.optional(v.union(v.literal('all'), v.literal('any'))),
+    /** Bounded: at most 10. */
+    conditions: v.array(automationCondition),
+    /** Bounded: at most 5. */
+    actions: v.array(automationAction),
+    /** Next due time for schedule rules (UTC ms). */
+    nextRunAt: v.optional(v.number()),
+    lastRunAt: v.optional(v.number()),
+    createdBy: v.optional(v.id('users')),
+    updatedBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_company_and_eventType_and_enabled', ['companyId', 'eventType', 'enabled'])
+    .index('by_company_and_templateKey', ['companyId', 'templateKey'])
+    .index('by_enabled_and_nextRunAt', ['enabled', 'nextRunAt']),
+
+  /** Execution history of automation rules (AUTO-002). */
+  automationRuns: defineTable({
+    companyId: v.id('companies'),
+    ruleId: v.id('automationRules'),
+    ruleName: v.string(),
+    triggerKind: v.union(v.literal('event'), v.literal('schedule'), v.literal('manual')),
+    eventId: v.optional(v.id('domainEvents')),
+    /** Company-local business date the run is for (schedule/manual runs). */
+    localDate: v.optional(v.string()),
+    dedupeKey: v.string(),
+    status: runStatus,
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    /** In-app notifications and tasks are written once, on the first attempt. */
+    localDone: v.boolean(),
+    notified: v.optional(v.number()),
+    tasksCreated: v.optional(v.number()),
+    /** Outbound SMS/WhatsApp/email for this run. Bounded: at most 50. */
+    deliveries: v.optional(v.array(runDelivery)),
+    note: v.optional(v.string()),
+    error: v.optional(v.string()),
+    nextAttemptAt: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_dedupeKey', ['dedupeKey'])
+    .index('by_company_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_rule_and_createdAt', ['ruleId', 'createdAt']),
+
+  /** Simple assignable tasks (AUTO-005); automation actions can create them. */
+  tasks: defineTable({
+    companyId: v.id('companies'),
+    title: v.string(),
+    description: v.optional(v.string()),
+    assigneeUserId: v.optional(v.id('users')),
+    /** YYYY-MM-DD. */
+    dueDate: v.optional(v.string()),
+    cageId: v.optional(v.id('cages')),
+    status: v.union(v.literal('open'), v.literal('done'), v.literal('cancelled')),
+    ruleId: v.optional(v.id('automationRules')),
+    runId: v.optional(v.id('automationRuns')),
+    createdBy: v.optional(v.id('users')),
+    completedBy: v.optional(v.id('users')),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_assignee_and_status', ['assigneeUserId', 'status'])
+    .index('by_company_and_status', ['companyId', 'status']),
+
+  /** Per-user notification channels and quiet hours (AUTO-003). */
+  notificationPreferences: defineTable({
+    userId: v.id('users'),
+    inApp: v.boolean(),
+    sms: v.boolean(),
+    whatsapp: v.boolean(),
+    email: v.boolean(),
+    /** 'HH:MM'–'HH:MM' in the company time zone; external channels pause. */
+    quietHours: v.optional(quietHours),
+    updatedAt: v.number(),
+  }).index('by_user', ['userId']),
 
   /**
    * Replay guard for field writes sent from a phone's outbox (MOBILE-002).

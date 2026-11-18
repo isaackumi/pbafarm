@@ -18,9 +18,9 @@
   --lake: #1d5f8c;
   --lake-soft: #e3eef6;
 
-  --font-display: 'Lexend', system-ui, sans-serif;
-  --font-ui: 'Figtree', system-ui, sans-serif;
-  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: var(--font-lexend, 'Lexend'), system-ui, sans-serif;
+  --font-ui: var(--font-figtree, 'Figtree'), system-ui, sans-serif;
+  --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
 
   --background: var(--foam);
   --foreground: var(--chart-ink);

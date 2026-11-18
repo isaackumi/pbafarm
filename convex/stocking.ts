@@ -6,7 +6,6 @@ import type { Doc, Id } from './_generated/dataModel'
 import { asOfDate, scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
-import { emitDomainEvent } from './lib/events'
 import {
   mergeSettings,
   assertStockingAllowed,
@@ -512,24 +511,6 @@ export const approveStocking = mutation({
       recordId: id,
       newValues: { status: 'approved' },
     })
-    const stockingCompanyId = stocking.companyId ?? cage.companyId
-    if (stockingCompanyId) {
-      await emitDomainEvent(ctx, 'stocking.approved', {
-        companyId: stockingCompanyId,
-        subject: { table: 'stockingHistory', id: String(id) },
-        locationId: cage.locationId,
-        actorUserId: user._id,
-        businessDate: stocking.stockingDate,
-        data: {
-          cageId: String(stocking.cageId),
-          cageName: cage.name,
-          fishCount: stocking.fishCount,
-          initialAbwG: stocking.initialAbw,
-          species: stocking.species ?? null,
-          batchNumber: stocking.batchNumber,
-        },
-      })
-    }
   },
 })
 

@@ -265,14 +265,11 @@ Inbound replies (for example a worker replying "12 dead" on WhatsApp) are stored
 
 ## 13. As built (Phase 11)
 
-### 13.1 Domain-event outbox (INT-010)
+### 13.1 Domain events used by integrations
 
-- Helper: `emitDomainEvent(ctx, type, { companyId, subject?, locationId?, actorUserId?, origin?, businessDate?, data })` in `convex/lib/events.ts`. Call it in the mutation that makes the change, after the write. It inserts a `domainEvents` row (`pending`) in the same transaction, so a rolled-back change never emits. Actor and `origin` default from the ctx (`'api'` for public API writes).
-- Catalog: `DOMAIN_EVENT_TYPES` in the same file (type → label for the webhook UI). Unknown types are refused at emit time. Current types: `daily.batch.recorded`, `sampling.recorded`, `stock.harvested`, `stocking.approved`, `transfer.approved`, `inventory.stock.low`.
-- `data` is flat (≤ 40 keys; string, number, boolean, null; strings capped at 500 characters). It goes to customer webhooks: no secrets.
-- Dispatch: the `dispatch domain events` cron (every minute) drains pending events oldest first, 50 per transaction (re-scheduling itself when full), and runs every entry of `CONSUMERS` in `convex/events.ts` as a nested mutation. A consumer that throws is rolled back alone and recorded in `dispatchError`; the event is then `failed`. `internal.events.dispatch({ eventId })` re-runs one event. Consumers must be idempotent per event.
-- Deviation from doc 07 §2 (one `runAfter(0)` per event): batching keeps scheduler volume flat and keeps emitting mutations free of scheduling (convex-test also races real-timer scheduled functions against other tests). Latency is under a minute.
-- Other agents: the production engine emits stock events through this helper (add types to the catalog); the automation engine (Phase 10) adds its dispatcher to `CONSUMERS`.
+- The outbox is AUTO-001's `domainEvents` table and `emitDomainEvent(ctx, type, payload, { companyId, locationId })` (`convex/lib/events.ts`). Phase 11 adds two event types to the shared catalog (`convex/automation/templates.ts` `EVENT_TYPES`): `sampling.recorded` (one per sampling save) and `inventory.stock.low` (edge-triggered when a feed type first reaches its minimum, from `applyStockChange`).
+- Daily entries (`daily.recorded`) and stock movements (`stock.*`: stocking approval, transfers, harvest) come from AUTO-001 and the production engine; Phase 11 does not emit duplicates.
+- Events from public API writes carry `origin: 'api'` and `apiKeyId` in their payload.
 
 ### 13.2 Public API v1 (INT-004)
 

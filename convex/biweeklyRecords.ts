@@ -343,21 +343,20 @@ export async function emitSamplingRecorded(
   const companyId = first?.companyId ?? user.companyId
   if (!companyId || !first) return
   const cage = await ctx.db.get(first.cageId)
-  await emitDomainEvent(ctx, 'sampling.recorded', {
-    companyId,
-    subject: { table: 'biweeklyRecords', id: String(first._id) },
-    locationId: first.locationId,
-    actorUserId: user._id,
-    businessDate: date,
-    data: {
+  await emitDomainEvent(
+    ctx,
+    'sampling.recorded',
+    {
+      date,
       lines: ids.length,
       // Single-cage saves carry the cage and its ABW for simple consumers.
-      cageId: ids.length === 1 ? String(first.cageId) : null,
-      cageName: ids.length === 1 ? (cage?.name ?? null) : null,
-      averageBodyWeightG: ids.length === 1 ? first.averageBodyWeight : null,
+      cageId: ids.length === 1 ? String(first.cageId) : undefined,
+      cageName: ids.length === 1 ? cage?.name : undefined,
+      averageBodyWeight: ids.length === 1 ? first.averageBodyWeight : undefined,
       recordIds: ids.slice(0, 20).join(','),
     },
-  })
+    { companyId, locationId: first.locationId },
+  )
 }
 
 export const createMany = mutation({
