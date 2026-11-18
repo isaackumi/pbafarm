@@ -124,4 +124,15 @@ describe('cage cycle growth', () => {
     expect(s.fcr).toBe(1.5)
     expect(s.feed_kg).toBe(7500)
   })
+
+  test('farm eFCR combines active cages', async () => {
+    const { as, cageId } = await setup()
+    await as.mutation(api.biweeklyRecords.create, {
+      cageId, date: '2026-08-02', batchCode: 'BW-1', averageBodyWeight: 400, totalFishCount: 30, totalWeight: 12,
+    })
+    const all = await as.query(api.cages.growthAll, {})
+    expect(all.cages).toHaveLength(1)
+    expect(all.farm_efcr).toBe(2)
+    expect(all.farm_biomass_kg).toBe(3800)
+  })
 })

@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import {
-  Package,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  DollarSign,
-  BarChart2,
-  Calendar,
   RefreshCw,
-  ShoppingCart,
-  Scale,
-  Percent,
-  ArrowUp,
-  ArrowDown,
-  Filter,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader } from '../../components/ui'
+import { PageHeader, StatCard } from '../../components/ui'
+import { useMoney } from '../../lib/money'
 import { useToast } from '../../components/Toast'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
@@ -53,6 +41,7 @@ export default function InventoryAnalyticsPage() {
 }
 
 function InventoryAnalytics() {
+  const money = useMoney()
   const router = useRouter()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -309,124 +298,29 @@ function InventoryAnalytics() {
         </div>
 
         {/* Key Performance Indicators */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {[
-            {
-              title: 'Total Items',
-              value: inventoryItems.length,
-              unit: 'items',
-              icon: Package,
-              color: 'blue',
-              trend: { value: 5, direction: 'up' }
-            },
-            {
-              title: 'Total Value',
-              value: inventoryItems
-                .reduce((sum, item) => sum + Number(item.stock_value || 0), 0)
-                .toFixed(2),
-              unit: '₵',
-              icon: DollarSign,
-              color: 'green',
-              trend: { value: 2.5, direction: 'up' }
-            },
-            {
-              title: 'Low stock',
-              value: inventoryItems.filter((i) => i.is_low_stock).length,
-              unit: 'feeds',
-              icon: AlertTriangle,
-              color: 'purple',
-              trend: { value: 0, direction: 'down' }
-            },
-            {
-              title: 'On hand',
-              value: inventoryItems
-                .reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
-                .toFixed(0),
-              unit: 'kg',
-              icon: Scale,
-              color: 'yellow',
-              trend: { value: 1, direction: 'up' }
-            },
-          ].map((metric, index) => (
-            <div
-              key={index}
-              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-3 rounded-full bg-${metric.color}-100 mr-4`}>
-                    <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted">{metric.title}</p>
-                    <p className="text-2xl font-semibold text-chart-ink">
-                      {metric.unit === '₵' ? metric.unit : ''}{metric.value}
-                      {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  {metric.trend.direction === 'up' ? (
-                    <ArrowUp className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <ArrowDown className="w-4 h-4 text-red-500" />
-                  )}
-                  <span className={`ml-1 text-sm ${
-                    metric.trend.direction === 'up' ? 'text-green-500' : 'text-red-500'
-                  }`}>
-                    {metric.trend.value}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard label="Feed types" value={inventoryItems.length} />
+          <StatCard
+            label="Stock value"
+            value={money(
+              inventoryItems.reduce((sum, item) => sum + Number(item.stock_value || 0), 0),
+              { decimals: 0 },
+            )}
+          />
+          <StatCard
+            label="Low stock"
+            value={inventoryItems.filter((i) => i.is_low_stock).length}
+            tone={inventoryItems.some((i) => i.is_low_stock) ? 'warn' : 'default'}
+          />
+          <StatCard
+            label="On hand"
+            value={inventoryItems
+              .reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
+              .toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            unit="kg"
+          />
         </div>
 
-        {/* Recommendations */}
-        <div className="page-card p-6">
-          <h3 className="text-lg font-medium text-chart-ink mb-4">Recommendations</h3>
-          <div className="space-y-4">
-            {[
-              {
-                title: 'Optimize Stock Levels',
-                description: 'Review and adjust minimum stock levels based on usage patterns and lead times.',
-                icon: Package,
-                color: 'blue'
-              },
-              {
-                title: 'Improve Turnover',
-                description: 'Identify slow-moving items and develop strategies to improve turnover.',
-                icon: TrendingUp,
-                color: 'green'
-              },
-              {
-                title: 'Category Analysis',
-                description: 'Analyze category performance and adjust inventory mix accordingly.',
-                icon: BarChart2,
-                color: 'purple'
-              },
-              {
-                title: 'Cost Optimization',
-                description: 'Look for opportunities to reduce inventory costs through better forecasting.',
-                icon: DollarSign,
-                color: 'yellow'
-              },
-            ].map((recommendation, index) => (
-              <div
-                key={index}
-                className="flex items-start p-4 bg-foam-deep/40 rounded-lg"
-              >
-                <div className={`p-3 rounded-full bg-${recommendation.color}-100 mr-4`}>
-                  <recommendation.icon className={`w-6 h-6 text-${recommendation.color}-600`} />
-                </div>
-                <div>
-                  <h4 className="font-medium text-chart-ink">{recommendation.title}</h4>
-                  <p className="text-sm text-muted">{recommendation.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
     </Layout>
   )
 } 

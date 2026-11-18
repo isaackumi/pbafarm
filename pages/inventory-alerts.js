@@ -13,6 +13,7 @@ import Layout from '../components/Layout'
 import { PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { useMoney } from '../lib/money'
 
 export default function InventoryAlertsPage() {
   return (
@@ -23,6 +24,7 @@ export default function InventoryAlertsPage() {
 }
 
 function InventoryAlerts() {
+  const money = useMoney()
   const router = useRouter()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -165,7 +167,7 @@ function InventoryAlerts() {
                             </div>
                             <div>
                               <span className="font-medium">Value:</span>{' '}
-                              ₵{(item.current_stock * item.price_per_kg).toFixed(2)}
+                              {money(item.current_stock * item.price_per_kg)}
                             </div>
                           </div>
                         </div>

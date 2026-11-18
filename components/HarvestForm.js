@@ -106,36 +106,64 @@ const HarvestForm = ({ onComplete }) => {
     }, 0)
   }
 
+  const num = (v) => (v === '' || v == null ? null : Number(v))
+
+  // Size grades are optional: blanks count as 0. Missing totals are filled in
+  // where they can be worked out, and every problem is named in one message.
   const validateForm = () => {
-    if (!formData.cageId) {
-      showToast('Please select a cage', 'error')
-      return false
+    const problems = []
+    const next = {}
+    if (!formData.cageId || !cages.some((c) => (c.id || c._id) === formData.cageId)) {
+      problems.push('pick a cage')
+    }
+    if (!formData.harvestDate) problems.push('set the harvest date')
+
+    const badGrade = (formData.sizeBreakdown || []).find((s) => {
+      const n = num(s.weight)
+      return n != null && (!Number.isFinite(n) || n < 0)
+    })
+    if (badGrade) problems.push(`fix the ${badGrade.category} weight`)
+    const gradeSum = calculateTotalWeight()
+
+    let total = num(formData.totalWeight)
+    if (total == null && gradeSum > 0) {
+      total = Math.round(gradeSum * 100) / 100
+      next.totalWeight = String(total)
+    }
+    const abw = num(formData.averageBodyWeight)
+    let count = num(formData.estimatedCount)
+    if (count == null && total > 0 && abw > 0) {
+      count = Math.round((total * 1000) / abw)
+      next.estimatedCount = String(count)
+    }
+    let fcrVal = num(formData.fcr)
+    if (fcrVal == null && fcrCalc?.fcr != null) {
+      fcrVal = fcrCalc.fcr
+      next.fcr = String(fcrVal)
     }
 
-    if (
-      !formData.totalWeight ||
-      !formData.averageBodyWeight ||
-      !formData.estimatedCount ||
-      !formData.fcr
-    ) {
-      showToast('Please fill in all required fields', 'error')
-      return false
+    if (!(total > 0)) problems.push('enter the total weight (or the size grades)')
+    if (!(abw > 0)) problems.push('enter the average body weight')
+    if (!(count > 0)) problems.push('enter the fish count')
+    if (!(fcrVal > 0)) {
+      problems.push(
+        fcrCalc && fcrCalc.fcr == null
+          ? 'enter the FCR (not enough feed logged to calculate it)'
+          : 'enter the FCR',
+      )
+    }
+    if (total > 0 && gradeSum > 0 && Math.abs(gradeSum - total) > 0.5) {
+      problems.push(
+        `size grades add up to ${gradeSum.toLocaleString()} kg but total weight is ${total.toLocaleString()} kg`,
+      )
     }
 
-    const totalFromBreakdown = calculateTotalWeight()
-    if (Math.abs(totalFromBreakdown - parseFloat(formData.totalWeight)) > 0.01) {
-      showToast('Total weight must match the sum of size breakdown weights', 'error')
+    if (Object.keys(next).length) setFormData((prev) => ({ ...prev, ...next }))
+    if (problems.length) {
+      const msg = problems.join(', ')
+      showToast(msg.charAt(0).toUpperCase() + msg.slice(1), 'error')
       return false
     }
-
-    const invalidSizeBreakdown = (formData.sizeBreakdown || []).some((size) =>
-      isNaN(parseFloat(size.weight)),
-    )
-    if (invalidSizeBreakdown) {
-      showToast('Please ensure all size breakdown weights are valid numbers', 'error')
-      return false
-    }
-
     return true
   }
 
@@ -158,8 +186,9 @@ const HarvestForm = ({ onComplete }) => {
         estimated_count: parseInt(formData.estimatedCount, 10),
         fcr: parseFloat(formData.fcr),
         size_breakdown: (formData.sizeBreakdown || []).map((size) => ({
+          category: size.category,
           range: size.range,
-          weight: parseFloat(size.weight),
+          weight: parseFloat(size.weight) || 0,
         })),
         notes: formData.notes,
       }
@@ -223,7 +252,7 @@ const HarvestForm = ({ onComplete }) => {
   return (
     <div className="page-card p-6">
       {!showPreview ? (
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} noValidate className="space-y-8">
           <div className="space-y-6">
             <h3 className="text-lg font-medium text-chart-ink">Harvest Information</h3>
             <p className="text-sm text-muted -mt-4">Drafts survive a browser refresh.</p>
@@ -393,9 +422,16 @@ const HarvestForm = ({ onComplete }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-chart-ink mb-2">
+              <label className="block text-sm font-medium text-chart-ink mb-1">
                 Size Breakdown (kg)
               </label>
+              <p className="text-xs text-muted mb-2 tabular-nums">
+                Optional. Leave grades you didn&apos;t sort blank.
+                {calculateTotalWeight() > 0 &&
+                  ` Grades add up to ${calculateTotalWeight().toLocaleString()} kg${
+                    formData.totalWeight ? '' : ', used as the total weight'
+                  }.`}
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {sizeBreakdown.map((size, index) => (
                   <div key={size.category}>
@@ -407,8 +443,10 @@ const HarvestForm = ({ onComplete }) => {
                       value={size.weight}
                       onChange={(e) => handleSizeBreakdownChange(index, e.target.value)}
                       step="0.01"
+                      min="0"
+                      inputMode="decimal"
+                      placeholder="0"
                       className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                      required
                     />
                   </div>
                 ))}

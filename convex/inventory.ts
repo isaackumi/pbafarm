@@ -7,6 +7,7 @@ import {
   bagsFromKg,
   addInventoryLot,
   deductInventoryLots,
+  siteStock,
 } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 
@@ -95,15 +96,6 @@ export const listStockLevels = query({
       feedTypes = feedTypes.filter((f) => f.active && !f.deletedAt)
     }
 
-    let lots: any[] = []
-    if (args.locationId) {
-      lots = await ctx.db
-        .query('feedInventory')
-        .withIndex('by_location', (q) => q.eq('locationId', args.locationId!))
-        .collect()
-      lots = await listForCompany(user, lots)
-    }
-
     const stockLevels = []
     for (const feedType of feedTypes) {
       let supplierName = null
@@ -118,19 +110,8 @@ export const listStockLevels = query({
 
       let currentStock = feedType.currentStock
       if (args.locationId) {
-        currentStock = lots
-          .filter((l) => l.feedTypeId === feedType._id)
-          .reduce((sum, l) => sum + (l.quantityKg || 0), 0)
-        // Fallback: sum location-scoped transactions when lots empty
-        if (currentStock === 0 && lots.length === 0) {
-          const txns = await ctx.db
-            .query('feedInventoryTransactions')
-            .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
-            .collect()
-          currentStock = txns
-            .filter((t) => t.locationId === args.locationId)
-            .reduce((sum, t) => sum + (t.quantityKg || 0), 0)
-        }
+        // Same rule the ledger enforces: the site's lots plus unassigned stock.
+        currentStock = (await siteStock(ctx, feedType, args.locationId)).available
       }
 
       const threshold = feedType.minimumStock * multiplier
@@ -315,6 +296,15 @@ export const createTransfer = mutation({
     if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [feedType])
     if (!allowed.length) throw new Error('Access denied')
+
+    if (fromLocationId) {
+      const site = await siteStock(ctx, feedType, fromLocationId)
+      if (site.available + 1e-6 < args.quantityKg) {
+        throw new Error(
+          `Not enough ${feedType.name} at ${fromLabel}: ${Math.round(site.available * 10) / 10} kg there, ${args.quantityKg} kg requested`,
+        )
+      }
+    }
 
     await deductInventoryLots(ctx, {
       feedTypeId: args.feedTypeId,

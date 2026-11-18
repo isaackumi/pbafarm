@@ -37,6 +37,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { feedService } from '../lib/feedService'
 import { supplierService } from '../lib/supplierService'
 import { cageService } from '../lib/cageService'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { formatCurrency, formatWeight, formatNumber } from '../lib/currencyUtils'
 import {
   LineChart as RechartsLineChart,
@@ -120,7 +121,8 @@ function FeedPurchases() {
   })
   const [usageAnalytics, setUsageAnalytics] = useState({
     cageUsage: [],
-    fcrByType: {},
+    fcrByCage: [],
+    farmEfcr: null,
     efficiencyMetrics: {},
     historicalTrends: []
   })
@@ -254,9 +256,18 @@ function FeedPurchases() {
       setStats(nextStats)
       setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
       setInventoryMetrics(nextInventory)
-      setUsageAnalytics(
-        calculateUsageAnalytics(purchasesData, usageRows, cagesData),
-      )
+      const growth = await getConvexHttpClient()
+        .query(api.cages.growthAll, activeLocationId ? { locationId: activeLocationId } : {})
+        .catch(() => null)
+      setUsageAnalytics({
+        ...calculateUsageAnalytics(purchasesData, usageRows, cagesData),
+        // eFCR per cage for the current cycle (feed ÷ biomass gained)
+        fcrByCage: (growth?.cages || [])
+          .filter((g) => g.efcr != null)
+          .map((g) => ({ cage: g.cage_name, efcr: g.efcr }))
+          .sort((a, b) => b.efcr - a.efcr),
+        farmEfcr: growth?.farm_efcr ?? null,
+      })
       setSupplierMetrics(
         calculateSupplierMetrics(purchasesData, suppliersData),
       )
@@ -615,7 +626,7 @@ function FeedPurchases() {
   const calculateUsageAnalytics = (purchases, usage, cages) => {
     const analytics = {
       cageUsage: [],
-      fcrByType: {},
+
       efficiencyMetrics: {},
       historicalTrends: []
     }
@@ -630,24 +641,6 @@ function FeedPurchases() {
         averageDailyUsage: totalUsage / (cageUsage.length || 1)
       }
     })
-
-    // Calculate FCR by feed type
-    const feedTypeUsage = {}
-    usage.forEach(record => {
-      const feedType = record.feed_types?.name
-      if (!feedTypeUsage[feedType]) {
-        feedTypeUsage[feedType] = {
-          totalFeed: 0,
-          totalWeightGain: 0
-        }
-      }
-      feedTypeUsage[feedType].totalFeed += record.quantity
-    })
-
-    analytics.fcrByType = Object.entries(feedTypeUsage).map(([feedType, data]) => ({
-      feedType,
-      fcr: data.totalWeightGain > 0 ? data.totalFeed / data.totalWeightGain : 0
-    }))
 
     return analytics
   }
@@ -1326,20 +1319,33 @@ function FeedPurchases() {
               </div>
             </div>
 
-            {/* FCR by Feed Type */}
-            <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-chart-ink mb-4">FCR by Feed Type</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={usageAnalytics.fcrByType}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="feedType" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="fcr" fill="#82ca9d" />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
+            {/* eFCR by cage: real figures from the growth calculation */}
+            <div className="bg-surface rounded-lg p-4">
+              <div className="flex items-baseline justify-between gap-2 mb-4">
+                <h3 className="text-sm font-medium text-chart-ink">eFCR by cage, current cycle</h3>
+                {usageAnalytics.farmEfcr != null && (
+                  <span className="text-sm text-muted tabular-nums">
+                    Farm {usageAnalytics.farmEfcr.toFixed(2)}
+                  </span>
+                )}
               </div>
+              {(usageAnalytics.fcrByCage || []).length === 0 ? (
+                <p className="h-64 flex items-center justify-center text-center text-sm text-muted px-6">
+                  eFCR appears once a cage has a stocking, logged feed and a bi-weekly sample.
+                </p>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart data={usageAnalytics.fcrByCage} layout="vertical" margin={{ left: 8, right: 16 }}>
+                      <CartesianGrid horizontal={false} stroke="var(--foam-deep)" />
+                      <XAxis type="number" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                      <YAxis type="category" dataKey="cage" width={64} tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                      <Tooltip formatter={(v) => Number(v).toFixed(2)} />
+                      <Bar dataKey="efcr" name="eFCR" fill="var(--lake)" radius={[0, 4, 4, 0]} />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
         </div>
