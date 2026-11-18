@@ -11,6 +11,7 @@ import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
 import { cleanError } from '../lib/offlineOutbox'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
+import { usePermission } from '../hooks/usePermission'
 
 const isoDay = (d) => d.toISOString().split('T')[0]
 const daysAgo = (n) => {
@@ -186,7 +187,7 @@ function EditSheet({ record, cages, feedTypes, onClose, onSaved }) {
 export default function DailyRecordsPage() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = hasRole('admin')
+  const isAdmin = usePermission('production.records.delete')
   const [range, setRange] = useState('7')
   const [cageId, setCageId] = useState('')
   const [records, setRecords] = useState([])

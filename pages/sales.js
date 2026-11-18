@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import LocationMetaField from '../components/LocationMetaField'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 export default function SalesPage() {
   return (
@@ -33,7 +34,7 @@ export default function SalesPage() {
 
 function Sales() {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('finance.sales.correct')
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency } = useCurrency()

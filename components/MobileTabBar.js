@@ -1,17 +1,21 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { House, ClipboardList, LayoutGrid, Package, Menu } from 'lucide-react'
+import { usePermissions } from '../hooks/usePermission'
 
 const TABS = [
-  { href: '/dashboard', label: 'Home', icon: House },
-  { href: '/daily-entry', label: 'Daily entry', icon: ClipboardList },
-  { href: '/cages', label: 'Cages', icon: LayoutGrid },
-  { href: '/feed-issue', label: 'Feed', icon: Package },
+  { href: '/dashboard', label: 'Home', icon: House, permission: 'reports.view' },
+  { href: '/daily-entry', label: 'Daily entry', icon: ClipboardList, permission: 'production.daily.record' },
+  { href: '/cages', label: 'Cages', icon: LayoutGrid, permission: 'production.view' },
+  { href: '/feed-issue', label: 'Feed', icon: Package, permission: 'inventory.issue' },
 ]
 
 /** Phone-only bottom bar: the four places field staff go most, plus the full menu. */
 export default function MobileTabBar({ onOpenMenu }) {
   const router = useRouter()
+  // Only the places this member may use (PERM-003); the menu button stays.
+  const { can } = usePermissions()
+  const tabs = TABS.filter((t) => can(t.permission))
   const isActive = (href) =>
     router.pathname === href || router.pathname.startsWith(`${href}/`)
 
@@ -20,8 +24,11 @@ export default function MobileTabBar({ onOpenMenu }) {
       aria-label="Quick navigation"
       className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-foam-deep bg-surface pb-[env(safe-area-inset-bottom)]"
     >
-      <ul className="grid grid-cols-5">
-        {TABS.map(({ href, label, icon: Icon }) => {
+      <ul
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}
+      >
+        {tabs.map(({ href, label, icon: Icon }) => {
           const active = isActive(href)
           return (
             <li key={href}>

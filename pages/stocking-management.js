@@ -17,6 +17,7 @@ import FarmLocationSelect from '../components/FarmLocationSelect'
 import { stockingService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
+import { usePermission } from '../hooks/usePermission'
 
 export default function StockingManagementPage() {
   return (
@@ -30,7 +31,7 @@ function StockingManagement() {
   const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.stocking.approve')
   const [stockings, setStockings] = useState([])
   const [filteredStockings, setFilteredStockings] = useState([])
   const [loading, setLoading] = useState(true)

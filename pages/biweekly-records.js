@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
+import { usePermission } from '../hooks/usePermission'
 
 const ICON_BTN =
   'inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake'
@@ -23,7 +24,7 @@ const ICON_BTN =
 export default function BiweeklyRecords() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.records.delete')
   const [records, setRecords] = useState([])
   const [cages, setCages] = useState([])
   const [loading, setLoading] = useState(true)

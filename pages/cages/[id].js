@@ -11,6 +11,7 @@ import Waterline from '../../components/Waterline'
 import { localToday, unitLabel } from '../../lib/format'
 import BatchHistory from '../../components/BatchHistory'
 import Link from 'next/link'
+import { usePermission } from '../../hooks/usePermission'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -104,7 +105,7 @@ function GrowthPanel({ growth, cage }) {
 function CageDetails() {
   const router = useRouter()
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.stock.adjust')
   const id = typeof router.query.id === 'string' ? router.query.id : null
 
   const cage = useQuery(api.cages.get, user && id ? { id } : 'skip')

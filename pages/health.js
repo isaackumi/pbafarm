@@ -23,6 +23,7 @@ import { useToast } from '../components/Toast'
 import LocationMetaField from '../components/LocationMetaField'
 import { DIAGNOSIS_SUGGESTIONS } from '../lib/farmHealth'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 export default function HealthPage() {
   return (
@@ -36,7 +37,7 @@ export default function HealthPage() {
 
 function HealthTreatments() {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('production.records.delete')
   const { locationArgs } = useLocation()
   const { showToast } = useToast()
 

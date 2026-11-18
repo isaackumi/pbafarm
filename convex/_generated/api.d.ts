@@ -47,6 +47,7 @@ import type * as lib_idempotency from "../lib/idempotency.js";
 import type * as lib_kpi from "../lib/kpi.js";
 import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_orgProfile from "../lib/orgProfile.js";
+import type * as lib_permissionCatalog from "../lib/permissionCatalog.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as lib_productionDualWrite from "../lib/productionDualWrite.js";
@@ -131,6 +132,7 @@ declare const fullApi: ApiFromModules<{
   "lib/kpi": typeof lib_kpi;
   "lib/memberships": typeof lib_memberships;
   "lib/orgProfile": typeof lib_orgProfile;
+  "lib/permissionCatalog": typeof lib_permissionCatalog;
   "lib/permissions": typeof lib_permissions;
   "lib/phone": typeof lib_phone;
   "lib/productionDualWrite": typeof lib_productionDualWrite;

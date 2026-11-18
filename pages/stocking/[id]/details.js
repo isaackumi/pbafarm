@@ -8,6 +8,7 @@ import { PageHeader, Button, Textarea } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../components/Toast'
 import { api } from '../../../convex/_generated/api'
+import { usePermission } from '../../../hooks/usePermission'
 
 function statusClass(status) {
   if (status === 'approved') return 'bg-kelp/15 text-kelp'
@@ -26,6 +27,7 @@ function formatDate(value) {
 function StockingDetails() {
   const router = useRouter()
   const { user, hasRole } = useAuth()
+  const canOverride = usePermission('production.stocking.approve')
   const { showToast } = useToast()
   const id = typeof router.query.id === 'string' ? router.query.id : null
 
@@ -74,7 +76,7 @@ function StockingDetails() {
   // Transfer-linked stockings are approved or rejected through the transfer.
   const linkedToTransfer = Boolean(stocking.transfer_id)
   const canModerate =
-    hasRole('admin') &&
+    canOverride &&
     stocking.status === 'pending_approval' &&
     !linkedToTransfer
 

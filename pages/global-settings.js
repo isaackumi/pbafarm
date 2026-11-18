@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useCurrency } from '../hooks/useCurrency'
 import { CURRENCIES, formatCurrency } from '../lib/currencyUtils'
+import { usePermission } from '../hooks/usePermission'
 
 export default function GlobalSettingsPage() {
   return (
@@ -32,7 +33,7 @@ export default function GlobalSettingsPage() {
 function GlobalSettings() {
   const { showToast } = useToast()
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('org.settings.manage')
   const { settings: localSettings, updateSettings } = useSettings()
   const { formatCurrency: fmt, symbol, shortLabel } = useCurrency()
 

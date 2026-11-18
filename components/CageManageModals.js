@@ -8,6 +8,7 @@ import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs, geometryFromUnit } from './UnitGeometryFields'
+import { usePermission } from '../hooks/usePermission'
 
 const EMPTY_FORM = {
   name: '',
@@ -61,7 +62,7 @@ export default function CageManageModals({
   const { showToast } = useToast()
   const { locations, activeLocationId } = useLocation()
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.stock.adjust')
   const updateCage = useMutation(api.cages.update)
   const removeCage = useMutation(api.cages.remove)
 
