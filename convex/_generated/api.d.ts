@@ -15,6 +15,7 @@ import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
 import type * as crons from "../crons.js";
 import type * as dailyRecords from "../dailyRecords.js";
+import type * as expenses from "../expenses.js";
 import type * as farmLocations from "../farmLocations.js";
 import type * as feed from "../feed.js";
 import type * as fishTransfers from "../fishTransfers.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   companies: typeof companies;
   crons: typeof crons;
   dailyRecords: typeof dailyRecords;
+  expenses: typeof expenses;
   farmLocations: typeof farmLocations;
   feed: typeof feed;
   fishTransfers: typeof fishTransfers;
