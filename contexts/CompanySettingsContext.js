@@ -79,6 +79,7 @@ export function CompanySettingsProvider({ children }) {
     () => ({
       settings,
       company,
+      terminology: company?.terminology || {},
       displayName:
         settings?.branding?.displayName || company?.name || 'PBA Farm',
       logoUrl: company?.logo_url,
@@ -101,6 +102,7 @@ export function useCompanySettings() {
     return {
       settings: null,
       company: null,
+      terminology: {},
       displayName: 'PBA Farm',
       logoUrl: null,
       currency: 'GHS',

@@ -304,6 +304,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `tasks.mine` | `account` | self | self | self | self | self |
 | `tasks.openCount` | `account` | self | self | self | self | self |
 | `tasks.setStatus` | `account` | self | self | self | self | self |
+| `terminology.get` | `account` | self | self | self | self | self |
+| `terminology.update` | `customization.manage` | yes | yes | no | no | no |
 | `traceability.batchTrace` | `production.view` | yes | yes | yes | yes | yes |
 | `traceability.batchTreatments` | `production.view` | yes | yes | yes | yes | yes |
 | `traceability.createDispatch` | `production.harvest.record` | yes | yes | yes | yes | no |

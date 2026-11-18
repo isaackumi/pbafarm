@@ -1,6 +1,7 @@
 /** Shared UI primitives — Harbor Soft light dashboard */
 import Link from 'next/link'
 import { useT } from '../../lib/i18n/context'
+import { useTerm } from '../../hooks/useTerm'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
@@ -162,6 +163,7 @@ export function TabBar({ tabs, active, onChange }) {
 
 export function Breadcrumbs({ items = [] }) {
   const t = useT()
+  const term = useTerm()
   if (!items.length) return null
   return (
     <nav aria-label={t('ui.breadcrumb')} className="mb-3">
@@ -180,14 +182,14 @@ export function Breadcrumbs({ items = [] }) {
                   href={item.href}
                   className="text-muted hover:text-lake transition-colors"
                 >
-                  {item.label}
+                  {term.text(item.label)}
                 </Link>
               ) : (
                 <span
                   className={last ? 'font-medium text-chart-ink' : 'text-muted'}
                   aria-current={last ? 'page' : undefined}
                 >
-                  {item.label}
+                  {term.text(item.label)}
                 </span>
               )}
             </li>
@@ -207,6 +209,7 @@ export function PageHeader({
   showTitle = true,
 }) {
   const t = useT()
+  const term = useTerm()
   return (
     <div className="mb-8">
       <Breadcrumbs items={breadcrumbs} />
@@ -214,7 +217,7 @@ export function PageHeader({
         <div className="min-w-0 max-w-3xl">
           {showTitle && title && (
             <h2 className="font-display text-2xl sm:text-[28px] font-medium text-chart-ink">
-              {title}
+              {term.text(title)}
             </h2>
           )}
           {description && (
@@ -223,7 +226,7 @@ export function PageHeader({
                 showTitle && title ? 'mt-1.5' : 'mt-0'
               }`}
             >
-              {description}
+              {term.text(description)}
             </p>
           )}
         </div>
@@ -245,7 +248,7 @@ export function PageHeader({
               href={item.href}
               className="inline-flex items-center rounded-lg border border-foam-deep px-3 min-h-8 text-sm text-chart-ink hover:border-lake hover:text-lake transition-colors"
             >
-              {item.label}
+              {term.text(item.label)}
             </Link>
           ))}
         </nav>

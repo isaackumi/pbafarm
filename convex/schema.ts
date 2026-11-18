@@ -341,6 +341,11 @@ const schema = defineSchema({
     timezone: v.optional(v.string()),
     unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
     defaultLocale: v.optional(v.string()),
+    /**
+     * Organization words (CUSTOM-003, D-007): override the built-in labels,
+     * e.g. cage → pen. Keys are validated against lib/terminology TERM_KEYS.
+     */
+    terminology: v.optional(v.record(v.string(), v.string())),
     settings: v.optional(
       v.object({
         aiAssistantEnabled: v.boolean(),
