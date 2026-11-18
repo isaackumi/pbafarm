@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import {
   Bell,
   CircleHelp,
@@ -15,6 +16,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
 
 const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
+  const router = useRouter()
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { startSystemWalkthrough } = useTour()
@@ -77,6 +79,10 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
 
   const handleNotifClick = async (n) => {
     if (!n.read) await markAsRead(n._id || n.id)
+    if (n.link) {
+      setNotifDropdownOpen(false)
+      router.push(n.link)
+    }
   }
 
   return (
@@ -221,17 +227,9 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
                           : 'text-chart-ink font-medium bg-foam/50'
                       } hover:bg-foam cursor-pointer`}
                     >
-                      <div className="font-semibold text-chart-ink">{n.title}</div>
-                      <div className="text-xs mt-0.5 line-clamp-2">{n.message}</div>
-                      {n.link && (
-                        <Link
-                          href={n.link}
-                          className="text-xs text-lagoon-800 mt-1 inline-block"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Open
-                        </Link>
-                      )}
+                      <div className="font-medium text-chart-ink">{n.title}</div>
+                      <div className="text-xs mt-0.5 line-clamp-3">{n.message}</div>
+                      {n.link && <div className="text-xs text-lake mt-1">Open</div>}
                     </button>
                   ))}
               </div>
