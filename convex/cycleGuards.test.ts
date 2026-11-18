@@ -107,7 +107,8 @@ describe('S5: editing an old complete harvest after restocking', () => {
     const { id } = await as.mutation(api.harvest.create, harvest(cageId))
     const secondStocking = await restock(t, cageId, companyId)
 
-    await as.mutation(api.harvest.remove, { id })
+    const res = await as.mutation(api.harvest.remove, { id })
+    expect(res.warnings.join(' ')).toMatch(/restocked/)
     const cage = await getDoc(t, cageId)
     expect(cage.status).toBe('active')
     expect(cage.currentCount).toBe(8000)
@@ -183,12 +184,14 @@ describe('S8: editing daily records from an earlier cycle', () => {
     await as.mutation(api.harvest.create, harvest(cageId, { estimatedCount: 9900 }))
     await restock(t, cageId, companyId)
 
-    await as.mutation(api.dailyRecords.update, { id: old, patch: { mortality: 300 } })
+    const edit = await as.mutation(api.dailyRecords.update, { id: old, patch: { mortality: 300 } })
     expect((await getDoc(t, cageId)).currentCount).toBe(8000)
     expect((await getDoc(t, old)).mortality).toBe(300)
+    expect(edit.warnings.join(' ')).toMatch(/earlier cycle/)
 
-    await as.mutation(api.dailyRecords.remove, { id: old })
+    const del = await as.mutation(api.dailyRecords.remove, { id: old })
     expect((await getDoc(t, cageId)).currentCount).toBe(8000)
+    expect(del.warnings.join(' ')).toMatch(/earlier cycle/)
   })
 
   test('records in the current cycle still move the live count', async () => {
@@ -197,8 +200,9 @@ describe('S8: editing daily records from an earlier cycle', () => {
     const rec = await daily(t, cageId, companyId, '2026-11-20', 50)
     await t.run((ctx: any) => ctx.db.patch(cageId, { currentCount: 7950 }))
 
-    await as.mutation(api.dailyRecords.update, { id: rec, patch: { mortality: 80 } })
+    const edit = await as.mutation(api.dailyRecords.update, { id: rec, patch: { mortality: 80 } })
     expect((await getDoc(t, cageId)).currentCount).toBe(7920)
+    expect(edit.warnings).toEqual([])
 
     // Moving the record back into the old cycle gives its deaths back to this one.
     await as.mutation(api.dailyRecords.update, { id: rec, patch: { date: '2026-10-01' } })

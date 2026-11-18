@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { scopedRows } from './lib/scope'
 import { assertOwns, listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
@@ -401,12 +402,30 @@ export const reverseTransaction = mutation({
       overrideReason: args.reason,
     })
 
+    // An issue or usage row stands for feed that left the store; once the stock
+    // comes back, void it so feed reports stop counting it (INV-003).
+    let voidedUsageId: Id<'feedUsage'> | null = null
+    if ((txn.transactionType === 'issue' || txn.transactionType === 'usage') && txn.referenceId) {
+      const usageId = ctx.db.normalizeId('feedUsage', txn.referenceId)
+      const usage = usageId ? await ctx.db.get(usageId) : null
+      if (usage && !usage.deletedAt) {
+        await ctx.db.patch(usage._id, { deletedAt: Date.now(), updatedAt: Date.now() })
+        voidedUsageId = usage._id
+      }
+    }
+
     await logAudit(ctx, {
       actionType: 'reversal',
       tableName: 'feedInventoryTransactions',
       recordId: transactionId,
       previousValues: txn,
-      newValues: { reversed: args.transactionId, reason: args.reason, previousStock, nextStock },
+      newValues: {
+        reversed: args.transactionId,
+        reason: args.reason,
+        previousStock,
+        nextStock,
+        voidedUsageId,
+      },
     })
 
     return transactionId

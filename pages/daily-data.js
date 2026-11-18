@@ -82,10 +82,11 @@ function EditSheet({ record, cages, feedTypes, onClose, onSaved }) {
 
     setSaving(true)
     setError('')
-    const { error: err } = await dailyRecordService.editDailyRecord(idOf(record), patch)
+    const { error: err, warnings } = await dailyRecordService.editDailyRecord(idOf(record), patch)
     setSaving(false)
     if (err) return setError(cleanError(err))
     showToast(`${cageName} on ${form.date} updated`, 'success')
+    if (warnings?.length) showToast(warnings.join('. '), 'warning')
     onSaved()
   }
 
@@ -271,13 +272,14 @@ export default function DailyRecordsPage() {
   const confirmDelete = async () => {
     if (!deleting) return
     setBusyDelete(true)
-    const { error } = await dailyRecordService.deleteDailyRecord(idOf(deleting))
+    const { error, warnings } = await dailyRecordService.deleteDailyRecord(idOf(deleting))
     setBusyDelete(false)
     if (error) {
       showToast(cleanError(error), 'error')
       return
     }
     showToast('Record deleted. Feed returned to stock', 'success')
+    if (warnings?.length) showToast(warnings.join('. '), 'warning')
     setDeleting(null)
     load()
   }

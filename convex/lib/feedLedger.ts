@@ -165,7 +165,7 @@ async function issuedKg(ctx: MutationCtx, cageId: Id<'cages'>, date: string) {
     .collect()
   let kg = 0
   for (const u of usage) {
-    if (u.source !== 'issue' || u.usageDate !== date) continue
+    if (u.deletedAt || u.source !== 'issue' || u.usageDate !== date) continue
     const txns = await ctx.db
       .query('feedInventoryTransactions')
       .withIndex('by_reference', (q) => q.eq('referenceId', String(u._id)))
