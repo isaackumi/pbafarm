@@ -41,6 +41,9 @@ import type * as sales from "../sales.js";
 import type * as seed from "../seed.js";
 import type * as stocking from "../stocking.js";
 import type * as userAccounts from "../userAccounts.js";
+import type * as mfa from "../mfa.js";
+import type * as phoneAuth from "../phoneAuth.js";
+import type * as security from "../security.js";
 import type * as users from "../users.js";
 
 import type {
@@ -83,6 +86,9 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   stocking: typeof stocking;
   userAccounts: typeof userAccounts;
+  mfa: typeof mfa;
+  phoneAuth: typeof phoneAuth;
+  security: typeof security;
   users: typeof users;
 }>;
 
