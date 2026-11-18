@@ -19,6 +19,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import LocationMetaField from '../components/LocationMetaField'
+import { localToday } from '../lib/format'
 
 export default function SalesPage() {
   return (
@@ -56,7 +57,7 @@ function Sales() {
     harvestId: '',
     customerId: '',
     customerName: '',
-    saleDate: new Date().toISOString().split('T')[0],
+    saleDate: localToday(),
     weightKg: '',
     pricePerKg: '',
     paymentStatus: 'paid',
@@ -120,7 +121,7 @@ function Sales() {
         harvestId: '',
         customerId: '',
         customerName: '',
-        saleDate: new Date().toISOString().split('T')[0],
+        saleDate: localToday(),
         weightKg: '',
         pricePerKg: '',
         paymentStatus: 'paid',

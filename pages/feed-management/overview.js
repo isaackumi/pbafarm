@@ -28,6 +28,8 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { localToday } from '../../lib/format'
+import { useLocation } from '../../contexts/LocationContext'
 
 export default function FeedManagementOverviewPage() {
   return (
@@ -56,9 +58,13 @@ function FeedManagementOverview() {
   const [costData, setCostData] = useState([])
   const [supplierData, setSupplierData] = useState([])
 
+  // Stock, usage and FCR at the header site (FARM-003).
+  const { activeLocationId } = useLocation()
+
   useEffect(() => {
     fetchData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocationId])
 
   const fetchData = async () => {
     setLoading(true)
@@ -66,7 +72,18 @@ function FeedManagementOverview() {
       const client = getConvexHttpClient()
       
       // Fetch feed types with current stock
-      const feedTypesData = await client.query(api.feed.listFeedTypes, {})
+      const site = activeLocationId ? { locationId: activeLocationId } : {}
+      const [feedTypesData, siteLevels] = await Promise.all([
+        client.query(api.feed.listFeedTypes, {}),
+        activeLocationId ? client.query(api.inventory.listStockLevels, site) : null,
+      ])
+      // At a site, stock is that site's lots plus unassigned stock.
+      if (siteLevels) {
+        const atSite = new Map(siteLevels.map((l) => [l.feed_type_id, l.current_stock]))
+        for (const t of feedTypesData || []) {
+          t.current_stock = atSite.get(t.id || t._id) ?? 0
+        }
+      }
       setFeedTypes(feedTypesData || [])
 
       // Fetch recent feed usage (last 30 days)
@@ -74,10 +91,10 @@ function FeedManagementOverview() {
       from.setDate(from.getDate() - 30)
       const dateFrom = from.toISOString().slice(0, 10)
       const [usageData, suppliers, growth] = await Promise.all([
-        client.query(api.feed.listUsage, { dateFrom }),
+        client.query(api.feed.listUsage, { dateFrom, ...site }),
         client.query(api.feed.listSuppliers, {}).catch(() => []),
         client
-          .query(api.cages.growthAll, { asOf: new Date().toISOString().slice(0, 10) })
+          .query(api.cages.growthAll, { asOf: localToday(), ...site })
           .catch(() => null),
       ])
       const feedName = new Map((feedTypesData || []).map((t) => [t.id || t._id, t.name]))

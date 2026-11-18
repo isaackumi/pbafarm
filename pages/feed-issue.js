@@ -21,6 +21,7 @@ import {
 } from '../components/ui'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
+import { localToday } from '../lib/format'
 
 export default function FeedIssuePage() {
   return (
@@ -45,7 +46,7 @@ function FeedIssue() {
     cageId: '',
     quantityKg: '',
     bags: '',
-    usageDate: new Date().toISOString().split('T')[0],
+    usageDate: localToday(),
     notes: '',
     allowNegative: false,
     overrideReason: '',

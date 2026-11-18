@@ -15,6 +15,7 @@ import {
 } from '../components/ui'
 import { cageService } from '../lib/cageService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { localToday } from '../lib/format'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g+' },
@@ -35,7 +36,7 @@ function HarvestSamplingPage() {
   const [saved, setSaved] = useState('')
   const [form, setForm] = useState({
     cageId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: localToday(),
     weight: '',
     fishCount: '',
     sizes: SIZE_CATEGORIES.reduce((acc, s) => ({ ...acc, [s.category]: '' }), {}),

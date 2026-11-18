@@ -8,6 +8,7 @@ import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import Waterline from '../../components/Waterline'
+import { localToday, unitLabel } from '../../lib/format'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -106,7 +107,7 @@ function CageDetails() {
   )
   const growth = useQuery(
     api.cages.growth,
-    user && id ? { id, asOf: new Date().toISOString().slice(0, 10) } : 'skip',
+    user && id ? { id, asOf: localToday() } : 'skip',
   )
 
   const [editCage, setEditCage] = useState(null)
@@ -149,7 +150,7 @@ function CageDetails() {
   const biweeklyRows = (recentBiweekly || []).slice(0, 10)
 
   return (
-    <Layout title={`Cage ${cage.name}`}>
+    <Layout title={`${unitLabel(cage)} ${cage.name}`}>
       <div className="max-w-5xl space-y-6">
         <PageHeader
           showTitle={false}
