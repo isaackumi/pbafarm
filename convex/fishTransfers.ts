@@ -60,13 +60,52 @@ async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
   return rows[0] || null
 }
 
-async function applyFishTransfer(ctx: any, transfer: any) {
+/**
+ * Move the fish: take them off the source cage and put them on the
+ * destination through the linked stocking or top-up.
+ *
+ * The linked row is only applied when it is still pending (or was created
+ * already approved in this same mutation). A linked row that was approved
+ * directly before transfer-linked rows were locked has already put its fish in
+ * the destination cage, so only the source side is applied. A rejected linked
+ * row means the transfer can no longer be approved.
+ */
+async function applyFishTransfer(
+  ctx: any,
+  transfer: any,
+  opts: { linkedJustCreated?: boolean } = {},
+) {
   const source = await ctx.db.get(transfer.sourceCageId)
   if (!source) throw new Error('Source cage not found')
   const sourceCount = source.currentCount || 0
   if (sourceCount < transfer.quantity) {
     throw new Error('Insufficient fish on source cage')
   }
+
+  const stocking = transfer.destinationStockingId
+    ? await ctx.db.get(transfer.destinationStockingId)
+    : null
+  if (transfer.destinationStockingId && !stocking) {
+    throw new Error('Linked destination stocking not found')
+  }
+  const topup = transfer.destinationTopupId
+    ? await ctx.db.get(transfer.destinationTopupId)
+    : null
+  if (transfer.destinationTopupId && !topup) {
+    throw new Error('Linked destination top-up not found')
+  }
+  for (const [row, label] of [
+    [stocking, 'stocking'],
+    [topup, 'top-up'],
+  ] as const) {
+    if (row?.status === 'rejected' || row?.deletedAt) {
+      throw new Error(
+        `The ${label} linked to this transfer was rejected, so the transfer cannot be approved. Reject the transfer instead.`,
+      )
+    }
+  }
+  const applies = (row: any) =>
+    opts.linkedJustCreated || row.status === 'pending_approval'
 
   const now = Date.now()
   const sourcePatch = sourceCagePatchAfterTransfer({
@@ -77,11 +116,9 @@ async function applyFishTransfer(ctx: any, transfer: any) {
   })
   await ctx.db.patch(transfer.sourceCageId, sourcePatch)
 
-  if (transfer.destinationStockingId) {
-    const stocking = await ctx.db.get(transfer.destinationStockingId)
-    if (!stocking) throw new Error('Linked destination stocking not found')
+  if (stocking && applies(stocking)) {
     if (stocking.status === 'pending_approval') {
-      await ctx.db.patch(transfer.destinationStockingId, {
+      await ctx.db.patch(stocking._id, {
         status: 'approved',
         approvedBy: transfer.approvedBy,
         approvedAt: now,
@@ -98,21 +135,19 @@ async function applyFishTransfer(ctx: any, transfer: any) {
     })
   }
 
-  if (transfer.destinationTopupId) {
-    const topup = await ctx.db.get(transfer.destinationTopupId)
-    if (!topup) throw new Error('Linked destination top-up not found')
+  if (topup && applies(topup)) {
     if (topup.status === 'pending_approval') {
-      await ctx.db.patch(transfer.destinationTopupId, {
+      await ctx.db.patch(topup._id, {
         status: 'approved',
         approvedBy: transfer.approvedBy,
         approvedAt: now,
       })
     }
-    const stocking = await ctx.db.get(topup.stockingId)
-    if (!stocking) throw new Error('Associated stocking record not found')
-    const destCage = await ctx.db.get(stocking.cageId)
+    const destStocking = await ctx.db.get(topup.stockingId)
+    if (!destStocking) throw new Error('Associated stocking record not found')
+    const destCage = await ctx.db.get(destStocking.cageId)
     if (destCage) {
-      await ctx.db.patch(stocking.cageId, {
+      await ctx.db.patch(destStocking.cageId, {
         currentCount: (destCage.currentCount || 0) + topup.fishCount,
         updatedAt: now,
       })
@@ -351,7 +386,7 @@ export const createFishTransfer = mutation({
 
     if (status === 'approved') {
       const transfer = await ctx.db.get(transferId)
-      await applyFishTransfer(ctx, transfer)
+      await applyFishTransfer(ctx, transfer, { linkedJustCreated: true })
     }
 
     await logAudit(ctx, {

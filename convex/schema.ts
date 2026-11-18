@@ -490,7 +490,9 @@ const schema = defineSchema({
     .index('by_status', ['status'])
     .index('by_source_cage', ['sourceCageId'])
     .index('by_destination_cage', ['destinationCageId'])
-    .index('by_company_location', ['companyId', 'sourceLocationId']),
+    .index('by_company_location', ['companyId', 'sourceLocationId'])
+    .index('by_destinationStockingId', ['destinationStockingId'])
+    .index('by_destinationTopupId', ['destinationTopupId']),
 
   auditLogs: defineTable({
     userId: v.optional(v.id('users')),
