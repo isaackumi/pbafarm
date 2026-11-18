@@ -53,7 +53,6 @@ export async function runOnce<R>(
   const result = await run()
   await ctx.db.insert('idempotencyKeys', {
     userId: user._id,
-    companyId: user.companyId,
     key,
     mutation: name,
     result: result === undefined ? null : result,

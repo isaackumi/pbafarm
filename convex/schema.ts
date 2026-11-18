@@ -738,8 +738,8 @@ const schema = defineSchema({
    * instead of writing again. Rows older than 30 days are pruned daily.
    */
   idempotencyKeys: defineTable({
+    // Scoped by user (keys are per user); no companyId, so tenant migrations skip it.
     userId: v.id('users'),
-    companyId: v.optional(v.id('companies')),
     key: v.string(),
     mutation: v.string(),
     result: v.any(),
