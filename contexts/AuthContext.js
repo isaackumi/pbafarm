@@ -8,6 +8,7 @@ import {
   bindConvexReactClient,
 } from '../lib/convexBridge'
 import { clearLlmKeys } from '../lib/llmClient'
+import { migrateLegacyOutbox } from '../lib/offlineOutbox'
 
 const AuthContext = createContext()
 
@@ -76,6 +77,14 @@ export function AuthProvider({ children }) {
 
   /** True when tenant data may be loaded (providers skip their queries otherwise). */
   const canUseApp = accessState === 'ok'
+
+  // Entries queued before the outbox was scoped per user move to the user
+  // signed in now; items stamped with another owner stay where they are.
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId || !canUseApp) return
+    migrateLegacyOutbox(userId)
+  }, [userId, canUseApp])
 
   const loading = isLoading || (isAuthenticated && convexUser === undefined)
   const initialized = !isLoading
