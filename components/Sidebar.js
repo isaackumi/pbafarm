@@ -65,6 +65,7 @@ const MENU_SECTIONS = {
       { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
       { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
+      { title: 'Harvest Lots', path: '/trace', icon: Package },
       { title: 'Sales', path: '/sales', icon: ShoppingCart, tourId: 'sales' },
       { title: 'Expenses', path: '/expenses', icon: Receipt },
       { title: 'Health', path: '/health', icon: HeartPulse, tourId: 'health' },
