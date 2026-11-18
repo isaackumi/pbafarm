@@ -29,6 +29,13 @@ export async function inCurrentCycle(ctx: Ctx, cage: Doc<'cages'>, date: string)
   return start != null && date >= start
 }
 
+/**
+ * Whether a harvest record is a real harvest for KPIs and cycle logic.
+ * Records written by the old /harvest-sampling page (tagged by migration
+ * M0-c) are samples, not harvests (doc 09 S12).
+ */
+export const isRealHarvest = (h: { source?: string }) => h.source !== 'sampling_page'
+
 /** Is `a` (date + creation time) later than `b`? Same-day ties go to whichever was entered later. */
 const isAfter = (aDate: string, aCreated: number, bDate: string, bCreated: number) =>
   aDate > bDate || (aDate === bDate && aCreated > bCreated)
@@ -66,6 +73,7 @@ export async function harvestIsCurrent(
   const laterComplete = harvests.some(
     (h) =>
       h._id !== harvest._id &&
+      isRealHarvest(h) &&
       h.harvestType === 'complete' &&
       isAfter(h.harvestDate, h._creationTime, harvest.harvestDate, harvest._creationTime),
   )
@@ -74,4 +82,34 @@ export async function harvestIsCurrent(
   // A complete harvest is only current while the cage is still sitting empty after it.
   if (harvest.harvestType === 'complete') return cage.status === 'harvested'
   return true
+}
+
+/**
+ * Refuse to start a new cycle on a cage whose current cycle is still running:
+ * another approved stocking without `closedAt` while the cage is not sitting
+ * empty. Stockings from before harvests closed their cycle have no `closedAt`,
+ * so an unclosed stocking on a harvested/empty/fallow cage is not counted.
+ */
+export async function assertNoOtherOpenStocking(
+  ctx: Ctx,
+  cage: Doc<'cages'>,
+  exceptStockingId?: Id<'stockingHistory'>,
+) {
+  if (cage.status && EMPTY_STATUSES.has(cage.status)) return
+  const rows = await ctx.db
+    .query('stockingHistory')
+    .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
+    .collect()
+  const open = rows.find(
+    (s) =>
+      s._id !== exceptStockingId &&
+      s.status === 'approved' &&
+      !s.deletedAt &&
+      !s.closedAt,
+  )
+  if (open) {
+    throw new Error(
+      `Cage ${cage.name} already has an open stocking (batch ${open.batchNumber}). Harvest the cage before stocking it again, or record these fish as a top-up.`,
+    )
+  }
 }

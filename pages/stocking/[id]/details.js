@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { useState } from 'react'
+import Link from 'next/link'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
 import { PageHeader, Button } from '../../../components/ui'
@@ -70,8 +71,12 @@ function StockingDetails() {
     )
   }
 
+  // Transfer-linked stockings are approved or rejected through the transfer.
+  const linkedToTransfer = Boolean(stocking.transfer_id)
   const canModerate =
-    hasRole('admin') && stocking.status === 'pending_approval'
+    hasRole('admin') &&
+    stocking.status === 'pending_approval' &&
+    !linkedToTransfer
 
   const onApprove = async () => {
     setProcessing(true)
@@ -197,6 +202,17 @@ function StockingDetails() {
               </dd>
             </div>
           </dl>
+
+          {linkedToTransfer && stocking.status === 'pending_approval' && (
+            <p className="pt-2 border-t border-foam-deep text-sm text-muted">
+              This stocking was created by a fish transfer. Approve or reject the
+              transfer on the{' '}
+              <Link href="/approvals" className="text-lagoon-800 underline-offset-2 hover:underline">
+                Approvals
+              </Link>{' '}
+              page so the fish leave the source cage at the same time.
+            </p>
+          )}
 
           {canModerate && (
             <div className="flex flex-wrap gap-3 pt-2 border-t border-foam-deep">

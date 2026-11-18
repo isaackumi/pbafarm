@@ -21,6 +21,7 @@ function toClientHarvestRecord(r: any) {
     size_breakdown: r.sizeBreakdown,
     notes: r.notes,
     harvest_type: r.harvestType,
+    source: r.source ?? null,
     status: r.status,
     company_id: r.companyId,
     created_by: r.createdBy,
@@ -414,6 +415,14 @@ export const createFromSampling = mutation({
     harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
     notes: v.optional(v.string()),
   },
+  /**
+   * Interim (doc 09 S12, OPEN-QUESTIONS Q-005): this used to insert a complete
+   * harvest with a made-up FCR of 1.5 and no effect on the cage, which
+   * double-counted harvest kg once the real harvest was recorded. Until the
+   * owner says whether the page records harvests or pre-harvest samples, it
+   * only stores a sampling row. `harvestType` and `notes` are accepted for
+   * older clients and ignored.
+   */
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
@@ -424,26 +433,7 @@ export const createFromSampling = mutation({
       args.abw ??
       (args.fishCount > 0 ? args.weight / args.fishCount : 0)
 
-    const fcr = 1.5
-
-    const harvestId = await ctx.db.insert('harvestRecords', {
-      cageId: args.cageId,
-      harvestDate: args.date,
-      averageBodyWeight: abw,
-      totalWeight: args.weight,
-      estimatedCount: args.fishCount,
-      fcr: fcr,
-      sizeBreakdown: args.sizes,
-      notes: args.notes,
-      harvestType: args.harvestType ?? 'complete',
-      status: 'completed',
-      locationId: cage.locationId,
-      companyId,
-      createdBy: user._id,
-    })
-
     const samplingId = await ctx.db.insert('harvestSampling', {
-      harvestId,
       cageId: args.cageId,
       date: args.date,
       weight: args.weight,
@@ -459,12 +449,13 @@ export const createFromSampling = mutation({
 
     await logAudit(ctx, {
       actionType: 'create',
-      tableName: 'harvestRecords',
-      recordId: harvestId,
-      newValues: { harvestId, samplingId, ...args },
+      tableName: 'harvestSampling',
+      recordId: samplingId,
+      newValues: args,
+      locationId: cage.locationId,
     })
 
-    return { harvestId, samplingId }
+    return { harvestId: null, samplingId }
   },
 })
 

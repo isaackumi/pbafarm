@@ -156,6 +156,91 @@ export async function deductInventoryLots(
   }
 }
 
+/** Kg issued from the store to this cage on this date and not reversed since. */
+async function issuedKg(ctx: MutationCtx, cageId: Id<'cages'>, date: string) {
+  const usage = await ctx.db
+    .query('feedUsage')
+    .withIndex('by_cage', (q) => q.eq('cageId', cageId))
+    .collect()
+  let kg = 0
+  for (const u of usage) {
+    if (u.source !== 'issue' || u.usageDate !== date) continue
+    const txns = await ctx.db
+      .query('feedInventoryTransactions')
+      .withIndex('by_reference', (q) => q.eq('referenceId', String(u._id)))
+      .collect()
+    const issue = txns.find((t) => t.transactionType === 'issue')
+    if (issue) {
+      const reversed = await ctx.db
+        .query('feedInventoryTransactions')
+        .withIndex('by_reference', (q) => q.eq('referenceId', String(issue._id)))
+        .filter((q) => q.eq(q.field('transactionType'), 'reversal'))
+        .first()
+      if (reversed) continue
+    }
+    kg += u.quantity || 0
+  }
+  return kg
+}
+
+/**
+ * Interim guard for doc 09 S14 (OPEN-QUESTIONS Q-003): a feed issue to a cage
+ * and the daily entry's feed for the same cage and date both deduct stock, so
+ * recording the same feed both ways counts it twice. Whichever is recorded
+ * second is refused unless an admin gives an override reason (for a genuine
+ * extra ration), which is written to the audit log.
+ */
+export async function assertFeedNotAlreadyRecorded(
+  ctx: MutationCtx,
+  args: {
+    user: Doc<'users'>
+    cageId: Id<'cages'>
+    date: string
+    writing: 'issue' | 'daily'
+    overrideReason?: string
+  },
+) {
+  let existingKg = 0
+  if (args.writing === 'daily') {
+    existingKg = await issuedKg(ctx, args.cageId, args.date)
+  } else {
+    const rec = await ctx.db
+      .query('dailyRecords')
+      .withIndex('by_cage_date', (q) => q.eq('cageId', args.cageId).eq('date', args.date))
+      .first()
+    existingKg = rec?.feedAmount ?? 0
+  }
+  if (!(existingKg > 0)) return
+
+  if (args.overrideReason?.trim()) {
+    requireRole(args.user, 'admin')
+    const cage = await ctx.db.get(args.cageId)
+    await logAudit(ctx, {
+      actionType: 'feed_overlap_override',
+      tableName: args.writing === 'daily' ? 'daily_records' : 'feedUsage',
+      recordId: String(args.cageId),
+      newValues: {
+        cageId: args.cageId,
+        date: args.date,
+        writing: args.writing,
+        alreadyRecordedKg: existingKg,
+        reason: args.overrideReason.trim(),
+      },
+      locationId: cage?.locationId,
+    })
+    return
+  }
+
+  const cage = await ctx.db.get(args.cageId)
+  const name = cage?.name ?? 'this cage'
+  const kg = round1(existingKg)
+  throw new Error(
+    args.writing === 'daily'
+      ? `Feed for cage ${name} on ${args.date} was already issued from the store (${kg} kg). Recording it in the daily entry as well would deduct the stock twice. Enter 0 feed here, or ask an admin to save it with an override reason.`
+      : `Feed for cage ${name} on ${args.date} is already recorded in the daily entry (${kg} kg). Issuing it as well would deduct the stock twice. Correct the daily entry instead, or ask an admin to issue it with an override reason.`,
+  )
+}
+
 /**
  * Apply a signed stock change (positive = in, negative = out).
  * Always writes feedInventoryTransactions and updates feedTypes.currentStock.
