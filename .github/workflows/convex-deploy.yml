@@ -1,0 +1,47 @@
+name: Deploy Convex
+
+# Pushes the backend (convex/) to the deployment that CONVEX_DEPLOY_KEY points at
+# (today the dev deployment vibrant-stork-860; swap in a prod: key to ship prod)
+# whenever it changes on main. `convex deploy` type-checks and validates the
+# schema first, so a broken push fails here instead of reaching the deployment.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'convex/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/convex-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: convex-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Check deploy key
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Deploy Convex functions and schema
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy --yes

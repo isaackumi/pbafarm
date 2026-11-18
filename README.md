@@ -58,12 +58,24 @@ Run `npm run dev -- -H 0.0.0.0` and open `http://<your-mac-ip>:3000` on the phon
 The app installs to the home screen in production builds (`npm run build && npm start`);
 the service worker is off in dev on purpose.
 
-## Deploy (Vercel)
+## Deploy
 
-1. `npx convex deploy` (production)
-2. Set `NEXT_PUBLIC_CONVEX_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL` on Vercel to the production deployment
-3. Set JWT / JWKS / SITE_URL on the Convex production deployment
+### Backend (Convex): automatic
 
+`.github/workflows/convex-deploy.yml` runs `npx convex deploy` on every push to
+`main` that touches `convex/`. It uses the `CONVEX_DEPLOY_KEY` repository secret
+(Settings → Secrets and variables → Actions). The secret is currently a **dev** key
+for `vibrant-stork-860`; replace it with a `prod:` key when production is ready.
+
+Locally, `.env.local` holds the same dev key as `CONVEX_DEPLOY_KEY`, so
+`npm run dev:backend` pushes every save to `vibrant-stork-860`. Generate keys in the
+Convex dashboard under the deployment's Settings → Deploy keys.
+
+### Frontend (Vercel)
+
+1. Set `NEXT_PUBLIC_CONVEX_URL` (`https://<deployment>.convex.cloud`) and
+   `NEXT_PUBLIC_CONVEX_SITE_URL` (`https://<deployment>.convex.site`) on Vercel.
+2. Set JWT / JWKS / SITE_URL on the Convex deployment (`npx convex env set ...`).
 ## Migration plan
 
 See `docs/plans/2026-07-24-convex-migration-and-ui-theme.md`.
