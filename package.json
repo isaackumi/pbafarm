@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "graph:convex-edges": "node scripts/graphify-convex-edges.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.3",
