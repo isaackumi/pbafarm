@@ -136,6 +136,48 @@ export const TEMPLATES: RuleTemplate[] = [
     ],
   },
   {
+    key: 'water_quality_breach',
+    name: 'Water quality out of range',
+    description:
+      'When a water-quality reading (logged, from a daily entry or from a sensor) is outside the thresholds for its unit type, alert admins.',
+    trigger: { kind: 'event', eventType: 'water.threshold.breached' },
+    conditions: [],
+    actions: [
+      {
+        kind: 'notify',
+        channels: ['in_app'],
+        recipients: ADMINS,
+        title: 'Water quality: {{payload.unitName}}',
+        message: '{{payload.summary}} on {{payload.date}} ({{payload.source}}).',
+        link: '/water-quality',
+        level: 'warning',
+      },
+    ],
+  },
+  {
+    key: 'equipment_maintenance_due',
+    name: 'Equipment and net checks due',
+    description: 'Each day at 07:00, list equipment maintenance and net inspections due in the next 3 days or overdue.',
+    trigger: {
+      kind: 'schedule',
+      localTime: '07:00',
+      check: 'maintenance_due',
+      params: { days: 3 },
+    },
+    conditions: [],
+    actions: [
+      {
+        kind: 'notify',
+        channels: ['in_app'],
+        recipients: ADMINS,
+        title: '{{check.title}}',
+        message: '{{check.message}}',
+        link: '{{check.link}}',
+        level: 'info',
+      },
+    ],
+  },
+  {
     key: 'harvest_ready_abw',
     name: 'Harvest-ready ABW',
     description: 'Each Monday at 07:00, list active cages at or above the harvest weight in farm rules.',
@@ -213,6 +255,22 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
     type: 'sensor.readings.recorded',
     label: 'Sensor readings received',
     fields: ['readings', 'cageNames', 'minDissolvedOxygen', 'maxTemperatureC'],
+  },
+  {
+    type: 'water.reading.recorded',
+    label: 'Water-quality reading recorded',
+    fields: [
+      'unitName', 'unitType', 'date', 'source', 'breachCount',
+      'dissolvedOxygen', 'temperatureC', 'ph', 'ammonia', 'nitrite', 'nitrate', 'salinity', 'turbidityNtu', 'secchiCm',
+    ],
+  },
+  {
+    type: 'water.threshold.breached',
+    label: 'Water quality outside thresholds',
+    fields: [
+      'unitName', 'unitType', 'date', 'source', 'breachCount', 'parameters', 'summary', 'lowOxygen',
+      'dissolvedOxygen', 'temperatureC', 'ph', 'ammonia', 'nitrite',
+    ],
   },
   {
     type: 'inventory.stock.low',

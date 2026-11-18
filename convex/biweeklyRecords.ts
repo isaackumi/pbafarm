@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
+import { mirrorRecordReading } from './waterQuality'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
@@ -178,6 +179,7 @@ export const create = mutation({
     }
 
     await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+    await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
     // The latest sample becomes the cage's current fish weight.
     await syncCageAbw(ctx, args.cageId)
     await refreshUnitDays(ctx, [{ unitId: args.cageId, date: args.date }])
@@ -320,6 +322,7 @@ export async function saveSamplingBatch(
         updatedAt: now,
       })
       ids.push(id)
+      await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
       await refreshUnitDays(ctx, [{ unitId: rec.cageId, date }])
     }
     for (const cageId of seen) {
@@ -395,6 +398,7 @@ export const createMany = mutation({
         updatedAt: now,
       })
       await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+      await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
       await refreshUnitDays(ctx, [{ unitId: record.cageId, date: record.date }])
       ids.push(id)
     }
@@ -444,6 +448,7 @@ export const update = mutation({
     })
     await syncCageAbw(ctx, existing.cageId)
     await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+    await mirrorRecordReading(ctx, 'biweekly_record', id, await ctx.db.get(id))
     await refreshUnitDays(ctx, [
       { unitId: existing.cageId, date: existing.date },
       { unitId: existing.cageId, date: patch.date ?? existing.date },
@@ -479,6 +484,7 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(id)
+    await mirrorRecordReading(ctx, 'biweekly_record', id, null)
     await syncCageAbw(ctx, existing.cageId)
     await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {

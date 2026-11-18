@@ -79,7 +79,11 @@ function Board() {
             </Button>
           </>
         }
-        related={[{ label: 'All units (table)', href: '/cages' }]}
+        related={[
+          { label: 'All units (table)', href: '/cages' },
+          { label: 'Water quality', href: '/water-quality' },
+          { label: 'Maintenance', href: '/maintenance' },
+        ]}
       />
 
       {data && (

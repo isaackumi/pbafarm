@@ -9,6 +9,7 @@ import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, 
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
 import { emitDomainEvent } from './lib/events'
+import { mirrorRecordReading } from './waterQuality'
 import { isBusinessDate, todayFor } from './lib/dates'
 import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
@@ -404,6 +405,8 @@ export async function insertDailyRecord(
     })
   }
   await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
+  // Water values also go to the water-quality log (Phase 6 dual-write).
+  await mirrorRecordReading(ctx, 'daily_record', id, await ctx.db.get(id))
 
   const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
   const nextCount =
@@ -725,6 +728,7 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, patch)
+    await mirrorRecordReading(ctx, 'daily_record', id, await ctx.db.get(id))
 
     // Deaths only move the live fish count for records in the cage's current
     // cycle; a record from an earlier cycle is corrected on its own.
@@ -814,6 +818,7 @@ export const remove = mutation({
       user._id,
     )
     await ctx.db.delete(id)
+    await mirrorRecordReading(ctx, 'daily_record', id, null)
     await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {
       actionType: 'delete',
@@ -882,6 +887,7 @@ export const createMany = mutation({
         })
       }
       await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
+      await mirrorRecordReading(ctx, 'daily_record', id, await ctx.db.get(id))
 
       await deductDailyFeed(ctx, user, {
         dailyRecordId: id,

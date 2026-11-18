@@ -258,6 +258,49 @@ export const CHECKS: Record<string, CheckDef> = {
       }
     },
   },
+
+  maintenance_due: {
+    label: 'Equipment and net checks due',
+    description: 'Equipment maintenance and unit (net) inspections due within the next days or overdue',
+    fields: ['count', 'overdue', 'items', 'days'],
+    params: [{ key: 'days', label: 'Days ahead', default: 3 }],
+    async run(ctx, companyId, date, params): Promise<CheckResult> {
+      const days = Math.max(0, Math.min(30, Math.round(num(params, 'days', 3))))
+      const until = addDays(date, days)
+      const gear = (
+        await ctx.db
+          .query('equipment')
+          .withIndex('by_companyId_and_nextMaintenanceDue', (q) =>
+            q.eq('companyId', companyId).gte('nextMaintenanceDue', '0000-01-01').lte('nextMaintenanceDue', until),
+          )
+          .take(100)
+      ).filter((e) => e.status !== 'retired')
+      const units = (
+        await ctx.db
+          .query('cages')
+          .withIndex('by_company', (q) => q.eq('companyId', companyId))
+          .take(1000)
+      ).filter((c) => !c.archivedAt && c.nextMaintenanceDate && c.nextMaintenanceDate <= until)
+      const items = [
+        ...gear.map((e) => ({ name: e.name, due: e.nextMaintenanceDue as string })),
+        ...units.map((c) => ({ name: `${c.name} net`, due: c.nextMaintenanceDate as string })),
+      ].sort((a, b) => a.due.localeCompare(b.due))
+      if (!items.length) return { ...EMPTY, days, overdue: 0, items: '' }
+      const overdue = items.filter((i) => i.due < date).length
+      const list = nameList(items.map((i) => `${i.name} (${i.due < date ? 'overdue ' : ''}${i.due})`), 5)
+      return {
+        count: items.length,
+        overdue,
+        days,
+        items: list,
+        title: overdue
+          ? `${plural(overdue, 'check')} overdue, ${items.length - overdue} due soon`
+          : `${plural(items.length, 'check')} due in ${days} days`,
+        message: `${list}.`,
+        link: '/maintenance',
+      }
+    },
+  },
 }
 
 export function checkExists(key: string) {

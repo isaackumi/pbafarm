@@ -11,6 +11,7 @@ import Waterline from '../../components/Waterline'
 import { localToday, unitLabel } from '../../lib/format'
 import BatchHistory from '../../components/BatchHistory'
 import UnitProfile from '../../components/UnitProfile'
+import UnitTabs from '../../components/UnitTabs'
 import Link from 'next/link'
 
 const n1 = (v, unit = '') =>
@@ -203,6 +204,8 @@ function CageDetails() {
             </div>
           }
         />
+
+        <UnitTabs unitId={cageId} active="overview" unitType={ws?.unitType} />
 
         <div className="flex flex-wrap gap-2">
           <Button href={`/daily-entry?cage=${cageId}`} size="sm">
