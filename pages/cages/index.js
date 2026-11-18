@@ -35,6 +35,8 @@ function CagesManagement() {
   const { user } = useAuth()
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
+  const settingsData = useQuery(api.companies.getEffectiveSettings, user ? {} : 'skip')
+  const targetAbw = Number(settingsData?.settings?.farmRules?.targetHarvestAbwG) || 600
   const loading = cages === undefined
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -57,11 +59,15 @@ function CagesManagement() {
         cage.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (cage.location &&
           cage.location.toLowerCase().includes(searchQuery.toLowerCase()))
+      // Ready to harvest: active cages whose latest sampled ABW reached the company target.
       const matchesStatus =
-        statusFilter === 'all' || cage.status === statusFilter
+        statusFilter === 'all' ||
+        (statusFilter === 'ready_to_harvest'
+          ? cage.status === 'active' && Number(cage.current_weight) >= targetAbw
+          : cage.status === statusFilter)
       return matchesSearch && matchesStatus
     })
-  }, [cages, searchQuery, statusFilter])
+  }, [cages, searchQuery, statusFilter, targetAbw])
 
   const analytics = useMemo(() => {
     if (!cages) {
@@ -350,6 +356,7 @@ function CagesManagement() {
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
             <option value="maintenance">Maintenance</option>
+            <option value="ready_to_harvest">Ready to harvest ({targetAbw} g+)</option>
             <option value="harvesting">Harvesting</option>
             <option value="harvested">Harvested</option>
             <option value="fallow">Fallow</option>

@@ -1,8 +1,11 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
+import { harvestFcr } from './lib/growth'
 
 function toClientHarvestRecord(r: any) {
   return {
@@ -89,6 +92,117 @@ export const get = query({
   },
 })
 
+type CageEffect = {
+  fishRemoved: number
+  countBefore?: number
+  statusBefore?: string
+  closedStockingId?: Id<'stockingHistory'>
+}
+
+/**
+ * Take harvested fish off the cage. A complete harvest empties the cage, marks
+ * it harvested and closes its open stocking cycle; a partial one subtracts the
+ * fish taken. Returns what changed so it can be undone later.
+ */
+async function applyHarvestToCage(
+  ctx: MutationCtx,
+  cageId: Id<'cages'>,
+  harvest: { harvestType?: string; estimatedCount: number; harvestDate: string },
+  warnings: string[],
+): Promise<CageEffect | undefined> {
+  const cage = await ctx.db.get(cageId)
+  if (!cage) return undefined
+  const before = cage.currentCount
+  const taken = Math.max(0, Math.round(harvest.estimatedCount || 0))
+
+  if (harvest.harvestType === 'partial') {
+    if (before != null && taken > before) {
+      warnings.push(
+        `Harvest count ${taken.toLocaleString()} is more than the ${before.toLocaleString()} fish on record for ${cage.name}. Cage count set to 0`,
+      )
+    }
+    const next = before != null ? Math.max(0, before - taken) : undefined
+    await ctx.db.patch(cageId, {
+      ...(next !== undefined ? { currentCount: next } : {}),
+      updatedAt: Date.now(),
+    })
+    return { fishRemoved: before != null ? before - (next ?? 0) : taken, countBefore: before }
+  }
+
+  // Complete harvest: the cycle is over.
+  if (before != null && before !== taken) {
+    const gap = before - taken
+    warnings.push(
+      gap > 0
+        ? `${gap.toLocaleString()} fish on record for ${cage.name} were not in the harvest count (loss, escape or count drift)`
+        : `Harvest count is ${Math.abs(gap).toLocaleString()} more than the fish on record for ${cage.name}`,
+    )
+  }
+  const stockings = await ctx.db
+    .query('stockingHistory')
+    .withIndex('by_cage', (q) => q.eq('cageId', cageId))
+    .collect()
+  const open = stockings
+    .filter((s) => s.status === 'approved' && !s.deletedAt && !s.closedAt)
+    .sort((a, b) => b.stockingDate.localeCompare(a.stockingDate))[0]
+  if (open) await ctx.db.patch(open._id, { closedAt: harvest.harvestDate })
+
+  await ctx.db.patch(cageId, {
+    currentCount: 0,
+    status: 'harvested',
+    updatedAt: Date.now(),
+  })
+  return {
+    fishRemoved: before ?? taken,
+    countBefore: before,
+    statusBefore: cage.status,
+    closedStockingId: open?._id,
+  }
+}
+
+/** Reverse applyHarvestToCage (used when a harvest is edited or deleted). */
+async function undoHarvestOnCage(
+  ctx: MutationCtx,
+  cageId: Id<'cages'>,
+  effect: CageEffect | undefined,
+) {
+  if (!effect) return
+  const cage = await ctx.db.get(cageId)
+  if (!cage) return
+  const patch: Record<string, unknown> = { updatedAt: Date.now() }
+  if (effect.statusBefore !== undefined) {
+    // Only reopen the cage if nothing else has happened to it since.
+    if (cage.status === 'harvested') {
+      patch.status = effect.statusBefore
+      if (effect.countBefore !== undefined) patch.currentCount = effect.countBefore
+    }
+    if (effect.closedStockingId) {
+      const st = await ctx.db.get(effect.closedStockingId)
+      if (st) await ctx.db.patch(effect.closedStockingId, { closedAt: undefined })
+    }
+  } else if (cage.currentCount != null) {
+    patch.currentCount = cage.currentCount + effect.fishRemoved
+  }
+  await ctx.db.patch(cageId, patch as any)
+}
+
+/** FCR for a planned harvest, from feed logged since stocking. */
+export const suggestFcr = query({
+  args: {
+    cageId: v.id('cages'),
+    harvestDate: v.string(),
+    totalWeight: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage) return null
+    const allowed = await listForCompany(user, [cage])
+    if (!allowed.length) return null
+    return await harvestFcr(ctx, cage, args.harvestDate, args.totalWeight)
+  },
+})
+
 export const create = mutation({
   args: {
     cageId: v.id('cages'),
@@ -125,8 +239,11 @@ export const create = mutation({
       farmRules: rules.farmRules,
     })
 
+    const cageEffect = await applyHarvestToCage(ctx, args.cageId, args, warnings)
+
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
+      cageEffect,
       locationId: cage.locationId,
       companyId,
       createdBy: user._id,
@@ -165,7 +282,27 @@ export const update = mutation({
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
 
-    await ctx.db.patch(id, patch)
+    // Changing the type or fish count re-posts the harvest against the cage.
+    const warnings: string[] = []
+    const cageTouched =
+      (patch.harvestType !== undefined && patch.harvestType !== existing.harvestType) ||
+      (patch.estimatedCount !== undefined && patch.estimatedCount !== existing.estimatedCount)
+    let cageEffect = existing.cageEffect
+    if (cageTouched) {
+      await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
+      cageEffect = await applyHarvestToCage(
+        ctx,
+        existing.cageId,
+        {
+          harvestType: patch.harvestType ?? existing.harvestType,
+          estimatedCount: patch.estimatedCount ?? existing.estimatedCount,
+          harvestDate: patch.harvestDate ?? existing.harvestDate,
+        },
+        warnings,
+      )
+    }
+
+    await ctx.db.patch(id, { ...patch, cageEffect })
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'harvestRecords',
@@ -173,7 +310,7 @@ export const update = mutation({
       previousValues: existing,
       newValues: patch,
     })
-    return id
+    return { id, warnings }
   },
 })
 
@@ -194,6 +331,8 @@ export const remove = mutation({
     for (const s of samples) {
       await ctx.db.delete(s._id)
     }
+    // Put the fish back and reopen the cage if this harvest emptied it.
+    await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',

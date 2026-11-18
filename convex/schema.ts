@@ -322,6 +322,15 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
     status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+    /** What this harvest did to its cage, so edits and deletes can undo it. */
+    cageEffect: v.optional(
+      v.object({
+        fishRemoved: v.number(),
+        countBefore: v.optional(v.number()),
+        statusBefore: v.optional(v.string()),
+        closedStockingId: v.optional(v.id('stockingHistory')),
+      }),
+    ),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -410,6 +419,8 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     notes: v.optional(v.string()),
+    /** Set when a complete harvest ends this stocking's production cycle. */
+    closedAt: v.optional(v.string()),
     /** Culture species code (e.g. nile_tilapia). */
     species: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),

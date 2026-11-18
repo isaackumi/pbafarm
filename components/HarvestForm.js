@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { harvestRecordService, cageService } from '../lib/databaseService'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import LocationMetaField from './LocationMetaField'
@@ -41,6 +42,8 @@ const HarvestForm = ({ onComplete }) => {
   const [cages, setCages] = useState([])
   const [cagesReady, setCagesReady] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [fcrCalc, setFcrCalc] = useState(null)
+  const [fcrTouched, setFcrTouched] = useState(false)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -59,6 +62,37 @@ const HarvestForm = ({ onComplete }) => {
 
     fetchCages()
   }, [showToast])
+
+  // Work out FCR from the feed logged since stocking once cage, date and weight are known.
+  useEffect(() => {
+    const weight = parseFloat(formData.totalWeight)
+    if (!formData.cageId || !formData.harvestDate || !(weight > 0)) {
+      setFcrCalc(null)
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(async () => {
+      try {
+        const res = await getConvexHttpClient().query(api.harvest.suggestFcr, {
+          cageId: formData.cageId,
+          harvestDate: formData.harvestDate,
+          totalWeight: weight,
+        })
+        if (cancelled) return
+        setFcrCalc(res)
+        if (res?.fcr != null && !fcrTouched) {
+          setFormData((prev) => ({ ...prev, fcr: String(res.fcr) }))
+        }
+      } catch {
+        if (!cancelled) setFcrCalc(null)
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.cageId, formData.harvestDate, formData.totalWeight])
 
   const handleSizeBreakdownChange = (index, value) => {
     const newSizeBreakdown = [...(formData.sizeBreakdown || [])]
@@ -130,10 +164,16 @@ const HarvestForm = ({ onComplete }) => {
         notes: formData.notes,
       }
 
-      const { error } = await harvestRecordService.createHarvestRecord(harvestData)
+      const { error, warnings } = await harvestRecordService.createHarvestRecord(harvestData)
       if (error) throw error
 
-      showToast('Harvest record saved successfully', 'success')
+      showToast(
+        formData.harvestType === 'complete'
+          ? `Harvest saved. ${selectedCageObject?.name || 'The cage'} is now marked harvested`
+          : 'Partial harvest saved. Fish taken off the cage count',
+        'success',
+      )
+      if (warnings?.length) showToast(warnings.join('. '), 'warning')
       clear()
       setFormData({
         ...HARVEST_DEFAULTS,
@@ -319,11 +359,36 @@ const HarvestForm = ({ onComplete }) => {
                   type="number"
                   name="fcr"
                   value={formData.fcr}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    setFcrTouched(true)
+                    handleChange(e)
+                  }}
                   step="0.01"
                   className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
+                {fcrCalc && (
+                  <p className="mt-1 text-xs text-muted tabular-nums">
+                    {fcrCalc.fcr != null
+                      ? `Calculated ${fcrCalc.fcr.toFixed(2)}: ${Number(fcrCalc.feed_kg).toLocaleString()} kg feed since ${fcrCalc.stocking_date}, ${Number(fcrCalc.stocked_biomass_kg || 0).toLocaleString()} kg stocked`
+                      : 'Not enough feed or growth logged to calculate FCR. Enter it by hand'}
+                    {fcrCalc.fcr != null && fcrTouched && Number(formData.fcr) !== fcrCalc.fcr && (
+                      <>
+                        {' '}
+                        <button
+                          type="button"
+                          className="text-lake underline underline-offset-2"
+                          onClick={() => {
+                            setFcrTouched(false)
+                            setFormData((prev) => ({ ...prev, fcr: String(fcrCalc.fcr) }))
+                          }}
+                        >
+                          Use calculated
+                        </button>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -408,6 +473,13 @@ const HarvestForm = ({ onComplete }) => {
             <p className="text-chart-ink">
               <span className="font-medium text-chart-ink">Harvest Type:</span>{' '}
               {formData.harvestType === 'complete' ? 'Complete Harvest' : 'Partial Harvest'}
+            </p>
+            <p className="md:col-span-2 rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink">
+              {formData.harvestType === 'complete'
+                ? `Saving empties ${selectedCageObject?.name || 'this cage'}: its fish count goes to 0, it is marked harvested and its stocking cycle closes.`
+                : `Saving takes ${Number(formData.estimatedCount || 0).toLocaleString()} fish off ${selectedCageObject?.name || 'this cage'}'s count.`}
+              {selectedCageObject?.current_count != null &&
+                ` On record now: ${Number(selectedCageObject.current_count).toLocaleString()} fish.`}
             </p>
             <p className="text-chart-ink">
               <span className="font-medium text-chart-ink">Total Weight (kg):</span>{' '}
