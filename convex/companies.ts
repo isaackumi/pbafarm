@@ -257,6 +257,9 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         stockingRules.enforceCageCapacity ??
         stockingRules.enforce_cage_capacity ??
         true,
+      requireDifferentApprover:
+        stockingRules.requireDifferentApprover === true ||
+        stockingRules.require_different_approver === true,
       minInitialAbwG: numOr(
         stockingRules.minInitialAbwG ?? stockingRules.min_initial_abw_g,
         DEFAULT_SETTINGS.stockingRules.minInitialAbwG,

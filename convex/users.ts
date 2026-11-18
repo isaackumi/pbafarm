@@ -25,7 +25,7 @@ import { siteUrl } from './lib/email'
 /** Invite links stay valid for 7 days. */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 import type { Doc, Id } from './_generated/dataModel'
-import { requireAccount, requireMember } from './lib/permissions'
+import { isPermission, requireAccount, requireMember } from './lib/permissions'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -749,6 +749,16 @@ export const declineJoinRequest = mutation({
       newValues: { email: invite.email, requestedByUserId: invite.requestedByUserId },
     })
     return invite._id
+  },
+})
+
+/** For actions: the caller, refused unless they hold the permission (requireMember). */
+export const authorizedMember = internalQuery({
+  args: { permission: v.string() },
+  handler: async (ctx, { permission }) => {
+    if (!isPermission(permission)) throw new Error(`Unknown permission: ${permission}`)
+    const m = await requireMember(ctx, { permission })
+    return { _id: m.user._id, role: m.user.role ?? 'user', companyId: m.user.companyId }
   },
 })
 

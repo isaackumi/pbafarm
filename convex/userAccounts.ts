@@ -26,11 +26,9 @@ export const createWithPassword = action({
   handler: async (ctx, args) => {
     // Same refusals as every other function (inactive, temporary password,
     // company not approved).
-    const me = await ctx.runQuery(internal.users.authorizedCaller, {})
-    const myRole = me.role ?? 'user'
-    if (myRole !== 'admin' && myRole !== 'super_admin') {
-      throw new Error('Insufficient permissions')
-    }
+    const me = await ctx.runQuery(internal.users.authorizedMember, {
+      permission: 'org.members.manage',
+    })
     if (!me.companyId) throw new Error('No company linked')
 
     const email = args.email.trim().toLowerCase()

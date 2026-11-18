@@ -19,7 +19,7 @@ import {
   sourceCagePatchAfterTransfer,
 } from './lib/fishTransferLogic'
 import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
-import { requireMember } from './lib/permissions'
+import { assertDifferentApprover, requireMember } from './lib/permissions'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -471,6 +471,7 @@ export const approveFishTransfer = mutation({
     if (transfer.status !== 'pending_approval') {
       throw new Error('Only pending transfers can be approved')
     }
+    await assertDifferentApprover(ctx, user, transfer)
 
     const now = Date.now()
     await ctx.db.patch(id, {

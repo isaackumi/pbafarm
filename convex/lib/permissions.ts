@@ -271,3 +271,22 @@ export async function requirePlatformAdmin(ctx: Ctx): Promise<Doc<'users'>> {
   if ((user.role ?? 'user') !== 'super_admin') forbidden('platform.admin')
   return user
 }
+
+/**
+ * Segregation of duties (PERM-005): when the organization turns on
+ * stockingRules.requireDifferentApprover, the person who requested a
+ * stocking, top-up or transfer cannot approve it. Off by default.
+ */
+export async function assertDifferentApprover(
+  ctx: Ctx,
+  approver: Doc<'users'>,
+  record: { createdBy?: Id<'users'>; companyId?: Id<'companies'> },
+) {
+  if (!record.createdBy || record.createdBy !== approver._id || !record.companyId) return
+  const company = await ctx.db.get(record.companyId)
+  if (company?.settings?.stockingRules?.requireDifferentApprover === true) {
+    throw userError('FORBIDDEN', 'Someone other than the requester must approve this', {
+      reason: 'SAME_APPROVER',
+    })
+  }
+}

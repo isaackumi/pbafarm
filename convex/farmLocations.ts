@@ -83,7 +83,8 @@ export const list = query({
     let rows = await scopedRows(ctx, user, 'farmLocations')
     rows = await listForCompany(user, rows)
 
-    if ((user.role ?? 'user') !== 'super_admin' && (user.role ?? 'user') !== 'admin') {
+    // Members limited to some sites see only those (PERM-004).
+    if ((user.role ?? 'user') !== 'super_admin') {
       const assigned = user.locationIds
       if (assigned && assigned.length > 0) {
         rows = rows.filter((r) => assigned.includes(r._id))

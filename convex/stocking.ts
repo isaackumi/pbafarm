@@ -13,7 +13,7 @@ import {
 import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
 import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
-import { assertUserCan, requireMember } from './lib/permissions'
+import { assertDifferentApprover, assertUserCan, requireMember } from './lib/permissions'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -464,6 +464,7 @@ export const approveStocking = mutation({
     if (stocking.status !== 'pending_approval') {
       throw new Error('Only pending stockings can be approved')
     }
+    await assertDifferentApprover(ctx, user, stocking)
     await assertNotTransferLinked(ctx, { stockingId: id })
 
     // Re-check against the cage as it is now: it may have been stocked since
@@ -649,6 +650,7 @@ export const approveTopup = mutation({
     if (topup.status !== 'pending_approval') {
       throw new Error('Only pending topups can be approved')
     }
+    await assertDifferentApprover(ctx, user, topup)
     await assertNotTransferLinked(ctx, { topupId: id })
 
     const stocking = await ctx.db.get(topup.stockingId)

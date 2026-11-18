@@ -26,6 +26,8 @@ export const DEFAULT_SETTINGS = {
     requireApprovalForStocking: true,
     requireApprovalForTopup: true,
     requireApprovalForFishTransfer: true,
+    /** Segregation of duties: requester cannot approve (PERM-005). */
+    requireDifferentApprover: false,
     enforceCageCapacity: true,
     /** Fingerlings through small juveniles (grams). */
     minInitialAbwG: 1,
@@ -71,6 +73,7 @@ export type EffectiveSettings = {
     requireApprovalForStocking: boolean
     requireApprovalForTopup: boolean
     requireApprovalForFishTransfer: boolean
+    requireDifferentApprover: boolean
     enforceCageCapacity: boolean
     minInitialAbwG: number
     maxInitialAbwG: number

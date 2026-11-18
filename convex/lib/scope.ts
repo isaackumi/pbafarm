@@ -33,6 +33,30 @@ export function tenantScope(user: Doc<'users'>): TenantScope {
   return { kind: 'none' }
 }
 
+/**
+ * Site scope (PERM-004): a member limited to some sites has them mirrored in
+ * users.locationIds for the active organization (lib/memberships). Rows tied
+ * to a site outside that list are dropped; rows tied to no site (feed types,
+ * customers, company-level records) stay visible. Transfers count when either
+ * end is in scope. null = every site.
+ */
+export function siteScopeOf(user: Doc<'users'>): ReadonlySet<string> | null {
+  if ((user.role ?? 'user') === 'super_admin') return null
+  const ids = user.locationIds
+  return ids && ids.length > 0 ? new Set(ids) : null
+}
+
+export function rowInSiteScope(scope: ReadonlySet<string> | null, row: any): boolean {
+  if (!scope || !row) return true
+  const sites = [row.locationId, row.sourceLocationId, row.destinationLocationId].filter(Boolean)
+  return sites.length === 0 || sites.some((id: string) => scope.has(id))
+}
+
+export function inSiteScope<T>(user: Doc<'users'>, rows: T[]): T[] {
+  const scope = siteScopeOf(user)
+  return scope ? rows.filter((r) => rowInSiteScope(scope, r)) : rows
+}
+
 /** Tables with a `by_company` index on `companyId`. */
 export type CompanyTable =
   | 'cages'
@@ -96,17 +120,20 @@ export async function scopedRows<T extends CompanyTable>(
   if (scope.kind === 'platform') {
     rows = await q.take(PLATFORM_SCAN_LIMIT)
   } else if (opts.locationId && COMPANY_LOCATION_INDEX.has(table)) {
-    return await q
-      .withIndex('by_company_location', (ix: any) =>
-        ix.eq('companyId', scope.companyId).eq('locationId', opts.locationId),
-      )
-      .collect()
+    return inSiteScope(
+      user,
+      await q
+        .withIndex('by_company_location', (ix: any) =>
+          ix.eq('companyId', scope.companyId).eq('locationId', opts.locationId),
+        )
+        .collect(),
+    )
   } else {
     rows = await q
       .withIndex('by_company', (ix: any) => ix.eq('companyId', scope.companyId))
       .collect()
   }
-  return byLocation(rows as any[], opts.locationId) as Doc<T>[]
+  return inSiteScope(user, byLocation(rows as any[], opts.locationId)) as Doc<T>[]
 }
 
 /** Date-indexed tables: company index, platform index and the date field. */
@@ -163,7 +190,7 @@ export async function scopedRowsInRange<T extends DatedTable>(
       ? Math.min(opts.limit ?? PLATFORM_SCAN_LIMIT, PLATFORM_SCAN_LIMIT)
       : opts.limit
   const rows: Doc<T>[] = cap ? await ordered.take(cap) : await ordered.collect()
-  return byLocation(rows as any[], opts.locationId) as Doc<T>[]
+  return inSiteScope(user, byLocation(rows as any[], opts.locationId)) as Doc<T>[]
 }
 
 const EMPTY_PAGE = { page: [], isDone: true, continueCursor: '' }
@@ -193,7 +220,8 @@ export async function scopedPageInRange<T extends DatedTable>(
     scope.kind === 'platform'
       ? q.withIndex(platform, range)
       : q.withIndex(company, (ix: any) => range(ix.eq('companyId', scope.companyId)))
-  return await indexed.order('desc').paginate(paginationOpts)
+  const page = await indexed.order('desc').paginate(paginationOpts)
+  return { ...page, page: inSiteScope(user, page.page) }
 }
 
 /** One page of the caller's company rows, newest first (`by_company`). */
@@ -210,7 +238,8 @@ export async function scopedPage<T extends CompanyTable>(
     scope.kind === 'platform'
       ? q
       : q.withIndex('by_company', (ix: any) => ix.eq('companyId', scope.companyId))
-  return await indexed.order('desc').paginate(paginationOpts)
+  const page = await indexed.order('desc').paginate(paginationOpts)
+  return { ...page, page: inSiteScope(user, page.page) }
 }
 
 /** Tables with a `by_company_and_status` index. */
@@ -231,11 +260,14 @@ export async function scopedRowsByStatus<T extends StatusTable>(
       .withIndex('by_status', (ix: any) => ix.eq('status', status))
       .take(PLATFORM_SCAN_LIMIT)
   }
-  return await q
-    .withIndex('by_company_and_status', (ix: any) =>
-      ix.eq('companyId', scope.companyId).eq('status', status),
-    )
-    .collect()
+  return inSiteScope(
+    user,
+    await q
+      .withIndex('by_company_and_status', (ix: any) =>
+        ix.eq('companyId', scope.companyId).eq('status', status),
+      )
+      .collect(),
+  )
 }
 
 /**
