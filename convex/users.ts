@@ -9,6 +9,21 @@ import { maskPhone, normalizePhone } from './lib/phone'
 import { messagingPrefs } from './messaging/channels'
 import { channelAvailable } from './messaging/deliver'
 import { securityPolicy } from './messaging/policy'
+import { internal } from './_generated/api'
+import {
+  getMembership,
+  isRoleKey,
+  legacyRoleFromKey,
+  leaveActiveCompany,
+  otherActiveMemberships,
+  roleKeyFromLegacy,
+  upsertMembership,
+} from './lib/memberships'
+import { randomToken, sha256Hex } from './lib/tokens'
+import { siteUrl } from './lib/email'
+
+/** Invite links stay valid for 7 days. */
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 import type { Doc, Id } from './_generated/dataModel'
 
 /** Invite rows written before `status` existed are pending. */
@@ -278,6 +293,22 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, next)
+    // Dual-write the role to the membership of the caller's company (M2).
+    const roleCompany = ((me.role ?? 'user') === 'super_admin' ? target.companyId : me.companyId)
+    if (patch.role && patch.role !== 'super_admin' && roleCompany) {
+      const m = await getMembership(ctx, id, roleCompany)
+      if (m || target.companyId === roleCompany) {
+        // Keep owner/admin when the legacy role is still admin; otherwise map.
+        const keep = m && legacyRoleFromKey(m.roleKey) === patch.role
+        await upsertMembership(ctx, {
+          userId: id,
+          companyId: roleCompany,
+          roleKey: keep ? m.roleKey : roleKeyFromLegacy(patch.role),
+          actorId: me._id,
+          ...(m ? {} : { status: target.active === false ? ('suspended' as const) : ('active' as const) }),
+        })
+      }
+    }
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'users',
@@ -340,16 +371,21 @@ export const setPhone = mutation({
 })
 
 /**
- * Invite by email into the caller's company. Never changes an existing
- * account: it only records a pending invite (one per company + email). The
- * invitee asks to join (claimInvite) and a company admin approves the request
- * (approveJoinRequest). Super_admin accounts cannot be invited.
+ * Invite by email into the caller's company (ORG-003). Never changes an
+ * existing account: it records a pending invite with a single-use link that
+ * expires in 7 days, emails the link, and returns it so the admin can share it
+ * directly. The invitee accepts at /invite/<token> after verifying their email
+ * (memberships.acceptInvite). People who already belong to another
+ * organization can be invited too: they gain a second membership.
+ * Super_admin accounts cannot be invited.
  */
 export const invite = mutation({
   args: {
     email: v.string(),
     name: v.optional(v.string()),
     role: v.optional(v.union(v.literal('user'), v.literal('admin'))),
+    /** Role template (admin | manager | field_staff | viewer); overrides `role`. */
+    roleKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx)
@@ -358,7 +394,12 @@ export const invite = mutation({
     const companyId = me.companyId
     const email = args.email.trim().toLowerCase()
     if (!email) throw new Error('Email is required')
-    const role = args.role || 'user'
+    if (args.roleKey !== undefined && !isRoleKey(args.roleKey)) {
+      throw new Error(`Unknown role: ${args.roleKey}`)
+    }
+    if (args.roleKey === 'owner') throw new Error('Invite as admin, then make them an owner')
+    const roleKey = args.roleKey ?? roleKeyFromLegacy(args.role || 'user')
+    const role = legacyRoleFromKey(roleKey)
 
     const existing = await ctx.db
       .query('users')
@@ -369,61 +410,76 @@ export const invite = mutation({
       if ((existing.role ?? 'user') === 'super_admin') {
         throw new Error('This account cannot be invited')
       }
-      if (existing.companyId === companyId) {
+      const membership = await getMembership(ctx, existing._id, companyId)
+      if (
+        membership?.status === 'active' ||
+        (!membership && existing.companyId === companyId)
+      ) {
         throw new Error('This person is already a member of your company')
-      }
-      if (existing.companyId) {
-        throw new Error('User already belongs to another company')
       }
     }
 
     const now = Date.now()
+    const token = randomToken()
+    const tokenHash = await sha256Hex(token)
+    const expiresAt = now + INVITE_TTL_MS
     const prior = await ctx.db
       .query('userInvites')
       .withIndex('by_company_and_email', (q) =>
         q.eq('companyId', companyId).eq('email', email),
       )
       .first()
+    const fields = {
+      role,
+      roleKey,
+      invitedBy: me._id,
+      createdAt: now,
+      status: 'pending' as const,
+      tokenHash,
+      expiresAt,
+    }
     let inviteId: Id<'userInvites'>
     if (prior) {
       inviteId = prior._id
       await ctx.db.patch(prior._id, {
-        role,
-        invitedBy: me._id,
-        createdAt: now,
-        status: 'pending',
+        ...fields,
         requestedByUserId: undefined,
         requestedAt: undefined,
         decidedBy: undefined,
         decidedAt: undefined,
+        acceptedBy: undefined,
+        acceptedAt: undefined,
       })
     } else {
-      inviteId = await ctx.db.insert('userInvites', {
-        email,
-        role,
-        companyId,
-        invitedBy: me._id,
-        createdAt: now,
-        status: 'pending',
-      })
+      inviteId = await ctx.db.insert('userInvites', { email, companyId, ...fields })
     }
+
+    const company = await ctx.db.get(companyId)
+    const inviteUrl = `${siteUrl()}/invite/${token}`
+    const orgName = company?.name ?? 'an organization'
+    await ctx.scheduler.runAfter(0, internal.emails.send, {
+      to: email,
+      subject: `You are invited to ${orgName} on PBA Farm`,
+      text:
+        `${me.name || me.email || 'An admin'} invited you to join ${orgName} on PBA Farm.\n\n` +
+        `Open this link to accept (valid for 7 days, single use):\n${inviteUrl}\n\n` +
+        `If you do not have an account yet, sign up with ${email} first.`,
+    })
+
     await logAudit(ctx, {
       actionType: 'invite',
       tableName: 'userInvites',
       recordId: inviteId,
-      newValues: { email, role, companyId, existingUser: !!existing },
+      newValues: { email, role, roleKey, companyId, existingUser: !!existing, expiresAt },
     })
-    return existing
-      ? {
-          status: 'invited' as const,
-          message:
-            'Invite saved. They will see it after signing in and can ask to join. Approve it under Pending join requests.',
-        }
-      : {
-          status: 'pending_signup' as const,
-          message:
-            'Invite saved. Once they sign up with this email they can ask to join. Approve it under Pending join requests.',
-        }
+    return {
+      status: existing ? ('invited' as const) : ('pending_signup' as const),
+      inviteUrl,
+      expiresAt,
+      message: existing
+        ? 'Invite sent. They accept it from the link in the email, or share the link below.'
+        : 'Invite sent. They sign up with this email, then open the link to join.',
+    }
   },
 })
 
@@ -442,14 +498,35 @@ export const deactivate = mutation({
     if (target._id === me._id) throw new Error('Cannot deactivate yourself')
     assertMayModify(me, target)
     await assertKeepsAnAdmin(ctx, target)
-    await ctx.db.patch(id, { active: false })
-    // Sign them out everywhere now, not when their sessions expire.
-    const sessionsRevoked = await revokeUserSessions(ctx, id)
+    // A member of other organizations keeps their account: only this
+    // company's membership is suspended (ORG-002). Otherwise the account is
+    // deactivated as before.
+    const companyId = ((me.role ?? 'user') === 'super_admin' ? target.companyId : me.companyId)
+    const others = companyId ? await otherActiveMemberships(ctx, id, companyId) : []
+    if (companyId) {
+      await upsertMembership(ctx, {
+        userId: id,
+        companyId,
+        status: 'suspended',
+        actorId: me._id,
+        ...((await getMembership(ctx, id, companyId))
+          ? {}
+          : { roleKey: roleKeyFromLegacy(target.role) }),
+      })
+    }
+    let sessionsRevoked = 0
+    if (others.length > 0 && (me.role ?? 'user') !== 'super_admin' && companyId) {
+      await leaveActiveCompany(ctx, id, companyId)
+    } else {
+      await ctx.db.patch(id, { active: false })
+      // Sign them out everywhere now, not when their sessions expire.
+      sessionsRevoked = await revokeUserSessions(ctx, id)
+    }
     await logAudit(ctx, {
       actionType: 'deactivate',
       tableName: 'users',
       recordId: id,
-      newValues: { active: false, sessionsRevoked },
+      newValues: { active: false, sessionsRevoked, membershipOnly: others.length > 0 },
     })
     return id
   },
@@ -469,6 +546,19 @@ export const reactivate = mutation({
     }
     assertMayModify(me, target)
     await ctx.db.patch(id, { active: true })
+    const companyId = ((me.role ?? 'user') === 'super_admin' ? target.companyId : me.companyId)
+    if (companyId) {
+      const m = await getMembership(ctx, id, companyId)
+      if (m || target.companyId === companyId) {
+        await upsertMembership(ctx, {
+          userId: id,
+          companyId,
+          status: 'active',
+          actorId: me._id,
+          ...(m ? {} : { roleKey: roleKeyFromLegacy(target.role) }),
+        })
+      }
+    }
     await logAudit(ctx, {
       actionType: 'reactivate',
       tableName: 'users',
@@ -618,11 +708,20 @@ export const approveJoinRequest = mutation({
     if ((target.role ?? 'user') === 'super_admin') {
       throw new Error('This account cannot be invited')
     }
-    if (target.companyId) throw new Error('User already belongs to a company')
     if ((target.email ?? '').toLowerCase() !== invite.email) {
       throw new Error('Join request does not match the invited email')
     }
-    await ctx.db.patch(target._id, { companyId: invite.companyId, role: invite.role })
+    await upsertMembership(ctx, {
+      userId: target._id,
+      companyId: invite.companyId,
+      roleKey: invite.roleKey ?? roleKeyFromLegacy(invite.role),
+      status: 'active',
+      actorId: me._id,
+    })
+    // Becomes their active organization only if they have none yet.
+    if (!target.companyId) {
+      await ctx.db.patch(target._id, { companyId: invite.companyId, role: invite.role })
+    }
     await ctx.db.patch(invite._id, {
       status: 'accepted',
       decidedBy: me._id,
@@ -718,6 +817,13 @@ export const finalizeCreatedUser = internalMutation({
       mustChangePassword: true,
       ...(args.name ? { name: args.name } : {}),
     })
+    await upsertMembership(ctx, {
+      userId: args.userId,
+      companyId: args.companyId,
+      roleKey: roleKeyFromLegacy(args.role),
+      status: 'active',
+      actorId: args.actorId,
+    })
     // Clear this company's invite for the email (other companies' invites stay)
     if (user.email) {
       const invite = await ctx.db
@@ -750,6 +856,14 @@ export const clearMustChangePassword = internalMutation({
     const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')
     await ctx.db.patch(userId, { mustChangePassword: false })
+    // Called after every password change (userAccounts.changePassword).
+    await insertAudit(ctx, {
+      userId,
+      companyId: user.companyId,
+      actionType: 'password_change',
+      tableName: 'users',
+      recordId: userId,
+    })
     return userId
   },
 })

@@ -2,6 +2,7 @@
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import UserManagement from '../components/UserManagement'
+import MembersPanel from '../components/MembersPanel'
 import { PageHeader, FormPage } from '../components/ui'
 
 export default function UsersPage() {
@@ -21,7 +22,10 @@ export default function UsersPage() {
               { label: 'Approvals', href: '/approvals' },
             ]}
           />
-          <UserManagement />
+          <div className="space-y-6">
+            <MembersPanel />
+            <UserManagement />
+          </div>
         </FormPage>
       </Layout>
     </ProtectedRoute>

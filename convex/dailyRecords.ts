@@ -802,6 +802,13 @@ export const createMany = mutation({
       })
       ids.push(id)
     }
+    if (ids.length > 0) {
+      await logAudit(ctx, {
+        actionType: 'bulk_create',
+        tableName: 'dailyRecords',
+        newValues: { count: ids.length, skipped: records.length - ids.length, ids },
+      })
+    }
     return ids
   },
 })
