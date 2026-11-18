@@ -68,6 +68,36 @@ export function sgr(abwStartG: number, abwEndG: number, days: number): number | 
   return ((Math.log(abwEndG) - Math.log(abwStartG)) / days) * 100
 }
 
+/**
+ * ABW after `days` at a constant SGR: the {@link sgr} definition solved for
+ * the end weight (forecasts, target curves; ANLY-003).
+ */
+export function projectAbw(abwG: number, sgrPctDay: number, days: number): number | null {
+  if (!(abwG > 0) || !Number.isFinite(sgrPctDay) || !(days >= 0)) return null
+  return abwG * Math.exp((sgrPctDay / 100) * days)
+}
+
+/**
+ * Days to grow from `abwG` to `targetG` at a constant SGR: the {@link sgr}
+ * definition solved for the days. 0 when already there; null without growth.
+ */
+export function daysToReach(abwG: number, targetG: number, sgrPctDay: number): number | null {
+  if (!(abwG > 0) || !(targetG > 0)) return null
+  if (abwG >= targetG) return 0
+  if (!(sgrPctDay > 0)) return null
+  return Math.ceil(((Math.log(targetG) - Math.log(abwG)) / sgrPctDay) * 100)
+}
+
+/**
+ * Fish left after `days` losing {@link dailyMortalityPct} of the stock each
+ * day (forecasts). Without a rate the count stays.
+ */
+export function projectCount(count: number, dailyPct: number | null, days: number): number {
+  if (!(count > 0)) return 0
+  const rate = dailyPct != null && dailyPct > 0 ? Math.min(dailyPct, 100) / 100 : 0
+  return Math.round(count * Math.pow(1 - rate, Math.max(0, days)))
+}
+
 /** Average daily gain, grams per fish per day (negative growth allowed). */
 export function adg(abwStartG: number, abwEndG: number, days: number): number | null {
   if (!(abwStartG > 0) || !(abwEndG > 0) || !(days > 0)) return null
