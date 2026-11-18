@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Trash2, Plus, Copy, CloudOff, RefreshCw, QrCode } from 'lucide-react'
+import { Trash2, Plus, Copy, CloudOff, RefreshCw, QrCode, ScanLine, TriangleAlert } from 'lucide-react'
 import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
 import { dailyRecordService } from '../lib/databaseService'
@@ -17,8 +17,8 @@ import {
 import {
   Button,
   FormCard,
-  FormActions,
   FormSection,
+  StickyActions,
   Field,
   Input,
   Select,
@@ -32,6 +32,8 @@ import { useToast } from './Toast'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
+import { parseCageScan } from '../lib/qrTarget'
+import QrScanner from './QrScanner'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const dayBefore = (iso) => {
@@ -84,6 +86,9 @@ const DailyUploadPage = () => {
   const [lookupsReady, setLookupsReady] = useState(false)
   const [outbox, setOutbox] = useState([])
   const [online, setOnline] = useState(true)
+  const [scanOpen, setScanOpen] = useState(false)
+  // Blank feed is "not recorded", not 0 kg: the first Save asks (Q-016).
+  const [confirmBlank, setConfirmBlank] = useState(false)
   const prefilledFor = useRef(null)
   const { showToast } = useToast()
   const { hasRole, user } = useAuth()
@@ -161,11 +166,13 @@ const DailyUploadPage = () => {
 
   // ---- lines -------------------------------------------------------------
 
-  const setLines = (updater) =>
+  const setLines = (updater) => {
+    setConfirmBlank(false)
     setFormData((prev) => {
       const current = Array.isArray(prev.lines) ? prev.lines : []
       return { ...prev, lines: typeof updater === 'function' ? updater(current) : updater }
     })
+  }
 
   const updateLine = (key, field, value) => {
     setErrorLine(null)
@@ -211,6 +218,22 @@ const DailyUploadPage = () => {
   }
 
   const openCages = cages.filter((c) => !loggedCageIds.has(idOf(c)))
+
+  const onScan = (text) => {
+    setScanOpen(false)
+    const hit = parseCageScan(text, cages)
+    if (!hit) {
+      showToast('No cage on this farm matches that label', 'error')
+      return
+    }
+    const fresh = hit.cageIds.filter((id) => !loggedCageIds.has(id))
+    if (!fresh.length) {
+      showToast(`${cageName(hit.cageIds[0])} is already logged for ${formData.date}`, 'info')
+      return
+    }
+    addCages(fresh)
+    showToast(`Added ${fresh.map(cageName).join(', ')}`, 'success')
+  }
 
   const selectAllCages = () => addCages(openCages.map(idOf))
 
@@ -307,6 +330,10 @@ const DailyUploadPage = () => {
   const shortages = stockCheck.filter((s) => s.short)
   const overrideActive = hasRole('admin') && formData.allowNegative
 
+  const blankFeedLines = lines.filter(
+    (l) => l.cageId && (l.feedQty === '' || l.feedQty == null),
+  )
+
   const totals = lines.reduce(
     (acc, l) => ({ feed: acc.feed + kgOf(l), mort: acc.mort + num(l.mortality) }),
     { feed: 0, mort: 0 },
@@ -401,6 +428,10 @@ const DailyUploadPage = () => {
     setError(problem)
     setErrorLine(lineIdx)
     if (problem) return
+    if (blankFeedLines.length && !confirmBlank) {
+      setConfirmBlank(true)
+      return
+    }
 
     const payload = {
       date: formData.date,
@@ -528,6 +559,8 @@ const DailyUploadPage = () => {
           )}
         </div>
       )}
+
+      <QrScanner open={scanOpen} onClose={() => setScanOpen(false)} onResult={onScan} />
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <FormSection title="Date and defaults">
@@ -667,6 +700,10 @@ const DailyUploadPage = () => {
                     Clear all
                   </Button>
                 )}
+                <Button variant="secondary" size="sm" onClick={() => setScanOpen(true)}>
+                  <ScanLine size={14} aria-hidden />
+                  Scan cage
+                </Button>
                 <Button variant="ghost" size="sm" href="/cages/qr-codes" className="ml-auto">
                   <QrCode size={14} aria-hidden />
                   Cage QR codes
@@ -683,7 +720,7 @@ const DailyUploadPage = () => {
 
         <FormSection
           title={`Lines${lines.length ? ` (${lines.length})` : ''}`}
-          description="Feed deducts stock through the inventory ledger. Leave a field blank for 0"
+          description="Feed deducts stock through the inventory ledger. Blank feed means not recorded; blank mortality means none"
         >
           {lines.length === 0 ? (
             <p className="text-sm text-muted">No cages selected yet</p>
@@ -693,31 +730,85 @@ const DailyUploadPage = () => {
                 const mort = num(line.mortality)
                 const kg = kgOf(line)
                 const flagged = errorLine === i
+                const blankFeed = Boolean(line.cageId) && (line.feedQty === '' || line.feedQty == null)
                 return (
                   <div
                     key={line.key}
-                    className={`rounded-xl border p-4 grid grid-cols-2 md:grid-cols-12 gap-3 items-end ${
+                    className={`rounded-xl border p-3 sm:p-4 grid grid-cols-2 md:grid-cols-12 gap-x-3 gap-y-2 items-end ${
                       flagged ? 'border-signal bg-signal/5' : 'border-foam-deep'
                     }`}
                   >
-                    <Field label={`${i + 1}. Cage`} htmlFor={`cage-${line.key}`} className="col-span-2 md:col-span-3">
-                      <Select
-                        id={`cage-${line.key}`}
-                        value={line.cageId}
-                        onChange={(e) => updateLine(line.key, 'cageId', e.target.value)}
+                    <div className="col-span-2 md:col-span-12 flex items-center gap-2 min-h-12">
+                      {line.cageId ? (
+                        <p className="flex-1 min-w-0 truncate font-medium text-chart-ink">
+                          <span className="text-muted tabular-nums mr-1.5">{i + 1}.</span>
+                          {cageName(line.cageId)}
+                        </p>
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <label htmlFor={`cage-${line.key}`} className="sr-only">
+                            Line {i + 1} cage
+                          </label>
+                          <Select
+                            id={`cage-${line.key}`}
+                            value={line.cageId}
+                            onChange={(e) => updateLine(line.key, 'cageId', e.target.value)}
+                          >
+                            <option value="">Choose a cage</option>
+                            {cages.map((c) => {
+                              const id = idOf(c)
+                              const taken = selectedCageIds.has(id) || loggedCageIds.has(id)
+                              return (
+                                <option key={id} value={id} disabled={taken}>
+                                  {c.name}
+                                </option>
+                              )
+                            })}
+                          </Select>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeLine(line.key)}
+                        aria-label={`Remove line ${i + 1}${line.cageId ? ` (${cageName(line.cageId)})` : ''}`}
+                        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-signal/10 hover:text-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                       >
-                        <option value="">Choose a cage</option>
-                        {cages.map((c) => {
-                          const id = idOf(c)
-                          const taken =
-                            (id !== line.cageId && selectedCageIds.has(id)) || loggedCageIds.has(id)
-                          return (
-                            <option key={id} value={id} disabled={taken}>
-                              {c.name}
-                            </option>
-                          )
-                        })}
-                      </Select>
+                        <Trash2 size={18} aria-hidden />
+                      </button>
+                    </div>
+                    <Field
+                      label={unit === 'bags' ? 'Feed (bags)' : 'Feed (kg)'}
+                      htmlFor={`qty-${line.key}`}
+                      hint={unit === 'bags' && kg > 0 ? `${kg.toFixed(1)} kg` : undefined}
+                      error={confirmBlank && blankFeed ? 'Not recorded' : undefined}
+                      className="md:col-span-3"
+                    >
+                      <Input
+                        id={`qty-${line.key}`}
+                        type="number"
+                        inputMode="decimal"
+                        enterKeyHint="next"
+                        step={unit === 'bags' ? '0.5' : '0.1'}
+                        min="0"
+                        placeholder="Not recorded"
+                        value={line.feedQty}
+                        onChange={(e) => updateLine(line.key, 'feedQty', e.target.value)}
+                        className="tabular-nums"
+                      />
+                    </Field>
+                    <Field label="Mortality" htmlFor={`mort-${line.key}`} className="md:col-span-3">
+                      <Input
+                        id={`mort-${line.key}`}
+                        type="number"
+                        inputMode="numeric"
+                        enterKeyHint="next"
+                        step="1"
+                        min="0"
+                        placeholder="0"
+                        value={line.mortality}
+                        onChange={(e) => updateLine(line.key, 'mortality', e.target.value)}
+                        className="tabular-nums"
+                      />
                     </Field>
                     <Field label="Feed type" htmlFor={`feed-${line.key}`} className="col-span-2 md:col-span-3">
                       <Select
@@ -733,48 +824,6 @@ const DailyUploadPage = () => {
                         ))}
                       </Select>
                     </Field>
-                    <Field
-                      label={unit === 'bags' ? 'Feed (bags)' : 'Feed (kg)'}
-                      htmlFor={`qty-${line.key}`}
-                      hint={unit === 'bags' && kg > 0 ? `${kg.toFixed(1)} kg` : undefined}
-                      className="md:col-span-2"
-                    >
-                      <Input
-                        id={`qty-${line.key}`}
-                        type="number"
-                        inputMode="decimal"
-                        step={unit === 'bags' ? '0.5' : '0.1'}
-                        min="0"
-                        placeholder="0"
-                        value={line.feedQty}
-                        onChange={(e) => updateLine(line.key, 'feedQty', e.target.value)}
-                        className="tabular-nums"
-                      />
-                    </Field>
-                    <Field label="Mortality" htmlFor={`mort-${line.key}`} className="md:col-span-2">
-                      <Input
-                        id={`mort-${line.key}`}
-                        type="number"
-                        inputMode="numeric"
-                        step="1"
-                        min="0"
-                        placeholder="0"
-                        value={line.mortality}
-                        onChange={(e) => updateLine(line.key, 'mortality', e.target.value)}
-                        className="tabular-nums"
-                      />
-                    </Field>
-                    <div className="col-span-2 md:col-span-2 flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLine(line.key)}
-                        aria-label={`Remove line ${i + 1}`}
-                      >
-                        <Trash2 size={16} aria-hidden />
-                        Remove
-                      </Button>
-                    </div>
                     {mort > 0 && (
                       <Field label="Cause of death" htmlFor={`cause-${line.key}`} className="col-span-2 md:col-span-3">
                         <Select
@@ -792,7 +841,7 @@ const DailyUploadPage = () => {
                     )}
                     {formData.showWater && (
                       <>
-                        <Field label="DO (mg/L)" htmlFor={`do-${line.key}`} className="md:col-span-2">
+                        <Field label="DO (mg/L)" htmlFor={`do-${line.key}`} className="md:col-span-3">
                           <Input
                             id={`do-${line.key}`}
                             type="number"
@@ -804,7 +853,7 @@ const DailyUploadPage = () => {
                             className="tabular-nums"
                           />
                         </Field>
-                        <Field label="Temp (°C)" htmlFor={`temp-${line.key}`} className="md:col-span-2">
+                        <Field label="Temp (°C)" htmlFor={`temp-${line.key}`} className="md:col-span-3">
                           <Input
                             id={`temp-${line.key}`}
                             type="number"
@@ -817,14 +866,20 @@ const DailyUploadPage = () => {
                         </Field>
                       </>
                     )}
-                    <Field label="Notes" htmlFor={`notes-${line.key}`} className="col-span-2 md:col-span-12">
+                    <details className="col-span-2 md:col-span-12" open={Boolean(line.notes) || undefined}>
+                      <summary className="inline-flex min-h-12 sm:min-h-9 cursor-pointer items-center text-sm text-muted hover:text-chart-ink select-none">
+                        {line.notes ? 'Note' : 'Add a note'}
+                      </summary>
+                      <label htmlFor={`notes-${line.key}`} className="sr-only">
+                        Note for line {i + 1}
+                      </label>
                       <Input
                         id={`notes-${line.key}`}
                         value={line.notes}
                         onChange={(e) => updateLine(line.key, 'notes', e.target.value)}
                         placeholder="Feeding response, weather, anything unusual"
                       />
-                    </Field>
+                    </details>
                   </div>
                 )
               })}
@@ -894,10 +949,19 @@ const DailyUploadPage = () => {
           )}
         </FormSection>
 
-        <FormActions>
+        <StickyActions>
+          {confirmBlank && blankFeedLines.length > 0 && (
+            <p role="alert" className="basis-full flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+              <span>
+                No feed entered for {blankFeedLines.map((l) => cageName(l.cageId)).join(', ')}.
+                They will be saved as 0 kg fed. Enter the amount, or save anyway.
+              </span>
+            </p>
+          )}
           {lines.length > 0 && (
             <p className="text-sm text-muted mr-auto tabular-nums">
-              {lines.length} cage{lines.length === 1 ? '' : 's'}, {totals.feed.toFixed(1)} kg feed,{' '}
+              {lines.length} cage{lines.length === 1 ? '' : 's'}, {totals.feed.toFixed(1)} kg,{' '}
               {totals.mort} dead
             </p>
           )}
@@ -905,14 +969,17 @@ const DailyUploadPage = () => {
             type="submit"
             disabled={loading || lines.length === 0 || (shortages.length > 0 && !overrideActive)}
             size="lg"
+            className="ml-auto"
           >
             {loading
               ? 'Saving…'
-              : lines.length
-                ? `Save ${lines.length} record${lines.length === 1 ? '' : 's'}`
-                : 'Save records'}
+              : confirmBlank && blankFeedLines.length
+                ? 'Save anyway'
+                : lines.length
+                  ? `Save ${lines.length} record${lines.length === 1 ? '' : 's'}`
+                  : 'Save records'}
           </Button>
-        </FormActions>
+        </StickyActions>
       </form>
     </FormCard>
   )
