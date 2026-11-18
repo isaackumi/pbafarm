@@ -204,6 +204,16 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
       'secchiCm',
     ],
   },
+  {
+    type: 'sampling.recorded',
+    label: 'Sampling recorded',
+    fields: ['date', 'lines', 'cageName', 'averageBodyWeight'],
+  },
+  {
+    type: 'inventory.stock.low',
+    label: 'Feed stock fell to its minimum',
+    fields: ['feedTypeName', 'stockKg', 'minimumKg'],
+  },
   ...['stock_in', 'mortality', 'transfer_in', 'transfer_out', 'harvest', 'grading_split', 'merge', 'count_adjustment', 'reversal'].map(
     (t) => ({
       type: `stock.${t}`,

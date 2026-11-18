@@ -1,6 +1,7 @@
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import { internal } from '../_generated/api'
+import { apiActorOf } from './apiActor'
 
 /**
  * Domain event outbox (AUTO-001, D-008, docs/architecture/07 §2).
@@ -28,11 +29,13 @@ export async function emitDomainEvent(
 ): Promise<Id<'domainEvents'> | null> {
   const companyId = opts?.companyId
   if (!companyId) return null
+  // Changes made through the public API carry the key (INT-004).
+  const actor = apiActorOf(ctx)
   const eventId = await ctx.db.insert('domainEvents', {
     companyId,
     locationId: opts?.locationId,
     type,
-    payload: cleanPayload(payload),
+    payload: cleanPayload(actor ? { ...payload, origin: 'api', apiKeyId: actor.apiKeyId } : payload),
     createdAt: Date.now(),
   })
 

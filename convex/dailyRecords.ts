@@ -8,6 +8,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { emitDomainEvent } from './lib/events'
 import { isBusinessDate, todayFor } from './lib/dates'
 import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
@@ -16,7 +17,6 @@ import {
   dailyMortalityPct,
   cumulativeMortalityPct,
 } from './lib/farmRules'
-import { emitDomainEvent } from './lib/events'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
@@ -340,7 +340,7 @@ type DailyRecordInput = {
 }
 
 /** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
-async function insertDailyRecord(
+export async function insertDailyRecord(
   ctx: MutationCtx,
   user: Doc<'users'>,
   args: DailyRecordInput,
@@ -548,8 +548,44 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
     /** Admin only: save feed already issued to this cage on this date. */
     feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { date, records, allowNegative, overrideReason, feedOverlapReason }) => {
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    return await saveDailyBatch(ctx, user, args)
+  },
+})
+
+export type DailyBatchLine = {
+  cageId: Id<'cages'>
+  feedAmount: number
+  feedTypeId?: Id<'feedTypes'>
+  mortality: number
+  mortalityCause?: string
+  notes?: string
+  dissolvedOxygen?: number
+  temperatureC?: number
+}
+
+/**
+ * createBatch's body, shared with the public API (POST /api/v1/daily-records).
+ * Prices come from the feed type; each line emits `daily.recorded`.
+ */
+export async function saveDailyBatch(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  {
+    date,
+    records,
+    allowNegative,
+    overrideReason,
+    feedOverlapReason,
+  }: {
+    date: string
+    records: DailyBatchLine[]
+    allowNegative?: boolean
+    overrideReason?: string
+    feedOverlapReason?: string
+  },
+): Promise<Id<'dailyRecords'>[]> {
     if (!records.length) throw new Error('Add at least one cage line')
     if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
 
@@ -612,8 +648,7 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
       }
     }
     return ids
-  },
-})
+}
 
 export const update = mutation({
   args: {

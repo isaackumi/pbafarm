@@ -94,6 +94,9 @@ import type * as seed from "../seed.js";
 import type * as stocking from "../stocking.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
+import type * as integrations_apiHttp from "../integrations/apiHttp.js";
+import type * as publicApi from "../publicApi.js";
+import type * as apiKeys from "../apiKeys.js";
 
 import type {
   ApiFromModules,
@@ -188,6 +191,9 @@ declare const fullApi: ApiFromModules<{
   stocking: typeof stocking;
   userAccounts: typeof userAccounts;
   users: typeof users;
+  "integrations/apiHttp": typeof integrations_apiHttp;
+  publicApi: typeof publicApi;
+  apiKeys: typeof apiKeys;
 }>;
 
 /**

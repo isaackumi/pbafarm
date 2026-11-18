@@ -28,4 +28,7 @@ crons.cron('stock ledger reconciliation', '30 1 * * *', internal.reconciliation.
 // Outbox replay keys older than 30 days (MOBILE-002).
 crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {})
 
+// Public API idempotency keys are kept 30 days (INT-004).
+crons.cron('prune api idempotency keys', '30 3 * * *', internal.publicApi.pruneIdempotencyKeys, {})
+
 export default crons
