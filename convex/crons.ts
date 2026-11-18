@@ -20,4 +20,10 @@ crons.cron('stock ledger reconciliation', '30 1 * * *', internal.reconciliation.
 // Outbox replay keys older than 30 days (MOBILE-002).
 crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {})
 
+// Rollups (PLAT-002): recompute occupancies changed since the last run.
+crons.interval('rollup dirty occupancies', { minutes: 5 }, internal.rollups.processDirty, {})
+
+// 00:30 UTC: roll open occupancies to the new day (days of culture, snapshots).
+crons.cron('rollup open occupancies', '30 0 * * *', internal.rollups.queueOpen, {})
+
 export default crons

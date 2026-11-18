@@ -10,6 +10,7 @@ import { tagBiweekly } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
+import { refreshUnitDays } from './lib/rollups'
 
 function toClient(r: any) {
   return {
@@ -178,6 +179,7 @@ export const create = mutation({
     await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
     // The latest sample becomes the cage's current fish weight.
     await syncCageAbw(ctx, args.cageId)
+    await refreshUnitDays(ctx, [{ unitId: args.cageId, date: args.date }])
 
     await logAudit(ctx, {
       actionType: 'create',
@@ -293,6 +295,7 @@ export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
         updatedAt: now,
       })
       ids.push(id)
+      await refreshUnitDays(ctx, [{ unitId: rec.cageId, date }])
     }
     for (const cageId of seen) {
       await syncCageAbw(ctx, cageId)
@@ -339,6 +342,7 @@ export const createMany = mutation({
         updatedAt: now,
       })
       await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+      await refreshUnitDays(ctx, [{ unitId: record.cageId, date: record.date }])
       ids.push(id)
     }
     for (const cageId of new Set(records.map((r) => r.cageId))) {
@@ -387,6 +391,10 @@ export const update = mutation({
     })
     await syncCageAbw(ctx, existing.cageId)
     await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
+    await refreshUnitDays(ctx, [
+      { unitId: existing.cageId, date: existing.date },
+      { unitId: existing.cageId, date: patch.date ?? existing.date },
+    ])
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'biweeklyRecords',
@@ -419,6 +427,7 @@ export const remove = mutation({
 
     await ctx.db.delete(id)
     await syncCageAbw(ctx, existing.cageId)
+    await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {
       actionType: 'delete',
       tableName: 'biweeklyRecords',
