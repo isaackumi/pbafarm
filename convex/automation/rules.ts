@@ -94,7 +94,14 @@ async function validateDraft(
       }
     }
   }
-  return { ...d, name, description: d.description?.trim() || undefined }
+  return {
+    name,
+    description: d.description?.trim() || undefined,
+    trigger: d.trigger,
+    match: d.match,
+    conditions: d.conditions,
+    actions: d.actions,
+  }
 }
 
 function indexFields(trigger: AutomationTrigger, enabled: boolean, tz: string, now: number) {
