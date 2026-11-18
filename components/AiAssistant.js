@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
 import { X, Send, KeyRound, Loader2, MessageCircle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
@@ -35,7 +36,12 @@ function TypingDots() {
  * Floating farm assistant.
  * Keys: .env (GEMINI_API_KEY etc.) via /api/llm, or optional localStorage override.
  */
+/** Field entry screens with a save bar at the bottom: no floating button on phones. */
+const FIELD_ROUTES = ['/daily-entry', '/biweekly-entry', '/scan']
+
 export default function AiAssistant() {
+  const router = useRouter()
+  const onFieldRoute = FIELD_ROUTES.includes(router?.pathname)
   const { user: authUser, canUseApp } = useAuth()
   // Tenant data only once access is confirmed (password changed, company approved).
   const user = canUseApp ? authUser : null
@@ -235,7 +241,7 @@ ${JSON.stringify(farmContext, null, 2)}`
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-lagoon-950 text-white shadow-md flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lake"
+        className={`${onFieldRoute && !open ? 'hidden lg:flex' : 'flex'} fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-40 h-14 w-14 rounded-full bg-lagoon-950 text-white shadow-md items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lake`}
         aria-label={open ? 'Close assistant' : 'Open assistant'}
         aria-expanded={open}
       >
@@ -248,7 +254,7 @@ ${JSON.stringify(farmContext, null, 2)}`
 
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-50 w-[min(100vw-2rem,22rem)] h-[min(70vh,28rem)] bg-surface border border-foam-deep rounded-xl shadow-xl flex flex-col overflow-hidden"
+          className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-24 lg:right-6 z-50 w-[min(100vw-2rem,22rem)] h-[min(70vh,28rem)] bg-surface border border-foam-deep rounded-xl shadow-xl flex flex-col overflow-hidden"
           role="dialog"
           aria-label="Farm assistant"
         >

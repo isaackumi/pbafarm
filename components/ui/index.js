@@ -1,9 +1,10 @@
 /** Shared UI primitives — Harbor Soft light dashboard */
 import Link from 'next/link'
 
+// Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
-  sm: 'px-3 text-sm min-h-9',
-  md: 'px-4 text-sm min-h-11',
+  sm: 'px-3 text-sm min-h-12 sm:min-h-9',
+  md: 'px-4 text-sm min-h-12 sm:min-h-11',
   lg: 'px-5 text-base min-h-12',
 }
 
@@ -143,7 +144,7 @@ export function TabBar({ tabs, active, onChange }) {
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
-          className={`px-3 text-sm font-medium rounded-lg min-h-9 transition-colors ${
+          className={`px-3 text-sm font-medium rounded-lg min-h-11 sm:min-h-9 transition-colors ${
             active === tab.id
               ? 'bg-surface text-chart-ink shadow-sm'
               : 'text-muted hover:text-chart-ink'
@@ -250,7 +251,7 @@ export function PageHeader({
 
 const FIELD_CLASS =
   // 16px text keeps iOS from zooming into fields on focus.
-  'w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-base text-chart-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-lake-soft focus:border-lake transition-colors disabled:opacity-50 min-h-11'
+  'w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-base text-chart-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-lake-soft focus:border-lake transition-colors disabled:opacity-50 min-h-12 sm:min-h-11'
 
 export function Field({ label, htmlFor, hint, error, required, children, className = '' }) {
   return (
@@ -360,6 +361,21 @@ export function FormActions({ children, className = '' }) {
   return (
     <div
       className={`flex flex-wrap items-center gap-3 pt-5 border-t border-foam-deep mt-8 ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Save bar that stays in view while a long field form scrolls. On phones it
+ * sits just above the bottom tab bar; from lg up it sticks to the viewport
+ * bottom.
+ */
+export function StickyActions({ children, className = '' }) {
+  return (
+    <div
+      className={`sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 mt-8 -mx-5 -mb-5 sm:-mx-8 sm:-mb-8 px-5 sm:px-8 py-3 rounded-b-xl border-t border-foam-deep bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex flex-wrap items-center gap-3 print:hidden ${className}`}
     >
       {children}
     </div>
