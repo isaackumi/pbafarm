@@ -547,7 +547,7 @@ describe('INV-003: reversals linked to their source records', () => {
       feedCost: 500,
       mortality: 0,
     })
-    const own = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
+    const own: any[] = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
     expect(own.map((u: any) => u.dailyRecordId)).toEqual([recordId])
 
     // Another daily-sourced row for the same cage and date, from a different record.
@@ -574,7 +574,7 @@ describe('INV-003: reversals linked to their source records', () => {
     })
 
     await as.mutation(api.dailyRecords.remove, { id: recordId })
-    const left = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
+    const left: any[] = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
     expect(left.map((u: any) => u._id)).toEqual([otherId])
   })
 })

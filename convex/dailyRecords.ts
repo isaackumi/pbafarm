@@ -705,7 +705,7 @@ export const update = mutation({
     /** Admin only: save feed already issued to this cage on this date. */
     feedOverlapReason: v.optional(v.string()),
   },
-  returns: v.id('dailyRecords'),
+  returns: v.object({ id: v.id('dailyRecords'), warnings: v.array(v.string()) }),
   handler: async (
     ctx,
     { id, patch: rawPatch, allowNegative, overrideReason, feedOverlapReason },
@@ -834,7 +834,7 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id('dailyRecords') },
-  returns: v.null(),
+  returns: v.object({ warnings: v.array(v.string()) }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
