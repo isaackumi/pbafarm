@@ -4,7 +4,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
-import { applyStockChange, bagsFromKg } from './lib/feedLedger'
+import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
 import {
   mergeSettings,
@@ -46,9 +46,23 @@ async function deductDailyFeed(
     date: string
     allowNegative?: boolean
     overrideReason?: string
+    /** Admin reason to record feed already issued to this cage on this date. */
+    feedOverlapReason?: string
+    /** The record already held feed for this cage and date (an edit). */
+    skipOverlapCheck?: boolean
   },
 ) {
   if (!args.feedTypeId || !(args.feedAmount > 0)) return
+
+  if (!args.skipOverlapCheck) {
+    await assertFeedNotAlreadyRecorded(ctx, {
+      user,
+      cageId: args.cageId,
+      date: args.date,
+      writing: 'daily',
+      overrideReason: args.feedOverlapReason,
+    })
+  }
 
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType) throw new Error('Feed type not found')
@@ -235,6 +249,7 @@ type DailyRecordInput = {
   secchiCm?: number
   allowNegative?: boolean
   overrideReason?: string
+  feedOverlapReason?: string
 }
 
 /** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
@@ -261,6 +276,7 @@ async function insertDailyRecord(
   const {
     allowNegative,
     overrideReason,
+    feedOverlapReason,
     dissolvedOxygen,
     temperatureC,
     secchiCm,
@@ -339,8 +355,9 @@ async function insertDailyRecord(
     cageId: args.cageId,
     feedAmount: args.feedAmount,
     date: args.date,
-    allowNegative: args.allowNegative,
-    overrideReason: args.overrideReason,
+    allowNegative,
+    overrideReason,
+    feedOverlapReason,
   })
 
   await logAudit(ctx, {
@@ -369,6 +386,8 @@ export const create = mutation({
     secchiCm: v.optional(v.number()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -397,8 +416,10 @@ export const createBatch = mutation({
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { date, records, allowNegative, overrideReason }) => {
+  handler: async (ctx, { date, records, allowNegative, overrideReason, feedOverlapReason }) => {
     const user = await requireUser(ctx)
     if (!records.length) throw new Error('Add at least one cage line')
     if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
@@ -449,6 +470,7 @@ export const createBatch = mutation({
           temperatureC: rec.temperatureC,
           allowNegative,
           overrideReason,
+          feedOverlapReason,
         })
         ids.push(id)
       } catch (err: any) {
@@ -478,8 +500,13 @@ export const update = mutation({
     }),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch: rawPatch, allowNegative, overrideReason }) => {
+  handler: async (
+    ctx,
+    { id, patch: rawPatch, allowNegative, overrideReason, feedOverlapReason },
+  ) => {
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
@@ -561,6 +588,10 @@ export const update = mutation({
         date: updated.date,
         allowNegative,
         overrideReason,
+        feedOverlapReason,
+        // Re-posting feed this record already held for the same cage and day
+        // is not a second recording.
+        skipOverlapCheck: existing.feedAmount > 0 && updated.date === existing.date,
       })
     }
 
@@ -623,8 +654,10 @@ export const createMany = mutation({
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { records, allowNegative, overrideReason }) => {
+  handler: async (ctx, { records, allowNegative, overrideReason, feedOverlapReason }) => {
     const user = await requireUser(ctx)
     const ids = []
     for (const record of records) {
@@ -665,6 +698,7 @@ export const createMany = mutation({
         date: record.date,
         allowNegative,
         overrideReason,
+        feedOverlapReason,
       })
       ids.push(id)
     }
