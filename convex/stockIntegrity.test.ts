@@ -439,3 +439,68 @@ describe('S7: restock after harvest carries the old ABW into the new cycle', () 
     expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
   })
 })
+
+/** A feed type with 1,000 kg in stock (no lots, so any site can draw on it). */
+async function withFeed(t: any, companyId: any) {
+  return await t.run((ctx: any) =>
+    ctx.db.insert('feedTypes', {
+      name: 'Grower',
+      currentStock: 1000,
+      minimumStock: 0,
+      pricePerKg: 10,
+      active: true,
+      bagSizeKg: 20,
+      companyId,
+      updatedAt: Date.now(),
+    }),
+  )
+}
+
+const ledger = (t: any, feedTypeId: any) =>
+  t.run((ctx: any) =>
+    ctx.db
+      .query('feedInventoryTransactions')
+      .withIndex('by_feed_type', (q: any) => q.eq('feedTypeId', feedTypeId))
+      .collect(),
+  )
+
+describe('S13: ledger reversals', () => {
+  test('a transaction can only be reversed once', async () => {
+    const { t, as, a, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    await as.mutation(api.feed.createIssue, {
+      feedTypeId,
+      cageId: a.cageId,
+      quantity: 100,
+      usageDate: '2026-11-10',
+    })
+    const issue = (await ledger(t, feedTypeId)).find((r: any) => r.transactionType === 'issue')
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(900)
+
+    await as.mutation(api.inventory.reverseTransaction, { transactionId: issue._id, reason: 'Wrong cage' })
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(1000)
+    await expect(
+      as.mutation(api.inventory.reverseTransaction, { transactionId: issue._id, reason: 'Again' }),
+    ).rejects.toThrow(/already been reversed/)
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(1000)
+  })
+
+  test('daily usage rows are corrected through the daily record, not reversed', async () => {
+    const { t, as, a, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    await as.mutation(api.dailyRecords.create, {
+      cageId: a.cageId,
+      date: '2026-11-10',
+      feedAmount: 50,
+      feedTypeId,
+      feedPrice: 10,
+      feedCost: 500,
+      mortality: 0,
+    })
+    const usage = (await ledger(t, feedTypeId)).find((r: any) => r.transactionType === 'daily_usage')
+    await expect(
+      as.mutation(api.inventory.reverseTransaction, { transactionId: usage._id, reason: 'Typo' }),
+    ).rejects.toThrow(/edit the daily record/)
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(950)
+  })
+})
