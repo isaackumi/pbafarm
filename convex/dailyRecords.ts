@@ -16,6 +16,20 @@ import {
   dailyMortalityPct,
   cumulativeMortalityPct,
 } from './lib/farmRules'
+import { emitDomainEvent } from './lib/events'
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/** Whether the company's "High mortality" automation rule replaces the inline alert. */
+async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>) {
+  const rules = await ctx.db
+    .query('automationRules')
+    .withIndex('by_company_and_templateKey', (q) =>
+      q.eq('companyId', companyId).eq('templateKey', 'high_mortality'),
+    )
+    .take(10)
+  return rules.some((r) => r.enabled)
+}
 
 function toClient(r: any) {
   return {
@@ -390,16 +404,22 @@ async function insertDailyRecord(
   }
   await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
-  // Mortality threshold alerts
-  if (args.mortality > 0 && user.companyId) {
+  const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
+  const nextCount =
+    cage.currentCount != null
+      ? Math.max(0, cage.currentCount - args.mortality)
+      : cage.currentCount
+  const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
+
+  // Mortality threshold alerts. A company that enabled the "High mortality"
+  // automation rule gets them from the engine instead (AUTO-002).
+  if (
+    args.mortality > 0 &&
+    user.companyId &&
+    !(await mortalityRuleEnabled(ctx, user.companyId))
+  ) {
     const company = await ctx.db.get(user.companyId)
     const rules = mergeSettings(company?.settings)
-    const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
-    const nextCount =
-      cage.currentCount != null
-        ? Math.max(0, cage.currentCount - args.mortality)
-        : cage.currentCount
-    const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
     const alerts: string[] = []
     if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
       alerts.push(
@@ -436,6 +456,26 @@ async function insertDailyRecord(
       }
     }
   }
+
+  await emitDomainEvent(
+    ctx,
+    'daily.recorded',
+    {
+      dailyRecordId: id,
+      cageId: args.cageId,
+      cageName: cage.name,
+      date: args.date,
+      mortality: args.mortality,
+      mortalityCause: args.mortality > 0 ? mortalityCause?.trim() || 'unknown' : undefined,
+      dailyMortalityPct: round2(dailyPct),
+      cumulativeMortalityPct: round2(cumPct),
+      feedAmount: args.feedAmount,
+      dissolvedOxygen,
+      temperatureC,
+      secchiCm,
+    },
+    { companyId: user.companyId ?? cage.companyId, locationId: cage.locationId },
+  )
 
   await deductDailyFeed(ctx, user, {
     dailyRecordId: id,

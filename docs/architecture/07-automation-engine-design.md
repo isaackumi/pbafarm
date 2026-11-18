@@ -257,3 +257,17 @@ Recommendation: adopt workpool for outbound deliveries and webhooks only (one po
 2. Should reminder time be per site (different shifts) or per organization?
 3. Are generic approval workflows (approval chains, amounts) needed beyond stocking, top-up, transfer and stock operations?
 4. Who may create rules: only `admin`, or managers for their sites?
+
+## 13. As built (Phase 10, 2026-11-18)
+
+Differences from the design above, kept deliberately small:
+
+| Topic | As built |
+|---|---|
+| Outbox | `domainEvents { companyId, locationId?, type, payload, createdAt, processedBy? }` (index `by_company_and_createdAt`), written by `convex/lib/events.ts` `emitDomainEvent(ctx, type, payload, { companyId, locationId })`. Dispatch is scheduled only when the company has an enabled rule for the type; consumers append their name to `processedBy`. Kept 30 days (`prune domain events` cron). |
+| Events emitted | `daily.recorded` (one per daily line: cage, date, mortality, daily/cumulative mortality %, feed, DO, temperature, Secchi); `stock.<type>` once per production-engine operation and type (`stock.stock_in`, `stock.harvest`, …). |
+| Rules | `automationRules.trigger` is a union (`event` with `eventType`, or `schedule` with `localTime`, `daysOfWeek`, `check`, `params`); `eventType` and `nextRunAt` are flattened for indexes. `match: 'all' | 'any'`. Actions: `notify` (channels `in_app`, `sms`, `whatsapp`, `email`; title/message/link templates; optional in-app dedupe key) and `create_task`. Webhook and escalate actions wait for INT-005 / AUTO-004. |
+| Execution | `executeRun` (internal action): `startRun` mutation writes in-app notifications and tasks once (`localDone`) and plans deliveries; `sendAll` (Effect, `convex/automation/deliver.ts`) sends through `messaging/deliver.deliverMessage` with concurrency 4 and a 45 s per-send timeout (timeouts not retried); `finishRun` retries transient failures at 1, 5, 30 min (4 attempts), then settles `succeeded` / `partial` / `failed`. Admins can re-run failed or partial runs. Workpool not adopted. |
+| Preferences | `notificationPreferences` per user: channel switches and quiet hours (company time); quiet hours skip external sends only. |
+| Time zone | The organization's `companies.timezone` (ORG-005, default Africa/Accra = the legacy 16:00 UTC); `companies.updateProfile` re-times schedule rules. The missed-entry check uses each site's local date (`farmLocations.timezone`), as the legacy digest does. |
+| Legacy reminders | The three built-in templates reproduce `reminders.dailyDigest` exactly (text, recipients, dedupe keys). Migration M17 `automation/migrations:seedBuiltInRules` creates them; `reminders.companyDigest` skips companies that have them. Inline mortality alerts in `dailyRecords` stay until a company enables the `high_mortality` rule, which then replaces them. |
