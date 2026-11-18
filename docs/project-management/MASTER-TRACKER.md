@@ -116,8 +116,8 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 | ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
-| HAT-001 | Broodstock registry | Individuals/groups on broodstock units | P2 | FARM-002 | Not started | R03 Phase 5 | new `convex/hatchery.ts` | None | Broodstock listed per unit |
-| HAT-002 | Spawning, incubation, hatching | Events producing hatched batches | P2 | PROD-002, HAT-001 | Not started | R03 Phase 5 | new | None | Hatch creates a batch with lineage |
+| HAT-001 | Broodstock registry | Individuals/groups on broodstock units | P2 | FARM-002 | Implemented | R03 Phase 5 | `convex/hatchery.ts`, `convex/lib/hatcheryAccess.ts`, `convex/schema.ts` (`broodstock`) | Covered (convex/hatchery.test.ts: registry, validation, conditioning, tenancy) | Broodstock listed per unit |
+| HAT-002 | Spawning, incubation, hatching | Events producing hatched batches | P2 | PROD-002, HAT-001 | Implemented | R03 Phase 5 | `convex/hatchery.ts` (`spawningEvents`, `incubationLots`; hatch → engine `stockIn`, batch origin `hatchery` + `spawningEventId`/`broodstockIds`), `convex/lib/kpi.ts` (fertilization, hatch rate, fry/kg female) | Covered (convex/hatchery.test.ts: hatch → batch + ledger, I4 refusal, replay, reversal, failed lot; kpi.test.ts) | Hatch creates a batch with lineage |
 | HAT-003 | Larval rearing and live feed | Daily records on hatchery tanks; live feed log | P3 | HAT-002, INV-001 | Not started | — | new | None | Larval mortality/feeding recorded |
 | HAT-004 | Fingerling output and nursery transfer | Transfer to nursery units via engine | P2 | PROD-006 | Not started | — | — | None | Lineage visible from grow-out |
 | NUR-001 | Nursery workspace and grading | Receiving, acclimatization checklist, grading splits | P2 | PROD-006 | Not started | — | new `pages/nursery/*` | None | Grading conserves fish |

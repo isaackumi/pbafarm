@@ -457,3 +457,37 @@ export function occupancyKpis(input: {
     adg_g_day: round(adg(initialAbw ?? 0, abw.abwG ?? 0, growthDays), 2),
   }
 }
+
+// ---------------------------------------------------------------------------
+// Hatchery and nursery (HAT-002, HAT-003, NUR-001)
+// ---------------------------------------------------------------------------
+
+/** `part` as a % of `whole`; null when the base is missing or not positive. */
+function pct(part: number | null | undefined, whole: number | null | undefined): number | null {
+  if (part == null || whole == null || !(whole > 0) || !Number.isFinite(part)) return null
+  return (Math.max(0, part) / whole) * 100
+}
+
+/** Fertilization %: fertilized eggs ÷ eggs collected. */
+export const fertilizationPct = (fertilizedEggs: number | null | undefined, eggs: number | null | undefined) =>
+  pct(fertilizedEggs, eggs)
+
+/** Hatch rate %: larvae hatched ÷ eggs set in the incubator. */
+export const hatchRatePct = (larvae: number | null | undefined, eggsIncubated: number | null | undefined) =>
+  pct(larvae, eggsIncubated)
+
+/** Eggs per kg of female broodstock (relative fecundity). */
+export function eggsPerKgFemale(eggs: number | null | undefined, femaleKg: number | null | undefined) {
+  if (eggs == null || femaleKg == null || !(femaleKg > 0)) return null
+  return Math.max(0, eggs) / femaleKg
+}
+
+/** Fry (larvae or fingerlings) produced per kg of female broodstock spawned. */
+export const fryPerKgFemale = eggsPerKgFemale
+
+/**
+ * Larval or nursery survival %: the batch's own flows (survivalPct), so
+ * fingerlings sold, transferred or graded out are not losses and survival
+ * counts recorded as count adjustments are.
+ */
+export const nurserySurvivalPct = (f: Flows) => survivalPct(f)
