@@ -11,7 +11,6 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button, Field, Input, Select, LoadingState } from '../components/ui'
-import QueryBoundary from '../components/QueryBoundary'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -28,9 +27,7 @@ import { errorMessage } from '../lib/errorMessage'
 export default function FeedTypesPage() {
   return (
     <ProtectedRoute>
-      <QueryBoundary>
-        <FeedTypes />
-      </QueryBoundary>
+      <FeedTypes />
     </ProtectedRoute>
   )
 }

@@ -80,7 +80,9 @@
       "aiSettings": "AI settings"
     },
     "section": {
-      "production": "Production",
+      "production": "Daily work",
+      "records": "Records",
+      "finance": "Finance",
       "hatchery": "Hatchery",
       "cages": "Cages",
       "feed": "Feed",
@@ -1390,6 +1392,44 @@
       "summaryHint": "Select a row to see its chart.",
       "unit": "Unit",
       "parameter": "Parameter"
+    }
+  },
+  "settings": {
+    "description": "Money amounts use Cedis (₵) unless you choose another currency here. Your display preferences are saved to your account.",
+    "saving": "Saving…",
+    "saveFailed": "Could not save your preferences. Try again.",
+    "currency": {
+      "title": "Currency",
+      "active": "Active: {currency} ({symbol}). Example: {example}",
+      "farm": "Farm currency",
+      "hint": "Applies to prices, purchases, inventory value, and other money fields.",
+      "default": "default",
+      "preview": "Preview: {value}",
+      "save": "Save & publish currency",
+      "adminOnly": "Only admins can change the farm currency.",
+      "saved": "Farm currency set to {currency}",
+      "saveFailed": "Failed to save currency"
+    },
+    "display": {
+      "title": "Display preferences",
+      "subtitle": "Saved to your account, so they follow you to any device.",
+      "dateFormat": "Date format",
+      "save": "Save display preferences",
+      "saved": "Display preferences saved to your account"
+    },
+    "shortcuts": {
+      "title": "Phone tab bar",
+      "subtitle": "Choose up to {max} places for the bar at the bottom of the screen on a phone. The menu button is always there.",
+      "chosen": "On the tab bar ({count} of {max})",
+      "none": "No shortcuts: only the menu button will show.",
+      "add": "Add a place",
+      "full": "The tab bar holds {max} places. Remove one to add another.",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "remove": "Remove {name}",
+      "useDefaults": "Use defaults",
+      "save": "Save tab bar",
+      "saved": "Tab bar saved"
     }
   }
 }

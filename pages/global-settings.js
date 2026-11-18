@@ -19,6 +19,11 @@ import { useSettings } from '../contexts/SettingsContext'
 import { useCurrency } from '../hooks/useCurrency'
 import { CURRENCIES, formatCurrency } from '../lib/currencyUtils'
 import { usePermission } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
+import { navKey } from '../lib/i18n'
+import { errorMessage } from '../lib/errorMessage'
+import { DATE_FORMATS } from '../convex/lib/userPreferences'
+import MobileShortcutsCard from '../components/MobileShortcutsCard'
 
 export default function GlobalSettingsPage() {
   return (
@@ -32,7 +37,8 @@ export default function GlobalSettingsPage() {
 
 function GlobalSettings() {
   const { showToast } = useToast()
-  const { user, hasRole } = useAuth()
+  const { user } = useAuth()
+  const t = useT()
   const isAdmin = usePermission('org.settings.manage')
   const { settings: localSettings, updateSettings } = useSettings()
   const { formatCurrency: fmt, symbol, shortLabel } = useCurrency()
@@ -54,6 +60,7 @@ function GlobalSettings() {
     localSettings?.dateFormat || 'DD/MM/YYYY',
   )
   const [saving, setSaving] = useState(false)
+  const [savingPersonal, setSavingPersonal] = useState(false)
 
   useEffect(() => {
     if (draftQuery?.draft?.locale?.currency) {
@@ -69,9 +76,16 @@ function GlobalSettings() {
 
   const preview = useMemo(() => formatCurrency(1250.5, { currency }), [currency])
 
-  const handleSavePersonal = () => {
-    updateSettings({ dateFormat, currency })
-    showToast('success', 'Personal display preferences saved on this device')
+  const handleSavePersonal = async () => {
+    setSavingPersonal(true)
+    try {
+      await updateSettings({ dateFormat, currency })
+      showToast('success', t('settings.display.saved'))
+    } catch (err) {
+      showToast('error', errorMessage(err, t('settings.saveFailed')))
+    } finally {
+      setSavingPersonal(false)
+    }
   }
 
   const handleSaveFarmCurrency = async () => {
@@ -85,10 +99,10 @@ function GlobalSettings() {
       }
       await saveDraft({ draft: next })
       await publish({})
-      updateSettings({ currency })
-      showToast('success', `Farm currency set to ${CURRENCIES[currency]?.shortLabel || currency}`)
+      await updateSettings({ currency })
+      showToast('success', t('settings.currency.saved', { currency: CURRENCIES[currency]?.shortLabel || currency }))
     } catch (err) {
-      showToast('error', err.message || 'Failed to save currency')
+      showToast('error', errorMessage(err, t('settings.currency.saveFailed')))
     } finally {
       setSaving(false)
     }
@@ -99,26 +113,26 @@ function GlobalSettings() {
       <PageHeader
         showTitle={false}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Global settings' },
+          { label: t.or(navKey('/dashboard'), 'Dashboard'), href: '/dashboard' },
+          { label: t.or(navKey('/global-settings'), 'Global settings') },
         ]}
-        description="Money amounts use Cedis (₵) unless you choose another currency here."
+        description={t('settings.description')}
         related={
           isAdmin
-            ? [{ label: 'Company settings', href: '/company-settings' }]
+            ? [{ label: t.or(navKey('/company-settings'), 'Company settings'), href: '/company-settings' }]
             : undefined
         }
       />
 
       <div className="space-y-6">
         <FormCard
-          title="Currency"
-          subtitle={`Active: ${shortLabel} (${symbol}). Example: ${fmt(1250.5)}`}
+          title={t('settings.currency.title')}
+          subtitle={t('settings.currency.active', { currency: shortLabel, symbol, example: fmt(1250.5) })}
         >
           <FormSection>
             <Field
-              label="Farm currency"
-              hint="Applies to prices, purchases, inventory value, and other money fields."
+              label={t('settings.currency.farm')}
+              hint={t('settings.currency.hint')}
             >
               <Select
                 value={currency}
@@ -128,48 +142,52 @@ function GlobalSettings() {
                 {Object.values(CURRENCIES).map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.label} ({c.symbol})
-                    {c.code === 'GHS' ? ' — default' : ''}
+                    {c.code === 'GHS' ? ` — ${t('settings.currency.default')}` : ''}
                   </option>
                 ))}
               </Select>
             </Field>
-            <p className="text-sm text-muted">Preview: {preview}</p>
+            <p className="text-sm text-muted">{t('settings.currency.preview', { value: preview })}</p>
           </FormSection>
           {isAdmin ? (
             <FormActions>
               <Button type="button" disabled={saving} onClick={handleSaveFarmCurrency}>
-                {saving ? 'Saving…' : 'Save & publish currency'}
+                {saving ? t('settings.saving') : t('settings.currency.save')}
               </Button>
             </FormActions>
           ) : (
             <p className="text-sm text-muted pt-2">
-              Only admins can change the farm currency.
+              {t('settings.currency.adminOnly')}
             </p>
           )}
         </FormCard>
 
         <FormCard
-          title="Display preferences"
-          subtitle="Stored on this browser for your account."
+          title={t('settings.display.title')}
+          subtitle={t('settings.display.subtitle')}
         >
           <FormSection>
-            <Field label="Date format">
+            <Field label={t('settings.display.dateFormat')}>
               <Select
                 value={dateFormat}
                 onChange={(e) => setDateFormat(e.target.value)}
               >
-                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                {DATE_FORMATS.map((format) => (
+                  <option key={format} value={format}>
+                    {format}
+                  </option>
+                ))}
               </Select>
             </Field>
           </FormSection>
           <FormActions>
-            <Button type="button" variant="secondary" onClick={handleSavePersonal}>
-              Save display preferences
+            <Button type="button" variant="secondary" disabled={savingPersonal} onClick={handleSavePersonal}>
+              {savingPersonal ? t('settings.saving') : t('settings.display.save')}
             </Button>
           </FormActions>
         </FormCard>
+
+        <MobileShortcutsCard />
       </div>
     </FormPage>
   )

@@ -74,7 +74,9 @@ export function SettingsProvider({ children }) {
       resolvePreferences(
         // Until the account copy exists, keep showing this browser's settings.
         live ? null : legacy,
-        cached.userId === userId ? cached.prefs : null,
+        // The account copy, once loaded, replaces the cache: a field cleared
+        // on the account must not reappear from an older cached copy.
+        !live && cached.userId === userId ? cached.prefs : null,
         live,
         pending,
       ),

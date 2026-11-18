@@ -17,6 +17,7 @@ import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { installGlobalErrorHandlers } from '../lib/monitoring'
+import QueryBoundary from '../components/QueryBoundary'
 import { safeNextPath } from '../lib/safeRedirect'
 import { clearRetiredData } from '../lib/deviceData'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
@@ -65,7 +66,9 @@ function AppWrapper({ Component, pageProps, router }) {
                       <TourProvider>
                         <AuthWrapper>
                           <ErrorBoundary resetKey={router.asPath}>
-                            <Component {...pageProps} />
+                            <QueryBoundary resetKey={router.asPath} className="min-h-[60vh]">
+                              <Component {...pageProps} />
+                            </QueryBoundary>
                           </ErrorBoundary>
                           <ErrorBoundary resetKey={router.asPath} silent>
                             <AiAssistant />
