@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Cursor agent skills (installed via uipro CLI; regenerate with `uipro init --ai cursor`)
 .cursor/skills/
+
+# Graphify knowledge graph output (regenerate with `graphify extract . --code-only`)
+graphify-out/
