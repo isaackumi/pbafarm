@@ -22,7 +22,6 @@ import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
 import { useOutbox } from '../hooks/useOutbox'
 import { api } from '../convex/_generated/api'
-import { useT } from '../lib/i18n/context'
 
 /**
  * Organizations I belong to (ORG-002). Shown in the profile menu; switching
@@ -93,7 +92,6 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
     markAsRead,
     markAllAsRead,
   } = useNotifications()
-  const t = useT()
   const fullName = user?.name || user?.user_metadata?.full_name || user?.email || 'User'
   const role = user?.role || user?.user_metadata?.role || 'User'
   const email = user?.email || ''
