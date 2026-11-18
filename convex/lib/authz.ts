@@ -2,6 +2,7 @@ import { getAuthSessionId, getAuthUserId } from '@convex-dev/auth/server'
 import { QueryCtx, MutationCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
+import { getMembership } from './memberships'
 
 export {
   AUTH_ERROR_CODES,
@@ -20,6 +21,7 @@ type Ctx = QueryCtx | MutationCtx
  * - member of a company that is not approved
  *   (pending, rejected, removed or missing); super_admin excepted
  *                                                     → COMPANY_NOT_APPROVED
+ * - membership row for the active company not active   → NOT_A_MEMBER
  * - company requires two-step verification and this
  *   session is not verified (super_admins included)   → MFA_REQUIRED
  *   (users.current, the mfa.* functions and sign-out pass `allowPendingMfa`)
@@ -47,6 +49,14 @@ export async function requireUser(
     const company = await ctx.db.get(user.companyId)
     if ((user.role ?? 'user') !== 'super_admin' && (!company || company.status !== 'approved')) {
       throw new Error(AUTH_ERROR_MESSAGES.COMPANY_NOT_APPROVED)
+    }
+    // Membership dual-read (M2): a row for the active organization must be
+    // active; without a row, users.companyId + users.role still decide.
+    if ((user.role ?? 'user') !== 'super_admin') {
+      const membership = await getMembership(ctx, user._id, user.companyId)
+      if (membership && membership.status !== 'active') {
+        throw new Error(AUTH_ERROR_MESSAGES.NOT_A_MEMBER)
+      }
     }
     if (
       !opts.allowPendingMfa &&

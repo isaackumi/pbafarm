@@ -72,7 +72,19 @@ export const ensureDefault = mutation({
     const user = await requireUser(ctx)
     // No-op for company-less users: there is no company to give a site to.
     if (!user.companyId) return null
+    const before = await ctx.db
+      .query('farmLocations')
+      .withIndex('by_company', (q) => q.eq('companyId', user.companyId))
+      .take(1)
     const id = await ensureDefaultLocation(ctx, user)
+    if (before.length === 0) {
+      await logAudit(ctx, {
+        actionType: 'create_default_location',
+        tableName: 'farmLocations',
+        recordId: id,
+        locationId: id,
+      })
+    }
     return id
   },
 })
@@ -89,6 +101,16 @@ export const setActiveLocation = mutation({
     if (!allowed.length) throw new Error('Access denied')
     assertLocationAccess(user, locationId)
     await ctx.db.patch(user._id, { activeLocationId: locationId })
+    if (user.activeLocationId !== locationId) {
+      await logAudit(ctx, {
+        actionType: 'set_active_location',
+        tableName: 'users',
+        recordId: user._id,
+        previousValues: { activeLocationId: user.activeLocationId },
+        newValues: { activeLocationId: locationId },
+        locationId,
+      })
+    }
     return locationId
   },
 })
