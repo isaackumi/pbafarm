@@ -5,8 +5,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { Button, Field, FormActions, FormCard, FormSection, Input, Select, Textarea } from './ui'
+import { localToday } from '../lib/format'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localToday()
 const blankLine = () => ({ key: Math.random().toString(36).slice(2), destinationCageId: '', quantity: '' })
 
 /**

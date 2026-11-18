@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
+import { localToday } from '../lib/format'
 
 export default function ExpensesPage() {
   return (
@@ -29,7 +30,7 @@ export default function ExpensesPage() {
   )
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localToday()
 const monthStart = () => `${today().slice(0, 7)}-01`
 
 const emptyForm = () => ({

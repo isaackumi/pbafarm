@@ -20,11 +20,12 @@ import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { FISH_SPECIES } from '../lib/fishSpecies'
+import { localToday } from '../lib/format'
 
 const STOCKING_DEFAULTS = {
   cageId: '',
   batchNumber: '',
-  stockingDate: new Date().toISOString().split('T')[0],
+  stockingDate: localToday(),
   fishCount: '',
   averageBodyWeight: '',
   species: 'nile_tilapia',
@@ -134,7 +135,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
       clear()
       setFormData({
         ...STOCKING_DEFAULTS,
-        stockingDate: new Date().toISOString().split('T')[0],
+        stockingDate: localToday(),
       })
       if (onSuccess) onSuccess()
       else router.push('/stocking-management')

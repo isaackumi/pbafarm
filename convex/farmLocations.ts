@@ -10,6 +10,49 @@ import {
   assertLocationAccess,
 } from './lib/tenancy'
 import { Id } from './_generated/dataModel'
+import { siteTypeValidator } from './schema'
+import { isValidTimezone } from './lib/orgProfile'
+
+/** Site metadata args (FARM-001). */
+const siteArgs = {
+  siteType: v.optional(siteTypeValidator),
+  /** IANA zone; empty string clears it (falls back to the company's). */
+  timezone: v.optional(v.string()),
+  latitude: v.optional(v.union(v.number(), v.null())),
+  longitude: v.optional(v.union(v.number(), v.null())),
+  waterBody: v.optional(v.string()),
+}
+
+/** Validated site metadata patch; undefined keys are left alone. */
+function siteFields(args: {
+  siteType?: any
+  timezone?: string
+  latitude?: number | null
+  longitude?: number | null
+  waterBody?: string
+}) {
+  const out: Record<string, unknown> = {}
+  if (args.siteType !== undefined) out.siteType = args.siteType
+  if (args.timezone !== undefined) {
+    const tz = args.timezone.trim()
+    if (tz && !isValidTimezone(tz)) throw new Error(`Unknown time zone: ${tz}`)
+    out.timezone = tz || undefined
+  }
+  if (args.latitude !== undefined) {
+    if (args.latitude !== null && !(args.latitude >= -90 && args.latitude <= 90)) {
+      throw new Error('Latitude must be between -90 and 90')
+    }
+    out.latitude = args.latitude ?? undefined
+  }
+  if (args.longitude !== undefined) {
+    if (args.longitude !== null && !(args.longitude >= -180 && args.longitude <= 180)) {
+      throw new Error('Longitude must be between -180 and 180')
+    }
+    out.longitude = args.longitude ?? undefined
+  }
+  if (args.waterBody !== undefined) out.waterBody = args.waterBody.trim() || undefined
+  return out
+}
 
 function toClient(loc: any) {
   return {
@@ -20,6 +63,13 @@ function toClient(loc: any) {
     address: loc.address,
     active: loc.active !== false,
     notes: loc.notes,
+    site_type: loc.siteType ?? null,
+    siteType: loc.siteType ?? null,
+    timezone: loc.timezone ?? null,
+    latitude: loc.latitude ?? null,
+    longitude: loc.longitude ?? null,
+    water_body: loc.waterBody ?? null,
+    waterBody: loc.waterBody ?? null,
     company_id: loc.companyId,
     updated_at: loc.updatedAt,
     created_at: loc._creationTime,
@@ -122,10 +172,12 @@ export const create = mutation({
     address: v.optional(v.string()),
     notes: v.optional(v.string()),
     active: v.optional(v.boolean()),
+    ...siteArgs,
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     requireRole(user, 'admin')
+    const meta = siteFields(args)
     const name = args.name.trim()
     if (!name) throw new Error('Name is required')
 
@@ -137,6 +189,7 @@ export const create = mutation({
       address: args.address?.trim() || undefined,
       notes: args.notes?.trim() || undefined,
       active: args.active !== false,
+      ...meta,
       updatedAt: Date.now(),
     })
 
@@ -164,6 +217,7 @@ export const update = mutation({
       address: v.optional(v.string()),
       notes: v.optional(v.string()),
       active: v.optional(v.boolean()),
+      ...siteArgs,
     }),
   },
   handler: async (ctx, { id, patch }) => {
@@ -185,6 +239,7 @@ export const update = mutation({
       next.address = patch.address.trim() || undefined
     if (patch.notes !== undefined) next.notes = patch.notes.trim() || undefined
     if (patch.active !== undefined) next.active = patch.active
+    Object.assign(next, siteFields(patch))
 
     await ctx.db.patch(id, next)
     await logAudit(ctx, {

@@ -8,6 +8,7 @@ import { PageHeader, Button, Card, CardHeader, StatCard, EmptyState } from '../.
 import { EventRow } from '../../components/BatchHistory'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
+import { localToday } from '../../lib/format'
 
 const fmt = (v, dp = 1) =>
   v == null ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -109,7 +110,7 @@ function BatchDetails() {
   const id = typeof router.query.id === 'string' ? router.query.id : null
   const batch = useQuery(
     api.batches.get,
-    user && id ? { id, asOf: new Date().toISOString().slice(0, 10) } : 'skip',
+    user && id ? { id, asOf: localToday() } : 'skip',
   )
 
   const crumbs = (label) => [
