@@ -33,6 +33,7 @@
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import { userError } from './errors'
+import { emitDomainEvent } from './events'
 import { abwAsOf, biomassKg, compareEvents, type Sample } from './kpi'
 
 type Ctx = QueryCtx | MutationCtx
@@ -1123,7 +1124,45 @@ export class StockOperation {
     await this.checkOneOccupancy()
     await this.writeCaches()
     await this.writeBatchStatus()
+    await this.emitEvents()
     return { eventIds: this.eventIds, warnings: [...this.warnings] }
+  }
+
+  /**
+   * One domain event per event type in this operation (AUTO-001), e.g.
+   * `stock.harvest`, `stock.mortality`: the automation engine and webhooks
+   * react to operations, not to every ledger row.
+   */
+  private async emitEvents() {
+    const byType = new Map<string, Doc<'stockEvents'>[]>()
+    for (const e of this.inserted) {
+      const list = byType.get(e.type) ?? []
+      list.push(e)
+      byType.set(e.type, list)
+    }
+    for (const [type, rows] of byType) {
+      const units = [...new Set(rows.map((r) => String(r.unitId)))].slice(0, 20)
+      const unitNames = units
+        .map((id) => this.units.get(id)?.name)
+        .filter((n): n is string => !!n)
+      await emitDomainEvent(
+        this.ctx,
+        `stock.${type}`,
+        {
+          eventCount: rows.length,
+          qtyDelta: rows.reduce((t, r) => t + r.qtyDelta, 0),
+          biomassKgDelta: Math.round(rows.reduce((t, r) => t + r.biomassKgDelta, 0) * 100) / 100,
+          eventDate: rows.reduce((m, r) => (r.eventDate > m ? r.eventDate : m), rows[0].eventDate),
+          unitIds: units.join(','),
+          unitNames: unitNames.join(', '),
+          cageId: units.length === 1 ? units[0] : undefined,
+          sourceTable: rows[0].sourceTable,
+          sourceId: rows[0].sourceId,
+          mode: this.mode,
+        },
+        { companyId: this.opts.companyId, locationId: rows[0].locationId },
+      )
+    }
   }
 }
 
