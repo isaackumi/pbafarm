@@ -92,4 +92,54 @@ export const integrationTables = {
   })
     .index('by_apiKeyId_and_key', ['apiKeyId', 'key'])
     .index('by_createdAt', ['createdAt']),
+
+  /**
+   * Outbound webhook endpoints (INT-005, doc 09 §7). The signing secret is
+   * encrypted in integrationSecrets (webhookEndpointId) and shown once.
+   */
+  webhookEndpoints: defineTable({
+    companyId: v.id('companies'),
+    url: v.string(),
+    description: v.optional(v.string()),
+    /** Subscribed domain event types (convex/lib/events.ts catalog). */
+    eventTypes: v.array(v.string()),
+    status: v.union(v.literal('active'), v.literal('disabled')),
+    /** Failed attempts since the last success; 20 disables the endpoint. */
+    consecutiveFailures: v.number(),
+    disabledReason: v.optional(v.string()),
+    /** "…4F2a" of the signing secret, for the UI. */
+    secretHint: v.optional(v.string()),
+    lastSuccessAt: v.optional(v.number()),
+    lastFailureAt: v.optional(v.number()),
+    createdBy: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_status', ['companyId', 'status']),
+
+  /** One row per (endpoint, event) delivery, and per redelivery or test. */
+  webhookDeliveries: defineTable({
+    companyId: v.id('companies'),
+    endpointId: v.id('webhookEndpoints'),
+    /** Absent for test pings. */
+    eventId: v.optional(v.id('domainEvents')),
+    eventType: v.string(),
+    /** The exact JSON body sent (kept so redelivery sends the same payload). */
+    payload: v.string(),
+    status: v.union(v.literal('pending'), v.literal('succeeded'), v.literal('failed')),
+    attempts: v.number(),
+    nextAttemptAt: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
+    responseStatus: v.optional(v.number()),
+    /** Short error text (never the response body). */
+    lastError: v.optional(v.string()),
+    durationMs: v.optional(v.number()),
+    /** Set on a manual redelivery: the delivery it repeats. */
+    redeliveryOf: v.optional(v.id('webhookDeliveries')),
+    createdAt: v.number(),
+  })
+    .index('by_endpointId_and_createdAt', ['endpointId', 'createdAt'])
+    .index('by_eventId_and_endpointId', ['eventId', 'endpointId'])
+    .index('by_createdAt', ['createdAt']),
 }

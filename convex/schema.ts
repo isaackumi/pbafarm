@@ -733,14 +733,18 @@ const schema = defineSchema({
    */
   integrationSecrets: defineTable({
     companyId: v.id('companies'),
-    channelId: v.id('messagingChannels'),
+    /** Owner: a messaging channel or (INT-005) a webhook endpoint's signing secret. */
+    channelId: v.optional(v.id('messagingChannels')),
+    webhookEndpointId: v.optional(v.id('webhookEndpoints')),
     /** base64 AES-GCM ciphertext (with tag) of the JSON credentials. */
     ciphertext: v.string(),
     /** base64 12-byte IV, random per encryption. */
     iv: v.string(),
     keyVersion: v.number(),
     updatedAt: v.number(),
-  }).index('by_channel', ['channelId']),
+  })
+    .index('by_channel', ['channelId'])
+    .index('by_webhookEndpointId', ['webhookEndpointId']),
 
   /**
    * Pending phone sign-in codes (SEC-006). One row per phone; replaced on
