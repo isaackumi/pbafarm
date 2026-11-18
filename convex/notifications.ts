@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation, internalMutation } from './_generated/server'
-import { requireUser } from './lib/authz'
 import { writeCompanyId, logAudit } from './lib/tenancy'
+import { requireAccount } from './lib/permissions'
 
 function toClient(n: any) {
   return {
@@ -24,7 +24,7 @@ export const listForCurrentUser = query({
     unreadOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     
     let notifications = await ctx.db
       .query('notifications')
@@ -49,7 +49,7 @@ export const listForCurrentUser = query({
 export const getUnreadCount = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     
     const unreadNotifications = await ctx.db
       .query('notifications')
@@ -63,7 +63,7 @@ export const getUnreadCount = query({
 export const markRead = mutation({
   args: { id: v.id('notifications') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const notification = await ctx.db.get(id)
     
     if (!notification) throw new Error('Notification not found')
@@ -80,7 +80,7 @@ export const markRead = mutation({
 export const markAllRead = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     
     const unreadNotifications = await ctx.db
       .query('notifications')
@@ -180,7 +180,7 @@ export const createBulk = internalMutation({
 export const deleteNotification = mutation({
   args: { id: v.id('notifications') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const notification = await ctx.db.get(id)
     
     if (!notification) throw new Error('Notification not found')

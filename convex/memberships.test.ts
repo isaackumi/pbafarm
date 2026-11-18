@@ -229,7 +229,7 @@ describe('admin membership management', () => {
     await as(adminA).mutation(api.memberships.suspend, { userId: staffA })
     const staff = await t.run((ctx) => ctx.db.get(staffA))
     expect(staff?.companyId).toBeUndefined()
-    expect(await as(staffA).query(api.cages.list, {})).toEqual([])
+    expect(await codeOf(as(staffA).query(api.cages.list, {}))).toBe('NO_COMPANY')
     await as(adminA).mutation(api.memberships.reactivate, { userId: staffA })
     expect((await as(staffA).query(api.cages.list, {})).map((c: any) => c.name)).toEqual(['A1'])
   })

@@ -5,12 +5,12 @@ import { idempotentMutation } from './lib/idempotency'
 import { mirrorRecordReading } from './waterQuality'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { syncCageAbw } from './lib/growth'
 import { tagBiweekly } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
+import { requireMember } from './lib/permissions'
 import { refreshUnitDays } from './lib/rollups'
 import { emitDomainEvent } from './lib/events'
 
@@ -44,7 +44,7 @@ export const list = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.cageId
       ? await ctx.db
           .query('biweeklyRecords')
@@ -75,7 +75,7 @@ export const listPage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPageInRange(ctx, user, 'biweeklyRecords', args.paginationOpts, {
       from: args.dateFrom,
       to: args.dateTo,
@@ -91,7 +91,7 @@ export const listPage = query({
 export const get = query({
   args: { id: v.id('biweeklyRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)
     if (!record) return null
     const allowed = await listForCompany(user, [record])
@@ -143,7 +143,7 @@ export const create = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.sampling.record' })
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
     const companyId = await writeCompanyId(user)
@@ -234,7 +234,7 @@ export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.sampling.record' })
     return await saveSamplingBatch(ctx, user, args)
   },
 })
@@ -379,9 +379,8 @@ export const createMany = mutation({
     ),
   },
   handler: async (ctx, { records }) => {
-    const user = await requireUser(ctx)
-    // Bulk import bypasses per-record review (doc 07 V9): admin only.
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.import' })
+    // Bulk import bypasses per-record review (doc 07 V9): production.import.
     const companyId = await writeCompanyId(user)
     const ids = []
     for (const record of records) {
@@ -426,7 +425,7 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.sampling.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Biweekly record not found')
     const allowed = await listForCompany(user, [existing])
@@ -467,8 +466,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('biweeklyRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Biweekly record not found')
     const allowed = await listForCompany(user, [existing])

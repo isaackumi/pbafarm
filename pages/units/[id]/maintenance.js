@@ -13,11 +13,12 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { api } from '../../../convex/_generated/api'
 import { errorMessage } from '../../../lib/errorMessage'
 import { localToday, unitLabel } from '../../../lib/format'
+import { usePermission } from '../../../hooks/usePermission'
 
 function MaintenancePage() {
   const router = useRouter()
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('org.sites.manage')
   const { showToast } = useToast()
   const id = typeof router.query.id === 'string' ? router.query.id : null
   const ws = useQuery(api.units.workspace, user && id ? { id } : 'skip')

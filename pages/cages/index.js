@@ -13,6 +13,7 @@ import { api } from '../../convex/_generated/api'
 import { Plus, Pencil, Archive } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { unitLabel } from '../../lib/format'
+import { usePermission } from '../../hooks/usePermission'
 
 const unitTypeOfRow = (row) => row.unitType || row.unit_type || 'cage'
 
@@ -34,7 +35,7 @@ export default function CagesPage() {
 function CagesManagement() {
   const router = useRouter()
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.units.delete')
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const settingsData = useQuery(api.companies.getEffectiveSettings, user ? {} : 'skip')

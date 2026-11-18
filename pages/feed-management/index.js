@@ -25,10 +25,11 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../../components/FeedPurchaseModal'
 import { Plus, ArrowLeft, Download, Filter, Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
+import { usePermission } from '../../hooks/usePermission'
 
 const FeedManagement = () => {
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('inventory.adjust')
   const [feedTypes, setFeedTypes] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)

@@ -172,7 +172,7 @@ export default function ApiKeysPage() {
   )
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="integrations.manage">
       <Layout title="API keys">
         <FormPage width="lg">
           <PageHeader

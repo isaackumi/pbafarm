@@ -10,6 +10,7 @@ import { errorMessage } from '../lib/errorMessage'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
+import { usePermission } from '../hooks/usePermission'
 
 function statusBadge(status) {
   if (status === 'approved') return 'bg-kelp/10 text-kelp'
@@ -43,7 +44,7 @@ function FishTransfersContent() {
   const [busyId, setBusyId] = useState(null)
 
   const rows = useMemo(() => transfers || [], [transfers, refreshKey])
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('production.transfer.approve')
 
   const onApprove = async (id) => {
     setBusyId(id)

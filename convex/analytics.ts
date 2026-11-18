@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { query, type QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser } from './lib/authz'
 import { scopedRows, scopedRowsInRange, tenantScope } from './lib/scope'
 import { mergeSettings } from './lib/farmRules'
 import { splitExpenses } from './lib/costing'
@@ -19,6 +18,7 @@ import {
   type Stats,
 } from './lib/analytics'
 import { userError } from './lib/errors'
+import { requireMember } from './lib/permissions'
 
 /**
  * Analytics pages (ANLY-002..004, Phase 13): farm comparison, growth curves
@@ -95,7 +95,7 @@ export const comparison = query({
     assertDate(args.from, 'From')
     assertDate(args.to, 'To')
     if (args.from > args.to) throw userError('VALIDATION', 'From must be on or before To')
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)
     const stats = await occupanciesSince(ctx, user, args.from, args.locationId)
     const n = await names(ctx, user)
@@ -218,7 +218,7 @@ export const growth = query({
   handler: async (ctx, args) => {
     assertDate(args.asOf, 'As of')
     if (args.forecastOn) assertDate(args.forecastOn, 'Forecast date')
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const target = await farmTarget(ctx, user)
     const harvestAt = args.targetAbwG && args.targetAbwG > 0 ? args.targetAbwG : target.abwG
     const since = addDays(args.asOf, -Math.max(0, Math.min(args.closedWithinDays ?? 0, 730)))
@@ -269,7 +269,7 @@ export const trends = query({
   handler: async (ctx, args) => {
     assertDate(args.asOf, 'As of')
     const weeks = weekEnds(args.asOf, Math.max(2, Math.min(args.weeks ?? 12, 26)))
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const stats = await occupanciesSince(ctx, user, addDays(weeks[0], -6), args.locationId)
     const n = await names(ctx, user)
     const byUnit = new Map<string, Stats[]>()
@@ -298,7 +298,7 @@ export const trends = query({
 export const cycles = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     const rows = (

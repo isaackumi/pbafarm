@@ -22,6 +22,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 const FREQ = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
 const KIND = { visitor: 'Visitor', vehicle: 'Vehicle', disinfection: 'Disinfection', other: 'Other' }
@@ -69,7 +70,7 @@ function Compliance() {
 
 function Checklists({ locationId }) {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('org.settings.manage')
   const { showToast } = useToast()
   const today = localToday()
   const due = useQuery(api.compliance.due, user ? { locationId, today } : 'skip')

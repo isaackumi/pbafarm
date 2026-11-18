@@ -63,6 +63,7 @@ import {
   Cell,
 } from 'recharts'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 export default function FeedPurchasesPage() {
   return (
@@ -77,7 +78,7 @@ function FeedPurchases() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   // Purchase edit and void are admin-only on the backend.
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('inventory.purchase.correct')
   const { activeLocationId, activeLocation, locations } = useLocation()
 
   const [feedTypes, setFeedTypes] = useState([])

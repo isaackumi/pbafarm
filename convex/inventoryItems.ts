@@ -2,9 +2,9 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, ensureDefaultLocation, logAudit, writeCompanyId, writeLocationId } from './lib/tenancy'
 import { tenantScope } from './lib/scope'
+import { requireMember } from './lib/permissions'
 
 /**
  * Non-feed inventory (INV-001): chemicals, drugs, nets, equipment, fuel,
@@ -112,7 +112,7 @@ export const listItems = query({
     includeArchived: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     const items = (
@@ -168,7 +168,7 @@ export const listItems = query({
 export const listMovements = query({
   args: { itemId: v.optional(v.id('inventoryItems')), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     const limit = Math.min(Math.max(args.limit ?? 100, 1), 500)
@@ -219,7 +219,7 @@ export const createItem = mutation({
     unitCost: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const companyId = await writeCompanyId(user)
     const name = args.name.trim()
     if (!name) throw new Error('Item name is required')
@@ -253,8 +253,7 @@ export const updateItem = mutation({
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const item = await loadItem(ctx, user, args.id)
     const patch: Partial<Doc<'inventoryItems'>> = { updatedAt: Date.now() }
     if (args.name !== undefined) {
@@ -280,8 +279,7 @@ export const updateItem = mutation({
 export const archiveItem = mutation({
   args: { id: v.id('inventoryItems') },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     const item = await loadItem(ctx, user, args.id)
     const rows = await ctx.db
       .query('inventoryItemStock')
@@ -307,7 +305,7 @@ export const receive = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const item = await loadItem(ctx, user, args.itemId)
     if (args.supplierId) assertOwns(user, await ctx.db.get(args.supplierId), 'Supplier')
     if (args.unitCost !== undefined && !(args.unitCost >= 0)) throw new Error('Unit cost must be zero or more')
@@ -334,7 +332,7 @@ export const issue = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
     return await issueItem(ctx, user, args)
   },
 })
@@ -385,8 +383,7 @@ export const adjust = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.reason.trim()) throw new Error('A reason is required')
     const item = await loadItem(ctx, user, args.itemId)
     const locationId = await siteFor(ctx, user, args.locationId)
@@ -407,8 +404,7 @@ export const transfer = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (args.fromLocationId === args.toLocationId) throw new Error('Pick two different sites')
     const item = await loadItem(ctx, user, args.itemId)
     const from = await siteFor(ctx, user, args.fromLocationId)

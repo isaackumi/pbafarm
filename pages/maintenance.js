@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 function DueList({ title, items, tone }) {
   if (!items.length) return null
@@ -39,7 +40,7 @@ function DueList({ title, items, tone }) {
 
 function Maintenance() {
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('org.sites.manage')
   const { locationArgs } = useLocation()
   const asOf = localToday()
   const due = useQuery(api.equipment.due, user ? { asOf, days: 14, ...locationArgs } : 'skip')

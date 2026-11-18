@@ -1,6 +1,6 @@
 import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
-import { requireRole } from './authz'
+import { assertUserCan } from './permissions'
 import { assertOwns, logAudit } from './tenancy'
 import { emitDomainEvent } from './events'
 import { mergeSettings } from './farmRules'
@@ -214,7 +214,7 @@ export async function assertFeedNotAlreadyRecorded(
   if (!(existingKg > 0)) return
 
   if (args.overrideReason?.trim()) {
-    requireRole(args.user, 'admin')
+    await assertUserCan(ctx, args.user, 'inventory.adjust')
     const cage = await ctx.db.get(args.cageId)
     await logAudit(ctx, {
       actionType: 'feed_overlap_override',
@@ -291,7 +291,7 @@ export async function applyStockChange(
         `Insufficient stock for ${feedType.name}: have ${feedType.currentStock} kg, need ${Math.abs(args.deltaKg)} kg`,
       )
     }
-    requireRole(args.user, 'admin')
+    await assertUserCan(ctx, args.user, 'inventory.adjust')
     if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
       throw new Error('Admin override requires a reason')
     }
@@ -315,7 +315,7 @@ export async function applyStockChange(
             `${round1(feedType.currentStock)} kg across all sites; transfer feed to ${siteName} or record a purchase for it.`,
         )
       }
-      requireRole(args.user, 'admin')
+      await assertUserCan(ctx, args.user, 'inventory.adjust')
       if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
         throw new Error('Admin override requires a reason')
       }

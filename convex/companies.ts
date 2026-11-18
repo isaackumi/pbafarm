@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
+import { requireUser, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { retimeScheduleRules } from './automation/engine'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
@@ -18,6 +18,7 @@ import {
   validateSettingsForPublish,
   DEFAULT_SETTINGS,
 } from './lib/farmRules'
+import { can, memberContext, requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
 
 /** A file must be claimed as a logo within this long of its upload. */
 const LOGO_CLAIM_WINDOW_MS = 60 * 60 * 1000
@@ -166,9 +167,10 @@ async function revokeMemberSessions(
   return sessions
 }
 
+/** The active organization only; the permission is checked by requireMember. */
 function requireCompanyAdmin(user: any, companyId: string) {
   if (user.role === 'super_admin') return
-  if (user.companyId !== companyId || user.role !== 'admin') {
+  if (user.companyId !== companyId) {
     throw new Error('Access denied')
   }
 }
@@ -269,6 +271,9 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         stockingRules.enforceCageCapacity ??
         stockingRules.enforce_cage_capacity ??
         true,
+      requireDifferentApprover:
+        stockingRules.requireDifferentApprover === true ||
+        stockingRules.require_different_approver === true,
       minInitialAbwG: numOr(
         stockingRules.minInitialAbwG ?? stockingRules.min_initial_abw_g,
         DEFAULT_SETTINGS.stockingRules.minInitialAbwG,
@@ -367,7 +372,7 @@ export const register = mutation({
     abbreviation: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
 
     const name = args.name.trim()
     if (!name) throw new Error('Company name is required')
@@ -450,7 +455,7 @@ export const register = mutation({
 export const myRegistration = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const latest = await ctx.db
       .query('companies')
       .withIndex('by_submittedByUserId', (q) => q.eq('submittedByUserId', user._id))
@@ -471,8 +476,7 @@ export const myRegistration = query({
 export const listPending = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'super_admin')
+    const user = await requirePlatformAdmin(ctx)
     
     const pending = await ctx.db
       .query('companies')
@@ -489,8 +493,7 @@ export const approve = mutation({
     userId: v.optional(v.id('users')), // User to promote to admin
   },
   handler: async (ctx, { companyId, userId: requestedUserId }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'super_admin')
+    const user = await requirePlatformAdmin(ctx)
 
     const company = await ctx.db.get(companyId)
     if (!company) throw new Error('Company not found')
@@ -578,8 +581,7 @@ export const reject = mutation({
     revokeSessions: v.optional(v.boolean()),
   },
   handler: async (ctx, { companyId, reason, revokeSessions }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'super_admin')
+    const user = await requirePlatformAdmin(ctx)
     
     const company = await ctx.db.get(companyId)
     if (!company) throw new Error('Company not found')
@@ -617,8 +619,7 @@ export const remove = mutation({
     revokeSessions: v.optional(v.boolean()),
   },
   handler: async (ctx, { companyId, reason, revokeSessions }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'super_admin')
+    const user = await requirePlatformAdmin(ctx)
 
     const company = await ctx.db.get(companyId)
     if (!company) throw new Error('Company not found')
@@ -651,8 +652,7 @@ export const remove = mutation({
 export const list = query({
   args: { status: v.optional(v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'super_admin')
+    const user = await requirePlatformAdmin(ctx)
     
     // Platform view (super_admin only): bounded, and filtered by the status
     // index when a status is given.
@@ -685,7 +685,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id('companies') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     const company = await ctx.db.get(id)
     if (!company) return null
     
@@ -709,19 +709,16 @@ export const updateSettings = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const company = await ctx.db.get(id)
     if (!company) throw new Error('Company not found')
 
-    // Only super admins or company admins can update
-    if (user.role !== 'super_admin' && (user.companyId !== id || user.role !== 'admin')) {
+    // org.settings.manage on the active organization only.
+    if (user.role !== 'super_admin' && user.companyId !== id) {
       throw new Error('Access denied')
     }
 
     const { aiAssistantEnabled, ...rest } = patch
-    if (aiAssistantEnabled !== undefined) {
-      requireRole(user, 'admin')
-    }
 
     const existing = { ...company }
     await ctx.db.patch(id, {
@@ -760,8 +757,7 @@ export const updateProfile = mutation({
     defaultLocale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
     if (!company) throw new Error('Company not found')
@@ -802,7 +798,7 @@ export const updateProfile = mutation({
 export const aiAssistantStatus = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     if ((user.role ?? 'user') === 'super_admin') {
       // Super admins without a company: allow for support; with company: follow setting
       if (!user.companyId) {
@@ -814,8 +810,7 @@ export const aiAssistantStatus = query({
     }
     const company = await ctx.db.get(user.companyId)
     const enabled = company?.settings?.aiAssistantEnabled === true
-    const role = user.role ?? 'user'
-    const canManage = role === 'admin' || role === 'super_admin'
+    const canManage = can(await memberContext(ctx, user), 'org.settings.manage')
     return { enabled, canManage }
   },
 })
@@ -823,7 +818,7 @@ export const aiAssistantStatus = query({
 export const getCurrentCompany = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     if (!user.companyId) return null
 
     const company = await ctx.db.get(user.companyId)
@@ -836,7 +831,7 @@ export const getCurrentCompany = query({
 export const getEffectiveSettings = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     if (!user.companyId) {
       return { settings: mergeSettings(undefined), company: null }
     }
@@ -854,8 +849,7 @@ export const getEffectiveSettings = query({
 export const getSettingsDraft = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) {
       return {
         missingCompany: true,
@@ -902,8 +896,7 @@ export const getSettingsDraft = query({
 export const saveSettingsDraft = mutation({
   args: { draft: v.any() },
   handler: async (ctx, { draft }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked to your account')
     requireCompanyAdmin(user, user.companyId)
 
@@ -941,8 +934,7 @@ export const saveSettingsDraft = mutation({
 export const publishSettings = mutation({
   args: { draft: v.optional(v.any()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked to your account')
     requireCompanyAdmin(user, user.companyId)
 
@@ -1038,8 +1030,7 @@ export const publishSettings = mutation({
 export const generateLogoUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
     return await ctx.storage.generateUploadUrl()
   },
@@ -1048,8 +1039,7 @@ export const generateLogoUploadUrl = mutation({
 export const setLogo = mutation({
   args: { storageId: v.id('_storage') },
   handler: async (ctx, { storageId }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
     if (!company) throw new Error('Company not found')
@@ -1072,8 +1062,7 @@ export const setLogo = mutation({
 export const clearLogo = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
     if (!company) throw new Error('Company not found')

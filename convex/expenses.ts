@@ -2,11 +2,11 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, writeCompanyId, writeLocationId, logAudit } from './lib/tenancy'
 import { tenantScope } from './lib/scope'
 import { mergeSettings } from './lib/farmRules'
 import { BUILT_IN_CATEGORY_KEYS, EXPENSE_CATEGORIES, categoryKey, splitExpenses } from './lib/costing'
+import { requireMember } from './lib/permissions'
 
 /**
  * Expenses (INV-007). Anyone in the company records an expense (field quick
@@ -73,7 +73,7 @@ function validateDate(date: string) {
 export const listCategories = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)
     const custom =
       scope.kind === 'company'
@@ -95,8 +95,7 @@ export const listCategories = query({
 export const createCategory = mutation({
   args: { label: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const companyId = await writeCompanyId(user)
     const label = args.label.trim()
     const key = categoryKey(label)
@@ -131,8 +130,7 @@ export const updateCategory = mutation({
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)
     assertOwns(user, existing, 'Category')
     const patch: Partial<Doc<'expenseCategories'>> = { updatedAt: Date.now() }
@@ -166,7 +164,7 @@ export const list = query({
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)
     const empty = { rows: [], total: 0, by_category: {}, truncated: false }
     if (scope.kind !== 'company') return empty
@@ -249,7 +247,7 @@ const expenseFields = {
 export const create = mutation({
   args: expenseFields,
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.expenses.record' })
     const companyId = await writeCompanyId(user)
     validateAmount(args.amount)
     validateDate(args.date)
@@ -297,8 +295,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)
     assertOwns(user, existing, 'Expense')
     if (existing.deletedAt) throw new Error('Expense not found')
@@ -340,8 +337,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('expenses') },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
     const existing = await ctx.db.get(args.id)
     assertOwns(user, existing, 'Expense')
     if (existing.deletedAt) return null

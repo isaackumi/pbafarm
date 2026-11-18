@@ -7,7 +7,6 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser } from './lib/authz'
 import { assertOwns, listForCompany, logAudit, writeCompanyId } from './lib/tenancy'
 import { userError } from './lib/errors'
 import {
@@ -20,6 +19,7 @@ import {
   occupanciesFor,
   treatmentsDuring,
 } from './lib/traceability'
+import { requireMember } from './lib/permissions'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const KG_TOLERANCE = 0.05
@@ -91,7 +91,7 @@ export const listLots = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     let rows: Doc<'harvestLots'>[]
@@ -137,7 +137,7 @@ export const createLot = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const harvest = await ctx.db.get(args.harvestId)
     assertOwns(user, harvest, 'Harvest')
     const companyId = await writeCompanyId(user)
@@ -193,8 +193,7 @@ export const createLot = mutation({
 export const removeLot = mutation({
   args: { id: v.id('harvestLots') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const lot = await ctx.db.get(id)
     assertOwns(user, lot, 'Lot')
     if ((await dispatchesOf(ctx, id)).length) {
@@ -231,7 +230,7 @@ export const createDispatch = mutation({
     withdrawalOverrideReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const lot = await ctx.db.get(args.harvestLotId)
     assertOwns(user, lot, 'Lot')
     if (!DATE_RE.test(args.dispatchDate)) throw userError('VALIDATION', 'Dispatch date must be YYYY-MM-DD')
@@ -296,8 +295,7 @@ export const createDispatch = mutation({
 export const removeDispatch = mutation({
   args: { id: v.id('dispatches') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const d = await ctx.db.get(id)
     assertOwns(user, d, 'Dispatch')
     await ctx.db.delete(id)
@@ -394,7 +392,7 @@ async function traceBatch(ctx: QueryCtx, batch: Doc<'batches'>) {
 export const batchTrace = query({
   args: { batchId: v.id('batches') },
   handler: async (ctx, { batchId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(batchId)
     if (!batch || !(await listForCompany(user, [batch])).length) return null
     const trace = await traceBatch(ctx, batch)
@@ -415,7 +413,7 @@ export const batchTrace = query({
 export const batchTreatments = query({
   args: { batchId: v.id('batches') },
   handler: async (ctx, { batchId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(batchId)
     if (!batch || !(await listForCompany(user, [batch])).length) return null
     const chain = await batchWithAncestors(ctx, batch)
@@ -434,7 +432,7 @@ export const batchTreatments = query({
 export const withdrawalStatus = query({
   args: { cageId: v.id('cages'), date: v.string() },
   handler: async (ctx, { cageId, date }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(cageId)
     if (!cage || !(await listForCompany(user, [cage])).length || !DATE_RE.test(date)) return null
     const rows = await blockingTreatments(ctx, cageId, date)
@@ -456,7 +454,7 @@ export const withdrawalStatus = query({
 export const lotReport = query({
   args: { lotId: v.id('harvestLots') },
   handler: async (ctx, { lotId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const lot = await ctx.db.get(lotId)
     if (!lot || !(await listForCompany(user, [lot])).length) return null
     const [harvest, cage, company, site] = await Promise.all([

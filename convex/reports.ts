@@ -1,6 +1,5 @@
 import { v } from 'convex/values'
 import { query } from './_generated/server'
-import { requireUser } from './lib/authz'
 import { listForCompany } from './lib/tenancy'
 import { isRealHarvest } from './lib/cycles'
 import { asOfDate, daysBefore, scopedRows, scopedRowsInRange, tenantScope } from './lib/scope'
@@ -22,6 +21,7 @@ import {
   pooledFcr,
   survivalPct,
 } from './lib/kpi'
+import { requireMember } from './lib/permissions'
 
 /** A bi-weekly row as a KPI sample. */
 const sampleRow = (r: Doc<'biweeklyRecords'>) => ({
@@ -68,7 +68,7 @@ export const dashboardSummary = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const daysBack = args.dateRange || 30
     const cutoffDateStr = daysBefore(asOfDate(args.asOf), daysBack)
 
@@ -157,7 +157,7 @@ export const dashboardKpis = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const daysBack = args.dateRange || 30
     const cutoffDateStr = daysBefore(asOfDate(args.asOf), daysBack)
 
@@ -218,7 +218,7 @@ export const exportBundle = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.export' })
 
     const range = { from: args.dateFrom, to: args.dateTo, order: 'asc' as const }
     const atSite = <T extends { locationId?: Id<'farmLocations'> }>(rows: T[]) =>
@@ -336,7 +336,7 @@ export const getProductionMetrics = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
 
     // Get cages for context
     let cages: Doc<'cages'>[]
@@ -407,7 +407,7 @@ export const productionReport = query({
     cageIds: v.array(v.id('cages')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const idSet = new Set(args.cageIds.map(String))
 
     // Only the selected cages the caller owns, in the order they were chosen.
@@ -516,7 +516,7 @@ export const farmContextForAi = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'ai.use' })
 
     const role = user.role ?? 'user'
     if (role !== 'super_admin' || user.companyId) {
@@ -636,7 +636,7 @@ export const getCagePnL = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const cage = await ctx.db.get(args.cageId)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
@@ -684,7 +684,7 @@ export const listCagePnL = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     const book = await loadPriceBook(ctx, user)
 
@@ -739,7 +739,7 @@ export const listCyclePnL = query({
     cageId: v.optional(v.id('cages')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     if (args.cageId) cages = cages.filter((c) => c._id === args.cageId)
     const book = await loadPriceBook(ctx, user)
@@ -809,7 +809,7 @@ export const pnlOverheads = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return { total: 0, by_category: {} }
     const rows = (
@@ -856,7 +856,7 @@ async function openOccupancies(
 export const productionOverview = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const rows = await openOccupancies(ctx, user, args.locationId)
     const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0)
     return {
@@ -887,7 +887,7 @@ export const dailySeries = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     const rows = await ctx.db

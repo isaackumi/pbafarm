@@ -17,7 +17,6 @@ import { internalMutation, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireRole, requireUser } from './lib/authz'
 import { assertLocationAccess, assertOwns, logAudit } from './lib/tenancy'
 import { emitDomainEvent } from './lib/events'
 import { idempotentMutation } from './lib/idempotency'
@@ -39,6 +38,7 @@ import {
   type WqParameter,
   type WqValues,
 } from './lib/waterQuality'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 const valueFields = {
   dissolvedOxygen: v.optional(v.number()),
@@ -284,7 +284,7 @@ export const record = idempotentMutation('waterQuality.record', {
     ...valueFields,
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     const unit = await loadUnit(ctx, user, args.unitId)
     if (unit.archivedAt) throw new Error('This unit is archived')
     const now = Date.now()
@@ -319,11 +319,11 @@ export const record = idempotentMutation('waterQuality.record', {
 export const remove = mutation({
   args: { id: v.id('waterQualityReadings') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     const row = await ctx.db.get(id)
     assertOwns(user, row, 'Reading')
     if (row.source !== 'manual') throw new Error('Edit the daily or bi-weekly record this reading came from')
-    if (row.createdBy !== user._id) requireRole(user, 'admin')
+    if (row.createdBy !== user._id) await assertUserCan(ctx, user, 'production.records.delete')
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
@@ -360,7 +360,7 @@ export const listForUnit = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(args.unitId)
     if (!unit || ((user.role ?? 'user') !== 'super_admin' && unit.companyId !== user.companyId)) return null
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
@@ -435,7 +435,7 @@ export const listForUnit = query({
 export const latestByUnit = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, { locationId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const rows = await ctx.db
@@ -470,7 +470,7 @@ const UNIT_TYPES: UnitType[] = ['cage', 'pond', 'tank', 'raceway', 'hatchery_tan
 export const thresholds = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const overrides = user.companyId ? await overridesFor(ctx, user.companyId) : []
     return {
       parameters: WQ_PARAMETERS,
@@ -494,8 +494,7 @@ export const setThreshold = mutation({
     reset: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = user.companyId
     if (!companyId) throw new Error('No company')
     if (!(args.parameter in WQ_PARAMETERS)) throw new Error('Unknown parameter')
@@ -566,7 +565,7 @@ export const logWaterEvent = idempotentMutation('waterQuality.logWaterEvent', {
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     const unit = await loadUnit(ctx, user, args.unitId)
     if (!isBusinessDate(args.date)) throw new Error('Date must be a real date (YYYY-MM-DD)')
     const today = await todayFor(ctx, { locationId: unit.locationId, companyId: unit.companyId })
@@ -633,7 +632,7 @@ export const logWaterEvent = idempotentMutation('waterQuality.logWaterEvent', {
 export const listWaterEvents = query({
   args: { unitId: v.id('cages'), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(args.unitId)
     if (!unit || ((user.role ?? 'user') !== 'super_admin' && unit.companyId !== user.companyId)) return []
     return await ctx.db

@@ -86,11 +86,11 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 | ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
-| PERM-001 | Permission catalog + role templates | owner, admin, manager, field_staff, viewer | P1 | ORG-001, Q-010 | Designed | D-005; A10 | new `convex/lib/permissions.ts` | None | Catalog covers every public function |
-| PERM-002 | Central guard `requireMember` | Replace `requireUser`/`requireRole`/`listForCompany` in 142 functions; shadow mode first | P1 | PERM-001 | Designed | D-005; R04 M9 | all `convex/*.ts` | None | Authz matrix test complete and green |
-| PERM-003 | Custom roles UI | Org-defined roles in `/users` | P2 | PERM-002 | Not started | R03 Phase 3 | `components/UserManagement.js` | None | Admin creates a role and assigns it |
-| PERM-004 | Site-scoped access | `memberships.locationScope` enforced on reads and writes | P1 | ORG-001, FARM-003 | Designed | d07 §3.3; d04 F17 | `convex/lib/tenancy.ts` | None | Field user of site A cannot read site B |
-| PERM-005 | Segregation of duties | Approver ≠ creator (configurable) for stocking/top-up/transfer | P2 | PERM-002 | Not started | d07 §3.7 | `convex/stocking.ts`, `convex/fishTransfers.ts` | None | Self-approval refused when enabled |
+| PERM-001 | Permission catalog + role templates | owner, admin, manager, field_staff, viewer | P1 | ORG-001, Q-010 | Implemented | D-005; A10 | new `convex/lib/permissions.ts` | Covered (convex/permissions.test.ts): catalog, templates, matrix | Catalog covers every public function |
+| PERM-002 | Central guard `requireMember` | Replace `requireUser`/`requireRole`/`listForCompany` in 142 functions; shadow mode first | P1 | PERM-001 | Implemented (direct switch, no shadow mode) | D-005; R04 M9 | all `convex/*.ts` | Covered (convex/permissions.test.ts): every public function guarded; custom roles | Authz matrix test complete and green |
+| PERM-003 | Custom roles UI | Org-defined roles in `/users` | P2 | PERM-002 | Implemented | R03 Phase 3 | `components/UserManagement.js` | Partial: usePermission drives Sidebar, MobileTabBar, ProtectedRoute and admin buttons (no UI tests) | Admin creates a role and assigns it |
+| PERM-004 | Site-scoped access | `memberships.locationScope` enforced on reads and writes | P1 | ORG-001, FARM-003 | Implemented | d07 §3.3; d04 F17 | `convex/lib/tenancy.ts` | Covered (convex/permissions.test.ts): field_staff site A cannot read or write B; setSites | Field user of site A cannot read site B |
+| PERM-005 | Segregation of duties | Approver ≠ creator (configurable) for stocking/top-up/transfer | P2 | PERM-002 | Implemented (off by default) | d07 §3.7 | `convex/stocking.ts`, `convex/fishTransfers.ts` | Covered (convex/permissions.test.ts): requester cannot approve when required | Self-approval refused when enabled |
 | UX-007 | Permission-aware UI | `usePermission` hook drives Sidebar, tab bar and buttons | P1 | PERM-002 | Not started | d02 §15 | `components/Sidebar.js`, `components/MobileTabBar.js`, `components/ProtectedRoute.js` | None | No visible action fails with "Insufficient permissions" |
 
 ## Phase 4 — Production engine

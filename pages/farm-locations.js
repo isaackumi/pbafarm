@@ -44,6 +44,7 @@ function siteMeta(form) {
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
+import { usePermission } from '../hooks/usePermission'
 
 export default function FarmLocationsPage() {
   return (
@@ -58,7 +59,7 @@ export default function FarmLocationsPage() {
 function FarmLocations() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('org.sites.manage')
   const { setActiveLocation } = useLocation()
 
   const locations = useQuery(

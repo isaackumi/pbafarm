@@ -10,11 +10,11 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser } from './lib/authz'
 import { assertOwns, logAudit, writeCompanyId, writeLocationId } from './lib/tenancy'
 import { scopedRows, tenantScope } from './lib/scope'
 import { densityStatus, mergeSettings, unitTypeOf } from './lib/farmRules'
 import { assertTransition, nextStatuses, STATUS_LABELS, type UnitStatus } from './lib/unitStatus'
+import { requireMember } from './lib/permissions'
 
 export const unitGroupKind = v.union(
   v.literal('cage_group'),
@@ -86,7 +86,7 @@ async function companyWaterBodies(ctx: QueryCtx, user: Doc<'users'>) {
 export const listWaterBodies = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const rows = await companyWaterBodies(ctx, user)
     return rows
       .filter((r) => args.includeInactive || r.active)
@@ -106,8 +106,7 @@ const waterBodyFields = {
 export const createWaterBody = mutation({
   args: waterBodyFields,
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     checkCoords(args.latitude, args.longitude)
     const companyId = await writeCompanyId(user)
     const locationId = args.locationId ? await writeLocationId(ctx, user, args.locationId) : undefined
@@ -138,8 +137,7 @@ export const updateWaterBody = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
     assertOwns(user, existing, 'Water body')
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
@@ -166,7 +164,7 @@ export const listGroups = query({
     includeInactive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const [groups, units, bodies] = await Promise.all([
       companyGroups(ctx, user),
       scopedRows(ctx, user, 'cages', { locationId: args.locationId }),
@@ -204,8 +202,7 @@ const groupFields = {
 export const createGroup = mutation({
   args: groupFields,
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     checkCoords(args.latitude, args.longitude)
     if (args.systemVolumeM3 !== undefined && !(args.systemVolumeM3 > 0)) {
       throw new Error('System volume must be a positive number')
@@ -242,8 +239,7 @@ export const updateGroup = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
     assertOwns(user, existing, 'Unit group')
     checkCoords(patch.latitude ?? existing.latitude, patch.longitude ?? existing.longitude)
@@ -271,8 +267,7 @@ export const assignToGroup = mutation({
     groupId: v.optional(v.id('unitGroups')),
   },
   handler: async (ctx, { unitIds, groupId }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     if (unitIds.length > 200) throw new Error('Assign at most 200 units at a time')
     const group = groupId ? await ctx.db.get(groupId) : null
     if (groupId) assertOwns(user, group, 'Unit group')
@@ -319,7 +314,7 @@ export const UNIT_PROFILE: Record<
 export const workspace = query({
   args: { id: v.id('cages') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(id)
     if (!unit) return null
     if ((user.role ?? 'user') !== 'super_admin' && unit.companyId !== user.companyId) return null
@@ -357,8 +352,7 @@ export const setStatus = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { id, status, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stock.adjust' })
     const unit = await ctx.db.get(id)
     assertOwns(user, unit, 'Unit')
     if (unit.archivedAt) throw new Error('This unit is archived; restore it first')
@@ -385,7 +379,7 @@ export const setStatus = mutation({
 export const board = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const [units, groups] = await Promise.all([
       scopedRows(ctx, user, 'cages', { locationId: args.locationId }),
       companyGroups(ctx, user),
@@ -466,7 +460,7 @@ export const board = query({
 export const mapPoints = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return { sites: [], waterBodies: [], groups: [], units: [] }
     const [sites, bodies, groups, units] = await Promise.all([

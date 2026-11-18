@@ -17,7 +17,7 @@ function RedirectToApprovals() {
 
 export default function PendingApprovalPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="production.stocking.approve">
       <RedirectToApprovals />
     </ProtectedRoute>
   )

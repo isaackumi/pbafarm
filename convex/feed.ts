@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import { scopedRows } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
@@ -11,6 +10,7 @@ import {
   assertFeedNotAlreadyRecorded,
 } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 function toClientSupplier(s: any) {
   return {
@@ -136,7 +136,7 @@ function resolveQuantityKg(
 export const listSuppliers = query({
   args: { includeDeleted: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let suppliers = await scopedRows(ctx, user, 'feedSuppliers')
     suppliers = await listForCompany(user, suppliers)
     if (!args.includeDeleted) {
@@ -154,7 +154,7 @@ export const createSupplier = mutation({
     website: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const now = Date.now()
     const id = await ctx.db.insert('feedSuppliers', {
       ...args,
@@ -182,7 +182,7 @@ export const updateSupplier = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Supplier not found')
     const allowed = await listForCompany(user, [existing])
@@ -203,8 +203,7 @@ export const updateSupplier = mutation({
 export const softDeleteSupplier = mutation({
   args: { id: v.id('feedSuppliers') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Supplier not found')
     const allowed = await listForCompany(user, [existing])
@@ -224,7 +223,7 @@ export const softDeleteSupplier = mutation({
 export const listFeedTypes = query({
   args: { includeDeleted: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
     if (!args.includeDeleted) {
@@ -246,11 +245,11 @@ export const createFeedType = mutation({
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const now = Date.now()
     const opening = Math.max(0, args.currentStock ?? 0)
-    // Opening stock is a stock adjustment — admin only (purchases are the normal path).
-    if (opening > 0) requireRole(user, 'admin')
+    // Opening stock is a stock adjustment (purchases are the normal path).
+    if (opening > 0) await assertUserCan(ctx, user, 'inventory.adjust')
     if (args.supplierId) {
       assertOwns(user, await ctx.db.get(args.supplierId), 'Supplier')
     }
@@ -302,7 +301,7 @@ export const updateFeedType = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [existing])
@@ -310,9 +309,9 @@ export const updateFeedType = mutation({
     if (patch.supplierId !== undefined && patch.supplierId !== existing.supplierId) {
       assertOwns(user, await ctx.db.get(patch.supplierId), 'Supplier')
     }
-    // Price drives every feed cost from here on (doc 07 V9): admin only.
+    // Price drives every feed cost from here on (doc 07 V9).
     if (patch.pricePerKg !== undefined && patch.pricePerKg !== existing.pricePerKg) {
-      requireRole(user, 'admin')
+      await assertUserCan(ctx, user, 'inventory.prices.manage')
     }
 
     await ctx.db.patch(id, { ...patch, updatedAt: Date.now() })
@@ -330,8 +329,7 @@ export const updateFeedType = mutation({
 export const softDeleteFeedType = mutation({
   args: { id: v.id('feedTypes') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [existing])
@@ -356,7 +354,7 @@ export const listPurchases = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let purchases = args.feedTypeId
       ? await ctx.db
           .query('feedPurchases')
@@ -387,7 +385,7 @@ export const createPurchase = mutation({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const feedType = await ctx.db.get(args.feedTypeId)
     if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [feedType])
@@ -472,8 +470,7 @@ export const updatePurchase = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const purchase = await ctx.db.get(args.id)
     if (!purchase || purchase.deletedAt) throw new Error('Purchase not found')
     const allowed = await listForCompany(user, [purchase])
@@ -544,8 +541,7 @@ export const voidPurchase = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const purchase = await ctx.db.get(args.id)
     if (!purchase || purchase.deletedAt) throw new Error('Purchase not found')
     const allowed = await listForCompany(user, [purchase])
@@ -595,7 +591,7 @@ export const listUsage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let usage = []
 
     if (args.feedTypeId) {
@@ -636,7 +632,8 @@ async function recordOutboundUsage(
     locationId?: any
   },
 ) {
-  const user = await requireUser(ctx)
+  // Feed leaving stock (issue, usage): the createIssue/createUsage guard.
+  const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
   const allowed = await listForCompany(user, [feedType])
@@ -736,7 +733,7 @@ export const createIssue = idempotentMutation('feed.createIssue', {
   },
   handler: async (ctx, { feedOverlapReason, ...args }) => {
     if (args.cageId) {
-      const user = await requireUser(ctx)
+      const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
       await assertFeedNotAlreadyRecorded(ctx, {
         user,
         cageId: args.cageId,

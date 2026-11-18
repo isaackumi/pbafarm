@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation, internalMutation } from './_generated/server'
 import { scopedRows } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import {
   listForCompany,
   writeCompanyId,
@@ -12,6 +11,7 @@ import {
 import { Id } from './_generated/dataModel'
 import { siteTypeValidator } from './schema'
 import { isValidTimezone } from './lib/orgProfile'
+import { requireMember } from './lib/permissions'
 
 /** Site metadata args (FARM-001). */
 const siteArgs = {
@@ -79,11 +79,12 @@ function toClient(loc: any) {
 export const list = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     let rows = await scopedRows(ctx, user, 'farmLocations')
     rows = await listForCompany(user, rows)
 
-    if ((user.role ?? 'user') !== 'super_admin' && (user.role ?? 'user') !== 'admin') {
+    // Members limited to some sites see only those (PERM-004).
+    if ((user.role ?? 'user') !== 'super_admin') {
       const assigned = user.locationIds
       if (assigned && assigned.length > 0) {
         rows = rows.filter((r) => assigned.includes(r._id))
@@ -101,7 +102,7 @@ export const list = query({
 export const getActive = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     if (!user.activeLocationId) return null
     const loc = await ctx.db.get(user.activeLocationId)
     if (!loc) return null
@@ -119,7 +120,7 @@ export const getActive = query({
 export const ensureDefault = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     // No-op for company-less users: there is no company to give a site to.
     if (!user.companyId) return null
     const before = await ctx.db
@@ -142,7 +143,7 @@ export const ensureDefault = mutation({
 export const setActiveLocation = mutation({
   args: { locationId: v.id('farmLocations') },
   handler: async (ctx, { locationId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     const loc = await ctx.db.get(locationId)
     if (!loc || loc.active === false) {
       throw new Error('Farm location not found or inactive')
@@ -175,8 +176,7 @@ export const create = mutation({
     ...siteArgs,
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const meta = siteFields(args)
     const name = args.name.trim()
     if (!name) throw new Error('Name is required')
@@ -221,8 +221,7 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Location not found')
     const allowed = await listForCompany(user, [existing])

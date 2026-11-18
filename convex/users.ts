@@ -1,7 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
-import { requireUser, requireRole, revokeUserSessions, sessionMfaVerified } from './lib/authz'
+import { requireUser, revokeUserSessions, sessionMfaVerified } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -25,6 +25,7 @@ import { siteUrl } from './lib/email'
 /** Invite links stay valid for 7 days. */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 import type { Doc, Id } from './_generated/dataModel'
+import { isPermission, requireAccount, requireMember } from './lib/permissions'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -180,7 +181,7 @@ export const current = query({
 export const get = query({
   args: { id: v.id('users') },
   handler: async (ctx, { id }) => {
-    const me = await requireUser(ctx)
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const user = await ctx.db.get(id)
     if (!user) return null
     if ((me.role ?? 'user') === 'super_admin') return toClient(user)
@@ -193,8 +194,7 @@ export const get = query({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     // Company admins read their company (by_companyId); super_admins keep the
     // platform-wide user list, bounded.
     const users =
@@ -217,7 +217,7 @@ export const list = query({
 export const listDirectory = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const { user: me } = await requireMember(ctx, { permission: 'org.view' })
     let users
     if ((me.role ?? 'user') === 'super_admin') {
       users = await ctx.db.query('users').take(PLATFORM_SCAN_LIMIT)
@@ -264,8 +264,7 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
     if (!target) throw new Error('User not found')
 
@@ -334,8 +333,7 @@ export const update = mutation({
 export const setPhone = mutation({
   args: { id: v.id('users'), phone: v.union(v.string(), v.null()) },
   handler: async (ctx, { id, phone }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
     if (!target) throw new Error('User not found')
     if ((me.role ?? 'user') !== 'super_admin') {
@@ -388,8 +386,7 @@ export const invite = mutation({
     roleKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     if (!me.companyId) throw new Error('No company linked')
     const companyId = me.companyId
     const email = args.email.trim().toLowerCase()
@@ -486,8 +483,7 @@ export const invite = mutation({
 export const deactivate = mutation({
   args: { id: v.id('users') },
   handler: async (ctx, { id }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
     if (!target) throw new Error('User not found')
     if ((me.role ?? 'user') !== 'super_admin') {
@@ -535,8 +531,7 @@ export const deactivate = mutation({
 export const reactivate = mutation({
   args: { id: v.id('users') },
   handler: async (ctx, { id }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
     if (!target) throw new Error('User not found')
     if ((me.role ?? 'user') !== 'super_admin') {
@@ -574,7 +569,7 @@ export const reactivate = mutation({
 export const myInvites = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (me.companyId || !me.email) return []
     const invites = await ctx.db
       .query('userInvites')
@@ -608,7 +603,7 @@ export const myInvites = query({
 export const claimInvite = mutation({
   args: { inviteId: v.optional(v.id('userInvites')) },
   handler: async (ctx, args) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (!me.email) return { claimed: false, requested: false }
     if (me.companyId) {
       return { claimed: false, requested: false, reason: 'already_in_company' }
@@ -657,8 +652,7 @@ export const claimInvite = mutation({
 export const listJoinRequests = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     if (!me.companyId) return []
     const companyId = me.companyId
     const invites = await ctx.db
@@ -700,8 +694,7 @@ async function loadJoinRequest(
 export const approveJoinRequest = mutation({
   args: { inviteId: v.id('userInvites') },
   handler: async (ctx, { inviteId }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const invite = await loadJoinRequest(ctx, me, inviteId)
     const target = await ctx.db.get(invite.requestedByUserId)
     if (!target) throw new Error('User not found')
@@ -742,8 +735,7 @@ export const approveJoinRequest = mutation({
 export const declineJoinRequest = mutation({
   args: { inviteId: v.id('userInvites') },
   handler: async (ctx, { inviteId }) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const invite = await loadJoinRequest(ctx, me, inviteId)
     await ctx.db.patch(invite._id, {
       status: 'declined',
@@ -757,6 +749,16 @@ export const declineJoinRequest = mutation({
       newValues: { email: invite.email, requestedByUserId: invite.requestedByUserId },
     })
     return invite._id
+  },
+})
+
+/** For actions: the caller, refused unless they hold the permission (requireMember). */
+export const authorizedMember = internalQuery({
+  args: { permission: v.string() },
+  handler: async (ctx, { permission }) => {
+    if (!isPermission(permission)) throw new Error(`Unknown permission: ${permission}`)
+    const m = await requireMember(ctx, { permission })
+    return { _id: m.user._id, role: m.user.role ?? 'user', companyId: m.user.companyId }
   },
 })
 

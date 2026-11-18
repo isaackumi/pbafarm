@@ -3,7 +3,6 @@ import * as Effect from 'effect/Effect'
 import { action, internalAction, internalMutation, internalQuery, query } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireRole, requireUser } from './lib/authz'
 import { assertLocationAccess } from './lib/tenancy'
 import { zoneFor } from './lib/dates'
 import { runEffect } from './lib/effect'
@@ -14,6 +13,7 @@ import {
   weatherLabel,
   type WeatherDay,
 } from './integrations/weatherLogic'
+import { requireMember } from './lib/permissions'
 
 /**
  * Per-site weather (INT-006, doc 09 §9). A daily cron fetches Open-Meteo for
@@ -140,8 +140,7 @@ export const refreshAll = internalAction({
 export const siteForRefresh = internalQuery({
   args: { locationId: v.id('farmLocations'), now: v.number() },
   handler: async (ctx, { locationId, now }): Promise<SiteJob> => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const loc = await ctx.db.get(locationId)
     if (!loc || !user.companyId || loc.companyId !== user.companyId) throw new Error('Site not found')
     if (!validCoordinates(loc.latitude, loc.longitude)) {
@@ -186,7 +185,7 @@ export const refreshSite = action({
 export const forSites = query({
   args: { locationId: v.optional(v.id('farmLocations')), fromDate: v.string() },
   handler: async (ctx, { locationId, fromDate }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     if (!user.companyId) return { sites: [] }
     const companyId = user.companyId
     let sites = await ctx.db

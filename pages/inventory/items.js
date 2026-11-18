@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
 import { localToday } from '../../lib/format'
+import { usePermission } from '../../hooks/usePermission'
 
 export default function InventoryItemsPage() {
   return (
@@ -53,7 +54,7 @@ const today = () => localToday()
 
 function Items() {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('inventory.adjust')
   const { locationArgs, activeLocationId, locations } = useLocation()
   const { showToast } = useToast()
 

@@ -3,7 +3,6 @@ import { action, internalMutation, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireRole, requireUser } from './lib/authz'
 import { AUTH_ERROR_MESSAGES } from './lib/authErrors'
 import { logAudit } from './lib/tenancy'
 import { sha256Hex } from './lib/crypto'
@@ -14,6 +13,7 @@ import {
   isApiScope,
   randomBase62,
 } from './integrations/apiScopes'
+import { requireMember } from './lib/permissions'
 
 /**
  * Organization API keys (INT-004, doc 09 §8). Admin-only.
@@ -29,8 +29,7 @@ const MAX_NAME = 80
 type Ctx = QueryCtx | MutationCtx
 
 async function requireApiAdmin(ctx: Ctx) {
-  const user = await requireUser(ctx)
-  requireRole(user, 'admin')
+  const { user } = await requireMember(ctx, { permission: 'integrations.manage' })
   if (!user.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
   return { user, companyId: user.companyId }
 }

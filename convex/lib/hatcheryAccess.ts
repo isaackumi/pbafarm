@@ -1,16 +1,13 @@
 /**
  * Hatchery and nursery permissions (Phase 5, `hatchery.*`).
  *
- * Until the Phase 3 member guard (`requireMember`, permission catalog) is on
- * main, these map onto today's roles: admins hold every hatchery permission,
- * other members every one except HATCHERY_ADMIN_ONLY, matching how grading,
- * transfers and stock corrections are gated elsewhere. When the catalog lands,
- * register HATCHERY_PERMISSIONS there and make `requireHatchery` call
- * `requireMember(ctx, { permission })`; callers do not change.
+ * Registered in the permission catalog (lib/permissionCatalog, group
+ * Hatchery); requireHatchery is requireMember with one of these. Managers hold
+ * all but HATCHERY_ADMIN_ONLY, field staff view and record, viewers view.
  */
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
-import { requireUser } from './authz'
+import { requireMember } from './permissions'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { userError } from './errors'
 
@@ -38,12 +35,8 @@ export type HatcheryMember = { user: Doc<'users'>; companyId: Id<'companies'> }
 
 /** The signed-in member of a company holding `permission`, or a refusal. */
 export async function requireHatchery(ctx: Ctx, permission: HatcheryPermission): Promise<HatcheryMember> {
-  const user = await requireUser(ctx)
+  const { user } = await requireMember(ctx, { permission })
   if (!user.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
-  const role = user.role ?? 'user'
-  if (role !== 'admin' && role !== 'super_admin' && HATCHERY_ADMIN_ONLY.includes(permission)) {
-    throw userError('FORBIDDEN', `Insufficient permissions: ${permission}`, { permission })
-  }
   return { user, companyId: user.companyId }
 }
 

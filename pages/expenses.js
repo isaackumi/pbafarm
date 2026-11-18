@@ -19,6 +19,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 export default function ExpensesPage() {
   return (
@@ -44,7 +45,7 @@ const emptyForm = () => ({
 
 function Expenses() {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('finance.expenses.manage')
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency, symbol } = useCurrency()

@@ -11,6 +11,7 @@ import { api } from '../convex/_generated/api'
 import { WQ_PARAMETERS } from '../convex/lib/waterQuality'
 import { errorMessage } from '../lib/errorMessage'
 import { UNIT_TYPES, unitLabel } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 const SHOWN = ['dissolvedOxygen', 'temperatureC', 'ph', 'ammonia', 'nitrite', 'secchiCm']
 const fmt = (v) => (v == null ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }))
@@ -101,7 +102,7 @@ function ThresholdEditor() {
 
 function Overview() {
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('org.settings.manage')
   const { locationArgs } = useLocation()
   const latest = useQuery(api.waterQuality.latestByUnit, user ? locationArgs : 'skip')
   const units = useQuery(api.cages.list, user ? locationArgs : 'skip')

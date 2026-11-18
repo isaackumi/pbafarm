@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
 import { internalMutation, query } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import { requireUser } from './lib/authz'
 import { emitDomainEvent } from './lib/events'
 import { evaluateSensorReadings } from './waterQuality'
 import { SENSOR_PARAMETERS, type SensorParameter } from './integrations/sensorLogic'
+import { requireMember } from './lib/permissions'
 
 /**
  * Sensor readings (INT-007). Convex-native ingestion (doc 14: a Cloudflare
@@ -130,7 +130,7 @@ export const ingest = internalMutation({
 export const latest = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, { locationId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return { readings: [] }
     const companyId = user.companyId
     const rows = await ctx.db

@@ -81,6 +81,8 @@ export async function upsertMembership(
     userId: Id<'users'>
     companyId: Id<'companies'>
     roleKey?: string
+    /** Custom role row; null clears it (template role). */
+    roleId?: Id<'roles'> | null
     status?: Doc<'memberships'>['status']
     allLocations?: boolean
     locationIds?: Id<'farmLocations'>[]
@@ -94,6 +96,7 @@ export async function upsertMembership(
   if (existing) {
     const patch: Partial<Doc<'memberships'>> = { updatedAt: now }
     if (args.roleKey !== undefined) patch.roleKey = args.roleKey
+    if (args.roleId !== undefined) patch.roleId = args.roleId ?? undefined
     if (args.allLocations !== undefined) patch.allLocations = args.allLocations
     if (args.locationIds !== undefined) patch.locationIds = args.locationIds
     if (args.status !== undefined && args.status !== existing.status) {
@@ -110,6 +113,7 @@ export async function upsertMembership(
       userId: args.userId,
       companyId: args.companyId,
       roleKey: args.roleKey ?? 'manager',
+      roleId: args.roleId ?? undefined,
       allLocations: args.allLocations ?? true,
       locationIds: args.locationIds,
       status,

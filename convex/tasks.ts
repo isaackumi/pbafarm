@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { requireRole, requireUser } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import { can, memberContext, requireAccount, requireMember } from './lib/permissions'
 
 /**
  * Simple tasks (AUTO-005): title, assignee, due date, optional cage, status.
@@ -15,7 +15,7 @@ const statusV = v.union(v.literal('open'), v.literal('done'), v.literal('cancell
 export const mine = query({
   args: { includeClosed: v.optional(v.boolean()) },
   handler: async (ctx, { includeClosed }) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const open = await ctx.db
       .query('tasks')
       .withIndex('by_assignee_and_status', (q) => q.eq('assigneeUserId', user._id).eq('status', 'open'))
@@ -47,7 +47,7 @@ export const mine = query({
 export const openCount = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const rows = await ctx.db
       .query('tasks')
       .withIndex('by_assignee_and_status', (q) => q.eq('assigneeUserId', user._id).eq('status', 'open'))
@@ -59,10 +59,10 @@ export const openCount = query({
 export const setStatus = mutation({
   args: { taskId: v.id('tasks'), status: statusV },
   handler: async (ctx, { taskId, status }) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const task = await ctx.db.get(taskId)
     if (!task || task.companyId !== user.companyId) throw new Error('Task not found')
-    const isAdmin = user.role === 'admin' || user.role === 'super_admin'
+    const isAdmin = can(await memberContext(ctx, user), 'automation.manage')
     if (task.assigneeUserId !== user._id && !isAdmin) throw new Error('Only the assignee or an admin can update this task')
     const now = Date.now()
     await ctx.db.patch(taskId, {
@@ -85,8 +85,7 @@ export const create = mutation({
     cageId: v.optional(v.id('cages')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'automation.manage' })
     if (!user.companyId) throw new Error('Your account is not linked to a company')
     const title = args.title.trim()
     if (!title || title.length > 200) throw new Error('Title is required (up to 200 characters)')

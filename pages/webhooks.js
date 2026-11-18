@@ -307,7 +307,7 @@ export default function WebhooksPage() {
   const [secret, setSecret] = useState(null)
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="integrations.manage">
       <Layout title="Webhooks">
         <FormPage width="lg">
           <PageHeader

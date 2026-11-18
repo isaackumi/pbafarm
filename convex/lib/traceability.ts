@@ -13,6 +13,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import { logAudit } from './tenancy'
 import { userError } from './errors'
 import * as engine from './productionEngine'
+import { assertUserCan } from './permissions'
 
 type Ctx = QueryCtx | MutationCtx
 
@@ -175,10 +176,7 @@ export async function enforceWithdrawal(
       { until, action: args.action, treatments: blocking.length },
     )
   }
-  const role = user.role ?? 'user'
-  if (role !== 'admin' && role !== 'super_admin') {
-    throw userError('FORBIDDEN', 'Only an admin can override a withdrawal period.')
-  }
+  await assertUserCan(ctx, user, 'production.withdrawal.override')
   const cage = await ctx.db.get(args.cageId)
   const override = {
     reason,

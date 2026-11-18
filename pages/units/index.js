@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import { localToday, unitLabel } from '../../lib/format'
+import { usePermission } from '../../hooks/usePermission'
 
 const STATUS_TONE = {
   active: 'bg-kelp/10 text-kelp border-kelp/30',
@@ -58,7 +59,7 @@ function UnitTile({ u, wq, today }) {
 
 function Board() {
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('org.sites.manage')
   const router = useRouter()
   const { locationArgs } = useLocation()
   const data = useQuery(api.units.board, user ? locationArgs : 'skip')

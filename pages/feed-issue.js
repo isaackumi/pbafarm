@@ -26,6 +26,7 @@ import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
 import OutboxPanel from '../components/OutboxPanel'
+import { usePermission } from '../hooks/usePermission'
 
 export default function FeedIssuePage() {
   return (
@@ -40,6 +41,7 @@ export default function FeedIssuePage() {
 function FeedIssue() {
   const { showToast } = useToast()
   const { hasRole, user } = useAuth()
+  const canOverride = usePermission('inventory.adjust')
   const { activeLocationId } = useLocation()
   const online = useOnline()
   const [feedTypes, setFeedTypes] = useState([])
@@ -300,7 +302,7 @@ function FeedIssue() {
             </Field>
           </FormSection>
 
-          {hasRole('admin') && (
+          {canOverride && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
               <label className="flex items-center gap-2 text-sm font-medium text-chart-ink">
                 <input

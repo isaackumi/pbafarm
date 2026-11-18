@@ -30,6 +30,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
 import { parseCageScan } from '../lib/qrTarget'
 import QrScanner from './QrScanner'
+import { usePermission } from '../hooks/usePermission'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const dayBefore = (iso) => {
@@ -88,6 +89,7 @@ const DailyUploadPage = () => {
   const prefilledFor = useRef(null)
   const { showToast } = useToast()
   const { hasRole, user } = useAuth()
+  const canOverride = usePermission('inventory.adjust')
   const userId = user?.id
   const { formData, setFormData, handleChange, clear } = usePersistedForm(
     'daily-entry-batch',
@@ -329,7 +331,7 @@ const DailyUploadPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines, feedTypeById, unit, siteStockById])
   const shortages = stockCheck.filter((s) => s.short)
-  const overrideActive = hasRole('admin') && formData.allowNegative
+  const overrideActive = canOverride && formData.allowNegative
 
   const blankFeedLines = mortalityOnly
     ? []
@@ -869,7 +871,7 @@ const DailyUploadPage = () => {
             />
           )}
 
-          {hasRole('admin') && shortages.length > 0 && (
+          {canOverride && shortages.length > 0 && (
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3 dark:bg-amber-500/10 dark:border-amber-500/30">
               <label className="flex items-center gap-2 text-sm text-chart-ink">
                 <input

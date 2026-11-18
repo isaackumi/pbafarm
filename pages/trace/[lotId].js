@@ -22,6 +22,7 @@ import { useToast } from '../../components/Toast'
 import { errorCode, errorMessage } from '../../lib/errorMessage'
 import { localToday } from '../../lib/format'
 import Attachments from '../../components/Attachments'
+import { usePermission } from '../../hooks/usePermission'
 
 const fmt = (v, dp = 1) =>
   v == null ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -108,7 +109,7 @@ function Table({ head, rows, empty }) {
 
 function DispatchForm({ lot, onDone }) {
   const { hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('production.withdrawal.override')
   const { showToast } = useToast()
   const customers = useQuery(api.sales.listCustomers, {})
   const createDispatch = useMutation(api.traceability.createDispatch)

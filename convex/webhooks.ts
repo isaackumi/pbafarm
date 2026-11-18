@@ -12,7 +12,6 @@ import {
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireRole, requireUser } from './lib/authz'
 import { AUTH_ERROR_MESSAGES } from './lib/authErrors'
 import { logAudit } from './lib/tenancy'
 import {
@@ -40,6 +39,7 @@ import {
   signatureHeader,
   webhookUrlProblem,
 } from './integrations/webhookLogic'
+import { requireMember } from './lib/permissions'
 
 /**
  * Outbound webhooks (INT-005, doc 09 §7).
@@ -63,8 +63,7 @@ const MAX_DESCRIPTION = 200
 type Ctx = QueryCtx | MutationCtx
 
 async function requireWebhookAdmin(ctx: Ctx) {
-  const user = await requireUser(ctx)
-  requireRole(user, 'admin')
+  const { user } = await requireMember(ctx, { permission: 'integrations.manage' })
   if (!user.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
   return { user, companyId: user.companyId }
 }

@@ -19,6 +19,7 @@ import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
 import { useCurrency } from '../../hooks/useCurrency'
 import { localToday } from '../../lib/format'
+import { usePermission } from '../../hooks/usePermission'
 
 export default function ProcurementPage() {
   return (
@@ -48,7 +49,7 @@ const blankLine = () => ({ feedTypeId: '', quantityKg: '', pricePerKg: '' })
 
 function PurchaseOrders() {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('inventory.purchase.correct')
   const { activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency } = useCurrency()

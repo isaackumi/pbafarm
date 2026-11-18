@@ -51,6 +51,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
+import { usePermissions } from '../hooks/usePermission'
 
 const MENU_SECTIONS = {
   production: {
@@ -58,24 +59,24 @@ const MENU_SECTIONS = {
     icon: Fish,
     tourId: 'production',
     items: [
-      { title: 'Dashboard', path: '/dashboard', icon: House, tourId: 'dashboard' },
-      { title: 'Daily Entry', path: '/daily-entry', icon: Calendar, tourId: 'daily-entry' },
+      { title: 'Dashboard', path: '/dashboard', permission: 'reports.view', icon: House, tourId: 'dashboard' },
+      { title: 'Daily Entry', path: '/daily-entry', permission: 'production.daily.record', icon: Calendar, tourId: 'daily-entry' },
       { title: 'My Tasks', path: '/tasks', icon: ListTodo },
-      { title: 'Daily Records', path: '/daily-data', icon: ClipboardList },
-      { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale, tourId: 'biweekly-entry' },
-      { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
-      { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },
-      { title: 'Harvest Sampling', path: '/harvest-sampling', icon: Crosshair },
-      { title: 'Harvest Lots', path: '/trace', icon: Package },
-      { title: 'Compliance', path: '/compliance', icon: ClipboardList },
-      { title: 'Sales', path: '/sales', icon: ShoppingCart, tourId: 'sales' },
-      { title: 'Expenses', path: '/expenses', icon: Receipt },
-      { title: 'Health', path: '/health', icon: HeartPulse, tourId: 'health' },
-      { title: 'Cage P&L', path: '/pnl', icon: TrendingUp, tourId: 'pnl' },
-      { title: 'Analytics', path: '/analytics', icon: ChartColumn },
-      { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
-      { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowLeftRight, tourId: 'fish-transfers' },
-      { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
+      { title: 'Daily Records', path: '/daily-data', permission: 'production.view', icon: ClipboardList },
+      { title: 'Bi-weekly Entry', path: '/biweekly-entry', permission: 'production.sampling.record', icon: Scale, tourId: 'biweekly-entry' },
+      { title: 'Bi-weekly Records', path: '/biweekly-records', permission: 'production.view', icon: FileText, tourId: 'biweekly-records' },
+      { title: 'Harvest Data', path: '/harvest', permission: 'production.view', icon: Package, tourId: 'harvest' },
+      { title: 'Harvest Sampling', path: '/harvest-sampling', permission: 'production.harvest.record', icon: Crosshair },
+      { title: 'Harvest Lots', path: '/trace', permission: 'production.view', icon: Package },
+      { title: 'Compliance', path: '/compliance', permission: 'production.view', icon: ClipboardList },
+      { title: 'Sales', path: '/sales', permission: 'finance.view', icon: ShoppingCart, tourId: 'sales' },
+      { title: 'Expenses', path: '/expenses', permission: 'finance.view', icon: Receipt },
+      { title: 'Health', path: '/health', permission: 'production.view', icon: HeartPulse, tourId: 'health' },
+      { title: 'Cage P&L', path: '/pnl', permission: 'finance.view', icon: TrendingUp, tourId: 'pnl' },
+      { title: 'Analytics', path: '/analytics', permission: 'reports.view', icon: ChartColumn },
+      { title: 'Stocking Management', path: '/stocking-management', permission: 'production.view', icon: Waves, tourId: 'stocking-management' },
+      { title: 'Fish Transfers', path: '/fish-transfers', permission: 'production.view', icon: ArrowLeftRight, tourId: 'fish-transfers' },
+      { title: 'New Stocking', path: '/stocking', permission: 'production.stocking.request', icon: Plus, tourId: 'stocking' },
     ],
   },
   hatchery: {
@@ -94,16 +95,16 @@ const MENU_SECTIONS = {
     icon: LayoutGrid,
     tourId: 'cages-section',
     items: [
-      { title: 'All Cages', path: '/cages', icon: Database, tourId: 'cages' },
-      { title: 'Unit board', path: '/units', icon: LayoutGrid },
-      { title: 'Groups', path: '/units/groups', icon: List },
-      { title: 'Site map', path: '/units/map', icon: Crosshair },
-      { title: 'Water quality', path: '/water-quality', icon: Waves },
-      { title: 'Maintenance', path: '/maintenance', icon: Settings },
-      { title: 'Analytics', path: '/cages/analytics', icon: ChartColumn },
-      { title: 'QR codes', path: '/cages/qr-codes', icon: QrCode },
-      { title: 'Settings', path: '/cages/settings', icon: Settings },
-      { title: 'Create Cage', path: '/create-cage', icon: Plus, tourId: 'create-cage' },
+      { title: 'All Cages', path: '/cages', permission: 'production.view', icon: Database, tourId: 'cages' },
+      { title: 'Unit board', path: '/units', permission: 'production.view', icon: LayoutGrid },
+      { title: 'Groups', path: '/units/groups', permission: 'production.view', icon: List },
+      { title: 'Site map', path: '/units/map', permission: 'production.view', icon: Crosshair },
+      { title: 'Water quality', path: '/water-quality', permission: 'production.view', icon: Waves },
+      { title: 'Maintenance', path: '/maintenance', permission: 'production.view', icon: Settings },
+      { title: 'Analytics', path: '/cages/analytics', permission: 'production.view', icon: ChartColumn },
+      { title: 'QR codes', path: '/cages/qr-codes', permission: 'production.view', icon: QrCode },
+      { title: 'Settings', path: '/cages/settings', permission: 'production.units.manage', icon: Settings },
+      { title: 'Create Cage', path: '/create-cage', permission: 'production.units.manage', icon: Plus, tourId: 'create-cage' },
     ],
   },
   feed: {
@@ -111,13 +112,13 @@ const MENU_SECTIONS = {
     icon: Package,
     tourId: 'feed-section',
     items: [
-      { title: 'Overview', path: '/feed-management', icon: ChartColumn, tourId: 'feed-management' },
-      { title: 'Feed Types', path: '/feed-types', icon: List, tourId: 'feed-types' },
-      { title: 'Suppliers', path: '/feed-suppliers', icon: Truck, tourId: 'feed-suppliers' },
-      { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart, tourId: 'feed-purchases' },
-      { title: 'Purchase Orders', path: '/procurement', icon: ClipboardList },
-      { title: 'Issue Feed', path: '/feed-issue', icon: Package, tourId: 'feed-issue' },
-      { title: 'Analytics', path: '/feed-management/analytics', icon: TrendingUp },
+      { title: 'Overview', path: '/feed-management', permission: 'inventory.view', icon: ChartColumn, tourId: 'feed-management' },
+      { title: 'Feed Types', path: '/feed-types', permission: 'inventory.view', icon: List, tourId: 'feed-types' },
+      { title: 'Suppliers', path: '/feed-suppliers', permission: 'inventory.view', icon: Truck, tourId: 'feed-suppliers' },
+      { title: 'Purchases', path: '/feed-purchases', permission: 'inventory.view', icon: ShoppingCart, tourId: 'feed-purchases' },
+      { title: 'Purchase Orders', path: '/procurement', permission: 'inventory.view', icon: ClipboardList },
+      { title: 'Issue Feed', path: '/feed-issue', permission: 'inventory.issue', icon: Package, tourId: 'feed-issue' },
+      { title: 'Analytics', path: '/feed-management/analytics', permission: 'inventory.view', icon: TrendingUp },
     ],
   },
   inventory: {
@@ -125,14 +126,14 @@ const MENU_SECTIONS = {
     icon: Database,
     tourId: 'inventory-section',
     items: [
-      { title: 'Overview', path: '/inventory/overview', icon: ChartColumn, tourId: 'inventory-overview' },
-      { title: 'Stock Levels', path: '/stock-levels', icon: Package, tourId: 'stock-levels' },
-      { title: 'Stock Items', path: '/inventory/items', icon: List },
-      { title: 'Lots', path: '/inventory/lots', icon: Package, tourId: 'inventory-lots' },
-      { title: 'Adjust / Transfer', path: '/inventory/adjust', icon: Package, tourId: 'inventory-adjust' },
-      { title: 'Alerts', path: '/inventory-alerts', icon: TriangleAlert },
-      { title: 'Transactions', path: '/inventory-transactions', icon: FileText, tourId: 'inventory-transactions' },
-      { title: 'Analytics', path: '/inventory/analytics', icon: TrendingUp },
+      { title: 'Overview', path: '/inventory/overview', permission: 'inventory.view', icon: ChartColumn, tourId: 'inventory-overview' },
+      { title: 'Stock Levels', path: '/stock-levels', permission: 'inventory.view', icon: Package, tourId: 'stock-levels' },
+      { title: 'Stock Items', path: '/inventory/items', permission: 'inventory.view', icon: List },
+      { title: 'Lots', path: '/inventory/lots', permission: 'inventory.view', icon: Package, tourId: 'inventory-lots' },
+      { title: 'Adjust / Transfer', path: '/inventory/adjust', permission: 'inventory.adjust', icon: Package, tourId: 'inventory-adjust' },
+      { title: 'Alerts', path: '/inventory-alerts', permission: 'inventory.view', icon: TriangleAlert },
+      { title: 'Transactions', path: '/inventory-transactions', permission: 'inventory.view', icon: FileText, tourId: 'inventory-transactions' },
+      { title: 'Analytics', path: '/inventory/analytics', permission: 'inventory.view', icon: TrendingUp },
     ],
   },
   analytics: {
@@ -140,13 +141,13 @@ const MENU_SECTIONS = {
     icon: ChartColumn,
     tourId: 'reports-section',
     items: [
-      { title: 'Production Report', path: '/report', icon: FileText, tourId: 'report' },
-      { title: 'Export Data', path: '/export', icon: Download },
+      { title: 'Production Report', path: '/report', permission: 'reports.view', icon: FileText, tourId: 'report' },
+      { title: 'Export Data', path: '/export', permission: 'reports.export', icon: Download },
       {
         title: 'Audit Logs',
         path: '/audit-logs',
+        permission: 'org.audit.view',
         icon: Eye,
-        adminOnly: true,
         tourId: 'audit-logs',
       },
     ],
@@ -157,15 +158,15 @@ const MENU_SECTIONS = {
     tourId: 'management-section',
     items: [
       { title: 'Global Settings', path: '/global-settings', icon: Settings, tourId: 'global-settings' },
-      { title: 'Farm Locations', path: '/farm-locations', icon: MapPin, adminOnly: true, tourId: 'farm-locations' },
-      { title: 'Users', path: '/users', icon: Users, adminOnly: true },
-      { title: 'Company Settings', path: '/company-settings', icon: Building2, adminOnly: true, tourId: 'company-settings' },
-      { title: 'Messaging', path: '/messaging-settings', icon: MessageSquare, adminOnly: true },
-      { title: 'Automations', path: '/automations', icon: Zap, adminOnly: true },
-      { title: 'API keys', path: '/api-keys', icon: KeyRound, adminOnly: true },
-      { title: 'Webhooks', path: '/webhooks', icon: Webhook, adminOnly: true },
-      { title: 'Approvals', path: '/approvals', icon: CircleCheck, adminOnly: true, tourId: 'approvals' },
-      { title: 'Bulk Upload', path: '/bulk-upload', icon: Upload, adminOnly: true },
+      { title: 'Farm Locations', path: '/farm-locations', permission: 'org.sites.manage', icon: MapPin, tourId: 'farm-locations' },
+      { title: 'Users', path: '/users', permission: 'org.members.manage', icon: Users },
+      { title: 'Company Settings', path: '/company-settings', permission: 'org.settings.manage', icon: Building2, tourId: 'company-settings' },
+      { title: 'Messaging', path: '/messaging-settings', permission: 'integrations.manage', icon: MessageSquare },
+      { title: 'Automations', path: '/automations', permission: 'automation.manage', icon: Zap },
+      { title: 'API keys', path: '/api-keys', permission: 'integrations.manage', icon: KeyRound },
+      { title: 'Webhooks', path: '/webhooks', permission: 'integrations.manage', icon: Webhook },
+      { title: 'Approvals', path: '/approvals', permission: 'production.stocking.approve', icon: CircleCheck, tourId: 'approvals' },
+      { title: 'Bulk Upload', path: '/bulk-upload', permission: 'production.import', icon: Upload },
     ],
   },
   admin: {
@@ -196,14 +197,14 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   const { showToast } = useToast()
 
   const role = user?.role || 'user'
-  const isAdmin = role === 'admin' || role === 'super_admin'
   const isSuperAdmin = role === 'super_admin'
+  // Menu follows the member's permissions (PERM-003), not the legacy role.
+  const { can } = usePermissions()
 
   const menuItems = useMemo(() => {
     const filtered = Object.entries(MENU_SECTIONS)
       .filter(([, section]) => {
         if (section.superAdminOnly && !isSuperAdmin) return false
-        if (section.adminOnly && !isAdmin) return false
         return true
       })
       .map(([key, section]) => [
@@ -212,13 +213,13 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
           ...section,
           items: section.items.filter((item) => {
             if (item.superAdminOnly && !isSuperAdmin) return false
-            if (item.adminOnly && !isAdmin) return false
-            return true
+            return can(item.permission)
           }),
         },
       ])
+      .filter(([, section]) => section.items.length > 0)
     return Object.fromEntries(filtered)
-  }, [isAdmin, isSuperAdmin])
+  }, [can, isSuperAdmin])
 
   useEffect(() => {
     const path = router.pathname

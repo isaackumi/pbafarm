@@ -10,10 +10,11 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { PlusCircle } from 'lucide-react'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 const HarvestPage = () => {
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.records.delete')
   const [harvestRecords, setHarvestRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

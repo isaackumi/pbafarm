@@ -3,11 +3,12 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import UserManagement from '../components/UserManagement'
 import MembersPanel from '../components/MembersPanel'
+import RolesPanel from '../components/RolesPanel'
 import { PageHeader, FormPage } from '../components/ui'
 
 export default function UsersPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="org.members.manage">
       <Layout title="User Management">
         <FormPage width="full">
           <PageHeader
@@ -24,6 +25,7 @@ export default function UsersPage() {
           />
           <div className="space-y-6">
             <MembersPanel />
+            <RolesPanel />
             <UserManagement />
           </div>
         </FormPage>

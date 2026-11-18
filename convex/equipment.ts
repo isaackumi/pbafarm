@@ -14,11 +14,11 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser } from './lib/authz'
 import { assertLocationAccess, assertOwns, logAudit, writeLocationId } from './lib/tenancy'
 import { idempotentMutation } from './lib/idempotency'
 import { addDays, isBusinessDate, todayFor } from './lib/dates'
 import { issueItem } from './inventoryItems'
+import { requireMember } from './lib/permissions'
 
 export const equipmentKind = v.union(
   v.literal('pump'),
@@ -119,7 +119,7 @@ export const list = query({
     includeRetired: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const rows = args.unitId
@@ -153,8 +153,7 @@ export const list = query({
 export const create = mutation({
   args: equipmentFields,
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const companyId = user.companyId
     if (!companyId) throw new Error('No company')
     const name = cleanText(args.name, 120)
@@ -223,8 +222,7 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
     assertOwns(user, existing, 'Equipment')
     checkDate(patch.installedOn, 'Installed on')
@@ -275,7 +273,7 @@ export const logInspection = idempotentMutation('equipment.logInspection', {
     partsUsed: v.optional(v.array(v.object({ itemId: v.id('inventoryItems'), quantity: v.number() }))),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     if (!args.unitId && !args.equipmentId) throw new Error('Choose a unit or a piece of equipment')
     const gear = args.equipmentId ? await ctx.db.get(args.equipmentId) : null
     if (args.equipmentId) assertOwns(user, gear, 'Equipment')
@@ -380,7 +378,7 @@ export const listInspections = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200)
@@ -430,7 +428,7 @@ export const due = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return { overdue: [], dueSoon: [] }
     const companyId = user.companyId
     const until = addDays(args.asOf, Math.max(0, Math.min(90, args.days ?? 14)))

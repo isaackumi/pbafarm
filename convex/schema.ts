@@ -178,6 +178,8 @@ const schema = defineSchema({
     companyId: v.id('companies'),
     /** Role template key: owner | admin | manager | field_staff | viewer (Phase 3 adds custom roles). */
     roleKey: v.string(),
+    /** Custom role (PERM-002); roleKey then holds the role's key. */
+    roleId: v.optional(v.id('roles')),
     /** true = every site of the organization, now and future. */
     allLocations: v.boolean(),
     /** Ignored when allLocations; at most 100 entries. */
@@ -194,6 +196,25 @@ const schema = defineSchema({
     .index('by_userId', ['userId'])
     .index('by_companyId', ['companyId'])
     .index('by_companyId_and_userId', ['companyId', 'userId']),
+
+  /**
+   * Custom roles per organization (PERM-002). Templates (owner, admin,
+   * manager, field_staff, viewer) live in code (lib/permissions); rows here
+   * are an organization's own roles. permissions are catalog keys.
+   */
+  roles: defineTable({
+    companyId: v.id('companies'),
+    key: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    /** Template it was copied from, if any. */
+    basedOn: v.optional(v.string()),
+    permissions: v.array(v.string()),
+    isTemplate: v.optional(v.boolean()),
+    archived: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  }).index('by_companyId_and_key', ['companyId', 'key']),
 
   /** One-time codes proving a signed-in user owns their email (SEC-005). */
   emailVerifications: defineTable({
@@ -280,6 +301,8 @@ const schema = defineSchema({
             requireApprovalForStocking: v.boolean(),
             requireApprovalForTopup: v.boolean(),
             requireApprovalForFishTransfer: v.optional(v.boolean()),
+            /** Approver must not be the person who requested it (PERM-005). */
+            requireDifferentApprover: v.optional(v.boolean()),
             enforceCageCapacity: v.boolean(),
             minInitialAbwG: v.optional(v.number()),
             maxInitialAbwG: v.optional(v.number()),

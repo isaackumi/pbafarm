@@ -1,6 +1,7 @@
 import { requireUser } from './authz'
 import { apiActorOf } from './apiActor'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
+import { inSiteScope, rowInSiteScope, siteScopeOf } from './scope'
 import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 
@@ -24,7 +25,11 @@ export async function listForCompany<T extends { companyId?: Id<'companies'> }>(
 ): Promise<T[]> {
   if ((user.role ?? 'user') === 'super_admin') return rows
   if (!user.companyId) return []
-  return rows.filter((r) => r.companyId === user.companyId)
+  // Company first, then the member's sites (PERM-004).
+  return inSiteScope(
+    user,
+    rows.filter((r) => r.companyId === user.companyId),
+  )
 }
 
 /**
@@ -41,6 +46,8 @@ export function assertOwns<T extends { companyId?: Id<'companies'> }>(
   if ((user.role ?? 'user') === 'super_admin') return
   const ok = !!user.companyId && doc.companyId === user.companyId
   if (!ok) throw new Error(`${label} not found`)
+  // A site outside the member's scope is as good as missing (PERM-004).
+  if (!rowInSiteScope(siteScopeOf(user), doc)) throw new Error(`${label} not found`)
 }
 
 /**
@@ -77,7 +84,6 @@ export function assertLocationAccess(
 ) {
   if (!locationId) return
   if ((user.role ?? 'user') === 'super_admin') return
-  if ((user.role ?? 'user') === 'admin') return
   const assigned = user.locationIds
   if (!assigned || assigned.length === 0) return
   if (!assigned.includes(locationId)) {

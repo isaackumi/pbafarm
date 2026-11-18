@@ -3,7 +3,6 @@ import { mutation, query } from '../_generated/server'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import { internal } from '../_generated/api'
-import { requireRole, requireUser } from '../lib/authz'
 import { logAudit } from '../lib/tenancy'
 import { CHECKS, checkExists } from './checks'
 import { validateConditions } from './conditions'
@@ -19,6 +18,7 @@ import {
   type AutomationCondition,
   type AutomationTrigger,
 } from './validators'
+import { requireMember } from '../lib/permissions'
 
 /**
  * Admin API for automation rules (AUTO-002, AUTO-006, AUTO-007). Everything
@@ -29,8 +29,7 @@ const MAX_RULES = 50
 const MAX_ACTIONS = 5
 
 async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  const user = await requireUser(ctx)
-  requireRole(user, 'admin')
+  const { user } = await requireMember(ctx, { permission: 'automation.manage' })
   if (!user.companyId) throw new Error('Your account is not linked to a company')
   return { user, companyId: user.companyId }
 }

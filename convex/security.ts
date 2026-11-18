@@ -2,11 +2,12 @@ import { v } from 'convex/values'
 import { internalMutation, mutation, query } from './_generated/server'
 import { getAuthSessionId } from '@convex-dev/auth/server'
 import type { Id } from './_generated/dataModel'
-import { requireRole, requireUser, sessionMfaVerified } from './lib/authz'
+import { sessionMfaVerified } from './lib/authz'
 import { AUTH_ERROR_MESSAGES } from './lib/authErrors'
 import { logAudit } from './lib/tenancy'
 import { channelAvailable } from './messaging/deliver'
 import { securityPolicy } from './messaging/policy'
+import { requireMember } from './lib/permissions'
 
 /**
  * Company sign-in policy (SEC-006 phone sign-in, SEC-007 two-step
@@ -19,8 +20,7 @@ const phoneChannel = v.union(v.literal('sms'), v.literal('whatsapp'))
 export const getPolicy = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!me.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
     const company = await ctx.db.get(me.companyId)
     return {
@@ -43,8 +43,7 @@ export const updatePolicy = mutation({
     phoneLoginSatisfies2fa: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const me = await requireUser(ctx)
-    requireRole(me, 'admin')
+    const { user: me } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!me.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
     const companyId = me.companyId
     const company = await ctx.db.get(companyId)

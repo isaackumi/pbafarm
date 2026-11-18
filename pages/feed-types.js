@@ -27,6 +27,7 @@ import {
 } from '../store/slices/feedSlice'
 import { useCurrency } from '../hooks/useCurrency'
 import { useAuth } from '../contexts/AuthContext'
+import { usePermission } from '../hooks/usePermission'
 
 export default function FeedTypesPage() {
   return (
@@ -40,7 +41,7 @@ function FeedTypes() {
   const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('inventory.prices.manage')
   const dispatch = useDispatch()
   const { pricePerKgLabel: priceLabel, formatCurrency: fmt } = useCurrency()
   const { feedTypes, loading, error } = useSelector(state => state.feed)

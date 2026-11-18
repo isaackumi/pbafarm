@@ -3,9 +3,9 @@ import { internalMutation, mutation } from './_generated/server'
 import { internal } from './_generated/api'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 
 import { todayIn, zoneFor } from './lib/dates'
+import { requireMember } from './lib/permissions'
 import { mergeSettings } from './lib/farmRules'
 import { CHECKS } from './automation/checks'
 import { onEngine } from './automation/rules'
@@ -139,8 +139,7 @@ export const companyDigest = internalMutation({
 export const runForMyCompanyNow = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('Your account is not linked to a company')
     const companyId = user.companyId
     if (await onEngine(ctx, companyId)) {

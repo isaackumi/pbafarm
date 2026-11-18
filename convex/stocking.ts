@@ -4,7 +4,6 @@ import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { asOfDate, scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import {
   mergeSettings,
@@ -14,6 +13,7 @@ import {
 import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
 import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
+import { assertDifferentApprover, assertUserCan, requireMember } from './lib/permissions'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -125,7 +125,7 @@ export const listStockingHistory = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let stockings = args.cageId
       ? await ctx.db
           .query('stockingHistory')
@@ -180,7 +180,7 @@ export const listStockingHistoryPage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPage(ctx, user, 'stockingHistory', args.paginationOpts)
     const rows = result.page.filter(
       (s) =>
@@ -213,7 +213,7 @@ export const listStockingHistoryPage = query({
 export const getStocking = query({
   args: { id: v.id('stockingHistory') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const stocking = await ctx.db.get(id)
     if (!stocking || stocking.deletedAt) return null
     const allowed = await listForCompany(user, [stocking])
@@ -248,7 +248,7 @@ export const getStocking = query({
 export const getTopup = query({
   args: { id: v.id('topupHistory') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const topup = await ctx.db.get(id)
     if (!topup) return null
     const allowed = await listForCompany(user, [topup])
@@ -304,7 +304,7 @@ export const createStocking = mutation({
     species: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
 
@@ -373,7 +373,7 @@ export const suggestBatchNumber = query({
     stockingDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.cageId)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
@@ -400,12 +400,12 @@ export const updateStocking = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const stocking = await ctx.db.get(id)
     if (!stocking) throw new Error('Stocking record not found')
     const allowed = await listForCompany(user, [stocking])
     if (!allowed.length) throw new Error('Access denied')
-    if (stocking.status === 'approved') requireRole(user, 'admin')
+    if (stocking.status === 'approved') await assertUserCan(ctx, user, 'production.stocking.approve')
 
     await ctx.db.patch(id, patch)
     await logAudit(ctx, {
@@ -426,8 +426,7 @@ export const removeStocking = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { id, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     const stocking = await ctx.db.get(id)
     if (!stocking || stocking.deletedAt) throw new Error('Stocking not found')
     const allowed = await listForCompany(user, [stocking])
@@ -455,8 +454,7 @@ export const removeStocking = mutation({
 export const approveStocking = mutation({
   args: { id: v.id('stockingHistory') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
     const stocking = await ctx.db.get(id)
     if (!stocking) throw new Error('Stocking record not found')
@@ -466,6 +464,7 @@ export const approveStocking = mutation({
     if (stocking.status !== 'pending_approval') {
       throw new Error('Only pending stockings can be approved')
     }
+    await assertDifferentApprover(ctx, user, stocking)
     await assertNotTransferLinked(ctx, { stockingId: id })
 
     // Re-check against the cage as it is now: it may have been stocked since
@@ -520,8 +519,7 @@ export const rejectStocking = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { id, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
     const stocking = await ctx.db.get(id)
     if (!stocking) throw new Error('Stocking record not found')
@@ -556,7 +554,7 @@ export const listTopupHistory = query({
     status: v.optional(stockingStatus),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let topups = args.stockingId
       ? await ctx.db
           .query('topupHistory')
@@ -587,7 +585,7 @@ export const createTopup = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const stocking = await ctx.db.get(args.stockingId)
     assertOwns(user, stocking, 'Stocking record')
 
@@ -642,8 +640,7 @@ export const createTopup = mutation({
 export const approveTopup = mutation({
   args: { id: v.id('topupHistory') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
     const topup = await ctx.db.get(id)
     if (!topup) throw new Error('Topup record not found')
@@ -653,6 +650,7 @@ export const approveTopup = mutation({
     if (topup.status !== 'pending_approval') {
       throw new Error('Only pending topups can be approved')
     }
+    await assertDifferentApprover(ctx, user, topup)
     await assertNotTransferLinked(ctx, { topupId: id })
 
     const stocking = await ctx.db.get(topup.stockingId)
@@ -692,8 +690,7 @@ export const rejectTopup = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { id, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
     
     const topup = await ctx.db.get(id)
     if (!topup) throw new Error('Topup record not found')
@@ -725,8 +722,7 @@ export const rejectTopup = mutation({
 export const listPendingApprovals = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
 
     // The company's whole pending queue (by_company_and_status): another
     // tenant's backlog can no longer hide this company's pending items.

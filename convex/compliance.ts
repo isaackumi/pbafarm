@@ -6,11 +6,11 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser } from './lib/authz'
 import { assertLocationAccess, assertOwns, logAudit, writeCompanyId } from './lib/tenancy'
 import { userError } from './lib/errors'
 import { complianceFrequency } from './schema'
 import { MAX_TEMPLATE_ITEMS, periodOf, seedTemplatesFor, templateItems } from './lib/compliance'
+import { requireMember } from './lib/permissions'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const LIST_LIMIT = 300
@@ -47,7 +47,7 @@ export const listBiosecurity = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const from = args.dateFrom ?? '0000-00-00'
@@ -104,7 +104,7 @@ export const logBiosecurity = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const companyId = await writeCompanyId(user)
     await ownedSite(ctx, user, args.locationId)
     assertDate(args.date)
@@ -144,8 +144,7 @@ export const logBiosecurity = mutation({
 export const removeBiosecurity = mutation({
   args: { id: v.id('biosecurityLogs') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const row = await ctx.db.get(id)
     assertOwns(user, row, 'Entry')
     await ctx.db.delete(id)
@@ -186,7 +185,7 @@ async function companyTemplates(ctx: QueryCtx | MutationCtx, companyId: Id<'comp
 export const listTemplates = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     return (await companyTemplates(ctx, user.companyId)).map(templateRow)
   },
@@ -196,8 +195,7 @@ export const listTemplates = query({
 export const seedDefaultTemplates = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
     const added = await seedTemplatesFor(ctx, companyId, { userId: user._id })
     if (added.length) {
@@ -215,8 +213,7 @@ export const createTemplate = mutation({
     items: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
     const name = args.name.trim()
     if (!name) throw userError('VALIDATION', 'Enter a name')
@@ -243,8 +240,7 @@ export const createTemplate = mutation({
 export const setTemplateActive = mutation({
   args: { id: v.id('complianceTemplates'), active: v.boolean() },
   handler: async (ctx, { id, active }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const t = await ctx.db.get(id)
     assertOwns(user, t, 'Template')
     await ctx.db.patch(id, { active, updatedAt: Date.now() })
@@ -281,7 +277,7 @@ async function recordFor(
 export const due = query({
   args: { locationId: v.id('farmLocations'), today: v.string() },
   handler: async (ctx, { locationId, today }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId || !DATE_RE.test(today)) return []
     const site = await ctx.db.get(locationId)
     if (!site || site.companyId !== user.companyId) return []
@@ -318,7 +314,7 @@ export const complete = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const companyId = await writeCompanyId(user)
     const template = await ctx.db.get(args.templateId)
     assertOwns(user, template, 'Checklist')
@@ -368,7 +364,7 @@ export const listRecords = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const rows = await ctx.db

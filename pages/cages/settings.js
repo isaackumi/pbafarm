@@ -9,6 +9,7 @@ import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
+import { usePermission } from '../../hooks/usePermission'
 
 export default function CageSettingsPage() {
   return (
@@ -22,7 +23,7 @@ export default function CageSettingsPage() {
 
 function CageSettings() {
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('production.stock.adjust')
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const [editCage, setEditCage] = useState(null)

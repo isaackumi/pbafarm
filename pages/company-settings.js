@@ -85,7 +85,7 @@ function deepEqual(a, b) {
 
 export default function CompanySettingsPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="org.settings.manage">
       <Layout title="Company Settings">
         <CompanySettings />
       </Layout>
@@ -576,6 +576,17 @@ function CompanySettings() {
                     }
                   />
                   Require approval for fish transfers
+                </label>
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
+                    checked={draft.stockingRules?.requireDifferentApprover === true}
+                    onChange={(e) =>
+                      patch('stockingRules.requireDifferentApprover', e.target.checked)
+                    }
+                  />
+                  Approver must be someone other than the requester
                 </label>
                 <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input

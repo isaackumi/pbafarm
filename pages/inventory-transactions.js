@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 export default function InventoryTransactionsPage() {
   return (
@@ -19,6 +20,7 @@ export default function InventoryTransactionsPage() {
 
 function InventoryTransactions() {
   const { user } = useAuth()
+  const canAdjust = usePermission('inventory.adjust')
   const { showToast } = useToast()
   const reverseTransaction = useMutation(api.inventory.reverseTransaction)
 
@@ -157,9 +159,7 @@ function InventoryTransactions() {
               <tbody className="divide-y divide-foam-deep">
                 {(transactions || []).map((txn) => {
                   const ft = typeMap[txn.feed_type_id]
-                  const canReverse =
-                    user?.role === 'admin' ||
-                    user?.role === 'super_admin'
+                  const canReverse = canAdjust
                   return (
                     <tr key={txn.id || txn._id} className="hover:bg-foam/60">
                       <td className="px-4 py-3 text-sm font-data tabular-nums whitespace-nowrap">

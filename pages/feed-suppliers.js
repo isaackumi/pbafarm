@@ -18,6 +18,7 @@ import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { supplierService } from '../lib/supplierService'
+import { usePermission } from '../hooks/usePermission'
 
 export default function FeedSuppliersPage() {
   return (
@@ -32,7 +33,7 @@ function FeedSuppliers() {
   const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('inventory.prices.manage')
 
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)

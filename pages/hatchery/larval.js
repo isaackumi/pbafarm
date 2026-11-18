@@ -27,6 +27,7 @@ import { saveOrQueue } from '../../lib/outboxSenders'
 import { cleanError } from '../../lib/offlineOutbox'
 import { useOnline } from '../../hooks/useOutbox'
 import { HatcheryNav, LIVE_FEED_LABEL, LIVE_FEED_UNIT, Pill, fmt, num, today } from '../../components/hatchery/common'
+import { usePermission } from '../../hooks/usePermission'
 
 export default function LarvalPage() {
   return (
@@ -120,11 +121,13 @@ function Larval() {
 
 function BatchPanel({ batch, onBack }) {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
+  const canGrade = usePermission('hatchery.grade')
+  const canDispatch = usePermission('hatchery.dispatch')
   const [tab, setTab] = useState('log')
   const tabs = [{ id: 'log', label: 'Daily log' }]
-  if (isAdmin && batch.count > 0) {
-    tabs.push({ id: 'grade', label: 'Grade' }, { id: 'move', label: 'Move' }, { id: 'sell', label: 'Sell or send' })
+  if (canGrade && batch.count > 0) tabs.push({ id: 'grade', label: 'Grade' })
+  if (canDispatch && batch.count > 0) {
+    tabs.push({ id: 'move', label: 'Move' }, { id: 'sell', label: 'Sell or send' })
   }
   return (
     <div className="space-y-4">

@@ -14,11 +14,11 @@ import { httpAction, internalMutation, internalQuery, mutation, query } from './
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireUser } from './lib/authz'
 import { assertOwns, logAudit } from './lib/tenancy'
 import { userError } from './lib/errors'
 import { randomToken, sha256Hex } from './lib/tokens'
 import { fileEntityType } from './schema'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 /** An upload must be attached within this window (it was uploaded for this record). */
@@ -98,7 +98,7 @@ function fileRow(f: Doc<'files'>) {
 export const generateUploadUrl = mutation({
   args: { entityType: fileEntityType, entityId: v.string() },
   handler: async (ctx, { entityType, entityId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'files.upload' })
     await ownedEntity(ctx, user, entityType, entityId)
     return await ctx.storage.generateUploadUrl()
   },
@@ -112,7 +112,7 @@ export const attach = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, args.entityType, args.entityId)
     const taken = await ctx.db
       .query('files')
@@ -173,7 +173,7 @@ export const attach = mutation({
 export const list = query({
   args: { entityType: fileEntityType, entityId: v.string() },
   handler: async (ctx, { entityType, entityId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     const doc = await loadEntity(ctx, entityType, entityId)
     if (!doc?.companyId || user.companyId !== doc.companyId) return []
     const companyId = doc.companyId
@@ -191,7 +191,7 @@ export const list = query({
 export const requestDownload = mutation({
   args: { fileId: v.id('files') },
   handler: async (ctx, { fileId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'org.view' })
     const file = await ctx.db.get(fileId)
     // Only members of the owning company (super_admins included only when it is their active company).
     if (!file || !user.companyId || file.companyId !== user.companyId) {
@@ -213,13 +213,11 @@ export const requestDownload = mutation({
 export const remove = mutation({
   args: { fileId: v.id('files') },
   handler: async (ctx, { fileId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const file = await ctx.db.get(fileId)
     assertOwns(user, file, 'File')
-    const role = user.role ?? 'user'
-    if (file.uploadedBy !== user._id && role !== 'admin' && role !== 'super_admin') {
-      throw userError('FORBIDDEN', 'Only an admin or the person who attached it can remove a file')
-    }
+    // Your own attachment, or anyone's with production.records.delete.
+    if (file.uploadedBy !== user._id) await assertUserCan(ctx, user, 'production.records.delete')
     await ctx.storage.delete(file.storageId)
     await ctx.db.delete(fileId)
     await logAudit(ctx, {

@@ -21,6 +21,7 @@ import {
   Textarea,
 } from './ui'
 import { localToday } from '../lib/format'
+import { usePermission } from '../hooks/usePermission'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g above' },
@@ -64,7 +65,7 @@ const HarvestForm = ({ onComplete }) => {
   const { showToast } = useToast()
   const { user, hasRole } = useAuth()
   const online = useOnline()
-  const isAdmin = hasRole ? hasRole('admin') : user?.role === 'admin'
+  const isAdmin = usePermission('production.withdrawal.override')
   const [withdrawal, setWithdrawal] = useState(null)
 
   // A treatment withdrawal period refuses the harvest (PROD-012); say so up front.

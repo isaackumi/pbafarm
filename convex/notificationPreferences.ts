@@ -1,9 +1,9 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { requireUser } from './lib/authz'
 import { DEFAULT_PREFS } from './automation/engine'
 import { parseHhmm } from './automation/schedule'
 import { quietHours } from './automation/validators'
+import { requireAccount } from './lib/permissions'
 
 /**
  * Per-user notification channels and quiet hours (AUTO-003). Automation
@@ -14,7 +14,7 @@ import { quietHours } from './automation/validators'
 export const mine = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const row = await ctx.db
       .query('notificationPreferences')
       .withIndex('by_user', (q) => q.eq('userId', user._id))
@@ -40,7 +40,7 @@ export const update = mutation({
     quietHours: v.optional(v.union(quietHours, v.null())),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const user = await requireAccount(ctx)
     const qh = args.quietHours ?? undefined
     if (qh && (!parseHhmm(qh.start) || !parseHhmm(qh.end))) throw new Error('Quiet hours must be HH:MM')
     const fields = {

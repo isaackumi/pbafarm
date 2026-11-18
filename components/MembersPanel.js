@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation } from '../contexts/LocationContext'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -32,6 +33,10 @@ export default function MembersPanel() {
   const reactivate = useMutation(api.memberships.reactivate)
   const remove = useMutation(api.memberships.remove)
   const revokeInvite = useMutation(api.memberships.revokeInvite)
+  const setSites = useMutation(api.memberships.setSites)
+  const roles = useQuery(api.roles.list, {})
+  const { locations } = useLocation()
+  const [sitesFor, setSitesFor] = useState(null)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState('')
 
@@ -78,11 +83,16 @@ export default function MembersPanel() {
                   </span>
                   <Select
                     aria-label={`Role for ${m.name || m.email}`}
-                    value={m.roleKey}
+                    value={m.roleId ? `custom:${m.roleId}` : m.roleKey}
                     disabled={isMe || busy === key}
-                    onChange={(e) =>
-                      run(key, () => setRole({ userId: m.userId, roleKey: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value
+                      run(key, () =>
+                        value.startsWith('custom:')
+                          ? setRole({ userId: m.userId, roleId: value.slice(7) })
+                          : setRole({ userId: m.userId, roleKey: value }),
+                      )
+                    }}
                     className="w-40"
                   >
                     {ROLE_OPTIONS.map((r) => (
@@ -90,7 +100,27 @@ export default function MembersPanel() {
                         {r.label}
                       </option>
                     ))}
+                    {(roles?.custom || []).map((r) => (
+                      <option key={r.id} value={`custom:${r.id}`}>
+                        {r.name}
+                      </option>
+                    ))}
                   </Select>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy === key}
+                    onClick={() =>
+                      setSitesFor({
+                        userId: m.userId,
+                        label: m.name || m.email,
+                        allLocations: m.allLocations,
+                        locationIds: m.allLocations ? [] : m.locationIds,
+                      })
+                    }
+                  >
+                    {m.allLocations ? 'All sites' : `${m.locationIds.length} site${m.locationIds.length === 1 ? '' : 's'}`}
+                  </Button>
                   {!isMe && (
                     <div className="flex gap-2">
                       {m.status === 'active' ? (
@@ -130,6 +160,66 @@ export default function MembersPanel() {
               )
             })}
           </ul>
+        )}
+        {sitesFor && (
+          <div className="mt-4 rounded-xl border border-foam-deep p-4 space-y-3">
+            <p className="text-sm font-semibold text-chart-ink">Sites for {sitesFor.label}</p>
+            <label className="flex items-center gap-3 min-h-11 text-sm text-chart-ink cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded accent-lake"
+                checked={sitesFor.allLocations}
+                onChange={(e) => setSitesFor((s) => ({ ...s, allLocations: e.target.checked }))}
+              />
+              Every site, including new ones
+            </label>
+            {!sitesFor.allLocations && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                {(locations || []).map((loc) => {
+                  const id = loc.id || loc._id
+                  return (
+                    <label key={id} className="flex items-center gap-3 min-h-11 text-sm text-chart-ink cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded accent-lake"
+                        checked={sitesFor.locationIds.includes(id)}
+                        onChange={() =>
+                          setSitesFor((s) => ({
+                            ...s,
+                            locationIds: s.locationIds.includes(id)
+                              ? s.locationIds.filter((x) => x !== id)
+                              : [...s.locationIds, id],
+                          }))
+                        }
+                      />
+                      {loc.name}
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={busy === sitesFor.userId}
+                onClick={() =>
+                  run(sitesFor.userId, async () => {
+                    await setSites({
+                      userId: sitesFor.userId,
+                      allLocations: sitesFor.allLocations,
+                      ...(sitesFor.allLocations ? {} : { locationIds: sitesFor.locationIds }),
+                    })
+                    setSitesFor(null)
+                  })
+                }
+              >
+                Save sites
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSitesFor(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
         )}
       </FormCard>
 

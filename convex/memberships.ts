@@ -11,12 +11,13 @@ import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser, revokeUserSessions } from './lib/authz'
+import { revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import {
   activateMembership,
   activeMembership,
   getMembership,
+  MAX_SCOPED_LOCATIONS,
   isRoleKey,
   leaveActiveCompany,
   otherActiveMemberships,
@@ -24,6 +25,7 @@ import {
   upsertMembership,
 } from './lib/memberships'
 import { sha256Hex } from './lib/tokens'
+import { requireAccount, requireMember } from './lib/permissions'
 
 const ADMIN_KEYS = new Set(['owner', 'admin'])
 
@@ -44,7 +46,7 @@ async function myMemberships(ctx: QueryCtx | MutationCtx, me: Doc<'users'>) {
 export const listMine = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const rows = await myMemberships(ctx, me)
     const out = []
     for (const m of rows) {
@@ -68,7 +70,7 @@ export const listMine = query({
 export const switchActive = mutation({
   args: { companyId: v.id('companies') },
   handler: async (ctx, { companyId }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (me.companyId === companyId) return { companyId }
     const membership = await getMembership(ctx, me._id, companyId)
     if (!membership || membership.status !== 'active') {
@@ -96,10 +98,10 @@ export const switchActive = mutation({
 // ─── Company admin ───────────────────────────────────────────────────────────
 
 async function requireCompanyAdmin(ctx: QueryCtx | MutationCtx) {
-  const me = await requireUser(ctx)
-  requireRole(me, 'admin')
+  const m = await requireMember(ctx, { permission: 'org.members.manage' })
+  const me = m.user
   if (!me.companyId) throw userError('VALIDATION', 'No company linked')
-  return { me, companyId: me.companyId }
+  return { me, companyId: me.companyId, member: m }
 }
 
 export const listMembers = query({
@@ -122,6 +124,7 @@ export const listMembers = query({
         name: u.name ?? null,
         email: u.email ?? null,
         roleKey: m.roleKey,
+        roleId: m.roleId ?? null,
         status: m.status,
         allLocations: m.allLocations,
         locationIds: m.locationIds ?? [],
@@ -220,26 +223,99 @@ async function assertAdminChange(
   }
 }
 
+/**
+ * Give a member a role template (`roleKey`) or one of the organization's
+ * custom roles (`roleId`).
+ */
 export const setRole = mutation({
-  args: { userId: v.id('users'), roleKey: v.string() },
-  handler: async (ctx, { userId, roleKey }) => {
+  args: { userId: v.id('users'), roleKey: v.optional(v.string()), roleId: v.optional(v.id('roles')) },
+  handler: async (ctx, args) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
-    if (!isRoleKey(roleKey)) throw userError('VALIDATION', `Unknown role: ${roleKey}`)
+    const { userId } = args
+    let roleKey = args.roleKey ?? ''
+    if (args.roleId) {
+      const role = await ctx.db.get(args.roleId)
+      if (!role || role.companyId !== companyId || role.archived) {
+        throw userError('NOT_FOUND', 'Role not found')
+      }
+      roleKey = role.key
+    } else if (!isRoleKey(roleKey)) {
+      throw userError('VALIDATION', `Unknown role: ${roleKey}`)
+    }
     const { membership } = await loadTarget(ctx, companyId, userId)
     if (roleKey === 'owner' && (me.role ?? 'user') !== 'super_admin') {
       const mine = await getMembership(ctx, me._id, companyId)
       if (mine?.roleKey !== 'owner') throw userError('FORBIDDEN', 'Only an owner can make someone an owner')
     }
     await assertAdminChange(ctx, me, companyId, membership, { roleKey })
-    await upsertMembership(ctx, { userId, companyId, roleKey, actorId: me._id })
+    await upsertMembership(ctx, {
+      userId,
+      companyId,
+      roleKey,
+      roleId: args.roleId ?? null,
+      actorId: me._id,
+    })
     await logAudit(ctx, {
       actionType: 'membership_role',
       tableName: 'memberships',
       recordId: membership._id,
-      previousValues: { roleKey: membership.roleKey },
-      newValues: { roleKey, userId },
+      previousValues: { roleKey: membership.roleKey, roleId: membership.roleId },
+      newValues: { roleKey, roleId: args.roleId, userId },
     })
     return { roleKey }
+  },
+})
+
+/**
+ * Limit a member to some sites, or give them every site (PERM-004). The
+ * scope is mirrored into users.locationIds while this is their active
+ * organization, which is what reads and writes filter on.
+ */
+export const setSites = mutation({
+  args: {
+    userId: v.id('users'),
+    allLocations: v.boolean(),
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
+  },
+  handler: async (ctx, args) => {
+    const { me, companyId } = await requireCompanyAdmin(ctx)
+    const { user, membership } = await loadTarget(ctx, companyId, args.userId)
+    const ids = args.allLocations ? [] : [...new Set(args.locationIds ?? [])]
+    if (!args.allLocations && ids.length === 0) {
+      throw userError('VALIDATION', 'Pick at least one site, or give access to all sites')
+    }
+    if (ids.length > MAX_SCOPED_LOCATIONS) {
+      throw userError('VALIDATION', `At most ${MAX_SCOPED_LOCATIONS} sites`)
+    }
+    for (const id of ids) {
+      const site = await ctx.db.get(id)
+      if (!site || site.companyId !== companyId) throw userError('NOT_FOUND', 'Site not found')
+    }
+    await upsertMembership(ctx, {
+      userId: args.userId,
+      companyId,
+      allLocations: args.allLocations,
+      locationIds: args.allLocations ? [] : ids,
+      actorId: me._id,
+    })
+    if (user.companyId === companyId) {
+      const fresh = (await ctx.db.get(user._id))!
+      const scoped = args.allLocations ? undefined : ids
+      const keepActive =
+        !scoped || (fresh.activeLocationId && scoped.includes(fresh.activeLocationId))
+      await ctx.db.patch(user._id, {
+        locationIds: scoped,
+        ...(keepActive ? {} : { activeLocationId: ids[0] }),
+      })
+    }
+    await logAudit(ctx, {
+      actionType: 'membership_sites',
+      tableName: 'memberships',
+      recordId: membership._id,
+      previousValues: { allLocations: membership.allLocations, locationIds: membership.locationIds },
+      newValues: { allLocations: args.allLocations, locationIds: ids, userId: args.userId },
+    })
+    return { allLocations: args.allLocations, locationIds: ids }
   },
 })
 
@@ -336,7 +412,7 @@ export const inviteInfo = query({
 export const acceptInvite = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
     if (!invite) throw userError('NOT_FOUND', 'This invite link is not valid')
     const state = inviteState(invite, Date.now())
@@ -388,7 +464,7 @@ export const acceptInvite = mutation({
 export const declineInvite = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
     if (!invite || (me.email ?? '').toLowerCase() !== invite.email) {
       throw userError('NOT_FOUND', 'This invite link is not valid')
