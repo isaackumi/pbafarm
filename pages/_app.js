@@ -32,9 +32,13 @@ function useServiceWorker() {
     // Production only: a service worker caching dev bundles makes hot reload lie.
     if (process.env.NODE_ENV !== 'production') return
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.warn('Service worker registration failed', err)
-    })
+    // A new URL per build installs a new worker, which drops the old build's cache.
+    const build = window.__NEXT_DATA__?.buildId || 'dev'
+    navigator.serviceWorker
+      .register(`/sw.js?v=${encodeURIComponent(build)}`)
+      .catch((err) => {
+        console.warn('Service worker registration failed', err)
+      })
   }, [])
 }
 
