@@ -10,6 +10,7 @@ import {
   MapPin,
   Menu,
   Moon,
+  ScanLine,
   Sun,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -236,6 +237,14 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
               </div>
             )}
           </div>
+
+          <Link
+            href="/scan"
+            aria-label="Scan cage label"
+            className="lg:hidden text-muted hover:text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg h-12 w-12 flex items-center justify-center transition-colors"
+          >
+            <ScanLine size={20} aria-hidden />
+          </Link>
 
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
