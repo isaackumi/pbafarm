@@ -697,6 +697,41 @@ const schema = defineSchema({
     .index('by_date', ['date']),
 
   /**
+   * Operating expenses (INV-007). Cost centre is the company, optionally a
+   * site, a cage and a production cycle (the cage's stocking record) — until
+   * Phase 4 adds `batches`, the stocking is the cycle. `category` is a
+   * built-in key (lib/costing EXPENSE_CATEGORIES) or a custom
+   * `expenseCategories.key`. `currency` is the company currency when saved.
+   */
+  expenses: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    cageId: v.optional(v.id('cages')),
+    stockingId: v.optional(v.id('stockingHistory')),
+    category: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    date: v.string(),
+    supplierId: v.optional(v.id('feedSuppliers')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    deletedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_company_and_date', ['companyId', 'date'])
+    .index('by_company_and_cage', ['companyId', 'cageId'])
+    .index('by_company_and_stocking', ['companyId', 'stockingId']),
+
+  /** Company-defined expense categories, alongside the built-in ones. */
+  expenseCategories: defineTable({
+    companyId: v.id('companies'),
+    key: v.string(),
+    label: v.string(),
+    active: v.boolean(),
+    updatedAt: v.number(),
+  }).index('by_company_and_key', ['companyId', 'key']),
+
+  /**
    * Replay guard for field writes sent from a phone's outbox (MOBILE-002).
    * A mutation called with `clientMutationId` records its result here; a
    * retry with the same key (lost response, flaky signal) returns that result
