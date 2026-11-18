@@ -130,10 +130,16 @@ const HarvestForm = ({ onComplete }) => {
         notes: formData.notes,
       }
 
-      const { error } = await harvestRecordService.createHarvestRecord(harvestData)
+      const { error, warnings } = await harvestRecordService.createHarvestRecord(harvestData)
       if (error) throw error
 
-      showToast('Harvest record saved successfully', 'success')
+      showToast(
+        formData.harvestType === 'complete'
+          ? `Harvest saved. ${selectedCageObject?.name || 'The cage'} is now marked harvested`
+          : 'Partial harvest saved. Fish taken off the cage count',
+        'success',
+      )
+      if (warnings?.length) showToast(warnings.join('. '), 'warning')
       clear()
       setFormData({
         ...HARVEST_DEFAULTS,
@@ -408,6 +414,13 @@ const HarvestForm = ({ onComplete }) => {
             <p className="text-chart-ink">
               <span className="font-medium text-chart-ink">Harvest Type:</span>{' '}
               {formData.harvestType === 'complete' ? 'Complete Harvest' : 'Partial Harvest'}
+            </p>
+            <p className="md:col-span-2 rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink">
+              {formData.harvestType === 'complete'
+                ? `Saving empties ${selectedCageObject?.name || 'this cage'}: its fish count goes to 0, it is marked harvested and its stocking cycle closes.`
+                : `Saving takes ${Number(formData.estimatedCount || 0).toLocaleString()} fish off ${selectedCageObject?.name || 'this cage'}'s count.`}
+              {selectedCageObject?.current_count != null &&
+                ` On record now: ${Number(selectedCageObject.current_count).toLocaleString()} fish.`}
             </p>
             <p className="text-chart-ink">
               <span className="font-medium text-chart-ink">Total Weight (kg):</span>{' '}
