@@ -14,7 +14,8 @@ export const PERMISSION_GROUPS = {
     'org.roles.manage': 'Create and edit custom roles',
     'org.sites.manage': 'Add and edit sites',
     'org.audit.view': 'Read the audit log',
-    'integrations.manage': 'Configure messaging channels',
+    'integrations.manage': 'Configure messaging channels, API keys and webhooks',
+    'automation.manage': 'Create and run automations; assign tasks',
   },
   Production: {
     'production.view': 'See units, stockings, records and batches',
@@ -76,6 +77,7 @@ export const ADMIN_ONLY: readonly Permission[] = [
   'org.sites.manage',
   'org.audit.view',
   'integrations.manage',
+  'automation.manage',
   'production.units.delete',
   'production.stock.adjust',
   'production.records.delete',

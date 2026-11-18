@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { convexTest } from 'convex-test'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -29,6 +29,8 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'changeStatus(ctx': 'org.members.manage',
   'requireMessagingAdmin(ctx)': 'integrations.manage',
   'recordOutboundUsage(ctx': 'inventory.issue',
+  'requireApiAdmin(ctx)': 'integrations.manage',
+  'requireAdmin(ctx)': 'automation.manage',
 }
 
 /** Functions without an organization guard, and why. */
@@ -40,6 +42,7 @@ const ALLOWLIST: Record<string, string> = {
   'mfa.startEnrolment': 'own two-step enrolment; guarded in internal.mfa',
   'mfa.verifyChallenge': 'own two-step code; guarded in internal.mfa',
   'messaging/channels.saveCredentials': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.channelForAdmin',
+  'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
 }
 
@@ -121,7 +124,36 @@ describe('permission matrix (generated from the source)', () => {
       })
       matrix[f.name] = `${g.padEnd(28)} ${ROLES.map((r, i) => `${r}=${cells[i]}`).join(' ')}`
     }
-    // Reviewed copy: docs/architecture/20-permission-matrix.md.
+    // Reviewed copy: docs/architecture/20-permission-matrix.md, rewritten with
+    //   WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
+    if (process.env.WRITE_PERMISSION_MATRIX) {
+      const word = (c: string) => (c === 'Y' ? 'yes' : c === '-' ? 'no' : c)
+      const rows = fns.map((f) => {
+        const g = f.guard!
+        const cells = ROLES.map((r) =>
+          g === 'platform' ? 'no' : g === 'account' ? 'self' : g === 'allowlisted' ? 'see test'
+            : word((ROLE_TEMPLATES[r] as readonly string[]).includes(g) ? 'Y' : '-'),
+        )
+        return `| \`${f.name}\` | \`${g}\` | ${cells.join(' | ')} |`
+      })
+      writeFileSync(
+        join(ROOT, '..', 'docs', 'architecture', '20-permission-matrix.md'),
+        [
+          '# Permission matrix',
+          '',
+          'Generated from the source by `convex/permissions.test.ts`: every public function and the permission its guard names. ' +
+            '`self` = self-service (`requireAccount`: the caller\'s own account, notifications, invites, tasks); `platform` = `requirePlatformAdmin` (super_admin only); ' +
+            '`see test` = guarded inside an internal function or public by design; the allow-list in the test says which. Templates are in `convex/lib/permissionCatalog.ts`; custom roles pick any subset of the catalog.',
+          '',
+          'Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts`. The test fails on any public function without a guard; it does not compare against this file.',
+          '',
+          '| Function | Permission | Owner | Admin | Manager | Field staff | Viewer |',
+          '|---|---|---|---|---|---|---|',
+          ...rows,
+          '',
+        ].join('\n'),
+      )
+    }
     expect(Object.keys(matrix)).toHaveLength(fns.length)
     for (const row of Object.values(matrix)) expect(row).toMatch(/viewer=(Y|-|self)$/)
   })

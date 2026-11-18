@@ -21,8 +21,10 @@ import {
   Fish,
   HeartPulse,
   House,
+  KeyRound,
   LayoutGrid,
   List,
+  ListTodo,
   LogOut,
   MapPin,
   MessageSquare,
@@ -41,6 +43,7 @@ import {
   Users,
   Waves,
   X,
+  Zap,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
@@ -56,6 +59,7 @@ const MENU_SECTIONS = {
     items: [
       { title: 'Dashboard', path: '/dashboard', permission: 'reports.view', icon: House, tourId: 'dashboard' },
       { title: 'Daily Entry', path: '/daily-entry', permission: 'production.daily.record', icon: Calendar, tourId: 'daily-entry' },
+      { title: 'My Tasks', path: '/tasks', icon: ListTodo },
       { title: 'Daily Records', path: '/daily-data', permission: 'production.view', icon: ClipboardList },
       { title: 'Bi-weekly Entry', path: '/biweekly-entry', permission: 'production.sampling.record', icon: Scale, tourId: 'biweekly-entry' },
       { title: 'Bi-weekly Records', path: '/biweekly-records', permission: 'production.view', icon: FileText, tourId: 'biweekly-records' },
@@ -137,6 +141,8 @@ const MENU_SECTIONS = {
       { title: 'Users', path: '/users', permission: 'org.members.manage', icon: Users },
       { title: 'Company Settings', path: '/company-settings', permission: 'org.settings.manage', icon: Building2, tourId: 'company-settings' },
       { title: 'Messaging', path: '/messaging-settings', permission: 'integrations.manage', icon: MessageSquare },
+      { title: 'Automations', path: '/automations', permission: 'automation.manage', icon: Zap },
+      { title: 'API keys', path: '/api-keys', permission: 'integrations.manage', icon: KeyRound },
       { title: 'Approvals', path: '/approvals', permission: 'production.stocking.approve', icon: CircleCheck, tourId: 'approvals' },
       { title: 'Bulk Upload', path: '/bulk-upload', permission: 'production.import', icon: Upload },
     ],

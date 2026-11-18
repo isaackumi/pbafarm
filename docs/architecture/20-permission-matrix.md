@@ -1,16 +1,28 @@
 # Permission matrix
 
-Generated from the source by `convex/permissions.test.ts` (every public function and the permission its `requireMember` call names). `self` = self-service (`requireAccount`: the caller's own account, notifications, invites); `platform` = `requirePlatformAdmin` (super_admin only); `allowlisted` = see the allow-list in the test. Role templates live in `convex/lib/permissions.ts`; custom roles pick any subset of the catalog.
+Generated from the source by `convex/permissions.test.ts`: every public function and the permission its guard names. `self` = self-service (`requireAccount`: the caller's own account, notifications, invites, tasks); `platform` = `requirePlatformAdmin` (super_admin only); `see test` = guarded inside an internal function or public by design; the allow-list in the test says which. Templates are in `convex/lib/permissionCatalog.ts`; custom roles pick any subset of the catalog.
 
-Snapshot taken when Phase 3 landed. `convex/permissions.test.ts` builds the same matrix from the source on every run and fails if a public function has no guard; it does not compare against this file.
+Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts`. The test fails on any public function without a guard; it does not compare against this file.
 
 | Function | Permission | Owner | Admin | Manager | Field staff | Viewer |
 |---|---|---|---|---|---|---|
+| `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
+| `apiKeys.overview` | `integrations.manage` | yes | yes | no | no | no |
+| `apiKeys.revoke` | `integrations.manage` | yes | yes | no | no | no |
 | `audit.getByTable` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getByUser` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getSummary` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.list` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.listPage` | `org.audit.view` | yes | yes | no | no | no |
+| `automation/rules.createFromTemplate` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.enableBuiltIns` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.overview` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.remove` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.rerun` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.runNow` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.runs` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.save` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.setEnabled` | `automation.manage` | yes | yes | no | no | no |
 | `batches.forCage` | `production.view` | yes | yes | yes | yes | yes |
 | `batches.get` | `production.view` | yes | yes | yes | yes | yes |
 | `batches.grade` | `production.transfer.approve` | yes | yes | no | no | no |
@@ -132,7 +144,7 @@ Snapshot taken when Phase 3 landed. `convex/permissions.test.ts` builds the same
 | `inventoryItems.updateItem` | `inventory.prices.manage` | yes | yes | no | no | no |
 | `memberships.acceptInvite` | `account` | self | self | self | self | self |
 | `memberships.declineInvite` | `account` | self | self | self | self | self |
-| `memberships.inviteInfo` | `allowlisted` | self | self | self | self | self |
+| `memberships.inviteInfo` | `allowlisted` | see test | see test | see test | see test | see test |
 | `memberships.listInvites` | `org.members.manage` | yes | yes | no | no | no |
 | `memberships.listMembers` | `org.members.manage` | yes | yes | no | no | no |
 | `memberships.listMine` | `account` | self | self | self | self | self |
@@ -147,12 +159,14 @@ Snapshot taken when Phase 3 landed. `convex/permissions.test.ts` builds the same
 | `messaging/channels.overview` | `integrations.manage` | yes | yes | no | no | no |
 | `messaging/channels.removeChannel` | `integrations.manage` | yes | yes | no | no | no |
 | `messaging/channels.saveChannel` | `integrations.manage` | yes | yes | no | no | no |
-| `messaging/channels.saveCredentials` | `allowlisted` | self | self | self | self | self |
-| `messaging/channels.sendTest` | `allowlisted` | self | self | self | self | self |
+| `messaging/channels.saveCredentials` | `allowlisted` | see test | see test | see test | see test | see test |
+| `messaging/channels.sendTest` | `allowlisted` | see test | see test | see test | see test | see test |
 | `messaging/channels.updatePreferences` | `integrations.manage` | yes | yes | no | no | no |
-| `mfa.startChallenge` | `allowlisted` | self | self | self | self | self |
-| `mfa.startEnrolment` | `allowlisted` | self | self | self | self | self |
-| `mfa.verifyChallenge` | `allowlisted` | self | self | self | self | self |
+| `mfa.startChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfa.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfa.verifyChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
+| `notificationPreferences.mine` | `account` | self | self | self | self | self |
+| `notificationPreferences.update` | `account` | self | self | self | self | self |
 | `notifications.deleteNotification` | `account` | self | self | self | self | self |
 | `notifications.getUnreadCount` | `account` | self | self | self | self | self |
 | `notifications.listForCurrentUser` | `account` | self | self | self | self | self |
@@ -206,11 +220,15 @@ Snapshot taken when Phase 3 landed. `convex/permissions.test.ts` builds the same
 | `stocking.removeStocking` | `production.stocking.approve` | yes | yes | no | no | no |
 | `stocking.suggestBatchNumber` | `production.view` | yes | yes | yes | yes | yes |
 | `stocking.updateStocking` | `production.stocking.request` | yes | yes | yes | yes | no |
-| `userAccounts.changePassword` | `allowlisted` | self | self | self | self | self |
+| `tasks.create` | `automation.manage` | yes | yes | no | no | no |
+| `tasks.mine` | `account` | self | self | self | self | self |
+| `tasks.openCount` | `account` | self | self | self | self | self |
+| `tasks.setStatus` | `account` | self | self | self | self | self |
+| `userAccounts.changePassword` | `allowlisted` | see test | see test | see test | see test | see test |
 | `userAccounts.createWithPassword` | `org.members.manage` | yes | yes | no | no | no |
 | `users.approveJoinRequest` | `org.members.manage` | yes | yes | no | no | no |
 | `users.claimInvite` | `account` | self | self | self | self | self |
-| `users.current` | `allowlisted` | self | self | self | self | self |
+| `users.current` | `allowlisted` | see test | see test | see test | see test | see test |
 | `users.deactivate` | `org.members.manage` | yes | yes | no | no | no |
 | `users.declineJoinRequest` | `org.members.manage` | yes | yes | no | no | no |
 | `users.get` | `org.members.manage` | yes | yes | no | no | no |

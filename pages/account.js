@@ -6,6 +6,7 @@ import Layout from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
+import NotificationPreferencesCard from '../components/NotificationPreferencesCard'
 import {
   PageHeader,
   FormPage,
@@ -84,7 +85,7 @@ export default function AccountPage() {
             description={
               forced && !done
                 ? 'You must set a new password before continuing.'
-                : 'Manage your login credentials.'
+                : 'Manage your login credentials and notifications.'
             }
           />
 
@@ -152,6 +153,12 @@ export default function AccountPage() {
               </FormActions>
             </form>
           </FormCard>
+
+          {!(forced && !done) && (
+            <div className="mt-6">
+              <NotificationPreferencesCard />
+            </div>
+          )}
         </FormPage>
       </Layout>
     </ProtectedRoute>
