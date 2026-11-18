@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
+import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
 import {
   automationAction,
@@ -526,6 +527,7 @@ const schema = defineSchema({
     updatedAt: v.number(),
   })
     .index('by_cage', ['cageId'])
+    .index('by_cage_and_date', ['cageId', 'date'])
     .index('by_batch_code', ['batchCode'])
     .index('by_company_and_batchCode', ['companyId', 'batchCode'])
     .index('by_company', ['companyId'])
@@ -1400,6 +1402,31 @@ const schema = defineSchema({
   })
     .index('by_user_and_key', ['userId', 'key'])
     .index('by_createdAt', ['createdAt']),
+
+  /** Rollups (PLAT-002, convex/lib/rollups.ts): one unit, one batch, one day. */
+  unitDailyStats: defineTable(unitDailyStatsFields)
+    .index('by_unitId_and_date', ['unitId', 'date'])
+    .index('by_unitId_and_batchId_and_date', ['unitId', 'batchId', 'date'])
+    .index('by_batchId_and_date', ['batchId', 'date'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
+  /** Rollups (PLAT-002): one row per occupancy, recomputed by the rollup job. */
+  batchStats: defineTable(batchStatsFields)
+    .index('by_unitId_and_batchId', ['unitId', 'batchId'])
+    .index('by_batchId', ['batchId'])
+    .index('by_companyId_and_open', ['companyId', 'open'])
+    .index('by_companyId_and_lastDate', ['companyId', 'lastDate']),
+
+  /** Occupancies whose batchStats must be recomputed (one row per pair). */
+  rollupDirty: defineTable({
+    companyId: v.id('companies'),
+    unitId: v.id('cages'),
+    batchId: v.id('batches'),
+    markedAt: v.number(),
+  })
+    .index('by_unitId_and_batchId', ['unitId', 'batchId'])
+    .index('by_markedAt', ['markedAt']),
+
   /**
    * A traceable unit of harvested fish (TRACE-004): part or all of one
    * harvest, with its own code, weight, grade and destination. Dispatches

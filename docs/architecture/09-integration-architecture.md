@@ -288,3 +288,9 @@ Inbound replies (for example a worker replying "12 dead" on WhatsApp) are stored
 - Automation: action `{ kind: 'webhook', endpointId }` sends the triggering event (plus `rule`) or, for schedule rules, the check result as type `automation.rule`.
 - Retention: deliveries 30 days (`prune webhook deliveries` cron).
 
+### 13.4 Weather and sensor ingestion (INT-006, INT-007)
+
+- Weather: `fetch site weather` cron (03:00 UTC) runs `internal.weather.refreshAll`, which pages through active sites of approved companies that have `latitude`/`longitude` (FARM-001) and calls Open-Meteo `/v1/forecast` with `past_days=1&forecast_days=3` in the site's time zone, five sites at a time (Effect: 10 s timeout, two retries on 5xx/network, Schema-checked body). Rows go to `weatherObservations` (one per site and local date; forecast rows are replaced later). Sites without coordinates are skipped. Admins can refresh a site (30-minute cooldown). The dashboard "Site conditions" card reads `weather.forSites` (client passes the date; no wall clock in the query).
+- Sensors: `POST /ingest/v1/readings` (API key, scope `ingest:write`, shared rate limits). Up to 500 readings `{ deviceId, parameter, value, measuredAt, cageId?, siteId? }`; each is checked on its own (`convex/integrations/sensorLogic.ts`: parameter catalog and ranges, not more than 5 minutes ahead or 90 days back); stored rows link to the key's company cage or site and respect the key's site list; repeats of (device, parameter, measuredAt) count as duplicates, so gateways can resend. One `sensor.readings.recorded` event per batch carries `minDissolvedOxygen` and `maxTemperatureC` for automation rules. Response `{ accepted, duplicates, rejected: [{ index, reason }] }`, 422 when nothing was stored.
+- Stays Convex-native (doc 14): a Cloudflare Worker in front of ingestion only when a trigger in doc 14 fires (sustained volume, device protocols other than HTTPS JSON, or edge buffering needs).
+
