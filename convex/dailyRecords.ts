@@ -1,12 +1,14 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
 import {
   mergeSettings,
@@ -391,6 +393,7 @@ async function insertDailyRecord(
       updatedAt: Date.now(),
     })
   }
+  await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
   const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
   const nextCount =
@@ -515,7 +518,8 @@ export const create = mutation({
  * Save several cages' daily records for one date in a single transaction.
  * Any failure (duplicate, insufficient stock, missing cage) rolls back every line.
  */
-export const createBatch = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const createBatch = idempotentMutation('dailyRecords.createBatch', {
   args: {
     date: v.string(),
     records: v.array(
@@ -696,6 +700,7 @@ export const update = mutation({
           })
         }
       }
+      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, true)
     }
 
     if (feedTouched) {
@@ -751,6 +756,13 @@ export const remove = mutation({
         })
       }
     }
+    await shadowReverse(
+      ctx,
+      await ctx.db.get(existing.cageId),
+      { sourceTable: 'dailyRecords', sourceId: id },
+      'Daily record deleted',
+      user._id,
+    )
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
@@ -818,6 +830,7 @@ export const createMany = mutation({
           updatedAt: Date.now(),
         })
       }
+      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
       await deductDailyFeed(ctx, user, {
         dailyRecordId: id,
@@ -830,6 +843,13 @@ export const createMany = mutation({
         feedOverlapReason,
       })
       ids.push(id)
+    }
+    if (ids.length > 0) {
+      await logAudit(ctx, {
+        actionType: 'bulk_create',
+        tableName: 'dailyRecords',
+        newValues: { count: ids.length, skipped: records.length - ids.length, ids },
+      })
     }
     return ids
   },

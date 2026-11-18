@@ -8,6 +8,8 @@ import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import Waterline from '../../components/Waterline'
+import BatchHistory from '../../components/BatchHistory'
+import Link from 'next/link'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -43,7 +45,16 @@ function GrowthPanel({ growth, cage }) {
           {growth.cycle_closed ? 'Last cycle' : 'Current cycle'}
         </h2>
         <p className="text-sm text-muted tabular-nums">
-          {growth.batch_number ? `${growth.batch_number}, ` : ''}stocked {growth.stocking_date},{' '}
+          {growth.batch_number ? (
+            growth.batch_id ? (
+              <Link href={`/batches/${growth.batch_id}`} className="text-lake hover:underline">
+                {growth.batch_number}
+              </Link>
+            ) : (
+              growth.batch_number
+            )
+          ) : null}
+          {growth.batch_number ? ', ' : ''}stocked {growth.stocking_date},{' '}
           day {growth.days_of_culture ?? '—'}
         </p>
       </div>
@@ -201,9 +212,19 @@ function CageDetails() {
           >
             Bi-weekly entry
           </Button>
+          <Button href={`/fish-transfers?source=${cageId}`} variant="secondary" size="sm">
+            Transfer fish
+          </Button>
+          {isAdmin && (
+            <Button href={`/grading?cage=${cageId}`} variant="secondary" size="sm">
+              Grade
+            </Button>
+          )}
         </div>
 
         <GrowthPanel growth={growth} cage={cage} />
+
+        <BatchHistory cageId={cageId} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="page-card p-6 space-y-2 text-sm">

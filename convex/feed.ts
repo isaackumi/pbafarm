@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import { scopedRows } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
@@ -718,7 +719,8 @@ export const createUsage = mutation({
 })
 
 /** Explicit store take-out by feeders (may link to a cage). */
-export const createIssue = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const createIssue = idempotentMutation('feed.createIssue', {
   args: {
     feedTypeId: v.id('feedTypes'),
     cageId: v.optional(v.id('cages')),

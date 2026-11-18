@@ -21,6 +21,10 @@ import {
 } from '../components/ui'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
+import { cleanError } from '../lib/offlineOutbox'
+import { saveOrQueue } from '../lib/outboxSenders'
+import { useOnline } from '../hooks/useOutbox'
+import OutboxPanel from '../components/OutboxPanel'
 
 export default function FeedIssuePage() {
   return (
@@ -34,8 +38,9 @@ export default function FeedIssuePage() {
 
 function FeedIssue() {
   const { showToast } = useToast()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const { activeLocationId } = useLocation()
+  const online = useOnline()
   const [feedTypes, setFeedTypes] = useState([])
   const [cages, setCages] = useState([])
   const [lookupsReady, setLookupsReady] = useState(false)
@@ -66,7 +71,18 @@ function FeedIssue() {
 
   useEffect(() => {
     loadLookups().catch((e) => {
-      showToast('error', e.message)
+      // No signal: the lists daily entry saved on this device last time.
+      try {
+        const cached = JSON.parse(localStorage.getItem('pbafarm:daily-entry:lookups') || 'null')
+        if (cached) {
+          setFeedTypes(cached.feedTypes || [])
+          setCages(cached.cages || [])
+        } else {
+          showToast('error', cleanError(e))
+        }
+      } catch {
+        showToast('error', cleanError(e))
+      }
       setLookupsReady(true)
     })
   }, [showToast])
@@ -97,8 +113,7 @@ function FeedIssue() {
     setSaving(true)
     try {
       if (!form.feedTypeId) throw new Error('Select a feed type')
-      const client = getConvexHttpClient()
-      await client.mutation(api.feed.createIssue, {
+      const payload = {
         feedTypeId: form.feedTypeId,
         cageId: form.cageId || undefined,
         quantity: form.quantityKg ? Number(form.quantityKg) : undefined,
@@ -111,8 +126,24 @@ function FeedIssue() {
           (form.alsoInDaily && form.feedOverlapReason) || undefined,
         locationId:
           activeLocationId || getActiveLocationId() || undefined,
+      }
+      const feedName = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)?.name || 'Feed'
+      const cageName = cages.find((c) => (c.id || c._id) === form.cageId)?.name
+      const res = await saveOrQueue({
+        kind: 'feed-issue',
+        payload: JSON.parse(JSON.stringify(payload)),
+        summary: `${form.usageDate} · ${feedName}${cageName ? ` to ${cageName}` : ''} · ${
+          form.quantityKg || 0
+        } kg`,
+        userId: user?.id,
       })
-      showToast('success', 'Feed issued — stock deducted on ledger')
+      if (res.error) throw res.error
+      showToast(
+        res.queued ? 'info' : 'success',
+        res.queued
+          ? 'No connection. Saved on this device and will send when you are back online'
+          : 'Feed issued — stock deducted on ledger',
+      )
       setForm((p) => ({
         ...p,
         quantityKg: '',
@@ -124,7 +155,7 @@ function FeedIssue() {
         feedOverlapReason: '',
       }))
     } catch (err) {
-      showToast('error', err.message || 'Failed to issue feed')
+      showToast('error', cleanError(err) || 'Failed to issue feed')
     } finally {
       setSaving(false)
     }
@@ -151,6 +182,7 @@ function FeedIssue() {
         title="Issue details"
         subtitle="Enter bags or kilograms — the other field updates from bag size."
       >
+        <OutboxPanel compact online={online} kinds={['feed-issue']} />
         <form onSubmit={submit} className="space-y-8">
           <FormSection title="What & where">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

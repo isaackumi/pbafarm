@@ -14,6 +14,7 @@ export const AUTH_ERROR_CODES = {
   COMPANY_NOT_APPROVED: 'COMPANY_NOT_APPROVED',
   PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
   NO_COMPANY: 'NO_COMPANY',
+  NOT_A_MEMBER: 'NOT_A_MEMBER',
   MFA_REQUIRED: 'MFA_REQUIRED',
 } as const
 
@@ -28,12 +29,14 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
     'PASSWORD_CHANGE_REQUIRED: Change your temporary password before continuing.',
   NO_COMPANY:
     'NO_COMPANY: Your account is not linked to a company yet. Register a company or ask an admin to invite you.',
+  NOT_A_MEMBER:
+    'NOT_A_MEMBER: Your access to this organization was suspended or removed. Ask its admin, or switch organization.',
   MFA_REQUIRED:
     'MFA_REQUIRED: Your company requires a verification code for this sign-in. Enter the code we send to your phone.',
 }
 
 /** Codes that end the session: the client signs out and shows the message. */
-export const SIGN_OUT_CODES: AuthErrorCode[] = ['USER_INACTIVE', 'COMPANY_NOT_APPROVED']
+export const SIGN_OUT_CODES: AuthErrorCode[] = ['USER_INACTIVE', 'COMPANY_NOT_APPROVED', 'NOT_A_MEMBER']
 
 /** Find an access-refusal code inside any error (Convex wraps the message). */
 export function authErrorCode(error: unknown): AuthErrorCode | null {

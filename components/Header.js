@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useMutation, useQuery } from 'convex/react'
 import {
   Bell,
+  Building2,
+  Check,
   CircleHelp,
+  CloudUpload,
   MapPin,
   Menu,
   Moon,
@@ -15,12 +19,64 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
+import { useOutbox } from '../hooks/useOutbox'
+import { api } from '../convex/_generated/api'
+
+/**
+ * Organizations I belong to (ORG-002). Shown in the profile menu; switching
+ * reloads the app so every cached query and the site picker start fresh.
+ */
+function OrganizationMenu({ onDone }) {
+  const { canUseApp } = useAuth()
+  const orgs = useQuery(api.memberships.listMine, canUseApp ? {} : 'skip')
+  const switchActive = useMutation(api.memberships.switchActive)
+  const [switching, setSwitching] = useState(null)
+  if (!orgs || orgs.length === 0) return null
+  const choose = async (org) => {
+    if (org.isActive || switching) return
+    setSwitching(org.companyId)
+    try {
+      await switchActive({ companyId: org.companyId })
+      onDone?.()
+      window.location.assign('/dashboard')
+    } catch {
+      setSwitching(null)
+    }
+  }
+  return (
+    <div className="border-b border-foam-deep py-1">
+      <div className="px-4 pt-1 pb-1 text-xs text-muted">Organization</div>
+      {orgs.map((org) => (
+        <button
+          key={org.companyId}
+          type="button"
+          disabled={org.companyStatus !== 'approved' || !!switching}
+          onClick={() => choose(org)}
+          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-chart-ink hover:bg-foam disabled:opacity-50"
+        >
+          <Building2 size={16} className="text-muted shrink-0" aria-hidden />
+          <span className="truncate flex-1">{org.name}</span>
+          {org.isActive && <Check size={16} className="text-kelp shrink-0" aria-label="Active" />}
+          {switching === org.companyId && <span className="text-xs text-muted">Switching…</span>}
+        </button>
+      ))}
+      <Link
+        href="/register-company"
+        onClick={onDone}
+        className="block px-4 py-2 text-sm text-lake hover:bg-foam"
+      >
+        Register another organization
+      </Link>
+    </div>
+  )
+}
 
 const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { startSystemWalkthrough } = useTour()
+  const { count: outboxCount } = useOutbox()
   const {
     locations,
     activeLocationId,
@@ -185,6 +241,19 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
             )}
           </div>
 
+          {outboxCount > 0 && (
+            <Link
+              href="/outbox"
+              aria-label={`${outboxCount} entr${outboxCount === 1 ? 'y' : 'ies'} waiting to send`}
+              className="relative text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg h-12 w-12 flex items-center justify-center transition-colors"
+            >
+              <CloudUpload size={20} aria-hidden />
+              <span className="absolute top-1 right-0.5 min-w-5 h-5 px-1 rounded-full bg-signal text-white text-xs font-medium leading-5 text-center tabular-nums">
+                {outboxCount > 99 ? '99+' : outboxCount}
+              </span>
+            </Link>
+          )}
+
           <Link
             href="/scan"
             aria-label="Scan cage label"
@@ -277,10 +346,11 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
               </div>
             </button>
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1">
+              <div className="absolute right-0 mt-2 w-64 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1">
                 <div className="px-4 py-2 text-xs text-muted border-b border-foam-deep font-data">
                   {email}
                 </div>
+                <OrganizationMenu onDone={() => setProfileDropdownOpen(false)} />
                 <Link
                   href="/account"
                   className="block w-full text-left px-4 py-2 text-sm text-chart-ink hover:bg-foam"

@@ -19,6 +19,13 @@ crons.cron(
 crons.interval('automation tick', { minutes: 5 }, internal.automation.engine.tick, {})
 
 // Domain event outbox retention (30 days).
-crons.cron('prune domain events', '30 3 * * *', internal.automation.engine.pruneEvents, {})
+crons.cron('prune domain events', '45 3 * * *', internal.automation.engine.pruneEvents, {})
+
+// 01:30 UTC, after the day's entries: compare cage counts with the stock
+// ledger and tell admins about any drift (PROD-005).
+crons.cron('stock ledger reconciliation', '30 1 * * *', internal.reconciliation.run, {})
+
+// Outbox replay keys older than 30 days (MOBILE-002).
+crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {})
 
 export default crons

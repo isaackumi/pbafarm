@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
@@ -8,6 +9,7 @@ import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, 
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
+import { shadowHarvest } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 
 /** Client rows with the cage name/code (one `get` per distinct cage). */
@@ -246,7 +248,8 @@ export const suggestFcr = query({
   },
 })
 
-export const create = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const create = idempotentMutation('harvest.create', {
   args: {
     cageId: v.id('cages'),
     harvestDate: v.string(),
@@ -291,6 +294,8 @@ export const create = mutation({
       companyId,
       createdBy: user._id,
     })
+    // Ledger (shadow) warnings go to reconciliation, not to the person saving.
+    await shadowHarvest(ctx, (await ctx.db.get(id))!, user._id, 'create')
 
     await logAudit(ctx, {
       actionType: 'create',
@@ -358,6 +363,12 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, { ...patch, cageEffect })
+    const ledgerTouched = (['harvestDate', 'estimatedCount', 'harvestType', 'totalWeight', 'averageBodyWeight'] as const).some(
+      (k) => patch[k] !== undefined && patch[k] !== existing[k],
+    )
+    if (ledgerTouched) {
+      await shadowHarvest(ctx, (await ctx.db.get(id))!, user._id, 'update')
+    }
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'harvestRecords',
@@ -390,6 +401,7 @@ export const remove = mutation({
     // the cage has since moved on to a new cycle.
     const current = await harvestIsCurrent(ctx, existing, existing.cageEffect?.closedStockingId)
     if (current) await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
+    await shadowHarvest(ctx, existing, user._id, 'remove')
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',

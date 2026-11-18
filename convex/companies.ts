@@ -5,6 +5,13 @@ import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
+import { activateMembership, upsertMembership } from './lib/memberships'
+import {
+  isValidCountry,
+  isValidLocale,
+  isValidTimezone,
+  orgProfile,
+} from './lib/orgProfile'
 import {
   mergeSettings,
   validateSettingsForPublish,
@@ -90,6 +97,7 @@ async function logoUrl(ctx: any, storageId?: any) {
 function toClient(c: any, logo_url: string | null = null) {
   const settings = mergeSettings(c.settings)
   return {
+    profile: orgProfile(c),
     id: c._id,
     _id: c._id,
     name: c.name,
@@ -122,6 +130,24 @@ function toClient(c: any, logo_url: string | null = null) {
  * the company is not approved; this ends their open sessions too).
  * Super_admins and the caller keep their sessions.
  */
+/** Platform action audited under the target company, so its admins see it (ORG-006). */
+async function platformAudit(
+  ctx: MutationCtx,
+  actor: Doc<'users'>,
+  companyId: Id<'companies'>,
+  row: { actionType: string; newValues?: unknown; locationId?: Id<'farmLocations'> },
+) {
+  await ctx.db.insert('auditLogs', {
+    userId: actor._id,
+    companyId,
+    actionType: row.actionType,
+    tableName: 'companies',
+    recordId: companyId,
+    newValues: row.newValues,
+    locationId: row.locationId,
+  })
+}
+
 async function revokeMemberSessions(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
@@ -357,9 +383,15 @@ export const register = mutation({
       throw new Error('Company code already exists — choose another short code')
     }
 
-    // User should not already belong to a company
-    if (user.companyId) {
-      throw new Error('User already belongs to a company')
+    // Members of another organization may register a new one (ORG-004);
+    // it becomes a second membership on approval. One pending at a time.
+    const pendingMine = await ctx.db
+      .query('companies')
+      .withIndex('by_submittedByUserId', (q) => q.eq('submittedByUserId', user._id))
+      .order('desc')
+      .take(20)
+    if (pendingMine.some((c) => c.status === 'pending')) {
+      throw new Error('You already have a registration waiting for approval')
     }
 
     const contactEmail =
@@ -406,7 +438,6 @@ export const myRegistration = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireUser(ctx)
-    if (user.companyId) return null
     const latest = await ctx.db
       .query('companies')
       .withIndex('by_submittedByUserId', (q) => q.eq('submittedByUserId', user._id))
@@ -470,10 +501,6 @@ export const approve = mutation({
     const targetUser = await ctx.db.get(userId)
     if (!targetUser) throw new Error('User not found')
 
-    if (targetUser.companyId) {
-      throw new Error('User already belongs to a company')
-    }
-
     const now = Date.now()
 
     await ctx.db.patch(companyId, {
@@ -483,9 +510,14 @@ export const approve = mutation({
       submittedByUserId: company.submittedByUserId || userId,
     })
 
-    await ctx.db.patch(userId, {
-      companyId: companyId,
-      role: 'admin',
+    // The submitter owns the new organization (membership, D-002). It becomes
+    // their active organization only when they have none yet.
+    await upsertMembership(ctx, {
+      userId,
+      companyId,
+      roleKey: 'owner',
+      status: 'active',
+      actorId: user._id,
     })
 
     const existingLocs = await ctx.db
@@ -503,12 +535,16 @@ export const approve = mutation({
         updatedAt: now,
       })
     }
-    await ctx.db.patch(userId, { activeLocationId: locationId })
+    if (!targetUser.companyId) {
+      await activateMembership(ctx, targetUser, {
+        companyId,
+        roleKey: 'owner',
+        allLocations: true,
+      })
+    }
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'approve',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: {
         status: 'approved',
         promotedUserId: userId,
@@ -548,10 +584,8 @@ export const reject = mutation({
     const sessionsRevoked =
       revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'reject',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: { 
         status: 'rejected',
         reason,
@@ -588,10 +622,8 @@ export const remove = mutation({
     const sessionsRevoked =
       revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'reject',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: {
         status: 'rejected',
         reason: reason || 'Removed by admin',
@@ -700,6 +732,52 @@ export const updateSettings = mutation({
     })
 
     return id
+  },
+})
+
+/**
+ * Company admin: organization profile (ORG-005, M3): country, timezone,
+ * unit system, locale. Values are validated; omitted fields keep their value.
+ */
+export const updateProfile = mutation({
+  args: {
+    country: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
+    defaultLocale: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    if (!user.companyId) throw new Error('No company linked')
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+    const patch: Partial<Doc<'companies'>> = {}
+    if (args.country !== undefined) {
+      const country = args.country.trim().toUpperCase()
+      if (!isValidCountry(country)) throw new Error('Country must be a two-letter code, e.g. GH')
+      patch.country = country
+    }
+    if (args.timezone !== undefined) {
+      const timezone = args.timezone.trim()
+      if (!isValidTimezone(timezone)) throw new Error(`Unknown time zone: ${timezone}`)
+      patch.timezone = timezone
+    }
+    if (args.unitSystem !== undefined) patch.unitSystem = args.unitSystem
+    if (args.defaultLocale !== undefined) {
+      const locale = args.defaultLocale.trim()
+      if (!isValidLocale(locale)) throw new Error(`Unknown locale: ${locale}`)
+      patch.defaultLocale = locale
+    }
+    await ctx.db.patch(company._id, patch)
+    await logAudit(ctx, {
+      actionType: 'update_profile',
+      tableName: 'companies',
+      recordId: company._id,
+      previousValues: orgProfile(company),
+      newValues: patch,
+    })
+    return orgProfile({ ...company, ...patch })
   },
 })
 
@@ -984,6 +1062,12 @@ export const clearLogo = mutation({
     if (!company) throw new Error('Company not found')
     await deleteOldLogo(ctx, user.companyId, company.logoStorageId)
     await ctx.db.patch(user.companyId, { logoStorageId: undefined })
+    await logAudit(ctx, {
+      actionType: 'clear_logo',
+      tableName: 'companies',
+      recordId: user.companyId,
+      previousValues: { logoStorageId: company.logoStorageId },
+    })
     return { ok: true }
   },
 })

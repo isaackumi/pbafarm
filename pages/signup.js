@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
 import { Button, Field, Input } from '../components/ui'
+import { safeNextPath } from '../lib/safeRedirect'
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
@@ -15,7 +16,7 @@ export default function SignUp() {
   const router = useRouter()
 
   if (user) {
-    router.push('/dashboard')
+    router.push(safeNextPath(router.query.next, '/register-company'))
     return null
   }
 
@@ -45,7 +46,7 @@ export default function SignUp() {
     }
 
     // A new account has no company yet: register one, or ask to join an invite.
-    router.push('/register-company')
+    router.push(safeNextPath(router.query.next, '/register-company'))
   }
 
   return (
