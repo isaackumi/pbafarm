@@ -47,6 +47,7 @@ const HARVEST_DEFAULTS = {
     weight: '',
   })),
   notes: '',
+  withdrawalOverrideReason: '',
 }
 
 const HarvestForm = ({ onComplete }) => {
@@ -61,8 +62,29 @@ const HarvestForm = ({ onComplete }) => {
   const [fcrCalc, setFcrCalc] = useState(null)
   const [fcrTouched, setFcrTouched] = useState(false)
   const { showToast } = useToast()
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
   const online = useOnline()
+  const isAdmin = hasRole ? hasRole('admin') : user?.role === 'admin'
+  const [withdrawal, setWithdrawal] = useState(null)
+
+  // A treatment withdrawal period refuses the harvest (PROD-012); say so up front.
+  useEffect(() => {
+    if (!formData.cageId || !formData.harvestDate || !online) {
+      setWithdrawal(null)
+      return
+    }
+    let cancelled = false
+    getConvexHttpClient()
+      .query(api.traceability.withdrawalStatus, {
+        cageId: formData.cageId,
+        date: formData.harvestDate,
+      })
+      .then((res) => !cancelled && setWithdrawal(res))
+      .catch(() => !cancelled && setWithdrawal(null))
+    return () => {
+      cancelled = true
+    }
+  }, [formData.cageId, formData.harvestDate, online])
 
   useEffect(() => {
     const fetchCages = async () => {
@@ -187,6 +209,14 @@ const HarvestForm = ({ onComplete }) => {
       )
     }
 
+    if (withdrawal?.blocked) {
+      if (!isAdmin) {
+        problems.push(`these fish are in a withdrawal period until ${withdrawal.until}; ask an admin`)
+      } else if (!formData.withdrawalOverrideReason?.trim()) {
+        problems.push(`give an override reason (withdrawal period until ${withdrawal.until})`)
+      }
+    }
+
     if (Object.keys(next).length) setFormData((prev) => ({ ...prev, ...next }))
     if (problems.length) {
       const msg = problems.join(', ')
@@ -220,6 +250,9 @@ const HarvestForm = ({ onComplete }) => {
           weight: parseFloat(size.weight) || 0,
         })),
         notes: formData.notes,
+        ...(withdrawal?.blocked && formData.withdrawalOverrideReason?.trim()
+          ? { withdrawal_override_reason: formData.withdrawalOverrideReason.trim() }
+          : {}),
       }
 
       const { error, warnings, queued } = await saveOrQueue({
@@ -361,6 +394,33 @@ const HarvestForm = ({ onComplete }) => {
                   required
                 />
               </Field>
+
+              {withdrawal?.blocked && (
+                <div
+                  role="alert"
+                  className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
+                >
+                  <p>
+                    <span className="font-medium">Withdrawal period until {withdrawal.until}.</span>{' '}
+                    {withdrawal.treatments.map((t) => `${t.product} (${t.date})`).join(', ')}.{' '}
+                    {isAdmin
+                      ? 'Harvesting now needs an override reason, which is kept in the audit log.'
+                      : 'Only an admin can record a harvest before then.'}
+                  </p>
+                  {isAdmin && (
+                    <Field label="Override reason" htmlFor="harvest-withdrawal-reason" required>
+                      <Textarea
+                        id="harvest-withdrawal-reason"
+                        name="withdrawalOverrideReason"
+                        value={formData.withdrawalOverrideReason || ''}
+                        onChange={handleChange}
+                        rows={2}
+                        placeholder="For example: residue test negative, lab report 2026-118"
+                      />
+                    </Field>
+                  )}
+                </div>
+              )}
 
               <Field label="Harvest type" htmlFor="harvest-type" required>
                 <Select

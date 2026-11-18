@@ -6,6 +6,7 @@ import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { PageHeader, Button, Card, CardHeader, StatCard, EmptyState } from '../../components/ui'
 import { EventRow } from '../../components/BatchHistory'
+import BatchTrace from '../../components/BatchTrace'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import { localToday } from '../../lib/format'
@@ -177,6 +178,8 @@ function BatchDetails() {
             <BatchLinks title="Went on to" items={batch.descendants} empty="No child batches." />
           </div>
         </Card>
+
+        <BatchTrace batchId={batch.id} />
 
         <section className="page-card overflow-hidden" aria-labelledby="occupancies-title">
           <div className="px-4 sm:px-6 pt-5 pb-3 border-b border-foam-deep">

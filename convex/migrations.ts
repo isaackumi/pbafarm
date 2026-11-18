@@ -21,6 +21,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { currentStocking } from './lib/growth'
 import { MAX_SCOPED_LOCATIONS, legacyRoleFromKey, roleKeyFromLegacy } from './lib/memberships'
 import { ORG_PROFILE_DEFAULTS } from './lib/orgProfile'
+import { nextLotCode } from './lib/traceability'
 
 /** Every table whose schema has an optional `companyId` (users handled separately). */
 export const UNSCOPED_TABLES = [
@@ -561,6 +562,67 @@ export const m4BackfillUnitTypes = internalMutation({
       dryRun,
       count: changes.length,
       changes,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    }
+  },
+})
+
+/**
+ * M18 (TRACE-004) — give every existing harvest one default lot holding its
+ * whole weight, so each harvest is traceable and can be dispatched. Rows from
+ * the old sampling page (`source: 'sampling_page'`), harvests without a
+ * company or weight, and harvests that already have a lot are skipped.
+ * Idempotent; dryRun (default true) only reports.
+ *   npx convex run migrations:m18DefaultHarvestLots '{"dryRun":true}'
+ *   npx convex run migrations:m18DefaultHarvestLots '{"dryRun":false}'
+ *   (repeat with '{"dryRun":false,"cursor":"<continueCursor>"}' while isDone is false)
+ */
+export const m18DefaultHarvestLots = internalMutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, { dryRun = true, cursor = null }) => {
+    const page = await ctx.db.query('harvestRecords').paginate({ numItems: 200, cursor })
+    const created: Array<{ harvestId: Id<'harvestRecords'>; lotCode: string; weightKg: number }> = []
+    let skipped = 0
+    for (const h of page.page) {
+      const companyId = h.companyId
+      if (!companyId || h.source === 'sampling_page' || !(h.totalWeight > 0)) {
+        skipped++
+        continue
+      }
+      const existing = await ctx.db
+        .query('harvestLots')
+        .withIndex('by_harvestId', (q) => q.eq('harvestId', h._id))
+        .first()
+      if (existing) {
+        skipped++
+        continue
+      }
+      const lotCode = await nextLotCode(ctx, companyId, h)
+      created.push({ harvestId: h._id, lotCode, weightKg: h.totalWeight })
+      if (dryRun) continue
+      await ctx.db.insert('harvestLots', {
+        companyId,
+        locationId: h.locationId,
+        harvestId: h._id,
+        cageId: h.cageId,
+        batchId: h.batchId,
+        lotCode,
+        harvestDate: h.harvestDate,
+        weightKg: h.totalWeight,
+        fishCount: h.estimatedCount,
+        backfilled: true,
+        updatedAt: Date.now(),
+      })
+    }
+    return {
+      dryRun,
+      count: created.length,
+      skipped,
+      created,
       isDone: page.isDone,
       continueCursor: page.continueCursor,
     }

@@ -37,4 +37,7 @@ crons.cron('rollup open occupancies', '30 0 * * *', internal.rollups.queueOpen, 
 // Public API idempotency keys are kept 30 days (INT-004).
 crons.cron('prune api idempotency keys', '30 3 * * *', internal.publicApi.pruneIdempotencyKeys, {})
 
+// Webhook delivery log is kept 30 days (INT-005).
+crons.cron('prune webhook deliveries', '45 3 * * *', internal.webhooks.pruneDeliveries, {})
+
 export default crons

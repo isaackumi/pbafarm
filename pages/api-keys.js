@@ -185,6 +185,7 @@ export default function ApiKeysPage() {
             description="Keys let other systems read your farm data and record daily entries and sampling through the API. Each key only sees your company."
             related={[
               { label: 'API documentation', href: '/api-docs' },
+              { label: 'Webhooks', href: '/webhooks' },
             ]}
           />
           {!data ? (
