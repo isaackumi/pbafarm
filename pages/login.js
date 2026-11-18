@@ -3,6 +3,11 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
 import { safeNextPath } from '../lib/safeRedirect'
+import {
+  AUTH_ERROR_CODES,
+  SIGN_OUT_CODES,
+  authErrorText,
+} from '../convex/lib/authErrors'
 import { Button, Field, Input } from '../components/ui'
 
 export default function Login() {
@@ -12,8 +17,14 @@ export default function Login() {
   const [error, setError] = useState('')
   const { signInWithEmail, user } = useAuth()
   const router = useRouter()
+  const reason =
+    typeof router.query.reason === 'string' && AUTH_ERROR_CODES[router.query.reason]
+      ? router.query.reason
+      : null
 
-  if (user) {
+  // An account that is about to be signed out (inactive, company not approved)
+  // stays here; AuthWrapper ends the session and sets ?reason=.
+  if (user && !SIGN_OUT_CODES.includes(user.accessState)) {
     router.push(safeNextPath(router.query.next))
     return null
   }
@@ -49,6 +60,14 @@ export default function Login() {
         </div>
 
         <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
+          {reason && !error && (
+            <div
+              role="alert"
+              className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm"
+            >
+              You have been signed out. {authErrorText(reason)}
+            </div>
+          )}
           {error && (
             <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
               {error}

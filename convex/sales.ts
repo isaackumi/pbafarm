@@ -199,7 +199,7 @@ export const createSale = mutation({
 
     let cageId = args.cageId
     let locationId = args.locationId
-    let companyId = await writeCompanyId(user)
+    const companyId = await writeCompanyId(user)
     let harvest = null
 
     if (args.harvestId) {
@@ -209,14 +209,12 @@ export const createSale = mutation({
       if (!allowed.length) throw new Error('Access denied')
       cageId = cageId || harvest.cageId
       locationId = locationId || harvest.locationId
-      companyId = companyId || harvest.companyId
     }
 
     if (cageId) {
       const cage = await ctx.db.get(cageId)
       assertOwns(user, cage, 'Cage')
       locationId = locationId || cage.locationId
-      companyId = companyId || cage.companyId
     }
 
     await ensureDefaultLocation(ctx, user)

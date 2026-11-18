@@ -44,7 +44,8 @@ export default function SignUp() {
       return
     }
 
-    router.push('/dashboard')
+    // A new account has no company yet: register one, or ask to join an invite.
+    router.push('/register-company')
   }
 
   return (
@@ -53,7 +54,10 @@ export default function SignUp() {
         <div className="text-center mb-8">
           <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
           <h1 className="text-xl font-semibold text-chart-ink">Create account</h1>
-          <p className="mt-1 text-sm text-muted">Start with email and password. Roles come next.</p>
+          <p className="mt-1 text-sm text-muted">
+            Start with email and password. Next, register your farm or accept your
+            company&apos;s invite.
+          </p>
         </div>
 
         <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
