@@ -81,22 +81,32 @@ async function deductDailyFeed(
   })
 }
 
+/**
+ * Undo whatever stock this daily record still holds. Works out the net
+ * movement per feed type from the ledger (usage is negative, reversals
+ * positive), so it stays correct after any number of edits.
+ */
 async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
-  if (!dailyRecord.feedTypeId || !(dailyRecord.feedAmount > 0)) return
-
   const ref = String(dailyRecord._id)
   const prior = await ctx.db
     .query('feedInventoryTransactions')
     .withIndex('by_reference', (q: any) => q.eq('referenceId', ref))
     .collect()
 
-  const alreadyReversed = prior.some((t: any) => t.transactionType === 'reversal')
-  const originals = prior.filter(
-    (t: any) => t.transactionType === 'daily_usage' || t.transactionType === 'usage',
-  )
-  if (alreadyReversed || !originals.length) {
-    // Fallback: restore by amount if no ledger row (legacy records)
-    if (!originals.length) {
+  // The usage rows that drive feed reports: one per cage per day from daily entry.
+  const usage = await ctx.db
+    .query('feedUsage')
+    .withIndex('by_cage', (q: any) => q.eq('cageId', dailyRecord.cageId))
+    .collect()
+  for (const u of usage) {
+    if (u.source === 'daily' && u.usageDate === dailyRecord.date) {
+      await ctx.db.delete(u._id)
+    }
+  }
+
+  if (!prior.length) {
+    // Legacy record written before the ledger: restore by amount.
+    if (dailyRecord.feedTypeId && dailyRecord.feedAmount > 0) {
       await applyStockChange(ctx, {
         user,
         feedTypeId: dailyRecord.feedTypeId,
@@ -110,15 +120,25 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
     return
   }
 
-  for (const txn of originals) {
+  const net = new Map<string, { feedTypeId: any; kg: number; bags: number }>()
+  for (const t of prior) {
+    const k = String(t.feedTypeId)
+    const cur = net.get(k) ?? { feedTypeId: t.feedTypeId, kg: 0, bags: 0 }
+    cur.kg += Number(t.quantityKg) || 0
+    cur.bags += (Number(t.bags) || 0) * Math.sign(Number(t.quantityKg) || 0)
+    net.set(k, cur)
+  }
+  for (const { feedTypeId, kg, bags } of net.values()) {
+    const outstanding = Math.round(kg * 1000) / 1000
+    if (outstanding >= 0) continue
     await applyStockChange(ctx, {
       user,
-      feedTypeId: dailyRecord.feedTypeId,
-      deltaKg: -txn.quantityKg,
-      bags: txn.bags,
+      feedTypeId,
+      deltaKg: -outstanding,
+      bags: Math.abs(bags) || undefined,
       transactionType: 'reversal',
       referenceId: ref,
-      notes: `Reversal of txn ${txn._id}`,
+      notes: `Reversal of daily feed ${dailyRecord.date}`,
       locationId: dailyRecord.locationId,
     })
   }
@@ -432,28 +452,72 @@ export const update = mutation({
       feedPrice: v.optional(v.number()),
       feedCost: v.optional(v.number()),
       mortality: v.optional(v.number()),
+      mortalityCause: v.optional(v.string()),
       notes: v.optional(v.string()),
+      dissolvedOxygen: v.optional(v.number()),
+      temperatureC: v.optional(v.number()),
+      secchiCm: v.optional(v.number()),
     }),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch, allowNegative, overrideReason }) => {
+  handler: async (ctx, { id, patch: rawPatch, allowNegative, overrideReason }) => {
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
 
+    const patch = { ...rawPatch }
+    if (patch.mortality !== undefined && !(patch.mortality >= 0 && Number.isInteger(patch.mortality))) {
+      throw new Error('Mortality must be a whole number, 0 or more')
+    }
+    if (patch.feedAmount !== undefined && !(patch.feedAmount >= 0)) {
+      throw new Error('Feed cannot be negative')
+    }
+    if (patch.date !== undefined && patch.date !== existing.date) {
+      const clash = await ctx.db
+        .query('dailyRecords')
+        .withIndex('by_cage_date', (q) =>
+          q.eq('cageId', existing.cageId).eq('date', patch.date!),
+        )
+        .first()
+      if (clash) throw new Error(`This cage already has a record for ${patch.date}`)
+    }
+
     const feedTouched =
       patch.feedAmount !== undefined ||
       patch.feedTypeId !== undefined ||
       patch.date !== undefined
+
+    // Keep price and cost consistent with the feed actually recorded.
+    if (patch.feedAmount !== undefined || patch.feedTypeId !== undefined) {
+      const feedTypeId = patch.feedTypeId ?? existing.feedTypeId
+      const feedType = feedTypeId ? await ctx.db.get(feedTypeId) : null
+      const price = feedType?.pricePerKg ?? existing.feedPrice ?? 0
+      const amount = patch.feedAmount ?? existing.feedAmount
+      patch.feedPrice = price
+      patch.feedCost = amount * price
+      if (feedType) patch.feedType = feedType.name
+    }
 
     if (feedTouched) {
       await reverseDailyFeed(ctx, user, existing)
     }
 
     await ctx.db.patch(id, patch)
+
+    // A corrected death count moves the cage's live fish count by the difference.
+    if (patch.mortality !== undefined && patch.mortality !== existing.mortality) {
+      const cage = await ctx.db.get(existing.cageId)
+      if (cage && cage.currentCount != null) {
+        const diff = patch.mortality - (existing.mortality || 0)
+        await ctx.db.patch(existing.cageId, {
+          currentCount: Math.max(0, cage.currentCount - diff),
+          updatedAt: Date.now(),
+        })
+      }
+    }
 
     if (feedTouched) {
       const updated = await ctx.db.get(id)
@@ -494,6 +558,16 @@ export const remove = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     await reverseDailyFeed(ctx, user, existing)
+    // Give back the fish this record had counted as dead.
+    if (existing.mortality > 0) {
+      const cage = await ctx.db.get(existing.cageId)
+      if (cage && cage.currentCount != null) {
+        await ctx.db.patch(existing.cageId, {
+          currentCount: cage.currentCount + existing.mortality,
+          updatedAt: Date.now(),
+        })
+      }
+    }
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
