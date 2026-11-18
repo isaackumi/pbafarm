@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
@@ -35,6 +36,7 @@ import type * as feed from "../feed.js";
 import type * as files from "../files.js";
 import type * as fishTransfers from "../fishTransfers.js";
 import type * as harvest from "../harvest.js";
+import type * as hatchery from "../hatchery.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as idempotency from "../idempotency.js";
@@ -47,6 +49,7 @@ import type * as integrations_weatherLogic from "../integrations/weatherLogic.js
 import type * as integrations_webhookLogic from "../integrations/webhookLogic.js";
 import type * as inventory from "../inventory.js";
 import type * as inventoryItems from "../inventoryItems.js";
+import type * as lib_analytics from "../lib/analytics.js";
 import type * as lib_apiActor from "../lib/apiActor.js";
 import type * as lib_authErrors from "../lib/authErrors.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -65,6 +68,7 @@ import type * as lib_farmRules from "../lib/farmRules.js";
 import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
 import type * as lib_growth from "../lib/growth.js";
+import type * as lib_hatcheryAccess from "../lib/hatcheryAccess.js";
 import type * as lib_idempotency from "../lib/idempotency.js";
 import type * as lib_kpi from "../lib/kpi.js";
 import type * as lib_memberships from "../lib/memberships.js";
@@ -126,6 +130,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   audit: typeof audit;
   auth: typeof auth;
@@ -153,6 +158,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   fishTransfers: typeof fishTransfers;
   harvest: typeof harvest;
+  hatchery: typeof hatchery;
   health: typeof health;
   http: typeof http;
   idempotency: typeof idempotency;
@@ -165,6 +171,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/webhookLogic": typeof integrations_webhookLogic;
   inventory: typeof inventory;
   inventoryItems: typeof inventoryItems;
+  "lib/analytics": typeof lib_analytics;
   "lib/apiActor": typeof lib_apiActor;
   "lib/authErrors": typeof lib_authErrors;
   "lib/authz": typeof lib_authz;
@@ -183,6 +190,7 @@ declare const fullApi: ApiFromModules<{
   "lib/feedLedger": typeof lib_feedLedger;
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;
   "lib/growth": typeof lib_growth;
+  "lib/hatcheryAccess": typeof lib_hatcheryAccess;
   "lib/idempotency": typeof lib_idempotency;
   "lib/kpi": typeof lib_kpi;
   "lib/memberships": typeof lib_memberships;

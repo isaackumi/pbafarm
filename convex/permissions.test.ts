@@ -66,8 +66,10 @@ function publicFunctions(): Array<{ name: string; kind: string; guard: Guard | n
       let guard: Guard | null = null
       const member = /requireMember\(ctx, \{ permission: '([\w.]+)'/.exec(body)
       const action = /authorizedMember, \{\s*permission: '([\w.]+)'/.exec(body)
+      const hatchery = /requireHatchery\(ctx, '([\w.]+)'\)/.exec(body)
       if (member) guard = member[1]
       else if (action) guard = action[1]
+      else if (hatchery) guard = hatchery[1]
       else if (body.includes('requirePlatformAdmin(ctx)')) guard = 'platform'
       else if (body.includes('requireAccount(ctx')) guard = 'account'
       else {
@@ -101,7 +103,11 @@ describe('permission matrix (generated from the source)', () => {
         named.add(m[1])
       }
     }
-    for (const p of ADMIN_ONLY) expect({ p, used: named.has(p) }).toEqual({ p, used: true })
+    // Catalogued ahead of the functions that will use them (later hatchery phases).
+    const reserved = new Set(['hatchery.grade', 'hatchery.dispatch'])
+    for (const p of ADMIN_ONLY) {
+      expect({ p, used: named.has(p) || reserved.has(p) }).toEqual({ p, used: true })
+    }
   })
 
   test('templates: viewer writes nothing, field staff and managers never hold admin-only permissions', () => {

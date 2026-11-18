@@ -38,6 +38,15 @@ export const PERMISSION_GROUPS = {
     'production.records.delete': 'Delete production records',
     'production.import': 'Bulk-import records',
   },
+  Hatchery: {
+    'hatchery.view': 'See broodstock, spawnings, incubation and larval batches',
+    'hatchery.broodstock.manage': 'Add and edit broodstock',
+    'hatchery.spawning.record': 'Record spawnings, egg collections, incubation and hatches',
+    'hatchery.larval.record': 'Record larval rearing logs and live feed',
+    'hatchery.grade': 'Grade larvae into fingerling batches',
+    'hatchery.dispatch': 'Transfer and sell fingerlings',
+    'hatchery.correct': 'Reverse hatches and larval logs',
+  },
   Inventory: {
     'inventory.view': 'See stock, purchases and movements',
     'inventory.issue': 'Issue feed and items',
@@ -84,6 +93,9 @@ export const ADMIN_ONLY: readonly Permission[] = [
   'production.stock.adjust',
   'production.records.delete',
   'production.withdrawal.override',
+  'hatchery.grade',
+  'hatchery.dispatch',
+  'hatchery.correct',
   'production.import',
   'production.stocking.approve',
   'production.transfer.approve',
@@ -108,11 +120,14 @@ export const ROLE_TEMPLATES = {
     'production.transfer.request',
     'production.harvest.record',
     'production.health.record',
+    'hatchery.view',
+    'hatchery.spawning.record',
+    'hatchery.larval.record',
     'inventory.view',
     'inventory.issue',
     'reports.view',
   ],
-  viewer: ['org.view', 'production.view', 'inventory.view', 'finance.view', 'reports.view'],
+  viewer: ['org.view', 'production.view', 'hatchery.view', 'inventory.view', 'finance.view', 'reports.view'],
 } as const satisfies Record<string, readonly Permission[]>
 
 export type TemplateKey = keyof typeof ROLE_TEMPLATES

@@ -6,6 +6,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 
 | Function | Permission | Owner | Admin | Manager | Field staff | Viewer |
 |---|---|---|---|---|---|---|
+| `analytics.comparison` | `reports.view` | yes | yes | yes | yes | yes |
+| `analytics.cycles` | `reports.view` | yes | yes | yes | yes | yes |
+| `analytics.growth` | `reports.view` | yes | yes | yes | yes | yes |
+| `analytics.trends` | `reports.view` | yes | yes | yes | yes | yes |
 | `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `apiKeys.overview` | `integrations.manage` | yes | yes | no | no | no |
 | `apiKeys.revoke` | `integrations.manage` | yes | yes | no | no | no |
@@ -136,6 +140,21 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `harvest.remove` | `production.records.delete` | yes | yes | no | no | no |
 | `harvest.suggestFcr` | `production.view` | yes | yes | yes | yes | yes |
 | `harvest.update` | `production.harvest.correct` | yes | yes | yes | no | no |
+| `hatchery.batchOrigin` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.createBroodstock` | `hatchery.broodstock.manage` | yes | yes | yes | no | no |
+| `hatchery.getBroodstock` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.getSpawning` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.incubationBoard` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.kpis` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.listBroodstock` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.listSpawnings` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `hatchery.markLotFailed` | `hatchery.spawning.record` | yes | yes | yes | yes | no |
+| `hatchery.recordEggCollection` | `hatchery.spawning.record` | yes | yes | yes | yes | no |
+| `hatchery.recordHatch` | `hatchery.spawning.record` | yes | yes | yes | yes | no |
+| `hatchery.recordSpawning` | `hatchery.spawning.record` | yes | yes | yes | yes | no |
+| `hatchery.reverseHatch` | `hatchery.correct` | yes | yes | no | no | no |
+| `hatchery.startIncubation` | `hatchery.spawning.record` | yes | yes | yes | yes | no |
+| `hatchery.updateBroodstock` | `hatchery.broodstock.manage` | yes | yes | yes | no | no |
 | `health.activeWithdrawals` | `production.view` | yes | yes | yes | yes | yes |
 | `health.create` | `production.health.record` | yes | yes | yes | yes | no |
 | `health.list` | `production.view` | yes | yes | yes | yes | yes |
