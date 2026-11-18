@@ -16,6 +16,7 @@ import {
   Crosshair,
   Database,
   Download,
+  Egg,
   Eye,
   FileText,
   Fish,
@@ -74,6 +75,17 @@ const MENU_SECTIONS = {
       { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
       { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowLeftRight, tourId: 'fish-transfers' },
       { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
+    ],
+  },
+  hatchery: {
+    title: 'Hatchery',
+    icon: Egg,
+    items: [
+      { title: 'Overview', path: '/hatchery', icon: House },
+      { title: 'Broodstock', path: '/hatchery/broodstock', icon: Fish },
+      { title: 'New spawning', path: '/hatchery/spawning', icon: Plus },
+      { title: 'Larvae & fingerlings', path: '/hatchery/larval', icon: Waves },
+      { title: 'Live feed', path: '/hatchery/live-feed', icon: ClipboardList },
     ],
   },
   cages: {

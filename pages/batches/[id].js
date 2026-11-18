@@ -7,6 +7,7 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import { PageHeader, Button, Card, CardHeader, StatCard, EmptyState } from '../../components/ui'
 import { EventRow } from '../../components/BatchHistory'
 import BatchTrace from '../../components/BatchTrace'
+import HatcheryOrigin from '../../components/hatchery/HatcheryOrigin'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import { localToday } from '../../lib/format'
@@ -179,6 +180,7 @@ function BatchDetails() {
           </div>
         </Card>
 
+        <HatcheryOrigin batchId={batch.id} />
         <BatchTrace batchId={batch.id} />
 
         <section className="page-card overflow-hidden" aria-labelledby="occupancies-title">
