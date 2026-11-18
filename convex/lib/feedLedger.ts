@@ -387,19 +387,18 @@ export async function applyStockChange(
     feedType.currentStock > minimum &&
     nextStock <= minimum
   ) {
-    await emitDomainEvent(ctx, 'inventory.stock.low', {
-      companyId,
-      subject: { table: 'feedTypes', id: String(feedType._id) },
-      locationId: args.locationId,
-      actorUserId: args.user._id,
-      data: {
+    await emitDomainEvent(
+      ctx,
+      'inventory.stock.low',
+      {
         feedTypeId: String(feedType._id),
         feedTypeName: feedType.name,
         stockKg: Math.round(nextStock * 1000) / 1000,
         minimumKg: minimum,
         transactionType: args.transactionType,
       },
-    })
+      { companyId, locationId: args.locationId },
+    )
   }
 
   if (args.allowNegative && nextStock < 0) {

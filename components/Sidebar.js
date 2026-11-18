@@ -24,6 +24,7 @@ import {
   KeyRound,
   LayoutGrid,
   List,
+  ListTodo,
   LogOut,
   MapPin,
   MessageSquare,
@@ -42,6 +43,7 @@ import {
   Users,
   Waves,
   X,
+  Zap,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
@@ -56,6 +58,7 @@ const MENU_SECTIONS = {
     items: [
       { title: 'Dashboard', path: '/dashboard', icon: House, tourId: 'dashboard' },
       { title: 'Daily Entry', path: '/daily-entry', icon: Calendar, tourId: 'daily-entry' },
+      { title: 'My Tasks', path: '/tasks', icon: ListTodo },
       { title: 'Daily Records', path: '/daily-data', icon: ClipboardList },
       { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale, tourId: 'biweekly-entry' },
       { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
@@ -137,6 +140,7 @@ const MENU_SECTIONS = {
       { title: 'Users', path: '/users', icon: Users, adminOnly: true },
       { title: 'Company Settings', path: '/company-settings', icon: Building2, adminOnly: true, tourId: 'company-settings' },
       { title: 'Messaging', path: '/messaging-settings', icon: MessageSquare, adminOnly: true },
+      { title: 'Automations', path: '/automations', icon: Zap, adminOnly: true },
       { title: 'API keys', path: '/api-keys', icon: KeyRound, adminOnly: true },
       { title: 'Approvals', path: '/approvals', icon: CircleCheck, adminOnly: true, tourId: 'approvals' },
       { title: 'Bulk Upload', path: '/bulk-upload', icon: Upload, adminOnly: true },

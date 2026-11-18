@@ -66,7 +66,7 @@ async function messageOf(p: Promise<unknown>) {
   return 'resolved'
 }
 
-async function addEndpoint(s: S, eventTypes = ['daily.batch.recorded'], admin?: Id<'users'>) {
+async function addEndpoint(s: S, eventTypes = ['daily.recorded'], admin?: Id<'users'>) {
   return await s.as(admin ?? s.adminA).action(api.webhooks.create, { url: URL_OK, eventTypes })
 }
 
@@ -84,8 +84,7 @@ async function settle(hours = 1) {
   for (let i = 0; i < 40 * hours; i += 1) await vi.advanceTimersByTimeAsync(30 * 60_000)
 }
 
-async function drain(s: S, hours = 1) {
-  await s.t.mutation(internal.events.dispatchPending, {})
+async function drain(_s: S, hours = 1) {
   await settle(hours)
 }
 
@@ -141,7 +140,7 @@ describe('endpoints (admin)', () => {
     const { id, secret } = await addEndpoint(s)
     expect(secret).toMatch(/^whsec_[A-Za-z0-9]{32}$/)
     const overview = await s.as(s.adminA).query(api.webhooks.overview, {})
-    expect(overview.endpoints[0]).toMatchObject({ id, url: URL_OK, status: 'active', eventTypes: ['daily.batch.recorded'] })
+    expect(overview.endpoints[0]).toMatchObject({ id, url: URL_OK, status: 'active', eventTypes: ['daily.recorded'] })
     expect(JSON.stringify(overview)).not.toContain(secret)
     const stored = await s.t.run((ctx) =>
       ctx.db.query('integrationSecrets').withIndex('by_webhookEndpointId', (q) => q.eq('webhookEndpointId', id)).unique(),
@@ -153,8 +152,8 @@ describe('endpoints (admin)', () => {
 
   test('refusals: non-admin, bad URL, unknown event, other company, missing key', async () => {
     const s = await setup()
-    expect(await messageOf(s.as(s.staffA).action(api.webhooks.create, { url: URL_OK, eventTypes: ['daily.batch.recorded'] }))).toContain('Insufficient permissions')
-    expect(await messageOf(s.as(s.adminA).action(api.webhooks.create, { url: 'https://localhost/x', eventTypes: ['daily.batch.recorded'] }))).toContain('public')
+    expect(await messageOf(s.as(s.staffA).action(api.webhooks.create, { url: URL_OK, eventTypes: ['daily.recorded'] }))).toContain('Insufficient permissions')
+    expect(await messageOf(s.as(s.adminA).action(api.webhooks.create, { url: 'https://localhost/x', eventTypes: ['daily.recorded'] }))).toContain('public')
     expect(await messageOf(s.as(s.adminA).action(api.webhooks.create, { url: URL_OK, eventTypes: ['nope'] }))).toContain('Unknown event')
     const { id } = await addEndpoint(s)
     expect(await messageOf(s.as(s.adminB).mutation(api.webhooks.update, { endpointId: id, enabled: false }))).toContain('not found')
@@ -176,23 +175,25 @@ describe('delivery', () => {
     expect(url).toBe(URL_OK)
     const headers = init.headers as Record<string, string>
     const body = String(init.body)
-    expect(await verifySignature(secret, body, headers['X-PBA-Signature'], Date.now())).toBe(true)
+    expect(await verifySignature(secret, body, headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(true)
     expect(init.redirect).toBe('manual')
     const payload = JSON.parse(body)
-    expect(payload).toMatchObject({ type: 'daily.batch.recorded', companyId: s.companyA, origin: 'user' })
+    expect(payload).toMatchObject({ type: 'daily.recorded', companyId: s.companyA, data: { cageName: 'A1', mortality: 1 } })
     expect(headers['X-PBA-Event-Id']).toBe(payload.id)
     const [d] = await deliveriesOf(s)
     expect(d).toMatchObject({ endpointId: id, status: 'succeeded', attempts: 1, responseStatus: 200 })
     // Dispatch is idempotent: running the consumer again adds nothing.
     await s.t.mutation(internal.webhooks.fanOut, { eventId: payload.id })
     expect(await deliveriesOf(s)).toHaveLength(1)
+    const event = await s.t.run((ctx) => ctx.db.get(payload.id as Id<'domainEvents'>))
+    expect(event!.processedBy).toEqual(['webhooks'])
   })
 
   test('unsubscribed types, other companies and turned-off endpoints get nothing', async () => {
     const s = await setup()
     const calls = fakeFetch(200)
-    await addEndpoint(s, ['stock.harvested'])
-    const b = await addEndpoint(s, ['daily.batch.recorded'], s.adminB)
+    await addEndpoint(s, ['inventory.stock.low'])
+    const b = await addEndpoint(s, ['daily.recorded'], s.adminB)
     await s.as(s.adminB).mutation(api.webhooks.update, { endpointId: b.id, enabled: false })
     await recordDaily(s, s.staffA, s.cageA)
     await recordDaily(s, s.adminB, s.cageB)
@@ -206,7 +207,7 @@ describe('delivery', () => {
     const calls = fakeFetch(400)
     const { id } = await addEndpoint(s)
     await recordDaily(s, s.staffA, s.cageA)
-    await drain(s, 1)
+    await drain(s, 2)
     expect(calls).toHaveLength(MAX_ATTEMPTS)
     const [d] = await deliveriesOf(s)
     expect(d).toMatchObject({ status: 'failed', attempts: MAX_ATTEMPTS, responseStatus: 400 })
@@ -214,7 +215,7 @@ describe('delivery', () => {
     const endpoint = await s.t.run((ctx) => ctx.db.get(id))
     expect(endpoint!.consecutiveFailures).toBe(MAX_ATTEMPTS)
 
-    fakeFetch(204)
+    fakeFetch(202)
     await s.as(s.adminA).mutation(api.webhooks.redeliver, { deliveryId: d._id })
     await settle()
     const all = await deliveriesOf(s)
@@ -256,7 +257,7 @@ describe('delivery', () => {
     await s.as(s.adminA).mutation(api.webhooks.sendTest, { endpointId: id })
     await settle()
     const headers = calls[0].init.headers as Record<string, string>
-    expect(await verifySignature(next, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now())).toBe(true)
-    expect(await verifySignature(secret, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now())).toBe(false)
+    expect(await verifySignature(next, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(true)
+    expect(await verifySignature(secret, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(false)
   })
 })

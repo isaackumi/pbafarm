@@ -23,7 +23,7 @@ import {
   readEncryptionKey,
   secretHint,
 } from './lib/crypto'
-import { DOMAIN_EVENT_TYPES, eventEnvelope, isDomainEventType } from './lib/events'
+import { EVENT_TYPES } from './automation/templates'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { runEffect } from './lib/effect'
 import { FetchLive, requestJson, type HttpTransportError } from './lib/effectHttp'
@@ -46,8 +46,10 @@ import {
  *
  * - Endpoints per company (admins). The signing secret `whsec_…` is created
  *   in an action, shown once, AES-GCM encrypted in integrationSecrets.
- * - `fanOut` is a domain-event consumer (convex/events.ts CONSUMERS): one
- *   `webhookDeliveries` row per subscribed endpoint, then `deliver`.
+ * - `fanOut` consumes `domainEvents`: `emitDomainEvent` schedules it when an
+ *   active endpoint subscribes to the type. One `webhookDeliveries` row per
+ *   subscribed endpoint, then `deliver`; the event's `processedBy` gets
+ *   'webhooks'.
  * - `deliver` (action) signs and POSTs with effectHttp (10 s timeout, two
  *   quick retries on network/5xx), records the attempt, and schedules the
  *   next attempt with backoff (webhookLogic.RETRY_DELAYS_MS) until
@@ -73,11 +75,32 @@ async function loadOwnEndpoint(ctx: Ctx, companyId: Id<'companies'>, endpointId:
   return row
 }
 
+/** Event types an endpoint can subscribe to: the shared catalog (AUTO-001). */
+export function webhookEventCatalog() {
+  return EVENT_TYPES.map((e) => ({ id: e.type, label: e.label }))
+}
+
+function isKnownEventType(type: string) {
+  return EVENT_TYPES.some((e) => e.type === type)
+}
+
+/** The JSON body sent for a domain event. Receivers dedupe by `id`. */
+export function eventEnvelope(event: Doc<'domainEvents'>) {
+  return {
+    id: event._id,
+    type: event.type,
+    occurredAt: new Date(event.createdAt).toISOString(),
+    companyId: event.companyId,
+    siteId: event.locationId ?? null,
+    data: event.payload,
+  }
+}
+
 function cleanEventTypes(types: string[]): string[] {
   const out = [...new Set(types)]
   if (!out.length) throw new Error('Choose at least one event')
   if (out.length > MAX_EVENT_TYPES) throw new Error('Too many events')
-  for (const t of out) if (!isDomainEventType(t)) throw new Error(`Unknown event "${t}"`)
+  for (const t of out) if (!isKnownEventType(t)) throw new Error(`Unknown event "${t}"`)
   return out
 }
 
@@ -136,7 +159,7 @@ export const overview = query({
     return {
       encryptionReady: encryptionConfigured(),
       endpoints: rows.map(endpointToClient),
-      events: Object.entries(DOMAIN_EVENT_TYPES).map(([id, label]) => ({ id, label })),
+      events: webhookEventCatalog(),
     }
   },
 })
@@ -411,6 +434,10 @@ export const fanOut = internalMutation({
       .withIndex('by_companyId_and_status', (q) => q.eq('companyId', event.companyId).eq('status', 'active'))
       .take(MAX_ENDPOINTS_PER_COMPANY + 5)
     const payload = JSON.stringify(eventEnvelope(event))
+    const processedBy = event.processedBy ?? []
+    if (!processedBy.includes('webhooks')) {
+      await ctx.db.patch(eventId, { processedBy: [...processedBy, 'webhooks'] })
+    }
     for (const endpoint of endpoints) {
       if (!endpoint.eventTypes.includes(event.type)) continue
       const existing = await ctx.db
@@ -445,10 +472,7 @@ export const sendTest = mutation({
       type: TEST_EVENT_TYPE,
       occurredAt: new Date(now).toISOString(),
       companyId,
-      subject: null,
       siteId: null,
-      origin: 'user',
-      businessDate: null,
       data: { message: 'Test delivery from PBA Farm' },
     })
     return await queueDelivery(ctx, { companyId, endpointId, eventType: TEST_EVENT_TYPE, payload })

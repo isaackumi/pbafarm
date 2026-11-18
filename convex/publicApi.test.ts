@@ -3,9 +3,8 @@ import { convexTest } from 'convex-test'
 import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
-import { api, internal } from './_generated/api'
+import { api } from './_generated/api'
 import type { Id } from './_generated/dataModel'
-import { cleanEventData, DOMAIN_EVENT_TYPES } from './lib/events'
 import { parseBearer, domainErrorMessage } from './integrations/apiHttp'
 import { API_ROUTES } from './integrations/openapi'
 import { API_RESOURCES } from './publicApi'
@@ -94,13 +93,6 @@ describe('helpers', () => {
   test('domain error messages are cleaned', () => {
     expect(domainErrorMessage(new Error('[CONVEX M(x)] [Request ID: 1] Server Error\nUncaught Error: Line 1: cage not found\n    at foo'))).toBe('Line 1: cage not found')
     expect(domainErrorMessage(new Error('plain'))).toBe('plain')
-  })
-
-  test('event data is flat, capped and refuses objects', () => {
-    expect(cleanEventData({ a: 1, b: undefined, c: 'x'.repeat(900) })).toEqual({ a: 1, c: 'x'.repeat(500) })
-    expect(() => cleanEventData({ a: {} as unknown as string })).toThrow('must be a string')
-    const many = Object.fromEntries(Array.from({ length: 41 }, (_, i) => [`k${i}`, i]))
-    expect(() => cleanEventData(many)).toThrow('at most 40')
   })
 })
 
@@ -259,9 +251,9 @@ describe('POST /api/v1 writes', () => {
     expect(state.feed!.currentStock).toBe(90)
     expect(state.cage!.currentCount).toBe(998)
     expect(state.audit.some((a) => a.apiKeyId === k.id && a.tableName === 'daily_records')).toBe(true)
-    const ev = state.events.find((e) => e.type === 'daily.batch.recorded')
-    expect(ev).toMatchObject({ origin: 'api', actorApiKeyId: k.id, companyId: s.companyA, businessDate: '2026-11-15' })
-    expect(ev!.data).toMatchObject({ lines: 1, totalMortality: 2, totalFeedKg: 10 })
+    const ev = state.events.find((e) => e.type === 'daily.recorded')
+    expect(ev).toMatchObject({ companyId: s.companyA })
+    expect(ev!.payload).toMatchObject({ origin: 'api', apiKeyId: k.id, date: '2026-11-15', mortality: 2 })
   })
 
   test('idempotency: replay returns the first response; another body is refused', async () => {
@@ -320,53 +312,33 @@ describe('POST /api/v1 writes', () => {
   })
 })
 
-describe('domain events', () => {
-  test('UI daily batch emits one event per save; dispatch marks it', async () => {
+describe('domain events (INT-004 additions to AUTO-001)', () => {
+  test('a sampling save emits one sampling.recorded', async () => {
     const s = await setup()
-    await s.as(s.staffA).mutation(api.dailyRecords.createBatch, {
+    await s.as(s.staffA).mutation(api.biweeklyRecords.createBatch, {
       date: '2026-11-15',
       records: [
-        { cageId: s.cageA1, feedAmount: 0, mortality: 1 },
-        { cageId: s.cageA2, feedAmount: 0, mortality: 0 },
+        { cageId: s.cageA1, totalFishCount: 10, totalWeight: 1000 },
+        { cageId: s.cageA2, totalFishCount: 10, totalWeight: 1200 },
       ],
     })
-    const events = await s.t.run((ctx) => ctx.db.query('domainEvents').collect())
+    const events = (await s.t.run((ctx) => ctx.db.query('domainEvents').collect())).filter((e) => e.type === 'sampling.recorded')
     expect(events).toHaveLength(1)
-    expect(events[0]).toMatchObject({ type: 'daily.batch.recorded', origin: 'user', actorUserId: s.staffA, dispatchStatus: 'pending' })
-    expect(events[0].data).toMatchObject({ lines: 2, cages: 2 })
-    expect(await s.t.mutation(internal.events.dispatchPending, {})).toBe(1)
-    expect((await s.t.run((ctx) => ctx.db.get(events[0]._id)))!.dispatchStatus).toBe('dispatched')
-    expect(await s.t.mutation(internal.events.dispatchPending, {})).toBe(0)
+    expect(events[0].payload).toMatchObject({ lines: 2, date: '2026-11-15' })
+    expect(events[0].payload.origin).toBeUndefined()
   })
 
   test('low stock is edge-triggered', async () => {
     const s = await setup()
-    const admin = s.as(s.staffA)
+    const staff = s.as(s.staffA)
     // 100 → 70: above the minimum of 60, no event.
-    await admin.mutation(api.dailyRecords.createBatch, { date: '2026-11-14', records: [{ cageId: s.cageA1, feedAmount: 30, feedTypeId: s.feedA, mortality: 0 }] })
+    await staff.mutation(api.dailyRecords.createBatch, { date: '2026-11-14', records: [{ cageId: s.cageA1, feedAmount: 30, feedTypeId: s.feedA, mortality: 0 }] })
     // 70 → 50: crosses, one event.
-    await admin.mutation(api.dailyRecords.createBatch, { date: '2026-11-15', records: [{ cageId: s.cageA1, feedAmount: 20, feedTypeId: s.feedA, mortality: 0 }] })
+    await staff.mutation(api.dailyRecords.createBatch, { date: '2026-11-15', records: [{ cageId: s.cageA1, feedAmount: 20, feedTypeId: s.feedA, mortality: 0 }] })
     // 50 → 40: already low, no new event.
-    await admin.mutation(api.dailyRecords.createBatch, { date: '2026-11-16', records: [{ cageId: s.cageA1, feedAmount: 10, feedTypeId: s.feedA, mortality: 0 }] })
+    await staff.mutation(api.dailyRecords.createBatch, { date: '2026-11-16', records: [{ cageId: s.cageA1, feedAmount: 10, feedTypeId: s.feedA, mortality: 0 }] })
     const low = (await s.t.run((ctx) => ctx.db.query('domainEvents').collect())).filter((e) => e.type === 'inventory.stock.low')
     expect(low).toHaveLength(1)
-    expect(low[0].data).toMatchObject({ feedTypeName: 'Grower', stockKg: 50, minimumKg: 60 })
-  })
-
-  test('harvest emits stock.harvested', async () => {
-    const s = await setup()
-    await s.as(s.adminA).mutation(api.harvest.create, {
-      cageId: s.cageA1, harvestDate: '2026-11-15', averageBodyWeight: 400, totalWeight: 400,
-      estimatedCount: 1000, fcr: 1.4,
-    })
-    const events = await s.t.run((ctx) => ctx.db.query('domainEvents').collect())
-    expect(events.find((e) => e.type === 'stock.harvested')?.data).toMatchObject({ cageName: 'A1', totalWeightKg: 400 })
-  })
-
-  test('the catalog lists every type with a label', () => {
-    for (const [type, label] of Object.entries(DOMAIN_EVENT_TYPES)) {
-      expect(type).toMatch(/^[a-z]+(\.[a-z]+)+$/)
-      expect(label.length).toBeGreaterThan(3)
-    }
+    expect(low[0].payload).toMatchObject({ feedTypeName: 'Grower', stockKg: 50, minimumKg: 60 })
   })
 })

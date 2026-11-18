@@ -18,6 +18,19 @@ import {
   cumulativeMortalityPct,
 } from './lib/farmRules'
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/** Whether the company's "High mortality" automation rule replaces the inline alert. */
+async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>) {
+  const rules = await ctx.db
+    .query('automationRules')
+    .withIndex('by_company_and_templateKey', (q) =>
+      q.eq('companyId', companyId).eq('templateKey', 'high_mortality'),
+    )
+    .take(10)
+  return rules.some((r) => r.enabled)
+}
+
 function toClient(r: any) {
   return {
     id: r._id,
@@ -391,16 +404,22 @@ export async function insertDailyRecord(
   }
   await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
-  // Mortality threshold alerts
-  if (args.mortality > 0 && user.companyId) {
+  const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
+  const nextCount =
+    cage.currentCount != null
+      ? Math.max(0, cage.currentCount - args.mortality)
+      : cage.currentCount
+  const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
+
+  // Mortality threshold alerts. A company that enabled the "High mortality"
+  // automation rule gets them from the engine instead (AUTO-002).
+  if (
+    args.mortality > 0 &&
+    user.companyId &&
+    !(await mortalityRuleEnabled(ctx, user.companyId))
+  ) {
     const company = await ctx.db.get(user.companyId)
     const rules = mergeSettings(company?.settings)
-    const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
-    const nextCount =
-      cage.currentCount != null
-        ? Math.max(0, cage.currentCount - args.mortality)
-        : cage.currentCount
-    const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
     const alerts: string[] = []
     if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
       alerts.push(
@@ -437,6 +456,26 @@ export async function insertDailyRecord(
       }
     }
   }
+
+  await emitDomainEvent(
+    ctx,
+    'daily.recorded',
+    {
+      dailyRecordId: id,
+      cageId: args.cageId,
+      cageName: cage.name,
+      date: args.date,
+      mortality: args.mortality,
+      mortalityCause: args.mortality > 0 ? mortalityCause?.trim() || 'unknown' : undefined,
+      dailyMortalityPct: round2(dailyPct),
+      cumulativeMortalityPct: round2(cumPct),
+      feedAmount: args.feedAmount,
+      dissolvedOxygen,
+      temperatureC,
+      secchiCm,
+    },
+    { companyId: user.companyId ?? cage.companyId, locationId: cage.locationId },
+  )
 
   await deductDailyFeed(ctx, user, {
     dailyRecordId: id,
@@ -480,9 +519,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    const id = await insertDailyRecord(ctx, user, args)
-    await emitDailyRecorded(ctx, user, args.date, [id])
-    return id
+    return await insertDailyRecord(ctx, user, args)
   },
 })
 
@@ -530,7 +567,7 @@ export type DailyBatchLine = {
 
 /**
  * createBatch's body, shared with the public API (POST /api/v1/daily-records).
- * Prices come from the feed type; emits one `daily.batch.recorded` event.
+ * Prices come from the feed type; each line emits `daily.recorded`.
  */
 export async function saveDailyBatch(
   ctx: MutationCtx,
@@ -610,47 +647,7 @@ export async function saveDailyBatch(
         throw new Error(`${line} (${cage.name}): ${err?.message || err}`)
       }
     }
-    await emitDailyRecorded(ctx, user, date, ids)
     return ids
-}
-
-/** One `daily.batch.recorded` event per save operation (doc 07 §4). */
-export async function emitDailyRecorded(
-  ctx: MutationCtx,
-  user: Doc<'users'>,
-  date: string | undefined,
-  ids: Id<'dailyRecords'>[],
-) {
-  if (!ids.length) return
-  const first = await ctx.db.get(ids[0])
-  const companyId = first?.companyId ?? user.companyId
-  if (!companyId) return
-  let mortality = 0
-  let feedKg = 0
-  const cages = new Set<string>()
-  const dates = new Set<string>()
-  for (const id of ids) {
-    const r = await ctx.db.get(id)
-    if (!r) continue
-    mortality += r.mortality || 0
-    feedKg += r.feedAmount || 0
-    cages.add(String(r.cageId))
-    dates.add(r.date)
-  }
-  await emitDomainEvent(ctx, 'daily.batch.recorded', {
-    companyId,
-    subject: { table: 'dailyRecords', id: String(ids[0]) },
-    locationId: first?.locationId,
-    actorUserId: user._id,
-    businessDate: date ?? (dates.size === 1 ? [...dates][0] : undefined),
-    data: {
-      lines: ids.length,
-      cages: cages.size,
-      totalMortality: mortality,
-      totalFeedKg: Math.round(feedKg * 1000) / 1000,
-      recordIds: ids.slice(0, 20).join(','),
-    },
-  })
 }
 
 export const update = mutation({
@@ -891,7 +888,6 @@ export const createMany = mutation({
       })
       ids.push(id)
     }
-    await emitDailyRecorded(ctx, user, undefined, ids)
     if (ids.length > 0) {
       await logAudit(ctx, {
         actionType: 'bulk_create',
