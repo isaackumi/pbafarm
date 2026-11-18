@@ -1,10 +1,14 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
-import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
+import { requireUser, requireRole, revokeUserSessions, sessionMfaVerified } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import { maskPhone, normalizePhone } from './lib/phone'
+import { messagingPrefs } from './messaging/channels'
+import { channelAvailable } from './messaging/deliver'
+import { securityPolicy } from './messaging/policy'
 import type { Doc, Id } from './_generated/dataModel'
 
 /** Invite rows written before `status` existed are pending. */
@@ -57,6 +61,61 @@ function assertMayModify(me: Doc<'users'>, target: Doc<'users'>) {
   }
 }
 
+/** Refuse a phone number another account already uses (phone sign-in needs one owner). */
+export async function assertPhoneFree(
+  ctx: QueryCtx | MutationCtx,
+  phone: string,
+  userId: Id<'users'>,
+) {
+  const others = await ctx.db
+    .query('users')
+    .withIndex('phone', (q) => q.eq('phone', phone))
+    .take(2)
+  if (others.some((u) => u._id !== userId)) {
+    throw new Error('This phone number is already registered to another account.')
+  }
+}
+
+/** E.164 form of a phone typed by an admin, using the target's company country. */
+async function normalizeForCompany(
+  ctx: MutationCtx,
+  raw: string,
+  companyId: Id<'companies'> | undefined,
+): Promise<string> {
+  const company = companyId ? await ctx.db.get(companyId) : null
+  const phone = normalizePhone(raw, messagingPrefs(company).defaultCountryCode)
+  if (!phone) throw new Error('Enter a valid phone number, for example 024 412 3456 or +233244123456')
+  return phone
+}
+
+const NO_MFA = {
+  mfaPolicy: false,
+  mfaRequired: false,
+  mfaChannels: [] as string[],
+  mfaDefaultChannel: null as string | null,
+}
+
+/** Two-step state of the current session, for users.current. */
+async function mfaState(ctx: QueryCtx, user: Doc<'users'>) {
+  if (!user.companyId) return NO_MFA
+  const company = await ctx.db.get(user.companyId)
+  const policy = securityPolicy(company)
+  if (!policy.require2fa) return NO_MFA
+  const verified = await sessionMfaVerified(ctx, user._id)
+  const mfaChannels: string[] = []
+  if (!verified) {
+    for (const c of ['sms', 'whatsapp'] as const) {
+      if (await channelAvailable(ctx, user.companyId, c)) mfaChannels.push(c)
+    }
+  }
+  return {
+    mfaPolicy: true,
+    mfaRequired: !verified,
+    mfaChannels,
+    mfaDefaultChannel: policy.twoFactorChannel as string | null,
+  }
+}
+
 function toClient(u: any) {
   return {
     id: u._id,
@@ -87,8 +146,19 @@ export const current = query({
       const company = await ctx.db.get(user.companyId)
       companyStatus = company?.status ?? 'missing'
     }
+    // Two-step verification for this session (SEC-007); the client routes
+    // to /verify while mfaRequired is true.
+    const mfa = await mfaState(ctx, user)
     // Keep raw Convex fields for AuthContext + add client aliases
-    return { ...user, ...toClient(user), role: user.role ?? 'user', companyStatus }
+    return {
+      ...user,
+      ...toClient(user),
+      role: user.role ?? 'user',
+      companyStatus,
+      ...mfa,
+      hasPhone: !!user.phone,
+      maskedPhone: user.phone ? maskPhone(user.phone) : null,
+    }
   },
 })
 
@@ -196,15 +266,76 @@ export const update = mutation({
     const nextRole = patch.role ?? target.role ?? 'user'
     if (nextRole === 'user') await assertKeepsAnAdmin(ctx, target)
 
-    await ctx.db.patch(id, patch)
+    const next = { ...patch }
+    if (patch.phone !== undefined) {
+      // Phones are E.164 and unique: phone sign-in looks accounts up by them.
+      if (patch.phone.trim()) {
+        next.phone = await normalizeForCompany(ctx, patch.phone, target.companyId)
+        await assertPhoneFree(ctx, next.phone, id)
+      } else {
+        next.phone = undefined
+      }
+    }
+
+    await ctx.db.patch(id, next)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'users',
       recordId: id,
-      previousValues: { role: target.role, name: target.name },
-      newValues: patch,
+      previousValues: {
+        role: target.role,
+        name: target.name,
+        ...(patch.phone !== undefined ? { phone: target.phone ? maskPhone(target.phone) : null } : {}),
+      },
+      newValues: {
+        ...patch,
+        ...(patch.phone !== undefined ? { phone: next.phone ? maskPhone(next.phone) : null } : {}),
+      },
     })
     return id
+  },
+})
+
+/**
+ * Admin: set or clear a member's mobile number (SEC-006). Stored in E.164
+ * using the company's default country; unique across accounts; audited.
+ */
+export const setPhone = mutation({
+  args: { id: v.id('users'), phone: v.union(v.string(), v.null()) },
+  handler: async (ctx, { id, phone }) => {
+    const me = await requireUser(ctx)
+    requireRole(me, 'admin')
+    const target = await ctx.db.get(id)
+    if (!target) throw new Error('User not found')
+    if ((me.role ?? 'user') !== 'super_admin') {
+      if (!me.companyId || target.companyId !== me.companyId) {
+        throw new Error('Access denied')
+      }
+    }
+    assertMayModify(me, target)
+    let next: string | undefined
+    if (phone !== null && phone.trim()) {
+      next = await normalizeForCompany(ctx, phone, target.companyId)
+      await assertPhoneFree(ctx, next, id)
+    }
+    if (next === target.phone) return { phone: next ?? null }
+    await ctx.db.patch(id, { phone: next, phoneVerificationTime: undefined })
+    // Pending sign-in codes for the old number die with it.
+    if (target.phone) {
+      const codes = await ctx.db
+        .query('phoneLoginCodes')
+        .withIndex('by_phone', (q) => q.eq('phone', target.phone!))
+        .collect()
+      for (const c of codes) await ctx.db.delete(c._id)
+    }
+    await logAudit(ctx, {
+      actionType: next ? 'set_phone' : 'clear_phone',
+      tableName: 'users',
+      recordId: id,
+      previousValues: { phone: target.phone ? maskPhone(target.phone) : null },
+      newValues: { phone: next ? maskPhone(next) : null },
+    })
+    return { phone: next ?? null }
   },
 })
 
