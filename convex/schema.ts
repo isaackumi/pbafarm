@@ -515,9 +515,12 @@ const schema = defineSchema({
     link: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
+    /** Set by scheduled reminders so the same reminder is never sent twice. */
+    dedupeKey: v.optional(v.string()),
   })
     .index('by_user', ['userId'])
-    .index('by_user_read', ['userId', 'read']),
+    .index('by_user_read', ['userId', 'read'])
+    .index('by_dedupe', ['dedupeKey']),
 
   /** Buyers / market outlets (company-wide catalog). */
   customers: defineTable({

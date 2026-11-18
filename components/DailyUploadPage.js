@@ -80,7 +80,7 @@ const DailyUploadPage = () => {
   const [lookupsReady, setLookupsReady] = useState(false)
   const [outbox, setOutbox] = useState([])
   const [online, setOnline] = useState(true)
-  const prefilled = useRef(false)
+  const prefilledFor = useRef(null)
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const { formData, setFormData, handleChange, clear } = usePersistedForm(
@@ -175,14 +175,18 @@ const DailyUploadPage = () => {
 
   // QR codes and cage pages link here as ?cage=<id> (or ?cages=a,b).
   useEffect(() => {
-    if (prefilled.current || !lookupsReady || !router.isReady) return
-    prefilled.current = true
+    if (!lookupsReady || !router.isReady) return
     const raw = [router.query.cage, router.query.cages].flat().filter(Boolean).join(',')
-    if (!raw) return
+    // Apply each link once, including a new one opened while already on this page.
+    if (!raw || prefilledFor.current === raw) return
+    prefilledFor.current = raw
     const known = new Set(cages.map(idOf))
-    const ids = raw.split(',').map((s) => s.trim()).filter((id) => known.has(id))
+    const ids = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((id) => known.has(id) && !loggedCageIds.has(id))
     if (ids.length) addCages(ids)
-  }, [lookupsReady, router.isReady, router.query, cages, addCages])
+  }, [lookupsReady, router.isReady, router.query, cages, addCages, loggedCageIds])
 
   const toggleCage = (cageId) => {
     if (selectedCageIds.has(cageId)) {
