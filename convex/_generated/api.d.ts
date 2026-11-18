@@ -10,6 +10,7 @@
 
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
+import type * as batches from "../batches.js";
 import type * as biweeklyRecords from "../biweeklyRecords.js";
 import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
@@ -87,6 +88,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
   auth: typeof auth;
+  batches: typeof batches;
   biweeklyRecords: typeof biweeklyRecords;
   cages: typeof cages;
   companies: typeof companies;

@@ -3,7 +3,10 @@ import { useMutation, usePaginatedQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import FishTransferForm from '../components/FishTransferForm'
-import { PageHeader, FormPage, Button, Select } from '../components/ui'
+import MultiTransferForm from '../components/MultiTransferForm'
+import { useRouter } from 'next/router'
+import { PageHeader, FormPage, Button, Select, TabBar } from '../components/ui'
+import { errorMessage } from '../lib/errorMessage'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -33,6 +36,10 @@ function FishTransfersContent() {
   )
   const approveTransfer = useMutation(api.fishTransfers.approveFishTransfer)
   const rejectTransfer = useMutation(api.fishTransfers.rejectFishTransfer)
+  const reverseTransfer = useMutation(api.fishTransfers.reverseFishTransfer)
+  const router = useRouter()
+  const sourceParam = typeof router.query.source === 'string' ? router.query.source : ''
+  const [mode, setMode] = useState('single')
   const [busyId, setBusyId] = useState(null)
 
   const rows = useMemo(() => transfers || [], [transfers, refreshKey])
@@ -65,6 +72,23 @@ function FishTransfersContent() {
     }
   }
 
+  const onReverse = async (row) => {
+    const reason = window.prompt(
+      `Reverse the transfer of ${(row.quantity || 0).toLocaleString()} fish from ${row.sourceCageName} to ${row.destinationCageName}? Give a reason:`,
+    )
+    if (!reason || !reason.trim()) return
+    setBusyId(row.id)
+    try {
+      await reverseTransfer({ id: row.id, reason: reason.trim() })
+      showToast('success', 'Transfer reversed')
+      setRefreshKey((k) => k + 1)
+    } catch (e) {
+      showToast('error', errorMessage(e, 'Reverse failed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <FormPage data-tour="page-fish-transfers">
       <PageHeader
@@ -83,7 +107,21 @@ function FishTransfersContent() {
       />
 
       <div className="space-y-8">
-        <FishTransferForm onCreated={() => setRefreshKey((k) => k + 1)} />
+        {isAdmin && (
+          <TabBar
+            tabs={[
+              { id: 'single', label: 'One destination' },
+              { id: 'multi', label: 'Several destinations' },
+            ]}
+            active={mode}
+            onChange={setMode}
+          />
+        )}
+        {isAdmin && mode === 'multi' ? (
+          <MultiTransferForm initialSourceId={sourceParam} onCreated={() => setRefreshKey((k) => k + 1)} />
+        ) : (
+          <FishTransferForm onCreated={() => setRefreshKey((k) => k + 1)} />
+        )}
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -150,7 +188,7 @@ function FishTransfersContent() {
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(row.status)}`}
                         >
-                          {row.status?.replace(/_/g, ' ')}
+                          {row.reversedAt ? 'reversed' : row.status?.replace(/_/g, ' ')}
                         </span>
                       </td>
                       {isAdmin ? (
@@ -175,6 +213,16 @@ function FishTransfersContent() {
                                 Reject
                               </Button>
                             </div>
+                          ) : row.status === 'approved' && !row.reversedAt ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={busyId === row.id}
+                              onClick={() => onReverse(row)}
+                            >
+                              Reverse
+                            </Button>
                           ) : (
                             '—'
                           )}

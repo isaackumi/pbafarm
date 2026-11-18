@@ -147,7 +147,9 @@ async function backfillCageEvents(ctx: MutationCtx, cage: Doc<'cages'>, dryRun: 
       planned.skipped++
       continue
     }
-    if (!(await linkedTransferOf(ctx, s._id)) && !(await has('stockingHistory', s._id))) {
+    // Stockings written by a grading carry their fish as grading events already.
+    const gradedChild = s.batchId ? (await ctx.db.get(s.batchId))?.origin === 'grading_split' : false
+    if (!gradedChild && !(await linkedTransferOf(ctx, s._id)) && !(await has('stockingHistory', s._id))) {
       planned.stock_in++
       items.push({
         date: s.stockingDate,
