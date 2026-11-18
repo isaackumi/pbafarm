@@ -21,6 +21,7 @@ import {
 } from '../components/ui'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
+import { readReferenceData } from '../lib/referenceCache'
 import { localToday } from '../lib/format'
 import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
@@ -74,21 +75,17 @@ function FeedIssue() {
 
   useEffect(() => {
     loadLookups().catch((e) => {
-      // No signal: the lists daily entry saved on this device last time.
-      try {
-        const cached = JSON.parse(localStorage.getItem('pbafarm:daily-entry:lookups') || 'null')
-        if (cached) {
-          setFeedTypes(cached.feedTypes || [])
-          setCages(cached.cages || [])
-        } else {
-          showToast('error', cleanError(e))
-        }
-      } catch {
+      // No signal: the lists daily entry saved for this user last time.
+      const cached = readReferenceData(user?.id, getActiveLocationId())
+      if (cached) {
+        setFeedTypes(cached.feedTypes || [])
+        setCages(cached.cages || [])
+      } else {
         showToast('error', cleanError(e))
       }
       setLookupsReady(true)
     })
-  }, [showToast])
+  }, [showToast, user?.id])
 
   const selected = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)
   const bagSize = selected?.bag_size_kg || 25

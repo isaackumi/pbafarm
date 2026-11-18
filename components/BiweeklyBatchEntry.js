@@ -8,6 +8,8 @@ import { useOnline } from '../hooks/useOutbox'
 import { useAuth } from '../contexts/AuthContext'
 import OutboxPanel from './OutboxPanel'
 import { parseCageScan } from '../lib/qrTarget'
+import { getActiveLocationId } from '../lib/locationScope'
+import { readReferenceList, saveReferenceData } from '../lib/referenceCache'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { Button, Field, FormCard, FormSection, Input, StickyActions } from './ui'
 import DependencyEmpty from './DependencyEmpty'
@@ -18,7 +20,6 @@ import { useT } from '../lib/i18n/context'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const idOf = (x) => x?.id || x?._id
-const LOOKUPS_CACHE_KEY = 'pbafarm:daily-entry:lookups'
 
 const newLine = (cageId) => ({
   key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -53,6 +54,7 @@ export default function BiweeklyBatchEntry() {
   const { showToast } = useToast()
   const t = useT()
   const { user } = useAuth()
+  const userId = user?.id
   const online = useOnline()
   const [cages, setCages] = useState([])
   const [ready, setReady] = useState(false)
@@ -73,17 +75,20 @@ export default function BiweeklyBatchEntry() {
       const res = await cageService.getActiveCages()
       if (!res.error) {
         setCages(res.data || [])
+        saveReferenceData(userId, getActiveLocationId(), { cages: res.data || [] })
         return
       }
-      // No signal: the cage list daily entry saved last time.
-      const cached = JSON.parse(localStorage.getItem(LOOKUPS_CACHE_KEY) || 'null')
-      if (cached?.cages) setCages(cached.cages)
+      // No signal: the cage list this user last saw on this device.
+      const cached = readReferenceList(userId, getActiveLocationId(), 'cages')
+      if (cached) setCages(cached)
     } catch (err) {
-      console.error('Error loading cages:', err)
+      const cached = readReferenceList(userId, getActiveLocationId(), 'cages')
+      if (cached) setCages(cached)
+      else console.error('Error loading cages:', err)
     } finally {
       setReady(true)
     }
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     loadCages()

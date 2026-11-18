@@ -6,6 +6,7 @@ import { feedTypeService } from '../lib/feedTypeService'
 import { dailyRecordService } from '../lib/databaseService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { getActiveLocationId } from '../lib/locationScope'
+import { readReferenceData, saveReferenceData } from '../lib/referenceCache'
 import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
@@ -103,9 +104,9 @@ const DailyUploadPage = () => {
   const unit = formData.feedUnit === 'bags' ? 'bags' : 'kg'
 
   const loadLookups = useCallback(async () => {
-    const CACHE_KEY = 'pbafarm:daily-entry:lookups'
+    let locationId
     try {
-      const locationId = getActiveLocationId()
+      locationId = getActiveLocationId()
       const [cageRes, feedRes, levels] = await Promise.all([
         cageService.getActiveCages(),
         feedTypeService.getAllFeedTypes(),
@@ -126,25 +127,27 @@ const DailyUploadPage = () => {
         )
         setCages(nextCages)
         setFeedTypes(nextFeed)
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ cages: nextCages, feedTypes: nextFeed }))
-        } catch {
-          // storage blocked; the live lists still work
-        }
+        saveReferenceData(userId, locationId, { cages: nextCages, feedTypes: nextFeed })
         return
       }
-      // No signal: fall back to the last lists this device saw.
-      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
+      // No signal: fall back to the last lists this user saw on this device.
+      const cached = readReferenceData(userId, locationId)
       if (cached) {
         setCages(cached.cages || [])
         setFeedTypes(cached.feedTypes || [])
       }
     } catch (err) {
-      console.error('Error loading lookups:', err)
+      const cached = readReferenceData(userId, locationId)
+      if (cached) {
+        setCages(cached.cages || [])
+        setFeedTypes(cached.feedTypes || [])
+      } else {
+        console.error('Error loading lookups:', err)
+      }
     } finally {
       setLookupsReady(true)
     }
-  }, [])
+  }, [userId])
 
   const loadLogged = useCallback(async (date) => {
     if (!date) return

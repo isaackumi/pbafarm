@@ -5,6 +5,7 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import { PageHeader, Button, EmptyState } from '../../components/ui'
 import { cageService } from '../../lib/cageService'
+import { labelUrl, shortCodeFor } from '../../lib/qrTarget'
 
 /**
  * Printable QR stickers, one per cage. Scanning a sticker opens daily entry
@@ -24,7 +25,7 @@ export default function CageQrCodes() {
       const entries = await Promise.all(
         list.map(async (c) => {
           const id = c.id || c._id
-          const url = `${origin}/daily-entry?cage=${encodeURIComponent(id)}`
+          const url = labelUrl(origin, c, list)
           const svg = await QRCode.toString(url, {
             type: 'svg',
             margin: 1,
@@ -56,7 +57,7 @@ export default function CageQrCodes() {
               { label: 'Cages', href: '/cages' },
               { label: 'QR codes' },
             ]}
-            description="Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in."
+            description="Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in. Codes stay valid if the app moves to a new address; labels printed earlier keep working."
             actions={
               <Button onClick={() => window.print()} disabled={!cages.length}>
                 <Printer size={16} aria-hidden />
@@ -89,7 +90,9 @@ export default function CageQrCodes() {
                     dangerouslySetInnerHTML={{ __html: codes[id] || '' }}
                   />
                   <p className="mt-3 text-base font-medium text-[#18181b]">{c.name}</p>
-                  {c.code && <p className="text-xs text-[#52525b]">{c.code}</p>}
+                  <p className="text-sm font-mono font-semibold text-[#18181b]">
+                    {shortCodeFor(c, cages)}
+                  </p>
                   <p className="mt-1 text-xs text-[#52525b]">Scan to log feed</p>
                 </li>
               )

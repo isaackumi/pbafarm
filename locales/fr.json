@@ -459,5 +459,47 @@
     "toG": "À (g)",
     "removeGrade": "Supprimer le calibre {code}",
     "addGrade": "Ajouter un calibre"
+  },
+  "csvImport": {
+    "title": {
+      "daily": "CSV journalier",
+      "biweekly": "CSV bimensuel"
+    },
+    "header": "Ligne d'en-tête : {columns}",
+    "file": "Fichier CSV",
+    "fileHint": "Séparé par des virgules ou des points-virgules. Dates au format AAAA-MM-JJ. Les champs entre guillemets peuvent contenir des virgules.",
+    "chooseFile": "Choisissez d'abord un fichier CSV.",
+    "upload": "Importer le CSV",
+    "uploading": "Importation…",
+    "failed": "L'importation a échoué",
+    "empty": "Le fichier est vide.",
+    "unclosedQuote": "Un champ entre guillemets commençant à la ligne {line} n'est jamais fermé.",
+    "summary": "{inserted} ligne(s) enregistrée(s) sur {rows}.",
+    "existing": {
+      "one": "{count} ligne existait déjà et n'a pas été enregistrée à nouveau.",
+      "other": "{count} lignes existaient déjà et n'ont pas été enregistrées à nouveau."
+    },
+    "skippedTitle": {
+      "one": "{count} ligne ignorée :",
+      "other": "{count} lignes ignorées :"
+    },
+    "lineReason": "Ligne {line} : {reason}",
+    "reason": {
+      "missingCage": "aucun nom de cage",
+      "unknownCage": "aucune cage nommée « {value} »",
+      "missingDate": "aucune date",
+      "badDate": "« {value} » n'est pas une date (utilisez AAAA-MM-JJ)",
+      "futureDate": "{value} est dans le futur",
+      "badNumber": "{column} doit être un nombre supérieur ou égal à 0",
+      "badWholeNumber": "{column} doit être un nombre entier supérieur ou égal à 0",
+      "badPositive": "{column} doit être supérieur à 0",
+      "unknownFeedType": "aucun aliment nommé « {value} »",
+      "feedTypeRequired": "feed_type est obligatoire quand feed_amount est supérieur à 0",
+      "duplicateRow": "répète une ligne précédente ({value})"
+    }
+  },
+  "scan": {
+    "openingCode": "Ouverture de la cage {code}…",
+    "unknownCode": "Aucune cage de cette ferme n'a le code {code}"
   }
 }
