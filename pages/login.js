@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
+import { safeNextPath } from '../lib/safeRedirect'
 import { Button, Field, Input } from '../components/ui'
 
 export default function Login() {
@@ -13,11 +14,7 @@ export default function Login() {
   const router = useRouter()
 
   if (user) {
-    const next =
-      typeof router.query.next === 'string' && router.query.next.startsWith('/')
-        ? router.query.next
-        : '/dashboard'
-    router.push(next)
+    router.push(safeNextPath(router.query.next))
     return null
   }
 
@@ -39,11 +36,7 @@ export default function Login() {
       return
     }
 
-    router.push(
-      typeof router.query.next === 'string' && router.query.next.startsWith('/')
-        ? router.query.next
-        : '/dashboard',
-    )
+    router.push(safeNextPath(router.query.next))
   }
 
   return (

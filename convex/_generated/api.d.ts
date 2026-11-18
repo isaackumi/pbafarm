@@ -28,6 +28,7 @@ import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
 import type * as lib_growth from "../lib/growth.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
+import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as reminders from "../reminders.js";
 import type * as reports from "../reports.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;
   "lib/growth": typeof lib_growth;
   "lib/tenancy": typeof lib_tenancy;
+  migrations: typeof migrations;
   notifications: typeof notifications;
   reminders: typeof reminders;
   reports: typeof reports;

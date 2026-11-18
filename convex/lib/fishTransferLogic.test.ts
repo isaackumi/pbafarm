@@ -1,38 +1,37 @@
-import { describe, it } from 'node:test'
-import assert from 'node:assert/strict'
+import { describe, expect, it } from 'vitest'
 import {
   deriveTransferType,
   transferBiomassKg,
   classifyDestination,
   sourceCagePatchAfterTransfer,
-} from './fishTransferLogic.ts'
+} from './fishTransferLogic'
 
 describe('deriveTransferType', () => {
   it('is full when qty equals source count', () => {
-    assert.equal(deriveTransferType(1000, 1000), 'full')
+    expect(deriveTransferType(1000, 1000)).toBe('full')
   })
   it('is partial when qty is less', () => {
-    assert.equal(deriveTransferType(400, 1000), 'partial')
+    expect(deriveTransferType(400, 1000)).toBe('partial')
   })
 })
 
 describe('transferBiomassKg', () => {
   it('matches top-up formula', () => {
-    assert.equal(transferBiomassKg(1000, 50), 50)
+    expect(transferBiomassKg(1000, 50)).toBe(50)
   })
 })
 
 describe('classifyDestination', () => {
   const empty = ['empty', 'fallow', 'harvested']
   it('stocks empty-eligible statuses', () => {
-    assert.equal(classifyDestination('empty', empty), 'stock')
-    assert.equal(classifyDestination('fallow', empty), 'stock')
+    expect(classifyDestination('empty', empty)).toBe('stock')
+    expect(classifyDestination('fallow', empty)).toBe('stock')
   })
   it('topups active', () => {
-    assert.equal(classifyDestination('active', empty), 'topup')
+    expect(classifyDestination('active', empty)).toBe('topup')
   })
   it('rejects maintenance', () => {
-    assert.equal(classifyDestination('maintenance', empty), 'invalid')
+    expect(classifyDestination('maintenance', empty)).toBe('invalid')
   })
 })
 
@@ -44,8 +43,8 @@ describe('sourceCagePatchAfterTransfer', () => {
       sourceCurrentCount: 1000,
       now: 1,
     })
-    assert.equal(patch.currentCount, 0)
-    assert.equal(patch.status, 'empty')
+    expect(patch.currentCount).toBe(0)
+    expect(patch.status).toBe('empty')
   })
   it('reduces on partial', () => {
     const patch = sourceCagePatchAfterTransfer({
@@ -54,7 +53,7 @@ describe('sourceCagePatchAfterTransfer', () => {
       sourceCurrentCount: 1000,
       now: 1,
     })
-    assert.equal(patch.currentCount, 600)
-    assert.equal(patch.status, 'active')
+    expect(patch.currentCount).toBe(600)
+    expect(patch.status).toBe('active')
   })
 })
