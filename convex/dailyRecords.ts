@@ -8,6 +8,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
 import {
   mergeSettings,
@@ -378,6 +379,7 @@ async function insertDailyRecord(
       updatedAt: Date.now(),
     })
   }
+  await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
   // Mortality threshold alerts
   if (args.mortality > 0 && user.companyId) {
@@ -658,6 +660,7 @@ export const update = mutation({
           })
         }
       }
+      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, true)
     }
 
     if (feedTouched) {
@@ -713,6 +716,13 @@ export const remove = mutation({
         })
       }
     }
+    await shadowReverse(
+      ctx,
+      await ctx.db.get(existing.cageId),
+      { sourceTable: 'dailyRecords', sourceId: id },
+      'Daily record deleted',
+      user._id,
+    )
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
@@ -780,6 +790,7 @@ export const createMany = mutation({
           updatedAt: Date.now(),
         })
       }
+      await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
       await deductDailyFeed(ctx, user, {
         dailyRecordId: id,

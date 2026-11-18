@@ -38,6 +38,8 @@ import type * as messaging_deliver from "../messaging/deliver.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as procurement from "../procurement.js";
+import type * as productionBackfill from "../productionBackfill.js";
+import type * as reconciliation from "../reconciliation.js";
 import type * as reminders from "../reminders.js";
 import type * as reports from "../reports.js";
 import type * as sales from "../sales.js";
@@ -86,6 +88,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notifications: typeof notifications;
   procurement: typeof procurement;
+  productionBackfill: typeof productionBackfill;
+  reconciliation: typeof reconciliation;
   reminders: typeof reminders;
   reports: typeof reports;
   sales: typeof sales;
