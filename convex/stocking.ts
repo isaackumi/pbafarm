@@ -14,6 +14,7 @@ import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
 import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
 import { assertDifferentApprover, assertUserCan, requireMember } from './lib/permissions'
+import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 
@@ -375,6 +376,7 @@ export const createStocking = mutation({
       recordId: id,
       newValues: { ...args, batchNumber, status },
     })
+    if (status === 'pending_approval') await onApprovalRequested(ctx, 'stocking', id)
     return id
   },
 })
@@ -539,6 +541,7 @@ export const approveStocking = mutation({
       recordId: id,
       newValues: { status: 'approved' },
     })
+    await onApprovalDecided(ctx, 'stocking', id, 'approved', user._id)
   },
 })
 
@@ -574,6 +577,7 @@ export const rejectStocking = mutation({
       recordId: id,
       newValues: { status: 'rejected', reason },
     })
+    await onApprovalDecided(ctx, 'stocking', id, 'rejected', user._id)
   },
 })
 
@@ -664,6 +668,7 @@ export const createTopup = mutation({
       recordId: id,
       newValues: { ...args, status },
     })
+    if (status === 'pending_approval') await onApprovalRequested(ctx, 'topup', id)
     return id
   },
 })
@@ -713,6 +718,7 @@ export const approveTopup = mutation({
       recordId: id,
       newValues: { status: 'approved' },
     })
+    await onApprovalDecided(ctx, 'topup', id, 'approved', user._id)
   },
 })
 
@@ -748,6 +754,7 @@ export const rejectTopup = mutation({
       recordId: id,
       newValues: { status: 'rejected', reason },
     })
+    await onApprovalDecided(ctx, 'topup', id, 'rejected', user._id)
   },
 })
 

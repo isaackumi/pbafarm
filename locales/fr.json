@@ -514,5 +514,43 @@
     "updateReady": "Une nouvelle version de PBA Farm est prête.",
     "reload": "Recharger",
     "later": "Plus tard"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "delete": "Supprimer",
+    "empty": "Aucune notification",
+    "emptyUnread": "Vous êtes à jour.",
+    "open": "Ouvrir",
+    "viewAll": "Tout voir",
+    "all": "Toutes",
+    "unread": "Non lues",
+    "loadMore": "Charger plus",
+    "unreadCount": {
+      "one": "{count} non lue",
+      "other": "{count} non lues"
+    },
+    "subtitle": "Approbations, alertes et rappels qui vous concernent. Choisissez les canaux et les heures calmes dans les paramètres.",
+    "preferences": "Préférences de notification",
+    "approvals": {
+      "title": "Alertes d'approbation",
+      "intro": "Prévenir les approbateurs quand un empoissonnement, un complément, un transfert ou une demande d'adhésion les attend, et alerter les administrateurs si personne n'agit.",
+      "enabled": "Prévenir les approbateurs des demandes en attente",
+      "channels": "Canaux",
+      "escalateAfter": "Escalader après (heures, 0 = jamais)",
+      "escalationChannels": "Canaux d'escalade",
+      "save": "Enregistrer les alertes d'approbation",
+      "saved": "Alertes d'approbation enregistrées",
+      "recent": "Envois récents",
+      "noRecent": "Aucune alerte d'approbation envoyée pour l'instant.",
+      "counts": "{sent} envoyés, {failed} en échec, {skipped} ignorés"
+    },
+    "channel": {
+      "in_app": "Dans l'app",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "E-mail"
+    }
   }
 }

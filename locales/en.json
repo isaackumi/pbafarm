@@ -514,5 +514,43 @@
     "updateReady": "A new version of PBA Farm is ready.",
     "reload": "Reload",
     "later": "Later"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "markRead": "Mark read",
+    "delete": "Delete",
+    "empty": "No notifications",
+    "emptyUnread": "You're all caught up.",
+    "open": "Open",
+    "viewAll": "View all",
+    "all": "All",
+    "unread": "Unread",
+    "loadMore": "Load more",
+    "unreadCount": {
+      "one": "{count} unread",
+      "other": "{count} unread"
+    },
+    "subtitle": "Approvals, alerts and reminders for you. Choose channels and quiet hours in Settings.",
+    "preferences": "Notification preferences",
+    "approvals": {
+      "title": "Approval alerts",
+      "intro": "Tell approvers when stocking, top-up, transfer or join requests wait for them, and escalate to admins if nobody acts.",
+      "enabled": "Notify approvers about pending requests",
+      "channels": "Channels",
+      "escalateAfter": "Escalate after (hours, 0 = never)",
+      "escalationChannels": "Escalation channels",
+      "save": "Save approval alerts",
+      "saved": "Approval alerts saved",
+      "recent": "Recent deliveries",
+      "noRecent": "No approval alerts sent yet.",
+      "counts": "{sent} sent, {failed} failed, {skipped} skipped"
+    },
+    "channel": {
+      "in_app": "In-app",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "Email"
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
   automationAction,
   automationCondition,
   automationTrigger,
+  notifyChannel,
   quietHours,
   runDelivery,
   runStatus,
@@ -420,6 +421,16 @@ const schema = defineSchema({
             usePlatformDefaultSms: v.optional(v.boolean()),
             usePlatformDefaultWhatsapp: v.optional(v.boolean()),
             usePlatformDefaultEmail: v.optional(v.boolean()),
+          }),
+        ),
+        /** Approval notifications and escalation (AUTO-004). Defaults in convex/approvalAlerts.ts. */
+        approvalAlerts: v.optional(
+          v.object({
+            enabled: v.optional(v.boolean()),
+            channels: v.optional(v.array(notifyChannel)),
+            /** 0 turns escalation off. */
+            escalateAfterHours: v.optional(v.number()),
+            escalationChannels: v.optional(v.array(notifyChannel)),
           }),
         ),
         /** Sign-in policy (SEC-006, SEC-007, doc 18 §7–8). All default off. */
@@ -1977,6 +1988,29 @@ const schema = defineSchema({
   })
     .index('by_assignee_and_status', ['assigneeUserId', 'status'])
     .index('by_company_and_status', ['companyId', 'status']),
+
+  /**
+   * Outbound SMS/WhatsApp/email of system notifications that are not
+   * automation runs (approval alerts, AUTO-003/004). Sent by
+   * convex/notificationDispatch.ts; kept 30 days.
+   */
+  notificationDispatches: defineTable({
+    companyId: v.id('companies'),
+    /** e.g. 'approval.requested', 'approval.escalated'. */
+    source: v.string(),
+    title: v.string(),
+    status: runStatus,
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    /** Bounded: at most 50. */
+    deliveries: v.array(runDelivery),
+    error: v.optional(v.string()),
+    nextAttemptAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_company_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
 
   /** Per-user notification channels and quiet hours (AUTO-003). */
   notificationPreferences: defineTable({

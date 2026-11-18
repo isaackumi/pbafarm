@@ -29,6 +29,7 @@ import { SUPPORTED_UI_LOCALES } from './lib/orgProfile'
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 import type { Doc, Id } from './_generated/dataModel'
 import { isPermission, requireAccount, requireMember } from './lib/permissions'
+import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -671,6 +672,7 @@ export const claimInvite = mutation({
       recordId: invite._id,
       newValues: { email, role: invite.role, status: 'requested' },
     })
+    await onApprovalRequested(ctx, 'join_request', invite._id)
     return { claimed: false, requested: true, companyId: invite.companyId }
   },
 })
@@ -756,6 +758,7 @@ export const approveJoinRequest = mutation({
       previousValues: { companyId: target.companyId, role: target.role },
       newValues: { companyId: invite.companyId, role: invite.role, inviteId },
     })
+    await onApprovalDecided(ctx, 'join_request', invite._id, 'approved', me._id)
     return { userId: target._id }
   },
 })
@@ -778,6 +781,7 @@ export const declineJoinRequest = mutation({
       recordId: invite._id,
       newValues: { email: invite.email, requestedByUserId: invite.requestedByUserId },
     })
+    await onApprovalDecided(ctx, 'join_request', invite._id, 'rejected', me._id)
     return invite._id
   },
 })

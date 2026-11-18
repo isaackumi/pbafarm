@@ -22,6 +22,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
 import { useOutbox } from '../hooks/useOutbox'
 import { api } from '../convex/_generated/api'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Organizations I belong to (ORG-002). Shown in the profile menu; switching
@@ -92,6 +93,7 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
     markAsRead,
     markAllAsRead,
   } = useNotifications()
+  const t = useT()
   const fullName = user?.name || user?.user_metadata?.full_name || user?.email || 'User'
   const role = user?.role || user?.user_metadata?.role || 'User'
   const email = user?.email || ''
@@ -267,7 +269,7 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
               className="relative text-muted hover:text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg cursor-pointer h-11 w-11 flex items-center justify-center transition-colors"
-              aria-label="Notifications"
+              aria-label={t('notifications.title')}
               onClick={() => setNotifDropdownOpen((open) => !open)}
             >
               <Bell size={20} />
@@ -278,22 +280,22 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
             {notifDropdownOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1 max-h-96 overflow-y-auto">
                 <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep flex items-center justify-between">
-                  <span>Notifications</span>
+                  <span>{t('notifications.title')}</span>
                   {unreadCount > 0 && (
                     <button
                       type="button"
                       onClick={() => markAllAsRead()}
                       className="text-xs font-medium text-lagoon-800 hover:underline"
                     >
-                      Mark all read
+                      {t('notifications.markAllRead')}
                     </button>
                   )}
                 </div>
                 {notifLoading && (
-                  <div className="px-4 py-3 text-sm text-muted">Loading…</div>
+                  <div className="px-4 py-3 text-sm text-muted">{t('common.loading')}</div>
                 )}
                 {!notifLoading && notifications.length === 0 && (
-                  <div className="px-4 py-3 text-sm text-muted">No notifications</div>
+                  <div className="px-4 py-3 text-sm text-muted">{t('notifications.empty')}</div>
                 )}
                 {!notifLoading &&
                   notifications.map((n) => (
@@ -309,9 +311,16 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
                     >
                       <div className="font-medium text-chart-ink">{n.title}</div>
                       <div className="text-xs mt-0.5 line-clamp-3">{n.message}</div>
-                      {n.link && <div className="text-xs text-lake mt-1">Open</div>}
+                      {n.link && <div className="text-xs text-lake mt-1">{t('notifications.open')}</div>}
                     </button>
                   ))}
+                <Link
+                  href="/notifications"
+                  onClick={() => setNotifDropdownOpen(false)}
+                  className="block px-4 py-2.5 text-sm font-medium text-lagoon-800 hover:bg-foam text-center"
+                >
+                  {t('notifications.viewAll')}
+                </Link>
               </div>
             )}
           </div>

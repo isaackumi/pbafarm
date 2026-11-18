@@ -273,6 +273,16 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
     ],
   },
   {
+    type: 'approval.requested',
+    label: 'Approval requested (stocking, top-up, transfer, join)',
+    fields: ['kind', 'recordId', 'subject', 'requesterName'],
+  },
+  {
+    type: 'approval.decided',
+    label: 'Approval decided',
+    fields: ['kind', 'recordId', 'subject', 'decision', 'decidedByName'],
+  },
+  {
     type: 'inventory.stock.low',
     label: 'Feed stock fell to its minimum',
     fields: ['feedTypeName', 'stockKg', 'minimumKg'],

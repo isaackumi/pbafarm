@@ -20,6 +20,7 @@ import {
 } from './lib/fishTransferLogic'
 import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 import { assertDifferentApprover, requireMember } from './lib/permissions'
+import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 
 async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) {
   if (!companyId) return mergeSettings(undefined)
@@ -455,6 +456,7 @@ export const createFishTransfer = mutation({
         destinationTopupId,
       },
     })
+    if (status === 'pending_approval') await onApprovalRequested(ctx, 'transfer', transferId)
 
     return transferId
   },
@@ -493,6 +495,7 @@ export const approveFishTransfer = mutation({
       recordId: id,
       newValues: { status: 'approved' },
     })
+    await onApprovalDecided(ctx, 'transfer', id, 'approved', user._id)
   },
 })
 
@@ -551,6 +554,7 @@ export const rejectFishTransfer = mutation({
       recordId: id,
       newValues: { status: 'rejected', reason },
     })
+    await onApprovalDecided(ctx, 'transfer', id, 'rejected', user._id)
   },
 })
 
