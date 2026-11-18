@@ -31,6 +31,8 @@ import type * as lib_feedLedger from "../lib/feedLedger.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
 import type * as lib_growth from "../lib/growth.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
+import type * as messaging_channels from "../messaging/channels.js";
+import type * as messaging_deliver from "../messaging/deliver.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as reminders from "../reminders.js";
@@ -71,6 +73,8 @@ declare const fullApi: ApiFromModules<{
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;
   "lib/growth": typeof lib_growth;
   "lib/tenancy": typeof lib_tenancy;
+  "messaging/channels": typeof messaging_channels;
+  "messaging/deliver": typeof messaging_deliver;
   migrations: typeof migrations;
   notifications: typeof notifications;
   reminders: typeof reminders;
@@ -108,4 +112,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};
