@@ -22,7 +22,11 @@ import { phoneLoginOffered, securityPolicy } from './messaging/policy'
  * module never creates users or auth accounts.
  */
 
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000
+/** Same session length as Convex Auth (AUTH_SESSION_TOTAL_DURATION_MS, default 30 days). */
+function sessionDurationMs() {
+  const configured = Number(process.env.AUTH_SESSION_TOTAL_DURATION_MS)
+  return Number.isFinite(configured) && configured > 0 ? configured : 30 * 24 * 60 * 60 * 1000
+}
 
 function loginCodeHash(phone: string, code: string) {
   return sha256Hex(`login:${phone}:${code}`)
@@ -152,7 +156,7 @@ export const verifyLoginCode = internalMutation({
     // two-step state can be recorded for this exact session.
     const sessionId = await ctx.db.insert('authSessions', {
       userId: user._id,
-      expirationTime: now + SESSION_DURATION_MS,
+      expirationTime: now + sessionDurationMs(),
     })
     if (eligible.policy.phoneLoginSatisfies2fa) {
       await ctx.db.insert('mfaSessions', {
