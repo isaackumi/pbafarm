@@ -1,7 +1,101 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { listForCompany } from './lib/tenancy'
+import { tenantScope } from './lib/scope'
+
+type AuditFilters = {
+  tableName?: string
+  userId?: Id<'users'>
+  actionType?: string
+  recordId?: string
+  dateFrom?: number
+  dateTo?: number
+}
+
+/** Most audit rows a single filtered read examines before it stops. */
+const AUDIT_SCAN_LIMIT = 5000
+
+/**
+ * Newest-first audit query for the caller's scope, using the tightest index:
+ * company + table (`by_company_and_tableName`), the user (`by_user`), or the
+ * company (`by_company`). Date filters are ranges on `_creationTime`, the
+ * implicit last field of every index. Returns null when the caller has no
+ * scope. Company-less super_admins get the platform view (by_table / by_user /
+ * creation time).
+ */
+function auditQuery(ctx: QueryCtx, user: Doc<'users'>, f: AuditFilters) {
+  const scope = tenantScope(user)
+  if (scope.kind === 'none') return null
+  const range = (q: any) => {
+    let r = q
+    if (f.dateFrom) r = r.gte('_creationTime', f.dateFrom)
+    if (f.dateTo) r = r.lte('_creationTime', f.dateTo)
+    return r
+  }
+  const logs = ctx.db.query('auditLogs')
+  if (scope.kind === 'company') {
+    if (f.tableName) {
+      return logs
+        .withIndex('by_company_and_tableName', (q) =>
+          range(q.eq('companyId', scope.companyId).eq('tableName', f.tableName!)),
+        )
+        .order('desc')
+    }
+    if (f.userId) {
+      return logs
+        .withIndex('by_user', (q) => range(q.eq('userId', f.userId!)))
+        .order('desc')
+    }
+    return logs
+      .withIndex('by_company', (q) => range(q.eq('companyId', scope.companyId)))
+      .order('desc')
+  }
+  if (f.tableName) {
+    return logs
+      .withIndex('by_table', (q) => range(q.eq('tableName', f.tableName!)))
+      .order('desc')
+  }
+  if (f.userId) {
+    return logs.withIndex('by_user', (q) => range(q.eq('userId', f.userId!))).order('desc')
+  }
+  return logs.withIndex('by_creation_time', (q) => range(q)).order('desc')
+}
+
+function matches(user: Doc<'users'>, f: AuditFilters, log: Doc<'auditLogs'>) {
+  const scope = tenantScope(user)
+  if (scope.kind === 'company' && log.companyId !== scope.companyId) return false
+  if (f.tableName && log.tableName !== f.tableName) return false
+  if (f.userId && log.userId !== f.userId) return false
+  if (f.actionType && log.actionType !== f.actionType) return false
+  if (f.recordId && log.recordId !== f.recordId) return false
+  return true
+}
+
+/**
+ * Up to `max` matching rows, newest first. Stops after AUDIT_SCAN_LIMIT
+ * examined rows so a rare filter cannot read a company's whole history.
+ */
+async function collectAudit(
+  ctx: QueryCtx,
+  user: Doc<'users'>,
+  f: AuditFilters,
+  max: number,
+) {
+  const q = auditQuery(ctx, user, f)
+  if (!q) return []
+  const out: Doc<'auditLogs'>[] = []
+  let scanned = 0
+  for await (const log of q) {
+    scanned += 1
+    if (matches(user, f, log)) out.push(log)
+    if (out.length >= max || scanned >= AUDIT_SCAN_LIMIT) break
+  }
+  return out
+}
 
 function toClient(a: any, userLabel?: string | null) {
   return {
@@ -40,43 +134,44 @@ export const list = query({
     requireRole(user, 'admin')
 
     const maxRows = Math.min(args.limit ?? 200, 500)
-
-    let auditLogs =
-      user.companyId && user.role !== 'super_admin'
-        ? await ctx.db
-            .query('auditLogs')
-            .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
-            .order('desc')
-            .take(maxRows * 3)
-        : await ctx.db.query('auditLogs').order('desc').take(maxRows * 3)
-
-    auditLogs = await listForCompany(user, auditLogs)
-
-    if (args.tableName) {
-      auditLogs = auditLogs.filter((log) => log.tableName === args.tableName)
-    }
-    if (args.userId) {
-      auditLogs = auditLogs.filter((log) => log.userId === args.userId)
-    }
-    if (args.actionType) {
-      auditLogs = auditLogs.filter((log) => log.actionType === args.actionType)
-    }
-    if (args.dateFrom) {
-      auditLogs = auditLogs.filter((log) => log._creationTime >= args.dateFrom!)
-    }
-    if (args.dateTo) {
-      auditLogs = auditLogs.filter((log) => log._creationTime <= args.dateTo!)
-    }
-
-    auditLogs = auditLogs
-      .sort((a, b) => b._creationTime - a._creationTime)
-      .slice(0, maxRows)
+    const { limit: _limit, ...filters } = args
+    const auditLogs = await collectAudit(ctx, user, filters, maxRows)
 
     const out = []
     for (const log of auditLogs) {
       out.push(toClient(log, await labelForUser(ctx, log.userId)))
     }
     return out
+  },
+})
+
+/**
+ * Paginated audit log (PLAT-001), newest first, same filters as `list`.
+ * `tableName`, `userId` and the date range are index reads; `actionType`
+ * filters each page, so a page can come back short.
+ */
+export const listPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    tableName: v.optional(v.string()),
+    userId: v.optional(v.id('users')),
+    actionType: v.optional(v.string()),
+    dateFrom: v.optional(v.number()),
+    dateTo: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const { paginationOpts, ...filters } = args
+    const q = auditQuery(ctx, user, filters)
+    if (!q) return { page: [], isDone: true, continueCursor: '' }
+    const result = await q.paginate(paginationOpts)
+    const page = []
+    for (const log of result.page) {
+      if (!matches(user, filters, log)) continue
+      page.push(toClient(log, await labelForUser(ctx, log.userId)))
+    }
+    return { ...result, page }
   },
 })
 
@@ -91,21 +186,14 @@ export const getByTable = query({
     requireRole(user, 'admin')
 
     const maxRows = Math.min(args.limit ?? 100, 300)
-    let auditLogs = await ctx.db
-      .query('auditLogs')
-      .withIndex('by_table', (q) => q.eq('tableName', args.tableName))
-      .order('desc')
-      .take(maxRows * 2)
-
-    auditLogs = await listForCompany(user, auditLogs)
-
-    if (args.recordId) {
-      auditLogs = auditLogs.filter((log) => log.recordId === args.recordId)
-    }
-
-    auditLogs = auditLogs
-      .sort((a, b) => b._creationTime - a._creationTime)
-      .slice(0, maxRows)
+    // Company + table index: another tenant's audit volume no longer pushes
+    // this company's rows out of the window.
+    const auditLogs = await collectAudit(
+      ctx,
+      user,
+      { tableName: args.tableName, recordId: args.recordId },
+      maxRows,
+    )
 
     const out = []
     for (const log of auditLogs) {
@@ -150,23 +238,14 @@ export const getSummary = query({
     const user = await requireUser(ctx)
     requireRole(user, 'admin')
 
-    let auditLogs =
-      user.companyId && user.role !== 'super_admin'
-        ? await ctx.db
-            .query('auditLogs')
-            .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
-            .order('desc')
-            .take(2000)
-        : await ctx.db.query('auditLogs').order('desc').take(2000)
+    // Newest 2000 rows of the company in the date range (index range).
+    const auditLogs = await collectAudit(
+      ctx,
+      user,
+      { dateFrom: args.dateFrom, dateTo: args.dateTo },
+      2000,
+    )
 
-    auditLogs = await listForCompany(user, auditLogs)
-
-    if (args.dateFrom) {
-      auditLogs = auditLogs.filter((log) => log._creationTime >= args.dateFrom!)
-    }
-    if (args.dateTo) {
-      auditLogs = auditLogs.filter((log) => log._creationTime <= args.dateTo!)
-    }
 
     const actionTypeCounts: Record<string, number> = {}
     const tableNameCounts: Record<string, number> = {}

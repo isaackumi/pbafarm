@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import { asOfDate, scopedRowsInRange, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import {
   listForCompany,
@@ -52,7 +53,11 @@ export const list = query({
           .query('healthTreatments')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('healthTreatments').collect()
+      : await scopedRowsInRange(ctx, user, 'healthTreatments', {
+          from: args.dateFrom,
+          to: args.dateTo,
+          locationId: args.locationId,
+        })
 
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
     if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
@@ -155,12 +160,26 @@ export const activeWithdrawals = query({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    const asOf = args.asOf || new Date().toISOString().split('T')[0]
-    let rows = await ctx.db.query('healthTreatments').collect()
+    const asOf = asOfDate(args.asOf)
+    // Only treatments whose withdrawal ends on or after asOf, read through
+    // by_company_and_withdrawalUntil (not the full treatment history).
+    const scope = tenantScope(user)
+    let rows =
+      scope.kind === 'company'
+        ? await ctx.db
+            .query('healthTreatments')
+            .withIndex('by_company_and_withdrawalUntil', (q) =>
+              q.eq('companyId', scope.companyId).gte('withdrawalUntil', asOf),
+            )
+            .collect()
+        : scope.kind === 'platform'
+          ? await ctx.db.query('healthTreatments').take(PLATFORM_SCAN_LIMIT)
+          : []
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
     rows = rows.filter(
       (r) => r.withdrawalUntil && r.withdrawalUntil >= asOf,
     )
+
 
     const out = []
     for (const row of rows) {

@@ -41,9 +41,11 @@ function HealthTreatments() {
 
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const treatments = useQuery(api.health.list, user ? locationArgs : 'skip')
+  // asOf: the client's today, so the list rolls over at midnight.
+  const today = new Date().toISOString().slice(0, 10)
   const withdrawals = useQuery(
     api.health.activeWithdrawals,
-    user ? locationArgs : 'skip',
+    user ? { ...locationArgs, asOf: today } : 'skip',
   )
   const createTreatment = useMutation(api.health.create)
   const removeTreatment = useMutation(api.health.remove)

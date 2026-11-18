@@ -104,7 +104,10 @@ function CageDetails() {
     api.biweeklyRecords.list,
     user && id ? { cageId: id } : 'skip',
   )
-  const growth = useQuery(api.cages.growth, user && id ? { id } : 'skip')
+  const growth = useQuery(
+    api.cages.growth,
+    user && id ? { id, asOf: new Date().toISOString().slice(0, 10) } : 'skip',
+  )
 
   const [editCage, setEditCage] = useState(null)
   const [deleteCage, setDeleteCage] = useState(null)

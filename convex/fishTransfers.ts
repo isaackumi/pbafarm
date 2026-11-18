@@ -1,5 +1,9 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
+import type { Doc } from './_generated/dataModel'
+import { scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
 import {
@@ -8,6 +12,7 @@ import {
   assertTopupAllowed,
 } from './lib/farmRules'
 import { assertNoOtherOpenStocking } from './lib/cycles'
+import { allocateBatchNumber } from './lib/batchNumbers'
 import {
   deriveTransferType,
   transferBiomassKg,
@@ -19,34 +24,6 @@ async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
   const company = await ctx.db.get(companyId)
   return mergeSettings(company?.settings)
-}
-
-function cageBatchSlug(cage: { code?: string; name?: string }) {
-  const raw = (cage.code || cage.name || 'CAGE')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '')
-    .slice(0, 10)
-  return raw || 'CAGE'
-}
-
-async function allocateBatchNumber(
-  ctx: any,
-  user: any,
-  cage: { code?: string; name?: string },
-  stockingDate: string,
-) {
-  const datePart = (stockingDate || new Date().toISOString().slice(0, 10)).replace(
-    /-/g,
-    '',
-  )
-  const base = `${cageBatchSlug(cage)}-${datePart}`
-  let rows = await ctx.db.query('stockingHistory').collect()
-  rows = await listForCompany(user, rows)
-  const existing = new Set(rows.map((r: any) => r.batchNumber))
-  if (!existing.has(base)) return base
-  let n = 2
-  while (existing.has(`${base}-${n}`)) n += 1
-  return `${base}-${n}`
 }
 
 async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
@@ -199,7 +176,9 @@ export const listFishTransfers = query({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let rows = await ctx.db.query('fishTransfers').collect()
+    let rows = args.status
+      ? await scopedRowsByStatus(ctx, user, 'fishTransfers', args.status)
+      : await scopedRows(ctx, user, 'fishTransfers')
     rows = await listForCompany(user, rows)
     if (args.status) rows = rows.filter((r) => r.status === args.status)
     if (args.sourceCageId) {
@@ -216,23 +195,65 @@ export const listFishTransfers = query({
       )
     }
     rows.sort((a, b) => b.updatedAt - a.updatedAt)
-
-    return Promise.all(
-      rows.map(async (r) => {
-        const [src, dest] = await Promise.all([
-          ctx.db.get(r.sourceCageId),
-          ctx.db.get(r.destinationCageId),
-        ])
-        return {
-          id: r._id,
-          ...r,
-          sourceCageName: src?.name,
-          destinationCageName: dest?.name,
-        }
-      }),
-    )
+    return await withCageNames(ctx, rows)
   },
 })
+
+/** Client rows with source/destination cage names (one `get` per cage). */
+async function withCageNames(ctx: QueryCtx, rows: Doc<'fishTransfers'>[]) {
+  const names = new Map<string, string | undefined>()
+  const nameOf = async (id: Doc<'fishTransfers'>['sourceCageId']) => {
+    const key = String(id)
+    if (!names.has(key)) names.set(key, (await ctx.db.get(id))?.name)
+    return names.get(key)
+  }
+  const out = []
+  for (const r of rows) {
+    out.push({
+      id: r._id,
+      ...r,
+      sourceCageName: await nameOf(r.sourceCageId),
+      destinationCageName: await nameOf(r.destinationCageId),
+    })
+  }
+  return out
+}
+
+/**
+ * Paginated fish transfers (PLAT-001), newest first (creation order, via
+ * `by_company`). Status, cage and site filters apply per page, so a page can
+ * come back short.
+ */
+export const listFishTransfersPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    status: v.optional(
+      v.union(
+        v.literal('pending_approval'),
+        v.literal('approved'),
+        v.literal('rejected'),
+      ),
+    ),
+    sourceCageId: v.optional(v.id('cages')),
+    destinationCageId: v.optional(v.id('cages')),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const result = await scopedPage(ctx, user, 'fishTransfers', args.paginationOpts)
+    const rows = result.page.filter(
+      (r) =>
+        (!args.status || r.status === args.status) &&
+        (!args.sourceCageId || r.sourceCageId === args.sourceCageId) &&
+        (!args.destinationCageId || r.destinationCageId === args.destinationCageId) &&
+        (!args.locationId ||
+          r.sourceLocationId === args.locationId ||
+          r.destinationLocationId === args.locationId),
+    )
+    return { ...result, page: await withCageNames(ctx, rows) }
+  },
+})
+
 
 export const getFishTransfer = query({
   args: { id: v.id('fishTransfers') },

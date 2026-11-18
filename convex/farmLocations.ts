@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation, internalMutation } from './_generated/server'
+import { scopedRows } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import {
   listForCompany,
@@ -29,7 +30,7 @@ export const list = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let rows = await ctx.db.query('farmLocations').collect()
+    let rows = await scopedRows(ctx, user, 'farmLocations')
     rows = await listForCompany(user, rows)
 
     if ((user.role ?? 'user') !== 'super_admin' && (user.role ?? 'user') !== 'admin') {

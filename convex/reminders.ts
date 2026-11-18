@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { internalMutation, mutation } from './_generated/server'
+import { internal } from './_generated/api'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
@@ -52,15 +53,17 @@ async function digestForCompany(
     .withIndex('by_company_status', (q) => q.eq('companyId', companyId).eq('status', 'active'))
     .take(500)
 
+  // Only this company's rows for the date: other tenants' volume cannot push
+  // a logged cage out of the window and cause a false reminder.
   const logged = new Set(
     (
       await ctx.db
         .query('dailyRecords')
-        .withIndex('by_date', (q) => q.eq('date', date))
-        .take(2000)
-    )
-      .filter((r) => r.companyId === companyId)
-      .map((r) => r.cageId),
+        .withIndex('by_company_and_date', (q) =>
+          q.eq('companyId', companyId).eq('date', date),
+        )
+        .collect()
+    ).map((r) => r.cageId),
   )
   const missing = cages
     .filter((c) => !logged.has(c._id))
@@ -81,10 +84,12 @@ async function digestForCompany(
     )
     .sort((a, b) => a.currentStock - b.currentStock)
 
-  // users has no company index yet; companies are small, so read and filter.
-  const people = (await ctx.db.query('users').take(5000)).filter(
-    (u) => u.companyId === companyId && u.active !== false,
-  )
+  const people = (
+    await ctx.db
+      .query('users')
+      .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
+      .collect()
+  ).filter((u) => u.active !== false)
   const admins = people.filter((u) => u.role === 'admin' || u.role === 'super_admin')
 
   let sent = 0
@@ -117,21 +122,54 @@ async function digestForCompany(
   return { missingCages: missing.length, lowFeedTypes: low.length, sent }
 }
 
-/** Run by the daily cron for every approved company. */
+/** Approved companies handled per dailyDigest run before it continues. */
+const DIGEST_PAGE_SIZE = 50
+
+/**
+ * Run by the daily cron. Pages through approved companies and schedules one
+ * `companyDigest` per company, each in its own transaction: one company's
+ * failure or size cannot roll back or starve another's reminders. Continues
+ * itself with the next page until every approved company is scheduled.
+ */
 export const dailyDigest = internalMutation({
-  args: { date: v.optional(v.string()) },
-  handler: async (ctx, { date }) => {
+  args: { date: v.optional(v.string()), cursor: v.optional(v.string()) },
+  handler: async (
+    ctx,
+    { date, cursor },
+  ): Promise<{ scheduled: number; done: boolean }> => {
     const day = date ?? todayUtc()
-    const companies = (await ctx.db.query('companies').take(1000)).filter(
-      (c) => c.status === 'approved',
-    )
-    let sent = 0
-    for (const c of companies) {
-      sent += (await digestForCompany(ctx, c._id, day)).sent
+    const page = await ctx.db
+      .query('companies')
+      .withIndex('by_status', (q) => q.eq('status', 'approved'))
+      .paginate({ numItems: DIGEST_PAGE_SIZE, cursor: cursor ?? null })
+    for (const c of page.page) {
+      await ctx.scheduler.runAfter(0, internal.reminders.companyDigest, {
+        companyId: c._id,
+        date: day,
+      })
     }
-    return { companies: companies.length, sent }
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.reminders.dailyDigest, {
+        date: day,
+        cursor: page.continueCursor,
+      })
+    }
+    return { scheduled: page.page.length, done: page.isDone }
   },
 })
+
+/** One company's daily digest (scheduled by dailyDigest). */
+export const companyDigest = internalMutation({
+  args: { companyId: v.id('companies'), date: v.string() },
+  handler: async (ctx, { companyId, date }) => {
+    const company = await ctx.db.get(companyId)
+    if (!company || company.status !== 'approved') {
+      return { missingCages: 0, lowFeedTypes: 0, sent: 0 }
+    }
+    return await digestForCompany(ctx, companyId, date)
+  },
+})
+
 
 /** Admins can send today's reminders now instead of waiting for the evening run. */
 export const runForMyCompanyNow = mutation({

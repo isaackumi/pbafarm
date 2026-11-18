@@ -76,7 +76,9 @@ function FeedManagementOverview() {
       const [usageData, suppliers, growth] = await Promise.all([
         client.query(api.feed.listUsage, { dateFrom }),
         client.query(api.feed.listSuppliers, {}).catch(() => []),
-        client.query(api.cages.growthAll, {}).catch(() => null),
+        client
+          .query(api.cages.growthAll, { asOf: new Date().toISOString().slice(0, 10) })
+          .catch(() => null),
       ])
       const feedName = new Map((feedTypesData || []).map((t) => [t.id || t._id, t.name]))
       const supplierName = new Map((suppliers || []).map((x) => [x.id || x._id, x.name]))

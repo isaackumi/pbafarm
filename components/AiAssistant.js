@@ -174,7 +174,9 @@ export default function AiAssistant() {
       let farmContext = {}
       try {
         const client = getConvexHttpClient()
-        farmContext = await client.query(api.reports.farmContextForAi, {})
+        farmContext = await client.query(api.reports.farmContextForAi, {
+          asOf: new Date().toISOString().slice(0, 10),
+        })
       } catch (err) {
         farmContext = { error: err.message || 'Could not load farm context' }
       }

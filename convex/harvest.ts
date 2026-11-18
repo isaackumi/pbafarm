@@ -1,12 +1,27 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { MutationCtx } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
+import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
+
+/** Client rows with the cage name/code (one `get` per distinct cage). */
+async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
+  const cageIds = [...new Set(records.map((r) => r.cageId))]
+  const cages = new Map(
+    await Promise.all(cageIds.map(async (id) => [id, await ctx.db.get(id)] as const)),
+  )
+  return records.map((r) => {
+    const cage = cages.get(r.cageId)
+    const cageInfo = { name: cage?.name ?? 'Unknown cage', code: cage?.code ?? '' }
+    return { ...toClientHarvestRecord(r), cages: cageInfo, cage: cageInfo }
+  })
+}
 
 function toClientHarvestRecord(r: any) {
   return {
@@ -63,22 +78,42 @@ export const list = query({
           .query('harvestRecords')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('harvestRecords').collect()
+      : await scopedRowsInRange(ctx, user, 'harvestRecords', {
+          from: args.dateFrom,
+          to: args.dateTo,
+          locationId: args.locationId,
+        })
 
     records = await listForCompanyAndLocation(user, records, args.locationId)
     if (args.dateFrom) records = records.filter((r) => r.harvestDate >= args.dateFrom!)
     if (args.dateTo) records = records.filter((r) => r.harvestDate <= args.dateTo!)
-    const cageIds = [...new Set(records.map((r) => r.cageId))]
-    const cages = new Map(
-      await Promise.all(cageIds.map(async (id) => [id, await ctx.db.get(id)] as const)),
+    return (await withCages(ctx, records)).sort((a, b) =>
+      b.harvest_date.localeCompare(a.harvest_date),
     )
-    return records
-      .map((r) => {
-        const cage = cages.get(r.cageId)
-        const cageInfo = { name: cage?.name ?? 'Unknown cage', code: cage?.code ?? '' }
-        return { ...toClientHarvestRecord(r), cages: cageInfo, cage: cageInfo }
-      })
-      .sort((a, b) => b.harvest_date.localeCompare(a.harvest_date))
+  },
+})
+
+/**
+ * Paginated harvests, newest harvest date first (PLAT-001), via
+ * `by_company_and_harvestDate`. A site filter is applied per page.
+ */
+export const listPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const result = await scopedPageInRange(ctx, user, 'harvestRecords', args.paginationOpts, {
+      from: args.dateFrom,
+      to: args.dateTo,
+    })
+    const rows = args.locationId
+      ? result.page.filter((r) => r.locationId === args.locationId)
+      : result.page
+    return { ...result, page: await withCages(ctx, rows) }
   },
 })
 
@@ -481,7 +516,8 @@ export const listSampling = query({
           .query('harvestSampling')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('harvestSampling').collect()
+      : await scopedRows(ctx, user, 'harvestSampling')
+
 
     samples = await listForCompany(user, samples)
     return samples.map(toClientHarvestSampling)

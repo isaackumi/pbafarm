@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import { scopedRows } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import {
@@ -135,7 +136,7 @@ export const listSuppliers = query({
   args: { includeDeleted: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let suppliers = await ctx.db.query('feedSuppliers').collect()
+    let suppliers = await scopedRows(ctx, user, 'feedSuppliers')
     suppliers = await listForCompany(user, suppliers)
     if (!args.includeDeleted) {
       suppliers = suppliers.filter((s) => !s.deletedAt)
@@ -223,7 +224,7 @@ export const listFeedTypes = query({
   args: { includeDeleted: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
+    let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
     if (!args.includeDeleted) {
       feedTypes = feedTypes.filter((f) => !f.deletedAt)
@@ -360,7 +361,7 @@ export const listPurchases = query({
           .query('feedPurchases')
           .withIndex('by_feed_type', (q) => q.eq('feedTypeId', args.feedTypeId!))
           .collect()
-      : await ctx.db.query('feedPurchases').collect()
+      : await scopedRows(ctx, user, 'feedPurchases')
 
     purchases = await listForCompanyAndLocation(user, purchases, args.locationId)
     purchases = purchases.filter((p) => !p.deletedAt)
@@ -607,7 +608,7 @@ export const listUsage = query({
         .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
         .collect()
     } else {
-      usage = await ctx.db.query('feedUsage').collect()
+      usage = await scopedRows(ctx, user, 'feedUsage')
     }
 
     usage = await listForCompanyAndLocation(user, usage, args.locationId)

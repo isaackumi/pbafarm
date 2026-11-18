@@ -309,6 +309,7 @@ const schema = defineSchema({
     .index('by_cage_date', ['cageId', 'date'])
     .index('by_date', ['date'])
     .index('by_company', ['companyId'])
+    .index('by_company_and_date', ['companyId', 'date'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
 
@@ -332,6 +333,7 @@ const schema = defineSchema({
     .index('by_batch_code', ['batchCode'])
     .index('by_company_and_batchCode', ['companyId', 'batchCode'])
     .index('by_company', ['companyId'])
+    .index('by_company_and_date', ['companyId', 'date'])
     .index('by_date', ['date'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
@@ -378,6 +380,7 @@ const schema = defineSchema({
   })
     .index('by_cage', ['cageId'])
     .index('by_company', ['companyId'])
+    .index('by_company_and_harvestDate', ['companyId', 'harvestDate'])
     .index('by_date', ['harvestDate'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
@@ -400,6 +403,7 @@ const schema = defineSchema({
   })
     .index('by_harvest', ['harvestId'])
     .index('by_cage', ['cageId'])
+    .index('by_company', ['companyId'])
     .index('by_location', ['locationId']),
 
   feedInventory: defineTable({
@@ -475,6 +479,8 @@ const schema = defineSchema({
     .index('by_cage', ['cageId'])
     .index('by_status', ['status'])
     .index('by_company', ['companyId'])
+    .index('by_company_and_status', ['companyId', 'status'])
+    .index('by_company_and_batchNumber', ['companyId', 'batchNumber'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
 
@@ -500,6 +506,7 @@ const schema = defineSchema({
     .index('by_stocking', ['stockingId'])
     .index('by_status', ['status'])
     .index('by_company', ['companyId'])
+    .index('by_company_and_status', ['companyId', 'status'])
     .index('by_location', ['locationId']),
 
   fishTransfers: defineTable({
@@ -530,6 +537,7 @@ const schema = defineSchema({
   })
     .index('by_company', ['companyId'])
     .index('by_status', ['status'])
+    .index('by_company_and_status', ['companyId', 'status'])
     .index('by_source_cage', ['sourceCageId'])
     .index('by_destination_cage', ['destinationCageId'])
     .index('by_company_location', ['companyId', 'sourceLocationId'])
@@ -548,7 +556,8 @@ const schema = defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_table', ['tableName'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_company_and_tableName', ['companyId', 'tableName']),
 
   notifications: defineTable({
     userId: v.id('users'),
@@ -606,6 +615,8 @@ const schema = defineSchema({
     .index('by_harvest', ['harvestId'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId'])
+    .index('by_company_and_cage', ['companyId', 'cageId'])
+    .index('by_company_and_saleDate', ['companyId', 'saleDate'])
     .index('by_date', ['saleDate']),
 
   /** Health events / treatments on a cage (medications, diagnosis, withdrawal). */
@@ -630,6 +641,8 @@ const schema = defineSchema({
     .index('by_company', ['companyId'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId'])
+    .index('by_company_and_date', ['companyId', 'date'])
+    .index('by_company_and_withdrawalUntil', ['companyId', 'withdrawalUntil'])
     .index('by_date', ['date']),
 })
 
