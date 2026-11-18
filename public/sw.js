@@ -1,21 +1,69 @@
 /* PBA Farm service worker: keeps the app shell available with weak signal.
  * Data never goes through here. Convex runs on another origin and is skipped,
  * and unsent daily entries live in the page's own outbox (lib/offlineOutbox.js).
+ *
+ * The page registers `/sw.js?v=<Next build id>` (pages/_app.js), so every
+ * deploy installs a new worker with its own cache, and `activate` deletes the
+ * caches of older builds (old hashed chunks no longer pile up on the phone).
  */
-const VERSION = 'pbafarm-v1'
-const SHELL = ['/daily-entry', '/dashboard', '/manifest.webmanifest', '/icon.svg']
+const BUILD = new URL(self.location.href).searchParams.get('v') || 'dev'
+const PREFIX = 'pbafarm-'
+const VERSION = `${PREFIX}${BUILD}`
+
+// Pages a field worker needs with no signal. Their JS/CSS chunks are read
+// from the HTML and cached too, so a cold start offline can run them.
+const SHELL_PAGES = ['/daily-entry', '/dashboard', '/login']
+const SHELL_FILES = ['/manifest.webmanifest', '/icon.svg']
+
+function cacheable(res) {
+  return res && res.ok && res.type === 'basic' && !res.redirected
+}
+
+async function precache() {
+  const cache = await caches.open(VERSION)
+  const assets = new Set(SHELL_FILES)
+  await Promise.all(
+    SHELL_PAGES.map(async (path) => {
+      try {
+        const res = await fetch(path, { credentials: 'same-origin', cache: 'no-store' })
+        if (!cacheable(res)) return
+        const html = await res.clone().text()
+        await cache.put(path, res)
+        for (const m of html.matchAll(/(?:src|href)="(\/_next\/static\/[^"]+)"/g)) {
+          assets.add(m[1])
+        }
+      } catch {
+        // offline during install: the page is cached on the next visit
+      }
+    }),
+  )
+  await Promise.all(
+    [...assets].map(async (url) => {
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' })
+        if (cacheable(res)) await cache.put(url, res)
+      } catch {
+        // best effort
+      }
+    }),
+  )
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()),
-  )
+  event.waitUntil(precache().then(() => self.skipWaiting()))
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith(PREFIX) && k !== VERSION)
+            .map((k) => caches.delete(k)),
+        ),
+      )
       .then(() => self.clients.claim()),
   )
 })
@@ -26,6 +74,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/')) return
+  if (url.pathname === '/sw.js') return
 
   // Hashed build assets never change: cache first.
   if (url.pathname.startsWith('/_next/static/') || url.pathname.match(/\.(svg|png|ico|woff2?)$/)) {
@@ -34,8 +83,10 @@ self.addEventListener('fetch', (event) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            const copy = res.clone()
-            caches.open(VERSION).then((c) => c.put(req, copy))
+            if (cacheable(res)) {
+              const copy = res.clone()
+              caches.open(VERSION).then((c) => c.put(req, copy))
+            }
             return res
           }),
       ),
@@ -43,17 +94,21 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Pages: network first, fall back to the last copy, then to daily entry.
+  // Pages: network first, fall back to the last good copy, then to daily entry.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(VERSION).then((c) => c.put(req, copy))
+          if (cacheable(res)) {
+            const copy = res.clone()
+            caches.open(VERSION).then((c) => c.put(url.pathname, copy))
+          }
           return res
         })
         .catch(() =>
-          caches.match(req).then((hit) => hit || caches.match('/daily-entry')),
+          caches
+            .match(url.pathname, { ignoreSearch: true })
+            .then((hit) => hit || caches.match('/daily-entry')),
         ),
     )
   }

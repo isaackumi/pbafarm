@@ -32,9 +32,13 @@ function useServiceWorker() {
     // Production only: a service worker caching dev bundles makes hot reload lie.
     if (process.env.NODE_ENV !== 'production') return
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.warn('Service worker registration failed', err)
-    })
+    // A new URL per build installs a new worker, which drops the old build's cache.
+    const build = window.__NEXT_DATA__?.buildId || 'dev'
+    navigator.serviceWorker
+      .register(`/sw.js?v=${encodeURIComponent(build)}`)
+      .catch((err) => {
+        console.warn('Service worker registration failed', err)
+      })
   }, [])
 }
 
@@ -111,8 +115,24 @@ class AuthErrorBoundary extends Component {
   }
 }
 
+/**
+ * Shown while the shell runs from the account saved on this device because
+ * Convex could not be reached (offline cold start, MOBILE-001).
+ */
+function OfflineSessionBanner() {
+  return (
+    <div
+      role="status"
+      className="sticky top-0 z-40 bg-foam-deep px-4 py-2 text-center text-sm text-chart-ink print:hidden"
+    >
+      No connection. Using the account saved on this phone. Entries are kept on
+      this device and sent when you are back online.
+    </div>
+  )
+}
+
 function AuthWrapper({ children }) {
-  const { user, initialized, loading, accessState, signOut } = useAuth()
+  const { user, initialized, loading, accessState, signOut, offlineMode } = useAuth()
   const router = useRouter()
   const signingOut = useRef(false)
   // AuthContext's signOut is a new function every render; keep callbacks stable.
@@ -128,7 +148,8 @@ function AuthWrapper({ children }) {
       if (signingOut.current) return
       signingOut.current = true
       try {
-        await signOutRef.current()
+        // Server ended the session: no outbox prompt; queued entries are kept.
+        await signOutRef.current({ force: true })
       } finally {
         signingOut.current = false
         router.replace(`/login?reason=${encodeURIComponent(code)}`)
@@ -202,6 +223,7 @@ function AuthWrapper({ children }) {
 
   return (
     <AuthErrorBoundary key={currentPath} onAuthError={signOutWithReason}>
+      {offlineMode && <OfflineSessionBanner />}
       {children}
     </AuthErrorBoundary>
   )

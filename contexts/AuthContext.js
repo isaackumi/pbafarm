@@ -1,5 +1,13 @@
 // contexts/AuthContext.js — Convex Auth bridge
-import React, { createContext, useContext, useEffect, useMemo } from 'react'
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useConvex, useConvexAuth, useQuery } from 'convex/react'
 import { useAuthActions, useAuthToken } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
@@ -8,6 +16,22 @@ import {
   bindConvexReactClient,
 } from '../lib/convexBridge'
 import { clearLlmKeys } from '../lib/llmClient'
+import {
+  clearOutbox,
+  flushOutbox,
+  migrateLegacyOutbox,
+  outboxCount,
+} from '../lib/offlineOutbox'
+import { clearDeviceData } from '../lib/deviceData'
+import SignOutOutboxDialog from '../components/SignOutOutboxDialog'
+import {
+  CONNECT_TIMEOUT_MS,
+  accessStateOf,
+  decideOfflineSession,
+  readCachedUser,
+  userIdFromToken,
+  writeCachedUser,
+} from '../lib/offlineSession'
 
 const AuthContext = createContext()
 
@@ -30,55 +54,119 @@ export function AuthProvider({ children }) {
   // Invites are no longer claimed automatically (SEC-003): a company-less user
   // asks to join from /register-company and a company admin approves.
 
+  // Convex has answered for this session: the real result wins from here on.
+  const authResolved =
+    !isLoading && (!isAuthenticated || convexUser !== undefined)
+
+  // Offline cold start (MOBILE-001): with no signal Convex never confirms the
+  // stored token, so fall back to the last-known user saved on this device.
+  const [online, setOnline] = useState(true)
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const update = () => setOnline(navigator.onLine !== false)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (authResolved || !authToken) {
+      setTimedOut(false)
+      return undefined
+    }
+    const t = setTimeout(() => setTimedOut(true), CONNECT_TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [authResolved, authToken])
+
+  const offlineUser = useMemo(() => {
+    if (authResolved || typeof window === 'undefined') return null
+    let storage = null
+    try {
+      storage = window.localStorage
+    } catch {
+      return null
+    }
+    return decideOfflineSession({
+      authResolved,
+      online,
+      timedOut,
+      token: authToken,
+      cachedUser: readCachedUser(storage, userIdFromToken(authToken)),
+    })
+  }, [authResolved, online, timedOut, authToken])
+
+  /** True while the shell runs from the cached user because Convex is unreachable. */
+  const offlineMode = Boolean(offlineUser)
+
+  // Remember the last-known user for the next offline start (minimal fields,
+  // no secrets). Inactive/unapproved accounts are removed instead.
+  useEffect(() => {
+    if (!isAuthenticated || !convexUser || typeof window === 'undefined') return
+    try {
+      writeCachedUser(window.localStorage, convexUser)
+    } catch {
+      // storage blocked
+    }
+  }, [isAuthenticated, convexUser])
+
+  const sourceUser = offlineMode
+    ? offlineUser
+    : isAuthenticated
+      ? convexUser
+      : null
+
   /**
    * What this account may do right now, mirroring requireUser on the server:
    * 'ok' | 'USER_INACTIVE' | 'COMPANY_NOT_APPROVED' (both sign out)
    * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'NO_COMPANY' (only /register-company)
    */
-  const accessState = useMemo(() => {
-    if (!isAuthenticated || !convexUser) return null
-    const role = convexUser.role || 'user'
-    if (convexUser.active === false) return 'USER_INACTIVE'
-    if (
-      role !== 'super_admin' &&
-      convexUser.companyId &&
-      convexUser.companyStatus !== 'approved'
-    ) {
-      return 'COMPANY_NOT_APPROVED'
-    }
-    if (convexUser.mustChangePassword === true) return 'PASSWORD_CHANGE_REQUIRED'
-    if (role !== 'super_admin' && !convexUser.companyId) return 'NO_COMPANY'
-    return 'ok'
-  }, [isAuthenticated, convexUser])
+  const accessState = useMemo(() => accessStateOf(sourceUser), [sourceUser])
 
   const user = useMemo(() => {
-    if (!isAuthenticated || !convexUser) return null
+    if (!sourceUser) return null
     return {
-      id: convexUser._id,
-      _id: convexUser._id,
-      email: convexUser.email,
-      name: convexUser.name,
-      role: convexUser.role || 'user',
-      companyId: convexUser.companyId,
-      mustChangePassword: convexUser.mustChangePassword === true,
-      active: convexUser.active !== false,
-      companyStatus: convexUser.companyStatus ?? null,
+      id: sourceUser._id,
+      _id: sourceUser._id,
+      email: sourceUser.email,
+      name: sourceUser.name,
+      role: sourceUser.role || 'user',
+      companyId: sourceUser.companyId,
+      mustChangePassword: sourceUser.mustChangePassword === true,
+      active: sourceUser.active !== false,
+      companyStatus: sourceUser.companyStatus ?? null,
       accessState,
-      activeLocationId: convexUser.activeLocationId,
-      locationIds: convexUser.locationIds,
+      activeLocationId: sourceUser.activeLocationId,
+      locationIds: sourceUser.locationIds,
+      offline: offlineMode,
       // Compatibility with former Supabase user shape
       user_metadata: {
-        full_name: convexUser.name,
-        role: convexUser.role || 'user',
+        full_name: sourceUser.name,
+        role: sourceUser.role || 'user',
       },
     }
-  }, [isAuthenticated, convexUser, accessState])
+  }, [sourceUser, accessState, offlineMode])
 
   /** True when tenant data may be loaded (providers skip their queries otherwise). */
   const canUseApp = accessState === 'ok'
 
-  const loading = isLoading || (isAuthenticated && convexUser === undefined)
-  const initialized = !isLoading
+  // Entries queued before the outbox was scoped per user move to the user
+  // signed in now; items stamped with another owner stay where they are.
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId || !canUseApp) return
+    migrateLegacyOutbox(userId)
+  }, [userId, canUseApp])
+
+  const loading = offlineMode
+    ? false
+    : isLoading || (isAuthenticated && convexUser === undefined)
+  const initialized = offlineMode || !isLoading
 
   const signInWithEmail = async (email, password) => {
     try {
@@ -116,10 +204,82 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signOut = async () => {
+  // Sign-out on a shared phone (MOBILE-001): unsent entries are sent or
+  // discarded on purpose, then the device forgets this user's data.
+  const [outboxPrompt, setOutboxPrompt] = useState(null)
+  const promptResolve = useRef(null)
+
+  const askOutbox = useCallback(
+    (count, note = '') =>
+      new Promise((resolve) => {
+        promptResolve.current = resolve
+        setOutboxPrompt({ count, note, sending: false })
+      }),
+    [],
+  )
+
+  const answerOutbox = useCallback((choice) => {
+    const resolve = promptResolve.current
+    promptResolve.current = null
+    if (choice === 'send') {
+      setOutboxPrompt((p) => (p ? { ...p, sending: true } : p))
+    } else {
+      setOutboxPrompt(null)
+    }
+    resolve?.(choice)
+  }, [])
+
+  /**
+   * @param {{ force?: boolean }} [options] force: the server ended the session
+   *   (inactive account, company not approved). No prompt; this user's queued
+   *   entries are kept (scoped to them, never sent by anyone else).
+   * @returns {Promise<{ error: any, cancelled?: boolean }>}
+   */
+  const signOut = async ({ force = false } = {}) => {
+    const userId = user?.id
+    if (!force && userId) {
+      let pending = outboxCount(userId)
+      let note = ''
+      while (pending > 0) {
+        const choice = await askOutbox(pending, note)
+        if (choice === 'cancel') return { error: null, cancelled: true }
+        if (choice === 'discard') {
+          clearOutbox(userId)
+          break
+        }
+        // Lazy: keep the service layer out of the first-load bundle.
+        const { dailyRecordService } = await import('../lib/databaseService')
+        const { sent, failed } = await flushOutbox(
+          (payload) => dailyRecordService.createBatch(payload),
+          userId,
+        )
+        pending = outboxCount(userId)
+        if (pending > 0) {
+          note =
+            failed > 0
+              ? `${pending} could not be sent. Open Daily entry to see why, or discard them.`
+              : sent > 0
+                ? `${sent} sent. ${pending} still waiting; the connection dropped.`
+                : 'Could not reach the server. Try again when you have signal.'
+        }
+      }
+      setOutboxPrompt(null)
+    }
     // Pasted assistant keys live in plaintext localStorage: drop them first,
     // even if the network sign-out below fails.
     clearLlmKeys()
+    if (typeof window !== 'undefined') {
+      try {
+        clearDeviceData({
+          local: window.localStorage,
+          session: window.sessionStorage,
+          userId,
+          keepOutbox: force,
+        })
+      } catch {
+        // storage blocked
+      }
+    }
     try {
       await convexSignOut()
       setConvexAuthToken(null)
@@ -154,6 +314,7 @@ export function AuthProvider({ children }) {
     loading,
     initialized,
     isAuthenticated,
+    offlineMode,
     signInWithEmail,
     signInWithGoogle,
     signUpWithEmail,
@@ -166,7 +327,19 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={authValue}>
+      {children}
+      {outboxPrompt && (
+        <SignOutOutboxDialog
+          count={outboxPrompt.count}
+          note={outboxPrompt.note}
+          sending={outboxPrompt.sending}
+          onSend={() => answerOutbox('send')}
+          onDiscard={() => answerOutbox('discard')}
+          onCancel={() => answerOutbox('cancel')}
+        />
+      )}
+    </AuthContext.Provider>
   )
 }
 

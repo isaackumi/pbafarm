@@ -86,7 +86,8 @@ const DailyUploadPage = () => {
   const [online, setOnline] = useState(true)
   const prefilledFor = useRef(null)
   const { showToast } = useToast()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
+  const userId = user?.id
   const { formData, setFormData, handleChange, clear } = usePersistedForm(
     'daily-entry-batch',
     DEFAULTS,
@@ -345,12 +346,13 @@ const DailyUploadPage = () => {
 
   // ---- offline outbox ----------------------------------------------------
 
-  const refreshOutbox = useCallback(() => setOutbox(listOutbox()), [])
+  const refreshOutbox = useCallback(() => setOutbox(listOutbox(userId)), [userId])
 
   const sendQueued = useCallback(async () => {
-    if (!listOutbox().length) return
-    const { sent, failed } = await flushOutbox((payload) =>
-      dailyRecordService.createBatch(payload),
+    if (!listOutbox(userId).length) return
+    const { sent, failed } = await flushOutbox(
+      (payload) => dailyRecordService.createBatch(payload),
+      userId,
     )
     refreshOutbox()
     if (sent) {
@@ -359,7 +361,7 @@ const DailyUploadPage = () => {
       loadLogged(formData.date)
     }
     if (failed) showToast(`${failed} saved batch${failed === 1 ? '' : 'es'} need attention`, 'error')
-  }, [refreshOutbox, showToast, loadLookups, loadLogged, formData.date])
+  }, [refreshOutbox, showToast, loadLookups, loadLogged, formData.date, userId])
 
   useEffect(() => {
     refreshOutbox()
@@ -423,7 +425,7 @@ const DailyUploadPage = () => {
     const summary = `${formData.date} · ${count} cage${count === 1 ? '' : 's'}`
 
     const queueIt = () => {
-      enqueue(payload, summary)
+      enqueue(payload, summary, userId)
       resetForm()
       showToast('No connection. Saved on this device and will send when you are back online', 'info')
     }
@@ -493,7 +495,7 @@ const DailyUploadPage = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    removeFromOutbox(i.id)
+                    removeFromOutbox(i.id, userId)
                     refreshOutbox()
                   }}
                 >

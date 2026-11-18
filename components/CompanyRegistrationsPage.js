@@ -63,7 +63,8 @@ const CompanyRegistrationsPage = () => {
   }
 
   const handleSignOut = async () => {
-    await signOut()
+    const { cancelled } = (await signOut()) || {}
+    if (cancelled) return
     router.replace('/login')
   }
 
