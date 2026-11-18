@@ -10,6 +10,7 @@
 
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
+import type * as assistant from "../assistant.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
 import type * as automation_checks from "../automation/checks.js";
@@ -70,7 +71,9 @@ import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
 import type * as lib_growth from "../lib/growth.js";
 import type * as lib_hatcheryAccess from "../lib/hatcheryAccess.js";
 import type * as lib_idempotency from "../lib/idempotency.js";
+import type * as lib_insights from "../lib/insights.js";
 import type * as lib_kpi from "../lib/kpi.js";
+import type * as lib_llmProviders from "../lib/llmProviders.js";
 import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_orgProfile from "../lib/orgProfile.js";
 import type * as lib_phone from "../lib/phone.js";
@@ -129,6 +132,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
+  assistant: typeof assistant;
   audit: typeof audit;
   auth: typeof auth;
   "automation/checks": typeof automation_checks;
@@ -189,7 +193,9 @@ declare const fullApi: ApiFromModules<{
   "lib/growth": typeof lib_growth;
   "lib/hatcheryAccess": typeof lib_hatcheryAccess;
   "lib/idempotency": typeof lib_idempotency;
+  "lib/insights": typeof lib_insights;
   "lib/kpi": typeof lib_kpi;
+  "lib/llmProviders": typeof lib_llmProviders;
   "lib/memberships": typeof lib_memberships;
   "lib/orgProfile": typeof lib_orgProfile;
   "lib/phone": typeof lib_phone;

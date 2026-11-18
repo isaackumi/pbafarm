@@ -31,6 +31,8 @@ import {
   DashboardSkeleton,
 } from './ui'
 import { localToday } from '../lib/format'
+import { useQuery } from 'convex/react'
+import DashboardInsights from './DashboardInsights'
 import SiteConditions from './SiteConditions'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
@@ -86,6 +88,7 @@ export default function Dashboard() {
   const router = useRouter()
   const { user } = useAuth()
   const { activeLocationId, locationArgs } = useLocation()
+  const aiStatus = useQuery(api.companies.aiAssistantStatus, user ? {} : 'skip')
   const [cages, setCages] = useState([])
   const [dailyRecords, setDailyRecords] = useState([])
   const [recentStockings, setRecentStockings] = useState([])
@@ -336,6 +339,11 @@ export default function Dashboard() {
           hint="Last 30 days"
         />
       </div>
+
+      <DashboardInsights
+        locationId={locationArgs?.locationId}
+        aiEnabled={aiStatus?.enabled === true}
+      />
 
       {/* Charts + table */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

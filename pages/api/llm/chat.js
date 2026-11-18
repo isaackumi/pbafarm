@@ -1,33 +1,33 @@
-import { chatCompletionWithKey, LLM_PROVIDERS } from '../../../lib/llmClient'
-import {
-  defaultProviderFromEnv,
-  readServerProviderKey,
-} from '../../../lib/llmEnv'
 import { requireApiUser } from '../../../lib/llmApiAuth'
 import { api } from '../../../lib/convexBridge'
-import {
-  clampTemperature,
-  createRateLimiter,
-  resolveAllowedModel,
-  validateMessages,
-} from '../../../lib/llmProxyGuard'
+import { clampTemperature, createRateLimiter, validateMessages } from '../../../lib/llmProxyGuard'
+import { assistantSystemPrompt, businessDateOr, resolveProvider } from '../../../lib/llmServer'
+import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
 
 /**
- * Server-side LLM proxy: spends the server's provider keys on behalf of a
- * signed-in user whose company has the assistant enabled.
+ * Server-side LLM proxy (PLAT-006, ANLY-005): spends the server's provider
+ * keys on behalf of a signed-in user whose company has the assistant enabled.
+ * Provider keys never reach the browser and the browser never calls a
+ * provider.
  *
- * Guards: Convex session token verified (requireApiUser calls users.current
- * with it), deactivated users refused, company AI toggle, per-user rate limit,
- * model allow-list, message count/size caps.
+ * The farm context is loaded here with the user's own token
+ * (assistant.context: company-scoped rollups, last N days), so the model only
+ * sees what this user may see. System messages from the client are dropped.
  *
- * Rate limits are in-memory per server instance (see lib/llmProxyGuard.js):
- * a stopgap until a shared limiter exists.
+ * Guards: Convex session token verified (requireApiUser), deactivated users
+ * refused, company AI toggle, per-user rate limit, model allow-list, message
+ * count/size caps, Schema-validated body. Provider calls: convex/lib/llmProviders
+ * (Effect: 30 s per attempt, transient-only retry, Schema-validated replies).
+ *
+ * Rate limits are in-memory per server instance (lib/llmProxyGuard.js).
  */
 const perMinute = createRateLimiter({ limit: 10, windowMs: 60_000 })
 const perHour = createRateLimiter({ limit: 100, windowMs: 60 * 60_000 })
 
-// Accept a little more than the 120k-char message cap (JSON overhead).
 export const config = { api: { bodyParser: { sizeLimit: '256kb' } } }
+
+/** Keep the last turns of the conversation, user and assistant only. */
+const HISTORY = 9
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -56,73 +56,42 @@ export default async function handler(req, res) {
   try {
     const aiStatus = await auth.client.query(api.companies.aiAssistantStatus, {})
     if (!aiStatus?.enabled) {
-      return res.status(403).json({
-        error: 'Assistant is disabled for your company',
+      return res.status(403).json({ error: 'Assistant is disabled for your company' })
+    }
+
+    const body = decodeChatBody(req.body)
+    if (!body.ok) return res.status(400).json({ error: body.error })
+
+    const checked = validateMessages(body.value.messages)
+    if (checked.error) return res.status(400).json({ error: checked.error })
+    const turns = checked.messages.filter((m) => m.role !== 'system').slice(-HISTORY)
+    if (!turns.length || turns[turns.length - 1].role !== 'user') {
+      return res.status(400).json({ error: 'The last message must be a question' })
+    }
+
+    const resolved = resolveProvider(body.value.provider, body.value.model)
+    if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
+
+    let context
+    try {
+      context = await auth.client.query(api.assistant.context, {
+        asOf: businessDateOr(body.value.asOf),
+        days: 14,
       })
+    } catch (err) {
+      context = { error: err?.data?.message || err?.message || 'Could not load farm context' }
     }
 
-    const {
-      provider: requestedProvider,
-      model: requestedModel,
-      messages: rawMessages,
-      temperature,
-    } = req.body || {}
-
-    const checked = validateMessages(rawMessages)
-    if (checked.error) {
-      return res.status(400).json({ error: checked.error })
-    }
-
-    const providerId =
-      (requestedProvider && LLM_PROVIDERS[requestedProvider]
-        ? requestedProvider
-        : null) ||
-      defaultProviderFromEnv() ||
-      'gemini'
-
-    const apiKey = readServerProviderKey(providerId)
-    if (!apiKey) {
-      const envName =
-        {
-          gemini: 'GEMINI_API_KEY',
-          openai: 'OPENAI_API_KEY',
-          openrouter: 'OPENROUTER_API_KEY',
-          anthropic: 'ANTHROPIC_API_KEY',
-          groq: 'GROQ_API_KEY',
-          custom: 'CUSTOM_LLM_API_KEY',
-        }[providerId] || 'GEMINI_API_KEY'
-      return res.status(400).json({
-        error: `No API key configured for ${providerId}. Add ${envName} to .env.local (or save a key in the assistant).`,
-      })
-    }
-
-    const provider = LLM_PROVIDERS[providerId]
-    const model = resolveAllowedModel(
-      provider,
-      requestedModel,
-      process.env.LLM_EXTRA_MODELS,
-    )
-    if (!model) {
-      return res.status(400).json({
-        error: `Model "${String(requestedModel).slice(0, 80)}" is not allowed for ${providerId}`,
-      })
-    }
-
-    const text = await chatCompletionWithKey({
-      provider: providerId,
-      apiKey,
-      model,
-      messages: checked.messages,
-      temperature: clampTemperature(temperature),
-      // Never let the browser choose where the server's key is sent.
-      customBaseUrl: process.env.CUSTOM_LLM_BASE_URL || '',
+    const text = await runChat({
+      ...resolved.chat,
+      messages: [{ role: 'system', content: assistantSystemPrompt(context) }, ...turns],
+      temperature: clampTemperature(body.value.temperature ?? undefined),
+      referer: req.headers.origin || undefined,
     })
 
-    return res.status(200).json({ text, provider: providerId })
+    return res.status(200).json({ text, provider: resolved.providerId })
   } catch (err) {
-    console.error('[api/llm/chat]', err)
-    return res.status(500).json({
-      error: err?.message || 'Assistant request failed',
-    })
+    console.error('[api/llm/chat]', err?.message)
+    return res.status(500).json({ error: err?.message || 'Assistant request failed' })
   }
 }

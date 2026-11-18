@@ -111,7 +111,7 @@ Research date for every external fact below: **2026-11-18**.
 | ID | Item | State |
 |---|---|---|
 | PLAT-005 | Foundation: `effect` dependency, `convex/lib/effect.ts`, `convex/lib/effectHttp.ts`, lint rule, tests, this doc | Implemented |
-| PLAT-006 | AI proxy (`pages/api/llm/chat.js`) on Effect: Schema-validated request body, per-attempt timeout + transient-only retry, typed provider errors, Schema-validated provider responses | Not started (next candidate) |
+| PLAT-006 | AI proxy (`pages/api/llm/chat.js`) on Effect: Schema-validated request body, per-attempt timeout + transient-only retry, typed provider errors, Schema-validated provider responses | Implemented (`convex/lib/llmProviders.ts`) |
 | PLAT-007 | **Pilot:** messaging provider adapters (`convex/messaging/providers/*`) on Effect | Implemented |
 
 **PLAT-007 (pilot) as built.** `convex/messaging/providers/send.ts` holds the shared pieces: tagged `ProviderRejected` (provider answered and refused; carries `retryable`) and `ProviderUnavailable` (network, timeout, 429, 5xx); `providerPost` (wraps `requestJson` with the send policy and turns HTTP errors into those tags, using each vendor's error-message format); `decodeBody` (Schema check of 2xx bodies); `runSend` (provides the `Fetch` service and returns the existing `SendResult`, never throws). Each adapter's `send` is now an `Effect.gen` program; the `ProviderAdapter` interface, request shapes, messages and `retryable` flags are unchanged, so `deliver.ts` and `channels.ts` did not change.
