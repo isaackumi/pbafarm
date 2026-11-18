@@ -712,7 +712,7 @@ const BulkUploadModal = ({
                       Ready to Import
                     </h5>
                     <p className="text-sm text-green-700">
-                      You're about to upload {parsedData.length} {recordType}{' '}
+                      You&apos;re about to upload {parsedData.length} {recordType}{' '}
                       records. This action cannot be undone.
                     </p>
                   </div>
