@@ -142,7 +142,8 @@ export const attach = mutation({
         q.eq('companyId', owner.companyId).eq('entityType', args.entityType).eq('entityId', args.entityId),
       )
       .take(FILES_PER_RECORD)
-    if (existing.length >= FILES_PER_RECORD) {
+    // Photos of a custom photo field all hang off its definition: no per-record cap.
+    if (args.entityType !== 'customFieldDefs' && existing.length >= FILES_PER_RECORD) {
       return await reject(`A record can have at most ${FILES_PER_RECORD} files`)
     }
     const name = args.name.trim().slice(0, 200) || 'file'

@@ -6,6 +6,7 @@ import { rateLimiter } from './lib/rateLimits'
 import { apiActorUser, withApiActor } from './lib/apiActor'
 import { saveDailyBatch } from './dailyRecords'
 import { saveSamplingBatch } from './biweeklyRecords'
+import { customValues } from './schema'
 import { timingSafeEqual } from './integrations/apiScopes'
 
 /**
@@ -126,6 +127,7 @@ export function cageOut(r: Doc<'cages'>) {
     currentAbwG: r.currentWeight ?? null,
     capacity: r.capacity ?? null,
     batchId: r.currentBatchId ?? null,
+    custom: r.custom ?? {},
     updatedAt: iso(r.updatedAt),
   }
 }
@@ -147,6 +149,7 @@ export function dailyOut(r: Doc<'dailyRecords'>) {
     notes: r.notes ?? null,
     siteId: r.locationId ?? null,
     batchId: r.batchId ?? null,
+    custom: r.custom ?? {},
     createdAt: iso(r._creationTime),
   }
 }
@@ -165,6 +168,7 @@ export function samplingOut(r: Doc<'biweeklyRecords'>) {
     secchiCm: r.secchiCm ?? null,
     siteId: r.locationId ?? null,
     batchId: r.batchId ?? null,
+    custom: r.custom ?? {},
     createdAt: iso(r._creationTime),
   }
 }
@@ -182,6 +186,7 @@ function harvestOut(r: Doc<'harvestRecords'>) {
     fcr: r.fcr,
     siteId: r.locationId ?? null,
     batchId: r.batchId ?? null,
+    custom: r.custom ?? {},
     createdAt: iso(r._creationTime),
   }
 }
@@ -470,6 +475,7 @@ export const createDailyRecords = internalMutation({
         notes: v.optional(v.string()),
         dissolvedOxygen: v.optional(v.number()),
         temperatureC: v.optional(v.number()),
+        custom: v.optional(customValues),
       }),
     ),
   },
@@ -487,6 +493,7 @@ export const createDailyRecords = internalMutation({
       notes: r.notes,
       dissolvedOxygen: r.dissolvedOxygen,
       temperatureC: r.temperatureC,
+      custom: r.custom,
     }))
     await assertCagesInScope(ctx, actor.key, records.map((r) => r.cageId))
     const ids = await saveDailyBatch(actor.ctx, actor.user, { date: a.date, records })
@@ -512,6 +519,7 @@ export const createSampling = internalMutation({
         dissolvedOxygen: v.optional(v.number()),
         temperatureC: v.optional(v.number()),
         secchiCm: v.optional(v.number()),
+        custom: v.optional(customValues),
       }),
     ),
   },
@@ -528,6 +536,7 @@ export const createSampling = internalMutation({
       dissolvedOxygen: r.dissolvedOxygen,
       temperatureC: r.temperatureC,
       secchiCm: r.secchiCm,
+      custom: r.custom,
     }))
     await assertCagesInScope(ctx, actor.key, records.map((r) => r.cageId))
     const ids = await saveSamplingBatch(actor.ctx, actor.user, { date: a.date, records })

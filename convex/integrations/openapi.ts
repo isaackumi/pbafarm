@@ -11,6 +11,12 @@ const num = { type: 'number' }
 const int = { type: 'integer' }
 const date = { type: 'string', format: 'date' }
 const nullable = (s: Record<string, unknown>) => ({ ...s, type: [s.type as string, 'null'] })
+/** Organization-defined fields (D-007), keyed by field key; validated against the definitions on write. */
+const custom = {
+  type: 'object',
+  additionalProperties: true,
+  description: 'Custom field values by field key, as defined under Settings → Customization',
+}
 
 const schemas = {
   Error: {
@@ -25,7 +31,7 @@ const schemas = {
     properties: {
       id: str, name: str, code: nullable(str), status: str, siteId: nullable(str), species: nullable(str),
       stockingDate: nullable(date), initialCount: nullable(int), currentCount: nullable(int),
-      currentAbwG: nullable(num), capacity: nullable(num), batchId: nullable(str), updatedAt: nullable(str),
+      currentAbwG: nullable(num), capacity: nullable(num), batchId: nullable(str), custom, updatedAt: nullable(str),
     },
   },
   DailyRecord: {
@@ -34,7 +40,7 @@ const schemas = {
       id: str, cageId: str, date, feedKg: num, feedTypeId: nullable(str), feedType: nullable(str),
       feedCost: num, mortality: int, mortalityCause: nullable(str), dissolvedOxygen: nullable(num),
       temperatureC: nullable(num), secchiCm: nullable(num), notes: nullable(str), siteId: nullable(str),
-      batchId: nullable(str), createdAt: str,
+      batchId: nullable(str), custom, createdAt: str,
     },
   },
   Sampling: {
@@ -42,7 +48,7 @@ const schemas = {
     properties: {
       id: str, cageId: str, date, batchCode: str, averageBodyWeightG: num, fishCount: int,
       totalWeightG: num, dissolvedOxygen: nullable(num), temperatureC: nullable(num),
-      secchiCm: nullable(num), siteId: nullable(str), batchId: nullable(str), createdAt: str,
+      secchiCm: nullable(num), siteId: nullable(str), batchId: nullable(str), custom, createdAt: str,
     },
   },
   Harvest: {
@@ -50,7 +56,7 @@ const schemas = {
     properties: {
       id: str, cageId: str, harvestDate: date, harvestType: { enum: ['complete', 'partial'] },
       status: str, totalWeightKg: num, estimatedCount: int, averageBodyWeightG: num, fcr: num,
-      siteId: nullable(str), batchId: nullable(str), createdAt: str,
+      siteId: nullable(str), batchId: nullable(str), custom, createdAt: str,
     },
   },
   FeedStock: {
@@ -80,7 +86,7 @@ const schemas = {
           required: ['cageId', 'feedKg', 'mortality'],
           properties: {
             cageId: str, feedKg: { ...num, minimum: 0 }, feedTypeId: { ...str, description: 'Required when feedKg > 0' },
-            mortality: { ...int, minimum: 0 }, mortalityCause: str, notes: str, dissolvedOxygen: num, temperatureC: num,
+            mortality: { ...int, minimum: 0 }, mortalityCause: str, notes: str, dissolvedOxygen: num, temperatureC: num, custom,
           },
         },
       },
@@ -98,7 +104,7 @@ const schemas = {
           required: ['cageId', 'fishCount', 'totalWeightG'],
           properties: {
             cageId: str, fishCount: { ...int, minimum: 1 }, totalWeightG: { ...num, exclusiveMinimum: 0 },
-            batchCode: str, dissolvedOxygen: num, temperatureC: num, secchiCm: num,
+            batchCode: str, dissolvedOxygen: num, temperatureC: num, secchiCm: num, custom,
           },
         },
       },

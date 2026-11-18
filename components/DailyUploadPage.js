@@ -31,6 +31,7 @@ import { MORTALITY_CAUSES } from '../lib/farmHealth'
 import { parseCageScan } from '../lib/qrTarget'
 import QrScanner from './QrScanner'
 import { usePermission } from '../hooks/usePermission'
+import CustomFields, { customPayload } from './CustomFields'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const dayBefore = (iso) => {
@@ -422,6 +423,7 @@ const DailyUploadPage = () => {
           notes: l.notes?.trim() || undefined,
           dissolvedOxygen: formData.showWater ? optNum(l.dissolvedOxygen) : undefined,
           temperatureC: formData.showWater ? optNum(l.temperatureC) : undefined,
+          custom: customPayload(l.custom),
         }
       }),
       allowNegative: overrideActive || undefined,
@@ -830,6 +832,16 @@ const DailyUploadPage = () => {
                         placeholder="Feeding response, weather, anything unusual"
                       />
                     </details>
+                    <div className="col-span-2 md:col-span-12">
+                      <CustomFields
+                        entity="dailyRecords"
+                        value={line.custom}
+                        onChange={(next) => updateLine(line.key, 'custom', next)}
+                        locationId={cages.find((c) => idOf(c) === line.cageId)?.location_id}
+                        core={{ mortality: mort, feedAmount: kg, mortalityCause: line.mortalityCause }}
+                        idPrefix={`cf-${line.key}`}
+                      />
+                    </div>
                   </div>
                 )
               })}

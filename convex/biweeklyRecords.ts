@@ -11,11 +11,14 @@ import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, 
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
 import { requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
 import { emitDomainEvent } from './lib/events'
 
 function toClient(r: any) {
   return {
+    custom: r.custom ?? {},
     id: r._id,
     _id: r._id,
     cage_id: r.cageId,
@@ -141,6 +144,7 @@ export const create = mutation({
         })
       )
     ),
+    custom: v.optional(customValues),
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.sampling.record' })
@@ -153,10 +157,18 @@ export const create = mutation({
     }
 
     const now = Date.now()
-    const { samples, ...recordData } = args
+    const { samples, custom: rawCustom, ...recordData } = args
+    const custom = await validateCustom(ctx, {
+      companyId,
+      entity: 'biweeklyRecords',
+      custom: rawCustom,
+      mode: 'create',
+      context: { locationId: cage.locationId, core: recordData },
+    })
 
     const id = await ctx.db.insert('biweeklyRecords', {
       ...recordData,
+      custom,
       locationId: cage.locationId,
       companyId,
       createdBy: user._id,
@@ -230,6 +242,7 @@ export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
         dissolvedOxygen: v.optional(v.number()),
         temperatureC: v.optional(v.number()),
         secchiCm: v.optional(v.number()),
+        custom: v.optional(customValues),
       }),
     ),
   },
@@ -247,6 +260,7 @@ export type SamplingBatchLine = {
   dissolvedOxygen?: number
   temperatureC?: number
   secchiCm?: number
+  custom?: Record<string, unknown>
 }
 
 /**
@@ -296,8 +310,17 @@ export async function saveSamplingBatch(
       usedCodes.add(batchCode)
       const averageBodyWeight =
         Math.round((rec.totalWeight / rec.totalFishCount) * 100) / 100
+      const custom = await validateCustom(ctx, {
+        companyId,
+        entity: 'biweeklyRecords',
+        custom: rec.custom,
+        mode: 'create',
+        context: { locationId: cage.locationId, core: { ...rec, averageBodyWeight } },
+        label: `${line} (${cage.name})`,
+      })
 
       const id = await ctx.db.insert('biweeklyRecords', {
+        custom,
         cageId: rec.cageId,
         date,
         batchCode,
@@ -422,9 +445,10 @@ export const update = mutation({
       averageBodyWeight: v.optional(v.number()),
       totalFishCount: v.optional(v.number()),
       totalWeight: v.optional(v.number()),
+      custom: v.optional(customValues),
     }),
   },
-  handler: async (ctx, { id, patch }) => {
+  handler: async (ctx, { id, patch: rawPatch }) => {
     const { user } = await requireMember(ctx, { permission: 'production.sampling.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Biweekly record not found')
@@ -433,11 +457,22 @@ export const update = mutation({
 
     // Check batch code uniqueness if being updated
     if (
-      patch.batchCode &&
-      patch.batchCode !== existing.batchCode &&
-      (await batchCodeTaken(ctx, existing.companyId, patch.batchCode, id))
+      rawPatch.batchCode &&
+      rawPatch.batchCode !== existing.batchCode &&
+      (await batchCodeTaken(ctx, existing.companyId, rawPatch.batchCode, id))
     ) {
       throw new Error('Batch code already exists')
+    }
+    const patch = { ...rawPatch }
+    if (patch.custom !== undefined) {
+      patch.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'biweeklyRecords',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: existing.locationId, core: { ...existing, ...rawPatch } },
+      })
     }
 
     await ctx.db.patch(id, {

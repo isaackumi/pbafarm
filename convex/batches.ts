@@ -213,6 +213,8 @@ export const get = query({
       species: batch.speciesCode ?? null,
       opened_on: batch.openedOn,
       closed_on: batch.closedOn ?? null,
+      home_location_id: batch.homeLocationId ?? null,
+      custom: batch.custom ?? {},
       stocking_id: stocking?._id ?? null,
       parents: await refs(batch.parentBatchIds),
       ancestors: lin.ancestors.map((a) => ({ id: a._id, batch_number: a.batchNumber, depth: a.depth, status: a.status })),

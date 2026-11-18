@@ -14,6 +14,7 @@ import UnitProfile from '../../components/UnitProfile'
 import UnitTabs from '../../components/UnitTabs'
 import Link from 'next/link'
 import { usePermission } from '../../hooks/usePermission'
+import { CustomFieldsCard } from '../../components/CustomFields'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -238,6 +239,15 @@ function CageDetails() {
         <GrowthPanel growth={growth} cage={cage} />
 
         <BatchHistory cageId={cageId} />
+
+        <CustomFieldsCard
+          entity="cages"
+          recordId={cageId}
+          values={cage.custom}
+          locationId={cage.location_id}
+          core={{ unitType: cage.unit_type ?? cage.unitType, status: cage.status }}
+          editPermission="production.units.manage"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UnitProfile ws={ws} isAdmin={isAdmin} />

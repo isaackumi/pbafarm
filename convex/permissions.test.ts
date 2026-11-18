@@ -47,6 +47,7 @@ const ALLOWLIST: Record<string, string> = {
   'webhooks.rotateSecret': 'action; guarded by requireWebhookAdmin in internal.webhooks.endpointOwner',
   'weather.refreshSite': 'action; guarded by requireMember(org.sites.manage) in internal.weather.siteForRefresh',
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
+  'customFields.setValues': 'guarded by requireEntityEditor: the permission that edits that entity (ENTITY_EDIT_PERMISSION in customFields.ts) plus site scope',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
 }
 

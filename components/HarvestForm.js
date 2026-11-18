@@ -22,6 +22,7 @@ import {
 } from './ui'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
+import CustomFields, { CustomFieldValues, customPayload } from './CustomFields'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g above' },
@@ -49,6 +50,7 @@ const HARVEST_DEFAULTS = {
   })),
   notes: '',
   withdrawalOverrideReason: '',
+  custom: {},
 }
 
 const HarvestForm = ({ onComplete }) => {
@@ -251,6 +253,7 @@ const HarvestForm = ({ onComplete }) => {
           weight: parseFloat(size.weight) || 0,
         })),
         notes: formData.notes,
+        custom: customPayload(formData.custom),
         ...(withdrawal?.blocked && formData.withdrawalOverrideReason?.trim()
           ? { withdrawal_override_reason: formData.withdrawalOverrideReason.trim() }
           : {}),
@@ -556,6 +559,15 @@ const HarvestForm = ({ onComplete }) => {
             />
           </Field>
 
+          <CustomFields
+            entity="harvestRecords"
+            value={formData.custom}
+            onChange={(custom) => setFormData((prev) => ({ ...prev, custom }))}
+            locationId={selectedCageObject?.location_id}
+            core={{ harvestType: formData.harvestType, totalWeight: Number(formData.totalWeight) || 0 }}
+            title="More details"
+          />
+
           <FormActions className="justify-end">
             <Button type="button" variant="secondary" onClick={() => onComplete()}>
               Cancel
@@ -613,6 +625,8 @@ const HarvestForm = ({ onComplete }) => {
               ))}
             </ul>
           </div>
+
+          <CustomFieldValues entity="harvestRecords" values={customPayload(formData.custom)} />
 
           {formData.notes && (
             <div>

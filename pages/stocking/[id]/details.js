@@ -9,6 +9,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../components/Toast'
 import { api } from '../../../convex/_generated/api'
 import { usePermission } from '../../../hooks/usePermission'
+import { CustomFieldsCard } from '../../../components/CustomFields'
 
 function statusClass(status) {
   if (status === 'approved') return 'bg-kelp/15 text-kelp'
@@ -254,6 +255,15 @@ function StockingDetails() {
             </ul>
           </div>
         )}
+
+        <CustomFieldsCard
+          entity="stockingHistory"
+          recordId={stocking.id}
+          values={stocking.custom}
+          locationId={stocking.location_id}
+          core={{ species: stocking.species, fishCount: stocking.fish_count }}
+          editPermission="production.stocking.approve"
+        />
       </div>
 
       {rejectOpen && (

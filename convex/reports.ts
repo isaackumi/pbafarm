@@ -270,6 +270,7 @@ export const exportBundle = query({
       notes: r.notes,
       created_by: r.createdBy,
       created_at: r._creationTime,
+      custom: r.custom ?? {},
     })
 
     const transformBiweeklyRecord = (r: any) => ({
@@ -284,6 +285,7 @@ export const exportBundle = query({
       updated_by: r.updatedBy,
       updated_at: r.updatedAt,
       created_at: r._creationTime,
+      custom: r.custom ?? {},
     })
 
     const transformHarvestRecord = (r: any) => ({
@@ -302,6 +304,7 @@ export const exportBundle = query({
       status: r.status,
       created_by: r.createdBy,
       created_at: r._creationTime,
+      custom: r.custom ?? {},
     })
 
     return {

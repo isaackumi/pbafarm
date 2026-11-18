@@ -3,7 +3,8 @@ import { query, mutation } from './_generated/server'
 import { cageGrowth } from './lib/growth'
 import { mergeSettings, unitTypeOf } from './lib/farmRules'
 import { assertTransition, type UnitStatus } from './lib/unitStatus'
-import { unitTypeValidator } from './schema'
+import { customValues, unitTypeValidator } from './schema'
+import { validateCustom } from './lib/customFields'
 import { shadowCountEdit } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
@@ -115,6 +116,7 @@ const cageStatus = v.union(
 
 function toClient(cage: any) {
   return {
+    custom: cage.custom ?? {},
     id: cage._id,
     _id: cage._id,
     name: cage.name,
@@ -302,6 +304,7 @@ export const create = mutation({
     initialBiomass: v.optional(v.number()),
     status: v.optional(cageStatus),
     notes: v.optional(v.string()),
+    custom: v.optional(customValues),
     ...geometryArgs,
   },
   handler: async (ctx, rawArgs) => {
@@ -318,7 +321,15 @@ export const create = mutation({
     if (STOCKED.has(initialStatus) && !(args.initialCount && args.initialCount > 0)) {
       throw new Error('A new unit can only start stocked with an initial fish count; stock it instead.')
     }
+    const custom = await validateCustom(ctx, {
+      companyId: user.companyId,
+      entity: 'cages',
+      custom: args.custom,
+      mode: 'create',
+      context: { locationId, core: { ...args, status: initialStatus } },
+    })
     const id = await ctx.db.insert('cages', {
+      custom,
       name: args.name,
       code: args.code,
       location: args.location || loc?.name,
@@ -393,6 +404,7 @@ export const update = mutation({
       nextMaintenanceDate: v.optional(v.string()),
       status: v.optional(cageStatus),
       notes: v.optional(v.string()),
+      custom: v.optional(customValues),
       ...geometryArgs,
     }),
   },
@@ -423,6 +435,16 @@ export const update = mutation({
     await assertUnitLinks(ctx, user, patch)
 
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
+    if (patch.custom !== undefined) {
+      next.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'cages',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: patch.locationId ?? existing.locationId, core: { ...existing, ...patch } },
+      })
+    }
     if (statusChanges) next.statusChangedAt = Date.now()
     if (patch.locationId) {
       const locationId = await writeLocationId(ctx, user, patch.locationId)

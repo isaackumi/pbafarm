@@ -11,6 +11,8 @@ import { harvestIsCurrent } from './lib/cycles'
 import { shadowHarvest } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 import { assertUserCan, requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 import { enforceWithdrawal } from './lib/traceability'
 
 /** Client rows with the cage name/code (one `get` per distinct cage). */
@@ -28,6 +30,7 @@ async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
 
 function toClientHarvestRecord(r: any) {
   return {
+    custom: r.custom ?? {},
     id: r._id,
     _id: r._id,
     cage_id: r.cageId,
@@ -264,11 +267,19 @@ export const create = idempotentMutation('harvest.create', {
     status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
     /** Admin only: harvest inside a treatment withdrawal period (PROD-012). */
     withdrawalOverrideReason: v.optional(v.string()),
+    custom: v.optional(customValues),
   },
-  handler: async (ctx, { withdrawalOverrideReason, ...args }) => {
+  handler: async (ctx, { withdrawalOverrideReason, custom: rawCustom, ...args }) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
+    const custom = await validateCustom(ctx, {
+      companyId: cage.companyId,
+      entity: 'harvestRecords',
+      custom: rawCustom,
+      mode: 'create',
+      context: { locationId: cage.locationId, core: args },
+    })
     const withdrawalOverride = await enforceWithdrawal(ctx, user, {
       cageId: args.cageId,
       date: args.harvestDate,
@@ -294,6 +305,7 @@ export const create = idempotentMutation('harvest.create', {
 
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
+      custom,
       cageEffect,
       withdrawalOverride,
       locationId: cage.locationId,
@@ -327,15 +339,27 @@ export const update = mutation({
       notes: v.optional(v.string()),
       harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
       status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+      custom: v.optional(customValues),
     }),
     withdrawalOverrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch, withdrawalOverrideReason }) => {
+  handler: async (ctx, { id, patch: rawPatch, withdrawalOverrideReason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Harvest record not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    const patch = { ...rawPatch }
+    if (patch.custom !== undefined) {
+      patch.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'harvestRecords',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: existing.locationId, core: { ...existing, ...rawPatch } },
+      })
+    }
     // Moving the harvest date is a new harvest date for withdrawal (PROD-012).
     let withdrawalOverride = existing.withdrawalOverride
     if (patch.harvestDate !== undefined && patch.harvestDate !== existing.harvestDate) {

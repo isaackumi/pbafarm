@@ -7,6 +7,8 @@ import { tenantScope } from './lib/scope'
 import { mergeSettings } from './lib/farmRules'
 import { BUILT_IN_CATEGORY_KEYS, EXPENSE_CATEGORIES, categoryKey, splitExpenses } from './lib/costing'
 import { requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 
 /**
  * Expenses (INV-007). Anyone in the company records an expense (field quick
@@ -218,6 +220,7 @@ export const list = query({
         amount: e.amount,
         currency: e.currency,
         notes: e.notes ?? '',
+        custom: e.custom ?? {},
         location_id: e.locationId ?? null,
         location_name: await nameOf(e.locationId),
         cage_id: e.cageId ?? null,
@@ -242,6 +245,7 @@ const expenseFields = {
   stockingId: v.optional(v.id('stockingHistory')),
   supplierId: v.optional(v.id('feedSuppliers')),
   notes: v.optional(v.string()),
+  custom: v.optional(customValues),
 }
 
 export const create = mutation({
@@ -255,8 +259,16 @@ export const create = mutation({
     const locationId = await costCentre(ctx, user, args)
     const company = await ctx.db.get(companyId)
     const currency = mergeSettings(company?.settings).locale.currency
+    const custom = await validateCustom(ctx, {
+      companyId,
+      entity: 'expenses',
+      custom: args.custom,
+      mode: 'create',
+      context: { locationId, core: args },
+    })
 
     const id = await ctx.db.insert('expenses', {
+      custom,
       companyId,
       locationId,
       cageId: args.cageId,
@@ -293,6 +305,7 @@ export const update = mutation({
     stockingId: v.optional(v.union(v.id('stockingHistory'), v.null())),
     supplierId: v.optional(v.union(v.id('feedSuppliers'), v.null())),
     notes: v.optional(v.string()),
+    custom: v.optional(customValues),
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.expenses.manage' })
@@ -320,8 +333,16 @@ export const update = mutation({
     // A new cage without a new site takes the cage's site.
     if (args.cageId && args.locationId === undefined) next.locationId = undefined
     next.locationId = await costCentre(ctx, user, next)
+    const custom = await validateCustom(ctx, {
+      companyId: existing.companyId,
+      entity: 'expenses',
+      custom: args.custom,
+      previous: existing.custom,
+      mode: 'update',
+      context: { locationId: next.locationId, core: next },
+    })
 
-    await ctx.db.patch(args.id, { ...next, updatedAt: Date.now() })
+    await ctx.db.patch(args.id, { ...next, ...(custom !== undefined ? { custom } : {}), updatedAt: Date.now() })
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'expenses',

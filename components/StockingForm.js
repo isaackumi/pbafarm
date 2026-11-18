@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { FISH_SPECIES } from '../lib/fishSpecies'
 import { localToday } from '../lib/format'
+import CustomFields, { customPayload } from './CustomFields'
 import { DEFAULT_SETTINGS, densityStatus } from '../convex/lib/farmRules'
 
 const STOCKING_DEFAULTS = {
@@ -34,6 +35,7 @@ const STOCKING_DEFAULTS = {
   transferSupervisor: '',
   samplingSupervisor: '',
   notes: '',
+  custom: {},
 }
 
 const DEFAULT_STOCKABLE = ['empty', 'fallow', 'harvested']
@@ -128,6 +130,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
         transfer_supervisor: formData.transferSupervisor,
         sampling_supervisor: formData.samplingSupervisor,
         notes: formData.notes,
+        custom: customPayload(formData.custom),
       }
 
       const response = await stockingService.createStocking(stockingData)
@@ -393,6 +396,15 @@ const StockingForm = ({ onSuccess, onCancel }) => {
             />
           </Field>
         </FormSection>
+
+        <CustomFields
+          entity="stockingHistory"
+          value={formData.custom}
+          onChange={(custom) => setFormData((prev) => ({ ...prev, custom }))}
+          locationId={cages.find((c) => (c._id || c.id) === formData.cageId)?.location_id}
+          core={{ species: formData.species, fishCount: Number(formData.fishCount) || 0 }}
+          title="More details"
+        />
 
         <FormActions>
           <Button type="submit" disabled={loading || cages.length === 0} size="lg">

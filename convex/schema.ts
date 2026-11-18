@@ -79,6 +79,8 @@ export const fileEntityType = v.union(
   v.literal('dispatches'),
   v.literal('complianceRecords'),
   v.literal('biosecurityLogs'),
+  /** Photos held by custom photo fields (CUSTOM-001); entityId is the field definition. */
+  v.literal('customFieldDefs'),
 )
 
 export const complianceFrequency = v.union(
@@ -139,6 +141,45 @@ export const liveFeedKind = v.union(
 /** million = million organisms (nauplii, rotifers); L = culture volume; g = weight. */
 export const liveFeedUnit = v.union(v.literal('million'), v.literal('L'), v.literal('g'))
 export const liveFeedEntry = v.object({ kind: liveFeedKind, quantity: v.number(), unit: liveFeedUnit })
+
+/** Records that can carry custom fields (D-007); see lib/customFieldRules. */
+export const customEntityValidator = v.union(
+  v.literal('cages'),
+  v.literal('farmLocations'),
+  v.literal('batches'),
+  v.literal('dailyRecords'),
+  v.literal('biweeklyRecords'),
+  v.literal('harvestRecords'),
+  v.literal('stockingHistory'),
+  v.literal('expenses'),
+  v.literal('equipment'),
+)
+export const customFieldType = v.union(
+  v.literal('text'),
+  v.literal('long_text'),
+  v.literal('number'),
+  v.literal('date'),
+  v.literal('select'),
+  v.literal('multiselect'),
+  v.literal('boolean'),
+  v.literal('photo'),
+)
+/** Values on a record, keyed by field key; checked against the definitions on every write. */
+export const customValues = v.record(v.string(), v.any())
+export const customScalar = v.union(v.string(), v.number(), v.boolean(), v.array(v.string()))
+export const customCondition = v.object({
+  field: v.string(),
+  op: v.union(
+    v.literal('eq'),
+    v.literal('neq'),
+    v.literal('in'),
+    v.literal('gt'),
+    v.literal('lt'),
+    v.literal('is_set'),
+    v.literal('is_not_set'),
+  ),
+  value: v.optional(customScalar),
+})
 
 const schema = defineSchema({
   ...authTables,
@@ -229,6 +270,8 @@ const schema = defineSchema({
 
   /** Physical farm sites under a company (ops + inventory scope). */
   farmLocations: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     companyId: v.optional(v.id('companies')),
     name: v.string(),
     code: v.optional(v.string()),
@@ -421,6 +464,8 @@ const schema = defineSchema({
     .index('by_tokenHash', ['tokenHash']),
 
   cages: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     name: v.string(),
     code: v.optional(v.string()),
     location: v.optional(v.string()),
@@ -636,6 +681,8 @@ const schema = defineSchema({
    * nets, oxygen cones and sensors, attached to a unit or a group.
    */
   equipment: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     companyId: v.id('companies'),
     locationId: v.optional(v.id('farmLocations')),
     unitId: v.optional(v.id('cages')),
@@ -797,6 +844,8 @@ const schema = defineSchema({
     .index('by_company_location', ['companyId', 'locationId']),
 
   dailyRecords: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     cageId: v.id('cages'),
     date: v.string(),
     feedAmount: v.number(),
@@ -829,6 +878,8 @@ const schema = defineSchema({
     .index('by_company_location', ['companyId', 'locationId']),
 
   biweeklyRecords: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     cageId: v.id('cages'),
     date: v.string(),
     batchCode: v.string(),
@@ -867,6 +918,8 @@ const schema = defineSchema({
   }).index('by_record', ['biweeklyRecordId']),
 
   harvestRecords: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     cageId: v.id('cages'),
     harvestDate: v.string(),
     averageBodyWeight: v.number(),
@@ -980,6 +1033,8 @@ const schema = defineSchema({
     .index('by_company_location', ['companyId', 'locationId']),
 
   stockingHistory: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     cageId: v.id('cages'),
     batchNumber: v.string(),
     stockingDate: v.string(),
@@ -1382,6 +1437,8 @@ const schema = defineSchema({
    * list their parents; a merge adds the merged batch to the target's parents.
    */
   batches: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     companyId: v.id('companies'),
     batchNumber: v.string(),
     speciesCode: v.optional(v.string()),
@@ -1658,6 +1715,8 @@ const schema = defineSchema({
    * `expenseCategories.key`. `currency` is the company currency when saved.
    */
   expenses: defineTable({
+    /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */
+    custom: v.optional(customValues),
     companyId: v.id('companies'),
     locationId: v.optional(v.id('farmLocations')),
     cageId: v.optional(v.id('cages')),
@@ -2062,6 +2121,42 @@ const schema = defineSchema({
     .index('by_companyId_and_key', ['companyId', 'key']),
 
   /** A completed checklist for one site and one period (TRACE-006). */
+  /** Custom field definitions per organization and entity (D-007, CUSTOM-001). */
+  customFieldDefs: defineTable({
+    companyId: v.id('companies'),
+    entity: customEntityValidator,
+    key: v.string(),
+    label: v.string(),
+    helpText: v.optional(v.string()),
+    type: customFieldType,
+    /** Display unit for numbers (kg, mm, °C …). */
+    unit: v.optional(v.string()),
+    options: v.optional(
+      v.array(v.object({ value: v.string(), label: v.string(), archived: v.optional(v.boolean()) })),
+    ),
+    validation: v.optional(
+      v.object({
+        min: v.optional(v.number()),
+        max: v.optional(v.number()),
+        maxLength: v.optional(v.number()),
+        pattern: v.optional(v.string()),
+        integer: v.optional(v.boolean()),
+      }),
+    ),
+    required: v.boolean(),
+    defaultValue: v.optional(customScalar),
+    /** Show (and require) only when every condition holds. */
+    conditions: v.optional(v.array(customCondition)),
+    /** Only records at these sites; empty = every site. */
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
+    sortOrder: v.number(),
+    archived: v.boolean(),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_entity_and_sortOrder', ['companyId', 'entity', 'sortOrder'])
+    .index('by_companyId_and_entity_and_key', ['companyId', 'entity', 'key']),
+
   complianceRecords: defineTable({
     companyId: v.id('companies'),
     locationId: v.id('farmLocations'),
