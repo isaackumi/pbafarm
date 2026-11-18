@@ -90,6 +90,7 @@ const MENU_SECTIONS = {
       { title: 'Feed Types', path: '/feed-types', icon: List, tourId: 'feed-types' },
       { title: 'Suppliers', path: '/feed-suppliers', icon: Truck, tourId: 'feed-suppliers' },
       { title: 'Purchases', path: '/feed-purchases', icon: ShoppingCart, tourId: 'feed-purchases' },
+      { title: 'Purchase Orders', path: '/procurement', icon: ClipboardList },
       { title: 'Issue Feed', path: '/feed-issue', icon: Package, tourId: 'feed-issue' },
       { title: 'Analytics', path: '/feed-management/analytics', icon: TrendingUp },
     ],
@@ -101,6 +102,7 @@ const MENU_SECTIONS = {
     items: [
       { title: 'Overview', path: '/inventory/overview', icon: ChartColumn, tourId: 'inventory-overview' },
       { title: 'Stock Levels', path: '/stock-levels', icon: Package, tourId: 'stock-levels' },
+      { title: 'Stock Items', path: '/inventory/items', icon: List },
       { title: 'Lots', path: '/inventory/lots', icon: Package, tourId: 'inventory-lots' },
       { title: 'Adjust / Transfer', path: '/inventory/adjust', icon: Package, tourId: 'inventory-adjust' },
       { title: 'Alerts', path: '/inventory-alerts', icon: TriangleAlert },
