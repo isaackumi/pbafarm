@@ -31,6 +31,7 @@ import {
   DashboardSkeleton,
 } from './ui'
 import { localToday } from '../lib/format'
+import SiteConditions from './SiteConditions'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -361,6 +362,11 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
+
+      <SiteConditions
+        locationId={activeLocationId || undefined}
+        isAdmin={user?.role === 'admin' || user?.role === 'super_admin'}
+      />
 
       {/* Recent activity */}
       <Card padding={false}>
