@@ -344,7 +344,7 @@ export default function Dashboard() {
 
       <DashboardInsights
         locationId={locationArgs?.locationId}
-        aiEnabled={aiStatus?.enabled === true}
+        aiEnabled={aiStatus?.enabled === true && aiStatus.canUse === true}
       />
 
       {/* Charts + table */}

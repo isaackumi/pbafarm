@@ -1,6 +1,11 @@
 import { requireApiUser } from '../../../lib/llmApiAuth'
 import { api } from '../../../lib/convexBridge'
-import { clampTemperature, createRateLimiter, validateMessages } from '../../../lib/llmProxyGuard'
+import {
+  assistantRefusal,
+  clampTemperature,
+  createRateLimiter,
+  validateMessages,
+} from '../../../lib/llmProxyGuard'
 import { assistantSystemPrompt, businessDateOr, resolveProvider } from '../../../lib/llmServer'
 import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
 
@@ -15,7 +20,8 @@ import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
  * sees what this user may see. System messages from the client are dropped.
  *
  * Guards: Convex session token verified (requireApiUser), deactivated users
- * refused, company AI toggle, per-user rate limit, model allow-list, message
+ * refused, company AI toggle, `ai.use` permission (SEC-004), per-user and
+ * per-company rate limits, model allow-list, message
  * count/size caps, Schema-validated body. Provider calls: convex/lib/llmProviders
  * (Effect: 30 s per attempt, transient-only retry, Schema-validated replies).
  *
@@ -23,6 +29,7 @@ import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
  */
 const perMinute = createRateLimiter({ limit: 10, windowMs: 60_000 })
 const perHour = createRateLimiter({ limit: 100, windowMs: 60 * 60_000 })
+const companyPerHour = createRateLimiter({ limit: 500, windowMs: 60 * 60_000 })
 
 export const config = { api: { bodyParser: { sizeLimit: '256kb' } } }
 
@@ -42,21 +49,25 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Your account is deactivated' })
   }
 
-  const userKey = String(auth.user._id || auth.user.id)
-  for (const limiter of [perMinute, perHour]) {
-    const verdict = limiter.check(userKey)
-    if (!verdict.ok) {
-      res.setHeader('Retry-After', String(verdict.retryAfterSec))
-      return res.status(429).json({
-        error: `Too many assistant requests. Try again in ${verdict.retryAfterSec} seconds.`,
-      })
-    }
-  }
-
   try {
     const aiStatus = await auth.client.query(api.companies.aiAssistantStatus, {})
-    if (!aiStatus?.enabled) {
-      return res.status(403).json({ error: 'Assistant is disabled for your company' })
+    const refusal = assistantRefusal(aiStatus)
+    if (refusal) return res.status(403).json({ error: refusal })
+
+    const userKey = String(auth.user._id || auth.user.id)
+    const companyKey = String(auth.user.companyId || `user:${userKey}`)
+    for (const [limiter, key] of [
+      [perMinute, userKey],
+      [perHour, userKey],
+      [companyPerHour, companyKey],
+    ]) {
+      const verdict = limiter.check(key)
+      if (!verdict.ok) {
+        res.setHeader('Retry-After', String(verdict.retryAfterSec))
+        return res.status(429).json({
+          error: `Too many assistant requests. Try again in ${verdict.retryAfterSec} seconds.`,
+        })
+      }
     }
 
     const body = decodeChatBody(req.body)

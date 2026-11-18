@@ -258,6 +258,16 @@ describe('requireMember in practice', () => {
     expect(await codeOf(as(viewer).query(api.audit.list, {}))).toBe('FORBIDDEN')
   })
 
+  test('SEC-004: aiAssistantStatus.canUse follows ai.use (viewer refused by the LLM proxy)', async () => {
+    const { t, as, viewer, manager, companyId } = await setup()
+    await t.run(async (ctx) => {
+      await ctx.db.patch(companyId, { settings: { aiAssistantEnabled: true } } as any)
+    })
+    expect(await as(viewer).query(api.companies.aiAssistantStatus, {})).toMatchObject({ enabled: true, canUse: false })
+    expect(await as(manager).query(api.companies.aiAssistantStatus, {})).toMatchObject({ enabled: true, canUse: true })
+    expect(await codeOf(as(viewer).query(api.assistant.context, { asOf: '2026-01-05' }))).toBe('FORBIDDEN')
+  })
+
   test('a field_staff user scoped to site A cannot read or write site B', async () => {
     const { as, field, cageA, cageB, siteB } = await setup()
     const cages = await as(field).query(api.cages.list, {})

@@ -1,6 +1,6 @@
 import { requireApiUser } from '../../../lib/llmApiAuth'
 import { api } from '../../../lib/convexBridge'
-import { createRateLimiter } from '../../../lib/llmProxyGuard'
+import { assistantRefusal, createRateLimiter } from '../../../lib/llmProxyGuard'
 import { businessDateOr, resolveProvider } from '../../../lib/llmServer'
 import { applyPhrasing, phrasingMessages } from '../../../lib/insightPhrasing'
 import { runChat } from '../../../convex/lib/llmProviders'
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
   try {
     const status = await auth.client.query(api.companies.aiAssistantStatus, {})
-    if (!status?.enabled) return res.status(200).json({ insights: plain, phrased: false })
+    if (assistantRefusal(status)) return res.status(200).json({ insights: plain, phrased: false })
     if (!perHour.check(String(auth.user._id || auth.user.id)).ok) {
       return res.status(200).json({ insights: plain, phrased: false })
     }

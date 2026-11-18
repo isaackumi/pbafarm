@@ -85,7 +85,7 @@ export default function AiAssistant() {
     if (open && !showSettings) inputRef.current?.focus()
   }, [open, showSettings])
 
-  if (!user || !aiStatus?.enabled) return null
+  if (!user || !aiStatus?.enabled || !aiStatus.canUse) return null
 
   const update = (patch) =>
     setSettings((prev) => {

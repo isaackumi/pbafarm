@@ -798,7 +798,11 @@ export const updateProfile = mutation({
   },
 })
 
-/** Lightweight flag for AI widget gating. */
+/**
+ * Lightweight flag for AI widget gating. `enabled` is the company switch;
+ * `canUse` is whether this member holds `ai.use` (SEC-004: the LLM proxy
+ * refuses members without it, e.g. viewers).
+ */
 export const aiAssistantStatus = query({
   args: {},
   handler: async (ctx) => {
@@ -806,16 +810,16 @@ export const aiAssistantStatus = query({
     if ((user.role ?? 'user') === 'super_admin') {
       // Super admins without a company: allow for support; with company: follow setting
       if (!user.companyId) {
-        return { enabled: true, canManage: true }
+        return { enabled: true, canManage: true, canUse: true }
       }
     }
     if (!user.companyId) {
-      return { enabled: false, canManage: false }
+      return { enabled: false, canManage: false, canUse: false }
     }
     const company = await ctx.db.get(user.companyId)
     const enabled = company?.settings?.aiAssistantEnabled === true
-    const canManage = can(await memberContext(ctx, user), 'org.settings.manage')
-    return { enabled, canManage }
+    const m = await memberContext(ctx, user)
+    return { enabled, canManage: can(m, 'org.settings.manage'), canUse: can(m, 'ai.use') }
   },
 })
 
