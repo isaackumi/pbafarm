@@ -12,7 +12,12 @@ export type SendInput = {
   channel: MessagingChannel
   subject?: string
   otpCode?: string
+  /** Email only (scheduled reports, ANLY-007); other channels ignore it. */
+  attachments?: EmailAttachment[]
 }
+
+/** A file sent with an email; `content` is base64. */
+export type EmailAttachment = { filename: string; content: string }
 
 export type SendResult =
   | { ok: true; providerMessageId?: string }

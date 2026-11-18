@@ -19,7 +19,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import { requireUser } from './authz'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { userError } from './errors'
-import { activeMembership } from './memberships'
+import { activeMembership, getMembership } from './memberships'
 import { actAsSessionOf } from './actAs'
 import {
   PERMISSIONS,
@@ -101,6 +101,14 @@ export async function memberContext(ctx: Ctx, user: Doc<'users'>): Promise<Membe
       isPlatformAdmin: false,
     }
   }
+  return fromMembership(ctx, user, m)
+}
+
+async function fromMembership(
+  ctx: Ctx,
+  user: Doc<'users'>,
+  m: Doc<'memberships'> & { synthesized?: true },
+): Promise<MemberContext> {
   let permissions: Permission[] = []
   let roleName: string = m.roleKey
   if (m.roleId) {
@@ -115,7 +123,7 @@ export async function memberContext(ctx: Ctx, user: Doc<'users'>): Promise<Membe
   }
   return {
     user,
-    companyId: user.companyId,
+    companyId: m.companyId,
     membership: m.synthesized ? null : m,
     roleKey: m.roleKey,
     roleName,
@@ -123,6 +131,24 @@ export async function memberContext(ctx: Ctx, user: Doc<'users'>): Promise<Membe
     siteScope: m.allLocations ? 'all' : new Set(m.locationIds ?? []),
     isPlatformAdmin: false,
   }
+}
+
+/**
+ * A user's permissions in a given company, whichever organization is active
+ * for them now (scheduled jobs acting for or sending to a member). null when
+ * the account is inactive or not an active member of that company. Platform
+ * admins get no implicit access here.
+ */
+export async function memberContextIn(
+  ctx: Ctx,
+  user: Doc<'users'>,
+  companyId: Id<'companies'>,
+): Promise<MemberContext | null> {
+  if (user.active === false) return null
+  if ((user.role ?? 'user') === 'super_admin') return null
+  const m = user.companyId === companyId ? await activeMembership(ctx, user) : await getMembership(ctx, user._id, companyId)
+  if (!m || m.companyId !== companyId || m.status !== 'active') return null
+  return fromMembership(ctx, user, m)
 }
 
 /** Throw FORBIDDEN unless the member holds `permission`. */
