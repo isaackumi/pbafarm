@@ -156,6 +156,7 @@ export const saveChannel = mutation({
     senderId: v.optional(v.string()),
     settings: v.optional(v.record(v.string(), v.string())),
   },
+  returns: v.id('messagingChannels'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireMessagingAdmin(ctx)
     const adapter = getAdapter(args.provider)
@@ -236,6 +237,7 @@ export const saveChannel = mutation({
 /** Stop using a channel; credentials are kept so it can be re-tested later. */
 export const disableChannel = mutation({
   args: { channelId: v.id('messagingChannels') },
+  returns: v.id('messagingChannels'),
   handler: async (ctx, { channelId }) => {
     const { user, companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)
@@ -255,6 +257,7 @@ export const disableChannel = mutation({
 /** Delete a channel and its encrypted credentials. */
 export const removeChannel = mutation({
   args: { channelId: v.id('messagingChannels') },
+  returns: v.null(),
   handler: async (ctx, { channelId }) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)
@@ -283,6 +286,7 @@ export const updatePreferences = mutation({
     usePlatformDefaultWhatsapp: v.optional(v.boolean()),
     usePlatformDefaultEmail: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const company = await ctx.db.get(companyId)
@@ -342,6 +346,7 @@ export const storeCredentials = internalMutation({
     keyVersion: v.number(),
     hint: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, args.channelId)
@@ -391,6 +396,7 @@ export const saveCredentials = action({
     channelId: v.id('messagingChannels'),
     credentials: v.record(v.string(), v.string()),
   },
+  returns: v.object({ hint: v.union(v.string(), v.null()) }),
   handler: async (ctx, args): Promise<{ hint: string | null }> => {
     const owner: { companyId: Id<'companies'>; provider: string } = await ctx.runQuery(
       internal.messaging.channels.channelForAdmin,
@@ -460,6 +466,7 @@ export const recordTest = internalMutation({
     result: v.string(),
     to: v.string(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, args.channelId)
@@ -484,6 +491,7 @@ export const recordTest = internalMutation({
 /** Send a test message; on success the channel becomes verified. */
 export const sendTest = action({
   args: { channelId: v.id('messagingChannels'), to: v.string() },
+  returns: v.object({ ok: v.boolean(), error: v.union(v.string(), v.null()) }),
   handler: async (ctx, args): Promise<{ ok: boolean; error: string | null }> => {
     const prep: {
       companyId: Id<'companies'>

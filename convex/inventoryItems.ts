@@ -218,6 +218,7 @@ export const createItem = mutation({
     supplierId: v.optional(v.id('feedSuppliers')),
     unitCost: v.optional(v.number()),
   },
+  returns: v.id('inventoryItems'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const companyId = await writeCompanyId(user)
@@ -252,6 +253,7 @@ export const updateItem = mutation({
     unitCost: v.optional(v.number()),
     active: v.optional(v.boolean()),
   },
+  returns: v.id('inventoryItems'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const item = await loadItem(ctx, user, args.id)
@@ -278,6 +280,7 @@ export const updateItem = mutation({
 /** Archive an item. Its movements stay; stock must be zero first. */
 export const archiveItem = mutation({
   args: { id: v.id('inventoryItems') },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     const item = await loadItem(ctx, user, args.id)
@@ -304,6 +307,7 @@ export const receive = mutation({
     date: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('inventoryMovements'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const item = await loadItem(ctx, user, args.itemId)
@@ -331,6 +335,7 @@ export const issue = mutation({
     date: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('inventoryMovements'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
     return await issueItem(ctx, user, args)
@@ -382,6 +387,7 @@ export const adjust = mutation({
     locationId: v.optional(v.id('farmLocations')),
     reason: v.string(),
   },
+  returns: v.id('inventoryMovements'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.reason.trim()) throw new Error('A reason is required')
@@ -403,6 +409,7 @@ export const transfer = mutation({
     date: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.object({ out: v.id('inventoryMovements'), in: v.id('inventoryMovements') }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (args.fromLocationId === args.toLocationId) throw new Error('Pick two different sites')

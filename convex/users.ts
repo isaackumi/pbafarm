@@ -188,6 +188,7 @@ export const current = query({
  */
 export const setLocale = mutation({
   args: { locale: v.union(v.string(), v.null()) },
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, { locale }) => {
     const user = await requireAccount(ctx, { allowPendingMfa: true })
     if (locale !== null && !(SUPPORTED_UI_LOCALES as readonly string[]).includes(locale)) {
@@ -236,6 +237,7 @@ export const list = query({
  */
 export const listDirectory = query({
   args: {},
+  returns: v.array(v.object({ id: v.id('users'), name: v.string(), email: v.string() })),
   handler: async (ctx) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.view' })
     let users
@@ -283,6 +285,7 @@ export const update = mutation({
       ),
     }),
   },
+  returns: v.id('users'),
   handler: async (ctx, { id, patch }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
@@ -352,6 +355,7 @@ export const update = mutation({
  */
 export const setPhone = mutation({
   args: { id: v.id('users'), phone: v.union(v.string(), v.null()) },
+  returns: v.object({ phone: v.union(v.string(), v.null()) }),
   handler: async (ctx, { id, phone }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
@@ -405,6 +409,7 @@ export const invite = mutation({
     /** Role template (admin | manager | field_staff | viewer); overrides `role`. */
     roleKey: v.optional(v.string()),
   },
+  returns: v.object({ status: v.union(v.literal('invited'), v.literal('pending_signup')), inviteUrl: v.string(), expiresAt: v.number(), message: v.string() }),
   handler: async (ctx, args) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     if (!me.companyId) throw new Error('No company linked')
@@ -502,6 +507,7 @@ export const invite = mutation({
 
 export const deactivate = mutation({
   args: { id: v.id('users') },
+  returns: v.id('users'),
   handler: async (ctx, { id }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
@@ -550,6 +556,7 @@ export const deactivate = mutation({
 
 export const reactivate = mutation({
   args: { id: v.id('users') },
+  returns: v.id('users'),
   handler: async (ctx, { id }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const target = await ctx.db.get(id)
@@ -671,6 +678,7 @@ export const claimInvite = mutation({
 /** Company admin: people who asked to join through an invite. */
 export const listJoinRequests = query({
   args: {},
+  returns: v.array(v.object({ id: v.id('userInvites'), email: v.string(), role: v.union(v.literal('user'), v.literal('admin')), name: v.union(v.string(), v.null()), requestedAt: v.union(v.number(), v.null()) })),
   handler: async (ctx) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     if (!me.companyId) return []
@@ -713,6 +721,7 @@ async function loadJoinRequest(
 /** Company admin: let the requester join with the invited role. */
 export const approveJoinRequest = mutation({
   args: { inviteId: v.id('userInvites') },
+  returns: v.object({ userId: v.id('users') }),
   handler: async (ctx, { inviteId }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const invite = await loadJoinRequest(ctx, me, inviteId)
@@ -754,6 +763,7 @@ export const approveJoinRequest = mutation({
 /** Company admin: refuse a join request. */
 export const declineJoinRequest = mutation({
   args: { inviteId: v.id('userInvites') },
+  returns: v.id('userInvites'),
   handler: async (ctx, { inviteId }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const invite = await loadJoinRequest(ctx, me, inviteId)
@@ -775,6 +785,7 @@ export const declineJoinRequest = mutation({
 /** For actions: the caller, refused unless they hold the permission (requireMember). */
 export const authorizedMember = internalQuery({
   args: { permission: v.string() },
+  returns: v.object({ _id: v.id('users'), role: v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')), companyId: v.optional(v.id('companies')) }),
   handler: async (ctx, { permission }) => {
     if (!isPermission(permission)) throw new Error(`Unknown permission: ${permission}`)
     const m = await requireMember(ctx, { permission })
@@ -785,6 +796,7 @@ export const authorizedMember = internalQuery({
 /** For actions: the caller, with the same refusals as requireUser. */
 export const authorizedCaller = internalQuery({
   args: {},
+  returns: v.object({ _id: v.id('users'), role: v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')), companyId: v.optional(v.id('companies')) }),
   handler: async (ctx) => {
     const me = await requireUser(ctx)
     return { _id: me._id, role: me.role ?? 'user', companyId: me.companyId }
@@ -798,6 +810,7 @@ export const authorizedCaller = internalQuery({
  */
 export const promoteToSuperAdmin = internalMutation({
   args: { email: v.string() },
+  returns: v.id('users'),
   handler: async (ctx, { email }) => {
     const user = await ctx.db
       .query('users')
@@ -829,6 +842,7 @@ export const finalizeCreatedUser = internalMutation({
     name: v.optional(v.string()),
     actorId: v.id('users'),
   },
+  returns: v.id('users'),
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
     if (!user) throw new Error('Created user not found')
@@ -874,6 +888,7 @@ export const finalizeCreatedUser = internalMutation({
 
 export const clearMustChangePassword = internalMutation({
   args: { userId: v.id('users') },
+  returns: v.id('users'),
   handler: async (ctx, { userId }) => {
     const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')

@@ -376,6 +376,7 @@ export const recordLiveFeed = idempotentMutation('nursery.recordLiveFeed', {
 
 export const removeLiveFeed = mutation({
   args: { id: v.id('liveFeedLogs') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const m = await requireHatchery(ctx, 'hatchery.larval.record')
     const row = ownDoc(m, await ctx.db.get(id), 'Live feed entry')
@@ -741,6 +742,7 @@ export const dispatchFingerlings = idempotentMutation('nursery.dispatchFingerlin
 /** Reverse a fingerling transfer, sale or dispatch: its events and its sale row. */
 export const reverseMovement = mutation({
   args: { id: v.id('nurseryMovements'), reason: v.string() },
+  returns: v.object({ reversed: v.number() }),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.correct')
     const mv = ownDoc(m, await ctx.db.get(args.id), 'Movement')

@@ -20,7 +20,7 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
-      - name: Type-check Convex
+      - name: Type-check Convex (functions and tests)
         run: npx tsc --noEmit -p convex
       - name: Tests
         run: npm test

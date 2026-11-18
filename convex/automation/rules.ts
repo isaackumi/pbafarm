@@ -251,6 +251,7 @@ export const runs = query({
 
 export const createFromTemplate = mutation({
   args: { templateKey: v.string(), enabled: v.optional(v.boolean()) },
+  returns: v.id('automationRules'),
   handler: async (ctx, { templateKey, enabled }) => {
     const { user, companyId } = await requireAdmin(ctx)
     const t = templateByKey(templateKey)
@@ -282,6 +283,7 @@ export const save = mutation({
     conditions: v.array(automationCondition),
     actions: v.array(automationAction),
   },
+  returns: v.id('automationRules'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireAdmin(ctx)
     const draft = await validateDraft(ctx, companyId, args)
@@ -315,6 +317,7 @@ export const save = mutation({
 
 export const setEnabled = mutation({
   args: { ruleId: v.id('automationRules'), enabled: v.boolean() },
+  returns: v.null(),
   handler: async (ctx, { ruleId, enabled }) => {
     const { user, companyId } = await requireAdmin(ctx)
     const rule = await ownRule(ctx, companyId, ruleId)
@@ -332,6 +335,7 @@ export const setEnabled = mutation({
 
 export const remove = mutation({
   args: { ruleId: v.id('automationRules') },
+  returns: v.null(),
   handler: async (ctx, { ruleId }) => {
     const { companyId } = await requireAdmin(ctx)
     const rule = await ownRule(ctx, companyId, ruleId)
@@ -344,6 +348,7 @@ export const remove = mutation({
 /** Run a schedule rule now for today (company time). */
 export const runNow = mutation({
   args: { ruleId: v.id('automationRules') },
+  returns: v.union(v.id('automationRuns'), v.null()),
   handler: async (ctx, { ruleId }) => {
     const { companyId } = await requireAdmin(ctx)
     const rule = await ownRule(ctx, companyId, ruleId)
@@ -361,6 +366,7 @@ export const runNow = mutation({
 /** Retry a failed or partial run: resend its failed deliveries (or redo it if it never got going). */
 export const rerun = mutation({
   args: { runId: v.id('automationRuns') },
+  returns: v.null(),
   handler: async (ctx, { runId }) => {
     const { companyId } = await requireAdmin(ctx)
     const run = await ctx.db.get(runId)
@@ -381,6 +387,7 @@ export const rerun = mutation({
 /** Move this company's daily reminders onto automation rules. */
 export const enableBuiltIns = mutation({
   args: {},
+  returns: v.array(v.string()),
   handler: async (ctx) => {
     const { user, companyId } = await requireAdmin(ctx)
     const created = await seedBuiltIns(ctx, companyId, user._id)

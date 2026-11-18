@@ -32,7 +32,13 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Never push backend code whose tests fail.
+      # Never push backend code that fails lint, type-check or tests.
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check Convex (functions and tests)
+        run: npx tsc --noEmit -p convex
+
       - name: Tests
         run: npm test
 

@@ -8,6 +8,7 @@ const BATCH = 500
 /** Delete replay keys older than the retention window, in batches. */
 export const prune = internalMutation({
   args: { now: v.optional(v.number()) },
+  returns: v.number(),
   handler: async (ctx, { now }) => {
     const cutoff = (now ?? Date.now()) - IDEMPOTENCY_RETENTION_MS
     const old = await ctx.db

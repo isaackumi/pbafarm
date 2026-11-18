@@ -46,6 +46,7 @@ export const mine = query({
 /** Open task count for the caller (nav badge). */
 export const openCount = query({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     const rows = await ctx.db
@@ -58,6 +59,7 @@ export const openCount = query({
 
 export const setStatus = mutation({
   args: { taskId: v.id('tasks'), status: statusV },
+  returns: v.null(),
   handler: async (ctx, { taskId, status }) => {
     const user = await requireAccount(ctx)
     const task = await ctx.db.get(taskId)
@@ -84,6 +86,7 @@ export const create = mutation({
     dueDate: v.optional(v.string()),
     cageId: v.optional(v.id('cages')),
   },
+  returns: v.id('tasks'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'automation.manage' })
     if (!user.companyId) throw new Error('Your account is not linked to a company')

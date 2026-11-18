@@ -307,6 +307,7 @@ export const create = mutation({
     custom: v.optional(customValues),
     ...geometryArgs,
   },
+  returns: v.id('cages'),
   handler: async (ctx, rawArgs) => {
     const args = normalizeGeometry(rawArgs)
     const { user } = await requireMember(ctx, { permission: 'production.units.manage' })
@@ -408,6 +409,7 @@ export const update = mutation({
       ...geometryArgs,
     }),
   },
+  returns: v.id('cages'),
   handler: async (ctx, { id, patch: rawPatch }) => {
     const patch = normalizeGeometry(rawPatch)
     const { user } = await requireMember(ctx, { permission: 'production.units.manage' })
@@ -483,6 +485,7 @@ export const update = mutation({
  */
 export const remove = mutation({
   args: { id: v.id('cages') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.units.delete' })
     const existing = await ctx.db.get(id)
@@ -509,6 +512,7 @@ export const remove = mutation({
 /** Bring an archived unit back. */
 export const restore = mutation({
   args: { id: v.id('cages') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.units.delete' })
     const existing = await ctx.db.get(id)
@@ -529,6 +533,7 @@ export const restore = mutation({
 
 export const analytics = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({ total: v.number(), active: v.number(), maintenance: v.number(), empty: v.number(), harvested: v.number(), utilizationRate: v.string() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cages = (await scopedRows(ctx, user, 'cages', { locationId: args.locationId })).filter(

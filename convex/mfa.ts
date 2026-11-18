@@ -63,6 +63,7 @@ export const issueChallenge = internalMutation({
     /** Hash of the code, bound to this session (computed in the action). */
     codeHash: v.string(),
   },
+  returns: v.object({ to: v.string(), companyId: v.id('companies') }),
   handler: async (ctx, args): Promise<{ to: string; companyId: Id<'companies'> }> => {
     const user = await requireUser(ctx, { allowPendingMfa: true })
     const sessionId = (await getAuthSessionId(ctx)) as Id<'authSessions'> | null
@@ -163,6 +164,7 @@ export const startEnrolment = action({
 /** Internal: check a code for this session; verifies the session on success. */
 export const checkChallenge = internalMutation({
   args: { codeHash: v.optional(v.string()) },
+  returns: v.object({ ok: v.boolean(), error: v.union(v.string(), v.null()) }),
   handler: async (ctx, { codeHash }): Promise<{ ok: boolean; error: string | null }> => {
     const user = await requireUser(ctx, { allowPendingMfa: true })
     const sessionId = (await getAuthSessionId(ctx)) as Id<'authSessions'> | null
@@ -222,6 +224,7 @@ export const checkChallenge = internalMutation({
 /** Check the code entered for this sign-in (hashed here, compared in the mutation). */
 export const verifyChallenge = action({
   args: { code: v.string() },
+  returns: v.object({ ok: v.boolean(), error: v.union(v.string(), v.null()) }),
   handler: async (ctx, { code }): Promise<{ ok: boolean; error: string | null }> => {
     const sessionId = await getAuthSessionId(ctx)
     if (!sessionId) throw new Error('Not authenticated')

@@ -91,6 +91,7 @@ const DIGEST_PAGE_SIZE = 50
  */
 export const dailyDigest = internalMutation({
   args: { date: v.optional(v.string()), cursor: v.optional(v.string()) },
+  returns: v.object({ scheduled: v.number(), done: v.boolean() }),
   handler: async (
     ctx,
     { date, cursor },

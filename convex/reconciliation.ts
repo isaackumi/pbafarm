@@ -37,6 +37,7 @@ async function checkCage(ctx: QueryCtx, cage: Doc<'cages'>): Promise<Mismatch | 
 /** Mismatches for one company, now (read-only). */
 export const report = internalQuery({
   args: { companyId: v.id('companies') },
+  returns: v.object({ checked: v.number(), mismatches: v.array(mismatchValidator) }),
   handler: async (ctx, { companyId }) => {
     const cages = await ctx.db
       .query('cages')

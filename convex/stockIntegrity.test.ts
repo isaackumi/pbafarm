@@ -415,7 +415,7 @@ describe('S7: restock after harvest carries the old ABW into the new cycle', () 
     // ... the real run fixes it and logs the old value.
     await t.mutation(internal.migrations.repairStaleCageWeight, { dryRun: false })
     expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
-    const logs = await t.run((ctx: any) => ctx.db.query('auditLogs').collect())
+    const logs: any[] = await t.run((ctx: any) => ctx.db.query('auditLogs').collect())
     expect(logs.find((l: any) => l.actionType === 'migration')?.previousValues).toEqual({ currentWeight: 600 })
     // Cage A1 was never sampled, so it is left alone.
     expect((await t.mutation(internal.migrations.repairStaleCageWeight, {})).count).toBe(0)
@@ -432,7 +432,7 @@ describe('S7: restock after harvest carries the old ABW into the new cycle', () 
       initialBiomass: 60,
     })
     await as.mutation(api.stocking.approveStocking, { id })
-    const [old] = await t.run((ctx: any) =>
+    const [old]: any[] = await t.run((ctx: any) =>
       ctx.db.query('biweeklyRecords').withIndex('by_cage', (q: any) => q.eq('cageId', b.cageId)).collect(),
     )
     await as.mutation(api.biweeklyRecords.update, { id: old._id, patch: { averageBodyWeight: 620 } })
@@ -708,7 +708,7 @@ describe('S14: feed issued to a cage and also logged in the daily entry (interim
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
 
     // Staff cannot override; an admin can, with a reason.
-    const rec = await t.run((ctx: any) =>
+    const rec: any = await t.run((ctx: any) =>
       ctx.db.query('dailyRecords').withIndex('by_cage_date', (q: any) => q.eq('cageId', a.cageId)).first(),
     )
     await expect(

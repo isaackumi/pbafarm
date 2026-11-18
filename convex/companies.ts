@@ -1,7 +1,7 @@
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
@@ -90,7 +90,7 @@ async function deleteOldLogo(
   if (recorded) await ctx.db.delete(recorded._id)
 }
 
-async function logoUrl(ctx: any, storageId?: any) {
+async function logoUrl(ctx: QueryCtx, storageId?: Id<'_storage'>) {
   if (!storageId) return null
   try {
     return await ctx.storage.getUrl(storageId)
@@ -375,6 +375,7 @@ export const register = mutation({
     contactPhone: v.optional(v.string()),
     abbreviation: v.optional(v.string()),
   },
+  returns: v.id('companies'),
   handler: async (ctx, args) => {
     const user = await requireAccount(ctx)
 
@@ -496,6 +497,7 @@ export const approve = mutation({
     companyId: v.id('companies'),
     userId: v.optional(v.id('users')), // User to promote to admin
   },
+  returns: v.object({ companyId: v.id('companies'), userId: v.id('users'), locationId: v.id('farmLocations') }),
   handler: async (ctx, { companyId, userId: requestedUserId }) => {
     const user = await requirePlatformAdmin(ctx)
 
@@ -584,6 +586,7 @@ export const reject = mutation({
     /** Sign members out now (default true). */
     revokeSessions: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, { companyId, reason, revokeSessions }) => {
     const user = await requirePlatformAdmin(ctx)
     
@@ -622,6 +625,7 @@ export const remove = mutation({
     /** Sign members out now (default true). */
     revokeSessions: v.optional(v.boolean()),
   },
+  returns: v.id('companies'),
   handler: async (ctx, { companyId, reason, revokeSessions }) => {
     const user = await requirePlatformAdmin(ctx)
 
@@ -712,6 +716,7 @@ export const updateSettings = mutation({
       aiAssistantEnabled: v.optional(v.boolean()),
     }),
   },
+  returns: v.id('companies'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const company = await ctx.db.get(id)
@@ -760,6 +765,7 @@ export const updateProfile = mutation({
     unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
     defaultLocale: v.optional(v.string()),
   },
+  returns: v.object({ country: v.string(), timezone: v.string(), unitSystem: v.union(v.literal('metric'), v.literal('imperial')), defaultLocale: v.string() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
@@ -805,6 +811,7 @@ export const updateProfile = mutation({
  */
 export const aiAssistantStatus = query({
   args: {},
+  returns: v.object({ enabled: v.boolean(), canManage: v.boolean() }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     if ((user.role ?? 'user') === 'super_admin') {
@@ -903,6 +910,7 @@ export const getSettingsDraft = query({
 
 export const saveSettingsDraft = mutation({
   args: { draft: v.any() },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { draft }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked to your account')
@@ -1037,6 +1045,7 @@ export const publishSettings = mutation({
 
 export const generateLogoUploadUrl = mutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
@@ -1046,6 +1055,7 @@ export const generateLogoUploadUrl = mutation({
 
 export const setLogo = mutation({
   args: { storageId: v.id('_storage') },
+  returns: v.object({ logoUrl: v.union(v.string(), v.null()) }),
   handler: async (ctx, { storageId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
@@ -1069,6 +1079,7 @@ export const setLogo = mutation({
 
 export const clearLogo = mutation({
   args: {},
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')

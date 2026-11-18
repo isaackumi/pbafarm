@@ -78,6 +78,7 @@ export const upsert = mutation({
     expectedDailyGrowthG: v.optional(v.number()),
     harvestGrades: v.array(gradeValidator),
   },
+  returns: v.id('species'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
@@ -135,6 +136,7 @@ export const upsert = mutation({
 /** Hide a species from pickers; cages and records keep their species code. */
 export const archive = mutation({
   args: { id: v.id('species'), archived: v.optional(v.boolean()) },
+  returns: v.id('species'),
   handler: async (ctx, { id, archived }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)
@@ -156,6 +158,7 @@ export const archive = mutation({
 /** Add the standard species (tilapia grades as used until now) that are missing. Idempotent. */
 export const ensureDefaults = mutation({
   args: {},
+  returns: v.object({ added: v.array(v.string()) }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = await writeCompanyId(user)

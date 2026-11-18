@@ -136,6 +136,7 @@ export const createLot = mutation({
     destination: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.object({ id: v.id('harvestLots'), lotCode: v.string() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const harvest = await ctx.db.get(args.harvestId)
@@ -192,6 +193,7 @@ export const createLot = mutation({
 
 export const removeLot = mutation({
   args: { id: v.id('harvestLots') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const lot = await ctx.db.get(id)
@@ -229,6 +231,7 @@ export const createDispatch = mutation({
     notes: v.optional(v.string()),
     withdrawalOverrideReason: v.optional(v.string()),
   },
+  returns: v.id('dispatches'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const lot = await ctx.db.get(args.harvestLotId)
@@ -294,6 +297,7 @@ export const createDispatch = mutation({
 
 export const removeDispatch = mutation({
   args: { id: v.id('dispatches') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const d = await ctx.db.get(id)

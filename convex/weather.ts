@@ -78,6 +78,7 @@ export const storeDays = internalMutation({
     companyId: v.id('companies'),
     days: v.array(dayValidator),
   },
+  returns: v.null(),
   handler: async (ctx, { locationId, companyId, days }) => {
     const now = Date.now()
     for (const [i, day] of days.entries()) {
@@ -111,6 +112,7 @@ async function fetchSite(site: SiteJob): Promise<WeatherDay[] | null> {
 /** Cron entry point: every site with coordinates, in pages of 200. */
 export const refreshAll = internalAction({
   args: { cursor: v.optional(v.number()) },
+  returns: v.object({ sites: v.number(), ok: v.number() }),
   handler: async (ctx, { cursor }): Promise<{ sites: number; ok: number }> => {
     const { sites, nextCursor }: { sites: SiteJob[]; nextCursor: number | null } = await ctx.runQuery(
       internal.weather.sitesToFetch,
@@ -168,6 +170,7 @@ export const siteForRefresh = internalQuery({
 /** Admin "Refresh now" for one site. */
 export const refreshSite = action({
   args: { locationId: v.id('farmLocations') },
+  returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, { locationId }): Promise<{ ok: boolean }> => {
     const site: SiteJob = await ctx.runQuery(internal.weather.siteForRefresh, { locationId, now: Date.now() })
     const days = await fetchSite(site)

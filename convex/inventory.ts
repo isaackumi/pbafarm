@@ -213,6 +213,7 @@ export const createAdjustment = mutation({
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
   },
+  returns: v.id('feedInventoryTransactions'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.notes.trim()) throw new Error('Adjustment reason is required')
@@ -263,6 +264,7 @@ export const createTransfer = mutation({
     notes: v.optional(v.string()),
     batchNumber: v.optional(v.string()),
   },
+  returns: v.id('feedInventoryTransactions'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!(args.quantityKg > 0)) throw new Error('Transfer quantity must be positive')
@@ -359,6 +361,7 @@ export const reverseTransaction = mutation({
     transactionId: v.id('feedInventoryTransactions'),
     reason: v.string(),
   },
+  returns: v.id('feedInventoryTransactions'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.reason.trim()) throw new Error('Reversal reason is required')
@@ -523,6 +526,7 @@ export const listAlerts = query({
 /** Tally check: currentStock vs sum of ledger quantities. */
 export const stockTally = query({
   args: { feedTypeId: v.optional(v.id('feedTypes')) },
+  returns: v.array(v.object({ feed_type_id: v.id('feedTypes'), feed_type_name: v.string(), current_stock: v.number(), ledger_sum: v.number(), lots_sum: v.number(), delta: v.number(), ok: v.boolean() })),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')

@@ -318,6 +318,7 @@ export const record = idempotentMutation('waterQuality.record', {
 /** Delete a manual reading (its author or an admin). Mirrors follow their record. */
 export const remove = mutation({
   args: { id: v.id('waterQualityReadings') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     const row = await ctx.db.get(id)
@@ -493,6 +494,7 @@ export const setThreshold = mutation({
     max: v.optional(v.number()),
     reset: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     const companyId = user.companyId
@@ -658,6 +660,7 @@ export const backfillFromRecords = internalMutation({
     cursor: v.optional(v.union(v.string(), v.null())),
     batchSize: v.optional(v.number()),
   },
+  returns: v.object({ dryRun: v.boolean(), scanned: v.number(), withWater: v.number(), alreadyMirrored: v.number(), created: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun !== false
     const page = await ctx.db

@@ -70,7 +70,7 @@ async function sessionsOf(t: ReturnType<typeof convexTest>, userId: any) {
   return t.run(async (ctx) => {
     const sessions = await ctx.db
       .query('authSessions')
-      .withIndex('userId', (q) => q.eq('userId', userId))
+      .withIndex('userId' as any, (q: any) => q.eq('userId', userId))
       .collect()
     const tokens = await ctx.db.query('authRefreshTokens').collect()
     return {

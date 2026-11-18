@@ -153,6 +153,7 @@ export const createSupplier = mutation({
     contactInfo: v.optional(v.string()),
     website: v.optional(v.string()),
   },
+  returns: v.id('feedSuppliers'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const now = Date.now()
@@ -181,6 +182,7 @@ export const updateSupplier = mutation({
       website: v.optional(v.string()),
     }),
   },
+  returns: v.id('feedSuppliers'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const existing = await ctx.db.get(id)
@@ -202,6 +204,7 @@ export const updateSupplier = mutation({
 
 export const softDeleteSupplier = mutation({
   args: { id: v.id('feedSuppliers') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const existing = await ctx.db.get(id)
@@ -244,6 +247,7 @@ export const createFeedType = mutation({
     supplierId: v.optional(v.id('feedSuppliers')),
     active: v.optional(v.boolean()),
   },
+  returns: v.id('feedTypes'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const now = Date.now()
@@ -300,6 +304,7 @@ export const updateFeedType = mutation({
       active: v.optional(v.boolean()),
     }),
   },
+  returns: v.id('feedTypes'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const existing = await ctx.db.get(id)
@@ -328,6 +333,7 @@ export const updateFeedType = mutation({
 
 export const softDeleteFeedType = mutation({
   args: { id: v.id('feedTypes') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.prices.manage' })
     const existing = await ctx.db.get(id)
@@ -384,6 +390,7 @@ export const createPurchase = mutation({
     location: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.id('feedPurchases'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const feedType = await ctx.db.get(args.feedTypeId)
@@ -469,6 +476,7 @@ export const updatePurchase = mutation({
     expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('feedPurchases'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const purchase = await ctx.db.get(args.id)
@@ -540,6 +548,7 @@ export const voidPurchase = mutation({
     id: v.id('feedPurchases'),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const purchase = await ctx.db.get(args.id)

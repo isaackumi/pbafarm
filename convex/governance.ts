@@ -49,6 +49,7 @@ function exportToClient(e: Doc<'dataExports'>) {
 /** Queue a full export of the organization (zip: JSON + CSV per table). */
 export const requestExport = mutation({
   args: {},
+  returns: v.id('dataExports'),
   handler: async (ctx) => {
     const { user, companyId } = await requireMember(ctx, { permission: 'org.data.export' })
     if (!companyId) throw userError('VALIDATION', 'No organization selected')
@@ -93,6 +94,7 @@ export const listExports = query({
 /** A download link for a ready, unexpired export of the caller's organization. Audited. */
 export const exportDownloadUrl = mutation({
   args: { exportId: v.id('dataExports') },
+  returns: v.string(),
   handler: async (ctx, { exportId }) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.data.export' })
     const row = await ctx.db.get(exportId)
@@ -122,6 +124,7 @@ export const markExport = internalMutation({
     truncatedTables: v.optional(v.array(v.string())),
     error: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, { exportId, status, ...rest }) => {
     const now = Date.now()
     await ctx.db.patch(exportId, {
@@ -158,6 +161,7 @@ export const exportPage = internalQuery({
 /** Build the zip: <table>.json and <table>.csv per table, plus manifest.json. */
 export const runExport = internalAction({
   args: { exportId: v.id('dataExports') },
+  returns: v.null(),
   handler: async (ctx, { exportId }) => {
     const job = await ctx.runQuery(internal.governance.exportJob, { exportId })
     if (!job || job.status !== 'queued') return null
@@ -228,6 +232,7 @@ export const runExport = internalAction({
 /** Daily: delete export files past their expiry. */
 export const pruneExports = internalMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx) => {
     const due = await ctx.db
       .query('dataExports')
@@ -287,6 +292,7 @@ function requestToClient(r: Doc<'dataRequests'>, extra: Record<string, unknown> 
 /** Ask for the organization and all its data to be deleted (platform approves). */
 export const requestOrgDeletion = mutation({
   args: { reason: v.optional(v.string()) },
+  returns: v.id('dataRequests'),
   handler: async (ctx, { reason }) => {
     const { user, companyId } = await requireMember(ctx, { permission: 'org.data.delete' })
     if (!companyId) throw userError('VALIDATION', 'No organization selected')
@@ -309,6 +315,7 @@ export const requestOrgDeletion = mutation({
 /** Ask for my own account to be deleted (anonymized) after the grace period. */
 export const requestAccountDeletion = mutation({
   args: { reason: v.optional(v.string()) },
+  returns: v.id('dataRequests'),
   handler: async (ctx, { reason }) => {
     const user = await requireAccount(ctx)
     if ((user.role ?? 'user') === 'super_admin') {
@@ -337,6 +344,7 @@ export const requestAccountDeletion = mutation({
  */
 export const cancelRequest = mutation({
   args: { requestId: v.id('dataRequests') },
+  returns: v.null(),
   handler: async (ctx, { requestId }) => {
     const user = await requireAccount(ctx)
     const r = await ctx.db.get(requestId)
@@ -425,6 +433,7 @@ export const platformListRequests = query({
  */
 export const decideRequest = mutation({
   args: { requestId: v.id('dataRequests'), approve: v.boolean(), note: v.optional(v.string()) },
+  returns: v.null(),
   handler: async (ctx, { requestId, approve, note }) => {
     const admin = await requirePlatformAdmin(ctx)
     const r = await ctx.db.get(requestId)
@@ -471,6 +480,7 @@ export const decideRequest = mutation({
 /** Platform: cancel an approved request during its grace period (restores the organization). */
 export const platformCancelRequest = mutation({
   args: { requestId: v.id('dataRequests') },
+  returns: v.null(),
   handler: async (ctx, { requestId }) => {
     const admin = await requirePlatformAdmin(ctx)
     const r = await ctx.db.get(requestId)
@@ -534,6 +544,7 @@ export async function anonymizeUser(ctx: MutationCtx, userId: Id<'users'>) {
 /** Daily: complete approved requests whose grace period ended; purge expired audit rows. */
 export const processDueRequests = internalMutation({
   args: {},
+  returns: v.object({ due: v.number(), auditPurges: v.number() }),
   handler: async (ctx) => {
     const now = Date.now()
     const due = await ctx.db
@@ -708,6 +719,7 @@ export const purgeCompanyBatch = internalMutation({
 /** After the retention period, delete a deleted organization's audit rows and chain. */
 export const purgeAuditBatch = internalMutation({
   args: { requestId: v.id('dataRequests') },
+  returns: v.null(),
   handler: async (ctx, { requestId }) => {
     const r = await ctx.db.get(requestId)
     if (!r || r.status !== 'completed' || !r.companyId || r.auditPurgedAt) return null

@@ -123,6 +123,7 @@ export const getActive = query({
 
 export const ensureDefault = mutation({
   args: {},
+  returns: v.union(v.id('farmLocations'), v.null()),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     // No-op for company-less users: there is no company to give a site to.
@@ -146,6 +147,7 @@ export const ensureDefault = mutation({
 
 export const setActiveLocation = mutation({
   args: { locationId: v.id('farmLocations') },
+  returns: v.id('farmLocations'),
   handler: async (ctx, { locationId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     const loc = await ctx.db.get(locationId)
@@ -180,6 +182,7 @@ export const create = mutation({
     custom: v.optional(customValues),
     ...siteArgs,
   },
+  returns: v.id('farmLocations'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const meta = siteFields(args)
@@ -234,6 +237,7 @@ export const update = mutation({
       ...siteArgs,
     }),
   },
+  returns: v.id('farmLocations'),
   handler: async (ctx, { id, patch }) => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const existing = await ctx.db.get(id)
@@ -301,6 +305,7 @@ export const backfillLocations = internalMutation({
   args: {
     promoteCageLocationStrings: v.optional(v.boolean()),
   },
+  returns: v.object({ createdLocations: v.number(), patched: v.number(), usersUpdated: v.number() }),
   handler: async (ctx, args) => {
     const companies = await ctx.db.query('companies').collect()
     const companyIds = new Set(
@@ -430,6 +435,7 @@ export const backfillLocations = internalMutation({
 /** Internal helper for company approve flow. */
 export const ensureForCompanyInternal = internalMutation({
   args: { companyId: v.id('companies') },
+  returns: v.id('farmLocations'),
   handler: async (ctx, { companyId }) => {
     const existing = await ctx.db
       .query('farmLocations')
