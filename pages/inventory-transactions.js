@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
+import { PageHeader, Button, Field, Input } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
@@ -103,26 +103,24 @@ function InventoryTransactions() {
       />
 
       <div className="mb-4 flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-xs text-muted mb-1">From</label>
-          <input
+        <Field label="From" htmlFor="ledger-from" className="w-full sm:w-auto">
+          <Input
+            id="ledger-from"
             type="date"
             value={dateRange.start}
             onChange={(e) =>
               setDateRange((p) => ({ ...p, start: e.target.value }))
             }
-            className="border border-input-border rounded-lg px-3 py-2 text-sm"
           />
-        </div>
-        <div>
-          <label className="block text-xs text-muted mb-1">To</label>
-          <input
+        </Field>
+        <Field label="To" htmlFor="ledger-to" className="w-full sm:w-auto">
+          <Input
+            id="ledger-to"
             type="date"
             value={dateRange.end}
             onChange={(e) => setDateRange((p) => ({ ...p, end: e.target.value }))}
-            className="border border-input-border rounded-lg px-3 py-2 text-sm"
           />
-        </div>
+        </Field>
       </div>
 
       <div className="page-card overflow-hidden">
@@ -163,16 +161,16 @@ function InventoryTransactions() {
                     user?.role === 'super_admin'
                   return (
                     <tr key={txn.id || txn._id} className="hover:bg-foam/60">
-                      <td className="px-4 py-3 text-sm font-data whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-data tabular-nums whitespace-nowrap">
                         {new Date(txn.transaction_date).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-lagoon-800">
+                      <td className="px-4 py-3 text-sm font-medium text-lake">
                         {txn.transaction_type}
                       </td>
                       <td className="px-4 py-3 text-sm">{ft?.name || '—'}</td>
                       <td
-                        className={`px-4 py-3 text-sm font-data text-right ${
-                          txn.quantity_kg < 0 ? 'text-red-600' : 'text-green-700'
+                        className={`px-4 py-3 text-sm font-data tabular-nums text-right ${
+                          txn.quantity_kg < 0 ? 'text-signal' : 'text-kelp'
                         }`}
                       >
                         {txn.quantity_kg > 0 ? '+' : ''}
@@ -185,16 +183,17 @@ function InventoryTransactions() {
                         {canReverse &&
                           txn.transaction_type !== 'reversal' &&
                           txn.transaction_type !== 'transfer' && (
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => {
                                 setReverseReason('')
                                 setReverseTarget(txn)
                               }}
-                              className="text-xs text-red-600 hover:underline"
+                              className="text-signal"
                             >
                               Reverse
-                            </button>
+                            </Button>
                           )}
                       </td>
                     </tr>
@@ -224,17 +223,16 @@ function InventoryTransactions() {
               </span>
               ? Stock will be adjusted.
             </p>
-            <label className="block text-xs font-semibold text-chart-ink">
-              Reason
-              <input
+            <Field label="Reason" htmlFor="reverse-reason">
+              <Input
+                id="reverse-reason"
                 type="text"
                 value={reverseReason}
                 onChange={(e) => setReverseReason(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input-border bg-surface px-3 py-2 text-sm text-chart-ink"
                 placeholder="Why reverse this entry?"
                 autoFocus
               />
-            </label>
+            </Field>
           </div>
         }
         onCancel={() => {

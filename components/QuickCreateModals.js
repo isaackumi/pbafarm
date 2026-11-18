@@ -46,7 +46,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-foam-deep bg-surface text-chart-ink shadow-xl"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-foam-deep bg-surface text-chart-ink shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-foam-deep px-5 py-4 sticky top-0 bg-surface z-10">
@@ -59,7 +59,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted hover:bg-foam hover:text-chart-ink"
+            className="-mr-2 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -263,7 +263,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
               min="0"
               value={form.size}
               onChange={setField('size')}
-              className="font-data"
+              className="font-data tabular-nums"
               placeholder="Volume"
             />
           </Field>
@@ -274,7 +274,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
               min="0"
               value={form.capacity}
               onChange={setField('capacity')}
-              className="font-data"
+              className="font-data tabular-nums"
               placeholder="Max fish"
             />
           </Field>
@@ -412,7 +412,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
             min="0"
             value={form.price_per_kg}
             onChange={setField('price_per_kg')}
-            className="font-data"
+            className="font-data tabular-nums"
           />
         </Field>
         <Field label="Protein percentage (%)" htmlFor="qc-ft-protein">
@@ -424,7 +424,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
             max="100"
             value={form.protein_percentage}
             onChange={setField('protein_percentage')}
-            className="font-data"
+            className="font-data tabular-nums"
           />
         </Field>
         <Field label="Pellet size" htmlFor="qc-ft-pellet">
@@ -458,7 +458,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
               min="0.1"
               value={form.bag_size_kg}
               onChange={setField('bag_size_kg')}
-              className="font-data"
+              className="font-data tabular-nums"
             />
           </Field>
           <Field label="Opening stock (kg)" htmlFor="qc-ft-stock">
@@ -469,7 +469,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
               min="0"
               value={form.current_stock}
               onChange={setField('current_stock')}
-              className="font-data"
+              className="font-data tabular-nums"
             />
           </Field>
           <Field label="Minimum stock (kg)" htmlFor="qc-ft-min">
@@ -480,16 +480,16 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
               min="0"
               value={form.minimum_stock}
               onChange={setField('minimum_stock')}
-              className="font-data"
+              className="font-data tabular-nums"
             />
           </Field>
         </div>
-        <label className="flex items-center gap-2 text-sm text-chart-ink">
+        <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
           <input
             type="checkbox"
             checked={form.active}
             onChange={setField('active')}
-            className="h-4 w-4 rounded border-input-border text-lagoon-800"
+            className="h-4 w-4 rounded accent-lake"
           />
           Active
         </label>
@@ -663,7 +663,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
             <button
               type="button"
               onClick={() => setShowCageCreate(true)}
-              className="mt-2 text-sm font-semibold text-lagoon-800 underline-offset-2 hover:underline"
+              className="mt-2 min-h-9 text-sm font-medium text-lake underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded"
             >
               Create a cage first
             </button>
@@ -716,7 +716,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               min="1"
               value={form.fishCount}
               onChange={setField('fishCount')}
-              className="font-data"
+              className="font-data tabular-nums"
               required
             />
           </Field>
@@ -742,7 +742,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
               }
               value={form.averageBodyWeight}
               onChange={setField('averageBodyWeight')}
-              className="font-data"
+              className="font-data tabular-nums"
               required
             />
           </Field>
@@ -1013,7 +1013,7 @@ export function QuickCreatePurchaseModal({
               min="0"
               value={form.bags}
               onChange={setField('bags')}
-              className="font-data"
+              className="font-data tabular-nums"
               placeholder="e.g. 40"
               autoFocus
             />
@@ -1026,7 +1026,7 @@ export function QuickCreatePurchaseModal({
               min="0"
               value={form.quantity}
               onChange={setField('quantity')}
-              className="font-data"
+              className="font-data tabular-nums"
               required
             />
           </Field>
@@ -1042,7 +1042,7 @@ export function QuickCreatePurchaseModal({
             min="0"
             value={form.price_per_kg}
             onChange={setField('price_per_kg')}
-            className="font-data"
+            className="font-data tabular-nums"
             required
           />
         </Field>

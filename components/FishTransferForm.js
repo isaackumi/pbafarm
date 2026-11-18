@@ -159,7 +159,7 @@ export default function FishTransferForm({ onCreated }) {
     <FormCard title="New fish transfer">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error ? (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-signal bg-signal/10 border border-signal/30 rounded-lg px-3 py-2">
             {error}
           </p>
         ) : null}
@@ -179,7 +179,7 @@ export default function FishTransferForm({ onCreated }) {
               <Input
                 type="number"
                 name="abw"
-                className="font-data"
+                className="font-data tabular-nums"
                 min="0"
                 step="0.1"
                 value={formData.abw}
@@ -239,7 +239,7 @@ export default function FishTransferForm({ onCreated }) {
               <Input
                 type="number"
                 name="quantity"
-                className="font-data"
+                className="font-data tabular-nums"
                 min="1"
                 step="1"
                 value={formData.quantity}
@@ -251,10 +251,11 @@ export default function FishTransferForm({ onCreated }) {
                 disabled={formData.fullTransfer}
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm font-medium pb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-chart-ink min-h-11">
               <input
                 type="checkbox"
                 checked={!!formData.fullTransfer}
+                className="h-4 w-4 accent-lake"
                 onChange={onFullToggle}
                 disabled={!source}
               />
@@ -271,7 +272,7 @@ export default function FishTransferForm({ onCreated }) {
               <>
                 {' '}
                 · Source has{' '}
-                <span className="font-data">{sourceCount.toLocaleString()}</span>{' '}
+                <span className="font-data tabular-nums">{sourceCount.toLocaleString()}</span>{' '}
                 fish
               </>
             ) : null}

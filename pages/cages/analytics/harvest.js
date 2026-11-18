@@ -66,8 +66,8 @@ function HarvestAnalytics() {
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
-            <p className="mt-2 text-muted">Loading harvest analytics...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent"></div>
+            <p className="mt-2 text-muted">Loading harvest analytics…</p>
           </div>
         </div>
       </div>
@@ -78,16 +78,16 @@ function HarvestAnalytics() {
     return (
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
+                <h3 className="text-sm font-medium text-signal">Error</h3>
+                <div className="mt-2 text-sm text-signal">
                   <p>{error}</p>
                 </div>
               </div>
@@ -134,69 +134,69 @@ function HarvestAnalytics() {
 
         <div className="grid grid-cols-1 gap-6">
           {/* Harvest Readiness Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Harvest Readiness</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Harvest readiness</h2>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={harvestData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="cageName" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="left" orientation="left" stroke="var(--lake)" />
+                  <YAxis yAxisId="right" orientation="right" stroke="var(--kelp)" />
                   <Tooltip />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="doc" name="Days of Culture" fill="#8884d8" />
-                  <Bar yAxisId="right" dataKey="daysToHarvest" name="Days to Harvest" fill="#82ca9d" />
+                  <Bar yAxisId="left" dataKey="doc" name="Days of culture" fill="var(--lake)" />
+                  <Bar yAxisId="right" dataKey="daysToHarvest" name="Days to harvest" fill="var(--kelp)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Growth Rate Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Growth Rate Analysis</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth rate</h2>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={harvestData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="cageName" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="initialWeight" name="Initial Weight" fill="#8884d8" />
-                  <Bar dataKey="currentWeight" name="Current Weight" fill="#82ca9d" />
-                  <Bar dataKey="growthRate" name="Growth Rate" fill="#ffc658" />
+                  <Bar dataKey="initialWeight" name="Initial weight" fill="var(--lake)" />
+                  <Bar dataKey="currentWeight" name="Current weight" fill="var(--kelp)" />
+                  <Bar dataKey="growthRate" name="Growth rate" fill="#d97706" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Harvest Ready Cages Table */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Harvest Ready Cages</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Cages ready to harvest</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-foam-deep">
-                <thead className="bg-foam-deep/40">
+                <thead className="bg-foam">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Cage Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">DOC</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Days to Harvest</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Initial Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Current Weight</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Growth Rate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Cage</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">DOC</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Days to harvest</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Initial weight</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Current weight</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Growth rate</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-foam-deep">
+                <tbody className="bg-surface divide-y divide-foam-deep">
                   {harvestData.map((cage) => (
                     <tr key={cage.cageId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{cage.cageName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.doc} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.daysToHarvest} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.initialWeight} g</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.currentWeight} g</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{cage.growthRate}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink">{cage.cageName}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.doc} days</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.daysToHarvest} days</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.initialWeight} g</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.currentWeight} g</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.growthRate}%</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           cage.status === 'Ready' ? 'bg-signal/15 text-signal' :
                           cage.status === 'Soon' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' :

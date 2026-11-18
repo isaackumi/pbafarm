@@ -130,10 +130,10 @@ const CompanyRegistrationsPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-foam px-4">
         <div className="max-w-md w-full text-center space-y-4">
-          <p className="font-display text-3xl text-lagoon-950 tracking-tight">
+          <p className="font-display text-3xl text-chart-ink font-medium">
             PBA Farm
           </p>
-          <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm space-y-3">
+          <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm space-y-3">
             <h1 className="text-lg font-semibold text-chart-ink">
               Already linked to a company
             </h1>
@@ -156,7 +156,7 @@ const CompanyRegistrationsPage = () => {
         <div className="text-center mb-8">
           <Link
             href="/dashboard"
-            className="font-display text-4xl text-lagoon-950 tracking-tight hover:opacity-90"
+            className="font-display text-4xl text-chart-ink font-medium hover:opacity-90"
           >
             PBA Farm
           </Link>
@@ -169,9 +169,9 @@ const CompanyRegistrationsPage = () => {
           </p>
         </div>
 
-        <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm">
+        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
           {error && (
-            <div className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
+            <div role="alert" className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
               {error}
             </div>
           )}
@@ -214,7 +214,7 @@ const CompanyRegistrationsPage = () => {
                 onChange={handleChange}
                 placeholder={previewCode || 'e.g. HEI'}
                 required
-                className="font-data"
+                className="font-data tabular-nums"
                 maxLength={12}
               />
             </Field>
@@ -284,14 +284,14 @@ const CompanyRegistrationsPage = () => {
           <p className="mt-6 text-center text-sm text-muted">
             <Link
               href="/dashboard"
-              className="font-medium text-lagoon-800 hover:text-lagoon-950"
+              className="font-medium text-lake hover:underline"
             >
               Back to dashboard
             </Link>
             {' · '}
             <Link
               href="/company-settings"
-              className="font-medium text-lagoon-800 hover:text-lagoon-950"
+              className="font-medium text-lake hover:underline"
             >
               Company settings
             </Link>
