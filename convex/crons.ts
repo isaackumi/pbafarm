@@ -31,6 +31,9 @@ crons.cron('prune idempotency keys', '30 3 * * *', internal.idempotency.prune, {
 // Public API idempotency keys are kept 30 days (INT-004).
 crons.cron('prune api idempotency keys', '30 3 * * *', internal.publicApi.pruneIdempotencyKeys, {})
 
+// Webhook delivery log is kept 30 days (INT-005).
+crons.cron('prune webhook deliveries', '45 3 * * *', internal.webhooks.pruneDeliveries, {})
+
 // Expired document download tokens (TRACE-005).
 crons.cron('prune file download tokens', '15 4 * * *', internal.files.pruneDownloadTokens, {})
 

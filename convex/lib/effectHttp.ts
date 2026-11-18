@@ -75,6 +75,8 @@ export type HttpRequest = {
   readonly headers?: Record<string, string>
   /** Objects are sent as JSON (Content-Type set if absent); strings as-is. */
   readonly body?: unknown
+  /** fetch redirect mode; 'manual' makes a 3xx an HttpStatusError (webhooks). */
+  readonly redirect?: 'follow' | 'manual' | 'error'
 }
 
 export type HttpPolicy = {
@@ -162,6 +164,7 @@ function attempt(
           headers,
           body,
           signal,
+          ...(req.redirect ? { redirect: req.redirect } : {}),
         })
         const text = await res.text().catch(() => '')
         return { status: res.status, headers: res.headers, body: parseBody(text), text, ok: res.ok }

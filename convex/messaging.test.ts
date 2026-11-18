@@ -17,6 +17,7 @@ import { maskPhone, normalizePhone } from './lib/phone'
 import { ADAPTERS, platformChannelFromEnv } from './messaging/providers'
 import * as channels from './messaging/channels'
 import * as deliver from './messaging/deliver'
+import * as webhooks from './webhooks'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -490,9 +491,12 @@ describe('secrets stay server-side (doc 10 §10 meta-test)', () => {
       .filter(([, src]) => src.includes("'integrationSecrets'"))
       .map(([path]) => path)
       .sort()
-    expect(users).toEqual(['./messaging/channels.ts', './messaging/deliver.ts'])
+    expect(users).toEqual(['./messaging/channels.ts', './messaging/deliver.ts', './webhooks.ts'])
     // Every function in those modules that returns secret material is internal.
-    for (const fn of [channels.storeCredentials, channels.prepareTest, deliver.resolveRoute] as any[]) {
+    for (const fn of [
+      channels.storeCredentials, channels.prepareTest, deliver.resolveRoute,
+      webhooks.insertEndpoint, webhooks.loadForDelivery,
+    ] as any[]) {
       expect(fn.isInternal).toBe(true)
     }
   })

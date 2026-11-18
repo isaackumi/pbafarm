@@ -10,6 +10,7 @@ import { deliverMessage } from '../messaging/deliver'
 import { CHECKS } from './checks'
 import { evaluateConditions, renderTemplate, type RunContext } from './conditions'
 import { sendAll } from './deliver'
+import { queueRuleWebhook } from '../webhooks'
 import { inQuietHours, localParts, nextRunAt, zoneOrDefault } from './schedule'
 import type { AutomationRecipients, RunDelivery } from './validators'
 
@@ -302,6 +303,18 @@ export const startRun = internalMutation({
       let truncated = false
 
       for (const action of rule.actions) {
+        if (action.kind === 'webhook') {
+          // INT-005: one signed delivery; retries live in the webhook log.
+          await queueRuleWebhook(ctx, {
+            companyId: run.companyId,
+            endpointId: action.endpointId,
+            rule: { id: rule._id, name: rule.name },
+            runId,
+            eventId: run.eventId,
+            check: context.check,
+          })
+          continue
+        }
         const targets = pickRecipients(users, action.recipients)
         if (action.kind === 'notify') {
           for (const u of targets) {
