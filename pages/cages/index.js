@@ -11,14 +11,12 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import {
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from 'recharts'
+import dynamic from 'next/dynamic'
+
+const CagePieChart = dynamic(() => import('../../components/charts/CagePieChart'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />,
+})
 
 export default function CagesPage() {
   return (
@@ -269,27 +267,7 @@ function CagesManagement() {
             Status distribution
           </h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={analyticsData.statusDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent, value }) =>
-                    value > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : null
-                  }
-                >
-                  {analyticsData.statusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </RechartsPieChart>
-            </ResponsiveContainer>
+            <CagePieChart data={analyticsData.statusDistribution} />
           </div>
         </div>
         <div className="page-card p-6">
@@ -297,27 +275,7 @@ function CagesManagement() {
             Harvest readiness
           </h3>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={analyticsData.harvestReadiness}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent, value }) =>
-                    value > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : null
-                  }
-                >
-                  {analyticsData.harvestReadiness.map((entry, index) => (
-                    <Cell key={`hr-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </RechartsPieChart>
-            </ResponsiveContainer>
+            <CagePieChart data={analyticsData.harvestReadiness} />
           </div>
         </div>
       </div>

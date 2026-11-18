@@ -33,12 +33,13 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-0 right-0 p-4 space-y-2 z-50">
+      {/* Phones: top of the screen, clear of the tab bar and save bars. */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 pt-[max(0.75rem,env(safe-area-inset-top))] px-3 space-y-2 z-[60] lg:inset-x-auto lg:top-auto lg:bottom-0 lg:right-0 lg:p-4">
         {toasts.map((toast) => (
           <div
             key={toast.id}
             role={toast.type === 'error' ? 'alert' : 'status'}
-            className={`rounded-lg border p-4 shadow-md max-w-md bg-surface transition-colors duration-300 ease-in-out ${
+            className={`pointer-events-auto rounded-lg border p-4 shadow-md max-w-md mx-auto lg:mx-0 bg-surface transition-colors duration-300 ease-in-out ${
               toast.type === 'error'
                 ? 'border-signal/40 text-signal'
                 : toast.type === 'success'
@@ -55,7 +56,7 @@ export const ToastProvider = ({ children }) => {
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="ml-4 -m-1 p-1 rounded text-muted hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                className="ml-2 -my-2 -mr-2 h-11 w-11 inline-flex items-center justify-center shrink-0 rounded text-muted hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
               >
                 <span className="sr-only">Close</span>
                 <svg
