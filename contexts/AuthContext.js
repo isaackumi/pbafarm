@@ -7,6 +7,7 @@ import {
   setConvexAuthToken,
   bindConvexReactClient,
 } from '../lib/convexBridge'
+import { clearLlmKeys } from '../lib/llmClient'
 
 const AuthContext = createContext()
 
@@ -116,6 +117,9 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
+    // Pasted assistant keys live in plaintext localStorage: drop them first,
+    // even if the network sign-out below fails.
+    clearLlmKeys()
     try {
       await convexSignOut()
       setConvexAuthToken(null)

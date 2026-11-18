@@ -26,11 +26,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Install
         run: npm ci
+
+      # Never push backend code whose tests fail.
+      - name: Tests
+        run: npm test
 
       - name: Check deploy key
         env:

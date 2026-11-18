@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
+import { safeNextPath } from '../lib/safeRedirect'
 import {
   AUTH_ERROR_CODES,
   SIGN_OUT_CODES,
@@ -23,11 +24,7 @@ export default function Login() {
   // An account that is about to be signed out (inactive, company not approved)
   // stays here; AuthWrapper ends the session and sets ?reason=.
   if (user && !SIGN_OUT_CODES.includes(user.accessState)) {
-    const next =
-      typeof router.query.next === 'string' && router.query.next.startsWith('/')
-        ? router.query.next
-        : '/dashboard'
-    router.push(next)
+    router.push(safeNextPath(router.query.next))
     return null
   }
 
@@ -49,11 +46,7 @@ export default function Login() {
       return
     }
 
-    router.push(
-      typeof router.query.next === 'string' && router.query.next.startsWith('/')
-        ? router.query.next
-        : '/dashboard',
-    )
+    router.push(safeNextPath(router.query.next))
   }
 
   return (
