@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
+import { Button } from './ui'
 
 /**
  * Shared destructive-action confirmation. Use for every permanent/soft delete.
@@ -26,7 +27,7 @@ export default function ConfirmDeleteModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-delete-title"
-        className="relative w-full max-w-md rounded-2xl border border-foam-deep bg-surface p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-xl border border-foam-deep bg-surface p-6 shadow-xl"
       >
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle className="h-6 w-6 shrink-0 text-signal" />
@@ -39,22 +40,12 @@ export default function ConfirmDeleteModal({
         </div>
         <div className="mb-5 text-sm text-muted">{message}</div>
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-            className="min-h-10 rounded-xl border border-input-border px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40 disabled:opacity-50"
-          >
+          <Button variant="secondary" disabled={busy} onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onConfirm}
-            className="min-h-10 rounded-xl bg-signal px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="danger" disabled={busy} onClick={onConfirm}>
             {busy ? 'Deleting…' : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

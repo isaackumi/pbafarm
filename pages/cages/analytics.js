@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import { PageHeader, Button, StatCard } from '../../components/ui'
 import { fetchCages } from '../../store/slices/cagesSlice'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -20,7 +20,7 @@ import {
 } from 'recharts'
 import { analyticsService } from '../../lib/databaseService'
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
 export default function CageAnalyticsPage() {
   return (
@@ -178,8 +178,8 @@ function CageAnalytics() {
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent"></div>
-            <p className="mt-2 text-muted">Loading analytics...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent"></div>
+            <p className="mt-2 text-muted">Loading analytics…</p>
           </div>
         </div>
       </div>
@@ -190,16 +190,16 @@ function CageAnalytics() {
     return (
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
+                <h3 className="text-sm font-medium text-signal">Error</h3>
+                <div className="mt-2 text-sm text-signal">
                   <p>{error || reduxError}</p>
                 </div>
               </div>
@@ -245,55 +245,20 @@ function CageAnalytics() {
 
         {/* Summary Cards */}
         {analyticsData && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Total Cages</div>
-              <div className="mt-2 text-2xl font-semibold text-lagoon-800">
-                {analyticsData.totalCages}
-              </div>
-            </div>
-
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Active</div>
-              <div className="mt-2 text-2xl font-semibold text-green-600">
-                {analyticsData.activeCages}
-              </div>
-            </div>
-
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Harvested</div>
-              <div className="mt-2 text-2xl font-semibold text-lagoon-800">
-                {analyticsData.harvestedCages}
-              </div>
-            </div>
-
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Maintenance</div>
-              <div className="mt-2 text-2xl font-semibold text-yellow-600">
-                {analyticsData.maintenanceCages}
-              </div>
-            </div>
-
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Fallow</div>
-              <div className="mt-2 text-2xl font-semibold text-muted">
-                {analyticsData.fallowCages}
-              </div>
-            </div>
-
-            <div className="page-card p-4">
-              <div className="text-sm font-medium text-muted">Empty</div>
-              <div className="mt-2 text-2xl font-semibold text-purple-600">
-                {analyticsData.emptyCages}
-              </div>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            <StatCard label="Total cages" value={analyticsData.totalCages} />
+            <StatCard label="Active" value={analyticsData.activeCages} tone="good" />
+            <StatCard label="Harvested" value={analyticsData.harvestedCages} />
+            <StatCard label="Maintenance" value={analyticsData.maintenanceCages} tone="warn" />
+            <StatCard label="Fallow" value={analyticsData.fallowCages} />
+            <StatCard label="Empty" value={analyticsData.emptyCages} />
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Status Distribution */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Status Distribution</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Status distribution</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -303,7 +268,7 @@ function CageAnalytics() {
                     cy="50%"
                     labelLine={false}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="var(--lake)"
                     dataKey="value"
                     label={({ name, percent, value }) =>
                       value > 0
@@ -323,8 +288,8 @@ function CageAnalytics() {
           </div>
 
           {/* Size Distribution */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Size Distribution</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Size distribution</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -334,7 +299,7 @@ function CageAnalytics() {
                     cy="50%"
                     labelLine={false}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="var(--lake)"
                     dataKey="value"
                     label={({ name, percent, value }) =>
                       value > 0
@@ -354,32 +319,32 @@ function CageAnalytics() {
           </div>
 
           {/* Harvest Readiness */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Harvest Readiness</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Harvest readiness</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.harvestReadiness}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="cageName" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Bar dataKey="daysToHarvest" fill="#8884d8" />
+                  <Bar dataKey="daysToHarvest" fill="var(--lake)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Growth Trends */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-chart-ink mb-4">Growth Trends</h2>
+          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
+            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth trends</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.growthTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="cageName" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Bar dataKey="growthRate" fill="#82ca9d" />
+                  <Bar dataKey="growthRate" fill="var(--kelp)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

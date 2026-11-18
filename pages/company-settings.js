@@ -343,7 +343,7 @@ function CompanySettings() {
       />
 
       {dirty && (
-        <p className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+        <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
           Unpublished changes — save a draft or publish to apply.
         </p>
       )}
@@ -397,7 +397,7 @@ function CompanySettings() {
                       <img
                         src={logoUrl}
                         alt="Company logo"
-                        className="h-14 w-14 rounded-xl object-cover border border-zinc-200"
+                        className="h-14 w-14 rounded-xl object-cover border border-foam-deep"
                       />
                     ) : (
                       <div className="h-14 w-14 rounded-xl bg-foam border border-foam-deep" />
@@ -449,11 +449,13 @@ function CompanySettings() {
                       type="color"
                       value={draft.branding?.accentHex || '#18181B'}
                       onChange={(e) => patch('branding.accentHex', e.target.value)}
-                      className="h-11 w-14 cursor-pointer rounded-lg border border-zinc-200 bg-white"
+                      aria-label="Pick accent color"
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-input-border bg-surface"
                     />
                     <Input
                       value={draft.branding?.accentHex || '#18181B'}
                       onChange={(e) => patch('branding.accentHex', e.target.value)}
+                      aria-label="Accent color hex"
                       className="font-data max-w-[10rem]"
                     />
                   </div>
@@ -468,12 +470,12 @@ function CompanySettings() {
                     <option value="system">System (user can toggle)</option>
                   </Select>
                 </Field>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.aiAssistantEnabled}
                     onChange={(e) => patch('aiAssistantEnabled', e.target.checked)}
-                    className="rounded border-zinc-300"
                   />
                   Enable AI assistant for this company
                 </label>
@@ -506,7 +508,7 @@ function CompanySettings() {
                       <Input
                         type="number"
                         step="any"
-                        className="font-data"
+                        className="font-data tabular-nums"
                         value={draft[root]?.[key] ?? ''}
                         onChange={(e) =>
                           patch(path, e.target.value === '' ? '' : Number(e.target.value))
@@ -525,9 +527,10 @@ function CompanySettings() {
               subtitle="Enforced when creating stockings and top-ups."
             >
               <div className="space-y-4">
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.stockingRules?.requireApprovalForStocking}
                     onChange={(e) =>
                       patch('stockingRules.requireApprovalForStocking', e.target.checked)
@@ -535,9 +538,10 @@ function CompanySettings() {
                   />
                   Require approval for new stockings
                 </label>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.stockingRules?.requireApprovalForTopup}
                     onChange={(e) =>
                       patch('stockingRules.requireApprovalForTopup', e.target.checked)
@@ -545,9 +549,10 @@ function CompanySettings() {
                   />
                   Require approval for top-ups
                 </label>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={
                       draft.stockingRules?.requireApprovalForFishTransfer !== false
                     }
@@ -560,9 +565,10 @@ function CompanySettings() {
                   />
                   Require approval for fish transfers
                 </label>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.stockingRules?.enforceCageCapacity}
                     onChange={(e) =>
                       patch('stockingRules.enforceCageCapacity', e.target.checked)
@@ -574,7 +580,7 @@ function CompanySettings() {
                   <Field label="Min initial ABW (g)">
                     <Input
                       type="number"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.stockingRules?.minInitialAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.minInitialAbwG', Number(e.target.value))
@@ -584,7 +590,7 @@ function CompanySettings() {
                   <Field label="Max initial ABW (g)">
                     <Input
                       type="number"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.stockingRules?.maxInitialAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.maxInitialAbwG', Number(e.target.value))
@@ -594,7 +600,7 @@ function CompanySettings() {
                   <Field label="Min top-up ABW (g)">
                     <Input
                       type="number"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.stockingRules?.minTopupAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.minTopupAbwG', Number(e.target.value))
@@ -604,7 +610,7 @@ function CompanySettings() {
                   <Field label="Max top-up ABW (g)">
                     <Input
                       type="number"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.stockingRules?.maxTopupAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.maxTopupAbwG', Number(e.target.value))
@@ -646,7 +652,7 @@ function CompanySettings() {
                     <Input
                       type="number"
                       step="any"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.feedRules?.defaultBagSizeKg ?? ''}
                       onChange={(e) =>
                         patch(
@@ -660,7 +666,7 @@ function CompanySettings() {
                     <Input
                       type="number"
                       step="any"
-                      className="font-data"
+                      className="font-data tabular-nums"
                       value={draft.feedRules?.lowStockMultiplier ?? ''}
                       onChange={(e) =>
                         patch(
@@ -682,9 +688,10 @@ function CompanySettings() {
                     />
                   </Field>
                 </div>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={draft.feedRules?.trackLots !== false}
                     onChange={(e) =>
                       patch('feedRules.trackLots', e.target.checked)
@@ -692,9 +699,10 @@ function CompanySettings() {
                   />
                   Track batch / location lots
                 </label>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.feedRules?.requireBatchOnPurchase}
                     onChange={(e) =>
                       patch('feedRules.requireBatchOnPurchase', e.target.checked)
@@ -702,9 +710,10 @@ function CompanySettings() {
                   />
                   Require batch number on purchases
                 </label>
-                <label className="flex items-center gap-2 text-sm font-medium">
+                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded accent-lake"
                     checked={!!draft.feedRules?.allowNegativeStock}
                     onChange={(e) =>
                       patch('feedRules.allowNegativeStock', e.target.checked)
@@ -721,7 +730,7 @@ function CompanySettings() {
           <p className="text-sm font-semibold text-muted mb-3">Preview</p>
           <div
             ref={previewRef}
-            className="rounded-xl border border-zinc-200 overflow-hidden"
+            className="rounded-xl border border-foam-deep overflow-hidden"
             data-preview-theme="light"
           >
             <div
@@ -742,7 +751,7 @@ function CompanySettings() {
               className={`p-3 space-y-2 ${
                 draft.branding?.themeMode === 'dark'
                   ? 'bg-zinc-900 text-zinc-100'
-                  : 'bg-white text-chart-ink'
+                  : 'bg-white text-zinc-900'
               }`}
             >
               <button
@@ -760,7 +769,7 @@ function CompanySettings() {
           <ul className="mt-4 space-y-1.5 text-sm text-muted">
             {ruleSummary.map((line) => (
               <li key={line} className="flex gap-2">
-                <span className="text-lagoon-950">•</span>
+                <span className="text-muted" aria-hidden>•</span>
                 <span>{line}</span>
               </li>
             ))}

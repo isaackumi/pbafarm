@@ -91,25 +91,22 @@ function StockLevels() {
             <Button href="/feed-issue" variant="secondary" size="sm">
               Issue feed
             </Button>
-            <button
-              onClick={fetchStockLevels}
-              className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <Button variant="secondary" size="sm" onClick={fetchStockLevels}>
+              <RefreshCw className="w-4 h-4" aria-hidden />
               Refresh
-            </button>
+            </Button>
           </>
         }
       />
 
         {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+          <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
             {error}
           </div>
         )}
 
         <div className="page-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-foam-deep">
+          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
             <h2 className="font-medium text-chart-ink">
               On-hand stock (kg + bags)
             </h2>
@@ -127,7 +124,7 @@ function StockLevels() {
                 <thead className="bg-foam-deep/40">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                      Feed Type
+                      Feed type
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Supplier
@@ -155,7 +152,7 @@ function StockLevels() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-foam-deep">
+                <tbody className="bg-surface divide-y divide-foam-deep">
                   {stockLevels.map((item) => {
                     const status = getStockStatus(
                       item.current_stock,
@@ -175,16 +172,16 @@ function StockLevels() {
                         <td className="px-4 py-3 text-sm text-muted">
                           {item.supplier_name || '—'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-mono">
+                        <td className="px-4 py-3 text-sm text-right tabular-nums">
                           {Number(item.current_stock).toFixed(2)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-mono">
+                        <td className="px-4 py-3 text-sm text-right tabular-nums">
                           {Number(item.current_stock_bags || 0).toFixed(2)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-mono">
+                        <td className="px-4 py-3 text-sm text-right tabular-nums">
                           {Number(item.bag_size_kg || 25).toFixed(0)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-mono">
+                        <td className="px-4 py-3 text-sm text-right tabular-nums">
                           {Number(item.minimum_stock).toFixed(2)}
                         </td>
                         <td className="px-4 py-3">
@@ -196,7 +193,7 @@ function StockLevels() {
                             {status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm tabular-nums">
                           {t ? (
                             <span
                               className={
@@ -209,7 +206,7 @@ function StockLevels() {
                             '—'
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-mono">
+                        <td className="px-4 py-3 text-sm text-right tabular-nums">
                           {money(item.stock_value || 0)}
                         </td>
                       </tr>

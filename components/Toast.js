@@ -37,12 +37,15 @@ export const ToastProvider = ({ children }) => {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-lg p-4 shadow-lg max-w-md transform transition-colors duration-300 ease-in-out ${
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            className={`rounded-lg border p-4 shadow-md max-w-md bg-surface transition-colors duration-300 ease-in-out ${
               toast.type === 'error'
-                ? 'bg-red-50 text-red-800'
+                ? 'border-signal/40 text-signal'
                 : toast.type === 'success'
-                ? 'bg-green-50 text-green-800'
-                : 'bg-foam-deep text-lagoon-800'
+                  ? 'border-kelp/40 text-kelp'
+                  : toast.type === 'warning'
+                    ? 'border-amber-300 text-amber-800 dark:border-amber-500/40 dark:text-amber-300'
+                    : 'border-foam-deep text-chart-ink'
             }`}
           >
             <div className="flex items-start">
@@ -50,8 +53,9 @@ export const ToastProvider = ({ children }) => {
                 <p className="text-sm font-medium">{toast.message}</p>
               </div>
               <button
+                type="button"
                 onClick={() => removeToast(toast.id)}
-                className="ml-4 text-muted hover:text-muted"
+                className="ml-4 -m-1 p-1 rounded text-muted hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
               >
                 <span className="sr-only">Close</span>
                 <svg

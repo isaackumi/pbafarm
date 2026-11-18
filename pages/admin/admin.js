@@ -6,6 +6,7 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import { PageHeader, Button } from '../../components/ui'
 import DataTable from '../../components/DataTable'
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import { useAuth } from '../../contexts/AuthContext'
 import companyService from '../../lib/companyService'
 import { useToast } from '../../components/Toast'
@@ -83,7 +84,7 @@ function CompaniesList() {
 
   const columns = [
     {
-      header: 'Company Name',
+      header: 'Company name',
       accessor: 'name',
       sortable: true,
       searchable: true,
@@ -100,12 +101,12 @@ function CompaniesList() {
       cell: (row) => row.status || '—',
     },
     {
-      header: 'Contact Email',
+      header: 'Contact email',
       accessor: 'contact_email',
       sortable: true,
     },
     {
-      header: 'Contact Phone',
+      header: 'Contact phone',
       accessor: 'contact_phone',
     },
     {
@@ -132,7 +133,7 @@ function CompaniesList() {
   }
 
   return (
-    <Layout title="Company Management">
+    <Layout title="Company management">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -148,58 +149,32 @@ function CompaniesList() {
         actions={
           <Button href="/admin/companies/create" size="sm">
             <Plus className="w-4 h-4" />
-            Add Company
+            Add company
           </Button>
         }
       />
 
-        {/* Main Content */}
-        <div className="page-card overflow-hidden">
-          <DataTable
-            data={companies}
-            columns={columns}
-            loading={loading}
-            pagination={true}
-            actions={tableActions}
-            searchable={true}
-            sortable={true}
-            emptyMessage="No companies found."
-          />
-        </div>
+      <div className="page-card overflow-hidden">
+        <DataTable
+          data={companies}
+          columns={columns}
+          loading={loading}
+          pagination={true}
+          actions={tableActions}
+          searchable={true}
+          sortable={true}
+          emptyMessage="No companies found."
+        />
+      </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowDeleteModal(false)}
-          ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Confirm Deletion
-            </h3>
-            <p className="text-sm text-muted mb-4">
-              Remove {companyToDelete?.name} from the active company list? The
-              company will be marked rejected. Tenant data is not permanently
-              deleted.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        open={showDeleteModal}
+        title="Remove company?"
+        message={`Remove ${companyToDelete?.name || 'this company'} from the active company list? The company will be marked rejected. Tenant data is not permanently deleted.`}
+        confirmLabel="Remove company"
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+      />
     </Layout>
   )
 }
