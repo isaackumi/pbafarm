@@ -3,7 +3,7 @@ import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { syncCageAbw } from './lib/growth'
 import { tagBiweekly } from './lib/productionDualWrite'
@@ -11,6 +11,7 @@ import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, 
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
 import { refreshUnitDays } from './lib/rollups'
+import { emitDomainEvent } from './lib/events'
 
 function toClient(r: any) {
   return {
@@ -187,6 +188,7 @@ export const create = mutation({
       recordId: id,
       newValues: args,
     })
+    await emitSamplingRecorded(ctx, user, args.date, [id])
     return id
   },
 })
@@ -229,8 +231,31 @@ export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
       }),
     ),
   },
-  handler: async (ctx, { date, records }) => {
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    return await saveSamplingBatch(ctx, user, args)
+  },
+})
+
+export type SamplingBatchLine = {
+  cageId: Id<'cages'>
+  totalFishCount: number
+  totalWeight: number
+  batchCode?: string
+  dissolvedOxygen?: number
+  temperatureC?: number
+  secchiCm?: number
+}
+
+/**
+ * createBatch's body, shared with the public API (POST /api/v1/sampling).
+ * Emits one `sampling.recorded` event.
+ */
+export async function saveSamplingBatch(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  { date, records }: { date: string; records: SamplingBatchLine[] },
+): Promise<Id<'biweeklyRecords'>[]> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw userError('VALIDATION', 'Choose a valid sampling date')
     }
@@ -305,9 +330,37 @@ export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
       tableName: 'biweeklyRecords',
       newValues: { date, count: ids.length },
     })
+    await emitSamplingRecorded(ctx, user, date, ids)
     return ids
-  },
-})
+}
+
+/** One `sampling.recorded` event per save operation (doc 07 §4). */
+export async function emitSamplingRecorded(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  date: string,
+  ids: Id<'biweeklyRecords'>[],
+) {
+  if (!ids.length) return
+  const first = await ctx.db.get(ids[0])
+  const companyId = first?.companyId ?? user.companyId
+  if (!companyId || !first) return
+  const cage = await ctx.db.get(first.cageId)
+  await emitDomainEvent(
+    ctx,
+    'sampling.recorded',
+    {
+      date,
+      lines: ids.length,
+      // Single-cage saves carry the cage and its ABW for simple consumers.
+      cageId: ids.length === 1 ? String(first.cageId) : undefined,
+      cageName: ids.length === 1 ? cage?.name : undefined,
+      averageBodyWeight: ids.length === 1 ? first.averageBodyWeight : undefined,
+      recordIds: ids.slice(0, 20).join(','),
+    },
+    { companyId, locationId: first.locationId },
+  )
+}
 
 export const createMany = mutation({
   args: {

@@ -1,4 +1,5 @@
 import { requireUser } from './authz'
+import { apiActorOf } from './apiActor'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
@@ -158,8 +159,12 @@ export async function logAudit(
     locationId?: Id<'farmLocations'>
   },
 ) {
-  const user = await requireUser(ctx)
+  // Public API writes run without a signed-in user: the request's actor is
+  // carried on the ctx (convex/lib/apiActor.ts) and recorded with its key.
+  const actor = apiActorOf(ctx)
+  const user = actor ? actor.user : await requireUser(ctx)
   await ctx.db.insert('auditLogs', {
+    ...(actor ? { apiKeyId: actor.apiKeyId } : {}),
     userId: user._id,
     actionType: args.actionType,
     tableName: args.tableName,
