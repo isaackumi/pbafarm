@@ -3,6 +3,7 @@ import { internalMutation, query } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { requireUser } from './lib/authz'
 import { emitDomainEvent } from './lib/events'
+import { evaluateSensorReadings } from './waterQuality'
 import { SENSOR_PARAMETERS, type SensorParameter } from './integrations/sensorLogic'
 
 /**
@@ -43,6 +44,7 @@ export const ingest = internalMutation({
     let minDo: number | null = null
     let maxTemp: number | null = null
     const cageNames = new Set<string>()
+    const stored: { cageId?: Id<'cages'>; parameter: string; value: number; measuredAt: number }[] = []
     const cageCache = new Map<string, { _id: Id<'cages'>; name: string; locationId?: Id<'farmLocations'> } | null>()
 
     for (const r of readings) {
@@ -95,6 +97,7 @@ export const ingest = internalMutation({
         apiKeyId,
       })
       accepted += 1
+      stored.push({ cageId: cage?._id, parameter: r.parameter, value: r.value, measuredAt: r.measuredAt })
       if (cage) cageNames.add(cage.name)
       if (r.parameter === 'dissolved_oxygen') minDo = minDo === null ? r.value : Math.min(minDo, r.value)
       if (r.parameter === 'temperature_c') maxTemp = maxTemp === null ? r.value : Math.max(maxTemp, r.value)
@@ -114,6 +117,8 @@ export const ingest = internalMutation({
         { companyId },
       )
     }
+    // Water-quality thresholds per unit type (Phase 6): one breach event per unit.
+    if (accepted > 0) await evaluateSensorReadings(ctx, companyId, stored)
     return { accepted, duplicates, rejected }
   },
 })

@@ -83,6 +83,8 @@ const MENU_SECTIONS = {
       { title: 'All Cages', path: '/cages', icon: Database, tourId: 'cages' },
       { title: 'Unit board', path: '/units', icon: LayoutGrid },
       { title: 'Groups', path: '/units/groups', icon: List },
+      { title: 'Water quality', path: '/water-quality', icon: Waves },
+      { title: 'Maintenance', path: '/maintenance', icon: Settings },
       { title: 'Analytics', path: '/cages/analytics', icon: ChartColumn },
       { title: 'QR codes', path: '/cages/qr-codes', icon: QrCode },
       { title: 'Settings', path: '/cages/settings', icon: Settings },
