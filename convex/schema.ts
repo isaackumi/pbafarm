@@ -730,6 +730,102 @@ const schema = defineSchema({
     active: v.boolean(),
     updatedAt: v.number(),
   }).index('by_company_and_key', ['companyId', 'key']),
+
+  /**
+   * Feed purchase orders (INV-004): draft → ordered → received (or
+   * cancelled). Receiving writes one `feedPurchases` row per line through the
+   * feed ledger, so stock, lots and purchase prices come from the receipt.
+   */
+  purchaseOrders: defineTable({
+    companyId: v.id('companies'),
+    poNumber: v.string(),
+    supplierId: v.id('feedSuppliers'),
+    /** Delivery site. */
+    locationId: v.optional(v.id('farmLocations')),
+    status: v.union(
+      v.literal('draft'),
+      v.literal('ordered'),
+      v.literal('received'),
+      v.literal('cancelled'),
+    ),
+    lines: v.array(
+      v.object({
+        feedTypeId: v.id('feedTypes'),
+        quantityKg: v.number(),
+        pricePerKg: v.number(),
+        receivedKg: v.optional(v.number()),
+        receivedPricePerKg: v.optional(v.number()),
+        batchNumber: v.optional(v.string()),
+        expiryDate: v.optional(v.string()),
+        purchaseId: v.optional(v.id('feedPurchases')),
+      }),
+    ),
+    expectedDate: v.optional(v.string()),
+    orderedAt: v.optional(v.number()),
+    receivedDate: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    orderedBy: v.optional(v.id('users')),
+    receivedBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_company', ['companyId'])
+    .index('by_company_and_status', ['companyId', 'status']),
+
+  /**
+   * Non-feed stock (INV-001): chemicals, drugs, nets, equipment, fuel,
+   * spares. Feed stays in `feedTypes` and its ledger.
+   */
+  inventoryItems: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    category: v.string(),
+    /** kg, L, pcs, … */
+    unit: v.string(),
+    /** Company-wide reorder level; 0 = no alert. */
+    minimumStock: v.number(),
+    supplierId: v.optional(v.id('feedSuppliers')),
+    unitCost: v.optional(v.number()),
+    active: v.boolean(),
+    deletedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_company', ['companyId']),
+
+  /** Quantity of an item held at a site (kept equal to its movements). */
+  inventoryItemStock: defineTable({
+    companyId: v.id('companies'),
+    itemId: v.id('inventoryItems'),
+    locationId: v.id('farmLocations'),
+    quantity: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_item_and_location', ['itemId', 'locationId'])
+    .index('by_company', ['companyId']),
+
+  /** Signed movements of non-feed items; transfers are two rows. */
+  inventoryMovements: defineTable({
+    companyId: v.id('companies'),
+    itemId: v.id('inventoryItems'),
+    locationId: v.id('farmLocations'),
+    type: v.union(
+      v.literal('receipt'),
+      v.literal('issue'),
+      v.literal('adjustment'),
+      v.literal('transfer_out'),
+      v.literal('transfer_in'),
+    ),
+    quantity: v.number(),
+    unitCost: v.optional(v.number()),
+    cageId: v.optional(v.id('cages')),
+    supplierId: v.optional(v.id('feedSuppliers')),
+    /** Links the two legs of a transfer. */
+    transferId: v.optional(v.string()),
+    date: v.string(),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+  })
+    .index('by_company_and_item', ['companyId', 'itemId'])
+    .index('by_company_and_date', ['companyId', 'date']),
 })
 
 export default schema

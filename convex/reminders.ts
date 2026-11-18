@@ -119,7 +119,44 @@ async function digestForCompany(
       if (ok) sent += 1
     }
   }
-  return { missingCages: missing.length, lowFeedTypes: low.length, sent }
+
+  // Non-feed items (INV-001) at or below their reorder level, company-wide.
+  const items = (
+    await ctx.db
+      .query('inventoryItems')
+      .withIndex('by_company', (q) => q.eq('companyId', companyId))
+      .take(500)
+  ).filter((i) => !i.deletedAt && i.active && i.minimumStock > 0)
+  const lowItems: { name: string; unit: string; have: number; min: number }[] = []
+  if (items.length) {
+    const held = new Map<string, number>()
+    for (const s of await ctx.db
+      .query('inventoryItemStock')
+      .withIndex('by_company', (q) => q.eq('companyId', companyId))
+      .collect()) {
+      held.set(String(s.itemId), (held.get(String(s.itemId)) ?? 0) + s.quantity)
+    }
+    for (const i of items) {
+      const have = held.get(String(i._id)) ?? 0
+      if (have <= i.minimumStock) lowItems.push({ name: i.name, unit: i.unit, have, min: i.minimumStock })
+    }
+    lowItems.sort((a, b) => a.have / a.min - b.have / b.min)
+  }
+  if (lowItems.length) {
+    for (const u of admins) {
+      const ok = await notifyOnce(ctx, u, `low-items:${date}:${u._id}`, {
+        title: `Low stock: ${lowItems.length} item${lowItems.length === 1 ? '' : 's'}`,
+        message: nameList(
+          lowItems.map((i) => `${i.name} ${kg(i.have)} ${i.unit} left (minimum ${kg(i.min)} ${i.unit})`),
+          4,
+        ),
+        type: 'warning',
+        link: '/inventory/items',
+      })
+      if (ok) sent += 1
+    }
+  }
+  return { missingCages: missing.length, lowFeedTypes: low.length, lowItems: lowItems.length, sent }
 }
 
 /** Approved companies handled per dailyDigest run before it continues. */
@@ -164,7 +201,7 @@ export const companyDigest = internalMutation({
   handler: async (ctx, { companyId, date }) => {
     const company = await ctx.db.get(companyId)
     if (!company || company.status !== 'approved') {
-      return { missingCages: 0, lowFeedTypes: 0, sent: 0 }
+      return { missingCages: 0, lowFeedTypes: 0, lowItems: 0, sent: 0 }
     }
     return await digestForCompany(ctx, companyId, date)
   },
