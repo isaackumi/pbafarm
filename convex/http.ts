@@ -4,6 +4,7 @@ import {
   createDailyRecordsHandler,
   createSamplingHandler,
   getHandler,
+  ingestReadingsHandler,
   listHandler,
   openApiHandler,
 } from './integrations/apiHttp'
@@ -21,5 +22,8 @@ for (const resource of API_RESOURCES) {
 }
 http.route({ path: '/api/v1/daily-records', method: 'POST', handler: createDailyRecordsHandler })
 http.route({ path: '/api/v1/sampling', method: 'POST', handler: createSamplingHandler })
+
+// Sensor / IoT ingestion (INT-007), same API keys with scope ingest:write.
+http.route({ path: '/ingest/v1/readings', method: 'POST', handler: ingestReadingsHandler })
 
 export default http

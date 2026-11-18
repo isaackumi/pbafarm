@@ -19,6 +19,8 @@ import { runEffect } from '../lib/effect'
 import { API_KEY_PATTERN, type ApiScope } from './apiScopes'
 import type { ApiResource, AuthResult, WriteResult } from '../publicApi'
 import { openApiDocument } from './openapi'
+import { MAX_READINGS_PER_BATCH, ReadingsBody, checkReading, type CleanReading } from './sensorLogic'
+import type { IngestResult } from '../sensors'
 
 export class ApiFailure extends Data.TaggedError('ApiFailure')<{
   readonly status: number
@@ -326,6 +328,41 @@ export const createSamplingHandler = httpAction((ctx, req) =>
           records: body.records.map((r) => ({ ...r })),
         }),
       )
+    }),
+  ),
+)
+
+/**
+ * POST /ingest/v1/readings (INT-007): up to 500 water-quality readings.
+ * Each reading is checked on its own; bad ones are listed in `rejected`,
+ * repeats of stored readings are counted as `duplicates`. 422 when none
+ * could be stored.
+ */
+export const ingestReadingsHandler = httpAction((ctx, req) =>
+  runApi(
+    Effect.gen(function* () {
+      const auth = yield* authenticate(ctx, req, 'ingest:write')
+      const { body } = yield* readJsonBody(req, ReadingsBody)
+      if (body.readings.length < 1 || body.readings.length > MAX_READINGS_PER_BATCH) {
+        return yield* Effect.fail(badRequest(`readings must hold 1 to ${MAX_READINGS_PER_BATCH} items`))
+      }
+      const now = Date.now()
+      const rejected: { index: number; reason: string }[] = []
+      const ok: (CleanReading & { index: number })[] = []
+      for (const [index, raw] of body.readings.entries()) {
+        const checked = checkReading(raw, now)
+        if (checked.ok) ok.push({ index, ...checked.reading })
+        else rejected.push({ index, reason: checked.reason })
+      }
+      const stored: IngestResult = ok.length
+        ? yield* Effect.tryPromise({
+            try: () => ctx.runMutation(internal.sensors.ingest, { apiKeyId: auth.apiKeyId, readings: ok }),
+            catch: (err) => new ApiFailure({ status: 422, code: 'unprocessable', message: domainErrorMessage(err) }),
+          })
+        : { accepted: 0, duplicates: 0, rejected: [] }
+      const all = [...rejected, ...stored.rejected].sort((a, b) => a.index - b.index)
+      const result = { accepted: stored.accepted, duplicates: stored.duplicates, rejected: all }
+      return jsonResponse(stored.accepted + stored.duplicates > 0 ? 200 : 422, result)
     }),
   ),
 )

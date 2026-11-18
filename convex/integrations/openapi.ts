@@ -4,6 +4,7 @@
  * (a test checks every route is described).
  */
 import { API_SCOPES } from './apiScopes'
+import { SENSOR_PARAMETERS } from './sensorLogic'
 
 const str = { type: 'string' }
 const num = { type: 'number' }
@@ -193,6 +194,60 @@ export function openApiDocument(serverUrl: string) {
   }
   paths['/api/v1/daily-records'].post = writeOp('Save daily records for one date', 'daily:write', 'DailyRecordsInput', 'DailyRecord')
   paths['/api/v1/sampling'].post = writeOp('Save sampling for one date', 'sampling:write', 'SamplingInput', 'Sampling')
+  paths['/ingest/v1/readings'] = {
+    post: {
+      summary: 'Send sensor readings',
+      description:
+        'Scope `ingest:write`. Up to 500 water-quality readings per request. Each reading is checked on its own: bad ones are listed in `rejected` with a reason, readings already stored (same device, parameter and measuredAt) count as `duplicates`, so a gateway can safely resend a batch. 422 when nothing could be stored. ' +
+        `Parameters: ${Object.entries(SENSOR_PARAMETERS).map(([k, p]) => `${k} (${p.unit || 'no unit'}, ${p.min}–${p.max})`).join(', ')}.`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['readings'],
+              properties: {
+                readings: {
+                  type: 'array', minItems: 1, maxItems: 500,
+                  items: {
+                    type: 'object',
+                    required: ['deviceId', 'parameter', 'value', 'measuredAt'],
+                    properties: {
+                      deviceId: { ...str, maxLength: 100 },
+                      parameter: { enum: Object.keys(SENSOR_PARAMETERS) },
+                      value: num,
+                      measuredAt: { oneOf: [{ type: 'string', format: 'date-time' }, { type: 'integer', description: 'epoch milliseconds' }] },
+                      cageId: str,
+                      siteId: { ...str, description: 'Used when no cageId is given' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Stored (some may be rejected)',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  accepted: int, duplicates: int,
+                  rejected: { type: 'array', items: { type: 'object', properties: { index: int, reason: str } } },
+                },
+              },
+            },
+          },
+        },
+        ...errors,
+        '422': { description: 'No reading could be stored' },
+      },
+    },
+  }
 
   return {
     openapi: '3.1.0',

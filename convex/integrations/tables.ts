@@ -103,4 +103,49 @@ export const integrationTables = {
     .index('by_endpointId_and_createdAt', ['endpointId', 'createdAt'])
     .index('by_eventId_and_endpointId', ['eventId', 'endpointId'])
     .index('by_createdAt', ['createdAt']),
+
+  /**
+   * Daily weather per site with coordinates (INT-006, doc 09 §9), from
+   * Open-Meteo. One row per site and local date; forecast rows are replaced
+   * by observed values on later fetches.
+   */
+  weatherObservations: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.id('farmLocations'),
+    /** YYYY-MM-DD in the site's time zone. */
+    date: v.string(),
+    tempMaxC: v.optional(v.number()),
+    tempMinC: v.optional(v.number()),
+    precipitationMm: v.optional(v.number()),
+    windMaxKmh: v.optional(v.number()),
+    /** WMO weather code. */
+    weatherCode: v.optional(v.number()),
+    /** True when the date was in the future at fetch time. */
+    isForecast: v.boolean(),
+    source: v.literal('open_meteo'),
+    fetchedAt: v.number(),
+  })
+    .index('by_locationId_and_date', ['locationId', 'date'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
+  /**
+   * Water-quality readings from sensors and gateways (INT-007), posted to
+   * /ingest/v1/readings with an `ingest:write` API key.
+   */
+  sensorReadings: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    cageId: v.optional(v.id('cages')),
+    /** The sender's own device id. */
+    deviceId: v.string(),
+    /** Catalog key (convex/integrations/sensorLogic.ts), e.g. 'dissolved_oxygen'. */
+    parameter: v.string(),
+    value: v.number(),
+    measuredAt: v.number(),
+    receivedAt: v.number(),
+    apiKeyId: v.id('apiKeys'),
+  })
+    .index('by_companyId_and_measuredAt', ['companyId', 'measuredAt'])
+    .index('by_cageId_and_parameter_and_measuredAt', ['cageId', 'parameter', 'measuredAt'])
+    .index('by_companyId_and_deviceId_and_measuredAt', ['companyId', 'deviceId', 'measuredAt']),
 }
