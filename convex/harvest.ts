@@ -5,6 +5,7 @@ import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
+import { harvestFcr } from './lib/growth'
 
 function toClientHarvestRecord(r: any) {
   return {
@@ -184,6 +185,23 @@ async function undoHarvestOnCage(
   }
   await ctx.db.patch(cageId, patch as any)
 }
+
+/** FCR for a planned harvest, from feed logged since stocking. */
+export const suggestFcr = query({
+  args: {
+    cageId: v.id('cages'),
+    harvestDate: v.string(),
+    totalWeight: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage) return null
+    const allowed = await listForCompany(user, [cage])
+    if (!allowed.length) return null
+    return await harvestFcr(ctx, cage, args.harvestDate, args.totalWeight)
+  },
+})
 
 export const create = mutation({
   args: {

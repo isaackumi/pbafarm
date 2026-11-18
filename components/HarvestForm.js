@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { harvestRecordService, cageService } from '../lib/databaseService'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import LocationMetaField from './LocationMetaField'
@@ -41,6 +42,8 @@ const HarvestForm = ({ onComplete }) => {
   const [cages, setCages] = useState([])
   const [cagesReady, setCagesReady] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [fcrCalc, setFcrCalc] = useState(null)
+  const [fcrTouched, setFcrTouched] = useState(false)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -59,6 +62,37 @@ const HarvestForm = ({ onComplete }) => {
 
     fetchCages()
   }, [showToast])
+
+  // Work out FCR from the feed logged since stocking once cage, date and weight are known.
+  useEffect(() => {
+    const weight = parseFloat(formData.totalWeight)
+    if (!formData.cageId || !formData.harvestDate || !(weight > 0)) {
+      setFcrCalc(null)
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(async () => {
+      try {
+        const res = await getConvexHttpClient().query(api.harvest.suggestFcr, {
+          cageId: formData.cageId,
+          harvestDate: formData.harvestDate,
+          totalWeight: weight,
+        })
+        if (cancelled) return
+        setFcrCalc(res)
+        if (res?.fcr != null && !fcrTouched) {
+          setFormData((prev) => ({ ...prev, fcr: String(res.fcr) }))
+        }
+      } catch {
+        if (!cancelled) setFcrCalc(null)
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.cageId, formData.harvestDate, formData.totalWeight])
 
   const handleSizeBreakdownChange = (index, value) => {
     const newSizeBreakdown = [...(formData.sizeBreakdown || [])]
@@ -325,11 +359,36 @@ const HarvestForm = ({ onComplete }) => {
                   type="number"
                   name="fcr"
                   value={formData.fcr}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    setFcrTouched(true)
+                    handleChange(e)
+                  }}
                   step="0.01"
                   className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
+                {fcrCalc && (
+                  <p className="mt-1 text-xs text-muted tabular-nums">
+                    {fcrCalc.fcr != null
+                      ? `Calculated ${fcrCalc.fcr.toFixed(2)}: ${Number(fcrCalc.feed_kg).toLocaleString()} kg feed since ${fcrCalc.stocking_date}, ${Number(fcrCalc.stocked_biomass_kg || 0).toLocaleString()} kg stocked`
+                      : 'Not enough feed or growth logged to calculate FCR. Enter it by hand'}
+                    {fcrCalc.fcr != null && fcrTouched && Number(formData.fcr) !== fcrCalc.fcr && (
+                      <>
+                        {' '}
+                        <button
+                          type="button"
+                          className="text-lake underline underline-offset-2"
+                          onClick={() => {
+                            setFcrTouched(false)
+                            setFormData((prev) => ({ ...prev, fcr: String(fcrCalc.fcr) }))
+                          }}
+                        >
+                          Use calculated
+                        </button>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
 
