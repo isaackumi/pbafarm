@@ -36,6 +36,42 @@ const schema = defineSchema({
     .index('email', ['email'])
     .index('by_companyId', ['companyId']),
 
+  /**
+   * A user's place in an organization (D-002, ORG-001). One row per
+   * user + company; users.companyId stays the active-organization pointer and
+   * is only set to a company where the user has an active membership.
+   */
+  memberships: defineTable({
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    /** Role template key: owner | admin | manager | field_staff | viewer (Phase 3 adds custom roles). */
+    roleKey: v.string(),
+    /** true = every site of the organization, now and future. */
+    allLocations: v.boolean(),
+    /** Ignored when allLocations; at most 100 entries. */
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
+    status: v.union(v.literal('active'), v.literal('suspended'), v.literal('removed')),
+    invitedBy: v.optional(v.id('users')),
+    joinedAt: v.optional(v.number()),
+    statusChangedAt: v.optional(v.number()),
+    statusChangedBy: v.optional(v.id('users')),
+    /** Created by the M2 backfill from users.companyId / users.role. */
+    legacy: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  })
+    .index('by_userId', ['userId'])
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_userId', ['companyId', 'userId']),
+
+  /** One-time codes proving a signed-in user owns their email (ORG-003). */
+  emailVerifications: defineTable({
+    userId: v.id('users'),
+    email: v.string(),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+  }).index('by_userId', ['userId']),
+
   /** Physical farm sites under a company (ops + inventory scope). */
   farmLocations: defineTable({
     companyId: v.optional(v.id('companies')),
@@ -62,6 +98,11 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     rejectionReason: v.optional(v.string()),
+    /** Organization profile (M3, D-012). Read with defaults from lib/orgProfile. */
+    country: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
+    defaultLocale: v.optional(v.string()),
     settings: v.optional(
       v.object({
         aiAssistantEnabled: v.boolean(),
@@ -167,8 +208,16 @@ const schema = defineSchema({
         v.literal('requested'),
         v.literal('accepted'),
         v.literal('declined'),
+        v.literal('revoked'),
       ),
     ),
+    /** Role template for the new membership; falls back to `role` (admin → admin, user → manager). */
+    roleKey: v.optional(v.string()),
+    /** SHA-256 (hex) of the single-use invite token; the token is only in the link. */
+    tokenHash: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    acceptedBy: v.optional(v.id('users')),
+    acceptedAt: v.optional(v.number()),
     requestedByUserId: v.optional(v.id('users')),
     requestedAt: v.optional(v.number()),
     decidedBy: v.optional(v.id('users')),
@@ -176,7 +225,8 @@ const schema = defineSchema({
   })
     .index('by_email', ['email'])
     .index('by_company', ['companyId'])
-    .index('by_company_and_email', ['companyId', 'email']),
+    .index('by_company_and_email', ['companyId', 'email'])
+    .index('by_tokenHash', ['tokenHash']),
 
   cages: defineTable({
     name: v.string(),

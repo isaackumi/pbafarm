@@ -1,0 +1,85 @@
+/**
+ * Email verification for signed-in users (ORG-003, closes doc 07 V3): a
+ * 6-digit code is emailed; entering it sets users.emailVerificationTime.
+ * Accepting an invite requires a verified email (memberships.acceptInvite).
+ *
+ * App-level rather than Convex Auth `verify` so sign-up keeps working on
+ * deployments without an email provider configured.
+ */
+import { v } from 'convex/values'
+import { mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
+import { requireUser } from './lib/authz'
+import { randomDigits, sha256Hex } from './lib/tokens'
+
+const CODE_TTL_MS = 15 * 60 * 1000
+const RESEND_AFTER_MS = 60 * 1000
+const MAX_ATTEMPTS = 5
+
+export const status = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUser(ctx)
+    return {
+      email: me.email ?? null,
+      verified: !!me.emailVerificationTime,
+    }
+  },
+})
+
+export const requestCode = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUser(ctx)
+    if (!me.email) throw new Error('Your account has no email on file')
+    if (me.emailVerificationTime) return { alreadyVerified: true }
+    const now = Date.now()
+    const prior = await ctx.db
+      .query('emailVerifications')
+      .withIndex('by_userId', (q) => q.eq('userId', me._id))
+      .unique()
+    if (prior) {
+      if (now - prior._creationTime < RESEND_AFTER_MS) {
+        throw new Error('A code was just sent. Wait a minute before asking for another.')
+      }
+      await ctx.db.delete(prior._id)
+    }
+    const code = randomDigits(6)
+    await ctx.db.insert('emailVerifications', {
+      userId: me._id,
+      email: me.email,
+      codeHash: await sha256Hex(`${me._id}:${code}`),
+      expiresAt: now + CODE_TTL_MS,
+      attempts: 0,
+    })
+    await ctx.scheduler.runAfter(0, internal.emails.send, {
+      to: me.email,
+      subject: 'Your PBA Farm verification code',
+      text: `Your verification code is ${code}. It expires in 15 minutes.\n\nIf you did not ask for it, ignore this email.`,
+    })
+    return { alreadyVerified: false }
+  },
+})
+
+export const verify = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const me = await requireUser(ctx)
+    if (me.emailVerificationTime) return { verified: true }
+    const row = await ctx.db
+      .query('emailVerifications')
+      .withIndex('by_userId', (q) => q.eq('userId', me._id))
+      .unique()
+    if (!row || row.email !== me.email) throw new Error('Ask for a new code')
+    if (row.expiresAt < Date.now()) throw new Error('This code has expired. Ask for a new one.')
+    if (row.attempts >= MAX_ATTEMPTS) throw new Error('Too many attempts. Ask for a new code.')
+    const ok = row.codeHash === (await sha256Hex(`${me._id}:${code.trim()}`))
+    if (!ok) {
+      await ctx.db.patch(row._id, { attempts: row.attempts + 1 })
+      return { verified: false }
+    }
+    await ctx.db.delete(row._id)
+    await ctx.db.patch(me._id, { emailVerificationTime: Date.now() })
+    return { verified: true }
+  },
+})
