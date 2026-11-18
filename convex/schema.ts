@@ -125,7 +125,10 @@ const schema = defineSchema({
     createdAt: v.number(),
     approvedAt: v.optional(v.number()),
     approvedBy: v.optional(v.id('users')),
-  }).index('by_code', ['code']).index('by_status', ['status']),
+  })
+    .index('by_code', ['code'])
+    .index('by_status', ['status'])
+    .index('by_submittedByUserId', ['submittedByUserId']),
 
   companySettingsDrafts: defineTable({
     companyId: v.id('companies'),

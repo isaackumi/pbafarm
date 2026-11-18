@@ -32,6 +32,27 @@ export function AuthProvider({ children }) {
     claimInvite({}).catch(() => {})
   }, [isAuthenticated, convexUser, claimInvite])
 
+  /**
+   * What this account may do right now, mirroring requireUser on the server:
+   * 'ok' | 'USER_INACTIVE' | 'COMPANY_NOT_APPROVED' (both sign out)
+   * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'NO_COMPANY' (only /register-company)
+   */
+  const accessState = useMemo(() => {
+    if (!isAuthenticated || !convexUser) return null
+    const role = convexUser.role || 'user'
+    if (convexUser.active === false) return 'USER_INACTIVE'
+    if (
+      role !== 'super_admin' &&
+      convexUser.companyId &&
+      convexUser.companyStatus !== 'approved'
+    ) {
+      return 'COMPANY_NOT_APPROVED'
+    }
+    if (convexUser.mustChangePassword === true) return 'PASSWORD_CHANGE_REQUIRED'
+    if (role !== 'super_admin' && !convexUser.companyId) return 'NO_COMPANY'
+    return 'ok'
+  }, [isAuthenticated, convexUser])
+
   const user = useMemo(() => {
     if (!isAuthenticated || !convexUser) return null
     return {
@@ -42,6 +63,9 @@ export function AuthProvider({ children }) {
       role: convexUser.role || 'user',
       companyId: convexUser.companyId,
       mustChangePassword: convexUser.mustChangePassword === true,
+      active: convexUser.active !== false,
+      companyStatus: convexUser.companyStatus ?? null,
+      accessState,
       activeLocationId: convexUser.activeLocationId,
       locationIds: convexUser.locationIds,
       // Compatibility with former Supabase user shape
@@ -50,7 +74,10 @@ export function AuthProvider({ children }) {
         role: convexUser.role || 'user',
       },
     }
-  }, [isAuthenticated, convexUser])
+  }, [isAuthenticated, convexUser, accessState])
+
+  /** True when tenant data may be loaded (providers skip their queries otherwise). */
+  const canUseApp = accessState === 'ok'
 
   const loading = isLoading || (isAuthenticated && convexUser === undefined)
   const initialized = !isLoading
@@ -121,6 +148,8 @@ export function AuthProvider({ children }) {
 
   const authValue = {
     user,
+    accessState,
+    canUseApp,
     loading,
     initialized,
     isAuthenticated,

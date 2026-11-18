@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
 import companyService from '../lib/companyService'
 import { useAuth } from '../contexts/AuthContext'
+import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Textarea } from './ui'
 
 function suggestCode(name) {
@@ -24,7 +26,7 @@ function suggestCode(name) {
 
 const CompanyRegistrationsPage = () => {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -37,6 +39,18 @@ const CompanyRegistrationsPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  const companyless = Boolean(user && !user.companyId)
+  const registration = useQuery(
+    api.companies.myRegistration,
+    companyless ? {} : 'skip',
+  )
+  const isSuperAdmin = user?.role === 'super_admin'
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.replace('/login')
+  }
 
   useEffect(() => {
     if (authLoading) return
@@ -150,6 +164,31 @@ const CompanyRegistrationsPage = () => {
     )
   }
 
+  if (registration?.status === 'pending' && !success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-foam px-4">
+        <div className="max-w-md w-full text-center space-y-4">
+          <p className="font-display text-3xl text-lagoon-950 tracking-tight">
+            PBA Farm
+          </p>
+          <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm space-y-3">
+            <h1 className="text-lg font-semibold text-chart-ink">
+              Registration awaiting approval
+            </h1>
+            <p className="text-sm text-muted">
+              {registration.name} ({registration.code}) was submitted for
+              approval. You get access as its admin once it is approved. This
+              page updates on its own.
+            </p>
+            <Button variant="secondary" className="w-full" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-foam px-4 py-10 sm:py-14">
       <div className="max-w-lg mx-auto">
@@ -170,6 +209,15 @@ const CompanyRegistrationsPage = () => {
         </div>
 
         <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm">
+          {registration?.status === 'rejected' && !success && (
+            <div className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
+              Your registration of {registration.name} was not approved
+              {registration.rejectionReason
+                ? `: ${registration.rejectionReason}`
+                : '.'}{' '}
+              You can submit a new one.
+            </div>
+          )}
           {error && (
             <div className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
               {error}
@@ -281,21 +329,33 @@ const CompanyRegistrationsPage = () => {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted">
-            <Link
-              href="/dashboard"
-              className="font-medium text-lagoon-800 hover:text-lagoon-950"
-            >
-              Back to dashboard
-            </Link>
-            {' · '}
-            <Link
-              href="/company-settings"
-              className="font-medium text-lagoon-800 hover:text-lagoon-950"
-            >
-              Company settings
-            </Link>
-          </p>
+          {companyless && !isSuperAdmin ? (
+            <p className="mt-6 text-center text-sm text-muted">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="font-medium text-lagoon-800 hover:text-lagoon-950"
+              >
+                Sign out
+              </button>
+            </p>
+          ) : (
+            <p className="mt-6 text-center text-sm text-muted">
+              <Link
+                href="/dashboard"
+                className="font-medium text-lagoon-800 hover:text-lagoon-950"
+              >
+                Back to dashboard
+              </Link>
+              {' · '}
+              <Link
+                href="/company-settings"
+                className="font-medium text-lagoon-800 hover:text-lagoon-950"
+              >
+                Company settings
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </div>

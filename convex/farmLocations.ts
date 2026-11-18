@@ -69,6 +69,8 @@ export const ensureDefault = mutation({
   args: {},
   handler: async (ctx) => {
     const user = await requireUser(ctx)
+    // No-op for company-less users: there is no company to give a site to.
+    if (!user.companyId) return null
     const id = await ensureDefaultLocation(ctx, user)
     return id
   },

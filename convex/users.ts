@@ -1,7 +1,8 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
+import type { Doc } from './_generated/dataModel'
 import { v } from 'convex/values'
-import { requireUser, requireRole } from './lib/authz'
+import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 
 function toClient(u: any) {
@@ -27,8 +28,15 @@ export const current = query({
     if (!userId) return null
     const user = await ctx.db.get(userId)
     if (!user) return null
+    // Not requireUser: the client needs this even when access is refused, to
+    // route to the password change, registration, or sign out with a reason.
+    let companyStatus: Doc<'companies'>['status'] | 'missing' | null = null
+    if (user.companyId) {
+      const company = await ctx.db.get(user.companyId)
+      companyStatus = company?.status ?? 'missing'
+    }
     // Keep raw Convex fields for AuthContext + add client aliases
-    return { ...user, ...toClient(user), role: user.role ?? 'user' }
+    return { ...user, ...toClient(user), role: user.role ?? 'user', companyStatus }
   },
 })
 
@@ -221,11 +229,13 @@ export const deactivate = mutation({
     }
     if (target._id === me._id) throw new Error('Cannot deactivate yourself')
     await ctx.db.patch(id, { active: false })
+    // Sign them out everywhere now, not when their sessions expire.
+    const sessionsRevoked = await revokeUserSessions(ctx, id)
     await logAudit(ctx, {
       actionType: 'deactivate',
       tableName: 'users',
       recordId: id,
-      newValues: { active: false },
+      newValues: { active: false, sessionsRevoked },
     })
     return id
   },
@@ -267,6 +277,15 @@ export const claimInvite = mutation({
     })
     await ctx.db.delete(invite._id)
     return { claimed: true, companyId: invite.companyId, role: invite.role }
+  },
+})
+
+/** For actions: the caller, with the same refusals as requireUser. */
+export const authorizedCaller = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUser(ctx)
+    return { _id: me._id, role: me.role ?? 'user', companyId: me.companyId }
   },
 })
 

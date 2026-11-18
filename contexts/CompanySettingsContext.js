@@ -43,7 +43,9 @@ export function applyBrandToDocument(branding, resolvedMode) {
 }
 
 export function CompanySettingsProvider({ children }) {
-  const { user } = useAuth()
+  const { user: authUser, canUseApp } = useAuth()
+  // Tenant data only once access is confirmed (password changed, company approved).
+  const user = canUseApp ? authUser : null
   const { theme, systemTheme } = useTheme()
   const data = useQuery(
     api.companies.getEffectiveSettings,
