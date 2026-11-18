@@ -2,12 +2,33 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { logAudit } from './lib/tenancy'
 import { can, memberContext, requireAccount, requireMember } from './lib/permissions'
+import type { QueryCtx } from './_generated/server'
+import type { Doc } from './_generated/dataModel'
+import { notifyUsers } from './lib/notify'
+import { isActiveMember, ownTeam, teamMemberRows, teamsOfUser } from './teams'
 
 /**
  * Simple tasks (AUTO-005): title, assignee, due date, optional cage, status.
  * Automation rules create them (`create_task` action); admins can assign one
- * by hand; assignees close their own.
+ * by hand to a person or to a team (ENT-004); assignees, and any member of
+ * the assigned team, close them.
  */
+
+/** Open tasks of the caller's teams (at most 10 teams × 50 tasks). */
+async function teamTasks(ctx: QueryCtx, user: Doc<'users'>) {
+  if (!user.companyId) return []
+  const out: Array<Doc<'tasks'> & { teamName: string }> = []
+  for (const r of (await teamsOfUser(ctx, user.companyId, user._id)).slice(0, 10)) {
+    const team = await ctx.db.get(r.teamId)
+    if (!team || team.companyId !== user.companyId || !team.active) continue
+    const rows = await ctx.db
+      .query('tasks')
+      .withIndex('by_teamId_and_status', (q) => q.eq('teamId', team._id).eq('status', 'open'))
+      .take(50)
+    for (const t of rows) if (t.assigneeUserId !== user._id) out.push({ ...t, teamName: team.name })
+  }
+  return out
+}
 
 const statusV = v.union(v.literal('open'), v.literal('done'), v.literal('cancelled'))
 
@@ -20,6 +41,8 @@ export const mine = query({
       .query('tasks')
       .withIndex('by_assignee_and_status', (q) => q.eq('assigneeUserId', user._id).eq('status', 'open'))
       .take(200)
+    const team = await teamTasks(ctx, user)
+    open.push(...team)
     open.sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.createdAt - b.createdAt)
     const closed = includeClosed
       ? await ctx.db
@@ -37,6 +60,7 @@ export const mine = query({
     }
     const shape = (t: (typeof open)[number]) => ({
       ...t,
+      teamName: 'teamName' in t ? (t.teamName as string) : undefined,
       cageName: t.cageId ? cageNames.get(String(t.cageId)) || undefined : undefined,
     })
     return { open: open.map(shape), closed: closed.map(shape) }
@@ -53,7 +77,7 @@ export const openCount = query({
       .query('tasks')
       .withIndex('by_assignee_and_status', (q) => q.eq('assigneeUserId', user._id).eq('status', 'open'))
       .take(100)
-    return rows.length
+    return rows.length + (await teamTasks(ctx, user)).length
   },
 })
 
@@ -65,7 +89,12 @@ export const setStatus = mutation({
     const task = await ctx.db.get(taskId)
     if (!task || task.companyId !== user.companyId) throw new Error('Task not found')
     const isAdmin = can(await memberContext(ctx, user), 'automation.manage')
-    if (task.assigneeUserId !== user._id && !isAdmin) throw new Error('Only the assignee or an admin can update this task')
+    const inTeam =
+      !!task.teamId &&
+      (await teamMemberRows(ctx, task.teamId)).some((r) => r.userId === user._id)
+    if (task.assigneeUserId !== user._id && !inTeam && !isAdmin) {
+      throw new Error('Only the assignee, the assigned team or an admin can update this task')
+    }
     const now = Date.now()
     await ctx.db.patch(taskId, {
       status,
@@ -77,12 +106,13 @@ export const setStatus = mutation({
   },
 })
 
-/** Admins assign a task by hand. */
+/** Admins assign a task by hand, to a person or a team. */
 export const create = mutation({
   args: {
     title: v.string(),
     description: v.optional(v.string()),
-    assigneeUserId: v.id('users'),
+    assigneeUserId: v.optional(v.id('users')),
+    teamId: v.optional(v.id('teams')),
     dueDate: v.optional(v.string()),
     cageId: v.optional(v.id('cages')),
   },
@@ -93,8 +123,11 @@ export const create = mutation({
     const title = args.title.trim()
     if (!title || title.length > 200) throw new Error('Title is required (up to 200 characters)')
     if (args.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(args.dueDate)) throw new Error('Due date must be YYYY-MM-DD')
-    const assignee = await ctx.db.get(args.assigneeUserId)
-    if (!assignee || assignee.companyId !== user.companyId) throw new Error('Assignee must be a member of your company')
+    if (!args.assigneeUserId && !args.teamId) throw new Error('Choose a person or a team')
+    if (args.assigneeUserId && !(await isActiveMember(ctx, user.companyId, args.assigneeUserId))) {
+      throw new Error('Assignee must be a member of your company')
+    }
+    const team = args.teamId ? await ownTeam(ctx, user.companyId, args.teamId) : null
     if (args.cageId) {
       const cage = await ctx.db.get(args.cageId)
       if (!cage || cage.companyId !== user.companyId) throw new Error('Cage not found')
@@ -105,6 +138,7 @@ export const create = mutation({
       title,
       description: args.description?.trim() || undefined,
       assigneeUserId: args.assigneeUserId,
+      teamId: team?._id,
       dueDate: args.dueDate || undefined,
       cageId: args.cageId,
       status: 'open',
@@ -112,16 +146,27 @@ export const create = mutation({
       createdAt: now,
       updatedAt: now,
     })
-    await ctx.db.insert('notifications', {
-      userId: args.assigneeUserId,
-      title: 'New task',
-      message: title,
-      type: 'info',
-      read: false,
-      link: '/tasks',
+    const recipients: Doc<'users'>[] = []
+    if (args.assigneeUserId) {
+      const assignee = await ctx.db.get(args.assigneeUserId)
+      if (assignee) recipients.push(assignee)
+    }
+    if (team) {
+      for (const r of await teamMemberRows(ctx, team._id)) {
+        const u = await ctx.db.get(r.userId)
+        if (u && u.active !== false && u.companyId === user.companyId) recipients.push(u)
+      }
+    }
+    await notifyUsers(ctx, {
       companyId: user.companyId,
+      users: recipients,
+      channels: ['in_app'],
+      title: team ? `New task for ${team.name}` : 'New task',
+      message: title,
+      link: '/tasks',
+      source: 'task.assigned',
     })
-    await logAudit(ctx, { actionType: 'create', tableName: 'tasks', recordId: id, newValues: { title } })
+    await logAudit(ctx, { actionType: 'create', tableName: 'tasks', recordId: id, newValues: { title, teamId: team?._id } })
     return id
   },
 })

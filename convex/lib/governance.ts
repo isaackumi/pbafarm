@@ -38,6 +38,13 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'memberships', index: 'by_companyId' },
   { table: 'roles', index: 'by_companyId_and_key' },
   { table: 'farmLocations', index: 'by_company' },
+  { table: 'businessUnits', index: 'by_companyId_and_parentId' },
+  // Links where this organization is the parent; a subsidiary's links are
+  // under its parent's id and stop counting once the subsidiary is gone.
+  { table: 'companyLinks', index: 'by_companyId_and_status' },
+  { table: 'teams', index: 'by_companyId_and_kind' },
+  { table: 'teamMembers', index: 'by_companyId_and_userId' },
+  { table: 'staffRecords', index: 'by_companyId_and_status' },
   { table: 'companySettingsDrafts', index: 'by_company' },
   { table: 'userInvites', index: 'by_company', redact: ['tokenHash'] },
   { table: 'cages', index: 'by_company' },

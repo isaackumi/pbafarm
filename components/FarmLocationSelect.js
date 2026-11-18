@@ -1,5 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
+import { usePermission } from '../hooks/usePermission'
 import { Select } from './ui'
 
 /**
@@ -8,6 +11,8 @@ import { Select } from './ui'
  * - valueKind "name": value is the location display name (string fields)
  * - syncWithHeader: follow the header switcher when it changes
  * - locked: read-only, always the header location (forms that track site metadata)
+ * - businessUnitId: only sites in that region / business unit (FARM-004)
+ * Sites are grouped by region / business unit when any site has one.
  */
 export default function FarmLocationSelect({
   id,
@@ -22,9 +27,27 @@ export default function FarmLocationSelect({
   valueKind = 'id',
   emptyLabel = 'Select location…',
   allowEmpty = true,
+  businessUnitId = null,
 }) {
-  const { locations, activeLocationId, activeLocation } = useLocation()
+  const { locations: allLocations, activeLocationId, activeLocation } = useLocation()
   const lastHeader = useRef(null)
+  const canViewOrg = usePermission('org.view')
+  const grouped = canViewOrg && (allLocations || []).some((l) => l.businessUnitId)
+  const units = useQuery(api.businessUnits.list, grouped ? {} : 'skip')
+  const locations = useMemo(
+    () => (businessUnitId ? (allLocations || []).filter((l) => l.businessUnitId === businessUnitId) : allLocations),
+    [allLocations, businessUnitId],
+  )
+  const groups = useMemo(() => {
+    if (!grouped || !units) return null
+    const name = new Map(units.map((u) => [u._id, u.name]))
+    const out = new Map()
+    for (const loc of locations || []) {
+      const label = (loc.businessUnitId && name.get(loc.businessUnitId)) || ''
+      out.set(label, [...(out.get(label) || []), loc])
+    }
+    return [...out.entries()].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
+  }, [grouped, units, locations])
 
   const nameForId = (locId) => {
     const loc = (locations || []).find((l) => (l.id || l._id) === locId)
@@ -71,6 +94,14 @@ export default function FarmLocationSelect({
     return value || activeLocationId || ''
   })()
 
+  const renderOption = (loc) => (
+    <option key={loc.id || loc._id} value={loc.id || loc._id}>
+      {loc.name}
+      {loc.code ? ` (${loc.code})` : ''}
+      {locked && (loc.id || loc._id) === activeLocationId ? ' · current' : ''}
+    </option>
+  )
+
   return (
     <Select
       id={id}
@@ -97,13 +128,13 @@ export default function FarmLocationSelect({
           {emptyLabel}
         </option>
       )}
-      {(locations || []).map((loc) => (
-        <option key={loc.id || loc._id} value={loc.id || loc._id}>
-          {loc.name}
-          {loc.code ? ` (${loc.code})` : ''}
-          {locked && (loc.id || loc._id) === activeLocationId ? ' · current' : ''}
-        </option>
-      ))}
+      {groups
+        ? groups.map(([label, locs]) => (
+            <optgroup key={label || '—'} label={label || 'Other sites'}>
+              {locs.map(renderOption)}
+            </optgroup>
+          ))
+        : (locations || []).map(renderOption)}
     </Select>
   )
 }

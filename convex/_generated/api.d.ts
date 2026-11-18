@@ -25,8 +25,10 @@ import type * as automation_templates from "../automation/templates.js";
 import type * as automation_validators from "../automation/validators.js";
 import type * as batches from "../batches.js";
 import type * as biweeklyRecords from "../biweeklyRecords.js";
+import type * as businessUnits from "../businessUnits.js";
 import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
+import type * as companyLinks from "../companyLinks.js";
 import type * as compliance from "../compliance.js";
 import type * as crons from "../crons.js";
 import type * as customFields from "../customFields.js";
@@ -40,6 +42,7 @@ import type * as feed from "../feed.js";
 import type * as files from "../files.js";
 import type * as fishTransfers from "../fishTransfers.js";
 import type * as governance from "../governance.js";
+import type * as groupReports from "../groupReports.js";
 import type * as harvest from "../harvest.js";
 import type * as hatchery from "../hatchery.js";
 import type * as health from "../health.js";
@@ -96,6 +99,7 @@ import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_rollupSchema from "../lib/rollupSchema.js";
 import type * as lib_rollups from "../lib/rollups.js";
 import type * as lib_scope from "../lib/scope.js";
+import type * as lib_siteKpis from "../lib/siteKpis.js";
 import type * as lib_species from "../lib/species.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_terminology from "../lib/terminology.js";
@@ -140,6 +144,7 @@ import type * as species from "../species.js";
 import type * as stockCounts from "../stockCounts.js";
 import type * as stocking from "../stocking.js";
 import type * as tasks from "../tasks.js";
+import type * as teams from "../teams.js";
 import type * as terminology from "../terminology.js";
 import type * as traceability from "../traceability.js";
 import type * as units from "../units.js";
@@ -148,6 +153,7 @@ import type * as users from "../users.js";
 import type * as waterQuality from "../waterQuality.js";
 import type * as weather from "../weather.js";
 import type * as webhooks from "../webhooks.js";
+import type * as workforce from "../workforce.js";
 
 import type {
   ApiFromModules,
@@ -173,8 +179,10 @@ declare const fullApi: ApiFromModules<{
   "automation/validators": typeof automation_validators;
   batches: typeof batches;
   biweeklyRecords: typeof biweeklyRecords;
+  businessUnits: typeof businessUnits;
   cages: typeof cages;
   companies: typeof companies;
+  companyLinks: typeof companyLinks;
   compliance: typeof compliance;
   crons: typeof crons;
   customFields: typeof customFields;
@@ -188,6 +196,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   fishTransfers: typeof fishTransfers;
   governance: typeof governance;
+  groupReports: typeof groupReports;
   harvest: typeof harvest;
   hatchery: typeof hatchery;
   health: typeof health;
@@ -244,6 +253,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rollupSchema": typeof lib_rollupSchema;
   "lib/rollups": typeof lib_rollups;
   "lib/scope": typeof lib_scope;
+  "lib/siteKpis": typeof lib_siteKpis;
   "lib/species": typeof lib_species;
   "lib/tenancy": typeof lib_tenancy;
   "lib/terminology": typeof lib_terminology;
@@ -288,6 +298,7 @@ declare const fullApi: ApiFromModules<{
   stockCounts: typeof stockCounts;
   stocking: typeof stocking;
   tasks: typeof tasks;
+  teams: typeof teams;
   terminology: typeof terminology;
   traceability: typeof traceability;
   units: typeof units;
@@ -296,6 +307,7 @@ declare const fullApi: ApiFromModules<{
   waterQuality: typeof waterQuality;
   weather: typeof weather;
   webhooks: typeof webhooks;
+  workforce: typeof workforce;
 }>;
 
 /**

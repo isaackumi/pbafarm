@@ -41,7 +41,8 @@ function DueList({ title, items, tone }) {
 function Maintenance() {
   const { user, hasRole } = useAuth()
   const isAdmin = usePermission('org.sites.manage')
-  const { locationArgs } = useLocation()
+  const { locationArgs, locations } = useLocation()
+  const locationName = (id) => (id ? (locations || []).find((l) => l.id === id)?.name : null)
   const asOf = localToday()
   const due = useQuery(api.equipment.due, user ? { asOf, days: 14, ...locationArgs } : 'skip')
   const gear = useQuery(api.equipment.list, user ? locationArgs : 'skip')
@@ -83,13 +84,14 @@ function Maintenance() {
         {!gear ? (
           <p className="p-5 text-sm text-muted">Loading…</p>
         ) : gear.length === 0 ? (
-          <EmptyState title="No equipment yet" description="Register pumps, blowers, aerators, biofilters and nets to schedule their servicing." />
+          <EmptyState title="No equipment yet" description="Register pumps, aerators, nets, boats, generators and vehicles to schedule their servicing." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted border-b border-foam-deep">
                   <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Asset tag</th>
                   <th className="px-4 py-2 font-medium">Kind</th>
                   <th className="px-4 py-2 font-medium">Attached to</th>
                   <th className="px-4 py-2 font-medium">Status</th>
@@ -100,12 +102,13 @@ function Maintenance() {
                 {gear.map((e) => (
                   <tr key={e._id}>
                     <td className="px-4 py-2 font-medium">{e.name}</td>
+                    <td className="px-4 py-2 text-muted">{e.assetTag || '—'}</td>
                     <td className="px-4 py-2 text-muted">{EQUIPMENT_KINDS.find((k) => k.value === e.kind)?.label}</td>
                     <td className="px-4 py-2">
                       {e.unitId ? (
                         <Link href={`/units/${e.unitId}/maintenance`} className="text-lake hover:underline">{e.unitName}</Link>
                       ) : (
-                        e.groupName || '—'
+                        e.groupName || locationName(e.locationId) || '—'
                       )}
                     </td>
                     <td className={`px-4 py-2 ${e.status === 'faulty' ? 'text-signal' : ''}`}>{EQUIPMENT_STATUS[e.status]}</td>

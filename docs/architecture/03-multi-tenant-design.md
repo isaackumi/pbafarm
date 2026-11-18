@@ -157,6 +157,16 @@ export const ROLE_TEMPLATES: Record<'owner' | 'admin' | 'manager' | 'field_staff
 
 Rules: segregation of duties is a policy flag per organization (`settings.approvals.requireDifferentApprover`), enforced in approve mutations by comparing `createdBy` with the caller (TD-042). A membership change takes effect on the next function call (no cached permissions).
 
+### 4.1 Group roles over subsidiaries (ENT-002)
+
+Consolidated reporting is the one place a member reads another organization's data. It is deliberately narrow:
+
+- The permission is `group.reports.view` (admin-only, granted to owner and admin templates; a custom role may carry it). It is held in the **parent** organization; nothing is granted inside the subsidiary.
+- Reach is limited to organizations linked by an **active** `companyLinks` row whose subsidiary has turned `shareReports` on (doc 04 §3.6). A pending, declined or ended link, a link with sharing off, or an unlinked organization yields nothing; `groupReports.subsidiarySites` answers NOT_FOUND for any organization that is not such a subsidiary.
+- Read-only: `groupReports.overview` and `groupReports.subsidiarySites` are queries returning aggregate KPIs (units, fish on hand, harvest kg, sales, expenses, overdue servicing) per organization or per site, never records or people. Each organization's figures are bounded index ranges (`convex/lib/siteKpis.ts`, `KPI_CAPS`, with a `truncated` flag). Amounts stay in each organization's currency.
+- The caller's own organization row respects their site scope; subsidiary rows are organization-wide (the subsidiary chose to share them).
+- Tests: `convex/enterprise.test.ts` (no group role, unlinked organization, pending link and sharing-off cases see nothing).
+
 ## 5. The guard
 
 ```ts

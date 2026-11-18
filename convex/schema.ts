@@ -319,8 +319,112 @@ const schema = defineSchema({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
     waterBody: v.optional(v.string()),
+    /** Business unit / region the site belongs to (FARM-004); unset = directly under the organization. */
+    businessUnitId: v.optional(v.id('businessUnits')),
     updatedAt: v.number(),
   }).index('by_company', ['companyId']),
+
+  /**
+   * Optional grouping between organization and site (FARM-004, ENT-001,
+   * doc 04 §3.6): regions and business units, nested at most three deep.
+   * Sites point at one with farmLocations.businessUnitId.
+   */
+  businessUnits: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    code: v.optional(v.string()),
+    kind: v.union(v.literal('region'), v.literal('business_unit')),
+    parentId: v.optional(v.id('businessUnits')),
+    description: v.optional(v.string()),
+    active: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  }).index('by_companyId_and_parentId', ['companyId', 'parentId']),
+
+  /**
+   * Subsidiary links (ENT-001): `companyId` is the parent (group)
+   * organization, `childCompanyId` the subsidiary. The parent asks, the
+   * subsidiary accepts; consolidated reporting (ENT-002) reads only active
+   * links whose subsidiary shares reports, and either side can end the link.
+   */
+  companyLinks: defineTable({
+    companyId: v.id('companies'),
+    childCompanyId: v.id('companies'),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('active'),
+      v.literal('declined'),
+      v.literal('ended'),
+    ),
+    /** Subsidiary's consent to consolidated reporting; it can turn this off. */
+    shareReports: v.boolean(),
+    note: v.optional(v.string()),
+    requestedBy: v.id('users'),
+    requestedAt: v.number(),
+    respondedBy: v.optional(v.id('users')),
+    respondedAt: v.optional(v.number()),
+    endedBy: v.optional(v.id('users')),
+    endedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_childCompanyId_and_status', ['childCompanyId', 'status']),
+
+  /**
+   * Departments and teams (ENT-004). A team may sit in a department
+   * (parentId). Members and leads are teamMembers rows.
+   */
+  teams: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    kind: v.union(v.literal('department'), v.literal('team')),
+    parentId: v.optional(v.id('teams')),
+    locationId: v.optional(v.id('farmLocations')),
+    description: v.optional(v.string()),
+    active: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  }).index('by_companyId_and_kind', ['companyId', 'kind']),
+
+  teamMembers: defineTable({
+    companyId: v.id('companies'),
+    teamId: v.id('teams'),
+    userId: v.id('users'),
+    role: v.union(v.literal('lead'), v.literal('member')),
+    addedAt: v.number(),
+    addedBy: v.optional(v.id('users')),
+  })
+    .index('by_teamId_and_userId', ['teamId', 'userId'])
+    .index('by_companyId_and_userId', ['companyId', 'userId']),
+
+  /**
+   * Workforce roster (ENT-004). Minimal personal data (doc 21): name, job,
+   * site, department and a work contact. Contact and notes are returned only
+   * to holders of workforce.manage. No national ids, birth dates or pay.
+   */
+  staffRecords: defineTable({
+    companyId: v.id('companies'),
+    /** Linked app account, when the person signs in. */
+    userId: v.optional(v.id('users')),
+    fullName: v.string(),
+    jobTitle: v.optional(v.string()),
+    employeeCode: v.optional(v.string()),
+    employmentType: v.optional(
+      v.union(v.literal('permanent'), v.literal('contract'), v.literal('casual'), v.literal('seasonal')),
+    ),
+    locationId: v.optional(v.id('farmLocations')),
+    departmentId: v.optional(v.id('teams')),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    status: v.union(v.literal('active'), v.literal('inactive')),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id('users')),
+  })
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_companyId_and_userId', ['companyId', 'userId']),
 
   companies: defineTable({
     name: v.string(),
@@ -750,6 +854,8 @@ const schema = defineSchema({
       v.literal('feeder'),
       v.literal('generator'),
       v.literal('sensor'),
+      v.literal('boat'),
+      v.literal('vehicle'),
       v.literal('other'),
     ),
     status: v.union(
@@ -768,6 +874,12 @@ const schema = defineSchema({
     maintenanceIntervalDays: v.optional(v.number()),
     lastMaintainedOn: v.optional(v.string()),
     nextMaintenanceDue: v.optional(v.string()),
+    /** Asset register (INV-012): tag, purchase and warranty. */
+    assetTag: v.optional(v.string()),
+    purchasedOn: v.optional(v.string()),
+    purchaseCost: v.optional(v.number()),
+    supplier: v.optional(v.string()),
+    warrantyUntil: v.optional(v.string()),
     /** Spare parts kept for it (non-feed inventory items, Phase 9). */
     sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
     notes: v.optional(v.string()),
@@ -2071,6 +2183,8 @@ const schema = defineSchema({
     title: v.string(),
     description: v.optional(v.string()),
     assigneeUserId: v.optional(v.id('users')),
+    /** Assigned to a team (ENT-004): any member can close it. */
+    teamId: v.optional(v.id('teams')),
     /** YYYY-MM-DD. */
     dueDate: v.optional(v.string()),
     cageId: v.optional(v.id('cages')),
@@ -2084,7 +2198,8 @@ const schema = defineSchema({
     updatedAt: v.number(),
   })
     .index('by_assignee_and_status', ['assigneeUserId', 'status'])
-    .index('by_company_and_status', ['companyId', 'status']),
+    .index('by_company_and_status', ['companyId', 'status'])
+    .index('by_teamId_and_status', ['teamId', 'status']),
 
   /**
    * Outbound SMS/WhatsApp/email of system notifications that are not

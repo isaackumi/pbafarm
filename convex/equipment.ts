@@ -11,12 +11,15 @@
  *   non-feed inventory (Phase 9).
  */
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { assertLocationAccess, assertOwns, logAudit, writeLocationId } from './lib/tenancy'
 import { idempotentMutation } from './lib/idempotency'
-import { addDays, isBusinessDate, todayFor } from './lib/dates'
+import { addDays, isBusinessDate, todayFor, todayIn, zoneFor } from './lib/dates'
+import { notifyUsers } from './lib/notify'
+import { membersWithPermission } from './approvalAlerts'
 import { issueItem } from './inventoryItems'
 import { requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
@@ -35,6 +38,8 @@ export const equipmentKind = v.union(
   v.literal('feeder'),
   v.literal('generator'),
   v.literal('sensor'),
+  v.literal('boat'),
+  v.literal('vehicle'),
   v.literal('other'),
 )
 
@@ -111,6 +116,20 @@ const equipmentFields = {
   sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
   notes: v.optional(v.string()),
   custom: v.optional(customValues),
+  assetTag: v.optional(v.string()),
+  purchasedOn: v.optional(v.string()),
+  purchaseCost: v.optional(v.number()),
+  supplier: v.optional(v.string()),
+  warrantyUntil: v.optional(v.string()),
+}
+
+/** Asset register fields (INV-012): dates, a non-negative cost, short text. */
+function checkAsset(a: { purchasedOn?: string; warrantyUntil?: string; purchaseCost?: number }) {
+  checkDate(a.purchasedOn, 'Purchase date')
+  checkDate(a.warrantyUntil, 'Warranty until')
+  if (a.purchaseCost !== undefined && !(Number.isFinite(a.purchaseCost) && a.purchaseCost >= 0 && a.purchaseCost <= 1e12)) {
+    throw new Error('Purchase cost must be zero or more')
+  }
 }
 
 /** Equipment of the company (optionally one unit or group), with attachment names. */
@@ -167,6 +186,7 @@ export const create = mutation({
       [args.lastMaintainedOn, 'Last maintained'],
       [args.nextMaintenanceDue, 'Next maintenance'],
     ] as const) checkDate(d, label)
+    checkAsset(args)
     if (args.maintenanceIntervalDays !== undefined && !(args.maintenanceIntervalDays >= 1 && args.maintenanceIntervalDays <= 3650)) {
       throw new Error('Maintenance interval must be between 1 and 3650 days')
     }
@@ -202,6 +222,8 @@ export const create = mutation({
       serialNumber: cleanText(args.serialNumber, 120),
       rating: cleanText(args.rating, 200),
       notes: cleanText(args.notes),
+      assetTag: cleanText(args.assetTag, 60),
+      supplier: cleanText(args.supplier, 120),
       nextMaintenanceDue: nextDue,
       sparePartItemIds: await checkSpares(ctx, user, args.sparePartItemIds),
       createdBy: user._id,
@@ -232,6 +254,11 @@ export const update = mutation({
       sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
       notes: v.optional(v.string()),
       custom: v.optional(customValues),
+      assetTag: v.optional(v.string()),
+      purchasedOn: v.optional(v.string()),
+      purchaseCost: v.optional(v.number()),
+      supplier: v.optional(v.string()),
+      warrantyUntil: v.optional(v.string()),
     }),
   },
   returns: v.id('equipment'),
@@ -241,6 +268,7 @@ export const update = mutation({
     assertOwns(user, existing, 'Equipment')
     checkDate(patch.installedOn, 'Installed on')
     checkDate(patch.nextMaintenanceDue, 'Next maintenance')
+    checkAsset(patch)
     if (patch.maintenanceIntervalDays !== undefined && !(patch.maintenanceIntervalDays >= 1 && patch.maintenanceIntervalDays <= 3650)) {
       throw new Error('Maintenance interval must be between 1 and 3650 days')
     }
@@ -252,6 +280,8 @@ export const update = mutation({
       if (!name) throw new Error('Name is required')
       next.name = name
     }
+    if (patch.assetTag !== undefined) next.assetTag = cleanText(patch.assetTag, 60)
+    if (patch.supplier !== undefined) next.supplier = cleanText(patch.supplier, 120)
     if (patch.sparePartItemIds) next.sparePartItemIds = await checkSpares(ctx, user, patch.sparePartItemIds)
     if (patch.custom !== undefined) {
       next.custom = await validateCustom(ctx, {
@@ -506,5 +536,86 @@ export const due = query({
       overdue: items.filter((i) => i.due < args.asOf),
       dueSoon: items.filter((i) => i.due >= args.asOf),
     }
+  },
+})
+
+// ─── Due-maintenance reminders (INV-012) ────────────────────────────────────
+
+const REMINDER_PAGE_SIZE = 50
+/** Remind this many days before an item is due, and every day while overdue. */
+export const REMINDER_LOOKAHEAD_DAYS = 3
+const REMINDER_CAP = 100
+
+/**
+ * Daily cron: pages through approved companies and schedules one
+ * companyMaintenanceReminders per company, each in its own transaction.
+ */
+export const maintenanceReminders = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  returns: v.object({ scheduled: v.number(), done: v.boolean() }),
+  handler: async (ctx, { cursor }): Promise<{ scheduled: number; done: boolean }> => {
+    const page = await ctx.db
+      .query('companies')
+      .withIndex('by_status', (q) => q.eq('status', 'approved'))
+      .paginate({ numItems: REMINDER_PAGE_SIZE, cursor: cursor ?? null })
+    for (const c of page.page) {
+      await ctx.scheduler.runAfter(0, internal.equipment.companyMaintenanceReminders, { companyId: c._id })
+    }
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.equipment.maintenanceReminders, { cursor: page.continueCursor })
+    }
+    return { scheduled: page.page.length, done: page.isDone }
+  },
+})
+
+/**
+ * One company: equipment due within REMINDER_LOOKAHEAD_DAYS of the company's
+ * today (or overdue), at most REMINDER_CAP items. One in-app notification per
+ * site to the people who manage that site's equipment (org.sites.manage),
+ * once a day (dedupe key per site and date).
+ */
+export const companyMaintenanceReminders = internalMutation({
+  args: { companyId: v.id('companies'), date: v.optional(v.string()) },
+  returns: v.object({ items: v.number(), notified: v.number() }),
+  handler: async (ctx, { companyId, date }) => {
+    const company = await ctx.db.get(companyId)
+    if (!company || company.status !== 'approved') return { items: 0, notified: 0 }
+    const today = date ?? todayIn(zoneFor(null, company))
+    const until = addDays(today, REMINDER_LOOKAHEAD_DAYS)
+    const due = (
+      await ctx.db
+        .query('equipment')
+        .withIndex('by_companyId_and_nextMaintenanceDue', (q) =>
+          q.eq('companyId', companyId).gte('nextMaintenanceDue', '0000-01-01').lte('nextMaintenanceDue', until),
+        )
+        .take(REMINDER_CAP)
+    ).filter((e) => e.status !== 'retired')
+    const bySite = new Map<string, Doc<'equipment'>[]>()
+    for (const e of due) {
+      const key = e.locationId ?? ''
+      bySite.set(key, [...(bySite.get(key) ?? []), e])
+    }
+    let notified = 0
+    for (const [siteKey, items] of bySite) {
+      const locationId = (siteKey || undefined) as Id<'farmLocations'> | undefined
+      const users = await membersWithPermission(ctx, companyId, 'org.sites.manage', locationId)
+      if (!users.length) continue
+      const overdue = items.filter((e) => e.nextMaintenanceDue! < today).length
+      const names = items.slice(0, 5).map((e) => `${e.name} (${e.nextMaintenanceDue})`).join(', ')
+      const more = items.length > 5 ? ` and ${items.length - 5} more` : ''
+      const res = await notifyUsers(ctx, {
+        companyId,
+        users,
+        channels: ['in_app'],
+        title: overdue ? 'Maintenance overdue' : 'Maintenance due soon',
+        message: `${items.length} item${items.length === 1 ? '' : 's'} due for servicing${overdue ? ` (${overdue} overdue)` : ''}: ${names}${more}.`,
+        link: '/maintenance',
+        level: overdue ? 'warning' : 'info',
+        dedupeKey: `maintenance-due:${companyId}:${siteKey || 'none'}:${today}`,
+        source: 'equipment.maintenance_due',
+      })
+      notified += res.notified
+    }
+    return { items: due.length, notified }
   },
 })

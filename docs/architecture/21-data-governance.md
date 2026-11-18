@@ -10,6 +10,12 @@ ENT-005 and TRACE-007. Code: `convex/governance.ts`, `convex/lib/governance.ts`,
 - Left out: `integrationSecrets`, `phoneLoginCodes`, `mfaSessions`, `fileDownloadTokens`, Convex Auth tables, `userInvites.tokenHash`, `apiKeys.hash`. Stored files (attachments) are listed in `files` but not copied into the zip.
 - `convex/governance.test.ts` checks `TENANT_TABLES` against the schema: every table with an index starting at `companyId` is listed or skipped with a reason, and every listed index starts with `companyId`. A new tenant table fails that test until it is classified.
 
+## Workforce and organization structure data (ENT-001, ENT-004)
+
+- `staffRecords` (workforce roster) keeps the minimum: name, job title, staff number, employment type, site, department, start/end dates, and optionally phone, email and notes. No national ID, date of birth, salary or bank details. The contact fields (phone, email, notes) are returned only to `workforce.manage` holders (admin-only); `workforce.view` (managers) sees the roster without them, and site-limited members only see staff of their sites. Audit entries for staff records omit contact data.
+- `teams` and `teamMembers` hold names and membership only; team lists show member e-mail addresses only to `workforce.manage` holders.
+- `businessUnits`, `companyLinks`, `teams`, `teamMembers` and `staffRecords` are tenant tables in `TENANT_TABLES` (exported and purged with the organization). A `companyLinks` row is filed under the parent (`companyId`); when a subsidiary is deleted, links pointing to it stay with the parent but report nothing because the subsidiary is no longer approved.
+
 ## Deletion requests
 
 | Step | Who | Effect |
