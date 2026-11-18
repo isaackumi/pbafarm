@@ -35,6 +35,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import { userError } from './errors'
 import { emitDomainEvent } from './events'
 import { abwAsOf, biomassKg, compareEvents, type Sample } from './kpi'
+import { refreshUnitDays } from './rollups'
 
 type Ctx = QueryCtx | MutationCtx
 
@@ -1124,6 +1125,11 @@ export class StockOperation {
     await this.checkOneOccupancy()
     await this.writeCaches()
     await this.writeBatchStatus()
+    // Rollups (PLAT-002): the days these events fall on, in this transaction.
+    await refreshUnitDays(
+      this.ctx,
+      this.inserted.map((e) => ({ unitId: e.unitId, date: e.eventDate })),
+    )
     await this.emitEvents()
     return { eventIds: this.eventIds, warnings: [...this.warnings] }
   }

@@ -17,6 +17,7 @@ import {
   dailyMortalityPct,
   cumulativeMortalityPct,
 } from './lib/farmRules'
+import { refreshUnitDays } from './lib/rollups'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
@@ -488,6 +489,7 @@ export async function insertDailyRecord(
     feedOverlapReason,
   })
 
+  await refreshUnitDays(ctx, [{ unitId: args.cageId, date: args.date }])
   await logAudit(ctx, {
     actionType: 'create',
     tableName: 'daily_records',
@@ -768,6 +770,10 @@ export const update = mutation({
       })
     }
 
+    await refreshUnitDays(ctx, [
+      { unitId: existing.cageId, date: existing.date },
+      { unitId: existing.cageId, date: patch.date ?? existing.date },
+    ])
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'daily_records',
@@ -808,6 +814,7 @@ export const remove = mutation({
       user._id,
     )
     await ctx.db.delete(id)
+    await refreshUnitDays(ctx, [{ unitId: existing.cageId, date: existing.date }])
     await logAudit(ctx, {
       actionType: 'delete',
       tableName: 'daily_records',
@@ -886,6 +893,7 @@ export const createMany = mutation({
         overrideReason,
         feedOverlapReason,
       })
+      await refreshUnitDays(ctx, [{ unitId: record.cageId, date: record.date }])
       ids.push(id)
     }
     if (ids.length > 0) {

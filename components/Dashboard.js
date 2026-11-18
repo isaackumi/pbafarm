@@ -143,16 +143,32 @@ export default function Dashboard() {
           .slice(0, 10)
         // No per-query fallbacks: a failed query must show the error state,
         // not a dashboard of zeros that looks like real numbers.
-        const [kpis, dashSummary, daily, growth] = await Promise.all([
+        // Trend and biomass come from the rollups (PLAT-002): one row per
+        // unit-day and per occupancy instead of every record and event.
+        const [kpis, dashSummary, series, overview] = await Promise.all([
           client.query(api.reports.dashboardKpis, scoped),
           client.query(api.reports.dashboardSummary, scoped),
           client.query(
-            api.dailyRecords.list,
-            withActiveLocation({ dateFrom: trendFrom }),
+            api.reports.dailySeries,
+            withActiveLocation({ from: trendFrom, to: asOf }),
           ),
-          // Standing biomass from the same KPI definitions as the cage page.
-          client.query(api.cages.growthAll, withActiveLocation({ asOf })),
+          client.query(api.reports.productionOverview, withActiveLocation({})),
         ])
+        // Before the rollup backfill has run: the raw reads as before.
+        const rollupsEmpty = !overview?.occupancies && active.length > 0
+        const [daily, growth] = rollupsEmpty
+          ? await Promise.all([
+              client.query(api.dailyRecords.list, withActiveLocation({ dateFrom: trendFrom })),
+              client.query(api.cages.growthAll, withActiveLocation({ asOf })),
+            ])
+          : [
+              (series || []).map((d) => ({
+                date: d.date,
+                feedAmount: d.feed_kg,
+                mortality: d.mortality,
+              })),
+              { farm_biomass_kg: overview?.biomass_kg ?? 0 },
+            ]
         if (cancelled) return
 
         setDailyRecords(daily || [])
