@@ -9,6 +9,7 @@ import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { PlusCircle } from 'lucide-react'
+import { localToday } from '../lib/format'
 
 const HarvestPage = () => {
   const { hasRole } = useAuth()
@@ -149,7 +150,7 @@ const HarvestPage = () => {
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      link.setAttribute('download', `harvest_records_${new Date().toISOString().split('T')[0]}.csv`)
+      link.setAttribute('download', `harvest_records_${localToday()}.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()

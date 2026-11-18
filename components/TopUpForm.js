@@ -20,10 +20,11 @@ import {
   Select,
   Textarea,
 } from './ui'
+import { localToday } from '../lib/format'
 
 const TOPUP_DEFAULTS = {
   stocking_id: '',
-  topup_date: new Date().toISOString().split('T')[0],
+  topup_date: localToday(),
   fish_count: '',
   abw: '',
   source_location: '',
@@ -145,7 +146,7 @@ const TopUpForm = ({ onComplete }) => {
       clear()
       setFormData({
         ...TOPUP_DEFAULTS,
-        topup_date: new Date().toISOString().split('T')[0],
+        topup_date: localToday(),
       })
 
       if (onComplete) {

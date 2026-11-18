@@ -62,6 +62,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { localToday } from '../lib/format'
 
 export default function FeedPurchasesPage() {
   return (
@@ -92,7 +93,7 @@ function FeedPurchases() {
     bags: '',
     bag_size_kg: '20',
     price_per_kg: '',
-    purchase_date: new Date().toISOString().split('T')[0],
+    purchase_date: localToday(),
     supplier_id: '',
     batch_number: '',
     expiry_date: '',
@@ -271,7 +272,7 @@ function FeedPurchases() {
       const growth = await getConvexHttpClient()
         .query(api.cages.growthAll, {
           ...(activeLocationId ? { locationId: activeLocationId } : {}),
-          asOf: new Date().toISOString().slice(0, 10),
+          asOf: localToday(),
         })
         .catch(() => null)
       setUsageAnalytics({

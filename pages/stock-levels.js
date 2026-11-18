@@ -6,6 +6,7 @@ import { PageHeader, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useMoney } from '../lib/money'
+import { useLocation } from '../contexts/LocationContext'
 
 export default function StockLevelsPage() {
   return (
@@ -22,17 +23,20 @@ function StockLevels() {
   const [stockLevels, setStockLevels] = useState([])
   const [tally, setTally] = useState([])
   const [error, setError] = useState(null)
+  // Stock at the header site (FARM-003); the tally check stays company-wide.
+  const { activeLocationId } = useLocation()
 
   useEffect(() => {
     fetchStockLevels()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocationId])
 
   const fetchStockLevels = async () => {
     setLoading(true)
     try {
       const client = getConvexHttpClient()
       const [data, tallyRows] = await Promise.all([
-        client.query(api.inventory.listStockLevels, {}),
+        client.query(api.inventory.listStockLevels, activeLocationId ? { locationId: activeLocationId } : {}),
         client.query(api.inventory.stockTally, {}),
       ])
       setStockLevels(data || [])

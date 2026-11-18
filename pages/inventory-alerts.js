@@ -14,6 +14,7 @@ import { PageHeader, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useMoney } from '../lib/money'
+import { useLocation } from '../contexts/LocationContext'
 
 export default function InventoryAlertsPage() {
   return (
@@ -31,15 +32,21 @@ function InventoryAlerts() {
   const [alerts, setAlerts] = useState([])
   const [error, setError] = useState(null)
 
+  const { activeLocationId } = useLocation()
+
   useEffect(() => {
     fetchAlerts()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocationId])
 
   const fetchAlerts = async () => {
     setLoading(true)
     try {
       const client = getConvexHttpClient()
-      const data = await client.query(api.inventory.listAlerts, {})
+      const data = await client.query(
+        api.inventory.listAlerts,
+        activeLocationId ? { locationId: activeLocationId } : {},
+      )
       setAlerts(data || [])
     } catch (error) {
       console.error('Error fetching alerts:', error)

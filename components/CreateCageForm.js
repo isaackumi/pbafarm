@@ -13,6 +13,8 @@ import {
   Select,
   Textarea,
 } from './ui'
+import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs } from './UnitGeometryFields'
+import { unitLabel } from '../lib/format'
 
 const CreateCageForm = () => {
   const router = useRouter()
@@ -24,6 +26,7 @@ const CreateCageForm = () => {
   const [nameError, setNameError] = useState('')
   const [existingCages, setExistingCages] = useState([])
   const [cageCode, setCageCode] = useState('')
+  const [geometry, setGeometry] = useState({ ...EMPTY_GEOMETRY })
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -126,7 +129,7 @@ const CreateCageForm = () => {
         code: formData.code,
         locationId,
         location: selectedLocationName || undefined,
-        size: formData.size ? parseFloat(formData.size) : undefined,
+        ...geometryArgs(geometry),
         capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
         dimensions: formData.dimensions ? formData.dimensions.trim() : undefined,
         material: formData.material ? formData.material.trim() : undefined,
@@ -138,7 +141,8 @@ const CreateCageForm = () => {
       const { data, error: createError } = await cageService.createCage(cageData)
       if (createError) throw createError
 
-      setMessage('Cage created')
+      setMessage(`${unitLabel(geometry.unitType)} created`)
+      setGeometry({ ...EMPTY_GEOMETRY })
       setFormData({
         name: '',
         code: '',
@@ -167,7 +171,7 @@ const CreateCageForm = () => {
   return (
     <FormCard
       title="Cage details"
-      subtitle="Register a physical cage. Stock it separately after creation."
+      subtitle="Register a cage, pond, tank or other unit. Stock it separately after creation."
     >
       {error && (
         <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
@@ -248,19 +252,12 @@ const CreateCageForm = () => {
         </FormSection>
 
         <FormSection title="Capacity & build">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Size (m³)" htmlFor="size">
-              <Input
-                id="size"
-                type="number"
-                name="size"
-                value={formData.size}
-                onChange={handleChange}
-                step="0.1"
-                className="font-data"
-                placeholder="Volume in cubic meters"
-              />
-            </Field>
+          <UnitGeometryFields
+            value={geometry}
+            idPrefix="create-unit"
+            onChange={(key, value) => setGeometry((g) => ({ ...g, [key]: value }))}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
             <Field label="Capacity (fish count)" htmlFor="capacity">
               <Input
                 id="capacity"

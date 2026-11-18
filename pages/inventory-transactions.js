@@ -7,6 +7,7 @@ import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
+import { localToday } from '../lib/format'
 
 export default function InventoryTransactionsPage() {
   return (
@@ -25,7 +26,7 @@ function InventoryTransactions() {
     start: new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
       .split('T')[0],
-    end: new Date().toISOString().split('T')[0],
+    end: localToday(),
   })
   const [reverseTarget, setReverseTarget] = useState(null)
   const [reverseReason, setReverseReason] = useState('')

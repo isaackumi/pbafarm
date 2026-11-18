@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { EmptyState, Field, Input } from './ui'
+import { localToday } from '../lib/format'
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 1 }))
 const signed = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n))
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localToday()
 
 /** One ledger event as a compact row: date, what happened, batch, fish ±. */
 export function EventRow({ e, showCage = false }) {

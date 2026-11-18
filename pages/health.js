@@ -22,6 +22,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import LocationMetaField from '../components/LocationMetaField'
 import { DIAGNOSIS_SUGGESTIONS } from '../lib/farmHealth'
+import { localToday } from '../lib/format'
 
 export default function HealthPage() {
   return (
@@ -42,7 +43,7 @@ function HealthTreatments() {
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const treatments = useQuery(api.health.list, user ? locationArgs : 'skip')
   // asOf: the client's today, so the list rolls over at midnight.
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const withdrawals = useQuery(
     api.health.activeWithdrawals,
     user ? { ...locationArgs, asOf: today } : 'skip',
@@ -54,7 +55,7 @@ function HealthTreatments() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     cageId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: localToday(),
     diagnosis: '',
     treatment: '',
     productName: '',
@@ -94,7 +95,7 @@ function HealthTreatments() {
       setShowForm(false)
       setForm({
         cageId: '',
-        date: new Date().toISOString().split('T')[0],
+        date: localToday(),
         diagnosis: '',
         treatment: '',
         productName: '',

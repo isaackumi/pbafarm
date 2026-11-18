@@ -11,6 +11,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
+import { localToday } from '../lib/format'
 
 const emptyEntry = (overrides = {}) => ({
   feed_type_id: '',
@@ -22,7 +23,7 @@ const emptyEntry = (overrides = {}) => ({
 
 const emptyPurchase = () => ({
   supplier_id: '',
-  purchase_date: new Date().toISOString().split('T')[0],
+  purchase_date: localToday(),
   total_amount: 0,
   notes: '',
   feed_entries: [],
