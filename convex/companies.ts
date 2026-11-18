@@ -130,6 +130,24 @@ function toClient(c: any, logo_url: string | null = null) {
  * the company is not approved; this ends their open sessions too).
  * Super_admins and the caller keep their sessions.
  */
+/** Platform action audited under the target company, so its admins see it (ORG-006). */
+async function platformAudit(
+  ctx: MutationCtx,
+  actor: Doc<'users'>,
+  companyId: Id<'companies'>,
+  row: { actionType: string; newValues?: unknown; locationId?: Id<'farmLocations'> },
+) {
+  await ctx.db.insert('auditLogs', {
+    userId: actor._id,
+    companyId,
+    actionType: row.actionType,
+    tableName: 'companies',
+    recordId: companyId,
+    newValues: row.newValues,
+    locationId: row.locationId,
+  })
+}
+
 async function revokeMemberSessions(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
@@ -353,7 +371,7 @@ export const register = mutation({
       throw new Error('Company code already exists — choose another short code')
     }
 
-    // Members of another organization may register a new one (ORG-002);
+    // Members of another organization may register a new one (ORG-004);
     // it becomes a second membership on approval. One pending at a time.
     const pendingMine = await ctx.db
       .query('companies')
@@ -513,10 +531,8 @@ export const approve = mutation({
       })
     }
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'approve',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: {
         status: 'approved',
         promotedUserId: userId,
@@ -556,10 +572,8 @@ export const reject = mutation({
     const sessionsRevoked =
       revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'reject',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: { 
         status: 'rejected',
         reason,
@@ -596,10 +610,8 @@ export const remove = mutation({
     const sessionsRevoked =
       revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
-    await logAudit(ctx, {
+    await platformAudit(ctx, user, companyId, {
       actionType: 'reject',
-      tableName: 'companies',
-      recordId: companyId,
       newValues: {
         status: 'rejected',
         reason: reason || 'Removed by admin',
@@ -712,7 +724,7 @@ export const updateSettings = mutation({
 })
 
 /**
- * Company admin: organization profile (ORG-006, M3): country, timezone,
+ * Company admin: organization profile (ORG-005, M3): country, timezone,
  * unit system, locale. Values are validated; omitted fields keep their value.
  */
 export const updateProfile = mutation({
@@ -1036,6 +1048,12 @@ export const clearLogo = mutation({
     if (!company) throw new Error('Company not found')
     await deleteOldLogo(ctx, user.companyId, company.logoStorageId)
     await ctx.db.patch(user.companyId, { logoStorageId: undefined })
+    await logAudit(ctx, {
+      actionType: 'clear_logo',
+      tableName: 'companies',
+      recordId: user.companyId,
+      previousValues: { logoStorageId: company.logoStorageId },
+    })
     return { ok: true }
   },
 })

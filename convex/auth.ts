@@ -6,7 +6,7 @@ import { pickEmailAdapter } from './lib/email'
 import { randomDigits } from './lib/tokens'
 
 /**
- * Password reset by emailed code (ORG-003): signIn('password', { email, flow: 'reset' })
+ * Password reset by emailed code (SEC-005): signIn('password', { email, flow: 'reset' })
  * sends it; signIn('password', { email, code, newPassword, flow: 'reset-verification' })
  * sets the new password and signs in.
  */

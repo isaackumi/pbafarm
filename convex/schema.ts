@@ -63,7 +63,7 @@ const schema = defineSchema({
     .index('by_companyId', ['companyId'])
     .index('by_companyId_and_userId', ['companyId', 'userId']),
 
-  /** One-time codes proving a signed-in user owns their email (ORG-003). */
+  /** One-time codes proving a signed-in user owns their email (SEC-005). */
   emailVerifications: defineTable({
     userId: v.id('users'),
     email: v.string(),

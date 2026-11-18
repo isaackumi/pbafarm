@@ -1,5 +1,5 @@
 /**
- * Email verification for signed-in users (ORG-003, closes doc 07 V3): a
+ * Email verification for signed-in users (SEC-005, closes doc 07 V3): a
  * 6-digit code is emailed; entering it sets users.emailVerificationTime.
  * Accepting an invite requires a verified email (memberships.acceptInvite).
  *
@@ -7,6 +7,7 @@
  * deployments without an email provider configured.
  */
 import { v } from 'convex/values'
+import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
 import { internal } from './_generated/api'
 import { requireUser } from './lib/authz'
@@ -31,7 +32,7 @@ export const requestCode = mutation({
   args: {},
   handler: async (ctx) => {
     const me = await requireUser(ctx)
-    if (!me.email) throw new Error('Your account has no email on file')
+    if (!me.email) throw userError('VALIDATION', 'Your account has no email on file')
     if (me.emailVerificationTime) return { alreadyVerified: true }
     const now = Date.now()
     const prior = await ctx.db
@@ -40,7 +41,7 @@ export const requestCode = mutation({
       .unique()
     if (prior) {
       if (now - prior._creationTime < RESEND_AFTER_MS) {
-        throw new Error('A code was just sent. Wait a minute before asking for another.')
+        throw userError('RATE_LIMITED', 'A code was just sent. Wait a minute before asking for another.')
       }
       await ctx.db.delete(prior._id)
     }
@@ -70,9 +71,9 @@ export const verify = mutation({
       .query('emailVerifications')
       .withIndex('by_userId', (q) => q.eq('userId', me._id))
       .unique()
-    if (!row || row.email !== me.email) throw new Error('Ask for a new code')
-    if (row.expiresAt < Date.now()) throw new Error('This code has expired. Ask for a new one.')
-    if (row.attempts >= MAX_ATTEMPTS) throw new Error('Too many attempts. Ask for a new code.')
+    if (!row || row.email !== me.email) throw userError('CONFLICT', 'Ask for a new code')
+    if (row.expiresAt < Date.now()) throw userError('CONFLICT', 'This code has expired. Ask for a new one.')
+    if (row.attempts >= MAX_ATTEMPTS) throw userError('RATE_LIMITED', 'Too many attempts. Ask for a new code.')
     const ok = row.codeHash === (await sha256Hex(`${me._id}:${code.trim()}`))
     if (!ok) {
       await ctx.db.patch(row._id, { attempts: row.attempts + 1 })

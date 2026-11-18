@@ -18,6 +18,7 @@ import { store } from '../store'
 import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { safeNextPath } from '../lib/safeRedirect'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
 import '../styles/globals.css'
 import '../styles/tour.css'
@@ -80,10 +81,18 @@ function AppWrapper({ Component, pageProps, router }) {
   )
 }
 
+/** Signed-out pages; a signed-in visitor is sent on to the app. */
+const PUBLIC_ROUTES = ['/login', '/signup', '/reset-password']
+/** Open to signed-in and signed-out visitors (an invite link shows who invited you). */
+const OPEN_ROUTES = ['/invite/[token]']
+
 /** Where each access state may go; everything else redirects to `home`. */
 const ACCESS_ROUTES = {
   PASSWORD_CHANGE_REQUIRED: { home: '/account?force=1', allowed: ['/account'] },
-  NO_COMPANY: { home: '/register-company', allowed: ['/register-company', '/account'] },
+  NO_COMPANY: {
+    home: '/register-company',
+    allowed: ['/register-company', '/account', '/verify-email', '/invite/[token]'],
+  },
 }
 
 /**
@@ -139,7 +148,6 @@ function AuthWrapper({ children }) {
   const signOutRef = useRef(signOut)
   signOutRef.current = signOut
 
-  const publicRoutes = ['/login', '/signup', '/reset-password', '/verify-email']
   const currentPath = router.pathname
 
   // Inactive account or company no longer approved: end the session and say why.
@@ -182,13 +190,13 @@ function AuthWrapper({ children }) {
       return
     }
 
-    if (!user && !publicRoutes.includes(currentPath)) {
-      router.push('/login')
+    if (!user && !PUBLIC_ROUTES.includes(currentPath) && !OPEN_ROUTES.includes(currentPath)) {
+      router.push(`/login?next=${encodeURIComponent(router.asPath)}`)
       return
     }
 
-    if (user && publicRoutes.includes(currentPath)) {
-      router.push(restricted ? restricted.home : '/dashboard')
+    if (user && PUBLIC_ROUTES.includes(currentPath)) {
+      router.push(safeNextPath(router.query.next, restricted ? restricted.home : '/dashboard'))
       return
     }
 
@@ -211,13 +219,13 @@ function AuthWrapper({ children }) {
   ])
 
   if (loading || !initialized) {
-    if (!publicRoutes.includes(currentPath)) {
+    if (!PUBLIC_ROUTES.includes(currentPath) && !OPEN_ROUTES.includes(currentPath)) {
       return <AppShellSkeleton />
     }
   }
 
   // Do not render pages whose queries the server would refuse.
-  if (mustSignOut || (offRoute && !publicRoutes.includes(currentPath))) {
+  if (mustSignOut || (offRoute && !PUBLIC_ROUTES.includes(currentPath))) {
     return <AppShellSkeleton />
   }
 

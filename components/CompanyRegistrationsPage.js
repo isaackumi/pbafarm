@@ -41,10 +41,8 @@ const CompanyRegistrationsPage = () => {
   const [success, setSuccess] = useState(false)
 
   const companyless = Boolean(user && !user.companyId)
-  const registration = useQuery(
-    api.companies.myRegistration,
-    companyless ? {} : 'skip',
-  )
+  // Members of an organization may register another one (ORG-004).
+  const registration = useQuery(api.companies.myRegistration, user ? {} : 'skip')
   const invites = useQuery(api.users.myInvites, companyless ? {} : 'skip')
   const requestToJoin = useMutation(api.users.claimInvite)
   const [joiningId, setJoiningId] = useState(null)
@@ -156,30 +154,6 @@ const CompanyRegistrationsPage = () => {
     )
   }
 
-  if (user.companyId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-        <div className="max-w-md w-full text-center space-y-4">
-          <p className="font-display text-3xl text-chart-ink font-medium">
-            PBA Farm
-          </p>
-          <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm space-y-3">
-            <h1 className="text-lg font-semibold text-chart-ink">
-              Already linked to a company
-            </h1>
-            <p className="text-sm text-muted">
-              Your account already belongs to a company. Open company settings
-              to manage details.
-            </p>
-            <Button href="/company-settings" className="w-full">
-              Company settings
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (registration?.status === 'pending' && !success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-foam px-4">
@@ -196,9 +170,15 @@ const CompanyRegistrationsPage = () => {
               approval. You get access as its admin once it is approved. This
               page updates on its own.
             </p>
-            <Button variant="secondary" className="w-full" onClick={handleSignOut}>
-              Sign out
-            </Button>
+            {user.companyId ? (
+              <Button href="/dashboard" variant="secondary" className="w-full">
+                Back to the app
+              </Button>
+            ) : (
+              <Button variant="secondary" className="w-full" onClick={handleSignOut}>
+                Sign out
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -218,11 +198,12 @@ const CompanyRegistrationsPage = () => {
             PBA Farm
           </Link>
           <h1 className="text-xl font-semibold text-chart-ink">
-            Register your company
+            {user.companyId ? 'Register another organization' : 'Register your company'}
           </h1>
           <p className="mt-1 text-sm text-muted max-w-sm mx-auto">
             Submit farm details for approval. Once a super admin approves, you
-            become the company admin.
+            become its owner{user.companyId ? ' and can switch to it from your profile menu' : ''}.
+            Invited by email? Open the link in the invite instead.
           </p>
         </div>
 

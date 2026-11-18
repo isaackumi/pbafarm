@@ -1,5 +1,5 @@
 /**
- * Organizations a user belongs to (D-002, ORG-001..ORG-005).
+ * Organizations a user belongs to (D-002, ORG-001..ORG-003).
  *
  * - listMine / switchActive: the organization switcher.
  * - listMembers / setRole / suspend / reactivate / remove: company admins.
@@ -7,6 +7,7 @@
  *   single-use, expiring invite links issued by users.invite.
  */
 import { v } from 'convex/values'
+import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -71,11 +72,11 @@ export const switchActive = mutation({
     if (me.companyId === companyId) return { companyId }
     const membership = await getMembership(ctx, me._id, companyId)
     if (!membership || membership.status !== 'active') {
-      throw new Error('You are not a member of that organization')
+      throw userError('FORBIDDEN', 'You are not a member of that organization')
     }
     const company = await ctx.db.get(companyId)
     if (!company || company.status !== 'approved') {
-      throw new Error('That organization is not active')
+      throw userError('CONFLICT', 'That organization is not active')
     }
     const previous = me.companyId
     await activateMembership(ctx, me, membership)
@@ -97,7 +98,7 @@ export const switchActive = mutation({
 async function requireCompanyAdmin(ctx: QueryCtx | MutationCtx) {
   const me = await requireUser(ctx)
   requireRole(me, 'admin')
-  if (!me.companyId) throw new Error('No company linked')
+  if (!me.companyId) throw userError('VALIDATION', 'No company linked')
   return { me, companyId: me.companyId }
 }
 
@@ -155,10 +156,10 @@ export const listMembers = query({
 /** The target's membership in my company, creating it from legacy fields if needed. */
 async function loadTarget(ctx: MutationCtx, companyId: Id<'companies'>, userId: Id<'users'>) {
   const user = await ctx.db.get(userId)
-  if (!user) throw new Error('Member not found')
+  if (!user) throw userError('NOT_FOUND', 'Member not found')
   let membership = await getMembership(ctx, userId, companyId)
   if (!membership) {
-    if (user.companyId !== companyId) throw new Error('Member not found')
+    if (user.companyId !== companyId) throw userError('NOT_FOUND', 'Member not found')
     const id = await upsertMembership(ctx, {
       userId,
       companyId,
@@ -171,7 +172,7 @@ async function loadTarget(ctx: MutationCtx, companyId: Id<'companies'>, userId: 
     membership = (await ctx.db.get(id))!
   }
   if ((user.role ?? 'user') === 'super_admin') {
-    throw new Error('Only a super_admin can change a super_admin account')
+    throw userError('FORBIDDEN', 'Only a super_admin can change a super_admin account')
   }
   return { user, membership }
 }
@@ -186,7 +187,7 @@ async function assertAdminChange(
 ) {
   if (membership.roleKey === 'owner' && (me.role ?? 'user') !== 'super_admin') {
     const mine = await getMembership(ctx, me._id, companyId)
-    if (mine?.roleKey !== 'owner') throw new Error('Only an owner can change an owner')
+    if (mine?.roleKey !== 'owner') throw userError('FORBIDDEN', 'Only an owner can change an owner')
   }
   const wasAdmin = ADMIN_KEYS.has(membership.roleKey) && membership.status === 'active'
   const staysAdmin =
@@ -215,7 +216,7 @@ async function assertAdminChange(
       (u.role === 'admin' || u.role === 'super_admin'),
   )
   if (legacyAdmins.length === 0) {
-    throw new Error('The company must keep at least one active admin')
+    throw userError('CONFLICT', 'The company must keep at least one active admin')
   }
 }
 
@@ -223,11 +224,11 @@ export const setRole = mutation({
   args: { userId: v.id('users'), roleKey: v.string() },
   handler: async (ctx, { userId, roleKey }) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
-    if (!isRoleKey(roleKey)) throw new Error(`Unknown role: ${roleKey}`)
+    if (!isRoleKey(roleKey)) throw userError('VALIDATION', `Unknown role: ${roleKey}`)
     const { membership } = await loadTarget(ctx, companyId, userId)
     if (roleKey === 'owner' && (me.role ?? 'user') !== 'super_admin') {
       const mine = await getMembership(ctx, me._id, companyId)
-      if (mine?.roleKey !== 'owner') throw new Error('Only an owner can make someone an owner')
+      if (mine?.roleKey !== 'owner') throw userError('FORBIDDEN', 'Only an owner can make someone an owner')
     }
     await assertAdminChange(ctx, me, companyId, membership, { roleKey })
     await upsertMembership(ctx, { userId, companyId, roleKey, actorId: me._id })
@@ -249,7 +250,7 @@ async function changeStatus(
 ) {
   const { me, companyId } = await requireCompanyAdmin(ctx)
   if (userId === me._id && status !== 'active') {
-    throw new Error('You cannot suspend or remove yourself')
+    throw userError('FORBIDDEN', 'You cannot suspend or remove yourself')
   }
   const { user, membership } = await loadTarget(ctx, companyId, userId)
   await assertAdminChange(ctx, me, companyId, membership, { status })
@@ -337,20 +338,20 @@ export const acceptInvite = mutation({
   handler: async (ctx, { token }) => {
     const me = await requireUser(ctx)
     const invite = await inviteByToken(ctx, token)
-    if (!invite) throw new Error('This invite link is not valid')
+    if (!invite) throw userError('NOT_FOUND', 'This invite link is not valid')
     const state = inviteState(invite, Date.now())
-    if (state === 'expired') throw new Error('This invite has expired. Ask for a new one.')
-    if (state !== 'pending') throw new Error('This invite has already been used or withdrawn')
-    if ((me.role ?? 'user') === 'super_admin') throw new Error('This account cannot be invited')
+    if (state === 'expired') throw userError('CONFLICT', 'This invite has expired. Ask for a new one.')
+    if (state !== 'pending') throw userError('CONFLICT', 'This invite has already been used or withdrawn')
+    if ((me.role ?? 'user') === 'super_admin') throw userError('FORBIDDEN', 'This account cannot be invited')
     if ((me.email ?? '').toLowerCase() !== invite.email) {
-      throw new Error(`This invite is for ${invite.email}. Sign in with that email to accept it.`)
+      throw userError('FORBIDDEN', `This invite is for ${invite.email}. Sign in with that email to accept it.`)
     }
     if (!me.emailVerificationTime) {
-      throw new Error('EMAIL_NOT_VERIFIED: Verify your email address before accepting the invite.')
+      throw userError('FORBIDDEN', 'Verify your email address before accepting the invite.', { reason: 'EMAIL_NOT_VERIFIED' })
     }
     const company = await ctx.db.get(invite.companyId)
     if (!company || company.status !== 'approved') {
-      throw new Error('That organization is not active')
+      throw userError('CONFLICT', 'That organization is not active')
     }
     const roleKey = invite.roleKey ?? roleKeyFromLegacy(invite.role)
     const existing = await getMembership(ctx, me._id, invite.companyId)
@@ -390,7 +391,7 @@ export const declineInvite = mutation({
     const me = await requireUser(ctx)
     const invite = await inviteByToken(ctx, token)
     if (!invite || (me.email ?? '').toLowerCase() !== invite.email) {
-      throw new Error('This invite link is not valid')
+      throw userError('NOT_FOUND', 'This invite link is not valid')
     }
     if (inviteState(invite, Date.now()) !== 'pending') return { declined: false }
     await ctx.db.patch(invite._id, { status: 'declined', decidedAt: Date.now() })
@@ -434,7 +435,7 @@ export const revokeInvite = mutation({
   handler: async (ctx, { inviteId }) => {
     const { me, companyId } = await requireCompanyAdmin(ctx)
     const invite = await ctx.db.get(inviteId)
-    if (!invite || invite.companyId !== companyId) throw new Error('Invite not found')
+    if (!invite || invite.companyId !== companyId) throw userError('NOT_FOUND', 'Invite not found')
     await ctx.db.patch(inviteId, {
       status: 'revoked',
       decidedBy: me._id,

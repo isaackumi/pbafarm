@@ -87,7 +87,15 @@ export default function Login() {
               />
             </Field>
 
-            <Field label="Password" htmlFor="password">
+            <Field
+              label="Password"
+              htmlFor="password"
+              hint={
+                <Link href="/reset-password" className="text-lake hover:underline">
+                  Forgot password?
+                </Link>
+              }
+            >
               <Input
                 id="password"
                 name="password"

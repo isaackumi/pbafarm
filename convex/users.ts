@@ -240,7 +240,7 @@ export const update = mutation({
 })
 
 /**
- * Invite by email into the caller's company (ORG-004). Never changes an
+ * Invite by email into the caller's company (ORG-003). Never changes an
  * existing account: it records a pending invite with a single-use link that
  * expires in 7 days, emails the link, and returns it so the admin can share it
  * directly. The invitee accepts at /invite/<token> after verifying their email
@@ -368,7 +368,7 @@ export const deactivate = mutation({
     assertMayModify(me, target)
     await assertKeepsAnAdmin(ctx, target)
     // A member of other organizations keeps their account: only this
-    // company's membership is suspended (ORG-005). Otherwise the account is
+    // company's membership is suspended (ORG-002). Otherwise the account is
     // deactivated as before.
     const companyId = ((me.role ?? 'user') === 'super_admin' ? target.companyId : me.companyId)
     const others = companyId ? await otherActiveMemberships(ctx, id, companyId) : []
@@ -725,6 +725,14 @@ export const clearMustChangePassword = internalMutation({
     const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')
     await ctx.db.patch(userId, { mustChangePassword: false })
+    // Called after every password change (userAccounts.changePassword).
+    await insertAudit(ctx, {
+      userId,
+      companyId: user.companyId,
+      actionType: 'password_change',
+      tableName: 'users',
+      recordId: userId,
+    })
     return userId
   },
 })

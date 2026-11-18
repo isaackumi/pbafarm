@@ -272,6 +272,11 @@ describe('registering a second organization', () => {
     expect(await as(staffA).query(api.companies.myRegistration, {})).toMatchObject({ status: 'pending' })
     await expect(as(staffA).mutation(api.companies.register, { name: 'Again', code: 'AGAIN' })).rejects.toThrow(/waiting/)
     await as(platform).mutation(api.companies.approve, { companyId: id })
+    // The platform action is filed under the approved organization (ORG-006).
+    const audit = await t.run((ctx) =>
+      ctx.db.query('auditLogs').withIndex('by_company', (q) => q.eq('companyId', id)).collect(),
+    )
+    expect(audit.find((a) => a.actionType === 'approve')).toMatchObject({ userId: platform })
     expect(await t.run((ctx) => ctx.db.get(staffA))).toMatchObject({ companyId: companyA, role: 'user' })
     const mine = await as(staffA).query(api.memberships.listMine, {})
     expect(mine.find((m: any) => m.name === 'Pond Co')).toMatchObject({ roleKey: 'owner', isActive: false })

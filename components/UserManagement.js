@@ -32,7 +32,8 @@ const UserManagement = () => {
   const approveJoin = useMutation(api.users.approveJoinRequest)
   const declineJoin = useMutation(api.users.declineJoinRequest)
   const inviteByEmail = useMutation(api.users.invite)
-  const [invite, setInvite] = useState({ email: '', role: 'user' })
+  const [invite, setInvite] = useState({ email: '', roleKey: 'manager' })
+  const [inviteLink, setInviteLink] = useState('')
   const [inviting, setInviting] = useState(false)
   const [decidingId, setDecidingId] = useState(null)
 
@@ -42,9 +43,10 @@ const UserManagement = () => {
     setError('')
     setSuccess('')
     try {
-      const data = await inviteByEmail({ email: invite.email, role: invite.role })
-      setInvite({ email: '', role: 'user' })
-      setSuccess(data?.message || 'Invite saved.')
+      const data = await inviteByEmail({ email: invite.email, roleKey: invite.roleKey })
+      setInvite({ email: '', roleKey: 'manager' })
+      setInviteLink(data?.inviteUrl || '')
+      setSuccess(data?.message || 'Invite sent.')
     } catch (err) {
       setError(err.message || 'Failed to invite')
     } finally {
@@ -210,7 +212,7 @@ const UserManagement = () => {
 
       <FormCard
         title="Invite by email"
-        subtitle="For people who sign up themselves. They ask to join after signing in, and you approve below."
+        subtitle="We email a link that works once and expires in 7 days. People who already use PBA Farm for another organization can be invited too."
       >
         <form
           onSubmit={handleInvite}
@@ -227,17 +229,35 @@ const UserManagement = () => {
           </Field>
           <Field label="Role">
             <Select
-              value={invite.role}
-              onChange={(e) => setInvite({ ...invite, role: e.target.value })}
+              value={invite.roleKey}
+              onChange={(e) => setInvite({ ...invite, roleKey: e.target.value })}
             >
-              <option value="user">User</option>
+              <option value="manager">Manager</option>
+              <option value="field_staff">Field staff</option>
+              <option value="viewer">Viewer</option>
               <option value="admin">Admin</option>
             </Select>
           </Field>
           <Button type="submit" disabled={inviting}>
-            {inviting ? 'Saving…' : 'Send invite'}
+            {inviting ? 'Sending…' : 'Send invite'}
           </Button>
         </form>
+        {inviteLink && (
+          <div className="mt-4 space-y-1.5">
+            <p className="text-sm text-muted">
+              Or share this link directly. It only works for the invited email.
+            </p>
+            <div className="flex gap-2">
+              <Input readOnly value={inviteLink} className="font-data text-sm" aria-label="Invite link" />
+              <Button
+                variant="secondary"
+                onClick={() => navigator.clipboard?.writeText(inviteLink)}
+              >
+                Copy
+              </Button>
+            </div>
+          </div>
+        )}
       </FormCard>
 
       <FormCard

@@ -1,10 +1,9 @@
 // pages/admin/companies.js
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Plus, Edit, Trash, Eye } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import { PageHeader } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import { useAuth } from '../../contexts/AuthContext'
@@ -127,8 +126,6 @@ function CompaniesList() {
   ]
 
   const tableActions = {
-    view: (row) => router.push(`/admin/companies/${row.id}`),
-    edit: (row) => router.push(`/admin/companies/${row.id}/edit`),
     delete: (row) => handleDeleteCompany(row),
   }
 
@@ -141,17 +138,11 @@ function CompaniesList() {
           { label: 'Admin' },
           { label: 'Companies' },
         ]}
-        description="Create and manage companies on the platform."
+        description="Approved organizations on the platform. New organizations register themselves and are approved under Company registrations."
         related={[
           { label: 'Company registrations', href: '/admin/company-registrations' },
           { label: 'Users', href: '/users' },
         ]}
-        actions={
-          <Button href="/admin/companies/create" size="sm">
-            <Plus className="w-4 h-4" />
-            Add company
-          </Button>
-        }
       />
 
       <div className="page-card overflow-hidden">

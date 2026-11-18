@@ -17,6 +17,7 @@ import { api } from '../convex/_generated/api'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { applyBrandToDocument } from '../contexts/CompanySettingsContext'
+import OrgProfileCard from '../components/OrgProfileCard'
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -433,6 +434,7 @@ function CompanySettings() {
               </div>
             </FormCard>
           )}
+          {tab === 'profile' && <OrgProfileCard />}
 
           {tab === 'branding' && (
             <FormCard title="Branding & theme">
