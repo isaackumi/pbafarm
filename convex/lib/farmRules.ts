@@ -17,6 +17,10 @@ export const DEFAULT_SETTINGS = {
     maxDensityFishPerM3: 80,
     /** Ponds (fish per m² of surface). */
     maxDensityFishPerM2: 5,
+    /** Tanks, raceways and RAS (fish per m³); 0 = use maxDensityFishPerM3. */
+    maxDensityTankFishPerM3: 0,
+    /** Warn at this % of the density limit. */
+    densityWarnPct: 90,
     dailyMortalityAlertPct: 0.5,
     cumulativeMortalityAlertPct: 10,
     targetFcr: 1.4,
@@ -64,6 +68,8 @@ export type EffectiveSettings = {
     harvestDocMaxDays: number
     maxDensityFishPerM3: number
     maxDensityFishPerM2: number
+    maxDensityTankFishPerM3: number
+    densityWarnPct: number
     dailyMortalityAlertPct: number
     cumulativeMortalityAlertPct: number
     targetFcr: number
@@ -171,6 +177,11 @@ export function validateSettingsForPublish(settings: any) {
   num(fr.harvestDocMaxDays, 'Harvest DOC max')
   num(fr.maxDensityFishPerM3, 'Max density')
   num(fr.maxDensityFishPerM2, 'Max pond density')
+  num(fr.maxDensityTankFishPerM3, 'Max tank density')
+  num(fr.densityWarnPct, 'Density warning %')
+  if (fr.densityWarnPct != null && fr.densityWarnPct !== '' && Number(fr.densityWarnPct) > 100) {
+    errors.push('Density warning % must be at most 100')
+  }
   num(fr.dailyMortalityAlertPct, 'Daily mortality alert %')
   num(fr.cumulativeMortalityAlertPct, 'Cumulative mortality alert %')
   num(fr.targetFcr, 'Target FCR', 0.01)
@@ -230,29 +241,118 @@ export function unitTypeOf(unit: { unitType?: UnitType | null } | null | undefin
 /** Units whose stocking density is measured per m² of surface, not per m³. */
 export const AREA_BASED_UNITS: ReadonlySet<UnitType> = new Set(['pond'])
 
+/** Units measured by water volume in tanks (RAS, flow-through). */
+export const TANK_UNITS: ReadonlySet<UnitType> = new Set([
+  'tank',
+  'raceway',
+  'hatchery_tank',
+  'incubator',
+])
+
+export type DensityBasis = {
+  /** 'area' (fish/m²) or 'volume' (fish/m³). */
+  measure: 'area' | 'volume'
+  /** The m² or m³ the density divides by, or null when the unit has none. */
+  size: number | null
+  /** Where size came from, e.g. "net volume". */
+  sizeLabel: string
+  max: number | null
+  unit: string
+}
+
 /**
- * Stocking density rule by unit type (FARM-002): ponds use surface area
- * (areaM2, fish/m²); every other unit uses volume (volumeM3, else the legacy
- * `size` in m³, fish/m³). Returns the excess, or null when within limits or
- * when the unit has no area/volume to check against.
+ * How a unit's stocking density is measured (FARM-002, CAGE-001, POND-001,
+ * RAS-001): ponds and hapas per m² of surface (areaM2); cages per m³ inside
+ * the net (netVolumeM3, else volumeM3, else legacy size); tanks, raceways and
+ * RAS per m³ of water (volumeM3, else size). The limit is the unit's own
+ * maxDensity, else the farm rule for its type.
+ */
+export function densityBasis(unit: any, farmRules: EffectiveSettings['farmRules']): DensityBasis {
+  const type = unitTypeOf(unit)
+  const own = unit?.maxDensity > 0 ? Number(unit.maxDensity) : null
+  if (AREA_BASED_UNITS.has(type)) {
+    const area = unit?.areaM2 > 0 ? Number(unit.areaM2) : null
+    return {
+      measure: 'area',
+      size: area,
+      sizeLabel: 'surface area',
+      max: own ?? (farmRules.maxDensityFishPerM2 || null),
+      unit: 'fish/m²',
+    }
+  }
+  if (type === 'cage') {
+    const net = unit?.netVolumeM3 > 0 ? Number(unit.netVolumeM3) : null
+    const vol = unit?.volumeM3 > 0 ? Number(unit.volumeM3) : unit?.size > 0 ? Number(unit.size) : null
+    return {
+      measure: 'volume',
+      size: net ?? vol,
+      sizeLabel: net ? 'net volume' : 'volume',
+      max: own ?? (farmRules.maxDensityFishPerM3 || null),
+      unit: 'fish/m³',
+    }
+  }
+  const vol = unit?.volumeM3 > 0 ? Number(unit.volumeM3) : unit?.size > 0 ? Number(unit.size) : null
+  const tankMax = TANK_UNITS.has(type)
+    ? farmRules.maxDensityTankFishPerM3 || farmRules.maxDensityFishPerM3
+    : farmRules.maxDensityFishPerM3
+  return {
+    measure: 'volume',
+    size: vol,
+    sizeLabel: 'water volume',
+    max: own ?? (tankMax || null),
+    unit: 'fish/m³',
+  }
+}
+
+export type DensityStatus = {
+  density: number | null
+  max: number | null
+  unit: string
+  measure: 'area' | 'volume'
+  sizeLabel: string
+  /** density ÷ max × 100. */
+  pctOfMax: number | null
+  level: 'ok' | 'warn' | 'over' | 'unknown'
+}
+
+/** Density of `fishCount` in a unit, against its limit and the warning band. */
+export function densityStatus(
+  unit: any,
+  fishCount: number,
+  farmRules: EffectiveSettings['farmRules'],
+): DensityStatus {
+  const b = densityBasis(unit, farmRules)
+  if (!b.size) {
+    return { density: null, max: b.max, unit: b.unit, measure: b.measure, sizeLabel: b.sizeLabel, pctOfMax: null, level: 'unknown' }
+  }
+  const density = fishCount / b.size
+  const pct = b.max ? (density / b.max) * 100 : null
+  const warnAt = farmRules.densityWarnPct > 0 ? farmRules.densityWarnPct : 90
+  const level = pct == null ? 'unknown' : pct > 100 ? 'over' : pct >= warnAt ? 'warn' : 'ok'
+  return {
+    density: Math.round(density * 100) / 100,
+    max: b.max,
+    unit: b.unit,
+    measure: b.measure,
+    sizeLabel: b.sizeLabel,
+    pctOfMax: pct == null ? null : Math.round(pct * 10) / 10,
+    level,
+  }
+}
+
+/**
+ * Stocking density over the unit's limit, or null when within limits or
+ * when the unit has no area/volume to check against. See densityBasis.
  */
 export function densityExcess(
   unit: any,
   fishCount: number,
   farmRules: EffectiveSettings['farmRules'],
 ): { density: number; max: number; unit: string } | null {
-  if (AREA_BASED_UNITS.has(unitTypeOf(unit))) {
-    const area = unit?.areaM2
-    const max = farmRules.maxDensityFishPerM2
-    if (!max || !(area > 0)) return null
-    const density = fishCount / area
-    return density > max ? { density, max, unit: 'fish/m²' } : null
-  }
-  const volume = unit?.volumeM3 > 0 ? unit.volumeM3 : unit?.size
-  const max = farmRules.maxDensityFishPerM3
-  if (!max || !(volume > 0)) return null
-  const density = fishCount / volume
-  return density > max ? { density, max, unit: 'fish/m³' } : null
+  const b = densityBasis(unit, farmRules)
+  if (!b.max || !b.size) return null
+  const density = fishCount / b.size
+  return density > b.max ? { density, max: b.max, unit: b.unit } : null
 }
 
 export function assertStockingAllowed(opts: {

@@ -227,6 +227,18 @@ function settingsFromDraft(draft: any, existingAi?: boolean) {
         farmRules.maxDensityFishPerM3 ?? farmRules.max_density_fish_per_m3,
         DEFAULT_SETTINGS.farmRules.maxDensityFishPerM3,
       ),
+      maxDensityFishPerM2: numOr(
+        farmRules.maxDensityFishPerM2 ?? farmRules.max_density_fish_per_m2,
+        DEFAULT_SETTINGS.farmRules.maxDensityFishPerM2,
+      ),
+      maxDensityTankFishPerM3: numOr(
+        farmRules.maxDensityTankFishPerM3 ?? farmRules.max_density_tank_fish_per_m3,
+        DEFAULT_SETTINGS.farmRules.maxDensityTankFishPerM3,
+      ),
+      densityWarnPct: numOr(
+        farmRules.densityWarnPct ?? farmRules.density_warn_pct,
+        DEFAULT_SETTINGS.farmRules.densityWarnPct,
+      ),
       dailyMortalityAlertPct: numOr(
         farmRules.dailyMortalityAlertPct ?? farmRules.daily_mortality_alert_pct,
         DEFAULT_SETTINGS.farmRules.dailyMortalityAlertPct,

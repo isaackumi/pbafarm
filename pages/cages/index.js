@@ -10,7 +10,7 @@ import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Archive } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { unitLabel } from '../../lib/format'
 import { usePermission } from '../../hooks/usePermission'
@@ -212,16 +212,16 @@ function CagesManagement() {
           {isAdmin && (
             <button
               type="button"
-              title="Delete cage"
+              title="Archive unit"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 setDeleteCage(row)
               }}
-              aria-label={`Delete ${row.name || 'cage'}`}
+              aria-label={`Archive ${row.name || 'unit'}`}
               className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
             >
-              <Trash2 className="w-4 h-4" />
+              <Archive className="w-4 h-4" />
             </button>
           )}
         </div>

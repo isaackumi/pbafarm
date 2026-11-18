@@ -9,6 +9,7 @@ import { Button, Field, Input, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs, geometryFromUnit } from './UnitGeometryFields'
 import { usePermission } from '../hooks/usePermission'
+import { MANUAL_TRANSITIONS, STATUS_LABELS } from '../convex/lib/unitStatus'
 
 const EMPTY_FORM = {
   name: '',
@@ -21,14 +22,11 @@ const EMPTY_FORM = {
   ...EMPTY_GEOMETRY,
 }
 
-const STATUS_OPTIONS = [
-  'empty',
-  'active',
-  'maintenance',
-  'fallow',
-  'harvesting',
-  'harvested',
-]
+/** The current status plus where it may go by hand (PROD-013). */
+function statusOptions(current) {
+  const from = current || 'empty'
+  return [from, ...(MANUAL_TRANSITIONS[from] || [])]
+}
 
 function cageIdOf(cage) {
   return cage?.id || cage?._id || null
@@ -132,18 +130,18 @@ export default function CageManageModals({
     const id = cageIdOf(deleteCage)
     if (!id) return
     if (confirmName.trim() !== (deleteCage.name || '').trim()) {
-      showToast('Type the cage name exactly to confirm delete', 'error')
+      showToast('Type the unit name exactly to confirm', 'error')
       return
     }
 
     setDeleting(true)
     try {
       await removeCage({ id })
-      showToast(`Deleted cage “${deleteCage.name}”`, 'success')
+      showToast(`Archived “${deleteCage.name}”`, 'success')
       onDeleted?.(id)
       onCloseDelete?.()
     } catch (err) {
-      showToast(err?.message || 'Failed to delete cage', 'error')
+      showToast(err?.message || 'Could not archive this unit', 'error')
     } finally {
       setDeleting(false)
     }
@@ -207,9 +205,9 @@ export default function CageManageModals({
                   disabled={!isAdmin}
                   onChange={(e) => patchField('status', e.target.value)}
                 >
-                  {STATUS_OPTIONS.map((s) => (
+                  {statusOptions(editCage?.status).map((s) => (
                     <option key={s} value={s}>
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                      {STATUS_LABELS[s] || s}
                     </option>
                   ))}
                 </Select>
@@ -248,15 +246,13 @@ export default function CageManageModals({
           <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-6 h-6 text-signal" />
-              <h3 className="text-lg font-semibold text-chart-ink">Delete cage</h3>
+              <h3 className="text-lg font-semibold text-chart-ink">Archive unit</h3>
             </div>
             <p className="text-sm text-muted mb-3">
-              This permanently removes{' '}
-              <span className="font-semibold text-chart-ink">{deleteCage.name}</span>
-              {deleteCage.status === 'active'
-                ? ' (currently active — related records may remain orphaned).'
-                : '.'}{' '}
-              This cannot be undone.
+              Archiving hides{' '}
+              <span className="font-semibold text-chart-ink">{deleteCage.name}</span> from
+              lists and pickers. Its records, batches and history stay. A unit that still
+              holds fish cannot be archived; an admin can restore it later.
             </p>
             <Field label={`Type “${deleteCage.name}” to confirm`}>
               <Input
@@ -284,7 +280,7 @@ export default function CageManageModals({
                 }
                 onClick={handleDelete}
               >
-                {deleting ? 'Deleting…' : 'Delete cage'}
+                {deleting ? 'Archiving…' : 'Archive unit'}
               </Button>
             </div>
           </div>

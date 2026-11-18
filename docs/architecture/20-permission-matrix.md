@@ -48,6 +48,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `cages.growthAll` | `production.view` | yes | yes | yes | yes | yes |
 | `cages.list` | `production.view` | yes | yes | yes | yes | yes |
 | `cages.remove` | `production.units.delete` | yes | yes | no | no | no |
+| `cages.restore` | `production.units.delete` | yes | yes | no | no | no |
 | `cages.update` | `production.units.manage` | yes | yes | yes | no | no |
 | `companies.aiAssistantStatus` | `account` | self | self | self | self | self |
 | `companies.approve` | `platform` | no | no | no | no | no |
@@ -270,6 +271,16 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `traceability.removeDispatch` | `production.records.delete` | yes | yes | no | no | no |
 | `traceability.removeLot` | `production.records.delete` | yes | yes | no | no | no |
 | `traceability.withdrawalStatus` | `production.view` | yes | yes | yes | yes | yes |
+| `units.assignToGroup` | `org.sites.manage` | yes | yes | no | no | no |
+| `units.board` | `production.view` | yes | yes | yes | yes | yes |
+| `units.createGroup` | `org.sites.manage` | yes | yes | no | no | no |
+| `units.createWaterBody` | `org.sites.manage` | yes | yes | no | no | no |
+| `units.listGroups` | `production.view` | yes | yes | yes | yes | yes |
+| `units.listWaterBodies` | `production.view` | yes | yes | yes | yes | yes |
+| `units.setStatus` | `production.stock.adjust` | yes | yes | no | no | no |
+| `units.updateGroup` | `org.sites.manage` | yes | yes | no | no | no |
+| `units.updateWaterBody` | `org.sites.manage` | yes | yes | no | no | no |
+| `units.workspace` | `production.view` | yes | yes | yes | yes | yes |
 | `userAccounts.changePassword` | `allowlisted` | see test | see test | see test | see test | see test |
 | `userAccounts.createWithPassword` | `org.members.manage` | yes | yes | no | no | no |
 | `users.approveJoinRequest` | `org.members.manage` | yes | yes | no | no | no |

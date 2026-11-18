@@ -271,6 +271,10 @@ const schema = defineSchema({
             maxDensityFishPerM3: v.optional(v.number()),
             /** Ponds: stocking density by surface area. */
             maxDensityFishPerM2: v.optional(v.number()),
+            /** Tanks, raceways and RAS (fish per m³); falls back to maxDensityFishPerM3. */
+            maxDensityTankFishPerM3: v.optional(v.number()),
+            /** Warn when a unit reaches this % of its density limit (default 90). */
+            densityWarnPct: v.optional(v.number()),
             dailyMortalityAlertPct: v.optional(v.number()),
             cumulativeMortalityAlertPct: v.optional(v.number()),
             targetFcr: v.optional(v.number()),
@@ -433,17 +437,91 @@ const schema = defineSchema({
     diameterM: v.optional(v.number()),
     /** Free-text group label, e.g. "Block A" or "Line 2". */
     unitGroup: v.optional(v.string()),
+    /** Unit workspace (CAGE-001, POND-001, RAS-001). */
+    unitGroupId: v.optional(v.id('unitGroups')),
+    waterBodyId: v.optional(v.id('waterBodies')),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    /** Cages: volume inside the net (m³); density uses it before volumeM3. */
+    netVolumeM3: v.optional(v.number()),
+    /** Cages: net mesh size (mm). */
+    meshSizeMm: v.optional(v.number()),
+    /** Ponds and raceways: length and width (m). */
+    lengthM: v.optional(v.number()),
+    widthM: v.optional(v.number()),
+    /** Tanks, raceways, RAS: water flow (m³/h) and turnover target (/h). */
+    flowM3h: v.optional(v.number()),
+    /** Ponds: water source (borehole, river, canal, ...). */
+    waterSource: v.optional(v.string()),
+    /** Per-unit density limit (fish/m² for ponds, fish/m³ otherwise). */
+    maxDensity: v.optional(v.number()),
+    statusChangedAt: v.optional(v.number()),
+    /** Archived instead of deleted (PROD-013); history stays linked. */
+    archivedAt: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
     updatedAt: v.number(),
   })
+    .index('by_unitGroupId', ['unitGroupId'])
     .index('by_name', ['name'])
     .index('by_status', ['status'])
     .index('by_company', ['companyId'])
     .index('by_company_status', ['companyId', 'status'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
+
+  /**
+   * A lake, reservoir, river or sea area that cages sit in, or the water
+   * source of ponds (CAGE-001, PROD-007 context).
+   */
+  waterBodies: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    kind: v.union(
+      v.literal('lake'),
+      v.literal('reservoir'),
+      v.literal('river'),
+      v.literal('sea'),
+      v.literal('lagoon'),
+      v.literal('borehole'),
+      v.literal('canal'),
+      v.literal('other'),
+    ),
+    locationId: v.optional(v.id('farmLocations')),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    active: v.boolean(),
+    updatedAt: v.number(),
+  }).index('by_companyId', ['companyId']),
+
+  /**
+   * Units managed together: a cage group (mooring line), a pond block or a
+   * RAS system (tanks sharing filtration).
+   */
+  unitGroups: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    name: v.string(),
+    kind: v.union(
+      v.literal('cage_group'),
+      v.literal('pond_block'),
+      v.literal('ras_system'),
+      v.literal('raceway_line'),
+      v.literal('other'),
+    ),
+    waterBodyId: v.optional(v.id('waterBodies')),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    /** RAS: total system volume (m³) including sumps and filters. */
+    systemVolumeM3: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    active: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_locationId', ['companyId', 'locationId']),
 
   feedSuppliers: defineTable({
     name: v.string(),
