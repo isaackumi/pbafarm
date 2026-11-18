@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { query, type QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
-import { requireUser } from './lib/authz'
 import { scopedRows, tenantScope } from './lib/scope'
 import { addDays, isBusinessDate } from './lib/dates'
 import { userError } from './lib/errors'
@@ -15,6 +14,7 @@ import {
   type UnitForecast,
 } from './lib/insights'
 import { farmTarget, names, occupanciesSince } from './analytics'
+import { requireMember } from './lib/permissions'
 
 /**
  * Grounded insights and the assistant's context (Phase 13, ANLY-005), both
@@ -93,7 +93,7 @@ export const forDashboard = query({
   },
   handler: async (ctx, args) => {
     assertDate(args.asOf)
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
     if (tenantScope(user).kind !== 'company') return []
     const { insights } = await analyse(ctx, user, args.asOf, args.locationId)
     return rankInsights(insights, Math.max(1, Math.min(args.limit ?? 3, 10))).map(
@@ -127,7 +127,7 @@ export const context = query({
   },
   handler: async (ctx, args) => {
     assertDate(args.asOf)
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'ai.use' })
     await assertAiEnabled(ctx, user)
     const scope = tenantScope(user)
     const days = Math.max(1, Math.min(args.days ?? 14, 30))

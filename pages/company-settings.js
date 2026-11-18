@@ -85,7 +85,7 @@ function deepEqual(a, b) {
 
 export default function CompanySettingsPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="org.settings.manage">
       <Layout title="Company Settings">
         <CompanySettings />
       </Layout>

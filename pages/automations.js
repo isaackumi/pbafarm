@@ -952,7 +952,7 @@ export default function AutomationsPage() {
   const [editing, setEditing] = useState(null)
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="automation.manage">
       <Layout title="Automations">
         <FormPage width="lg">
           <PageHeader

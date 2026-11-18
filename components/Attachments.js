@@ -7,6 +7,7 @@ import { useToast } from './Toast'
 import { Button } from './ui'
 import { convexSiteUrl } from '../lib/apiBase'
 import { errorMessage } from '../lib/errorMessage'
+import { usePermission } from '../hooks/usePermission'
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.txt,.xls,.xlsx,.doc,.docx'
 const MAX_BYTES = 10 * 1024 * 1024
@@ -20,7 +21,7 @@ const size = (n) =>
  */
 export default function Attachments({ entityType, entityId, compact = false }) {
   const { user, hasRole } = useAuth()
-  const isAdmin = hasRole?.('admin')
+  const isAdmin = usePermission('production.records.delete')
   const { showToast } = useToast()
   const files = useQuery(api.files.list, user && entityId ? { entityType, entityId } : 'skip')
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)

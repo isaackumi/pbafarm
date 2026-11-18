@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import { errorMessage } from '../../lib/errorMessage'
+import { usePermission } from '../../hooks/usePermission'
 
 const GROUP_KINDS = [
   { value: 'cage_group', label: 'Cage group' },
@@ -222,7 +223,7 @@ function AssignUnits({ group, units }) {
 
 function Groups() {
   const { user, hasRole } = useAuth()
-  const isAdmin = Boolean(hasRole?.('admin'))
+  const isAdmin = usePermission('org.sites.manage')
   const { locations } = useLocation()
   const groups = useQuery(api.units.listGroups, user ? {} : 'skip')
   const waterBodies = useQuery(api.units.listWaterBodies, user ? {} : 'skip')

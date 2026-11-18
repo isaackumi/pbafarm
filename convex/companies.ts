@@ -18,7 +18,7 @@ import {
   validateSettingsForPublish,
   DEFAULT_SETTINGS,
 } from './lib/farmRules'
-import { requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
+import { can, memberContext, requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
 
 /** A file must be claimed as a logo within this long of its upload. */
 const LOGO_CLAIM_WINDOW_MS = 60 * 60 * 1000
@@ -167,9 +167,10 @@ async function revokeMemberSessions(
   return sessions
 }
 
+/** The active organization only; the permission is checked by requireMember. */
 function requireCompanyAdmin(user: any, companyId: string) {
   if (user.role === 'super_admin') return
-  if (user.companyId !== companyId || user.role !== 'admin') {
+  if (user.companyId !== companyId) {
     throw new Error('Access denied')
   }
 }
@@ -809,8 +810,7 @@ export const aiAssistantStatus = query({
     }
     const company = await ctx.db.get(user.companyId)
     const enabled = company?.settings?.aiAssistantEnabled === true
-    const role = user.role ?? 'user'
-    const canManage = role === 'admin' || role === 'super_admin'
+    const canManage = can(await memberContext(ctx, user), 'org.settings.manage')
     return { enabled, canManage }
   },
 })

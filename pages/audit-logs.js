@@ -246,7 +246,7 @@ function AuditLogsContent() {
 
 export default function AuditLogsPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="org.audit.view">
       <AuditLogsContent />
     </ProtectedRoute>
   )

@@ -503,7 +503,7 @@ export default function MessagingSettingsPage() {
   }, [data])
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="integrations.manage">
       <Layout title="Messaging">
         <FormPage width="lg">
           <PageHeader

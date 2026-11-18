@@ -18,7 +18,7 @@ import { api } from '../convex/_generated/api'
 
 export default function ApprovalsPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="production.stocking.approve">
       <PendingApprovals />
     </ProtectedRoute>
   )

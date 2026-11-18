@@ -30,7 +30,7 @@ export default function ApiDocsPage() {
   }, [doc])
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="integrations.manage">
       <Layout title="API documentation">
         <FormPage width="lg">
           <PageHeader

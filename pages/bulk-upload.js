@@ -10,7 +10,7 @@ export default function BulkUploadPage() {
   const [activeTab, setActiveTab] = useState('daily')
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="production.import">
       <ToastProvider>
         <Layout title="Bulk Upload">
           <FormPage>

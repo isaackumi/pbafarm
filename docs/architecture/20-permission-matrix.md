@@ -13,6 +13,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `apiKeys.overview` | `integrations.manage` | yes | yes | no | no | no |
 | `apiKeys.revoke` | `integrations.manage` | yes | yes | no | no | no |
+| `assistant.context` | `ai.use` | yes | yes | yes | no | no |
+| `assistant.forDashboard` | `reports.view` | yes | yes | yes | yes | yes |
 | `audit.getByTable` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getByUser` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getSummary` | `org.audit.view` | yes | yes | no | no | no |
@@ -207,6 +209,18 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `notifications.listForCurrentUser` | `account` | self | self | self | self | self |
 | `notifications.markAllRead` | `account` | self | self | self | self | self |
 | `notifications.markRead` | `account` | self | self | self | self | self |
+| `nursery.dispatchFingerlings` | `hatchery.dispatch` | yes | yes | no | no | no |
+| `nursery.gradeFingerlings` | `hatchery.grade` | yes | yes | no | no | no |
+| `nursery.larvalBatches` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `nursery.listLarvalLogs` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `nursery.listMovements` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `nursery.liveFeed` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `nursery.nurseryUnits` | `hatchery.view` | yes | yes | yes | yes | yes |
+| `nursery.recordLiveFeed` | `hatchery.larval.record` | yes | yes | yes | yes | no |
+| `nursery.removeLiveFeed` | `hatchery.larval.record` | yes | yes | yes | yes | no |
+| `nursery.reverseMovement` | `hatchery.correct` | yes | yes | no | no | no |
+| `nursery.saveLarvalLog` | `hatchery.larval.record` | yes | yes | yes | yes | no |
+| `nursery.transferFingerlings` | `hatchery.dispatch` | yes | yes | no | no | no |
 | `procurement.cancel` | `inventory.purchase.correct` | yes | yes | no | no | no |
 | `procurement.create` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `procurement.list` | `inventory.view` | yes | yes | yes | yes | yes |
