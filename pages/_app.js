@@ -20,6 +20,7 @@ import { store } from '../store'
 import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { installGlobalErrorHandlers } from '../lib/monitoring'
 import { safeNextPath } from '../lib/safeRedirect'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
 import { fontVariablesCss } from '../lib/fonts'
@@ -38,7 +39,15 @@ const OutboxSync = dynamic(() => import('../components/OutboxSync'), { ssr: fals
 const AppUpdatePrompt = dynamic(() => import('../components/AppUpdatePrompt'), { ssr: false })
 
 function AppWrapper({ Component, pageProps, router }) {
+  // Uncaught errors and rejections go to monitoring when a DSN is set (OPS-001).
+  useEffect(() => {
+    installGlobalErrorHandlers()
+  }, [])
+
   return (
+    // Outermost boundary: a crash in a provider (auth, settings, i18n) shows a
+    // reload screen instead of a blank page. Page crashes are caught lower down.
+    <ErrorBoundary root resetKey={router.asPath}>
     <ConvexAuthProvider client={convex}>
       {/* Self-hosted font faces for the CSS variables in globals.css (MOBILE-007). */}
       <style dangerouslySetInnerHTML={{ __html: fontVariablesCss }} />
@@ -76,6 +85,7 @@ function AppWrapper({ Component, pageProps, router }) {
         </ThemeProvider>
       </Provider>
     </ConvexAuthProvider>
+    </ErrorBoundary>
   )
 }
 

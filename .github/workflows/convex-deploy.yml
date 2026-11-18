@@ -1,56 +1,124 @@
 name: Deploy Convex
 
-# Pushes the backend (convex/) to the deployment that CONVEX_DEPLOY_KEY points at
-# (today the dev deployment vibrant-stork-860; swap in a prod: key to ship prod)
-# whenever it changes on main. `convex deploy` type-checks and validates the
-# schema first, so a broken push fails here instead of reaching the deployment.
+# Pushes the backend (convex/) after lint, type-check and tests pass (OPS-001).
+#
+#   verify             lint + tsc + tests; nothing deploys if this fails.
+#   deploy-staging     CONVEX_DEPLOY_KEY_STAGING (skipped, not failed, while the
+#                      secret is unset). Runs for main, release/** and dispatch.
+#   deploy-production  CONVEX_DEPLOY_KEY, main only, in the `production`
+#                      GitHub environment. Add required reviewers to that
+#                      environment (Settings → Environments) to make every prod
+#                      deploy wait for approval; see docs/ops/environments-and-deploys.md.
+#                      Waits for staging when staging is configured, so a
+#                      schema push that staging rejects never reaches prod.
+#
+# Today CONVEX_DEPLOY_KEY still points at the dev deployment vibrant-stork-860;
+# swapping it for a prod: key is the OPS-001 owner step.
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     paths:
       - 'convex/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/convex-deploy.yml'
   workflow_dispatch:
+    inputs:
+      target:
+        description: Where to deploy
+        type: choice
+        options: [staging, production, both]
+        default: staging
 
 concurrency:
-  group: convex-deploy
+  group: convex-deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-
       - name: Install
         run: npm ci
-
-      # Never push backend code that fails lint, type-check or tests.
       - name: Lint
         run: npm run lint
-
       - name: Type-check Convex (functions and tests)
         run: npx tsc --noEmit -p convex
-
       - name: Tests
         run: npm test
 
+  deploy-staging:
+    needs: verify
+    if: github.event_name == 'push' || inputs.target == 'staging' || inputs.target == 'both'
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: convex-deploy-staging
+      cancel-in-progress: false
+    steps:
+      - name: Check staging deploy key
+        id: key
+        env:
+          KEY: ${{ secrets.CONVEX_DEPLOY_KEY_STAGING }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::notice::CONVEX_DEPLOY_KEY_STAGING is not set; skipping staging (OPS-004 not set up yet)."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install
+        if: steps.key.outputs.present == 'true'
+        run: npm ci
+      - name: Deploy to staging
+        if: steps.key.outputs.present == 'true'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_STAGING }}
+        run: npx convex deploy --yes
+
+  deploy-production:
+    needs: [verify, deploy-staging]
+    # Runs after staging succeeded or was skipped by the dispatch target;
+    # never after a staging failure, never from a release branch.
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped') &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || inputs.target == 'production' || inputs.target == 'both')
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: convex-deploy-production
+      cancel-in-progress: false
+    steps:
       - name: Check deploy key
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
           if [ -z "$CONVEX_DEPLOY_KEY" ]; then
-            echo "::error::CONVEX_DEPLOY_KEY secret is not set. Add it under Settings → Secrets and variables → Actions."
+            echo "::error::CONVEX_DEPLOY_KEY secret is not set. Add it under Settings → Secrets and variables → Actions (or the production environment)."
             exit 1
           fi
-
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install
+        run: npm ci
       - name: Deploy Convex functions and schema
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

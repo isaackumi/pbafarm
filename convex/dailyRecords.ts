@@ -21,6 +21,7 @@ import { requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
+import { isUserError, userError } from './lib/errors'
 
 /** Shown when a mortality change on a record from a closed cycle leaves the live count alone (doc 09 S8). */
 const EARLIER_CYCLE_WARNING =
@@ -93,7 +94,7 @@ async function deductDailyFeed(
   }
 
   const feedType = await ctx.db.get(args.feedTypeId)
-  if (!feedType) throw new Error('Feed type not found')
+  if (!feedType) throw userError('NOT_FOUND', 'Feed type not found')
 
   const cage = await ctx.db.get(args.cageId)
   const bags = bagsFromKg(args.feedAmount, feedType.bagSizeKg)
@@ -364,7 +365,7 @@ export async function insertDailyRecord(
   assertOwns(user, cage, 'Cage')
 
   if (args.feedAmount > 0 && !args.feedTypeId) {
-    throw new Error('feedTypeId is required when feedAmount > 0')
+    throw userError('VALIDATION', 'Choose a feed type when feed is more than 0')
   }
   if (args.feedTypeId) {
     assertOwns(user, await ctx.db.get(args.feedTypeId), 'Feed type')
@@ -372,10 +373,10 @@ export async function insertDailyRecord(
 
   // The date is the site's local calendar day (FARM-001, D-012): a real date,
   // not after today in the site's time zone.
-  if (!isBusinessDate(args.date)) throw new Error('Date must be a real date (YYYY-MM-DD)')
+  if (!isBusinessDate(args.date)) throw userError('VALIDATION', 'Date must be a real date (YYYY-MM-DD)')
   const today = await todayFor(ctx, { locationId: cage.locationId, companyId: cage.companyId })
   if (args.date > today) {
-    throw new Error(`Date ${args.date} is in the future for this site (today is ${today})`)
+    throw userError('VALIDATION', `Date ${args.date} is in the future for this site (today is ${today})`)
   }
 
   const existing = await ctx.db
@@ -384,7 +385,7 @@ export async function insertDailyRecord(
       q.eq('cageId', args.cageId).eq('date', args.date),
     )
     .first()
-  if (existing) throw new Error('Daily record already exists for this cage and date')
+  if (existing) throw userError('DUPLICATE', 'Daily record already exists for this cage and date')
 
   const {
     allowNegative,
@@ -617,26 +618,26 @@ export async function saveDailyBatch(
     feedOverlapReason?: string
   },
 ): Promise<Id<'dailyRecords'>[]> {
-    if (!records.length) throw new Error('Add at least one cage line')
-    if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
+    if (!records.length) throw userError('VALIDATION', 'Add at least one cage line')
+    if (records.length > 100) throw userError('VALIDATION', 'A batch can hold at most 100 lines')
 
     const seen = new Set<string>()
     const ids: Id<'dailyRecords'>[] = []
     for (const [i, rec] of records.entries()) {
       const line = `Line ${i + 1}`
       const cage = await ctx.db.get(rec.cageId)
-      if (!cage) throw new Error(`${line}: cage not found`)
+      if (!cage) throw userError('NOT_FOUND', `${line}: cage not found`)
       const allowed = await listForCompany(user, [cage])
-      if (!allowed.length) throw new Error(`${line}: access denied for cage ${cage.name}`)
+      if (!allowed.length) throw userError('FORBIDDEN', `${line}: access denied for cage ${cage.name}`)
       if (seen.has(rec.cageId)) {
-        throw new Error(`${line}: cage ${cage.name} appears more than once`)
+        throw userError('VALIDATION', `${line}: cage ${cage.name} appears more than once`)
       }
       seen.add(rec.cageId)
       if (!(rec.feedAmount >= 0) || !(rec.mortality >= 0)) {
-        throw new Error(`${line} (${cage.name}): feed and mortality cannot be negative`)
+        throw userError('VALIDATION', `${line} (${cage.name}): feed and mortality cannot be negative`)
       }
       if (rec.feedAmount > 0 && !rec.feedTypeId) {
-        throw new Error(`${line} (${cage.name}): choose a feed type`)
+        throw userError('VALIDATION', `${line} (${cage.name}): choose a feed type`)
       }
 
       let feedPrice = 0
@@ -644,12 +645,12 @@ export async function saveDailyBatch(
       if (rec.feedTypeId) {
         const feedType = await ctx.db.get(rec.feedTypeId)
         if (!feedType || feedType.deletedAt) {
-          throw new Error(`${line} (${cage.name}): feed type not found`)
+          throw userError('NOT_FOUND', `${line} (${cage.name}): feed type not found`)
         }
         try {
           assertOwns(user, feedType, 'Feed type')
         } catch {
-          throw new Error(`${line} (${cage.name}): feed type not found`)
+          throw userError('NOT_FOUND', `${line} (${cage.name}): feed type not found`)
         }
         feedPrice = feedType.pricePerKg ?? 0
         feedTypeName = feedType.name
@@ -676,6 +677,10 @@ export async function saveDailyBatch(
         })
         ids.push(id)
       } catch (err: any) {
+        // Keep the code and the readable message of a user error; prefix the line.
+        if (isUserError(err)) {
+          throw userError(err.data.code, `${line} (${cage.name}): ${err.data.message}`, err.data.details)
+        }
         throw new Error(`${line} (${cage.name}): ${err?.message || err}`)
       }
     }
@@ -712,9 +717,9 @@ export const update = mutation({
   ) => {
     const { user } = await requireMember(ctx, { permission: 'production.daily.correct' })
     const existing = await ctx.db.get(id)
-    if (!existing) throw new Error('Daily record not found')
+    if (!existing) throw userError('NOT_FOUND', 'Daily record not found')
     const allowed = await listForCompany(user, [existing])
-    if (!allowed.length) throw new Error('Access denied')
+    if (!allowed.length) throw userError('FORBIDDEN', 'Access denied')
 
     const patch = { ...rawPatch }
     if (patch.custom !== undefined) {
@@ -731,10 +736,10 @@ export const update = mutation({
       assertOwns(user, await ctx.db.get(patch.feedTypeId), 'Feed type')
     }
     if (patch.mortality !== undefined && !(patch.mortality >= 0 && Number.isInteger(patch.mortality))) {
-      throw new Error('Mortality must be a whole number, 0 or more')
+      throw userError('VALIDATION', 'Mortality must be a whole number, 0 or more')
     }
     if (patch.feedAmount !== undefined && !(patch.feedAmount >= 0)) {
-      throw new Error('Feed cannot be negative')
+      throw userError('VALIDATION', 'Feed cannot be negative')
     }
     if (patch.date !== undefined && patch.date !== existing.date) {
       const clash = await ctx.db
@@ -743,7 +748,7 @@ export const update = mutation({
           q.eq('cageId', existing.cageId).eq('date', patch.date!),
         )
         .first()
-      if (clash) throw new Error(`This cage already has a record for ${patch.date}`)
+      if (clash) throw userError('DUPLICATE', `This cage already has a record for ${patch.date}`)
     }
 
     const feedTouched =
@@ -800,7 +805,7 @@ export const update = mutation({
       const updated = await ctx.db.get(id)
       if (!updated) throw new Error('Daily record missing after update')
       if (updated.feedAmount > 0 && !updated.feedTypeId) {
-        throw new Error('feedTypeId is required when feedAmount > 0')
+        throw userError('VALIDATION', 'Choose a feed type when feed is more than 0')
       }
       await deductDailyFeed(ctx, user, {
         dailyRecordId: id,
@@ -838,9 +843,9 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
-    if (!existing) throw new Error('Daily record not found')
+    if (!existing) throw userError('NOT_FOUND', 'Daily record not found')
     const allowed = await listForCompany(user, [existing])
-    if (!allowed.length) throw new Error('Access denied')
+    if (!allowed.length) throw userError('FORBIDDEN', 'Access denied')
 
     await reverseDailyFeed(ctx, user, existing)
     // Give back the fish this record had counted as dead (current cycle only).
@@ -905,7 +910,8 @@ export const createMany = mutation({
     const ids = []
     for (const record of records) {
       if (record.feedAmount > 0 && !record.feedTypeId) {
-        throw new Error(
+        throw userError(
+          'VALIDATION',
           `feedTypeId is required when feedAmount > 0 (${record.date})`,
         )
       }

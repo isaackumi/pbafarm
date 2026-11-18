@@ -113,6 +113,7 @@ Optional `siteType`, `timezone`, `latitude`, `longitude`, `waterBody`. No backfi
 
 ### M10 — Remove the unassigned pool (narrow step of SEC-001/M1)
 Precondition: P1 = 0 for all tables after M1. Remove the `companyId`-missing branches from `convex/lib/tenancy.ts`; make `companyId` required on tenant tables in one approved deploy per group of tables. Backup immediately before. Rollback: revert to optional (schema loosening is always safe).
+- **Implemented (verification only):** `legacyData:m10VerifyNarrowReady`; the schema change is a follow-up PR per the checklist in `docs/ops/legacy-data-migrations.md`.
 
 ## 5. Phase 4 migrations (production engine)
 
@@ -156,7 +157,7 @@ New tables (`unitDailyStats`, `batchStats`, `siteDailyStats`) backfilled by pagi
 | M12 | 8 | `custom` optional object on records; `customFieldDefs` | Widen only | Archive defs |
 | M13 | 7 | `clientMutationId` optional on field records; `idempotencyKeys` table with retention | Widen; dual-write in field mutations | Ignore keys |
 | M15 | 6 | Copy `dailyRecords.dissolvedOxygen/temperatureC`, `biweeklyRecords` DO/temperature/Secchi into `waterQualityReadings` | Widen → backfill → dual-write from daily/biweekly entry → switch charts | Delete copied readings; originals untouched |
-| M16 | 9 | `locationId` on every `feedInventoryTransactions` row where derivable (purchase site; cage site for usage); legacy inter-site transfer rows marked `legacy_unsigned` (the source site was never stored, doc 08 §6.3); two-legged transfers from now on | Widen → backfill → dual-write → switch per-site ledger reads | Unset backfilled fields |
+| M16 | 9 | `locationId` on every `feedInventoryTransactions` row where derivable (purchase site; cage site for usage); legacy inter-site transfer rows marked `legacy_unsigned` (the source site was never stored on the ledger, doc 08 §6.3 — but the audit row kept it: `legacyData:m16ConvertLegacyTransfers` converts provable rows to two legs, see `docs/ops/legacy-data-migrations.md`); two-legged transfers from now on | Widen → backfill → dual-write → switch per-site ledger reads | Unset backfilled fields |
 | M17 | 10 | Current reminders and mortality alerts expressed as default `automationRules` per org | Widen → seed rules → run both with dedupe → switch off legacy cron | Re-enable legacy cron |
 | M18 | 12 | One `harvestLots` row per existing harvest | Widen → backfill | Delete tagged lots |
 | M19 | 2/4 | Species and size grades as per-org configuration seeded from `lib/fishSpecies.js` and distinct `harvestRecords.sizeBreakdown[].category` values | Widen → seed → forms read config | Forms fall back to the static list |

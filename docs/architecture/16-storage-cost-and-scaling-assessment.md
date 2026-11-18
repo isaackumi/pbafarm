@@ -160,6 +160,8 @@ API (all in Convex; provider hidden from callers): `files.requestUpload({ subjec
 
 ### 9.2 Steps
 
+> Steps 4–5 (copy + reconciliation) have code: `convex/r2Sync.ts` (`copyToR2`, `reconcileR2`), not yet wired to `files`; see `docs/ops/r2-storage.md`.
+
 | Step | Change | Rollback |
 |---|---|---|
 | 1 | Introduce `files` on Convex storage with Phase 7/12 file features; new code never stores raw `_storage` ids on business tables | Additive |

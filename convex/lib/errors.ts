@@ -8,7 +8,11 @@
  * `error.data.code`. Plain `Error` throws keep working: the client falls back
  * to cleaning `error.message` (see lib/errorMessage.js).
  *
- * Existing server throws are not converted yet; that is a separate change.
+ * In production Convex replaces a plain `Error` message with "Server Error",
+ * so any message the person must read has to be a `userError`. Converted so
+ * far: daily entry (convex/dailyRecords.ts) and the feed ledger
+ * (convex/lib/feedLedger.ts), plus the modules that already used it. Other
+ * plain throws are converted module by module (OPS-001).
  */
 import { ConvexError } from 'convex/values'
 

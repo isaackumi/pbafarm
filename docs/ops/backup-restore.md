@@ -4,6 +4,11 @@
 > restore drill has been run. Nothing here has been tested against this project.
 > The first drill must be run and recorded (see "Drill log" at the end) before
 > this runbook can be relied on. Tracker: OPS-001 (roadmap §0.6).
+>
+> Scripted versions of §1 and §2 (dry-run by default, `DRY_RUN=0` executes):
+> `scripts/ops/convex-backup.sh` and `scripts/ops/convex-restore-drill.sh`,
+> with per-table count comparison by `scripts/ops/snapshot-counts.mjs`.
+> See also `staging-and-cutover.md` and `environments-and-deploys.md`.
 
 ## Scope and current state
 
@@ -55,6 +60,12 @@ npx convex export \
 
 Record the file name, size, and the time in the change ticket.
 
+Scripted (also writes `<zip>.sha256` and `<zip>.counts.json`):
+
+```bash
+SOURCE_DEPLOYMENT=<prod-deployment-name> DRY_RUN=0 scripts/ops/convex-backup.sh
+```
+
 ### Environment variables
 
 Snapshots do not include env vars. Keep a current list (names only here, values
@@ -65,6 +76,8 @@ in the password manager) and update it whenever one changes:
 | `JWT_PRIVATE_KEY`, `JWKS` | Convex Auth signing keys |
 | `SITE_URL` | Auth redirect base |
 | LLM provider keys | Assistant (if set on the deployment) |
+| `SENTRY_DSN`, `SENTRY_ENVIRONMENT` | Error monitoring (optional) |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT` | R2 mirror (optional, CF-005) |
 
 ## 2. Restore drill (monthly)
 
@@ -84,6 +97,9 @@ Goal: prove a snapshot can be restored and is complete, without touching prod.
    npx convex import --deployment <scratch-deployment-name> --replace-all backups/<snapshot>.zip
    ```
 
+   Steps 4–5 scripted (import, export back, compare counts; refuses prod
+   and staging as the target):
+   `BACKUP_ZIP=… DRILL_DEPLOYMENT=<scratch> PROD_DEPLOYMENT=<prod> DRY_RUN=0 scripts/ops/convex-restore-drill.sh`
 5. **Compare row counts** per table between the snapshot source and the scratch
    deployment. In the dashboard Data page each table shows its document count;
    record both columns in the drill log. Every table must match exactly.

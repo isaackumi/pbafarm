@@ -4,6 +4,7 @@ import { assertUserCan } from './permissions'
 import { assertOwns, logAudit } from './tenancy'
 import { emitDomainEvent } from './events'
 import { mergeSettings } from './farmRules'
+import { userError } from './errors'
 
 export type StockTxnType =
   | 'purchase'
@@ -246,7 +247,8 @@ export async function assertFeedNotAlreadyRecorded(
   const cage = await ctx.db.get(args.cageId)
   const name = cage?.name ?? 'this cage'
   const kg = round1(existingKg)
-  throw new Error(
+  throw userError(
+    'CONFLICT',
     args.writing === 'daily'
       ? `Feed for cage ${name} on ${args.date} was already issued from the store (${kg} kg). Recording it in the daily entry as well would deduct the stock twice. Enter 0 feed here, or ask an admin to save it with an override reason.`
       : `Feed for cage ${name} on ${args.date} is already recorded in the daily entry (${kg} kg). Issuing it as well would deduct the stock twice. Correct the daily entry instead, or ask an admin to issue it with an override reason.`,
@@ -279,12 +281,12 @@ export async function applyStockChange(
   },
 ) {
   if (!Number.isFinite(args.deltaKg) || args.deltaKg === 0) {
-    throw new Error('Stock change quantity must be a non-zero number')
+    throw userError('VALIDATION', 'Stock change quantity must be a non-zero number')
   }
 
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType || feedType.deletedAt) {
-    throw new Error('Feed type not found')
+    throw userError('NOT_FOUND', 'Feed type not found')
   }
   // Defensive (SEC-002, V1): never move another company's stock, whatever
   // the caller checked.
@@ -298,13 +300,14 @@ export async function applyStockChange(
     const allowNeg =
       args.allowNegative === true || feedRules.allowNegativeStock === true
     if (!allowNeg) {
-      throw new Error(
+      throw userError(
+        'INSUFFICIENT_STOCK',
         `Insufficient stock for ${feedType.name}: have ${feedType.currentStock} kg, need ${Math.abs(args.deltaKg)} kg`,
       )
     }
     await assertUserCan(ctx, args.user, 'inventory.adjust')
     if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
-      throw new Error('Admin override requires a reason')
+      throw userError('VALIDATION', 'Admin override requires a reason')
     }
   } else if (
     args.deltaKg < 0 &&
@@ -321,14 +324,15 @@ export async function applyStockChange(
       const siteDoc = await ctx.db.get(args.locationId)
       const siteName = siteDoc?.name || 'this site'
       if (!allowNeg) {
-        throw new Error(
+        throw userError(
+          'INSUFFICIENT_STOCK',
           `Not enough ${feedType.name} at ${siteName}: ${round1(site.available)} kg there, ${round1(need)} kg needed. ` +
             `${round1(feedType.currentStock)} kg across all sites; transfer feed to ${siteName} or record a purchase for it.`,
         )
       }
       await assertUserCan(ctx, args.user, 'inventory.adjust')
       if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
-        throw new Error('Admin override requires a reason')
+        throw userError('VALIDATION', 'Admin override requires a reason')
       }
     }
   }

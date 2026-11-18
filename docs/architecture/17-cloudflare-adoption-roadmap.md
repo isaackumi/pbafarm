@@ -85,6 +85,8 @@ Retrieved 2026-11-18; `[Sn]` ids refer to the source table in doc 14. Cost figur
 | Rollback | Provider setting back to `convex` (new uploads); rows already on R2 keep working; until step 5 completes, rows can be patched back to their retained `storageId`. |
 | Cost | Doc 16: at 300 orgs ≈ $12–35/month R2 vs ≈ $120–166/month Convex Pro overage (month 12–36); at 1,000 orgs $39–115 vs $420–573. No Workers plan needed. |
 
+> Status (2026-11): the R2 provider (`convex/lib/r2.ts`, Effect service, hand-written SigV4 instead of `@convex-dev/r2`) and the copy/reconcile actions (`convex/r2Sync.ts`) are implemented and tested but **not wired** into `convex/files.ts`; env-gated no-op until `R2_*` is set. Owner setup and the wiring steps: `docs/ops/r2-storage.md`.
+
 ### Stage 5 — Access for staging (CF-007)
 
 | Item | Detail |
