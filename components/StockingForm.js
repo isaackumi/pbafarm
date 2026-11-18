@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { FISH_SPECIES } from '../lib/fishSpecies'
 import { localToday } from '../lib/format'
+import { DEFAULT_SETTINGS, densityStatus } from '../convex/lib/farmRules'
 
 const STOCKING_DEFAULTS = {
   cageId: '',
@@ -161,8 +162,14 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     if (cage?.capacity && count > cage.capacity && sr.enforceCageCapacity) {
       notes.push(`Exceeds cage capacity (${cage.capacity})`)
     }
-    if (cage?.size && count > 0 && count / cage.size > fr.maxDensityFishPerM3) {
-      notes.push(`Exceeds max density ${fr.maxDensityFishPerM3} fish/m³`)
+    if (cage && count > 0) {
+      // Same basis as the server check: pond area, cage net volume, tank volume.
+      const d = densityStatus(cage, count, { ...DEFAULT_SETTINGS.farmRules, ...fr })
+      if (d.level === 'over') {
+        notes.push(`Density ${d.density} ${d.unit} exceeds the limit of ${d.max} ${d.unit}`)
+      } else if (d.level === 'warn') {
+        notes.push(`Density ${d.density} ${d.unit} is ${d.pctOfMax}% of the limit (${d.max})`)
+      }
     }
     if (sr.requireApprovalForStocking) {
       notes.push('This stocking will require admin approval')
