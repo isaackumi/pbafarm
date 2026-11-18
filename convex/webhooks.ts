@@ -169,7 +169,7 @@ export const insertEndpoint = internalMutation({
     hint: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user, companyId } = await requireWebhookAdmin(ctx)
+    const { companyId } = await requireWebhookAdmin(ctx)
     const row = await loadOwnEndpoint(ctx, companyId, args.endpointId)
     const now = Date.now()
     const existing = await ctx.db
@@ -193,7 +193,6 @@ export const insertEndpoint = internalMutation({
       recordId: args.endpointId,
       newValues: { url: row.url, keyVersion: args.keyVersion },
     })
-    void user
     return null
   },
 })

@@ -28,7 +28,10 @@ type Consumer = {
   fn: FunctionReference<'mutation', 'internal', { eventId: Id<'domainEvents'> }, null>
 }
 
-export const CONSUMERS: Consumer[] = []
+export const CONSUMERS: Consumer[] = [
+  // Outbound webhooks (INT-005).
+  { name: 'webhooks', fn: internal.webhooks.fanOut },
+]
 
 /** Events per drain transaction; the drain re-schedules itself when full. */
 export const DISPATCH_BATCH = 50
