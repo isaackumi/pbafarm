@@ -29,6 +29,8 @@ export const ERROR_CODES = [
   'CONFLICT',
   /** Too many requests in a short time. */
   'RATE_LIMITED',
+  /** Fish are inside a treatment withdrawal period (PROD-012). */
+  'WITHDRAWAL_ACTIVE',
 ] as const
 
 export type ErrorCode = (typeof ERROR_CODES)[number]

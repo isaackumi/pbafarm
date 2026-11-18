@@ -5,6 +5,7 @@ import type { QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
+import { enforceWithdrawal } from './lib/traceability'
 import {
   assertOwns,
   listForCompany,
@@ -231,8 +232,10 @@ export const createSale = mutation({
     ),
     notes: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
+    /** Admin only: sell fish inside a treatment withdrawal period (PROD-012). */
+    withdrawalOverrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { withdrawalOverrideReason, ...args }) => {
     const user = await requireUser(ctx)
     if (!(args.weightKg > 0)) throw new Error('Weight must be greater than zero')
     if (!(args.pricePerKg >= 0)) throw new Error('Price per kg must be zero or more')
@@ -290,6 +293,19 @@ export const createSale = mutation({
     const totalAmount =
       Math.round(args.weightKg * args.pricePerKg * 100) / 100
 
+    // A sale from a cage (or its harvest) inside a withdrawal period is refused
+    // unless an admin overrides it (PROD-012). The batch is the harvested one.
+    const withdrawalOverride = cageId
+      ? await enforceWithdrawal(ctx, user, {
+          cageId,
+          // Fish from a harvest are judged at the harvest date.
+          date: harvest?.harvestDate ?? args.saleDate,
+          action: 'sale',
+          overrideReason: withdrawalOverrideReason,
+          batchId: harvest?.batchId,
+        })
+      : undefined
+
     const id = await ctx.db.insert('sales', {
       harvestId: args.harvestId,
       cageId,
@@ -301,6 +317,7 @@ export const createSale = mutation({
       totalAmount,
       paymentStatus: args.paymentStatus || 'pending',
       notes: args.notes?.trim() || undefined,
+      withdrawalOverride,
       locationId,
       companyId,
       createdBy: user._id,
