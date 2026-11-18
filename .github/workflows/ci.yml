@@ -5,6 +5,8 @@ on:
     branches: [main, master, 'feat/**']
   pull_request:
 
+# Every step below is a gate: a lint error, Convex type error, failing test or
+# broken build fails the job and blocks the merge.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,15 +14,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
       - name: Install
         run: npm ci
-      - name: Backend tests
-        run: npm test
       - name: Lint
         run: npm run lint
-        continue-on-error: true
+      - name: Type-check Convex
+        run: npx tsc --noEmit -p convex
+      - name: Tests
+        run: npm test
       - name: Build
         run: npm run build
         env:
