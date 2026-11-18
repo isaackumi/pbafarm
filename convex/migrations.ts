@@ -19,6 +19,8 @@ import { internalMutation, internalQuery } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { currentStocking } from './lib/growth'
+import { MAX_SCOPED_LOCATIONS, legacyRoleFromKey, roleKeyFromLegacy } from './lib/memberships'
+import { ORG_PROFILE_DEFAULTS } from './lib/orgProfile'
 
 /** Every table whose schema has an optional `companyId` (users handled separately). */
 export const UNSCOPED_TABLES = [
@@ -389,6 +391,141 @@ export const tagSamplingPageHarvests = internalMutation({
       })
     }
 
+    return { dryRun, count: changes.length, changes }
+  },
+})
+
+/**
+ * M2 — one membership per user with a companyId (ORG-001, D-002).
+ * Role mapping (owner decision): admin (and super_admin with a company) →
+ * 'admin', user → 'manager'. status 'suspended' when the account is
+ * inactive; allLocations unless users.locationIds lists sites.
+ *
+ * Pages through users; dryRun (default true) only reports. Idempotent: users
+ * who already have a row for their company are skipped. Run until isDone:
+ *   npx convex run migrations:m2BackfillMemberships '{"dryRun":true}'
+ *   npx convex run migrations:m2BackfillMemberships '{"dryRun":false}'
+ *   (repeat with '{"dryRun":false,"cursor":"<continueCursor>"}' while isDone is false)
+ *   npx convex run migrations:m2VerifyMemberships
+ */
+export const m2BackfillMemberships = internalMutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+    batchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, { dryRun = true, cursor = null, batchSize = 200 }) => {
+    const page = await ctx.db
+      .query('users')
+      .paginate({ numItems: Math.min(Math.max(batchSize, 1), 500), cursor })
+    const created: Array<{
+      userId: Id<'users'>
+      companyId: Id<'companies'>
+      roleKey: string
+      status: string
+    }> = []
+    let skipped = 0
+    for (const user of page.page) {
+      const companyId = user.companyId
+      if (!companyId) {
+        skipped++
+        continue
+      }
+      const existing = await ctx.db
+        .query('memberships')
+        .withIndex('by_companyId_and_userId', (q) =>
+          q.eq('companyId', companyId).eq('userId', user._id),
+        )
+        .unique()
+      if (existing) {
+        skipped++
+        continue
+      }
+      const roleKey = roleKeyFromLegacy(user.role)
+      const status = user.active === false ? ('suspended' as const) : ('active' as const)
+      const scoped = (user.locationIds ?? []).slice(0, MAX_SCOPED_LOCATIONS)
+      created.push({ userId: user._id, companyId, roleKey, status })
+      if (dryRun) continue
+      const now = Date.now()
+      await ctx.db.insert('memberships', {
+        userId: user._id,
+        companyId,
+        roleKey,
+        allLocations: scoped.length === 0,
+        locationIds: scoped.length ? scoped : undefined,
+        status,
+        joinedAt: user._creationTime,
+        statusChangedAt: now,
+        legacy: true,
+        updatedAt: now,
+      })
+    }
+    return {
+      dryRun,
+      created: created.length,
+      skipped,
+      rows: created,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    }
+  },
+})
+
+/**
+ * M2 acceptance check: every user with a companyId has exactly one membership
+ * for it, with the role the mapping gives. Read-only; pages like the backfill.
+ */
+export const m2VerifyMemberships = internalQuery({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { cursor = null }) => {
+    const page = await ctx.db.query('users').paginate({ numItems: 500, cursor })
+    const problems: Array<{ userId: Id<'users'>; problem: string }> = []
+    let checked = 0
+    for (const user of page.page) {
+      const companyId = user.companyId
+      if (!companyId) continue
+      checked++
+      const rows = await ctx.db
+        .query('memberships')
+        .withIndex('by_companyId_and_userId', (q) =>
+          q.eq('companyId', companyId).eq('userId', user._id),
+        )
+        .collect()
+      if (rows.length !== 1) {
+        problems.push({ userId: user._id, problem: `${rows.length} memberships for active company` })
+        continue
+      }
+      const legacy = user.role === 'admin' || user.role === 'super_admin' ? 'admin' : 'user'
+      if (legacyRoleFromKey(rows[0].roleKey) !== legacy) {
+        problems.push({ userId: user._id, problem: `role ${user.role} vs membership ${rows[0].roleKey}` })
+      }
+    }
+    return { checked, problems, isDone: page.isDone, continueCursor: page.continueCursor }
+  },
+})
+
+/**
+ * M3 — write the organization profile defaults onto existing companies
+ * (timezone 'Africa/Accra', metric, en-GH, GH). Optional: reads already
+ * default them (lib/orgProfile). Only fills fields that are unset.
+ *   npx convex run migrations:m3CompanyProfileDefaults '{"dryRun":true}'
+ *   npx convex run migrations:m3CompanyProfileDefaults '{"dryRun":false}'
+ */
+export const m3CompanyProfileDefaults = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun = true }) => {
+    const companies = await ctx.db.query('companies').take(1000)
+    const changes: Array<{ companyId: Id<'companies'>; patch: Partial<Doc<'companies'>> }> = []
+    for (const c of companies) {
+      const patch: Partial<Doc<'companies'>> = {}
+      if (c.timezone === undefined) patch.timezone = ORG_PROFILE_DEFAULTS.timezone
+      if (c.unitSystem === undefined) patch.unitSystem = ORG_PROFILE_DEFAULTS.unitSystem
+      if (c.defaultLocale === undefined) patch.defaultLocale = ORG_PROFILE_DEFAULTS.defaultLocale
+      if (c.country === undefined) patch.country = ORG_PROFILE_DEFAULTS.country
+      if (Object.keys(patch).length === 0) continue
+      changes.push({ companyId: c._id, patch })
+      if (!dryRun) await ctx.db.patch(c._id, patch)
+    }
     return { dryRun, count: changes.length, changes }
   },
 })

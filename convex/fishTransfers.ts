@@ -20,6 +20,7 @@ import {
   classifyDestination,
   sourceCagePatchAfterTransfer,
 } from './lib/fishTransferLogic'
+import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -467,6 +468,7 @@ export const createFishTransfer = mutation({
       const transfer = await ctx.db.get(transferId)
       await applyFishTransfer(ctx, transfer, { linkedJustCreated: true })
       if (transfer) await emitTransferApproved(ctx, transfer, user._id)
+      await shadowTransfer(ctx, (await ctx.db.get(transferId))!, user._id)
     }
 
     await logAudit(ctx, {
@@ -511,6 +513,7 @@ export const approveFishTransfer = mutation({
 
     const updated = await ctx.db.get(id)
     await applyFishTransfer(ctx, updated)
+    await shadowTransfer(ctx, (await ctx.db.get(id))!, user._id)
 
     await logAudit(ctx, {
       actionType: 'approve',
@@ -577,5 +580,100 @@ export const rejectFishTransfer = mutation({
       recordId: id,
       newValues: { status: 'rejected', reason },
     })
+  },
+})
+
+/**
+ * Reverse an approved transfer (doc 09 S1, PROD-007): the fish go back to the
+ * source cage, the destination gives them up, and the ledger gets reversal
+ * events (the original events stay in the history). Refused once either cage
+ * has moved on to a later cycle or the destination no longer holds the fish.
+ */
+export const reverseFishTransfer = mutation({
+  args: {
+    id: v.id('fishTransfers'),
+    reason: v.string(),
+  },
+  handler: async (ctx, { id, reason }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const transfer = await ctx.db.get(id)
+    if (!transfer) throw new Error('Transfer not found')
+    const allowed = await listForCompany(user, [transfer])
+    if (!allowed.length) throw new Error('Access denied')
+    if (transfer.status !== 'approved') throw new Error('Only approved transfers can be reversed')
+    if (transfer.reversedAt) throw new Error('This transfer has already been reversed')
+    if (!reason.trim()) throw new Error('Give a reason for the reversal')
+
+    const source = await ctx.db.get(transfer.sourceCageId)
+    const dest = await ctx.db.get(transfer.destinationCageId)
+    if (!source || !dest) throw new Error('Cage not found')
+
+    const laterStocking = async (cageId: Id<'cages'>, except?: Id<'stockingHistory'>) => {
+      const rows = await ctx.db
+        .query('stockingHistory')
+        .withIndex('by_cage', (q) => q.eq('cageId', cageId))
+        .take(1000)
+      return rows.some(
+        (s) =>
+          s.status === 'approved' &&
+          !s.deletedAt &&
+          s._id !== except &&
+          s.stockingDate > transfer.transferDate,
+      )
+    }
+    if (source.status === 'harvested' || (await laterStocking(transfer.sourceCageId))) {
+      throw new Error(
+        `${source.name} has been harvested or restocked since this transfer, so the fish cannot go back. Record a stock adjustment instead.`,
+      )
+    }
+    if (await laterStocking(transfer.destinationCageId, transfer.destinationStockingId)) {
+      throw new Error(`${dest.name} has been restocked since this transfer, so it cannot be reversed.`)
+    }
+    const destCount = dest.currentCount ?? 0
+    if (destCount < transfer.quantity) {
+      throw new Error(
+        `${dest.name} holds ${destCount.toLocaleString()} fish, fewer than the ${transfer.quantity.toLocaleString()} this transfer moved. Record what happened to them first.`,
+      )
+    }
+
+    const now = Date.now()
+    await ctx.db.patch(source._id, {
+      currentCount: (source.currentCount ?? 0) + transfer.quantity,
+      ...(source.status === 'empty' || source.status === 'fallow' ? { status: 'active' as const } : {}),
+      updatedAt: now,
+    })
+    const nextDest = destCount - transfer.quantity
+    await ctx.db.patch(dest._id, {
+      currentCount: nextDest,
+      ...(nextDest === 0 ? { status: 'empty' as const } : {}),
+      updatedAt: now,
+    })
+    // A cycle the transfer opened in the destination ends with it.
+    if (nextDest === 0 && transfer.destinationStockingId) {
+      const st = await ctx.db.get(transfer.destinationStockingId)
+      if (st && !st.closedAt) await ctx.db.patch(st._id, { closedAt: transfer.transferDate })
+    }
+    await ctx.db.patch(id, {
+      reversedAt: now,
+      reversedBy: user._id,
+      reversalReason: reason.trim(),
+      updatedAt: now,
+    })
+    const { warnings } = await shadowReverse(
+      ctx,
+      source,
+      { sourceTable: 'fishTransfers', sourceId: id },
+      `Transfer reversed: ${reason.trim()}`,
+      user._id,
+    )
+    await logAudit(ctx, {
+      actionType: 'reverse',
+      tableName: 'fishTransfers',
+      recordId: id,
+      previousValues: transfer,
+      newValues: { reversedAt: now, reason: reason.trim() },
+    })
+    return { ok: true, warnings }
   },
 })

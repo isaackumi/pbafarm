@@ -159,6 +159,56 @@ export function gainKg(f: {
   return f.standingKg + f.harvestedKg + f.outKg - f.stockedKg - f.inKg
 }
 
+/**
+ * FCR over a set of harvests (dashboard, report, export). Uses the inputs
+ * stored with each harvest (feed and gain from the ledger, PROD-009): per
+ * cage and batch only the latest harvest counts, because its inputs are
+ * cumulative for the occupancy. Older harvests without inputs fall back to
+ * their recorded FCR weighted by harvested kg (never an unweighted mean,
+ * never FCR 0, C25/C28).
+ */
+export function periodHarvestFcr(
+  harvests: Array<{
+    cageId: string
+    batchId?: string
+    harvestDate: string
+    totalWeight: number
+    fcr?: number
+    fcrInputs?: { feedKg: number; gainKg: number } | null
+  }>,
+): number | null {
+  const latest = new Map<string, (typeof harvests)[number]>()
+  const rows: Array<{ feedKg: number; gainKg: number }> = []
+  for (const h of harvests) {
+    if (h.fcrInputs && h.batchId) {
+      const k = `${h.cageId}|${h.batchId}`
+      const prev = latest.get(k)
+      if (!prev || h.harvestDate >= prev.harvestDate) latest.set(k, h)
+    } else if (h.fcr && h.fcr > 0 && h.totalWeight > 0) {
+      rows.push({ feedKg: h.fcr * h.totalWeight, gainKg: h.totalWeight })
+    }
+  }
+  for (const h of latest.values()) rows.push(h.fcrInputs!)
+  return pooledFcr(rows)
+}
+
+/**
+ * Growth per day over a set of samples: the slope of each occupancy (cage
+ * and batch; cage alone for untagged samples), then their mean. Samples of
+ * different cages or cycles are never joined into one slope (C26, C29).
+ */
+export function periodGrowthPerDay(
+  samples: Array<{ cageId: string; batchId?: string; date: string; abwG: number }>,
+): number | null {
+  const groups = new Map<string, Array<{ date: string; abwG: number }>>()
+  for (const s of samples) {
+    const k = `${s.cageId}|${s.batchId ?? ''}`
+    if (!groups.has(k)) groups.set(k, [])
+    groups.get(k)!.push({ date: s.date, abwG: s.abwG })
+  }
+  return mean([...groups.values()].map(sampleGrowthPerDay))
+}
+
 // ---------------------------------------------------------------------------
 // Occupancy KPIs from ledger events
 // ---------------------------------------------------------------------------

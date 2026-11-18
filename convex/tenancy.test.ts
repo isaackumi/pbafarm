@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
 import { authErrorCode } from './lib/authErrors'
@@ -214,6 +214,10 @@ describe('SEC-001 company-less users', () => {
 })
 
 describe('SEC-003 invitations', () => {
+  // users.invite schedules the invite email; keep it from running after the test.
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+
   test('V2: inviting a company-less super_admin is refused and changes nothing', async () => {
     const { t, as, adminA, platform } = await setup()
     await expect(

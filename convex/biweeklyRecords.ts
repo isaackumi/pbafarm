@@ -1,10 +1,12 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { syncCageAbw } from './lib/growth'
+import { tagBiweekly } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 import { userError } from './lib/errors'
@@ -174,6 +176,7 @@ export const create = mutation({
       }
     }
 
+    await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
     // The latest sample becomes the cage's current fish weight.
     await syncCageAbw(ctx, args.cageId)
 
@@ -210,7 +213,8 @@ async function freshBatchCode(
  * the fish counted and their total weight in grams; ABW is computed here.
  * All lines save or none do. Batch codes are generated when not given.
  */
-export const createBatch = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const createBatch = idempotentMutation('biweeklyRecords.createBatch', {
   args: {
     date: v.string(),
     records: v.array(
@@ -388,6 +392,7 @@ export const createMany = mutation({
         createdBy: user._id,
         updatedAt: now,
       })
+      await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
       ids.push(id)
     }
     for (const cageId of new Set(records.map((r) => r.cageId))) {
@@ -435,6 +440,7 @@ export const update = mutation({
       updatedAt: Date.now(),
     })
     await syncCageAbw(ctx, existing.cageId)
+    await tagBiweekly(ctx, (await ctx.db.get(id))!, user._id)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'biweeklyRecords',
