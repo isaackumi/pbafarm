@@ -35,7 +35,7 @@ function assertDate(value: string, label: string) {
 }
 
 /** Occupancies of the caller's company with fish on or after `from`. */
-async function occupanciesSince(
+export async function occupanciesSince(
   ctx: QueryCtx,
   user: Doc<'users'>,
   from: string,
@@ -53,7 +53,7 @@ async function occupanciesSince(
 }
 
 /** Unit and site names of the company. */
-async function names(ctx: QueryCtx, user: Doc<'users'>) {
+export async function names(ctx: QueryCtx, user: Doc<'users'>) {
   const cages = await scopedRows(ctx, user, 'cages')
   const sites = await scopedRows(ctx, user, 'farmLocations')
   return {
@@ -62,7 +62,7 @@ async function names(ctx: QueryCtx, user: Doc<'users'>) {
   }
 }
 
-async function farmTarget(ctx: QueryCtx, user: Doc<'users'>) {
+export async function farmTarget(ctx: QueryCtx, user: Doc<'users'>) {
   const company = user.companyId ? await ctx.db.get(user.companyId) : null
   const rules = mergeSettings(company?.settings).farmRules
   return { abwG: rules.targetHarvestAbwG, days: rules.harvestDocMaxDays }
