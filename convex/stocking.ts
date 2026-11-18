@@ -13,6 +13,7 @@ import {
 } from './lib/farmRules'
 import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
+import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -352,6 +353,7 @@ export const createStocking = mutation({
         species: species || cage.species,
         updatedAt: Date.now(),
       })
+      await shadowStocking(ctx, (await ctx.db.get(id))!, user._id)
     }
 
     await logAudit(ctx, {
@@ -501,6 +503,7 @@ export const approveStocking = mutation({
       species: stocking.species,
       updatedAt: now,
     })
+    await shadowStocking(ctx, (await ctx.db.get(id))!, user._id)
 
     await logAudit(ctx, {
       actionType: 'approve',
@@ -623,6 +626,7 @@ export const createTopup = mutation({
         currentCount: (cage.currentCount || 0) + args.fishCount,
         updatedAt: Date.now(),
       })
+      await shadowTopup(ctx, (await ctx.db.get(id))!, user._id)
     }
 
     await logAudit(ctx, {
@@ -671,6 +675,7 @@ export const approveTopup = mutation({
         updatedAt: now,
       })
     }
+    await shadowTopup(ctx, (await ctx.db.get(id))!, user._id)
 
     await logAudit(ctx, {
       actionType: 'approve',
