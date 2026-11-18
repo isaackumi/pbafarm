@@ -65,6 +65,21 @@ export const stockSourceTable = v.union(
   v.literal('legacyBackfill'),
 )
 
+/** Records a file can be attached to (D-016, TRACE-005). */
+export const fileEntityType = v.union(
+  v.literal('healthTreatments'),
+  v.literal('harvestLots'),
+  v.literal('dispatches'),
+  v.literal('complianceRecords'),
+  v.literal('biosecurityLogs'),
+)
+
+export const complianceFrequency = v.union(
+  v.literal('daily'),
+  v.literal('weekly'),
+  v.literal('monthly'),
+)
+
 /** Who overrode an active withdrawal period, when and why (PROD-012). */
 export const withdrawalOverride = v.object({
   reason: v.string(),
@@ -1317,6 +1332,103 @@ const schema = defineSchema({
     .index('by_harvestLotId', ['harvestLotId'])
     .index('by_companyId_and_dispatchDate', ['companyId', 'dispatchDate'])
     .index('by_customerId', ['customerId']),
+
+  /**
+   * Provider-neutral file register (D-016, TRACE-005). A row is one stored
+   * file attached to one record; `provider` says where the bytes live
+   * (Convex storage today, R2 later via CF-005). Bytes are only served
+   * through short-lived download tokens issued to the owning company.
+   */
+  files: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    entityType: fileEntityType,
+    entityId: v.string(),
+    provider: v.literal('convex'),
+    storageId: v.id('_storage'),
+    name: v.string(),
+    mime: v.string(),
+    size: v.number(),
+    uploadedBy: v.id('users'),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_entityType_and_entityId', ['companyId', 'entityType', 'entityId'])
+    .index('by_storageId', ['storageId']),
+
+  /** One-time-ish download grants: valid for a few minutes, stored hashed. */
+  fileDownloadTokens: defineTable({
+    tokenHash: v.string(),
+    fileId: v.id('files'),
+    companyId: v.id('companies'),
+    userId: v.id('users'),
+    expiresAt: v.number(),
+  })
+    .index('by_tokenHash', ['tokenHash'])
+    .index('by_expiresAt', ['expiresAt']),
+
+  /** Biosecurity log per site (TRACE-006): visitors, vehicles, disinfection. */
+  biosecurityLogs: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.id('farmLocations'),
+    date: v.string(),
+    kind: v.union(
+      v.literal('visitor'),
+      v.literal('vehicle'),
+      v.literal('disinfection'),
+      v.literal('other'),
+    ),
+    /** Visitor or driver name. */
+    person: v.optional(v.string()),
+    organisation: v.optional(v.string()),
+    vehicle: v.optional(v.string()),
+    purpose: v.optional(v.string()),
+    /** Area, unit or equipment disinfected or visited. */
+    area: v.optional(v.string()),
+    disinfectant: v.optional(v.string()),
+    /** Footbath / wheel-dip / hand-wash done on entry. */
+    entryControlsDone: v.optional(v.boolean()),
+    notes: v.optional(v.string()),
+    createdBy: v.id('users'),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_date', ['companyId', 'date'])
+    .index('by_companyId_and_locationId_and_date', ['companyId', 'locationId', 'date']),
+
+  /** A checklist with a due frequency (TRACE-006). */
+  complianceTemplates: defineTable({
+    companyId: v.id('companies'),
+    /** Set for the built-in templates so seeding is idempotent. */
+    key: v.optional(v.string()),
+    name: v.string(),
+    description: v.optional(v.string()),
+    frequency: complianceFrequency,
+    /** Bounded: at most 50 items. */
+    items: v.array(v.object({ id: v.string(), label: v.string(), required: v.boolean() })),
+    active: v.boolean(),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_key', ['companyId', 'key']),
+
+  /** A completed checklist for one site and one period (TRACE-006). */
+  complianceRecords: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.id('farmLocations'),
+    templateId: v.id('complianceTemplates'),
+    /** 2026-11-18 (daily), 2026-W47 (weekly) or 2026-11 (monthly). */
+    period: v.string(),
+    completedOn: v.string(),
+    /** One answer per template item (bounded by the template). */
+    answers: v.array(v.object({ itemId: v.string(), ok: v.boolean(), note: v.optional(v.string()) })),
+    /** Whether every required item passed. */
+    passed: v.boolean(),
+    notes: v.optional(v.string()),
+    completedBy: v.id('users'),
+    updatedAt: v.number(),
+  })
+    .index('by_templateId_and_locationId_and_period', ['templateId', 'locationId', 'period'])
+    .index('by_companyId_and_completedOn', ['companyId', 'completedOn']),
 })
 
 export default schema

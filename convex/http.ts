@@ -8,6 +8,7 @@ import {
   openApiHandler,
 } from './integrations/apiHttp'
 import { API_RESOURCES } from './publicApi'
+import { download as fileDownload } from './files'
 
 const http = httpRouter()
 
@@ -21,5 +22,8 @@ for (const resource of API_RESOURCES) {
 }
 http.route({ path: '/api/v1/daily-records', method: 'POST', handler: createDailyRecordsHandler })
 http.route({ path: '/api/v1/sampling', method: 'POST', handler: createSamplingHandler })
+
+// Short-lived document downloads (TRACE-005, D-016).
+http.route({ path: '/files/download', method: 'GET', handler: fileDownload })
 
 export default http
