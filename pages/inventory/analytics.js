@@ -115,7 +115,11 @@ function InventoryAnalytics() {
   const qtyKg = (item) => Number(item.quantity_kg ?? item.quantity ?? 0)
 
   const processTransactionData = (data) => {
-    const grouped = (data || []).reduce((acc, item) => {
+    // Transfer legs (INV-002) move stock between sites; company-wide they net to zero.
+    const moves = (data || []).filter(
+      (t) => t.transaction_type !== 'transfer_out' && t.transaction_type !== 'transfer_in',
+    )
+    const grouped = moves.reduce((acc, item) => {
       const date = new Date(item.transaction_date).toLocaleDateString()
       if (!acc[date]) acc[date] = { in: 0, out: 0 }
       const type = item.transaction_type

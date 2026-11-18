@@ -15,6 +15,8 @@ import {
   logAudit,
 } from './lib/tenancy'
 import { assertUserCan, requireMember } from './lib/permissions'
+import { userError } from './lib/errors'
+import { amountPaidOf, statusFor } from './invoices'
 
 function toClientCustomer(c: any) {
   return {
@@ -48,6 +50,10 @@ function toClientSale(s: any, extras: Record<string, unknown> = {}) {
     price_per_unit: s.pricePerUnit ?? null,
     batch_id: s.batchId ?? null,
     payment_status: s.paymentStatus || 'pending',
+    amount_paid: amountPaidOf(s),
+    balance: Math.round((s.totalAmount - amountPaidOf(s)) * 100) / 100,
+    has_payments: s.amountPaid !== undefined,
+    invoice_id: s.invoiceId ?? null,
     notes: s.notes,
     location_id: s.locationId,
     company_id: s.companyId,
@@ -176,7 +182,7 @@ export const listSales = query({
   },
 })
 
-/** Client rows with `cage_name` (one `get` per distinct cage). */
+/** Client rows with `cage_name` (one `get` per distinct cage) and invoice number. */
 async function withCageNames(ctx: QueryCtx, rows: Doc<'sales'>[]) {
   const names = new Map<string, string | null>()
   const out = []
@@ -187,7 +193,13 @@ async function withCageNames(ctx: QueryCtx, rows: Doc<'sales'>[]) {
       if (!names.has(key)) names.set(key, (await ctx.db.get(sale.cageId))?.name || null)
       cageName = names.get(key) ?? null
     }
-    out.push(toClientSale(sale, { cage_name: cageName }))
+    const invoice = sale.invoiceId ? await ctx.db.get(sale.invoiceId) : null
+    out.push(
+      toClientSale(sale, {
+        cage_name: cageName,
+        invoice_number: invoice && !invoice.voidedAt ? invoice.number : null,
+      }),
+    )
   }
   return out
 }
@@ -373,10 +385,19 @@ export const updateSale = mutation({
       await assertUserCan(ctx, user, 'finance.sales.correct')
     }
 
+    const weightChanged = patch.weightKg !== undefined && patch.weightKg !== existing.weightKg
+    const priceChanged = patch.pricePerKg !== undefined && patch.pricePerKg !== existing.pricePerKg
+    if ((weightChanged || priceChanged) && existing.unitCount !== undefined) {
+      // A fingerling sale is priced per fish and took fish off the batch (NUR-002).
+      throw userError(
+        'CONFLICT',
+        'This is a fingerling sale priced per fish. Reverse it from the hatchery and record it again to change the quantity or price.',
+      )
+    }
+
     const next: Record<string, unknown> = { updatedAt: Date.now() }
     if (patch.saleDate !== undefined) next.saleDate = patch.saleDate
     if (patch.notes !== undefined) next.notes = patch.notes.trim() || undefined
-    if (patch.paymentStatus !== undefined) next.paymentStatus = patch.paymentStatus
 
     let weightKg = existing.weightKg
     let pricePerKg = existing.pricePerKg
@@ -390,7 +411,56 @@ export const updateSale = mutation({
       pricePerKg = patch.pricePerKg
       next.pricePerKg = pricePerKg
     }
-    next.totalAmount = Math.round(weightKg * pricePerKg * 100) / 100
+    const totalAmount =
+      existing.unitCount !== undefined
+        ? existing.totalAmount
+        : Math.round(weightKg * pricePerKg * 100) / 100
+    next.totalAmount = totalAmount
+
+    // The same cap as createSale (d08 §10): the harvest's sales may not
+    // exceed what was harvested.
+    if (weightChanged && existing.harvestId) {
+      const harvest = await ctx.db.get(existing.harvestId)
+      if (harvest) {
+        const others = await ctx.db
+          .query('sales')
+          .withIndex('by_harvest', (q) => q.eq('harvestId', existing.harvestId!))
+          .collect()
+        const sold = others.filter((r) => r._id !== id).reduce((s, r) => s + r.weightKg, 0)
+        if (sold + weightKg > harvest.totalWeight + 0.05) {
+          throw userError(
+            'VALIDATION',
+            `Sale exceeds remaining harvest weight (have ${harvest.totalWeight} kg, ${Math.round(sold * 100) / 100} kg sold elsewhere)`,
+          )
+        }
+      }
+    }
+
+    if (Math.abs(totalAmount - existing.totalAmount) > 0.005) {
+      if (existing.invoiceId) {
+        const invoice = await ctx.db.get(existing.invoiceId)
+        if (invoice && !invoice.voidedAt) {
+          throw userError('CONFLICT', `Invoice ${invoice.number} was issued for this sale. Void it before changing the amount.`)
+        }
+      }
+      if (existing.amountPaid !== undefined && existing.amountPaid > totalAmount + 0.005) {
+        throw userError(
+          'CONFLICT',
+          `Payments received (${existing.amountPaid}) are more than the new total (${totalAmount}). Remove a payment first.`,
+        )
+      }
+    }
+
+    if (existing.amountPaid !== undefined) {
+      // Recorded payments decide the status (INV-009).
+      const derived = statusFor(existing.amountPaid, totalAmount)
+      if (patch.paymentStatus !== undefined && patch.paymentStatus !== derived) {
+        throw userError('CONFLICT', 'The payment status follows the payments recorded. Record or remove a payment instead.')
+      }
+      next.paymentStatus = derived
+    } else if (patch.paymentStatus !== undefined) {
+      next.paymentStatus = patch.paymentStatus
+    }
 
     if (patch.customerId !== undefined) {
       const customer = await ctx.db.get(patch.customerId)
@@ -427,6 +497,15 @@ export const removeSale = mutation({
       // A fingerling sale took fish off the ledger (NUR-002): reversing it in
       // the hatchery puts them back and removes this row.
       throw new Error('This is a fingerling sale. Reverse it from the hatchery so the fish are put back.')
+    }
+    if (existing.amountPaid !== undefined && existing.amountPaid > 0) {
+      throw userError('CONFLICT', 'Payments are recorded on this sale. Remove them before deleting the sale.')
+    }
+    if (existing.invoiceId) {
+      const invoice = await ctx.db.get(existing.invoiceId)
+      if (invoice && !invoice.voidedAt) {
+        await ctx.db.patch(invoice._id, { voidedAt: Date.now(), updatedAt: Date.now() })
+      }
     }
     await ctx.db.delete(id)
     await logAudit(ctx, {

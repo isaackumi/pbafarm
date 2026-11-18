@@ -1064,14 +1064,23 @@ const schema = defineSchema({
       v.literal('issue'),
       v.literal('daily_usage'),
       v.literal('adjustment'),
+      /** Legacy one-row transfer (source site not recorded, doc 08 §6.3). */
       v.literal('transfer'),
       v.literal('reversal'),
+      /** Two-legged site-to-site transfer (INV-002): out at the source, in at the destination. */
+      v.literal('transfer_out'),
+      v.literal('transfer_in'),
     ),
     /** Signed kg: positive = stock in, negative = stock out. */
     quantityKg: v.number(),
     bags: v.optional(v.number()),
     transactionDate: v.number(),
     referenceId: v.optional(v.string()),
+    /** Links the two legs of a transfer_out / transfer_in pair. */
+    transferId: v.optional(v.string()),
+    /** Batch and expiry of the lot an inbound row created or a transfer moved. */
+    batchNumber: v.optional(v.string()),
+    expiryDate: v.optional(v.string()),
     notes: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
@@ -1080,6 +1089,7 @@ const schema = defineSchema({
     .index('by_feed_type', ['feedTypeId'])
     .index('by_company', ['companyId'])
     .index('by_reference', ['referenceId'])
+    .index('by_transfer', ['transferId'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
 
@@ -1443,6 +1453,13 @@ const schema = defineSchema({
     unitCount: v.optional(v.number()),
     pricePerUnit: v.optional(v.number()),
     batchId: v.optional(v.id('batches')),
+    /**
+     * Σ of the sale's live `salePayments` (INV-009). Absent on sales with no
+     * recorded payment; paymentStatus then stays the manual flag.
+     */
+    amountPaid: v.optional(v.number()),
+    /** Current invoice for the sale (INV-009). */
+    invoiceId: v.optional(v.id('invoices')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -1455,6 +1472,55 @@ const schema = defineSchema({
     .index('by_company_and_cage', ['companyId', 'cageId'])
     .index('by_company_and_saleDate', ['companyId', 'saleDate'])
     .index('by_date', ['saleDate']),
+
+  /**
+   * Money received against a sale (INV-009). Removing a payment voids it
+   * (kept for the audit trail); `sales.amountPaid` is the Σ of live rows.
+   */
+  salePayments: defineTable({
+    companyId: v.id('companies'),
+    saleId: v.id('sales'),
+    locationId: v.optional(v.id('farmLocations')),
+    amount: v.number(),
+    paidDate: v.string(),
+    method: v.union(
+      v.literal('cash'),
+      v.literal('mobile_money'),
+      v.literal('bank'),
+      v.literal('cheque'),
+      v.literal('other'),
+    ),
+    reference: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    voidedAt: v.optional(v.number()),
+    voidReason: v.optional(v.string()),
+  })
+    .index('by_sale', ['saleId'])
+    .index('by_company_and_paidDate', ['companyId', 'paidDate']),
+
+  /**
+   * Invoice for one sale (INV-009), numbered INV-0001… per company. A void
+   * invoice keeps its number; issuing again gives the sale a new one.
+   */
+  invoices: defineTable({
+    companyId: v.id('companies'),
+    saleId: v.id('sales'),
+    seq: v.number(),
+    number: v.string(),
+    issueDate: v.string(),
+    dueDate: v.optional(v.string()),
+    customerId: v.optional(v.id('customers')),
+    customerName: v.string(),
+    amount: v.number(),
+    notes: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+    createdBy: v.optional(v.id('users')),
+    voidedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_company_and_seq', ['companyId', 'seq'])
+    .index('by_sale', ['saleId']),
 
   /** Health events / treatments on a cage (medications, diagnosis, withdrawal). */
   healthTreatments: defineTable({
@@ -1890,6 +1956,37 @@ const schema = defineSchema({
   })
     .index('by_company_and_item', ['companyId', 'itemId'])
     .index('by_company_and_date', ['companyId', 'date']),
+
+  /**
+   * Cycle count at one site (INV-011). Starting snapshots what the system
+   * expects; posting writes one adjustment per line whose count differs.
+   */
+  stockCounts: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.id('farmLocations'),
+    countDate: v.string(),
+    status: v.union(v.literal('draft'), v.literal('posted'), v.literal('cancelled')),
+    lines: v.array(
+      v.object({
+        kind: v.union(v.literal('feed'), v.literal('item')),
+        feedTypeId: v.optional(v.id('feedTypes')),
+        itemId: v.optional(v.id('inventoryItems')),
+        name: v.string(),
+        unit: v.string(),
+        expected: v.number(),
+        counted: v.optional(v.number()),
+        /** Signed adjustment posted for this line, when there was a difference. */
+        variance: v.optional(v.number()),
+      }),
+    ),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    postedBy: v.optional(v.id('users')),
+    postedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_company_and_location', ['companyId', 'locationId'])
+    .index('by_company', ['companyId']),
 
   /**
    * Domain event outbox (AUTO-001, D-008). Written by convex/lib/events.ts
