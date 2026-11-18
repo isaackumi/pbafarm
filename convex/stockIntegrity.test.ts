@@ -2,7 +2,7 @@
 import { convexTest } from 'convex-test'
 import { describe, expect, test } from 'vitest'
 import schema from './schema'
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -302,5 +302,140 @@ describe('S9: two stockings approved for the same cage', () => {
     const cage = await getDoc(t, b.cageId)
     expect(cage.status).toBe('active')
     expect(cage.currentCount).toBe(3000)
+  })
+})
+
+describe('S7: restock after harvest carries the old ABW into the new cycle', () => {
+  /** Cycle 1 on cage B1 sampled at 600 g, then completely harvested. */
+  async function harvestedAt600(t: any, as: any, cageId: any) {
+    await as.mutation(api.biweeklyRecords.create, {
+      cageId,
+      date: '2026-10-01',
+      batchCode: 'BW-1',
+      averageBodyWeight: 600,
+      totalFishCount: 30,
+      totalWeight: 18,
+    })
+    expect((await getDoc(t, cageId)).currentWeight).toBe(600)
+    await as.mutation(api.harvest.create, {
+      cageId,
+      harvestDate: '2026-11-01',
+      averageBodyWeight: 600,
+      totalWeight: 3000,
+      estimatedCount: 5000,
+      fcr: 1.5,
+      harvestType: 'complete',
+    })
+  }
+
+  test('approving a new stocking resets the cage weight to the stocking ABW', async () => {
+    const { t, as, b } = await setup()
+    await harvestedAt600(t, as, b.cageId)
+    const id = await as.mutation(api.stocking.createStocking, {
+      cageId: b.cageId,
+      stockingDate: '2026-11-15',
+      fishCount: 6000,
+      initialAbw: 10,
+      initialBiomass: 60,
+    })
+    await as.mutation(api.stocking.approveStocking, { id })
+
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
+    const g = (await as.query(api.cages.growth, { id: b.cageId }))!
+    expect(g.current_abw_g).toBe(10)
+    expect(g.current_biomass_kg).toBe(60)
+  })
+
+  test('a stocking approved at creation resets it too', async () => {
+    const { t, as, b, companyId } = await setup()
+    await t.run((ctx: any) =>
+      ctx.db.patch(companyId, {
+        settings: {
+          aiAssistantEnabled: false,
+          stockingRules: {
+            requireApprovalForStocking: false,
+            requireApprovalForTopup: true,
+            enforceCageCapacity: true,
+          },
+        },
+      }),
+    )
+    await harvestedAt600(t, as, b.cageId)
+    await as.mutation(api.stocking.createStocking, {
+      cageId: b.cageId,
+      stockingDate: '2026-11-15',
+      fishCount: 6000,
+      initialAbw: 10,
+      initialBiomass: 60,
+    })
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
+  })
+
+  test('a transfer into a harvested cage resets it to the transfer ABW', async () => {
+    const { t, as, a, b } = await setup()
+    await harvestedAt600(t, as, b.cageId)
+    const transferId = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, b.cageId, 3000))
+    await as.mutation(api.fishTransfers.approveFishTransfer, { id: transferId })
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(50)
+  })
+
+  test('growth ignores a stale cage weight when the new cycle has no sample yet', async () => {
+    const { t, as, b } = await setup()
+    await harvestedAt600(t, as, b.cageId)
+    // Restocked before this fix: the cage still says 600 g.
+    await t.run(async (ctx: any) => {
+      await ctx.db.insert('stockingHistory', {
+        cageId: b.cageId,
+        batchNumber: 'B1-2611',
+        stockingDate: '2026-11-15',
+        fishCount: 6000,
+        initialAbw: 10,
+        initialBiomass: 60,
+        status: 'approved',
+      })
+      await ctx.db.patch(b.cageId, {
+        status: 'active',
+        stockingDate: '2026-11-15',
+        initialCount: 6000,
+        currentCount: 6000,
+        initialAbw: 10,
+      })
+    })
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(600)
+    const g = (await as.query(api.cages.growth, { id: b.cageId }))!
+    expect(g.current_abw_g).toBe(10)
+
+    // M0-b: the dry run reports the cage and changes nothing ...
+    const dry = await t.mutation(internal.migrations.repairStaleCageWeight, {})
+    expect(dry.dryRun).toBe(true)
+    expect(dry.changes).toEqual([
+      expect.objectContaining({ cage: 'B1', from: 600, to: 10, lastSampleDate: '2026-10-01' }),
+    ])
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(600)
+    // ... the real run fixes it and logs the old value.
+    await t.mutation(internal.migrations.repairStaleCageWeight, { dryRun: false })
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
+    const logs = await t.run((ctx: any) => ctx.db.query('auditLogs').collect())
+    expect(logs.find((l: any) => l.actionType === 'migration')?.previousValues).toEqual({ currentWeight: 600 })
+    // Cage A1 was never sampled, so it is left alone.
+    expect((await t.mutation(internal.migrations.repairStaleCageWeight, {})).count).toBe(0)
+  })
+
+  test('editing an old-cycle sample does not put its weight back on the restocked cage', async () => {
+    const { t, as, b } = await setup()
+    await harvestedAt600(t, as, b.cageId)
+    const id = await as.mutation(api.stocking.createStocking, {
+      cageId: b.cageId,
+      stockingDate: '2026-11-15',
+      fishCount: 6000,
+      initialAbw: 10,
+      initialBiomass: 60,
+    })
+    await as.mutation(api.stocking.approveStocking, { id })
+    const [old] = await t.run((ctx: any) =>
+      ctx.db.query('biweeklyRecords').withIndex('by_cage', (q: any) => q.eq('cageId', b.cageId)).collect(),
+    )
+    await as.mutation(api.biweeklyRecords.update, { id: old._id, patch: { averageBodyWeight: 620 } })
+    expect((await getDoc(t, b.cageId)).currentWeight).toBe(10)
   })
 })

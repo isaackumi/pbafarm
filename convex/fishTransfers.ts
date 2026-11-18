@@ -156,6 +156,8 @@ async function applyFishTransfer(
       initialCount: stocking.fishCount,
       currentCount: stocking.fishCount,
       initialAbw: stocking.initialAbw,
+      // New cycle: weight starts at the stocking ABW, not the last cycle's.
+      currentWeight: stocking.initialAbw,
       status: 'active',
       species: stocking.species,
       updatedAt: now,
