@@ -67,6 +67,7 @@ const MENU_SECTIONS = {
       { title: 'Harvest Data', path: '/harvest', permission: 'production.view', icon: Package, tourId: 'harvest' },
       { title: 'Harvest Sampling', path: '/harvest-sampling', permission: 'production.harvest.record', icon: Crosshair },
       { title: 'Harvest Lots', path: '/trace', permission: 'production.view', icon: Package },
+      { title: 'Compliance', path: '/compliance', permission: 'production.view', icon: ClipboardList },
       { title: 'Sales', path: '/sales', permission: 'finance.view', icon: ShoppingCart, tourId: 'sales' },
       { title: 'Expenses', path: '/expenses', permission: 'finance.view', icon: Receipt },
       { title: 'Health', path: '/health', permission: 'production.view', icon: HeartPulse, tourId: 'health' },

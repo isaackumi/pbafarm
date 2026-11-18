@@ -22,6 +22,7 @@ import { currentStocking } from './lib/growth'
 import { MAX_SCOPED_LOCATIONS, legacyRoleFromKey, roleKeyFromLegacy } from './lib/memberships'
 import { ORG_PROFILE_DEFAULTS } from './lib/orgProfile'
 import { nextLotCode } from './lib/traceability'
+import { seedTemplatesFor } from './lib/compliance'
 
 /** Every table whose schema has an optional `companyId` (users handled separately). */
 export const UNSCOPED_TABLES = [
@@ -626,5 +627,29 @@ export const m18DefaultHarvestLots = internalMutation({
       isDone: page.isDone,
       continueCursor: page.continueCursor,
     }
+  },
+})
+
+/**
+ * TRACE-006 — give every approved company the built-in compliance checklists
+ * (daily biosecurity, weekly net inspection, monthly water quality review).
+ * Idempotent (by template key); dryRun (default true) only reports.
+ *   npx convex run migrations:seedComplianceTemplates '{"dryRun":true}'
+ *   npx convex run migrations:seedComplianceTemplates '{"dryRun":false}'
+ */
+export const seedComplianceTemplates = internalMutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, { dryRun = true, cursor = null }) => {
+    const page = await ctx.db.query('companies').paginate({ numItems: 100, cursor })
+    const added: Array<{ companyId: Id<'companies'>; keys: string[] }> = []
+    for (const company of page.page) {
+      if (company.status !== 'approved') continue
+      const keys = await seedTemplatesFor(ctx, company._id, { dryRun })
+      if (keys.length) added.push({ companyId: company._id, keys })
+    }
+    return { dryRun, count: added.length, added, isDone: page.isDone, continueCursor: page.continueCursor }
   },
 })

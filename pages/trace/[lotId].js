@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
 import { errorCode, errorMessage } from '../../lib/errorMessage'
 import { localToday } from '../../lib/format'
+import Attachments from '../../components/Attachments'
 
 const fmt = (v, dp = 1) =>
   v == null ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -389,6 +390,11 @@ function LotReport() {
           </Card>
         </>
       )}
+
+      <Card>
+        <CardHeader title="Documents" subtitle="Health certificates, lab results and delivery notes for this lot." />
+        <Attachments entityType="harvestLots" entityId={r.lot.id} />
+      </Card>
 
       <Card>
         <CardHeader

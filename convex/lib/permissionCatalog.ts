@@ -14,6 +14,7 @@ export const PERMISSION_GROUPS = {
     'org.roles.manage': 'Create and edit custom roles',
     'org.sites.manage': 'Add and edit sites',
     'org.audit.view': 'Read the audit log',
+    'files.upload': 'Attach files to records and remove their own',
     'integrations.manage': 'Configure messaging channels, API keys and webhooks',
     'automation.manage': 'Create and run automations; assign tasks',
   },
@@ -99,6 +100,7 @@ export const ROLE_TEMPLATES = {
   manager: PERMISSIONS.filter((p) => !ADMIN_ONLY.includes(p)),
   field_staff: [
     'org.view',
+    'files.upload',
     'production.view',
     'production.daily.record',
     'production.sampling.record',
