@@ -1,4 +1,4 @@
-import { MutationCtx } from '../_generated/server'
+import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 import { requireRole } from './authz'
 import { logAudit } from './tenancy'
@@ -12,6 +12,8 @@ export type StockTxnType =
   | 'adjustment'
   | 'transfer'
   | 'reversal'
+
+const round1 = (n: number) => Math.round(n * 10) / 10
 
 export function bagsFromKg(quantityKg: number, bagSizeKg?: number | null) {
   const size = bagSizeKg && bagSizeKg > 0 ? bagSizeKg : 20
@@ -81,6 +83,28 @@ export async function addInventoryLot(
   })
 }
 
+/**
+ * Feed a site can use: its own lots, plus stock not tied to any site
+ * (lots with no location, and stock from before lots were tracked).
+ */
+export async function siteStock(
+  ctx: MutationCtx | QueryCtx,
+  feedType: Doc<'feedTypes'>,
+  locationId: Id<'farmLocations'>,
+) {
+  const lots = await ctx.db
+    .query('feedInventory')
+    .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
+    .collect()
+  const sum = (rows: Doc<'feedInventory'>[]) =>
+    rows.reduce((s, l) => s + Math.max(0, l.quantityKg || 0), 0)
+  const own = sum(lots.filter((l) => l.locationId === locationId))
+  const unassignedLots = sum(lots.filter((l) => !l.locationId))
+  const untracked = Math.max(0, (feedType.currentStock || 0) - sum(lots))
+  const shared = unassignedLots + untracked
+  return { own, shared, available: own + shared }
+}
+
 /** FIFO deduct from lots for a feed type (optionally locked to a location). */
 export async function deductInventoryLots(
   ctx: MutationCtx,
@@ -100,19 +124,23 @@ export async function deductInventoryLots(
     .collect()
 
   lots = lots.filter((lot) => lot.quantityKg > 0)
-  if (args.locationId) {
-    lots = lots.filter((lot) => lot.locationId === args.locationId)
-  } else if (args.location) {
-    const loc = args.location.trim()
-    lots = lots.filter((lot) => (lot.location || 'Main store') === loc)
-  }
-
-  lots.sort((a, b) => {
+  const fifo = (a: Doc<'feedInventory'>, b: Doc<'feedInventory'>) => {
     const ae = a.expiryDate || '9999-99-99'
     const be = b.expiryDate || '9999-99-99'
     if (ae !== be) return ae.localeCompare(be)
     return a._creationTime - b._creationTime
-  })
+  }
+  if (args.locationId) {
+    // The site's own lots first, then stock not tied to any site.
+    const own = lots.filter((lot) => lot.locationId === args.locationId).sort(fifo)
+    const shared = lots.filter((lot) => !lot.locationId).sort(fifo)
+    lots = [...own, ...shared]
+  } else if (args.location) {
+    const loc = args.location.trim()
+    lots = lots.filter((lot) => (lot.location || 'Main store') === loc).sort(fifo)
+  } else {
+    lots.sort(fifo)
+  }
 
   const now = Date.now()
   for (const lot of lots) {
@@ -177,6 +205,31 @@ export async function applyStockChange(
     requireRole(args.user, 'admin')
     if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
       throw new Error('Admin override requires a reason')
+    }
+  } else if (
+    args.deltaKg < 0 &&
+    args.locationId &&
+    feedRules.trackLots &&
+    !args.skipLots
+  ) {
+    // The company has enough in total; check this site has it.
+    const need = Math.abs(args.deltaKg)
+    const site = await siteStock(ctx, feedType, args.locationId)
+    if (site.available + 1e-6 < need) {
+      const allowNeg =
+        args.allowNegative === true || feedRules.allowNegativeStock === true
+      const siteDoc = await ctx.db.get(args.locationId)
+      const siteName = siteDoc?.name || 'this site'
+      if (!allowNeg) {
+        throw new Error(
+          `Not enough ${feedType.name} at ${siteName}: ${round1(site.available)} kg there, ${round1(need)} kg needed. ` +
+            `${round1(feedType.currentStock)} kg across all sites; transfer feed to ${siteName} or record a purchase for it.`,
+        )
+      }
+      requireRole(args.user, 'admin')
+      if (!args.overrideReason?.trim() && !feedRules.allowNegativeStock) {
+        throw new Error('Admin override requires a reason')
+      }
     }
   }
 

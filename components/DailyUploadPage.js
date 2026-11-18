@@ -4,6 +4,8 @@ import { Trash2, Plus, Copy, CloudOff, RefreshCw, QrCode } from 'lucide-react'
 import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
 import { dailyRecordService } from '../lib/databaseService'
+import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { getActiveLocationId } from '../lib/locationScope'
 import {
   enqueue,
   listOutbox,
@@ -72,6 +74,8 @@ const DailyUploadPage = () => {
   const router = useRouter()
   const [cages, setCages] = useState([])
   const [feedTypes, setFeedTypes] = useState([])
+  // Feed on hand at the active site (the server checks stock per site).
+  const [siteStockById, setSiteStockById] = useState(null)
   const [loggedCageIds, setLoggedCageIds] = useState(() => new Set())
   const [loading, setLoading] = useState(false)
   const [copying, setCopying] = useState(false)
@@ -94,10 +98,19 @@ const DailyUploadPage = () => {
   const loadLookups = useCallback(async () => {
     const CACHE_KEY = 'pbafarm:daily-entry:lookups'
     try {
-      const [cageRes, feedRes] = await Promise.all([
+      const locationId = getActiveLocationId()
+      const [cageRes, feedRes, levels] = await Promise.all([
         cageService.getActiveCages(),
         feedTypeService.getAllFeedTypes(),
+        locationId
+          ? getConvexHttpClient()
+              .query(api.inventory.listStockLevels, { locationId })
+              .catch(() => null)
+          : Promise.resolve(null),
       ])
+      setSiteStockById(
+        levels ? new Map(levels.map((l) => [l.feed_type_id, Number(l.current_stock) || 0])) : null,
+      )
       const ok = !cageRes.error && !feedRes.error
       if (ok) {
         const nextCages = cageRes.data || []
@@ -283,11 +296,13 @@ const DailyUploadPage = () => {
     }
     return Object.entries(need).map(([feedTypeId, kg]) => {
       const ft = feedTypeById.get(feedTypeId)
-      const onHand = num(ft?.current_stock ?? ft?.currentStock)
+      const onHand = siteStockById?.has(feedTypeId)
+        ? siteStockById.get(feedTypeId)
+        : num(ft?.current_stock ?? ft?.currentStock)
       return { feedTypeId, name: ft?.name || 'Feed', need: kg, onHand, short: onHand < kg }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, feedTypeById, unit])
+  }, [lines, feedTypeById, unit, siteStockById])
   const shortages = stockCheck.filter((s) => s.short)
   const overrideActive = hasRole('admin') && formData.allowNegative
 
@@ -827,7 +842,7 @@ const DailyUploadPage = () => {
               <p className="font-medium text-chart-ink">Feed in this batch</p>
               {stockCheck.map((s) => (
                 <p key={s.feedTypeId} className={`tabular-nums ${s.short ? 'text-signal' : 'text-muted'}`}>
-                  {s.name}: {s.need.toFixed(1)} kg of {s.onHand.toFixed(1)} kg on hand
+                  {s.name}: {s.need.toFixed(1)} kg of {s.onHand.toFixed(1)} kg on hand{siteStockById ? ' at this site' : ''}
                   {s.short ? ', not enough stock' : ''}
                 </p>
               ))}
