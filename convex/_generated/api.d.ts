@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
@@ -42,10 +43,13 @@ import type * as idempotency from "../idempotency.js";
 import type * as integrations_apiHttp from "../integrations/apiHttp.js";
 import type * as integrations_apiScopes from "../integrations/apiScopes.js";
 import type * as integrations_openapi from "../integrations/openapi.js";
+import type * as integrations_sensorLogic from "../integrations/sensorLogic.js";
 import type * as integrations_tables from "../integrations/tables.js";
+import type * as integrations_weatherLogic from "../integrations/weatherLogic.js";
 import type * as integrations_webhookLogic from "../integrations/webhookLogic.js";
 import type * as inventory from "../inventory.js";
 import type * as inventoryItems from "../inventoryItems.js";
+import type * as lib_analytics from "../lib/analytics.js";
 import type * as lib_apiActor from "../lib/apiActor.js";
 import type * as lib_authErrors from "../lib/authErrors.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -107,12 +111,12 @@ import type * as rollups from "../rollups.js";
 import type * as sales from "../sales.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
+import type * as sensors from "../sensors.js";
 import type * as stocking from "../stocking.js";
 import type * as tasks from "../tasks.js";
 import type * as traceability from "../traceability.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
-import type * as sensors from "../sensors.js";
 import type * as weather from "../weather.js";
 import type * as webhooks from "../webhooks.js";
 
@@ -123,6 +127,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   audit: typeof audit;
   auth: typeof auth;
@@ -157,10 +162,13 @@ declare const fullApi: ApiFromModules<{
   "integrations/apiHttp": typeof integrations_apiHttp;
   "integrations/apiScopes": typeof integrations_apiScopes;
   "integrations/openapi": typeof integrations_openapi;
+  "integrations/sensorLogic": typeof integrations_sensorLogic;
   "integrations/tables": typeof integrations_tables;
+  "integrations/weatherLogic": typeof integrations_weatherLogic;
   "integrations/webhookLogic": typeof integrations_webhookLogic;
   inventory: typeof inventory;
   inventoryItems: typeof inventoryItems;
+  "lib/analytics": typeof lib_analytics;
   "lib/apiActor": typeof lib_apiActor;
   "lib/authErrors": typeof lib_authErrors;
   "lib/authz": typeof lib_authz;
@@ -222,12 +230,12 @@ declare const fullApi: ApiFromModules<{
   sales: typeof sales;
   security: typeof security;
   seed: typeof seed;
+  sensors: typeof sensors;
   stocking: typeof stocking;
   tasks: typeof tasks;
   traceability: typeof traceability;
   userAccounts: typeof userAccounts;
   users: typeof users;
-  sensors: typeof sensors;
   weather: typeof weather;
   webhooks: typeof webhooks;
 }>;

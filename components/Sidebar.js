@@ -71,6 +71,7 @@ const MENU_SECTIONS = {
       { title: 'Expenses', path: '/expenses', icon: Receipt },
       { title: 'Health', path: '/health', icon: HeartPulse, tourId: 'health' },
       { title: 'Cage P&L', path: '/pnl', icon: TrendingUp, tourId: 'pnl' },
+      { title: 'Analytics', path: '/analytics', icon: ChartColumn },
       { title: 'Stocking Management', path: '/stocking-management', icon: Waves, tourId: 'stocking-management' },
       { title: 'Fish Transfers', path: '/fish-transfers', icon: ArrowLeftRight, tourId: 'fish-transfers' },
       { title: 'New Stocking', path: '/stocking', icon: Plus, tourId: 'stocking' },
