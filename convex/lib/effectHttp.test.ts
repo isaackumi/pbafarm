@@ -66,6 +66,7 @@ describe('requestJson', () => {
       if (result.failure._tag === 'HttpStatusError') {
         expect(result.failure.status).toBe(400)
         expect(result.failure.body).toEqual({ error: { message: 'bad model' } })
+        expect(result.failure.text).toBe('{"error":{"message":"bad model"}}')
       }
     }
   })

@@ -42,6 +42,8 @@ export class HttpStatusError extends Data.TaggedError('HttpStatusError')<{
   readonly url: string
   readonly status: number
   readonly body: unknown
+  /** Raw response text (for provider-specific error messages). */
+  readonly text: string
   readonly message: string
 }> {}
 
@@ -91,6 +93,8 @@ export type HttpResponse = {
   readonly headers: Headers
   /** Parsed JSON, the raw text when not JSON, or null when empty. */
   readonly body: unknown
+  /** Raw response text. */
+  readonly text: string
 }
 
 export const DEFAULT_TIMEOUT_MS = 15_000
@@ -160,7 +164,7 @@ function attempt(
           signal,
         })
         const text = await res.text().catch(() => '')
-        return { status: res.status, headers: res.headers, body: parseBody(text), ok: res.ok }
+        return { status: res.status, headers: res.headers, body: parseBody(text), text, ok: res.ok }
       },
       catch: (cause) => new HttpNetworkError({ url: safeUrl, message: errorMessage(cause), cause }),
     }).pipe(
@@ -183,11 +187,12 @@ function attempt(
           url: safeUrl,
           status: response.status,
           body: response.body,
+          text: response.text,
           message: `Request to ${safeUrl} failed (${response.status})`,
         }),
       )
     }
-    return { status: response.status, headers: response.headers, body: response.body }
+    return { status: response.status, headers: response.headers, body: response.body, text: response.text }
   })
 }
 
