@@ -186,6 +186,23 @@ function FieldInput({ def, value, onChange, id, error }) {
   }
 }
 
+/** One custom field with its label (the form-layout renderer places fields one by one). */
+export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', errorKey, className = '' }) {
+  const id = `${idPrefix}-${def.key}`
+  return (
+    <Field
+      label={<span id={`${id}-label`}>{def.label}{def.type !== 'number' && def.unit ? ` (${def.unit})` : ''}</span>}
+      htmlFor={id}
+      hint={def.helpText}
+      required={def.required}
+      error={errorKey === def.key ? 'Check this value' : undefined}
+      className={className}
+    >
+      <FieldInput def={def} value={value} onChange={onChange} id={id} error={errorKey === def.key} />
+    </Field>
+  )
+}
+
 /**
  * Inputs for an entity's custom fields inside an existing form.
  *

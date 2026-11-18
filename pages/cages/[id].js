@@ -15,6 +15,7 @@ import UnitTabs from '../../components/UnitTabs'
 import Link from 'next/link'
 import { usePermission } from '../../hooks/usePermission'
 import { CustomFieldsCard } from '../../components/CustomFields'
+import RationSuggestion from '../../components/RationSuggestion'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -235,6 +236,8 @@ function CageDetails() {
             </Button>
           )}
         </div>
+
+        <RationSuggestion cageId={cageId} />
 
         <GrowthPanel growth={growth} cage={cage} />
 

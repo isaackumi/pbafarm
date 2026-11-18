@@ -3,6 +3,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from './AuthContext'
 import { useTheme } from './ThemeContext'
+import { checkBrandAccent } from '../convex/lib/contrast'
 
 const CompanySettingsContext = createContext(null)
 
@@ -29,7 +30,9 @@ function lightenHex(hex, amount = 12) {
 export function applyBrandToDocument(branding, resolvedMode) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  const accent = branding?.accentHex || '#18181B'
+  // White button text must stay readable (WCAG AA, CUSTOM-006): a pale brand
+  // colour is applied as its nearest accessible variant; the stored value is unchanged.
+  const accent = checkBrandAccent(branding?.accentHex || '')?.accessibleHex || '#18181B'
   root.style.setProperty('--lagoon-950', accent)
   root.style.setProperty('--lagoon-800', lightenHex(accent, 14))
   root.style.setProperty('--lagoon-700', lightenHex(accent, 28))

@@ -19,6 +19,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { applyBrandToDocument } from '../contexts/CompanySettingsContext'
 import OrgProfileCard from '../components/OrgProfileCard'
 import DataPrivacyCard from '../components/DataPrivacyCard'
+import BrandContrast from '../components/BrandContrast'
+import { checkBrandAccent } from '../convex/lib/contrast'
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -134,7 +136,8 @@ function CompanySettings() {
   useEffect(() => {
     const el = previewRef.current
     if (!el) return
-    const accent = draft.branding?.accentHex || '#18181B'
+    // What members will see: pale accents are applied as their accessible variant.
+    const accent = checkBrandAccent(draft.branding?.accentHex || '')?.accessibleHex || '#18181B'
     el.style.setProperty('--lagoon-950', accent)
     el.style.setProperty('--preview-accent', accent)
     const dark = draft.branding?.themeMode === 'dark'
@@ -471,6 +474,10 @@ function CompanySettings() {
                       className="font-data max-w-[10rem]"
                     />
                   </div>
+                  <BrandContrast
+                    hex={draft.branding?.accentHex || '#18181B'}
+                    onUse={(hex) => patch('branding.accentHex', hex)}
+                  />
                 </Field>
                 <Field label="Theme mode">
                   <Select

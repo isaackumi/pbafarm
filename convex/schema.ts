@@ -173,6 +173,35 @@ export const customFieldType = v.union(
 /** Values on a record, keyed by field key; checked against the definitions on every write. */
 export const customValues = v.record(v.string(), v.any())
 export const customScalar = v.union(v.string(), v.number(), v.boolean(), v.array(v.string()))
+/** Form layouts (CUSTOM-004): lib/formLayouts. */
+export const formLayoutField = v.object({
+  ref: v.string(),
+  width: v.optional(v.union(v.literal('full'), v.literal('half'))),
+  showWhen: v.optional(
+    v.object({
+      ref: v.string(),
+      op: v.union(v.literal('is_set'), v.literal('eq'), v.literal('neq')),
+      value: v.optional(v.union(v.string(), v.number(), v.boolean())),
+    }),
+  ),
+})
+export const formLayoutSection = v.object({
+  key: v.string(),
+  title: v.optional(v.string()),
+  fields: v.array(formLayoutField),
+})
+/** Dashboard layouts (CUSTOM-005): lib/dashboardLayout. */
+export const dashboardWidget = v.object({
+  widget: v.string(),
+  size: v.union(v.literal('sm'), v.literal('md'), v.literal('half'), v.literal('lg'), v.literal('full')),
+})
+/** Feeding plans (PROD-015): lib/ration. */
+export const feedBand = v.object({
+  minAbwG: v.number(),
+  bodyWeightPct: v.number(),
+  feedingsPerDay: v.number(),
+  pelletMm: v.number(),
+})
 export const customCondition = v.object({
   field: v.string(),
   op: v.union(
@@ -2442,6 +2471,39 @@ const schema = defineSchema({
   })
     .index('by_companyId_and_entity_and_sortOrder', ['companyId', 'entity', 'sortOrder'])
     .index('by_companyId_and_entity_and_key', ['companyId', 'entity', 'key']),
+
+  /** Saved arrangement of a record form (CUSTOM-004); bounded by lib/formLayouts LAYOUT_LIMITS. */
+  formLayouts: defineTable({
+    companyId: v.id('companies'),
+    /** lib/formLayouts FORM_CATALOG key, e.g. 'production.sampling'. */
+    formKey: v.string(),
+    sections: v.array(formLayoutSection),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_companyId_and_formKey', ['companyId', 'formKey']),
+
+  /** Dashboard widget list (CUSTOM-005): organization default (no userId) or one user's override. */
+  dashboardLayouts: defineTable({
+    companyId: v.id('companies'),
+    /** lib/dashboardLayout DASHBOARD_KEYS. */
+    key: v.string(),
+    userId: v.optional(v.id('users')),
+    /** ≤ MAX_WIDGETS, in display order. */
+    widgets: v.array(dashboardWidget),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_companyId_and_key_and_userId', ['companyId', 'key', 'userId']),
+
+  /** Feed table per species (PROD-015); species without a row use lib/ration DEFAULT_FEED_TABLES. */
+  feedingPlans: defineTable({
+    companyId: v.id('companies'),
+    speciesKey: v.string(),
+    name: v.string(),
+    /** ≤ RATION_LIMITS.bandsPerTable, ascending minAbwG from 0. */
+    bands: v.array(feedBand),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_companyId_and_speciesKey', ['companyId', 'speciesKey']),
 
   complianceRecords: defineTable({
     companyId: v.id('companies'),

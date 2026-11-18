@@ -5,13 +5,13 @@ import Layout from '../components/Layout'
 import { EmptyState, PageHeader, TabBar } from '../components/ui'
 import FieldsBuilder from '../components/customization/FieldsBuilder'
 import TerminologyEditor from '../components/customization/TerminologyEditor'
+import FormLayoutEditor from '../components/customization/FormLayoutEditor'
+import DashboardLayoutEditor from '../components/customization/DashboardLayoutEditor'
 import { usePermission } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
 
 /** Settings → Customization (D-007): one place for the organization's configuration. */
-const TABS = [
-  { id: 'fields', label: 'Fields' },
-  { id: 'words', label: 'Words' },
-]
+const TAB_IDS = ['fields', 'words', 'forms', 'dashboard']
 
 export default function CustomizationPage() {
   return (
@@ -25,11 +25,13 @@ export default function CustomizationPage() {
 
 function Customization() {
   const router = useRouter()
+  const t = useT()
+  const tabs = TAB_IDS.map((id) => ({ id, label: t(`customizePage.tab.${id}`) }))
   const canManage = usePermission('customization.manage')
   const [tab, setTab] = useState('fields')
   useEffect(() => {
     const q = router.query.tab
-    if (typeof q === 'string' && TABS.some((t) => t.id === q)) setTab(q)
+    if (typeof q === 'string' && TAB_IDS.includes(q)) setTab(q)
   }, [router.query.tab])
   const choose = (id) => {
     setTab(id)
@@ -51,9 +53,11 @@ function Customization() {
         <EmptyState title="Only organization admins can change customization" description="Ask an admin for the customization permission." />
       ) : (
         <>
-          {TABS.length > 1 && <TabBar tabs={TABS} active={tab} onChange={choose} />}
+          <TabBar tabs={tabs} active={tab} onChange={choose} />
           {tab === 'fields' && <FieldsBuilder />}
           {tab === 'words' && <TerminologyEditor />}
+          {tab === 'forms' && <FormLayoutEditor />}
+          {tab === 'dashboard' && <DashboardLayoutEditor />}
         </>
       )}
     </div>

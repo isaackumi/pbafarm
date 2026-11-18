@@ -71,7 +71,8 @@
       "groupReports": "Rapports du groupe",
       "organizationStructure": "Structure de l’organisation",
       "teams": "Équipes",
-      "workforce": "Personnel"
+      "workforce": "Personnel",
+      "feedingPlans": "Plans d'alimentation"
     },
     "section": {
       "production": "Production",
@@ -830,6 +831,178 @@
       "showInactive": "Afficher les anciens employés",
       "empty": "Aucune fiche pour l’instant",
       "emptyHint": "Les administrateurs du personnel peuvent ajouter du personnel ici."
+    }
+  },
+  "formLayout": {
+    "title": "Mise en page des formulaires",
+    "intro": "Organisez un formulaire en sections, ordonnez ses champs et n'affichez un champ que lorsqu'un autre a une valeur. Les champs intégrés gardent leurs contrôles ; seule leur place change.",
+    "form": "Formulaire",
+    "formName": {
+      "production_sampling": "Échantillonnage bimensuel",
+      "production_stocking": "Empoissonnement"
+    },
+    "section": {
+      "session": "Séance",
+      "water": "Qualité de l'eau",
+      "samples": "Échantillons",
+      "more": "Plus de détails",
+      "cageBatch": "Cage et lot",
+      "fish": "Mesures des poissons",
+      "source": "Origine et superviseurs",
+      "notes": "Notes"
+    },
+    "core": {
+      "date": "Date d'échantillonnage",
+      "batchCode": "Code de lot",
+      "dissolvedOxygen": "Oxygène dissous",
+      "temperatureC": "Température",
+      "secchiCm": "Profondeur Secchi",
+      "samples": "Échantillons",
+      "cageId": "Cage",
+      "batchNumber": "Numéro de lot",
+      "stockingDate": "Date d'empoissonnement",
+      "species": "Espèce",
+      "fishCount": "Nombre de poissons",
+      "averageBodyWeight": "Poids moyen",
+      "sourceLocation": "Lieu d'origine",
+      "transferSupervisor": "Superviseur du transfert",
+      "samplingSupervisor": "Superviseur de l'échantillonnage",
+      "notes": "Notes"
+    },
+    "sectionTitle": "Titre de la section",
+    "newSection": "Nouvelle section",
+    "addSection": "Ajouter une section",
+    "removeSection": "Supprimer la section (ses champs passent dans la section au-dessus)",
+    "emptySection": "Aucun champ pour l'instant. Déplacez-y des champs depuis une autre section.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "moveToSection": "Section",
+    "required": "Obligatoire",
+    "custom": "Champ personnalisé",
+    "width": "Largeur",
+    "widthAuto": "Largeur par défaut",
+    "widthHalf": "Demi-largeur",
+    "widthFull": "Pleine largeur",
+    "showWhen": "Quand afficher",
+    "always": "Toujours afficher",
+    "whenField": "Seulement si {field}…",
+    "condition": "Condition",
+    "conditionValue": "Valeur",
+    "opIsSet": "a une valeur",
+    "opEq": "est égal à",
+    "opNeq": "est différent de",
+    "save": "Enregistrer la mise en page",
+    "reset": "Revenir à la mise en page d'origine",
+    "saved": "Mise en page enregistrée. Le formulaire l'utilise désormais.",
+    "resetDone": "Le formulaire a retrouvé sa mise en page d'origine.",
+    "saveFailed": "Impossible d'enregistrer la mise en page"
+  },
+  "dashboardLayout": {
+    "customize": "Personnaliser",
+    "customizeTitle": "Personnaliser ce tableau de bord",
+    "sourceMe": "Vous utilisez votre propre disposition.",
+    "sourceOrg": "Vous utilisez la disposition de votre organisation.",
+    "sourceDefault": "Vous utilisez la disposition d'origine.",
+    "orgTitle": "Tableau de bord de l'organisation",
+    "orgIntro": "Le tableau de bord d'accueil que voit chaque membre, sauf s'il organise le sien.",
+    "widget": {
+      "stat_activeUnits": "Unités actives",
+      "stat_biomass": "Biomasse en place",
+      "stat_fcr": "IC moyen",
+      "stat_mortality": "Mortalité",
+      "stat_health": "Santé de la ferme",
+      "stat_adg": "Croissance journalière moyenne",
+      "stat_feed30d": "Aliment (30 jours)",
+      "insights": "Analyses",
+      "chart_feedTrend": "Graphique de l'aliment cumulé",
+      "chart_mortality": "Graphique de la mortalité journalière",
+      "siteConditions": "Conditions du site",
+      "recentActivity": "Activité récente",
+      "feedingPlan": "Plan d'alimentation du jour"
+    },
+    "size": "Taille",
+    "sizeName": {
+      "sm": "Petit",
+      "md": "Moyen",
+      "half": "Moitié",
+      "lg": "Grand",
+      "full": "Pleine largeur"
+    },
+    "remove": "Retirer le widget",
+    "addWidget": "Ajouter un widget",
+    "empty": "Aucun widget. Ajoutez-en un ci-dessous.",
+    "saveMine": "Enregistrer pour moi",
+    "saveOrg": "Enregistrer comme disposition de l'organisation",
+    "resetMine": "Utiliser la disposition de l'organisation",
+    "resetOrg": "Revenir à la disposition d'origine",
+    "savedMine": "Votre tableau de bord est enregistré.",
+    "savedOrg": "Tableau de bord de l'organisation enregistré.",
+    "resetDone": "Disposition du tableau de bord réinitialisée.",
+    "saveFailed": "Impossible d'enregistrer le tableau de bord"
+  },
+  "branding": {
+    "invalidHex": "Saisissez une couleur en code hexadécimal, par exemple #1E3A5F.",
+    "contrastPass": "Le texte blanc sur cette couleur a un contraste de {ratio}:1, conforme à WCAG AA.",
+    "contrastFail": "Le texte blanc sur cette couleur n'a qu'un contraste de {ratio}:1 ; WCAG AA exige {min}:1, les boutons seraient donc difficiles à lire.",
+    "contrastLargeOnly": "Le texte blanc sur cette couleur a un contraste de {ratio}:1 : suffisant pour le grand texte et les icônes, mais WCAG AA exige {min}:1 pour le texte normal.",
+    "contrastAdjusted": "L'application utilise la nuance lisible la plus proche, {hex}, tant que vous ne la changez pas.",
+    "useAccessible": "Utiliser la couleur accessible"
+  },
+  "feedingPlan": {
+    "title": "Plans d'alimentation",
+    "intro": "Tables d'alimentation par espèce et taille de poisson, et ration suggérée du jour pour chaque unité empoissonnée (nombre de poissons × poids moyen × % du poids vif).",
+    "todayTitle": "Rations suggérées du jour",
+    "totalLine": "{kg} kg par jour pour {planned} unités sur {total}",
+    "noUnits": "Aucune unité empoissonnée ici pour l'instant.",
+    "col": {
+      "unit": "Unité",
+      "species": "Espèce",
+      "fish": "Poissons",
+      "abw": "PM",
+      "bodyWeightPct": "% du poids vif/jour",
+      "kgPerDay": "kg/jour",
+      "how": "Comment nourrir",
+      "fromAbw": "À partir du PM (g)",
+      "feedings": "Repas/jour",
+      "pellet": "Granulé (mm)"
+    },
+    "suggestion": "{kg} kg/jour en {feedings} repas de {perFeeding} kg, granulés de {pellet} mm",
+    "suggestedRation": "Ration suggérée",
+    "seePlan": "Plan d'alimentation",
+    "reason": {
+      "no_fish": "Aucun poisson dans l'unité",
+      "no_abw": "Enregistrez un échantillonnage pour obtenir le poids moyen",
+      "no_plan": "Pas encore de table d'alimentation pour cette espèce",
+      "no_species": "Indiquez l'espèce de l'unité"
+    },
+    "tablesTitle": "Tables d'alimentation",
+    "tablesIntro": "Chaque ligne s'applique de son poids moyen jusqu'à la ligne suivante. Adaptez les tables à votre aliment, à la température de l'eau et à l'appétit.",
+    "source": {
+      "saved": "Table de votre organisation.",
+      "default": "Table d'origine. L'enregistrer crée votre propre copie.",
+      "none": "Pas encore de table. Remplissez les lignes et enregistrez."
+    },
+    "planName": "Nom de la table",
+    "addBand": "Ajouter une classe de taille",
+    "removeBand": "Supprimer la classe de taille",
+    "save": "Enregistrer la table",
+    "saved": "Table d'alimentation enregistrée.",
+    "resetToDefault": "Revenir à la table d'origine",
+    "remove": "Supprimer la table",
+    "resetDone": "Table d'alimentation réinitialisée.",
+    "saveFailed": "Impossible d'enregistrer la table d'alimentation",
+    "widgetTitle": "Plan d'alimentation du jour",
+    "widgetSubtitle": "Suggéré à partir du nombre de poissons, du poids et des tables d'alimentation",
+    "open": "Ouvrir",
+    "kgPerDay": "kg/jour",
+    "coverage": "{planned} unités sur {total} ont une ration"
+  },
+  "customizePage": {
+    "tab": {
+      "fields": "Champs",
+      "words": "Mots",
+      "forms": "Formulaires",
+      "dashboard": "Tableau de bord"
     }
   }
 }
