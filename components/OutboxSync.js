@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useOutbox } from '../hooks/useOutbox'
-import { listOutbox } from '../lib/offlineOutbox'
+import { listOutbox, restoreOutbox } from '../lib/offlineOutbox'
 import { useToast } from './Toast'
 
 /**
@@ -13,6 +13,8 @@ export default function OutboxSync() {
   useEffect(() => {
     if (!userId || typeof window === 'undefined') return undefined
     const run = async () => {
+      // Bring back anything localStorage lost from the IndexedDB copy.
+      await restoreOutbox(userId)
       if (navigator.onLine === false || listOutbox(userId).length === 0) return
       const { sent, failed } = await send()
       if (sent) showToast(`Sent ${sent} entr${sent === 1 ? 'y' : 'ies'} saved on this phone`, 'success')
