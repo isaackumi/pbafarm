@@ -1,10 +1,14 @@
-import {
-  isRetryableStatus,
-  networkFailure,
-  providerError,
-  readJson,
-  type ProviderAdapter,
-} from './types'
+import * as Effect from 'effect/Effect'
+import * as Schema from 'effect/Schema'
+import { decodeBody, providerPost, runSend } from './send'
+import { providerError, type ProviderAdapter } from './types'
+
+/** Error body: { name, message, statusCode }. Success: { id }. */
+const ResendError = Schema.Struct({
+  name: Schema.optional(Schema.Unknown),
+  message: Schema.optional(Schema.Unknown),
+})
+const ResendSent = Schema.Struct({ id: Schema.optional(Schema.NullOr(Schema.String)) })
 
 /**
  * Resend (email over HTTPS; the Convex runtime has fetch but no SMTP sockets).
@@ -28,32 +32,33 @@ export const resend: ProviderAdapter = {
   senderLabel: 'From address, e.g. "PBA Farm <alerts@yourfarm.com>"',
   senderRequired: true,
 
-  async send(input, creds, config, fetchImpl = fetch) {
-    try {
-      const res = await fetchImpl('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${creds.apiKey ?? ''}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'pbafarm-messaging/1.0',
+  send(input, creds, config, fetchImpl) {
+    const program = Effect.gen(function* () {
+      const res = yield* providerPost(
+        {
+          url: 'https://api.resend.com/emails',
+          headers: {
+            Authorization: `Bearer ${creds.apiKey ?? ''}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'pbafarm-messaging/1.0',
+          },
+          body: JSON.stringify({
+            from: config.senderId ?? '',
+            to: [input.to],
+            subject: input.subject ?? 'Message from PBA Farm',
+            text: input.body,
+          }),
         },
-        body: JSON.stringify({
-          from: config.senderId ?? '',
-          to: [input.to],
-          subject: input.subject ?? 'Message from PBA Farm',
-          text: input.body,
-        }),
-      })
-      const { json, text } = await readJson(res)
-      if (!res.ok) {
-        const detail = json?.message
-          ? `Resend ${json.name ?? res.status}: ${String(json.message).slice(0, 160)}`
-          : providerError(res.status, text)
-        return { ok: false, error: detail, retryable: isRetryableStatus(res.status) }
-      }
-      return { ok: true, providerMessageId: json?.id ?? undefined }
-    } catch (err) {
-      return networkFailure(err)
-    }
+        (status, json, text) => {
+          const decoded = Schema.decodeUnknownOption(ResendError)(json)
+          const err = decoded._tag === 'Some' ? decoded.value : undefined
+          return err?.message
+            ? `Resend ${err.name ?? status}: ${String(err.message).slice(0, 160)}`
+            : providerError(status, text)
+        },
+      )
+      return { providerMessageId: decodeBody(ResendSent, res)?.id ?? undefined }
+    })
+    return runSend(program, fetchImpl)
   },
 }
