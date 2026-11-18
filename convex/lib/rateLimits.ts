@@ -18,6 +18,12 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   loginCodeGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
   /** Two-step and enrolment codes, key = userId. */
   mfaCodePerUser: { kind: 'fixed window', rate: 5, period: 15 * MINUTE },
+  /** Public API requests (INT-004), key = apiKeyId. Bursts up to 60. */
+  apiPerKey: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 60 },
+  /** Public API requests across all of a company's keys, key = companyId. */
+  apiPerCompany: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 200 },
+  /** Webhook test sends from the UI (INT-005), key = companyId. */
+  webhookTestPerCompany: { kind: 'fixed window', rate: 20, period: HOUR },
 })
 
 /** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */

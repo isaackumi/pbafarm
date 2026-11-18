@@ -9,6 +9,18 @@
  */
 
 import type * as audit from "../audit.js";
+import type * as automation_checks from "../automation/checks.js";
+import type * as automation_conditions from "../automation/conditions.js";
+import type * as automation_deliver from "../automation/deliver.js";
+import type * as automation_engine from "../automation/engine.js";
+import type * as automation_migrations from "../automation/migrations.js";
+import type * as automation_rules from "../automation/rules.js";
+import type * as automation_schedule from "../automation/schedule.js";
+import type * as automation_templates from "../automation/templates.js";
+import type * as automation_validators from "../automation/validators.js";
+import type * as lib_events from "../lib/events.js";
+import type * as notificationPreferences from "../notificationPreferences.js";
+import type * as tasks from "../tasks.js";
 import type * as auth from "../auth.js";
 import type * as batches from "../batches.js";
 import type * as biweeklyRecords from "../biweeklyRecords.js";
@@ -84,6 +96,9 @@ import type * as stocking from "../stocking.js";
 import type * as traceability from "../traceability.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
+import type * as integrations_apiHttp from "../integrations/apiHttp.js";
+import type * as publicApi from "../publicApi.js";
+import type * as apiKeys from "../apiKeys.js";
 
 import type {
   ApiFromModules,
@@ -93,6 +108,18 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
+  "automation/checks": typeof automation_checks;
+  "automation/conditions": typeof automation_conditions;
+  "automation/deliver": typeof automation_deliver;
+  "automation/engine": typeof automation_engine;
+  "automation/migrations": typeof automation_migrations;
+  "automation/rules": typeof automation_rules;
+  "automation/schedule": typeof automation_schedule;
+  "automation/templates": typeof automation_templates;
+  "automation/validators": typeof automation_validators;
+  "lib/events": typeof lib_events;
+  notificationPreferences: typeof notificationPreferences;
+  tasks: typeof tasks;
   auth: typeof auth;
   batches: typeof batches;
   biweeklyRecords: typeof biweeklyRecords;
@@ -168,6 +195,9 @@ declare const fullApi: ApiFromModules<{
   traceability: typeof traceability;
   userAccounts: typeof userAccounts;
   users: typeof users;
+  "integrations/apiHttp": typeof integrations_apiHttp;
+  publicApi: typeof publicApi;
+  apiKeys: typeof apiKeys;
 }>;
 
 /**

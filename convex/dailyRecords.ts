@@ -8,6 +8,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { emitDomainEvent } from './lib/events'
 import { isBusinessDate, todayFor } from './lib/dates'
 import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
@@ -16,6 +17,19 @@ import {
   dailyMortalityPct,
   cumulativeMortalityPct,
 } from './lib/farmRules'
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/** Whether the company's "High mortality" automation rule replaces the inline alert. */
+async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>) {
+  const rules = await ctx.db
+    .query('automationRules')
+    .withIndex('by_company_and_templateKey', (q) =>
+      q.eq('companyId', companyId).eq('templateKey', 'high_mortality'),
+    )
+    .take(10)
+  return rules.some((r) => r.enabled)
+}
 
 function toClient(r: any) {
   return {
@@ -326,7 +340,7 @@ type DailyRecordInput = {
 }
 
 /** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
-async function insertDailyRecord(
+export async function insertDailyRecord(
   ctx: MutationCtx,
   user: Doc<'users'>,
   args: DailyRecordInput,
@@ -390,16 +404,22 @@ async function insertDailyRecord(
   }
   await shadowDailyRecord(ctx, (await ctx.db.get(id))!, user._id, false)
 
-  // Mortality threshold alerts
-  if (args.mortality > 0 && user.companyId) {
+  const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
+  const nextCount =
+    cage.currentCount != null
+      ? Math.max(0, cage.currentCount - args.mortality)
+      : cage.currentCount
+  const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
+
+  // Mortality threshold alerts. A company that enabled the "High mortality"
+  // automation rule gets them from the engine instead (AUTO-002).
+  if (
+    args.mortality > 0 &&
+    user.companyId &&
+    !(await mortalityRuleEnabled(ctx, user.companyId))
+  ) {
     const company = await ctx.db.get(user.companyId)
     const rules = mergeSettings(company?.settings)
-    const dailyPct = dailyMortalityPct(args.mortality, cage.currentCount)
-    const nextCount =
-      cage.currentCount != null
-        ? Math.max(0, cage.currentCount - args.mortality)
-        : cage.currentCount
-    const cumPct = cumulativeMortalityPct(cage.initialCount, nextCount)
     const alerts: string[] = []
     if (dailyPct >= rules.farmRules.dailyMortalityAlertPct) {
       alerts.push(
@@ -436,6 +456,26 @@ async function insertDailyRecord(
       }
     }
   }
+
+  await emitDomainEvent(
+    ctx,
+    'daily.recorded',
+    {
+      dailyRecordId: id,
+      cageId: args.cageId,
+      cageName: cage.name,
+      date: args.date,
+      mortality: args.mortality,
+      mortalityCause: args.mortality > 0 ? mortalityCause?.trim() || 'unknown' : undefined,
+      dailyMortalityPct: round2(dailyPct),
+      cumulativeMortalityPct: round2(cumPct),
+      feedAmount: args.feedAmount,
+      dissolvedOxygen,
+      temperatureC,
+      secchiCm,
+    },
+    { companyId: user.companyId ?? cage.companyId, locationId: cage.locationId },
+  )
 
   await deductDailyFeed(ctx, user, {
     dailyRecordId: id,
@@ -508,8 +548,44 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
     /** Admin only: save feed already issued to this cage on this date. */
     feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { date, records, allowNegative, overrideReason, feedOverlapReason }) => {
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    return await saveDailyBatch(ctx, user, args)
+  },
+})
+
+export type DailyBatchLine = {
+  cageId: Id<'cages'>
+  feedAmount: number
+  feedTypeId?: Id<'feedTypes'>
+  mortality: number
+  mortalityCause?: string
+  notes?: string
+  dissolvedOxygen?: number
+  temperatureC?: number
+}
+
+/**
+ * createBatch's body, shared with the public API (POST /api/v1/daily-records).
+ * Prices come from the feed type; each line emits `daily.recorded`.
+ */
+export async function saveDailyBatch(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  {
+    date,
+    records,
+    allowNegative,
+    overrideReason,
+    feedOverlapReason,
+  }: {
+    date: string
+    records: DailyBatchLine[]
+    allowNegative?: boolean
+    overrideReason?: string
+    feedOverlapReason?: string
+  },
+): Promise<Id<'dailyRecords'>[]> {
     if (!records.length) throw new Error('Add at least one cage line')
     if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
 
@@ -572,8 +648,7 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
       }
     }
     return ids
-  },
-})
+}
 
 export const update = mutation({
   args: {

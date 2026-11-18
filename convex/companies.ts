@@ -4,6 +4,7 @@ import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import { retimeScheduleRules } from './automation/engine'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import { activateMembership, upsertMembership } from './lib/memberships'
 import {
@@ -770,6 +771,10 @@ export const updateProfile = mutation({
       patch.defaultLocale = locale
     }
     await ctx.db.patch(company._id, patch)
+    // Scheduled automation rules run in the organization's time zone (AUTO-007).
+    if (patch.timezone !== undefined && patch.timezone !== company.timezone) {
+      await retimeScheduleRules(ctx, company._id)
+    }
     await logAudit(ctx, {
       actionType: 'update_profile',
       tableName: 'companies',
