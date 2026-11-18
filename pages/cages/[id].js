@@ -10,6 +10,7 @@ import { api } from '../../convex/_generated/api'
 import Waterline from '../../components/Waterline'
 import { localToday, unitLabel } from '../../lib/format'
 import BatchHistory from '../../components/BatchHistory'
+import UnitProfile from '../../components/UnitProfile'
 import Link from 'next/link'
 
 const n1 = (v, unit = '') =>
@@ -116,6 +117,7 @@ function CageDetails() {
     api.biweeklyRecords.list,
     user && id ? { cageId: id } : 'skip',
   )
+  const ws = useQuery(api.units.workspace, user && id ? { id } : 'skip')
   const growth = useQuery(
     api.cages.growth,
     user && id ? { id, asOf: localToday() } : 'skip',
@@ -167,10 +169,10 @@ function CageDetails() {
           showTitle={false}
           breadcrumbs={[
             { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Cages', href: '/cages' },
+            { label: unitLabel(cage, { plural: true }), href: '/cages' },
             { label: cage.name },
           ]}
-          description={`Code ${cage.code || cageId} · Status ${status}`}
+          description={`${unitLabel(cage)} · code ${cage.code || cageId} · ${ws?.status?.label || status}`}
           related={[
             { label: 'Daily entry', href: `/daily-entry?cage=${cageId}` },
             { label: 'Bi-weekly entry', href: `/biweekly-entry?cage=${cageId}` },
@@ -192,11 +194,11 @@ function CageDetails() {
                   size="sm"
                   onClick={() => setDeleteCage(cage)}
                 >
-                  Delete
+                  Archive
                 </Button>
               )}
               <Button href="/cages" variant="secondary" size="sm">
-                All cages
+                All units
               </Button>
             </div>
           }
@@ -228,26 +230,7 @@ function CageDetails() {
         <BatchHistory cageId={cageId} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="page-card p-6 space-y-2 text-sm">
-            <h2 className="font-display font-semibold text-lg mb-2">Information</h2>
-            <p>
-              <span className="text-muted">Location:</span> {cage.location || '—'}
-            </p>
-            <p>
-              <span className="text-muted">Status:</span>{' '}
-              <span className="font-semibold text-lagoon-800">{status}</span>
-            </p>
-            <p>
-              <span className="text-muted">Size:</span> {cage.size ?? '—'} m³
-            </p>
-            <p>
-              <span className="text-muted">Capacity:</span> {cage.capacity ?? '—'}{' '}
-              fish
-            </p>
-            <p>
-              <span className="text-muted">Material:</span> {cage.material || '—'}
-            </p>
-          </div>
+          <UnitProfile ws={ws} isAdmin={isAdmin} />
           <div className="page-card p-6 space-y-2 text-sm">
             <h2 className="font-display font-semibold text-lg mb-2">Stock</h2>
             <p>

@@ -3,14 +3,18 @@ import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { cageGrowth } from './lib/growth'
 import { mergeSettings, unitTypeOf } from './lib/farmRules'
+import { assertTransition, type UnitStatus } from './lib/unitStatus'
 import { unitTypeValidator } from './schema'
 import { shadowCountEdit } from './lib/productionDualWrite'
-import { listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
+import { assertOwns, listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 
-/** The caller's active cages (optionally one site), via `by_company_status`. */
+/**
+ * The caller's stocked cages (optionally one site): status active or
+ * harvesting (fish are still in, fed and counted), via `by_company_status`.
+ */
 async function activeCages(
   ctx: QueryCtx,
   user: Doc<'users'>,
@@ -18,19 +22,36 @@ async function activeCages(
 ): Promise<Doc<'cages'>[]> {
   const scope = tenantScope(user)
   if (scope.kind === 'none') return []
-  const rows =
-    scope.kind === 'company'
-      ? await ctx.db
-          .query('cages')
-          .withIndex('by_company_status', (q) =>
-            q.eq('companyId', scope.companyId).eq('status', 'active'),
-          )
-          .collect()
-      : await ctx.db
-          .query('cages')
-          .withIndex('by_status', (q) => q.eq('status', 'active'))
-          .take(PLATFORM_SCAN_LIMIT)
-  return locationId ? rows.filter((c) => c.locationId === locationId) : rows
+  const rows: Doc<'cages'>[] = []
+  for (const status of ['active', 'harvesting'] as const) {
+    rows.push(
+      ...(scope.kind === 'company'
+        ? await ctx.db
+            .query('cages')
+            .withIndex('by_company_status', (q) =>
+              q.eq('companyId', scope.companyId).eq('status', status),
+            )
+            .collect()
+        : await ctx.db
+            .query('cages')
+            .withIndex('by_status', (q) => q.eq('status', status))
+            .take(PLATFORM_SCAN_LIMIT)),
+    )
+  }
+  const live = rows.filter((c) => !c.archivedAt)
+  return locationId ? live.filter((c) => c.locationId === locationId) : live
+}
+
+const STOCKED = new Set(['active', 'harvesting'])
+
+/** A group or water body given to a unit must be the caller's company's. */
+async function assertUnitLinks(
+  ctx: QueryCtx,
+  user: Doc<'users'>,
+  links: { unitGroupId?: Id<'unitGroups'>; waterBodyId?: Id<'waterBodies'> },
+) {
+  if (links.unitGroupId) assertOwns(user, await ctx.db.get(links.unitGroupId), 'Unit group')
+  if (links.waterBodyId) assertOwns(user, await ctx.db.get(links.waterBodyId), 'Water body')
 }
 
 /** Typed geometry for production units (FARM-002); all optional, metres. */
@@ -41,18 +62,41 @@ const geometryArgs = {
   volumeM3: v.optional(v.number()),
   diameterM: v.optional(v.number()),
   unitGroup: v.optional(v.string()),
+  // Unit workspace (CAGE-001, POND-001, RAS-001).
+  unitGroupId: v.optional(v.id('unitGroups')),
+  waterBodyId: v.optional(v.id('waterBodies')),
+  latitude: v.optional(v.number()),
+  longitude: v.optional(v.number()),
+  netVolumeM3: v.optional(v.number()),
+  meshSizeMm: v.optional(v.number()),
+  lengthM: v.optional(v.number()),
+  widthM: v.optional(v.number()),
+  flowM3h: v.optional(v.number()),
+  waterSource: v.optional(v.string()),
+  maxDensity: v.optional(v.number()),
 }
+
+const POSITIVE_KEYS = [
+  'areaM2', 'depthM', 'volumeM3', 'diameterM', 'size',
+  'netVolumeM3', 'meshSizeMm', 'lengthM', 'widthM', 'flowM3h', 'maxDensity',
+] as const
 
 /**
  * Validate geometry and keep `size` (the m³ the density rules read) in step
  * with volumeM3: a new volume also sets size unless size is given.
  */
 function normalizeGeometry<T extends Record<string, any>>(g: T): T {
-  for (const key of ['areaM2', 'depthM', 'volumeM3', 'diameterM', 'size'] as const) {
+  for (const key of POSITIVE_KEYS) {
     const n = g[key]
     if (n !== undefined && !(Number.isFinite(n) && n > 0)) {
       throw new Error(`${key} must be a positive number`)
     }
+  }
+  if (g.latitude !== undefined && !(Number.isFinite(g.latitude) && Math.abs(g.latitude) <= 90)) {
+    throw new Error('Latitude must be between -90 and 90')
+  }
+  if (g.longitude !== undefined && !(Number.isFinite(g.longitude) && Math.abs(g.longitude) <= 180)) {
+    throw new Error('Longitude must be between -180 and 180')
   }
   const out: Record<string, any> = { ...g }
   if (g.volumeM3 !== undefined && g.size === undefined) out.size = g.volumeM3
@@ -108,6 +152,20 @@ function toClient(cage: any) {
     diameterM: cage.diameterM,
     unit_group: cage.unitGroup,
     unitGroup: cage.unitGroup,
+    unitGroupId: cage.unitGroupId,
+    waterBodyId: cage.waterBodyId,
+    latitude: cage.latitude,
+    longitude: cage.longitude,
+    netVolumeM3: cage.netVolumeM3,
+    meshSizeMm: cage.meshSizeMm,
+    lengthM: cage.lengthM,
+    widthM: cage.widthM,
+    flowM3h: cage.flowM3h,
+    waterSource: cage.waterSource,
+    maxDensity: cage.maxDensity,
+    status_changed_at: cage.statusChangedAt,
+    archived_at: cage.archivedAt,
+    archivedAt: cage.archivedAt,
     company_id: cage.companyId,
     created_by: cage.createdBy,
     updated_at: cage.updatedAt,
@@ -119,6 +177,8 @@ export const list = query({
   args: {
     status: v.optional(cageStatus),
     locationId: v.optional(v.id('farmLocations')),
+    /** Archived units are left out unless asked for. */
+    includeArchived: v.optional(v.boolean()),
     filter: v.optional(
       v.union(
         v.literal('all'),
@@ -131,6 +191,7 @@ export const list = query({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
+    if (!args.includeArchived) cages = cages.filter((c) => !c.archivedAt)
 
     if (args.status) {
       cages = cages.filter((c) => c.status === args.status)
@@ -252,6 +313,11 @@ export const create = mutation({
       (await writeLocationId(ctx, user, args.locationId)) ||
       (await ensureDefaultLocation(ctx, user))
     const loc = await ctx.db.get(locationId)
+    await assertUnitLinks(ctx, user, args)
+    const initialStatus = args.status ?? 'empty'
+    if (STOCKED.has(initialStatus) && !(args.initialCount && args.initialCount > 0)) {
+      throw new Error('A new unit can only start stocked with an initial fish count; stock it instead.')
+    }
     const id = await ctx.db.insert('cages', {
       name: args.name,
       code: args.code,
@@ -267,7 +333,8 @@ export const create = mutation({
       currentCount: args.initialCount,
       initialAbw: args.initialAbw,
       initialBiomass: args.initialBiomass,
-      status: args.status ?? 'empty',
+      status: initialStatus,
+      statusChangedAt: now,
       notes: args.notes,
       unitType: args.unitType,
       areaM2: args.areaM2,
@@ -275,6 +342,17 @@ export const create = mutation({
       volumeM3: args.volumeM3,
       diameterM: args.diameterM,
       unitGroup: args.unitGroup,
+      unitGroupId: args.unitGroupId,
+      waterBodyId: args.waterBodyId,
+      latitude: args.latitude,
+      longitude: args.longitude,
+      netVolumeM3: args.netVolumeM3,
+      meshSizeMm: args.meshSizeMm,
+      lengthM: args.lengthM,
+      widthM: args.widthM,
+      flowM3h: args.flowM3h,
+      waterSource: args.waterSource,
+      maxDensity: args.maxDensity,
       companyId: await writeCompanyId(user),
       createdBy: user._id,
       updatedAt: now,
@@ -331,11 +409,21 @@ export const update = mutation({
     }
     // Status is normally set by stocking and harvest; changing it by hand
     // skips their checks (doc 07 V9): admin only.
-    if (patch.status !== undefined && patch.status !== existing.status) {
+    const statusChanges = patch.status !== undefined && patch.status !== existing.status
+    if (statusChanges) {
       requireRole(user, 'admin')
+      // PROD-013: only allowed transitions, and fish counts must agree.
+      assertTransition(
+        existing.status as UnitStatus,
+        patch.status as UnitStatus,
+        patch.currentCount ?? existing.currentCount ?? 0,
+      )
     }
+    if (existing.archivedAt) throw new Error('This unit is archived; restore it first')
+    await assertUnitLinks(ctx, user, patch)
 
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
+    if (statusChanges) next.statusChangedAt = Date.now()
     if (patch.locationId) {
       const locationId = await writeLocationId(ctx, user, patch.locationId)
       next.locationId = locationId
@@ -367,6 +455,10 @@ export const update = mutation({
   },
 })
 
+/**
+ * Archive a unit (PROD-013: no hard delete). Its records, batches and ledger
+ * keep pointing at it; it leaves pickers and lists. Refused while it holds fish.
+ */
 export const remove = mutation({
   args: { id: v.id('cages') },
   handler: async (ctx, { id }) => {
@@ -376,12 +468,41 @@ export const remove = mutation({
     if (!existing) throw new Error('Cage not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
-    await ctx.db.delete(id)
+    if ((existing.currentCount ?? 0) > 0 || existing.status === 'active' || existing.status === 'harvesting') {
+      throw new Error('Harvest or transfer the fish before archiving this unit')
+    }
+    if (existing.archivedAt) return
+    const now = Date.now()
+    await ctx.db.patch(id, { archivedAt: now, updatedAt: now })
     await logAudit(ctx, {
-      actionType: 'delete',
+      actionType: 'archive',
       tableName: 'cages',
       recordId: id,
       previousValues: existing,
+      newValues: { archivedAt: now },
+      locationId: existing.locationId,
+    })
+  },
+})
+
+/** Bring an archived unit back. */
+export const restore = mutation({
+  args: { id: v.id('cages') },
+  handler: async (ctx, { id }) => {
+    const user = await requireUser(ctx)
+    requireRole(user, 'admin')
+    const existing = await ctx.db.get(id)
+    if (!existing) throw new Error('Cage not found')
+    const allowed = await listForCompany(user, [existing])
+    if (!allowed.length) throw new Error('Access denied')
+    if (!existing.archivedAt) return
+    await ctx.db.patch(id, { archivedAt: undefined, updatedAt: Date.now() })
+    await logAudit(ctx, {
+      actionType: 'restore',
+      tableName: 'cages',
+      recordId: id,
+      previousValues: { archivedAt: existing.archivedAt },
+      locationId: existing.locationId,
     })
   },
 })
@@ -390,7 +511,9 @@ export const analytics = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
+    const cages = (await scopedRows(ctx, user, 'cages', { locationId: args.locationId })).filter(
+      (c) => !c.archivedAt,
+    )
     const total = cages.length
 
     const active = cages.filter((c) => c.status === 'active').length
