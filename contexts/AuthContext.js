@@ -1,5 +1,5 @@
 // contexts/AuthContext.js — Convex Auth bridge
-import React, { createContext, useContext, useEffect, useMemo } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useConvex, useConvexAuth, useQuery } from 'convex/react'
 import { useAuthActions, useAuthToken } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
@@ -9,6 +9,14 @@ import {
 } from '../lib/convexBridge'
 import { clearLlmKeys } from '../lib/llmClient'
 import { migrateLegacyOutbox } from '../lib/offlineOutbox'
+import {
+  CONNECT_TIMEOUT_MS,
+  accessStateOf,
+  decideOfflineSession,
+  readCachedUser,
+  userIdFromToken,
+  writeCachedUser,
+} from '../lib/offlineSession'
 
 const AuthContext = createContext()
 
@@ -31,49 +39,103 @@ export function AuthProvider({ children }) {
   // Invites are no longer claimed automatically (SEC-003): a company-less user
   // asks to join from /register-company and a company admin approves.
 
+  // Convex has answered for this session: the real result wins from here on.
+  const authResolved =
+    !isLoading && (!isAuthenticated || convexUser !== undefined)
+
+  // Offline cold start (MOBILE-001): with no signal Convex never confirms the
+  // stored token, so fall back to the last-known user saved on this device.
+  const [online, setOnline] = useState(true)
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const update = () => setOnline(navigator.onLine !== false)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (authResolved || !authToken) {
+      setTimedOut(false)
+      return undefined
+    }
+    const t = setTimeout(() => setTimedOut(true), CONNECT_TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [authResolved, authToken])
+
+  const offlineUser = useMemo(() => {
+    if (authResolved || typeof window === 'undefined') return null
+    let storage = null
+    try {
+      storage = window.localStorage
+    } catch {
+      return null
+    }
+    return decideOfflineSession({
+      authResolved,
+      online,
+      timedOut,
+      token: authToken,
+      cachedUser: readCachedUser(storage, userIdFromToken(authToken)),
+    })
+  }, [authResolved, online, timedOut, authToken])
+
+  /** True while the shell runs from the cached user because Convex is unreachable. */
+  const offlineMode = Boolean(offlineUser)
+
+  // Remember the last-known user for the next offline start (minimal fields,
+  // no secrets). Inactive/unapproved accounts are removed instead.
+  useEffect(() => {
+    if (!isAuthenticated || !convexUser || typeof window === 'undefined') return
+    try {
+      writeCachedUser(window.localStorage, convexUser)
+    } catch {
+      // storage blocked
+    }
+  }, [isAuthenticated, convexUser])
+
+  const sourceUser = offlineMode
+    ? offlineUser
+    : isAuthenticated
+      ? convexUser
+      : null
+
   /**
    * What this account may do right now, mirroring requireUser on the server:
    * 'ok' | 'USER_INACTIVE' | 'COMPANY_NOT_APPROVED' (both sign out)
    * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'NO_COMPANY' (only /register-company)
    */
-  const accessState = useMemo(() => {
-    if (!isAuthenticated || !convexUser) return null
-    const role = convexUser.role || 'user'
-    if (convexUser.active === false) return 'USER_INACTIVE'
-    if (
-      role !== 'super_admin' &&
-      convexUser.companyId &&
-      convexUser.companyStatus !== 'approved'
-    ) {
-      return 'COMPANY_NOT_APPROVED'
-    }
-    if (convexUser.mustChangePassword === true) return 'PASSWORD_CHANGE_REQUIRED'
-    if (role !== 'super_admin' && !convexUser.companyId) return 'NO_COMPANY'
-    return 'ok'
-  }, [isAuthenticated, convexUser])
+  const accessState = useMemo(() => accessStateOf(sourceUser), [sourceUser])
 
   const user = useMemo(() => {
-    if (!isAuthenticated || !convexUser) return null
+    if (!sourceUser) return null
     return {
-      id: convexUser._id,
-      _id: convexUser._id,
-      email: convexUser.email,
-      name: convexUser.name,
-      role: convexUser.role || 'user',
-      companyId: convexUser.companyId,
-      mustChangePassword: convexUser.mustChangePassword === true,
-      active: convexUser.active !== false,
-      companyStatus: convexUser.companyStatus ?? null,
+      id: sourceUser._id,
+      _id: sourceUser._id,
+      email: sourceUser.email,
+      name: sourceUser.name,
+      role: sourceUser.role || 'user',
+      companyId: sourceUser.companyId,
+      mustChangePassword: sourceUser.mustChangePassword === true,
+      active: sourceUser.active !== false,
+      companyStatus: sourceUser.companyStatus ?? null,
       accessState,
-      activeLocationId: convexUser.activeLocationId,
-      locationIds: convexUser.locationIds,
+      activeLocationId: sourceUser.activeLocationId,
+      locationIds: sourceUser.locationIds,
+      offline: offlineMode,
       // Compatibility with former Supabase user shape
       user_metadata: {
-        full_name: convexUser.name,
-        role: convexUser.role || 'user',
+        full_name: sourceUser.name,
+        role: sourceUser.role || 'user',
       },
     }
-  }, [isAuthenticated, convexUser, accessState])
+  }, [sourceUser, accessState, offlineMode])
 
   /** True when tenant data may be loaded (providers skip their queries otherwise). */
   const canUseApp = accessState === 'ok'
@@ -86,8 +148,10 @@ export function AuthProvider({ children }) {
     migrateLegacyOutbox(userId)
   }, [userId, canUseApp])
 
-  const loading = isLoading || (isAuthenticated && convexUser === undefined)
-  const initialized = !isLoading
+  const loading = offlineMode
+    ? false
+    : isLoading || (isAuthenticated && convexUser === undefined)
+  const initialized = offlineMode || !isLoading
 
   const signInWithEmail = async (email, password) => {
     try {
@@ -163,6 +227,7 @@ export function AuthProvider({ children }) {
     loading,
     initialized,
     isAuthenticated,
+    offlineMode,
     signInWithEmail,
     signInWithGoogle,
     signUpWithEmail,

@@ -111,8 +111,24 @@ class AuthErrorBoundary extends Component {
   }
 }
 
+/**
+ * Shown while the shell runs from the account saved on this device because
+ * Convex could not be reached (offline cold start, MOBILE-001).
+ */
+function OfflineSessionBanner() {
+  return (
+    <div
+      role="status"
+      className="sticky top-0 z-40 bg-foam-deep px-4 py-2 text-center text-sm text-chart-ink print:hidden"
+    >
+      No connection. Using the account saved on this phone. Entries are kept on
+      this device and sent when you are back online.
+    </div>
+  )
+}
+
 function AuthWrapper({ children }) {
-  const { user, initialized, loading, accessState, signOut } = useAuth()
+  const { user, initialized, loading, accessState, signOut, offlineMode } = useAuth()
   const router = useRouter()
   const signingOut = useRef(false)
   // AuthContext's signOut is a new function every render; keep callbacks stable.
@@ -202,6 +218,7 @@ function AuthWrapper({ children }) {
 
   return (
     <AuthErrorBoundary key={currentPath} onAuthError={signOutWithReason}>
+      {offlineMode && <OfflineSessionBanner />}
       {children}
     </AuthErrorBoundary>
   )
