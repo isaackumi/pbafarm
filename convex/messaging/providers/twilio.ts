@@ -1,15 +1,23 @@
+import * as Effect from 'effect/Effect'
+import * as Schema from 'effect/Schema'
+import type { FetchFn } from '../../lib/effectHttp'
+import { decodeBody, providerPost, runSend } from './send'
 import {
   basicAuth,
-  isRetryableStatus,
-  networkFailure,
   providerError,
-  readJson,
   type ChannelConfig,
   type Credentials,
   type ProviderAdapter,
   type SendInput,
   type SendResult,
 } from './types'
+
+/** Error body: { code, message, … }. Success body: { sid, status, … }. */
+const TwilioError = Schema.Struct({
+  code: Schema.optional(Schema.Unknown),
+  message: Schema.optional(Schema.Unknown),
+})
+const TwilioMessage = Schema.Struct({ sid: Schema.optional(Schema.NullOr(Schema.String)) })
 
 /**
  * Twilio Programmable Messaging (SMS) and Twilio WhatsApp.
@@ -31,7 +39,7 @@ async function sendTwilio(
   creds: Credentials,
   config: ChannelConfig,
   whatsapp: boolean,
-  fetchImpl: typeof fetch,
+  fetchImpl: FetchFn | undefined,
 ): Promise<SendResult> {
   const sid = creds.accountSid ?? ''
   const form = new URLSearchParams()
@@ -51,11 +59,10 @@ async function sendTwilio(
   } else {
     form.set('Body', input.body)
   }
-  try {
-    const res = await fetchImpl(
-      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`,
+  const program = Effect.gen(function* () {
+    const res = yield* providerPost(
       {
-        method: 'POST',
+        url: `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`,
         headers: {
           Authorization: basicAuth(sid, creds.authToken ?? ''),
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -63,18 +70,17 @@ async function sendTwilio(
         },
         body: form.toString(),
       },
+      (status, json, text) => {
+        const err = Schema.decodeUnknownOption(TwilioError)(json)
+        const message = err._tag === 'Some' ? err.value.message : undefined
+        return message
+          ? `Twilio ${err._tag === 'Some' ? (err.value.code ?? status) : status}: ${String(message).slice(0, 160)}`
+          : providerError(status, text)
+      },
     )
-    const { json, text } = await readJson(res)
-    if (!res.ok) {
-      const detail = json?.message
-        ? `Twilio ${json.code ?? res.status}: ${String(json.message).slice(0, 160)}`
-        : providerError(res.status, text)
-      return { ok: false, error: detail, retryable: isRetryableStatus(res.status) }
-    }
-    return { ok: true, providerMessageId: json?.sid ?? undefined }
-  } catch (err) {
-    return networkFailure(err)
-  }
+    return { providerMessageId: decodeBody(TwilioMessage, res)?.sid ?? undefined }
+  })
+  return runSend(program, fetchImpl)
 }
 
 const credentialFields = [
@@ -97,8 +103,7 @@ export const twilio: ProviderAdapter = {
   ],
   senderLabel: 'From number (E.164) or alphanumeric sender ID',
   senderRequired: false,
-  send: (input, creds, config, fetchImpl = fetch) =>
-    sendTwilio(input, creds, config, false, fetchImpl),
+  send: (input, creds, config, fetchImpl) => sendTwilio(input, creds, config, false, fetchImpl),
 }
 
 export const twilioWhatsapp: ProviderAdapter = {
@@ -123,6 +128,5 @@ export const twilioWhatsapp: ProviderAdapter = {
   ],
   senderLabel: 'WhatsApp sender number (E.164)',
   senderRequired: false,
-  send: (input, creds, config, fetchImpl = fetch) =>
-    sendTwilio(input, creds, config, true, fetchImpl),
+  send: (input, creds, config, fetchImpl) => sendTwilio(input, creds, config, true, fetchImpl),
 }
