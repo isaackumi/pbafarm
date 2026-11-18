@@ -44,6 +44,9 @@ function toClientSale(s: any, extras: Record<string, unknown> = {}) {
     weight_kg: s.weightKg,
     price_per_kg: s.pricePerKg,
     total_amount: s.totalAmount,
+    unit_count: s.unitCount ?? null,
+    price_per_unit: s.pricePerUnit ?? null,
+    batch_id: s.batchId ?? null,
     payment_status: s.paymentStatus || 'pending',
     notes: s.notes,
     location_id: s.locationId,
@@ -418,6 +421,11 @@ export const removeSale = mutation({
     if (!existing) throw new Error('Sale not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    if (existing.unitCount !== undefined && existing.batchId) {
+      // A fingerling sale took fish off the ledger (NUR-002): reversing it in
+      // the hatchery puts them back and removes this row.
+      throw new Error('This is a fingerling sale. Reverse it from the hatchery so the fish are put back.')
+    }
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',

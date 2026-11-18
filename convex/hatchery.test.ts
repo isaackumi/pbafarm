@@ -320,3 +320,199 @@ describe('spawning, incubation and hatch (HAT-002)', () => {
     expect(sp.lots[0]).toMatchObject({ status: 'failed', hatch_pct: 0 })
   })
 })
+
+describe('larval rearing and live feed (HAT-003)', () => {
+  test('deaths and survival counts post to the ledger; saving the day again replaces it', async () => {
+    const { t, as, asStaff, ids, hatchBatch, ledger } = await hatcherySetup()
+    const h = await hatchBatch(40_000)
+    const first = await asStaff.mutation(api.nursery.saveLarvalLog, {
+      unitId: ids.units.larval1,
+      logDate: '2026-10-05',
+      mortality: 1000,
+      countedAlive: 30_000,
+      liveFeed: [{ kind: 'rotifer', quantity: 20, unit: 'million' }],
+      temperatureC: 28,
+    })
+    expect(first).toMatchObject({ batchId: h.batchId, alive: 30_000, adjusted: -9_000 })
+    expect(await ledger(ids.units.larval1)).toEqual([30_000, 30_000])
+
+    const again = await asStaff.mutation(api.nursery.saveLarvalLog, {
+      unitId: ids.units.larval1,
+      logDate: '2026-10-05',
+      mortality: 500,
+      countedAlive: 35_000,
+      liveFeed: [{ kind: 'artemia', quantity: 5, unit: 'million' }],
+    })
+    expect(again.logId).toBe(first.logId)
+    expect(await ledger(ids.units.larval1)).toEqual([35_000, 35_000])
+    const logs = await as.query(api.nursery.listLarvalLogs, { batchId: h.batchId })
+    expect(logs).toHaveLength(1)
+    expect(logs[0]).toMatchObject({
+      mortality: 500,
+      counted_alive: 35_000,
+      live_feed: [{ kind: 'artemia', quantity: 5, unit: 'million' }],
+    })
+
+    await asStaff.mutation(api.nursery.recordLiveFeed, {
+      date: '2026-10-05',
+      kind: 'artemia',
+      movement: 'produced',
+      quantity: 12,
+      unit: 'million',
+      culture: 'Hatching cone 1',
+      inputNote: '50 g cysts',
+    })
+    const lf = await as.query(api.nursery.liveFeed, {})
+    expect(lf.balances).toEqual([{ kind: 'artemia', unit: 'million', produced: 12, used: 5, discarded: 0, on_hand: 7 }])
+    expect(lf.entries.filter((e) => e.from_larval_log)).toHaveLength(1)
+
+    const batches = await as.query(api.nursery.larvalBatches, {})
+    expect(batches).toHaveLength(1)
+    expect(batches[0]).toMatchObject({
+      stage: 'larvae',
+      count: 35_000,
+      stocked: 40_000,
+      survival_pct: 87.5,
+      last_log_date: '2026-10-05',
+    })
+    const events = await t.run((ctx) => eventsForUnit(ctx, ids.units.larval1))
+    expect(events.filter((e) => e.sourceTable === 'larvalLogs' && e.type === 'reversal')).toHaveLength(2)
+  })
+
+  test('a replayed offline log writes once; a unit without larvae is refused', async () => {
+    const { as, ids, hatchBatch, ledger } = await hatcherySetup()
+    await hatchBatch(40_000)
+    const args = { unitId: ids.units.larval1, logDate: '2026-10-05', mortality: 100, clientMutationId: 'log-1' }
+    const a = await as.mutation(api.nursery.saveLarvalLog, args)
+    const b = await as.mutation(api.nursery.saveLarvalLog, args)
+    expect(b).toEqual(a)
+    expect(await ledger(ids.units.larval1)).toEqual([39_900, 39_900])
+    await expect(
+      as.mutation(api.nursery.saveLarvalLog, { unitId: ids.units.larval2, logDate: '2026-10-05', mortality: 1 }),
+    ).rejects.toThrow(/holds no batch/)
+    await expect(
+      as.mutation(api.nursery.saveLarvalLog, { unitId: ids.units.larval1, logDate: '2026-10-06', mortality: 50_000 }),
+    ).rejects.toThrow(/Not enough fish/)
+  })
+})
+
+describe('grading and fingerlings out (NUR-001, HAT-004, NUR-002)', () => {
+  async function graded() {
+    const s = await hatcherySetup()
+    const h = await s.hatchBatch(40_000)
+    await s.as.mutation(api.nursery.saveLarvalLog, {
+      unitId: s.ids.units.larval1,
+      logDate: '2026-10-10',
+      countedAlive: 30_000,
+    })
+    const g = await s.as.mutation(api.nursery.gradeFingerlings, {
+      unitId: s.ids.units.larval1,
+      date: '2026-10-25',
+      outputs: [
+        { unitId: s.ids.units.nursery1, quantity: 20_000, abwG: 1.2 },
+        { unitId: s.ids.units.nursery2, quantity: 9_000, abwG: 0.6 },
+      ],
+      culls: 500,
+    })
+    return { ...s, h, g }
+  }
+
+  test('grading conserves fish and opens fingerling batches with the larval batch as parent', async () => {
+    const { t, as, asStaff, ids, h, g, ledger } = await graded()
+    expect(g.unaccounted).toBe(500)
+    expect(await ledger(ids.units.larval1)).toEqual([0, 0])
+    expect(await ledger(ids.units.nursery1)).toEqual([20_000, 20_000])
+    expect(await ledger(ids.units.nursery2)).toEqual([9_000, 9_000])
+    const [c1, c2] = await t.run(async (ctx) => Promise.all(g.childBatchIds.map((id) => ctx.db.get(id))))
+    expect(c1).toMatchObject({
+      origin: 'grading_split',
+      parentBatchIds: [h.batchId],
+      batchNumber: 'HAT-LARVAL1-20261004-A',
+    })
+    expect(c2!.parentBatchIds).toEqual([h.batchId])
+    const parent = await t.run((ctx) => ctx.db.get(h.batchId))
+    expect(parent!.status).toBe('closed')
+    await expect(
+      asStaff.mutation(api.nursery.gradeFingerlings, {
+        unitId: ids.units.nursery1,
+        date: '2026-10-26',
+        outputs: [{ unitId: ids.units.nursery2, quantity: 1, abwG: 1 }],
+      }),
+    ).rejects.toThrow(/Insufficient permissions/)
+    const list = await as.query(api.nursery.larvalBatches, {})
+    expect(list.map((b) => b.stage).sort()).toEqual(['fingerlings', 'fingerlings'])
+    expect(list.every((b) => b.hatched_batch_number === 'HAT-LARVAL1-20261004')).toBe(true)
+  })
+
+  test('fingerlings transferred to grow-out keep their hatchery lineage', async () => {
+    const { t, as, ids, g, h, ledger } = await graded()
+    const r = await as.mutation(api.nursery.transferFingerlings, {
+      sourceUnitId: ids.units.nursery1,
+      date: '2026-11-01',
+      lines: [{ destinationUnitId: ids.units.growout, quantity: 15_000, abwG: 2 }],
+    })
+    expect(r.lines[0]).toMatchObject({ kind: 'move', targetBatchId: g.childBatchIds[0] })
+    expect(await ledger(ids.units.nursery1)).toEqual([5_000, 5_000])
+    expect(await ledger(ids.units.growout)).toEqual([15_000, 15_000])
+    const cage = await t.run((ctx) => ctx.db.get(ids.units.growout))
+    expect(cage).toMatchObject({ status: 'active', currentBatchId: g.childBatchIds[0] })
+    const stocking = await t.run((ctx) =>
+      ctx.db
+        .query('stockingHistory')
+        .withIndex('by_cage', (q) => q.eq('cageId', ids.units.growout))
+        .collect(),
+    )
+    expect(stocking).toHaveLength(1)
+    expect(stocking[0]).toMatchObject({ fishCount: 15_000, batchId: g.childBatchIds[0], status: 'approved' })
+
+    // From the grow-out cage's batch back to the spawning and its broodstock.
+    const origin = await as.query(api.hatchery.batchOrigin, { batchId: cage!.currentBatchId! })
+    expect(origin).toMatchObject({ hatched_batch_id: h.batchId, generations: 1 })
+    expect(origin!.spawning.female_codes).toEqual(['F-001', 'F-002'])
+    expect(origin!.spawning.male_codes).toEqual(['M-GROUP-A'])
+  })
+
+  test('a sale by count reduces the batch and is reversed from the hatchery only', async () => {
+    const { t, as, asStaff, ids, g, ledger } = await graded()
+    const args = {
+      kind: 'sale' as const,
+      unitId: ids.units.nursery2,
+      date: '2026-11-01',
+      quantity: 4_000,
+      abwG: 0.8,
+      pricePerUnit: 0.5,
+      customerName: 'Volta fish farm',
+    }
+    await expect(asStaff.mutation(api.nursery.dispatchFingerlings, args)).rejects.toThrow(/Insufficient permissions/)
+    const r = await as.mutation(api.nursery.dispatchFingerlings, args)
+    expect(await ledger(ids.units.nursery2)).toEqual([5_000, 5_000])
+    const sale = await t.run((ctx) => ctx.db.get(r.saleId!))
+    expect(sale).toMatchObject({
+      unitCount: 4_000,
+      pricePerUnit: 0.5,
+      totalAmount: 2_000,
+      weightKg: 3.2,
+      batchId: g.childBatchIds[1],
+    })
+    await expect(as.mutation(api.sales.removeSale, { id: r.saleId! })).rejects.toThrow(/fingerling sale/)
+
+    await as.mutation(api.nursery.reverseMovement, { id: r.movementId, reason: 'Buyer cancelled' })
+    expect(await ledger(ids.units.nursery2)).toEqual([9_000, 9_000])
+    expect(await t.run((ctx) => ctx.db.get(r.saleId!))).toBeNull()
+    const moves = await as.query(api.nursery.listMovements, {})
+    expect(moves[0]).toMatchObject({ kind: 'sale', status: 'reversed' })
+  })
+
+  test('a dispatch to another farm needs the farm and cannot exceed the stock', async () => {
+    const { as, ids, ledger } = await graded()
+    const base = { kind: 'external' as const, unitId: ids.units.nursery2, date: '2026-11-01', abwG: 0.8 }
+    await expect(as.mutation(api.nursery.dispatchFingerlings, { ...base, quantity: 10 })).rejects.toThrow(
+      /receiving farm/,
+    )
+    await expect(
+      as.mutation(api.nursery.dispatchFingerlings, { ...base, quantity: 10_000, destinationFarm: 'Akosombo' }),
+    ).rejects.toThrow(/Not enough fish/)
+    await as.mutation(api.nursery.dispatchFingerlings, { ...base, quantity: 9_000, destinationFarm: 'Akosombo' })
+    expect(await ledger(ids.units.nursery2)).toEqual([0, 0])
+  })
+})
