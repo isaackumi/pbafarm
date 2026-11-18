@@ -164,9 +164,10 @@ describe('SEC-001 company status', () => {
 })
 
 describe('SEC-001 company-less users', () => {
+  // Tenant functions refuse company-less callers outright (requireMember, PERM-002).
   test('a company-less user sees no cages, not even unscoped legacy ones', async () => {
     const { as, loner1 } = await setup()
-    expect(await as(loner1).query(api.cages.list, {})).toEqual([])
+    expect(await codeOf(as(loner1).query(api.cages.list, {}))).toBe('NO_COMPANY')
   })
 
   test('a company-less user cannot create a cage', async () => {
@@ -185,17 +186,17 @@ describe('SEC-001 company-less users', () => {
     const theirs = await t.run((ctx) =>
       ctx.db.insert('cages', { name: 'Loner2 cage', status: 'active', createdBy: loner2, updatedAt: Date.now() }),
     )
-    expect(await as(loner1).query(api.cages.list, {})).toEqual([])
-    expect(await as(loner1).query(api.cages.get, { id: theirs })).toBeNull()
+    expect(await codeOf(as(loner1).query(api.cages.list, {}))).toBe('NO_COMPANY')
+    expect(await codeOf(as(loner1).query(api.cages.get, { id: theirs }))).toBe('NO_COMPANY')
     expect(
       await codeOf(as(loner1).mutation(api.cages.update, { id: theirs, patch: { name: 'Mine now' } })),
-    ).toBe('Access denied')
+    ).toBe('NO_COMPANY')
     expect((await t.run((ctx) => ctx.db.get(theirs)))?.name).toBe('Loner2 cage')
   })
 
   test('ensureDefault creates no location for a company-less user', async () => {
     const { t, as, loner1 } = await setup()
-    expect(await as(loner1).mutation(api.farmLocations.ensureDefault, {})).toBeNull()
+    expect(await codeOf(as(loner1).mutation(api.farmLocations.ensureDefault, {}))).toBe('NO_COMPANY')
     expect(await t.run((ctx) => ctx.db.query('farmLocations').collect())).toHaveLength(1)
   })
 

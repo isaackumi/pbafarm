@@ -2,11 +2,11 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, ensureDefaultLocation, logAudit, writeCompanyId, writeLocationId } from './lib/tenancy'
 import { tenantScope } from './lib/scope'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
+import { requireMember } from './lib/permissions'
 
 /**
  * Feed purchase orders (INV-004).
@@ -62,7 +62,7 @@ export const list = query({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     const rows = args.status
@@ -134,7 +134,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const companyId = await writeCompanyId(user)
     await validateSupplier(ctx, user, args.supplierId)
     const lines = await validateLines(ctx, user, args.lines)
@@ -177,7 +177,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const po = await loadPo(ctx, user, args.id)
     if (po.status !== 'draft') throw new Error('Only a draft purchase order can be edited')
     const patch: Partial<Doc<'purchaseOrders'>> = { updatedAt: Date.now() }
@@ -198,8 +198,7 @@ export const update = mutation({
 export const markOrdered = mutation({
   args: { id: v.id('purchaseOrders') },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const po = await loadPo(ctx, user, args.id)
     if (po.status !== 'draft') throw new Error('Only a draft can be placed as an order')
     await ctx.db.patch(args.id, { status: 'ordered', orderedAt: Date.now(), orderedBy: user._id, updatedAt: Date.now() })
@@ -211,8 +210,7 @@ export const markOrdered = mutation({
 export const cancel = mutation({
   args: { id: v.id('purchaseOrders'), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.correct' })
     const po = await loadPo(ctx, user, args.id)
     if (po.status === 'received') throw new Error('A received order cannot be cancelled; void its purchases instead')
     if (po.status === 'cancelled') return args.id
@@ -248,7 +246,7 @@ export const receive = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const po = await loadPo(ctx, user, args.id)
     if (po.status !== 'ordered') throw new Error('Only an ordered purchase order can be received')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args.receivedDate)) throw new Error('Date must be YYYY-MM-DD')

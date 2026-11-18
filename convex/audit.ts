@@ -3,9 +3,9 @@ import { paginationOptsValidator } from 'convex/server'
 import { query } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { listForCompany } from './lib/tenancy'
 import { tenantScope } from './lib/scope'
+import { requireMember } from './lib/permissions'
 
 type AuditFilters = {
   tableName?: string
@@ -130,8 +130,7 @@ export const list = query({
     dateTo: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
     const maxRows = Math.min(args.limit ?? 200, 500)
     const { limit: _limit, ...filters } = args
@@ -160,8 +159,7 @@ export const listPage = query({
     dateTo: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
     const { paginationOpts, ...filters } = args
     const q = auditQuery(ctx, user, filters)
     if (!q) return { page: [], isDone: true, continueCursor: '' }
@@ -182,8 +180,7 @@ export const getByTable = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
     const maxRows = Math.min(args.limit ?? 100, 300)
     // Company + table index: another tenant's audit volume no longer pushes
@@ -209,8 +206,7 @@ export const getByUser = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
     const maxRows = Math.min(args.limit ?? 100, 300)
     let auditLogs = await ctx.db
@@ -235,8 +231,7 @@ export const getSummary = query({
     dateTo: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
     // Newest 2000 rows of the company in the date range (index range).
     const auditLogs = await collectAudit(

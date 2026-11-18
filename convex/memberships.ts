@@ -11,7 +11,7 @@ import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser, revokeUserSessions } from './lib/authz'
+import { revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import {
   activateMembership,
@@ -24,6 +24,7 @@ import {
   upsertMembership,
 } from './lib/memberships'
 import { sha256Hex } from './lib/tokens'
+import { requireAccount, requireMember } from './lib/permissions'
 
 const ADMIN_KEYS = new Set(['owner', 'admin'])
 
@@ -44,7 +45,7 @@ async function myMemberships(ctx: QueryCtx | MutationCtx, me: Doc<'users'>) {
 export const listMine = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const rows = await myMemberships(ctx, me)
     const out = []
     for (const m of rows) {
@@ -68,7 +69,7 @@ export const listMine = query({
 export const switchActive = mutation({
   args: { companyId: v.id('companies') },
   handler: async (ctx, { companyId }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (me.companyId === companyId) return { companyId }
     const membership = await getMembership(ctx, me._id, companyId)
     if (!membership || membership.status !== 'active') {
@@ -96,10 +97,10 @@ export const switchActive = mutation({
 // ─── Company admin ───────────────────────────────────────────────────────────
 
 async function requireCompanyAdmin(ctx: QueryCtx | MutationCtx) {
-  const me = await requireUser(ctx)
-  requireRole(me, 'admin')
+  const m = await requireMember(ctx, { permission: 'org.members.manage' })
+  const me = m.user
   if (!me.companyId) throw userError('VALIDATION', 'No company linked')
-  return { me, companyId: me.companyId }
+  return { me, companyId: me.companyId, member: m }
 }
 
 export const listMembers = query({
@@ -336,7 +337,7 @@ export const inviteInfo = query({
 export const acceptInvite = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
     if (!invite) throw userError('NOT_FOUND', 'This invite link is not valid')
     const state = inviteState(invite, Date.now())
@@ -388,7 +389,7 @@ export const acceptInvite = mutation({
 export const declineInvite = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     const invite = await inviteByToken(ctx, token)
     if (!invite || (me.email ?? '').toLowerCase() !== invite.email) {
       throw userError('NOT_FOUND', 'This invite link is not valid')

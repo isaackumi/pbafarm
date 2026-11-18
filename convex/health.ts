@@ -1,13 +1,13 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { asOfDate, scopedRowsInRange, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import {
   listForCompany,
   listForCompanyAndLocation,
   writeCompanyId,
   logAudit,
 } from './lib/tenancy'
+import { requireMember } from './lib/permissions'
 
 function addDays(isoDate: string, days: number) {
   const d = new Date(`${isoDate}T12:00:00`)
@@ -47,7 +47,7 @@ export const list = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.cageId
       ? await ctx.db
           .query('healthTreatments')
@@ -86,7 +86,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.health.record' })
     const cage = await ctx.db.get(args.cageId)
     if (!cage) throw new Error('Cage not found')
     const allowed = await listForCompany(user, [cage])
@@ -135,8 +135,7 @@ export const create = mutation({
 export const remove = mutation({
   args: { id: v.id('healthTreatments') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Record not found')
     const allowed = await listForCompany(user, [existing])
@@ -159,7 +158,7 @@ export const activeWithdrawals = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const asOf = asOfDate(args.asOf)
     // Only treatments whose withdrawal ends on or after asOf, read through
     // by_company_and_withdrawalUntil (not the full treatment history).

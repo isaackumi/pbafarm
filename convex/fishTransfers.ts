@@ -4,7 +4,6 @@ import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
 import {
   mergeSettings,
@@ -20,6 +19,7 @@ import {
   sourceCagePatchAfterTransfer,
 } from './lib/fishTransferLogic'
 import { shadowReverse, shadowTransfer } from './lib/productionDualWrite'
+import { requireMember } from './lib/permissions'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -176,7 +176,7 @@ export const listFishTransfers = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.status
       ? await scopedRowsByStatus(ctx, user, 'fishTransfers', args.status)
       : await scopedRows(ctx, user, 'fishTransfers')
@@ -240,7 +240,7 @@ export const listFishTransfersPage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPage(ctx, user, 'fishTransfers', args.paginationOpts)
     const rows = result.page.filter(
       (r) =>
@@ -259,7 +259,7 @@ export const listFishTransfersPage = query({
 export const getFishTransfer = query({
   args: { id: v.id('fishTransfers') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const row = await ctx.db.get(id)
     if (!row) return null
     const allowed = await listForCompany(user, [row])
@@ -288,7 +288,7 @@ export const createFishTransfer = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.request' })
     if (args.sourceCageId === args.destinationCageId) {
       throw new Error('Source and destination cages must be different')
     }
@@ -462,8 +462,7 @@ export const createFishTransfer = mutation({
 export const approveFishTransfer = mutation({
   args: { id: v.id('fishTransfers') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
 
     const transfer = await ctx.db.get(id)
     if (!transfer) throw new Error('Transfer not found')
@@ -500,8 +499,7 @@ export const rejectFishTransfer = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { id, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
 
     const transfer = await ctx.db.get(id)
     if (!transfer) throw new Error('Transfer not found')
@@ -564,8 +562,7 @@ export const reverseFishTransfer = mutation({
     reason: v.string(),
   },
   handler: async (ctx, { id, reason }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     const transfer = await ctx.db.get(id)
     if (!transfer) throw new Error('Transfer not found')
     const allowed = await listForCompany(user, [transfer])

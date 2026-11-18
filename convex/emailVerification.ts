@@ -10,8 +10,8 @@ import { v } from 'convex/values'
 import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
 import { internal } from './_generated/api'
-import { requireUser } from './lib/authz'
 import { randomDigits, sha256Hex } from './lib/tokens'
+import { requireAccount } from './lib/permissions'
 
 const CODE_TTL_MS = 15 * 60 * 1000
 const RESEND_AFTER_MS = 60 * 1000
@@ -20,7 +20,7 @@ const MAX_ATTEMPTS = 5
 export const status = query({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     return {
       email: me.email ?? null,
       verified: !!me.emailVerificationTime,
@@ -31,7 +31,7 @@ export const status = query({
 export const requestCode = mutation({
   args: {},
   handler: async (ctx) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (!me.email) throw userError('VALIDATION', 'Your account has no email on file')
     if (me.emailVerificationTime) return { alreadyVerified: true }
     const now = Date.now()
@@ -65,7 +65,7 @@ export const requestCode = mutation({
 export const verify = mutation({
   args: { code: v.string() },
   handler: async (ctx, { code }) => {
-    const me = await requireUser(ctx)
+    const me = await requireAccount(ctx)
     if (me.emailVerificationTime) return { verified: true }
     const row = await ctx.db
       .query('emailVerifications')

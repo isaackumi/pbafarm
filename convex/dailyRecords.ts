@@ -4,7 +4,6 @@ import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
@@ -16,6 +15,7 @@ import {
   dailyMortalityPct,
   cumulativeMortalityPct,
 } from './lib/farmRules'
+import { requireMember } from './lib/permissions'
 
 function toClient(r: any) {
   return {
@@ -173,7 +173,7 @@ export const list = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const limit = Math.min(Math.max(args.limit ?? 5000, 1), 5000)
     const { dateFrom, dateTo } = args
     // The company's own window (by_company_and_date): another tenant's rows
@@ -216,7 +216,7 @@ export const listPage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const { dateFrom, dateTo } = args
     const scope = tenantScope(user)
     const empty = { page: [], isDone: true, continueCursor: '' }
@@ -279,7 +279,7 @@ export const listPage = query({
 export const listForDate = query({
   args: { date: v.string() },
   handler: async (ctx, { date }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const rows = await scopedRowsInRange(ctx, user, 'dailyRecords', {
       from: date,
       to: date,
@@ -297,7 +297,7 @@ export const listForDate = query({
 export const get = query({
   args: { id: v.id('dailyRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)
     if (!record) return null
     const allowed = await listForCompany(user, [record])
@@ -478,7 +478,7 @@ export const create = mutation({
     feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     return await insertDailyRecord(ctx, user, args)
   },
 })
@@ -509,7 +509,7 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
     feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, { date, records, allowNegative, overrideReason, feedOverlapReason }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
     if (!records.length) throw new Error('Add at least one cage line')
     if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
 
@@ -601,7 +601,7 @@ export const update = mutation({
     ctx,
     { id, patch: rawPatch, allowNegative, overrideReason, feedOverlapReason },
   ) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.daily.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
     const allowed = await listForCompany(user, [existing])
@@ -707,8 +707,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('dailyRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
     const allowed = await listForCompany(user, [existing])
@@ -763,9 +762,8 @@ export const createMany = mutation({
     feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, { records, allowNegative, overrideReason, feedOverlapReason }) => {
-    const user = await requireUser(ctx)
-    // Bulk import takes caller-supplied price and cost (doc 07 V9): admin only.
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.import' })
+    // Bulk import takes caller-supplied price and cost (doc 07 V9): production.import.
     const ids = []
     for (const record of records) {
       if (record.feedAmount > 0 && !record.feedTypeId) {

@@ -4,7 +4,6 @@ import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import {
   assertOwns,
   listForCompany,
@@ -14,6 +13,7 @@ import {
   ensureDefaultLocation,
   logAudit,
 } from './lib/tenancy'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 function toClientCustomer(c: any) {
   return {
@@ -57,7 +57,7 @@ function toClientSale(s: any, extras: Record<string, unknown> = {}) {
 export const listCustomers = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let rows = await scopedRows(ctx, user, 'customers')
     rows = rows.filter((c) => !c.deletedAt)
     if (!args.includeInactive) rows = rows.filter((c) => c.active !== false)
@@ -74,8 +74,7 @@ export const createCustomer = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const name = args.name.trim()
     if (!name) throw new Error('Customer name is required')
     const id = await ctx.db.insert('customers', {
@@ -111,8 +110,7 @@ export const updateCustomer = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const existing = await ctx.db.get(id)
     if (!existing || existing.deletedAt) throw new Error('Customer not found')
     const allowed = await listForCompany(user, [existing])
@@ -151,7 +149,7 @@ export const listSales = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let rows = args.harvestId
       ? await ctx.db
           .query('sales')
@@ -200,7 +198,7 @@ export const listSalesPage = query({
     dateTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const result = await scopedPageInRange(ctx, user, 'sales', args.paginationOpts, {
       from: args.dateFrom,
       to: args.dateTo,
@@ -233,7 +231,7 @@ export const createSale = mutation({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
     if (!(args.weightKg > 0)) throw new Error('Weight must be greater than zero')
     if (!(args.pricePerKg >= 0)) throw new Error('Price per kg must be zero or more')
 
@@ -338,17 +336,17 @@ export const updateSale = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Sale not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
-    // Price and payment status are financial edits (doc 07 V9): admin only.
+    // Price and payment status are financial edits (doc 07 V9).
     if (
       (patch.pricePerKg !== undefined && patch.pricePerKg !== existing.pricePerKg) ||
       (patch.paymentStatus !== undefined && patch.paymentStatus !== existing.paymentStatus)
     ) {
-      requireRole(user, 'admin')
+      await assertUserCan(ctx, user, 'finance.sales.correct')
     }
 
     const next: Record<string, unknown> = { updatedAt: Date.now() }
@@ -395,8 +393,7 @@ export const updateSale = mutation({
 export const removeSale = mutation({
   args: { id: v.id('sales') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Sale not found')
     const allowed = await listForCompany(user, [existing])
@@ -416,7 +413,7 @@ export const removeSale = mutation({
 export const harvestSaleSummary = query({
   args: { harvestId: v.id('harvestRecords') },
   handler: async (ctx, { harvestId }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const harvest = await ctx.db.get(harvestId)
     if (!harvest) return null
     const allowed = await listForCompany(user, [harvest])

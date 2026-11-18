@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { scopedRows } from './lib/scope'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
   applyStockChange,
@@ -11,6 +10,7 @@ import {
   siteStock,
 } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
+import { requireMember } from './lib/permissions'
 
 function toClientTransaction(t: any) {
   return {
@@ -79,7 +79,7 @@ export const listStockLevels = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes =
       user.companyId && user.role !== 'super_admin'
         ? await ctx.db
@@ -158,7 +158,7 @@ export const listTransactions = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const maxRows = Math.min(args.limit ?? 200, 500)
 
     let transactions = args.feedTypeId
@@ -213,8 +213,7 @@ export const createAdjustment = mutation({
     expiryDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.notes.trim()) throw new Error('Adjustment reason is required')
 
     const feedType = await ctx.db.get(args.feedTypeId)
@@ -264,8 +263,7 @@ export const createTransfer = mutation({
     batchNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!(args.quantityKg > 0)) throw new Error('Transfer quantity must be positive')
 
     let fromLabel = (args.fromLocation || '').trim()
@@ -361,8 +359,7 @@ export const reverseTransaction = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     if (!args.reason.trim()) throw new Error('Reversal reason is required')
 
     const txn = await ctx.db.get(args.transactionId)
@@ -422,7 +419,7 @@ export const listLots = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let lots = args.feedTypeId
       ? await ctx.db
           .query('feedInventory')
@@ -461,7 +458,7 @@ export const listAlerts = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
 
@@ -508,7 +505,7 @@ export const listAlerts = query({
 export const stockTally = query({
   args: { feedTypeId: v.optional(v.id('feedTypes')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
     if (args.feedTypeId) {

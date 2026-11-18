@@ -1,6 +1,5 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser, requireRole } from './lib/authz'
 import { cageGrowth } from './lib/growth'
 import { mergeSettings, unitTypeOf } from './lib/farmRules'
 import { unitTypeValidator } from './schema'
@@ -9,6 +8,7 @@ import { listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation,
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 /** The caller's active cages (optionally one site), via `by_company_status`. */
 async function activeCages(
@@ -129,7 +129,7 @@ export const list = query({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
 
     if (args.status) {
@@ -155,7 +155,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id('cages') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(id)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
@@ -167,7 +167,7 @@ export const get = query({
 export const getActive = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cages = await activeCages(ctx, user, args.locationId)
     return cages.map(toClient)
   },
@@ -181,7 +181,7 @@ export const growth = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, { id, asOf }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(id)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
@@ -201,7 +201,7 @@ export const growthAll = query({
     asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     // Every active cage of the company (was the first 300 active cages of
     // all tenants, so cages went missing as the platform grew).
     const cages = await activeCages(ctx, user, args.locationId)
@@ -245,7 +245,7 @@ export const create = mutation({
   },
   handler: async (ctx, rawArgs) => {
     const args = normalizeGeometry(rawArgs)
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.units.manage' })
     const now = Date.now()
     await ensureDefaultLocation(ctx, user)
     const locationId =
@@ -320,19 +320,19 @@ export const update = mutation({
   },
   handler: async (ctx, { id, patch: rawPatch }) => {
     const patch = normalizeGeometry(rawPatch)
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.units.manage' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Cage not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
     // Fish counts drive mortality %, biomass and P&L — only admins correct them by hand.
     if (patch.currentCount !== undefined || patch.initialCount !== undefined) {
-      requireRole(user, 'admin')
+      await assertUserCan(ctx, user, 'production.stock.adjust')
     }
     // Status is normally set by stocking and harvest; changing it by hand
     // skips their checks (doc 07 V9): admin only.
     if (patch.status !== undefined && patch.status !== existing.status) {
-      requireRole(user, 'admin')
+      await assertUserCan(ctx, user, 'production.stock.adjust')
     }
 
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
@@ -370,8 +370,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('cages') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.units.delete' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Cage not found')
     const allowed = await listForCompany(user, [existing])
@@ -389,7 +388,7 @@ export const remove = mutation({
 export const analytics = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     const total = cages.length
 

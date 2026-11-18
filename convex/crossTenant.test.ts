@@ -93,7 +93,15 @@ async function messageOf(p: Promise<unknown>) {
   try {
     await p
   } catch (err) {
-    return (err as Error).message
+    // Permission refusals are ConvexErrors ("Insufficient permissions: <permission>").
+    const message = (err as Error).message
+    try {
+      const data = JSON.parse(message.slice(message.indexOf('{')))
+      if (typeof data.message === 'string') return data.message.replace(/: [a-z_.]+$/, '')
+    } catch {
+      // plain Error
+    }
+    return message
   }
   return 'resolved'
 }

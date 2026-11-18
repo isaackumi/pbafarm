@@ -4,13 +4,13 @@ import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr, daysBetween } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
 import { shadowHarvest } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
+import { assertUserCan, requireMember } from './lib/permissions'
 
 /** Client rows with the cage name/code (one `get` per distinct cage). */
 async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
@@ -74,7 +74,7 @@ export const list = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let records = args.cageId
       ? await ctx.db
           .query('harvestRecords')
@@ -107,7 +107,7 @@ export const listPage = query({
     locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPageInRange(ctx, user, 'harvestRecords', args.paginationOpts, {
       from: args.dateFrom,
       to: args.dateTo,
@@ -122,7 +122,7 @@ export const listPage = query({
 export const get = query({
   args: { id: v.id('harvestRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)
     if (!record) return null
     const allowed = await listForCompany(user, [record])
@@ -239,7 +239,7 @@ export const suggestFcr = query({
     totalWeight: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.cageId)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
@@ -263,7 +263,7 @@ export const create = idempotentMutation('harvest.create', {
     status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
 
@@ -320,7 +320,7 @@ export const update = mutation({
     }),
   },
   handler: async (ctx, { id, patch }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.correct' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Harvest record not found')
     const allowed = await listForCompany(user, [existing])
@@ -331,8 +331,8 @@ export const update = mutation({
     const cageTouched =
       (patch.harvestType !== undefined && patch.harvestType !== existing.harvestType) ||
       (patch.estimatedCount !== undefined && patch.estimatedCount !== existing.estimatedCount)
-    // Re-posting fish counts is a stock correction (doc 07 V9): admin only.
-    if (cageTouched) requireRole(user, 'admin')
+    // Re-posting fish counts is a stock correction (doc 07 V9).
+    if (cageTouched) await assertUserCan(ctx, user, 'production.stock.adjust')
     let cageEffect = existing.cageEffect
     // Once the cage has moved on (restocked, or harvested again), this harvest
     // belongs to a closed cycle: correct the record, leave the live cage alone.
@@ -379,8 +379,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('harvestRecords') },
   handler: async (ctx, { id }) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Harvest record not found')
     const allowed = await listForCompany(user, [existing])
@@ -423,7 +422,7 @@ export const createSampling = mutation({
     abw: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const harvest = await ctx.db.get(args.harvestId)
     if (!harvest) throw new Error('Harvest record not found')
 
@@ -472,7 +471,7 @@ export const createFromSampling = mutation({
    * older clients and ignored.
    */
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
 
@@ -513,7 +512,7 @@ export const listSampling = query({
     cageId: v.optional(v.id('cages')),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     let samples = args.harvestId
       ? await ctx.db
           .query('harvestSampling')

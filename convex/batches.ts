@@ -8,13 +8,13 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { requireRole, requireUser } from './lib/authz'
 import { assertOwns, listForCompany, logAudit } from './lib/tenancy'
 import { userError } from './lib/errors'
 import * as engine from './lib/productionEngine'
 import { flowsOf, occupancyKpis, survivalPct, cumulativeMortalityPct, round } from './lib/kpi'
 import { feedFor, stockingAt } from './lib/productionDualWrite'
 import { deriveTransferType, transferBiomassKg } from './lib/fishTransferLogic'
+import { requireMember } from './lib/permissions'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const EVENT_LIMIT = 200
@@ -83,7 +83,7 @@ const newestFirst = (a: Doc<'stockEvents'>, b: Doc<'stockEvents'>) => engine.com
 export const forCage = query({
   args: { cageId: v.id('cages'), asOf: v.optional(v.string()) },
   handler: async (ctx, { cageId, asOf }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(cageId)
     if (!cage || !(await listForCompany(user, [cage])).length) return null
     const all = await engine.eventsForUnit(ctx, cageId)
@@ -129,7 +129,7 @@ export const forCage = query({
 export const list = query({
   args: { status: v.optional(v.union(v.literal('active'), v.literal('closed'))) },
   handler: async (ctx, { status }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
     const companyId = user.companyId
     const rows = status
@@ -160,7 +160,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id('batches'), asOf: v.optional(v.string()) },
   handler: async (ctx, { id, asOf }) => {
-    const user = await requireUser(ctx)
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(id)
     if (!batch || !(await listForCompany(user, [batch])).length) return null
     const events = await engine.eventsForBatch(ctx, id)
@@ -288,8 +288,7 @@ export const transferGroup = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     if (!DATE_RE.test(args.transferDate)) throw userError('VALIDATION', 'Choose a transfer date')
     if (!args.lines.length) throw userError('VALIDATION', 'Add at least one destination')
     if (args.lines.length > engine.MAX_LINES) {
@@ -447,8 +446,7 @@ export const grade = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    requireRole(user, 'admin')
+    const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
     if (!DATE_RE.test(args.date)) throw userError('VALIDATION', 'Choose a grading date')
     const cage = await ownedCage(ctx, user, args.cageId)
     await assertLedgerReady(ctx, cage)
