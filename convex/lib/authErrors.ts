@@ -15,6 +15,7 @@ export const AUTH_ERROR_CODES = {
   PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
   NO_COMPANY: 'NO_COMPANY',
   NOT_A_MEMBER: 'NOT_A_MEMBER',
+  MFA_REQUIRED: 'MFA_REQUIRED',
 } as const
 
 export type AuthErrorCode = keyof typeof AUTH_ERROR_CODES
@@ -30,6 +31,8 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
     'NO_COMPANY: Your account is not linked to a company yet. Register a company or ask an admin to invite you.',
   NOT_A_MEMBER:
     'NOT_A_MEMBER: Your access to this organization was suspended or removed. Ask its admin, or switch organization.',
+  MFA_REQUIRED:
+    'MFA_REQUIRED: Your company requires a verification code for this sign-in. Enter the code we send to your phone.',
 }
 
 /** Codes that end the session: the client signs out and shows the message. */

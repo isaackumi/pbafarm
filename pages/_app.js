@@ -89,6 +89,8 @@ const OPEN_ROUTES = ['/invite/[token]']
 /** Where each access state may go; everything else redirects to `home`. */
 const ACCESS_ROUTES = {
   PASSWORD_CHANGE_REQUIRED: { home: '/account?force=1', allowed: ['/account'] },
+  // Company requires two-step verification and this session has not passed it.
+  MFA_REQUIRED: { home: '/verify', allowed: ['/verify'] },
   NO_COMPANY: {
     home: '/register-company',
     allowed: ['/register-company', '/account', '/verify-email', '/invite/[token]'],
@@ -230,7 +232,13 @@ function AuthWrapper({ children }) {
   }
 
   return (
-    <AuthErrorBoundary key={currentPath} onAuthError={signOutWithReason}>
+    <AuthErrorBoundary
+      key={currentPath}
+      onAuthError={(code) =>
+        // Unverified session: verify, do not sign out.
+        code === 'MFA_REQUIRED' ? router.replace('/verify') : signOutWithReason(code)
+      }
+    >
       {offlineMode && <OfflineSessionBanner />}
       {children}
     </AuthErrorBoundary>

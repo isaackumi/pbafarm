@@ -4,6 +4,7 @@ import userService from '../lib/userService'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, FormCard } from './ui'
+import { errorMessage } from '../lib/errorMessage'
 
 const ROLES = [
   { value: 'user', label: 'User' },
@@ -16,6 +17,52 @@ const EMPTY_CREATE = {
   name: '',
   role: 'user',
   password: '',
+}
+
+/** Mobile number for phone sign-in and verification codes (SEC-006). */
+function PhoneCell({ user, disabled, onSaved, onError }) {
+  const setPhone = useMutation(api.users.setPhone)
+  const [value, setValue] = useState(user.phone || '')
+  const [saving, setSaving] = useState(false)
+  const id = user._id || user.id
+  const dirty = (value || '') !== (user.phone || '')
+
+  useEffect(() => {
+    setValue(user.phone || '')
+  }, [user.phone])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const result = await setPhone({ id, phone: value.trim() ? value : null })
+      setValue(result?.phone || '')
+      await onSaved()
+    } catch (err) {
+      onError(errorMessage(err, 'Could not save the phone number'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        aria-label={`Mobile number for ${user.name || user.email}`}
+        type="tel"
+        inputMode="tel"
+        placeholder="024 412 3456"
+        value={value}
+        disabled={disabled || saving}
+        onChange={(e) => setValue(e.target.value)}
+        className="min-w-[10rem]"
+      />
+      {dirty && (
+        <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={save}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      )}
+    </div>
+  )
 }
 
 const UserManagement = () => {
@@ -326,6 +373,7 @@ const UserManagement = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Mobile</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted">Actions</th>
@@ -334,7 +382,7 @@ const UserManagement = () => {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
                     No users found for this company.
                   </td>
                 </tr>
@@ -349,6 +397,14 @@ const UserManagement = () => {
                     <tr key={id} className="border-t border-foam-deep hover:bg-foam">
                       <td className="px-4 py-3 text-sm text-chart-ink">{user.name || '—'}</td>
                       <td className="px-4 py-3 font-data text-sm text-chart-ink">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <PhoneCell
+                          user={user}
+                          disabled={locked}
+                          onSaved={loadUsers}
+                          onError={setError}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <Select
                           aria-label={`Role for ${user.name || user.email}`}

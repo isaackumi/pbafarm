@@ -316,6 +316,7 @@ function preservedSettings(settings: Doc<'companies'>['settings']) {
   const out: Partial<NonNullable<Doc<'companies'>['settings']>> = {}
   if (settings?.defaultCountryCode !== undefined) out.defaultCountryCode = settings.defaultCountryCode
   if (settings?.messaging !== undefined) out.messaging = settings.messaging
+  if (settings?.security !== undefined) out.security = settings.security
   return out
 }
 

@@ -4,6 +4,8 @@ import { convexAuth } from '@convex-dev/auth/server'
 import type { DataModel } from './_generated/dataModel'
 import { pickEmailAdapter } from './lib/email'
 import { randomDigits } from './lib/tokens'
+import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
+import { authorizePhoneOtp } from './phoneAuth'
 
 /**
  * Password reset by emailed code (SEC-005): signIn('password', { email, flow: 'reset' })
@@ -44,6 +46,18 @@ const PasswordProvider = Password<DataModel>({
   reset: PasswordReset,
 })
 
+/**
+ * Passwordless phone sign-in (SEC-006, doc 18 §7). A credentials provider
+ * rather than the library's Phone provider: that one creates a user and
+ * account before sending a code, which would create users for unknown
+ * numbers or reveal which numbers exist. This one only signs in an existing
+ * user whose phone matches; see convex/phoneAuth.ts.
+ */
+const PhoneOtpProvider = ConvexCredentials<DataModel>({
+  id: 'phone-otp',
+  authorize: (params, ctx) => authorizePhoneOtp(params, ctx),
+})
+
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [PasswordProvider],
+  providers: [PasswordProvider, PhoneOtpProvider],
 })

@@ -35,6 +35,8 @@ const schema = defineSchema({
     activeLocationId: v.optional(v.id('farmLocations')),
   })
     .index('email', ['email'])
+    // Same name as the Convex Auth users table: phone sign-in looks users up by E.164 phone.
+    .index('phone', ['phone'])
     .index('by_companyId', ['companyId']),
 
   /**
@@ -171,6 +173,18 @@ const schema = defineSchema({
             usePlatformDefaultSms: v.optional(v.boolean()),
             usePlatformDefaultWhatsapp: v.optional(v.boolean()),
             usePlatformDefaultEmail: v.optional(v.boolean()),
+          }),
+        ),
+        /** Sign-in policy (SEC-006, SEC-007, doc 18 §7–8). All default off. */
+        security: v.optional(
+          v.object({
+            allowPhoneLogin: v.optional(v.boolean()),
+            phoneLoginChannel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
+            require2fa: v.optional(v.boolean()),
+            twoFactorChannel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
+            phoneLoginSatisfies2fa: v.optional(v.boolean()),
+            updatedAt: v.optional(v.number()),
+            updatedBy: v.optional(v.id('users')),
           }),
         ),
         updatedAt: v.optional(v.number()),
@@ -659,6 +673,43 @@ const schema = defineSchema({
     keyVersion: v.number(),
     updatedAt: v.number(),
   }).index('by_channel', ['channelId']),
+
+  /**
+   * Pending phone sign-in codes (SEC-006). One row per phone; replaced on
+   * resend, deleted on success or after too many wrong tries. Only hashes.
+   */
+  phoneLoginCodes: defineTable({
+    phone: v.string(),
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    createdAt: v.number(),
+  }).index('by_phone', ['phone']),
+
+  /**
+   * Two-step verification state per sign-in session (SEC-007). A session is
+   * verified when verifiedAt is set. Pending codes are stored hashed.
+   */
+  mfaSessions: defineTable({
+    userId: v.id('users'),
+    sessionId: v.id('authSessions'),
+    companyId: v.id('companies'),
+    purpose: v.union(v.literal('verify'), v.literal('enrol')),
+    channel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
+    codeHash: v.optional(v.string()),
+    /** Number being enrolled; saved to users.phone once the code is entered. */
+    pendingPhone: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    attempts: v.number(),
+    lastSentAt: v.optional(v.number()),
+    verifiedAt: v.optional(v.number()),
+    /** otp: code entered; phone_login: signed in by phone code; policy_enable: the admin who turned 2FA on, in that session. */
+    method: v.optional(v.union(v.literal('otp'), v.literal('phone_login'), v.literal('policy_enable'))),
+  })
+    .index('by_session', ['sessionId'])
+    .index('by_user', ['userId']),
 
   notifications: defineTable({
     userId: v.id('users'),

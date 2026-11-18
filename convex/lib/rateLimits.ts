@@ -9,7 +9,21 @@ import { components } from '../_generated/api'
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   /** Test messages from Settings, key = companyId. */
   messagingTestPerCompany: { kind: 'fixed window', rate: 10, period: HOUR },
+  /** Phone sign-in codes, key = E.164 phone (consumed for unknown numbers too). */
+  loginCodePerPhone: { kind: 'fixed window', rate: 3, period: 15 * MINUTE },
+  loginCodePerPhoneDaily: { kind: 'fixed window', rate: 10, period: 24 * HOUR },
+  /** Phone sign-in codes, key = companyId. */
+  loginCodePerCompany: { kind: 'fixed window', rate: 100, period: HOUR },
+  /** Phone sign-in codes across the platform (no key). */
+  loginCodeGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
+  /** Two-step and enrolment codes, key = userId. */
+  mfaCodePerUser: { kind: 'fixed window', rate: 5, period: 15 * MINUTE },
 })
+
+/** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */
+export const OTP_TTL_MS = 10 * MINUTE
+export const OTP_MAX_ATTEMPTS = 5
+export const OTP_RESEND_COOLDOWN_MS = 30 * 1000
 
 /** Human sentence for a refused request ("Try again in 4 minutes."). */
 export function retryAfterText(retryAfterMs: number | undefined): string {
