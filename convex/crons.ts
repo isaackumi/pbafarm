@@ -44,4 +44,7 @@ crons.cron('prune webhook deliveries', '45 3 * * *', internal.webhooks.pruneDeli
 // coordinates (INT-006). Open-Meteo, no key.
 crons.cron('fetch site weather', '0 3 * * *', internal.weather.refreshAll, {})
 
+// Expired document download tokens (TRACE-005).
+crons.cron('prune file download tokens', '15 4 * * *', internal.files.pruneDownloadTokens, {})
+
 export default crons

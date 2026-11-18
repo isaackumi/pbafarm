@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import {
   HeartPulse,
@@ -23,6 +23,7 @@ import { useToast } from '../components/Toast'
 import LocationMetaField from '../components/LocationMetaField'
 import { DIAGNOSIS_SUGGESTIONS } from '../lib/farmHealth'
 import { localToday } from '../lib/format'
+import Attachments from '../components/Attachments'
 
 export default function HealthPage() {
   return (
@@ -50,6 +51,8 @@ function HealthTreatments() {
   )
   const createTreatment = useMutation(api.health.create)
   const removeTreatment = useMutation(api.health.remove)
+  // Treatment whose documents (vet reports, prescriptions) are open.
+  const [docsFor, setDocsFor] = useState(null)
 
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -328,16 +331,15 @@ function HealthTreatments() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Withdrawal
                   </th>
-                  {isAdmin && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Actions
-                    </th>
-                  )}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-foam-deep">
                 {treatments.map((t) => (
-                  <tr key={t.id || t._id}>
+                  <Fragment key={t.id || t._id}>
+                  <tr>
                     <td className="px-4 py-3 text-sm font-data">{t.date}</td>
                     <td className="px-4 py-3 text-sm">{t.cage_name}</td>
                     <td className="px-4 py-3 text-sm text-muted">
@@ -355,8 +357,16 @@ function HealthTreatments() {
                     <td className="px-4 py-3 text-sm font-data">
                       {t.withdrawal_until || '—'}
                     </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
+                      <button
+                        type="button"
+                        className="text-sm text-lake hover:underline"
+                        aria-expanded={docsFor === (t.id || t._id)}
+                        onClick={() => setDocsFor(docsFor === (t.id || t._id) ? null : t.id || t._id)}
+                      >
+                        Documents
+                      </button>
                     {isAdmin && (
-                      <td className="px-4 py-3 text-right">
                         <button
                           type="button"
                           className="text-sm text-signal hover:underline"
@@ -371,9 +381,17 @@ function HealthTreatments() {
                         >
                           Delete
                         </button>
-                      </td>
                     )}
+                    </td>
                   </tr>
+                  {docsFor === (t.id || t._id) && (
+                    <tr>
+                      <td colSpan={6} className="px-4 pb-4 bg-foam/40">
+                        <Attachments entityType="healthTreatments" entityId={t.id || t._id} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

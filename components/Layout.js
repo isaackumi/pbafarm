@@ -26,6 +26,7 @@ const TITLE_BY_PREFIX = [
   ['/inventory-transactions', 'Inventory Ledger'],
   ['/harvest-sampling', 'Harvest Sampling'],
   ['/trace', 'Harvest lots'],
+  ['/compliance', 'Compliance'],
   ['/harvest', 'Harvest'],
   ['/sales', 'Sales'],
   ['/health', 'Health & Treatments'],

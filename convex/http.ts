@@ -9,6 +9,7 @@ import {
   openApiHandler,
 } from './integrations/apiHttp'
 import { API_RESOURCES } from './publicApi'
+import { download as fileDownload } from './files'
 
 const http = httpRouter()
 
@@ -25,5 +26,8 @@ http.route({ path: '/api/v1/sampling', method: 'POST', handler: createSamplingHa
 
 // Sensor / IoT ingestion (INT-007), same API keys with scope ingest:write.
 http.route({ path: '/ingest/v1/readings', method: 'POST', handler: ingestReadingsHandler })
+
+// Short-lived document downloads (TRACE-005, D-016).
+http.route({ path: '/files/download', method: 'GET', handler: fileDownload })
 
 export default http
