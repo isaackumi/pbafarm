@@ -19,6 +19,8 @@ import { idempotentMutation } from './lib/idempotency'
 import { addDays, isBusinessDate, todayFor } from './lib/dates'
 import { issueItem } from './inventoryItems'
 import { requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 
 export const equipmentKind = v.union(
   v.literal('pump'),
@@ -108,6 +110,7 @@ const equipmentFields = {
   nextMaintenanceDue: v.optional(v.string()),
   sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
   notes: v.optional(v.string()),
+  custom: v.optional(customValues),
 }
 
 /** Equipment of the company (optionally one unit or group), with attachment names. */
@@ -179,8 +182,16 @@ export const create = mutation({
       (args.lastMaintainedOn && args.maintenanceIntervalDays
         ? addDays(args.lastMaintainedOn, args.maintenanceIntervalDays)
         : undefined)
+    const custom = await validateCustom(ctx, {
+      companyId,
+      entity: 'equipment',
+      custom: args.custom,
+      mode: 'create',
+      context: { locationId, core: args },
+    })
     const id = await ctx.db.insert('equipment', {
       ...args,
+      custom,
       name,
       companyId,
       locationId,
@@ -219,6 +230,7 @@ export const update = mutation({
       nextMaintenanceDue: v.optional(v.string()),
       sparePartItemIds: v.optional(v.array(v.id('inventoryItems'))),
       notes: v.optional(v.string()),
+      custom: v.optional(customValues),
     }),
   },
   handler: async (ctx, { id, patch }) => {
@@ -239,6 +251,16 @@ export const update = mutation({
       next.name = name
     }
     if (patch.sparePartItemIds) next.sparePartItemIds = await checkSpares(ctx, user, patch.sparePartItemIds)
+    if (patch.custom !== undefined) {
+      next.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'equipment',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: existing.locationId, core: { ...existing, ...patch } },
+      })
+    }
     await ctx.db.patch(id, next)
     await logAudit(ctx, {
       actionType: 'update',

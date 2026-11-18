@@ -14,6 +14,8 @@ import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
 import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
 import { assertDifferentApprover, assertUserCan, requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
@@ -71,6 +73,7 @@ const stockingStatus = v.union(
 
 function toClientStocking(s: any) {
   return {
+    custom: s.custom ?? {},
     id: s._id,
     _id: s._id,
     cage_id: s.cageId,
@@ -302,6 +305,7 @@ export const createStocking = mutation({
     samplingSupervisor: v.optional(v.string()),
     notes: v.optional(v.string()),
     species: v.optional(v.string()),
+    custom: v.optional(customValues),
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
@@ -323,13 +327,21 @@ export const createStocking = mutation({
       : 'approved'
 
     const locationId = cage.locationId
-    const { species, batchNumber: rawBatch, ...rest } = args
+    const { species, batchNumber: rawBatch, custom: rawCustom, ...rest } = args
+    const custom = await validateCustom(ctx, {
+      companyId,
+      entity: 'stockingHistory',
+      custom: rawCustom,
+      mode: 'create',
+      context: { locationId, core: { ...rest, species } },
+    })
     const batchNumber =
       rawBatch?.trim() ||
       (await allocateBatchNumber(ctx, user, cage, args.stockingDate))
 
     const id = await ctx.db.insert('stockingHistory', {
       ...rest,
+      custom,
       batchNumber,
       species: species || undefined,
       status,
@@ -397,15 +409,27 @@ export const updateStocking = mutation({
       transferSupervisor: v.optional(v.string()),
       samplingSupervisor: v.optional(v.string()),
       notes: v.optional(v.string()),
+      custom: v.optional(customValues),
     }),
   },
-  handler: async (ctx, { id, patch }) => {
+  handler: async (ctx, { id, patch: rawPatch }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
     const stocking = await ctx.db.get(id)
     if (!stocking) throw new Error('Stocking record not found')
     const allowed = await listForCompany(user, [stocking])
     if (!allowed.length) throw new Error('Access denied')
     if (stocking.status === 'approved') await assertUserCan(ctx, user, 'production.stocking.approve')
+    const patch = { ...rawPatch }
+    if (patch.custom !== undefined) {
+      patch.custom = await validateCustom(ctx, {
+        companyId: stocking.companyId,
+        entity: 'stockingHistory',
+        custom: patch.custom,
+        previous: stocking.custom,
+        mode: 'update',
+        context: { locationId: stocking.locationId, core: { ...stocking, ...rawPatch } },
+      })
+    }
 
     await ctx.db.patch(id, patch)
     await logAudit(ctx, {

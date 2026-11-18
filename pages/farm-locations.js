@@ -45,6 +45,7 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { usePermission } from '../hooks/usePermission'
+import CustomFields, { CustomFieldValues, customPayload } from '../components/CustomFields'
 
 export default function FarmLocationsPage() {
   return (
@@ -87,6 +88,7 @@ function FarmLocations() {
       latitude: editing.latitude ?? '',
       longitude: editing.longitude ?? '',
       waterBody: editing.waterBody || '',
+      custom: editing.custom || {},
     })
     setShowForm(true)
   }, [editing])
@@ -112,6 +114,7 @@ function FarmLocations() {
             notes: form.notes,
             active: form.active,
             ...siteMeta(form),
+            custom: form.custom || {},
           },
         })
         showToast('success', 'Location updated')
@@ -127,6 +130,7 @@ function FarmLocations() {
           latitude: numberOrNull(form.latitude) ?? undefined,
           longitude: numberOrNull(form.longitude) ?? undefined,
           waterBody: form.waterBody || undefined,
+          custom: customPayload(form.custom),
         })
         showToast('success', 'Location created')
         if (id) await setActiveLocation(id)
@@ -272,6 +276,15 @@ function FarmLocations() {
                   }
                 />
               </Field>
+              <CustomFields
+                key={editing ? editing.id || editing._id : 'new'}
+                entity="farmLocations"
+                value={form.custom}
+                onChange={(custom) => setForm((p) => ({ ...p, custom }))}
+                locationId={editing ? editing.id || editing._id : null}
+                core={{ siteType: form.siteType }}
+                applyDefaults={!editing}
+              />
               {editing && (
                 <label className="flex items-center gap-2 text-sm text-chart-ink">
                   <input
@@ -347,6 +360,7 @@ function FarmLocations() {
                   {loc.notes && (
                     <p className="text-xs text-muted mt-1">{loc.notes}</p>
                   )}
+                  <CustomFieldValues entity="farmLocations" values={loc.custom} className="mt-2" />
                 </div>
                 <div className="flex gap-2">
                   <Button

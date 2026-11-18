@@ -18,6 +18,8 @@ import {
   cumulativeMortalityPct,
 } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -35,6 +37,7 @@ async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>
 
 function toClient(r: any) {
   return {
+    custom: r.custom ?? {},
     id: r._id,
     _id: r._id,
     cage_id: r.cageId,
@@ -339,6 +342,7 @@ type DailyRecordInput = {
   allowNegative?: boolean
   overrideReason?: string
   feedOverlapReason?: string
+  custom?: Record<string, unknown>
 }
 
 /** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
@@ -381,11 +385,20 @@ export async function insertDailyRecord(
     temperatureC,
     secchiCm,
     mortalityCause,
+    custom: rawCustom,
     ...recordFields
   } = args
+  const custom = await validateCustom(ctx, {
+    companyId: cage.companyId,
+    entity: 'dailyRecords',
+    custom: rawCustom,
+    mode: 'create',
+    context: { locationId: cage.locationId, core: { ...recordFields, mortalityCause } },
+  })
 
   const id = await ctx.db.insert('dailyRecords', {
     ...recordFields,
+    custom,
     mortalityCause:
       args.mortality > 0
         ? mortalityCause?.trim() || 'unknown'
@@ -521,6 +534,7 @@ export const create = mutation({
     overrideReason: v.optional(v.string()),
     /** Admin only: save feed already issued to this cage on this date. */
     feedOverlapReason: v.optional(v.string()),
+    custom: v.optional(customValues),
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
@@ -546,6 +560,7 @@ export const createBatch = idempotentMutation('dailyRecords.createBatch', {
         notes: v.optional(v.string()),
         dissolvedOxygen: v.optional(v.number()),
         temperatureC: v.optional(v.number()),
+        custom: v.optional(customValues),
       }),
     ),
     allowNegative: v.optional(v.boolean()),
@@ -568,6 +583,7 @@ export type DailyBatchLine = {
   notes?: string
   dissolvedOxygen?: number
   temperatureC?: number
+  custom?: Record<string, unknown>
 }
 
 /**
@@ -643,6 +659,7 @@ export async function saveDailyBatch(
           notes: rec.notes?.trim() || undefined,
           dissolvedOxygen: rec.dissolvedOxygen,
           temperatureC: rec.temperatureC,
+          custom: rec.custom,
           allowNegative,
           overrideReason,
           feedOverlapReason,
@@ -671,6 +688,7 @@ export const update = mutation({
       dissolvedOxygen: v.optional(v.number()),
       temperatureC: v.optional(v.number()),
       secchiCm: v.optional(v.number()),
+      custom: v.optional(customValues),
     }),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
@@ -688,6 +706,16 @@ export const update = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     const patch = { ...rawPatch }
+    if (patch.custom !== undefined) {
+      patch.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'dailyRecords',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: existing.locationId, core: { ...existing, ...rawPatch } },
+      })
+    }
     if (patch.feedTypeId !== undefined) {
       assertOwns(user, await ctx.db.get(patch.feedTypeId), 'Feed type')
     }

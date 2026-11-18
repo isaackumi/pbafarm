@@ -12,6 +12,8 @@ import { Id } from './_generated/dataModel'
 import { siteTypeValidator } from './schema'
 import { isValidTimezone } from './lib/orgProfile'
 import { requireMember } from './lib/permissions'
+import { validateCustom } from './lib/customFields'
+import { customValues } from './schema'
 
 /** Site metadata args (FARM-001). */
 const siteArgs = {
@@ -56,6 +58,7 @@ function siteFields(args: {
 
 function toClient(loc: any) {
   return {
+    custom: loc.custom ?? {},
     id: loc._id,
     _id: loc._id,
     name: loc.name,
@@ -173,6 +176,7 @@ export const create = mutation({
     address: v.optional(v.string()),
     notes: v.optional(v.string()),
     active: v.optional(v.boolean()),
+    custom: v.optional(customValues),
     ...siteArgs,
   },
   handler: async (ctx, args) => {
@@ -182,8 +186,16 @@ export const create = mutation({
     if (!name) throw new Error('Name is required')
 
     const companyId = await writeCompanyId(user)
+    const custom = await validateCustom(ctx, {
+      companyId,
+      entity: 'farmLocations',
+      custom: args.custom,
+      mode: 'create',
+      context: { core: args },
+    })
     const id = await ctx.db.insert('farmLocations', {
       companyId,
+      custom,
       name,
       code: args.code?.trim() || undefined,
       address: args.address?.trim() || undefined,
@@ -217,6 +229,7 @@ export const update = mutation({
       address: v.optional(v.string()),
       notes: v.optional(v.string()),
       active: v.optional(v.boolean()),
+      custom: v.optional(customValues),
       ...siteArgs,
     }),
   },
@@ -239,6 +252,16 @@ export const update = mutation({
     if (patch.notes !== undefined) next.notes = patch.notes.trim() || undefined
     if (patch.active !== undefined) next.active = patch.active
     Object.assign(next, siteFields(patch))
+    if (patch.custom !== undefined) {
+      next.custom = await validateCustom(ctx, {
+        companyId: existing.companyId,
+        entity: 'farmLocations',
+        custom: patch.custom,
+        previous: existing.custom,
+        mode: 'update',
+        context: { locationId: id, core: { ...existing, ...patch } },
+      })
+    }
 
     await ctx.db.patch(id, next)
     await logAudit(ctx, {

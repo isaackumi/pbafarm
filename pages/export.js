@@ -16,6 +16,35 @@ import { getConvexHttpClient, api } from '../lib/convexBridge'
 import * as XLSX from 'xlsx'
 import { localToday } from '../lib/format'
 import { useLocation } from '../contexts/LocationContext'
+import { customCell, customColumns } from '../components/CustomFields'
+
+/** Sheet name → custom field entity (D-007): custom values become one column per field. */
+const SHEET_ENTITY = {
+  daily_records: 'dailyRecords',
+  biweekly_records: 'biweeklyRecords',
+  harvest_records: 'harvestRecords',
+  cages: 'cages',
+  stocking_history: 'stockingHistory',
+}
+
+function flattenCustom(sheets, defs) {
+  const out = {}
+  for (const [name, rows] of Object.entries(sheets)) {
+    const entity = SHEET_ENTITY[name]
+    if (!entity || !Array.isArray(rows)) {
+      out[name] = rows
+      continue
+    }
+    const cols = customColumns((defs || []).filter((d) => d.entity === entity))
+    out[name] = rows.map((row) => {
+      if (!row || typeof row !== 'object') return row
+      const { custom: _custom, ...rest } = row
+      for (const c of cols) rest[c.header] = customCell(c, row)
+      return rest
+    })
+  }
+  return out
+}
 
 function downloadWorkbook(sheets, filename) {
   const wb = XLSX.utils.book_new()
@@ -97,7 +126,8 @@ function ExportPageInner() {
         document.body.removeChild(link)
         URL.revokeObjectURL(url)
       } else {
-        downloadWorkbook(sheets, `${base}.xlsx`)
+        const defs = await client.query(api.customFields.allDefs, {})
+        downloadWorkbook(flattenCustom(sheets, defs), `${base}.xlsx`)
       }
     } catch (err) {
       setError(err.message || String(err))

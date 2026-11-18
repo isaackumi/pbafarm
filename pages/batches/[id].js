@@ -11,6 +11,7 @@ import HatcheryOrigin from '../../components/hatchery/HatcheryOrigin'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import { localToday } from '../../lib/format'
+import { CustomFieldsCard } from '../../components/CustomFields'
 
 const fmt = (v, dp = 1) =>
   v == null ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -171,6 +172,15 @@ function BatchDetails() {
           <StatCard label="Survival" value={pct(t.survival_pct)} hint="Harvests and transfers are not losses" tone={t.survival_pct != null && t.survival_pct < 80 ? 'warn' : 'default'} />
           <StatCard label="Mortality" value={pct(t.mortality_pct)} hint={`${fmt(t.mortality, 0)} deaths`} />
         </div>
+
+        <CustomFieldsCard
+          entity="batches"
+          recordId={batch.id}
+          values={batch.custom}
+          locationId={batch.home_location_id}
+          core={{ origin: batch.origin, species: batch.species, status: batch.status }}
+          editPermission="production.units.manage"
+        />
 
         <Card>
           <CardHeader title="Lineage" subtitle="Where these fish came from and where they went." />

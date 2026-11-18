@@ -11,6 +11,7 @@ import {
   Input,
 } from './ui'
 import { localToday } from '../lib/format'
+import CustomFields, { customPayload } from './CustomFields'
 
 function generateBatchCode() {
   const date = new Date()
@@ -25,6 +26,7 @@ function generateBatchCode() {
 
 const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const { showToast } = useToast()
+  const [custom, setCustom] = useState({})
   const [samplings, setSamplings] = useState([
     { id: 1, fish_count: '', total_weight: '', abw: 0 },
   ])
@@ -124,6 +126,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
           dissolvedOxygen !== '' ? Number(dissolvedOxygen) : undefined,
         temperature_c: temperatureC !== '' ? Number(temperatureC) : undefined,
         secchi_cm: secchiCm !== '' ? Number(secchiCm) : undefined,
+        custom: customPayload(custom),
         samples: samplings
           .filter((s) => s.fish_count && s.total_weight)
           .map((sampling, index) => ({
@@ -146,6 +149,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       setDissolvedOxygen('')
       setTemperatureC('')
       setSecchiCm('')
+      setCustom({})
       setSamplings([{ id: 1, fish_count: '', total_weight: '', abw: 0 }])
 
       if (onComplete) {
@@ -356,6 +360,15 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             ))}
           </div>
         </FormSection>
+
+        <CustomFields
+          entity="biweeklyRecords"
+          value={custom}
+          onChange={setCustom}
+          locationId={cage?.location_id}
+          core={{ totalFishCount: totalFish, totalWeight }}
+          title="More details"
+        />
 
         <FormActions>
           <Button type="submit" disabled={loading} size="lg">

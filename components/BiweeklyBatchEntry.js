@@ -13,6 +13,7 @@ import { Button, Field, FormCard, FormSection, Input, StickyActions } from './ui
 import DependencyEmpty from './DependencyEmpty'
 import QrScanner from './QrScanner'
 import { useToast } from './Toast'
+import CustomFields, { customPayload } from './CustomFields'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const idOf = (x) => x?.id || x?._id
@@ -174,6 +175,7 @@ export default function BiweeklyBatchEntry() {
         dissolvedOxygen: formData.showWater ? optNum(l.dissolvedOxygen) : undefined,
         temperatureC: formData.showWater ? optNum(l.temperatureC) : undefined,
         secchiCm: formData.showWater ? optNum(l.secchiCm) : undefined,
+        custom: customPayload(l.custom),
       })),
     }
     const n = lines.length
@@ -407,6 +409,16 @@ export default function BiweeklyBatchEntry() {
                         </Field>
                       </>
                     )}
+                    <div className="col-span-2 md:col-span-12">
+                      <CustomFields
+                        entity="biweeklyRecords"
+                        value={line.custom}
+                        onChange={(next) => updateLine(line.key, 'custom', next)}
+                        locationId={cage?.location_id}
+                        core={{ totalFishCount: Number(line.fishCount) || 0, totalWeight: Number(line.totalWeight) || 0 }}
+                        idPrefix={`cf-${line.key}`}
+                      />
+                    </div>
                     <div className="col-span-2 md:col-span-12">
                       <Button
                         variant="ghost"

@@ -81,6 +81,12 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `compliance.removeBiosecurity` | `production.records.delete` | yes | yes | no | no | no |
 | `compliance.seedDefaultTemplates` | `org.settings.manage` | yes | yes | no | no | no |
 | `compliance.setTemplateActive` | `org.settings.manage` | yes | yes | no | no | no |
+| `customFields.allDefs` | `org.view` | yes | yes | yes | yes | yes |
+| `customFields.defs` | `org.view` | yes | yes | yes | yes | yes |
+| `customFields.reorder` | `customization.manage` | yes | yes | no | no | no |
+| `customFields.save` | `customization.manage` | yes | yes | no | no | no |
+| `customFields.setArchived` | `customization.manage` | yes | yes | no | no | no |
+| `customFields.setValues` | `allowlisted` | see test | see test | see test | see test | see test |
 | `dailyRecords.create` | `production.daily.record` | yes | yes | yes | yes | no |
 | `dailyRecords.createBatch` | `production.daily.record` | yes | yes | yes | yes | no |
 | `dailyRecords.createMany` | `production.import` | yes | yes | no | no | no |

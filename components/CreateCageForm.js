@@ -15,6 +15,7 @@ import {
 } from './ui'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs } from './UnitGeometryFields'
 import { unitLabel } from '../lib/format'
+import CustomFields, { customPayload } from './CustomFields'
 
 const CreateCageForm = () => {
   const router = useRouter()
@@ -27,6 +28,7 @@ const CreateCageForm = () => {
   const [existingCages, setExistingCages] = useState([])
   const [cageCode, setCageCode] = useState('')
   const [geometry, setGeometry] = useState({ ...EMPTY_GEOMETRY })
+  const [custom, setCustom] = useState({})
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -136,6 +138,7 @@ const CreateCageForm = () => {
         installation_date: formData.installation_date || undefined,
         notes: formData.notes ? formData.notes.trim() : undefined,
         status: formData.status || 'empty',
+        custom: customPayload(custom),
       }
 
       const { data, error: createError } = await cageService.createCage(cageData)
@@ -143,6 +146,7 @@ const CreateCageForm = () => {
 
       setMessage(`${unitLabel(geometry.unitType)} created`)
       setGeometry({ ...EMPTY_GEOMETRY })
+      setCustom({})
       setFormData({
         name: '',
         code: '',
@@ -312,6 +316,15 @@ const CreateCageForm = () => {
             />
           </Field>
         </FormSection>
+
+        <CustomFields
+          entity="cages"
+          value={custom}
+          onChange={setCustom}
+          locationId={formData.locationId || activeLocationId}
+          core={{ unitType: geometry.unitType, status: formData.status }}
+          title="More details"
+        />
 
         <FormActions>
           <Button type="submit" disabled={loading || !!nameError} size="lg">

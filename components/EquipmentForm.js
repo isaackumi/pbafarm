@@ -4,6 +4,7 @@ import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
+import CustomFields, { customPayload } from './CustomFields'
 
 export const EQUIPMENT_KINDS = [
   { value: 'pump', label: 'Pump' },
@@ -38,7 +39,7 @@ export default function EquipmentForm({ unitId, onDone }) {
   const items = useQuery(api.inventoryItems.listItems, {})
   const [form, setForm] = useState({
     name: '', kind: 'pump', unitId: unitId || '', unitGroupId: '', make: '', model: '', serialNumber: '', rating: '',
-    installedOn: '', maintenanceIntervalDays: '', nextMaintenanceDue: '', spareId: '', notes: '',
+    installedOn: '', maintenanceIntervalDays: '', nextMaintenanceDue: '', spareId: '', notes: '', custom: {},
   })
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -62,6 +63,7 @@ export default function EquipmentForm({ unitId, onDone }) {
         nextMaintenanceDue: form.nextMaintenanceDue || undefined,
         sparePartItemIds: form.spareId ? [form.spareId] : undefined,
         notes: t(form.notes),
+        custom: customPayload(form.custom),
       })
       showToast(`Added ${form.name.trim()}`, 'success')
       onDone?.()
@@ -139,6 +141,14 @@ export default function EquipmentForm({ unitId, onDone }) {
       <Field label="Notes" htmlFor="eq-notes" className="col-span-2 sm:col-span-3">
         <Textarea id="eq-notes" rows={2} value={form.notes} onChange={set('notes')} />
       </Field>
+      <div className="col-span-2 sm:col-span-3">
+        <CustomFields
+          entity="equipment"
+          value={form.custom}
+          onChange={(custom) => setForm((f) => ({ ...f, custom }))}
+          core={{ kind: form.kind }}
+        />
+      </div>
       <div className="col-span-2 sm:col-span-3 flex justify-end gap-2">
         {onDone && <Button variant="secondary" onClick={onDone}>Cancel</Button>}
         <Button type="submit" disabled={saving || !form.name.trim()}>{saving ? 'Saving…' : 'Add equipment'}</Button>

@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
+import CustomFields, { CustomFieldValues, customCell, customColumns, customPayload, useCustomFieldDefs } from '../components/CustomFields'
 
 export default function ExpensesPage() {
   return (
@@ -41,6 +42,7 @@ const emptyForm = () => ({
   cageId: '',
   supplierId: '',
   notes: '',
+  custom: {},
 })
 
 function Expenses() {
@@ -78,6 +80,7 @@ function Expenses() {
   const updateCategory = useMutation(api.expenses.updateCategory)
 
   const [form, setForm] = useState(emptyForm)
+  const expenseFieldDefs = useCustomFieldDefs('expenses', { includeArchived: true })
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [newCategory, setNewCategory] = useState('')
@@ -107,6 +110,7 @@ function Expenses() {
           cageId: form.cageId || null,
           supplierId: form.supplierId || null,
           notes: form.notes,
+          custom: form.custom || {},
         })
         showToast('success', 'Expense updated')
       } else {
@@ -117,6 +121,7 @@ function Expenses() {
           ...(form.cageId ? { cageId: form.cageId } : activeLocationId ? { locationId: activeLocationId } : {}),
           ...(form.supplierId ? { supplierId: form.supplierId } : {}),
           ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+          custom: customPayload(form.custom),
         })
         showToast('success', 'Expense saved')
       }
@@ -138,6 +143,7 @@ function Expenses() {
       cageId: row.cage_id || '',
       supplierId: row.supplier_id || '',
       notes: row.notes || '',
+      custom: row.custom || {},
     })
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -169,7 +175,8 @@ function Expenses() {
     .slice(0, 3)
 
   const exportCsv = () => {
-    const header = ['Date', 'Category', 'Amount', 'Currency', 'Site', 'Cage', 'Supplier', 'Notes']
+    const extra = customColumns(expenseFieldDefs)
+    const header = ['Date', 'Category', 'Amount', 'Currency', 'Site', 'Cage', 'Supplier', 'Notes', ...extra.map((c) => c.header)]
     const esc = (v) => {
       const s = v == null ? '' : String(v)
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -183,6 +190,7 @@ function Expenses() {
       r.cage_name || '',
       r.supplier_name || '',
       r.notes || '',
+      ...extra.map((c) => customCell(c, r)),
     ])
     const csv = [header, ...lines].map((line) => line.map(esc).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -278,6 +286,16 @@ function Expenses() {
             <Field label="Notes" htmlFor="exp-notes">
               <Input id="exp-notes" value={form.notes} onChange={set('notes')} placeholder="What it was for" />
             </Field>
+            <CustomFields
+              key={editingId || 'new'}
+              entity="expenses"
+              value={form.custom}
+              onChange={(custom) => setForm((f) => ({ ...f, custom }))}
+              locationId={activeLocationId}
+              core={{ category: form.category, amount: Number(form.amount) || 0 }}
+              columns={1}
+              applyDefaults={!editingId}
+            />
             <Button type="submit" className="w-full" disabled={saving}>
               {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add expense'}
             </Button>
@@ -354,6 +372,7 @@ function Expenses() {
                         {r.supplier_name ? ` · ${r.supplier_name}` : ''}
                         {r.notes ? ` · ${r.notes}` : ''}
                       </p>
+                      <CustomFieldValues entity="expenses" values={r.custom} className="mt-2" />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="font-data text-sm font-semibold">{formatCurrency(r.amount)}</span>

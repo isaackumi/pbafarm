@@ -208,6 +208,8 @@ export const getHandler = (resource: ApiResource) =>
 
 const optionalNumber = Schema.optional(Schema.Number)
 const optionalString = Schema.optional(Schema.String)
+/** Custom field values by key (D-007); checked against the organization's definitions on write. */
+const optionalCustom = Schema.optional(Schema.Record(Schema.String, Schema.Unknown))
 
 export const DailyRecordsBody = Schema.Struct({
   date: Schema.String,
@@ -221,6 +223,7 @@ export const DailyRecordsBody = Schema.Struct({
       notes: optionalString,
       dissolvedOxygen: optionalNumber,
       temperatureC: optionalNumber,
+      custom: optionalCustom,
     }),
   ),
 })
@@ -236,6 +239,7 @@ export const SamplingBody = Schema.Struct({
       dissolvedOxygen: optionalNumber,
       temperatureC: optionalNumber,
       secchiCm: optionalNumber,
+      custom: optionalCustom,
     }),
   ),
 })

@@ -17,6 +17,7 @@ export const PERMISSION_GROUPS = {
     'files.upload': 'Attach files to records and remove their own',
     'integrations.manage': 'Configure messaging channels, API keys and webhooks',
     'automation.manage': 'Create and run automations; assign tasks',
+    'customization.manage': 'Define custom fields, terminology, form layouts, dashboards and navigation',
   },
   Production: {
     'production.view': 'See units, stockings, records and batches',
@@ -89,6 +90,7 @@ export const ADMIN_ONLY: readonly Permission[] = [
   'org.audit.view',
   'integrations.manage',
   'automation.manage',
+  'customization.manage',
   'production.units.delete',
   'production.stock.adjust',
   'production.records.delete',
