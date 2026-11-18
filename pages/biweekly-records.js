@@ -1,28 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import Link from 'next/link'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
+import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState } from '../components/ui'
 import { biweeklyRecordService, cageService } from '../lib/databaseService'
 import {
   Search,
-  Filter,
-  Calendar,
-  Fish,
-  Scale,
-  TrendingUp,
   Eye,
   Download,
   Plus,
   RefreshCw,
-  BarChart3,
-  FileText,
   Pencil,
   Trash2,
   AlertTriangle,
 } from 'lucide-react'
 import { useToast } from '../components/Toast'
+
+const ICON_BTN =
+  'inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake'
 
 export default function BiweeklyRecords() {
   const { showToast } = useToast()
@@ -212,11 +207,11 @@ export default function BiweeklyRecords() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <Layout title="Bi-weekly Records">
+        <Layout title="Bi-weekly records">
           <div className="page-card p-8">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-lagoon-800 border-t-transparent"></div>
-              <p className="mt-4 text-lg text-muted">Loading biweekly records...</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-lake border-t-transparent"></div>
+              <p className="mt-4 text-lg text-muted">Loading bi-weekly records…</p>
             </div>
           </div>
         </Layout>
@@ -226,7 +221,7 @@ export default function BiweeklyRecords() {
 
   return (
     <ProtectedRoute>
-      <Layout title="Bi-weekly Records">
+      <Layout title="Bi-weekly records">
         <PageHeader
           showTitle={false}
           breadcrumbs={[
@@ -242,159 +237,95 @@ export default function BiweeklyRecords() {
           actions={
             <>
               <Button href="/biweekly-entry" size="sm">
-                <Plus className="w-4 h-4" />
-                New Record
+                <Plus className="w-4 h-4" aria-hidden />
+                New record
               </Button>
-              <button
-                onClick={exportData}
-                className="inline-flex items-center px-3 py-2 border border-foam-deep text-sm font-semibold rounded-xl text-chart-ink bg-white hover:bg-foam min-h-10"
-              >
-                <Download className="w-4 h-4 mr-2" />
+              <Button variant="secondary" size="sm" onClick={exportData}>
+                <Download className="w-4 h-4" aria-hidden />
                 Export
-              </button>
+              </Button>
             </>
           }
         />
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <FileText className="h-8 w-8 text-lagoon-800" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted">Total Records</p>
-                    <p className="text-2xl font-semibold text-chart-ink">{stats.totalRecords}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Fish className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted">Total Fish</p>
-                    <p className="text-2xl font-semibold text-chart-ink">{stats.totalFish.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Scale className="h-8 w-8 text-lagoon-800" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted">Total Weight</p>
-                    <p className="text-2xl font-semibold text-chart-ink">{(stats.totalWeight / 1000).toFixed(1)}kg</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <TrendingUp className="h-8 w-8 text-purple-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted">Avg ABW</p>
-                    <p className="text-2xl font-semibold text-chart-ink">{stats.averageABW.toFixed(1)}g</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <BarChart3 className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted">Active Cages</p>
-                    <p className="text-2xl font-semibold text-chart-ink">{stats.activeCages}</p>
-                  </div>
-                </div>
-              </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+              <StatCard label="Total records" value={stats.totalRecords} />
+              <StatCard label="Total fish" value={stats.totalFish.toLocaleString()} />
+              <StatCard label="Total weight" value={(stats.totalWeight / 1000).toFixed(1)} unit="kg" />
+              <StatCard label="Average ABW" value={stats.averageABW.toFixed(1)} unit="g" />
+              <StatCard label="Active cages" value={stats.activeCages} />
             </div>
 
-            {/* Filters and Search */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-foam-deep mb-8">
+            <div className="page-card p-4 sm:p-5 mb-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-2">Search</label>
+                <Field label="Search" htmlFor="biweekly-search">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted" />
-                    <input
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" aria-hidden />
+                    <Input
+                      id="biweekly-search"
                       type="text"
-                      placeholder="Search by cage or batch code..."
+                      placeholder="Cage or batch code"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 block w-full border-input-border rounded-lg shadow-sm focus:ring-lagoon-800 focus:border-lagoon-800"
+                      className="pl-10"
                     />
                   </div>
-                </div>
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-2">Cage</label>
-                  <select
+                <Field label="Cage" htmlFor="biweekly-cage">
+                  <Select
+                    id="biweekly-cage"
                     value={selectedCage}
                     onChange={(e) => setSelectedCage(e.target.value)}
-                    className="block w-full border-input-border rounded-lg shadow-sm focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Cages</option>
+                    <option value="all">All cages</option>
                     {cages.map(cage => (
                       <option key={cage.id} value={cage.id}>{cage.name}</option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-2">Date Filter</label>
-                  <select
+                <Field label="Date" htmlFor="biweekly-date">
+                  <Select
+                    id="biweekly-date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="block w-full border-input-border rounded-lg shadow-sm focus:ring-lagoon-800 focus:border-lagoon-800"
                   >
-                    <option value="all">All Time</option>
-                    <option value="recent">Last 30 Days</option>
-                    <option value="month">This Month</option>
-                  </select>
-                </div>
+                    <option value="all">All time</option>
+                    <option value="recent">Last 30 days</option>
+                    <option value="month">This month</option>
+                  </Select>
+                </Field>
 
                 <div className="flex items-end">
-                  <button
-                    onClick={fetchData}
-                    className="inline-flex items-center px-4 py-2 border border-input-border text-sm font-medium rounded-lg text-chart-ink bg-white hover:bg-foam-deep/40"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
+                  <Button variant="secondary" onClick={fetchData}>
+                    <RefreshCw className="w-4 h-4" aria-hidden />
                     Refresh
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
 
             {/* Records Table */}
-            <div className="bg-white shadow rounded-xl overflow-hidden border border-foam-deep">
-              <div className="px-6 py-4 border-b border-foam-deep">
-                <h3 className="text-lg font-medium text-chart-ink">
-                  Bi-weekly Records ({filteredRecords.length})
+            <div className="page-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-foam-deep">
+                <h3 className="font-display text-lg font-medium text-chart-ink">
+                  Records <span className="text-muted font-normal tabular-nums">({filteredRecords.length})</span>
                 </h3>
               </div>
 
               {error && (
                 <div className="p-6">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <h3 className="text-sm font-medium text-red-800">Error</h3>
-                        <div className="mt-2 text-sm text-red-700">
+                        <h3 className="text-sm font-medium text-signal">Error</h3>
+                        <div className="mt-2 text-sm text-signal">
                           <p>{error}</p>
                         </div>
                       </div>
@@ -404,122 +335,123 @@ export default function BiweeklyRecords() {
               )}
 
               {filteredRecords.length === 0 ? (
-                <div className="p-12 text-center">
-                  <FileText className="mx-auto h-12 w-12 text-muted" />
-                  <h3 className="mt-2 text-sm font-medium text-chart-ink">No biweekly records found</h3>
-                  <p className="mt-1 text-sm text-muted">
-                    Get started by creating your first bi-weekly record.
-                  </p>
-                  <div className="mt-6">
-                    <Link href="/biweekly-entry">
-                      <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Record
-                      </button>
-                    </Link>
-                  </div>
-                </div>
+                <EmptyState
+                  title="No bi-weekly records yet"
+                  description="Records appear here once you enter a bi-weekly sampling."
+                  action={
+                    <Button href="/biweekly-entry">
+                      <Plus className="w-4 h-4" aria-hidden />
+                      Create record
+                    </Button>
+                  }
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-foam-deep">
-                    <thead className="bg-foam-deep/40">
+                    <thead className="bg-foam">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                           Date
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                           Cage
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                          Batch Code
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
+                          Batch code
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                          Total Fish
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
+                          Total fish
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                          Total Weight
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
+                          Total weight
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                           Average ABW
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                           Samples
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-foam-deep">
+                    <tbody className="bg-surface divide-y divide-foam-deep">
                       {filteredRecords.map((record) => (
-                        <tr key={record.id} className="hover:bg-foam-deep/40">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                        <tr key={record.id} className="hover:bg-foam">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <Calendar className="h-4 w-4 text-muted mr-2" />
+                              
                               <span className="text-sm font-medium text-chart-ink">
                                 {format(new Date(record.date), 'MMM d, yyyy')}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <span className="text-sm font-medium text-chart-ink">
-                              {record.cages?.name || 'Unknown Cage'}
+                              {record.cages?.name || 'Unknown cage'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-mono text-lagoon-800 font-medium">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-sm font-data text-chart-ink">
                               {record.batch_code}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <Fish className="h-4 w-4 text-green-500 mr-2" />
-                              <span className="text-sm text-chart-ink">
+                              
+                              <span className="text-sm text-chart-ink tabular-nums">
                                 {record.total_fish_count.toLocaleString()}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <Scale className="h-4 w-4 text-blue-500 mr-2" />
-                              <span className="text-sm text-chart-ink">
+                              
+                              <span className="text-sm text-chart-ink tabular-nums">
                                 {record.total_weight.toFixed(2)}g
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <TrendingUp className="h-4 w-4 text-purple-500 mr-2" />
-                              <span className="text-sm font-medium text-chart-ink">
+                              
+                              <span className="text-sm font-medium text-chart-ink tabular-nums">
                                 {record.average_body_weight.toFixed(2)}g
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-foam-deep text-lagoon-950">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-foam-deep text-chart-ink tabular-nums">
                               {record.biweekly_sampling?.length || 0} samples
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex items-center gap-3">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center gap-1">
                               <button
+                                type="button"
                                 onClick={() => handleViewDetails(record)}
-                                className="text-lagoon-800 hover:text-lagoon-950 flex items-center"
+                                className={ICON_BTN + ' text-lake'}
                                 title="View"
+                                aria-label="View record"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleEditRecord(record)}
-                                className="text-lagoon-800 hover:text-lagoon-950"
+                                className={ICON_BTN + ' text-lake'}
                                 title="Edit"
+                                aria-label="Edit record"
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => setDeleteRecord(record)}
-                                className="text-signal hover:opacity-80"
+                                className={ICON_BTN + ' text-signal hover:bg-signal/10'}
                                 title="Delete"
+                                aria-label="Delete record"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -534,26 +466,28 @@ export default function BiweeklyRecords() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-foam-deep">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-chart-ink">
+                <div className="px-4 py-3 border-t border-foam-deep">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-muted tabular-nums">
                       Showing page {currentPage} of {totalPages} ({totalCount} total records)
                     </div>
-                    <div className="flex space-x-2">
-                      <button
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-2 border border-input-border rounded-lg text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-input-border rounded-lg text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -562,17 +496,19 @@ export default function BiweeklyRecords() {
 
         {/* Details Modal */}
         {showDetails && selectedRecord && (
-          <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
+          <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 modal-backdrop" onClick={() => setShowDetails(false)}></div>
-            <div className="relative bg-white rounded-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="px-6 py-4 border-b border-foam-deep">
+            <div className="relative bg-surface rounded-xl border border-foam-deep shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="px-4 py-3 border-b border-foam-deep">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-chart-ink">Record Details</h3>
+                  <h3 className="font-display text-lg font-medium text-chart-ink">Record details</h3>
                   <button
+                    type="button"
                     onClick={() => setShowDetails(false)}
-                    className="text-muted hover:text-muted"
+                    aria-label="Close"
+                    className={ICON_BTN + ' text-muted hover:text-chart-ink'}
                   >
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -582,37 +518,37 @@ export default function BiweeklyRecords() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <h4 className="text-sm font-medium text-muted mb-2">Record Information</h4>
+                    <h4 className="text-sm font-semibold text-chart-ink mb-2">Record</h4>
                     <dl className="space-y-2">
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Date</dt>
+                        <dt className="text-sm text-muted">Date</dt>
                         <dd className="text-sm text-chart-ink">{format(new Date(selectedRecord.date), 'MMMM d, yyyy')}</dd>
                       </div>
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Cage</dt>
+                        <dt className="text-sm text-muted">Cage</dt>
                         <dd className="text-sm text-chart-ink">{selectedRecord.cages?.name || 'Unknown'}</dd>
                       </div>
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Batch Code</dt>
-                        <dd className="text-sm font-mono text-lagoon-800">{selectedRecord.batch_code}</dd>
+                        <dt className="text-sm text-muted">Batch code</dt>
+                        <dd className="text-sm font-data text-chart-ink">{selectedRecord.batch_code}</dd>
                       </div>
                     </dl>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-muted mb-2">Summary</h4>
+                    <h4 className="text-sm font-semibold text-chart-ink mb-2">Summary</h4>
                     <dl className="space-y-2">
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Total Fish Count</dt>
-                        <dd className="text-sm text-chart-ink">{selectedRecord.total_fish_count.toLocaleString()}</dd>
+                        <dt className="text-sm text-muted">Total fish count</dt>
+                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_fish_count.toLocaleString()}</dd>
                       </div>
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Total Weight</dt>
-                        <dd className="text-sm text-chart-ink">{selectedRecord.total_weight.toFixed(2)}g</dd>
+                        <dt className="text-sm text-muted">Total weight</dt>
+                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_weight.toFixed(2)}g</dd>
                       </div>
                       <div>
-                        <dt className="text-sm font-medium text-chart-ink">Average ABW</dt>
-                        <dd className="text-sm text-chart-ink">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
+                        <dt className="text-sm text-muted">Average ABW</dt>
+                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
                       </div>
                     </dl>
                   </div>
@@ -620,24 +556,24 @@ export default function BiweeklyRecords() {
 
                 {selectedRecord.biweekly_sampling && selectedRecord.biweekly_sampling.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted mb-4">Sampling Details</h4>
+                    <h4 className="text-sm font-semibold text-chart-ink mb-3">Samples</h4>
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-foam-deep">
-                        <thead className="bg-foam-deep/40">
+                        <thead className="bg-foam">
                           <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample #</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish Count</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total Weight</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish count</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total weight</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-muted">Average ABW</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-foam-deep">
+                        <tbody className="bg-surface divide-y divide-foam-deep">
                           {selectedRecord.biweekly_sampling.map((sampling, index) => (
                             <tr key={sampling.id}>
-                              <td className="px-4 py-3 text-sm text-chart-ink">{sampling.sampling_number}</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink">{sampling.fish_count}</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink">{sampling.total_weight.toFixed(2)}g</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink">{sampling.average_body_weight.toFixed(2)}g</td>
+                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.sampling_number}</td>
+                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.fish_count}</td>
+                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.total_weight.toFixed(2)}g</td>
+                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.average_body_weight.toFixed(2)}g</td>
                             </tr>
                           ))}
                         </tbody>
@@ -656,38 +592,37 @@ export default function BiweeklyRecords() {
               className="absolute inset-0 modal-backdrop"
               onClick={() => !saving && setEditRecord(null)}
             />
-            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-chart-ink mb-4">
-                Edit biweekly record
+            <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
+              <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
+                Edit bi-weekly record
               </h3>
               <form onSubmit={handleSaveEdit} className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
-                  <input
+                <Field label="Date" htmlFor="biweekly-date-2">
+                  <Input
+                    id="biweekly-date-2"
                     type="date"
                     required
                     value={editForm.date}
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, date: e.target.value }))
                     }
-                    className="w-full border border-input-border rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Batch code</label>
-                  <input
+                </Field>
+                <Field label="Batch code" htmlFor="biweekly-batch-code">
+                  <Input
+                    id="biweekly-batch-code"
                     required
                     value={editForm.batch_code}
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, batch_code: e.target.value }))
                     }
-                    className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
+                    className="font-data"
                   />
-                </div>
+                </Field>
                 <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">ABW (g)</label>
-                    <input
+                  <Field label="ABW (g)" htmlFor="biweekly-abw-g">
+                    <Input
+                      id="biweekly-abw-g"
                       type="number"
                       step="any"
                       required
@@ -698,12 +633,12 @@ export default function BiweeklyRecords() {
                           average_body_weight: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
+                      className="tabular-nums"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Fish</label>
-                    <input
+                  </Field>
+                  <Field label="Fish" htmlFor="biweekly-fish">
+                    <Input
+                      id="biweekly-fish"
                       type="number"
                       required
                       value={editForm.total_fish_count}
@@ -713,12 +648,12 @@ export default function BiweeklyRecords() {
                           total_fish_count: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
+                      className="tabular-nums"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Weight</label>
-                    <input
+                  </Field>
+                  <Field label="Weight" htmlFor="biweekly-weight">
+                    <Input
+                      id="biweekly-weight"
                       type="number"
                       step="any"
                       required
@@ -729,26 +664,22 @@ export default function BiweeklyRecords() {
                           total_weight: e.target.value,
                         }))
                       }
-                      className="w-full border border-input-border rounded-lg px-3 py-2 text-sm font-data"
+                      className="tabular-nums"
                     />
-                  </div>
+                  </Field>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     disabled={saving}
                     onClick={() => setEditRecord(null)}
-                    className="px-4 py-2 border rounded-lg text-sm"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-4 py-2 bg-lagoon-950 text-white rounded-lg text-sm"
-                  >
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving…' : 'Save record'}
+                  </Button>
                 </div>
               </form>
             </div>
@@ -761,33 +692,33 @@ export default function BiweeklyRecords() {
               className="absolute inset-0 modal-backdrop"
               onClick={() => !deleting && setDeleteRecord(null)}
             />
-            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
               <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle className="w-6 h-6 text-signal" />
-                <h3 className="text-lg font-semibold">Delete record</h3>
+                <h3 className="font-display text-lg font-medium text-chart-ink">Delete record</h3>
               </div>
               <p className="text-sm text-muted mb-5">
                 Delete batch{' '}
-                <span className="font-semibold">{deleteRecord.batch_code}</span> from{' '}
+                <span className="font-semibold text-chart-ink">{deleteRecord.batch_code}</span> from{' '}
                 {deleteRecord.date}? This cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   disabled={deleting}
                   onClick={() => setDeleteRecord(null)}
-                  className="px-4 py-2 border rounded-lg text-sm"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="danger"
                   disabled={deleting}
                   onClick={handleConfirmDelete}
-                  className="px-4 py-2 bg-signal text-white rounded-lg text-sm"
                 >
-                  {deleting ? 'Deleting…' : 'Delete'}
-                </button>
+                  {deleting ? 'Deleting…' : 'Delete record'}
+                </Button>
               </div>
             </div>
           </div>

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
   Plus,
   Edit,
   Trash,
-  Save,
   AlertCircle,
   TrendingUp,
   Calendar,
@@ -25,7 +23,16 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader } from '../components/ui'
+import {
+  PageHeader,
+  Button,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  StatCard,
+  TabBar,
+} from '../components/ui'
 import FeedTypeField from '../components/FeedTypeField'
 import BagSizeField, {
   DEFAULT_BAG_SIZE_KG,
@@ -891,7 +898,7 @@ function FeedPurchases() {
     }
   }
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
+  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)', 'var(--kelp-soft)']
 
   return (
     <Layout title="Feed Purchases">
@@ -911,14 +918,10 @@ function FeedPurchases() {
           { label: 'Issue feed', href: '/feed-issue' },
         ]}
         actions={
-          <button
-            onClick={handleAddPurchase}
-            data-tour="feed-purchases-record"
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Record Purchase
-          </button>
+          <Button onClick={handleAddPurchase} data-tour="feed-purchases-record">
+            <Plus className="w-4 h-4" aria-hidden />
+            Record purchase
+          </Button>
         }
       />
 
@@ -927,36 +930,24 @@ function FeedPurchases() {
           <p className="text-sm text-muted">
             Spend &amp; usage window
           </p>
-          <div
-            className="inline-flex rounded-xl border border-foam-deep bg-surface p-1"
-            role="group"
-            aria-label="Time range"
-          >
-            {['7d', '30d', '90d', '1y'].map((range) => (
-              <button
-                key={range}
-                type="button"
-                onClick={() => setTimeRange(range)}
-                className={`min-h-9 cursor-pointer rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
-                  timeRange === range
-                    ? 'bg-lagoon-800 text-white shadow-sm'
-                    : 'text-muted hover:bg-foam-deep/50 hover:text-chart-ink'
-                }`}
-              >
-                {range}
-              </button>
-            ))}
+          <div role="group" aria-label="Time range">
+            <TabBar
+              tabs={['7d', '30d', '90d', '1y'].map((range) => ({
+                id: range,
+                label: range,
+              }))}
+              active={timeRange}
+              onChange={setTimeRange}
+            />
           </div>
         </div>
 
         {/* Low Stock Alerts */}
         {lowStockAlerts.length > 0 ? (
-          <div className="mb-6 overflow-hidden rounded-2xl border border-signal/30 bg-signal/10">
+          <div className="mb-6 overflow-hidden rounded-xl border border-signal/30 bg-signal/10">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-signal/20 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-signal/20">
-                  <AlertTriangle className="h-5 w-5 text-signal" aria-hidden />
-                </div>
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-signal" aria-hidden />
                 <div>
                   <h3 className="text-sm font-semibold text-chart-ink">
                     Low stock · {lowStockAlerts.length}{' '}
@@ -967,42 +958,39 @@ function FeedPurchases() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleAddPurchase}
-                className="min-h-10 cursor-pointer rounded-xl bg-lagoon-800 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-lagoon-950"
-              >
+              <Button onClick={handleAddPurchase}>
                 Record purchase
-              </button>
+              </Button>
             </div>
             <ul className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
               {lowStockAlerts.map((feed) => (
                 <li
                   key={feed.id || feed.name}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-foam-deep/80 bg-surface/80 px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-foam-deep bg-surface px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-chart-ink">
                       {feed.name}
                     </p>
-                    <p className="font-data text-xs text-muted">
+                    <p className="font-data text-xs text-muted tabular-nums">
                       {formatWeight(feed.current_stock)} · min{' '}
                       {formatWeight(feed.minimum_stock)}
                     </p>
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleOrderFeed(feed.id || feed.name)}
-                    className="shrink-0 cursor-pointer rounded-lg border border-lagoon-800/40 px-2.5 py-1.5 text-xs font-semibold text-chart-ink transition-colors hover:bg-foam-deep/50"
+                    className="shrink-0"
                   >
                     Order
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           </div>
         ) : (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-kelp/25 bg-kelp/10 px-5 py-3.5">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-kelp/25 bg-kelp/10 px-4 sm:px-5 py-3.5">
             <div className="flex items-center gap-3">
               <Package className="h-5 w-5 shrink-0 text-kelp" aria-hidden />
               <p className="text-sm text-chart-ink">
@@ -1014,12 +1002,9 @@ function FeedPurchases() {
                 </span>
               </p>
             </div>
-            <Link
-              href="/feed-types"
-              className="min-h-9 shrink-0 cursor-pointer rounded-lg border border-kelp/40 bg-surface px-3 py-1.5 text-xs font-semibold text-chart-ink transition-colors hover:bg-foam-deep/40"
-            >
+            <Button href="/feed-types" variant="secondary" size="sm" className="shrink-0">
               Open feed types
-            </Link>
+            </Button>
           </div>
         )}
 
@@ -1040,61 +1025,32 @@ function FeedPurchases() {
             {
               label: 'Total cost',
               value: formatCurrency(stats.totalCost),
-              icon: DollarSign,
-              tone: 'bg-foam-deep text-lagoon-800',
             },
             {
               label: 'Quantity bought',
               value: formatWeight(stats.totalQuantity),
-              icon: Package,
-              tone: 'bg-kelp/15 text-kelp',
             },
             {
-              label: 'Avg. cost / kg',
+              label: 'Average cost per kg',
               value: formatCurrency(stats.averageCostPerKg),
-              icon: BarChart2,
-              tone: 'bg-foam-deep text-lagoon-800',
             },
             {
               label: 'Stock on hand',
               value: formatCurrency(stats.stockValue),
-              icon: Database,
-              tone: 'bg-foam-deep text-lagoon-800',
             },
             {
               label: 'Bags on hand',
               value: `${formatNumber(stats.totalBags || 0, { decimals: 0 })} bags`,
-              icon: Layers,
-              tone: 'bg-kelp/15 text-kelp',
             },
             {
-              label: 'Avg. feed age',
+              label: 'Average feed age',
               value:
                 stats.avgFeedAgeDays != null
                   ? `${formatNumber(stats.avgFeedAgeDays, { decimals: 0 })} days`
                   : '—',
-              icon: Clock,
-              tone: 'bg-foam-deep text-lagoon-800',
             },
           ].map((card) => (
-            <div
-              key={card.label}
-              className="page-card flex items-center gap-3 p-4 transition-shadow duration-200 hover:shadow-md"
-            >
-              <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.tone}`}
-              >
-                <card.icon className="h-5 w-5" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted">
-                  {card.label}
-                </p>
-                <p className="truncate font-data text-lg font-semibold text-chart-ink sm:text-xl">
-                  {card.value}
-                </p>
-              </div>
-            </div>
+            <StatCard key={card.label} label={card.label} value={card.value} />
           ))}
         </div>
 
@@ -1112,7 +1068,7 @@ function FeedPurchases() {
                     <XAxis dataKey="month" tick={{ fill: 'var(--muted)', fontSize: 12 }} />
                     <YAxis tick={{ fill: 'var(--muted)', fontSize: 12 }} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="cost" stroke="var(--lagoon-800)" strokeWidth={2} />
+                    <Line type="monotone" dataKey="cost" stroke="var(--lake)" strokeWidth={2} />
                   </RechartsLineChart>
                 </ResponsiveContainer>
               </div>
@@ -1156,7 +1112,7 @@ function FeedPurchases() {
                 <span className="h-2 w-2 rounded-full bg-kelp" /> OK
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500" /> Near min
+                <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" /> Near min
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-signal" /> Below min
@@ -1184,7 +1140,7 @@ function FeedPurchases() {
                       stock.status === 'critical'
                         ? 'bg-signal'
                         : stock.status === 'low'
-                          ? 'bg-amber-500'
+                          ? 'bg-amber-500 dark:bg-amber-400'
                           : stock.status === 'empty'
                             ? 'bg-muted/40'
                             : 'bg-kelp'
@@ -1214,7 +1170,7 @@ function FeedPurchases() {
                                 : ''}
                             </span>
                           </div>
-                          <span className="shrink-0 font-data text-sm font-semibold text-chart-ink">
+                          <span className="shrink-0 font-data text-sm font-semibold text-chart-ink tabular-nums">
                             {formatWeight(stock.currentStock)}
                           </span>
                         </div>
@@ -1224,7 +1180,7 @@ function FeedPurchases() {
                             style={{ width: `${Math.max(stock.barPct, stock.currentStock > 0 ? 4 : 0)}%` }}
                           />
                         </div>
-                        <div className="mt-1 flex justify-between text-xs text-muted">
+                        <div className="mt-1 flex justify-between gap-3 text-xs text-muted tabular-nums">
                           <span>
                             {stock.minimumStock > 0
                               ? `Min ${formatWeight(stock.minimumStock)}${
@@ -1244,7 +1200,7 @@ function FeedPurchases() {
             </div>
 
             {/* Reorder Recommendations */}
-            <div className="bg-foam-deep/20 p-4 lg:col-span-2">
+            <div className="bg-foam p-4 lg:col-span-2">
               <h3 className="mb-3 text-xs font-semibold text-muted">
                 Reorder
               </h3>
@@ -1263,14 +1219,14 @@ function FeedPurchases() {
                   {inventoryMetrics.reorderRecommendations.map((rec) => (
                     <li
                       key={rec.id || rec.name}
-                      className="rounded-xl border border-amber-500/25 bg-surface p-3"
+                      className="rounded-lg border border-amber-500/30 bg-surface p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-chart-ink">
                             {rec.name}
                           </p>
-                          <p className="mt-0.5 text-xs text-muted">
+                          <p className="mt-0.5 text-xs text-muted tabular-nums">
                             {formatWeight(rec.currentStock)} on hand · min{' '}
                             {formatWeight(rec.minimumStock)}
                             {rec.protein != null ? ` · ${rec.protein}%` : ''}
@@ -1278,19 +1234,19 @@ function FeedPurchases() {
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-2">
-                        <p className="font-data text-xs text-muted">
+                        <p className="font-data text-xs text-muted tabular-nums">
                           Suggest {formatWeight(rec.recommendedOrder)}
                           {rec.recommendedBags != null
                             ? ` (~${rec.recommendedBags}×${rec.bagSizeKg}kg)`
                             : ''}
                         </p>
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
                           onClick={() => handleOrderFeed(rec.id || rec.name)}
-                          className="min-h-9 shrink-0 cursor-pointer rounded-lg bg-lagoon-800 px-3 text-xs font-semibold text-white transition-colors duration-200 hover:bg-lagoon-950"
+                          className="shrink-0"
                         >
                           Order
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))}
@@ -1301,20 +1257,20 @@ function FeedPurchases() {
         </div>
 
         {/* Usage Analytics Section */}
-        <div className="page-card p-6 mb-6">
-          <h2 className="text-lg font-medium text-chart-ink mb-4">Usage Analytics</h2>
+        <div className="page-card p-4 sm:p-6 mb-6">
+          <h2 className="text-lg font-medium text-chart-ink mb-4">Usage analytics</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cage Usage Chart */}
-            <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed Usage by Cage</h3>
+            <div className="bg-surface rounded-lg p-4">
+              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed usage by cage</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={usageAnalytics.cageUsage}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="cageName" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                    <XAxis dataKey="cageName" tick={{ fill: 'var(--muted)', fontSize: 12 }} />
+                    <YAxis tick={{ fill: 'var(--muted)', fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey="totalUsage" fill="#8884d8" />
+                    <Bar dataKey="totalUsage" fill="var(--lake)" />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
@@ -1372,13 +1328,13 @@ function FeedPurchases() {
                   supplierMetrics.reliability.map((metric, index) => (
                     <div
                       key={metric.supplier || index}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-foam-deep/70 bg-surface px-3 py-2.5"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-foam-deep bg-surface px-3 py-2.5"
                     >
                       <div className="min-w-0 flex-1">
                         <span className="text-sm font-medium text-chart-ink">
                           {metric.supplier}
                         </span>
-                        <p className="text-xs text-muted">
+                        <p className="text-xs text-muted tabular-nums">
                           {metric.totalOrders}{' '}
                           {metric.totalOrders === 1 ? 'order' : 'orders'}
                           {' · '}
@@ -1394,7 +1350,7 @@ function FeedPurchases() {
                             }}
                           />
                         </div>
-                        <span className="w-12 text-right font-data text-xs text-muted">
+                        <span className="w-12 text-right font-data text-xs text-muted tabular-nums">
                           {metric.reliability.toFixed(0)}%
                         </span>
                       </div>
@@ -1406,7 +1362,7 @@ function FeedPurchases() {
                   </p>
                 )}
                 {supplierMetrics.unassigned ? (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-chart-ink">
@@ -1439,11 +1395,11 @@ function FeedPurchases() {
                 {supplierMetrics.priceComparison && supplierMetrics.priceComparison.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsBarChart data={supplierMetrics.priceComparison}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="supplier" />
-                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
+                      <XAxis dataKey="supplier" tick={{ fill: 'var(--muted)', fontSize: 12 }} />
+                      <YAxis tick={{ fill: 'var(--muted)', fontSize: 12 }} />
                       <Tooltip />
-                      <Bar dataKey="averagePrice" fill="#8884d8" />
+                      <Bar dataKey="averagePrice" fill="var(--lake)" />
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -1458,13 +1414,13 @@ function FeedPurchases() {
 
         {/* Purchases Table */}
         <div className="page-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Recent Purchases</h2>
+          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Recent purchases</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
               <p className="mt-3 text-muted">Loading purchases...</p>
             </div>
           ) : purchases.length > 0 ? (
@@ -1473,7 +1429,7 @@ function FeedPurchases() {
                 <thead className="bg-foam-deep/40">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                      Feed Type
+                      Feed type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Quantity
@@ -1485,43 +1441,43 @@ function FeedPurchases() {
                       Price/kg
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                      Total Cost
+                      Total cost
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                      Purchase Date
+                      Purchase date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Supplier
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
-                      Batch Number
+                      Batch number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-foam-deep">
+                <tbody className="bg-surface divide-y divide-foam-deep">
                   {purchases.map((purchase) => (
                     <tr key={purchase.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
                         {purchase.feed_types?.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data tabular-nums">
                         {purchase.quantity} kg
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data tabular-nums">
                         {purchase.bags != null
                           ? `${purchase.bags} bags`
                           : '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
                         {formatCurrency(purchase.price_per_kg)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
                         {formatCurrency(purchase.quantity * purchase.price_per_kg)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
                         {new Date(purchase.purchase_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
@@ -1533,23 +1489,28 @@ function FeedPurchases() {
                         {purchase.batch_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        <div className="flex space-x-3">
-                          <button
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleEditPurchase(purchase)}
-                            className="text-lagoon-800 hover:text-lagoon-950"
-                            title="Edit Purchase"
+                            className="text-lake"
+                            title="Edit purchase"
+                            aria-label="Edit purchase"
                           >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                            <Edit className="w-4 h-4" aria-hidden />
+                          </Button>
 
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setDeleteConfirm(purchase)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete Purchase"
+                            className="text-signal"
+                            title="Delete purchase"
+                            aria-label="Delete purchase"
                           >
-                            <Trash className="w-4 h-4" />
-                          </button>
+                            <Trash className="w-4 h-4" aria-hidden />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -1577,7 +1538,7 @@ function FeedPurchases() {
         feedTypes={feedTypes}
         suppliers={suppliers}
         defaultFeedTypeId={purchaseDefaultFeedTypeId}
-        title="New Feed Purchase"
+        title="New feed purchase"
       />
 
       {/* Edit Purchase Modal */}
@@ -1587,19 +1548,19 @@ function FeedPurchases() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => setShowEditModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
             <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit Purchase
+              Edit purchase
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
                 {success}
               </div>
             )}
@@ -1636,81 +1597,68 @@ function FeedPurchases() {
               />
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Bags
-                  </label>
-                  <input
+                <Field label="Bags" htmlFor="fp-edit-bags">
+                  <Input
+                    id="fp-edit-bags"
                     type="number"
                     name="bags"
                     value={formData.bags}
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                     placeholder="e.g. 40"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Quantity (kg) <span className="text-red-500">*</span>
-                  </label>
-                  <input
+                </Field>
+                <Field label="Quantity (kg)" htmlFor="fp-edit-quantity" required>
+                  <Input
+                    id="fp-edit-quantity"
                     type="number"
                     name="quantity"
                     value={formData.quantity}
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                     required
                   />
                   <p className="mt-1 text-xs text-muted">
                     At {bagSizeKg} kg/bag — enter bags or kg; the other updates.
                   </p>
-                </div>
+                </Field>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Price per kg (₵) <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Price per kg (₵)" htmlFor="fp-edit-price-per-kg" required>
+                <Input
+                  id="fp-edit-price-per-kg"
                   type="number"
                   name="price_per_kg"
                   value={formData.price_per_kg}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Purchase Date <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Purchase date" htmlFor="fp-edit-purchase-date" required>
+                <Input
+                  id="fp-edit-purchase-date"
                   type="date"
                   name="purchase_date"
                   value={formData.purchase_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Supplier <span className="text-signal">*</span>
-                </label>
-                <select
+              <Field label="Supplier" htmlFor="fp-edit-supplier-id" required>
+                <Select
+                  id="fp-edit-supplier-id"
                   name="supplier_id"
                   value={formData.supplier_id || ''}
                   onChange={handleChange}
                   required
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 >
                   <option value="">Select supplier</option>
                   {suppliers.map((supplier) => (
@@ -1721,68 +1669,54 @@ function FeedPurchases() {
                       {supplier.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {suppliers.length === 0 && (
                   <p className="mt-1 text-xs text-muted">
                     No suppliers yet — add one under Feed suppliers.
                   </p>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Batch Number
-                </label>
-                <input
+              <Field label="Batch number" htmlFor="fp-edit-batch-number">
+                <Input
+                  id="fp-edit-batch-number"
                   type="text"
                   name="batch_number"
                   value={formData.batch_number}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Expiry Date
-                </label>
-                <input
+              <Field label="Expiry date" htmlFor="fp-edit-expiry-date">
+                <Input
+                  id="fp-edit-expiry-date"
                   type="date"
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Notes
-                </label>
-                <textarea
+              <Field label="Notes" htmlFor="fp-edit-notes">
+                <Textarea
+                  id="fp-edit-notes"
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
                   rows={3}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+              <div className="flex flex-wrap justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save Changes
-                </button>
+                </Button>
+                <Button type="submit">
+                  Save changes
+                </Button>
               </div>
             </form>
           </div>

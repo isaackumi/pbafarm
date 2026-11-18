@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import {
   Package,
@@ -8,7 +7,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard } from '../../components/ui'
+import { PageHeader, StatCard, Button } from '../../components/ui'
 import { useMoney } from '../../lib/money'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
@@ -136,7 +135,7 @@ function InventoryOverview() {
   )
 
   const lowStock = (inventoryItems || []).filter((item) => item.is_low_stock)
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   return (
     <Layout title="Inventory Overview">
@@ -159,48 +158,28 @@ function InventoryOverview() {
 
       {loading ? (
         <div className="py-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto" />
           <p className="mt-3 text-muted">Loading inventory…</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Link href="/stock-levels">
-              <button
-                type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
-              >
-                <Package className="w-5 h-5 mr-2" />
-                Stock levels
-              </button>
-            </Link>
-            <Link href="/feed-types">
-              <button
-                type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-kelp hover:opacity-90"
-              >
-                <Package className="w-5 h-5 mr-2" />
-                Feed types
-              </button>
-            </Link>
-            <Link href="/inventory/adjust">
-              <button
-                type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-950 hover:bg-lagoon-800"
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Adjust / transfer
-              </button>
-            </Link>
-            <Link href="/inventory/analytics">
-              <button
-                type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
-              >
-                <BarChart2 className="w-5 h-5 mr-2" />
-                Analytics
-              </button>
-            </Link>
+            <Button href="/stock-levels" variant="secondary" className="w-full">
+              <Package className="w-4 h-4" aria-hidden />
+              Stock levels
+            </Button>
+            <Button href="/feed-types" variant="secondary" className="w-full">
+              <Package className="w-4 h-4" aria-hidden />
+              Feed types
+            </Button>
+            <Button href="/inventory/adjust" variant="secondary" className="w-full">
+              <ShoppingCart className="w-4 h-4" aria-hidden />
+              Adjust / transfer
+            </Button>
+            <Button href="/inventory/analytics" variant="secondary" className="w-full">
+              <BarChart2 className="w-4 h-4" aria-hidden />
+              Analytics
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -224,9 +203,9 @@ function InventoryOverview() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="page-card p-6">
+            <div className="page-card p-4 sm:p-6">
               <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Transaction Trend
+                Transaction trend
               </h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -240,24 +219,24 @@ function InventoryOverview() {
                       type="monotone"
                       dataKey="in"
                       stackId="1"
-                      stroke="#8884d8"
-                      fill="#8884d8"
+                      stroke="var(--lake)"
+                      fill="var(--lake)"
                     />
                     <Area
                       type="monotone"
                       dataKey="out"
                       stackId="1"
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
+                      stroke="var(--kelp)"
+                      fill="var(--kelp)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="page-card p-6">
+            <div className="page-card p-4 sm:p-6">
               <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Category Distribution
+                Category distribution
               </h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -289,8 +268,8 @@ function InventoryOverview() {
               </div>
             </div>
 
-            <div className="page-card p-6">
-              <h3 className="text-lg font-medium text-chart-ink mb-4">Stock Trend</h3>
+            <div className="page-card p-4 sm:p-6">
+              <h3 className="text-lg font-medium text-chart-ink mb-4">Stock trend</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData}>
@@ -302,7 +281,7 @@ function InventoryOverview() {
                     <Line
                       type="monotone"
                       dataKey="value"
-                      stroke="#8884d8"
+                      stroke="var(--lake)"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -310,9 +289,9 @@ function InventoryOverview() {
               </div>
             </div>
 
-            <div className="page-card p-6">
+            <div className="page-card p-4 sm:p-6">
               <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Low Stock Alerts
+                Low stock alerts
               </h3>
               <div className="space-y-4">
                 {lowStock.length === 0 ? (
@@ -327,7 +306,7 @@ function InventoryOverview() {
                         <p className="font-medium text-chart-ink">
                           {item.feed_type_name}
                         </p>
-                        <p className="text-sm text-muted">
+                        <p className="text-sm text-muted tabular-nums">
                           Current: {item.current_stock} kg
                           {item.current_stock_bags != null
                             ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
@@ -335,14 +314,14 @@ function InventoryOverview() {
                           | Minimum: {item.minimum_stock} kg
                         </p>
                       </div>
-                      <Link href="/inventory-transactions">
-                        <button
-                          type="button"
-                          className="text-sm font-semibold text-signal hover:opacity-80 shrink-0"
-                        >
-                          Order Now
-                        </button>
-                      </Link>
+                      <Button
+                        href="/inventory-transactions"
+                        variant="ghost"
+                        size="sm"
+                        className="text-signal shrink-0"
+                      >
+                        Order now
+                      </Button>
                     </div>
                   ))
                 )}
@@ -351,18 +330,18 @@ function InventoryOverview() {
           </div>
 
           <div className="page-card overflow-hidden">
-            <div className="px-6 py-4 border-b border-foam-deep">
-              <h3 className="text-lg font-medium text-chart-ink">Feed Types</h3>
+            <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+              <h3 className="text-lg font-medium text-chart-ink">Feed types</h3>
             </div>
             <div className="divide-y divide-foam-deep">
               {(inventoryItems || []).slice(0, 5).map((item) => (
-                <div key={item.feed_type_id} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
+                <div key={item.feed_type_id} className="px-4 sm:px-6 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium text-chart-ink">
                         {item.feed_type_name}
                       </p>
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted tabular-nums">
                         Stock: {item.current_stock} kg
                         {item.current_stock_bags != null
                           ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
@@ -370,7 +349,7 @@ function InventoryOverview() {
                         | Price: {money(item.price_per_kg)}/kg
                       </p>
                     </div>
-                    <div className="text-sm text-muted">
+                    <div className="text-sm text-muted tabular-nums shrink-0">
                       Value: {money(item.stock_value || 0)}
                     </div>
                   </div>

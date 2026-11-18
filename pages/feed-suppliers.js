@@ -5,7 +5,6 @@ import {
   Plus,
   Edit,
   Trash,
-  Save,
   AlertCircle,
   Mail,
   Phone,
@@ -14,7 +13,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader } from '../components/ui'
+import { PageHeader, Button, Field, Input } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { supplierService } from '../lib/supplierService'
@@ -189,35 +188,32 @@ function FeedSuppliers() {
           { label: 'Stock levels', href: '/stock-levels' },
         ]}
         actions={
-          <button
-            onClick={handleAddSupplier}
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Supplier
-          </button>
+          <Button onClick={handleAddSupplier}>
+            <Plus className="w-4 h-4" aria-hidden />
+            Add supplier
+          </Button>
         }
       />
 
         {/* Suppliers Grid */}
         <div className="page-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Suppliers Directory</h2>
+          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Suppliers directory</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
               <p className="mt-3 text-muted">Loading suppliers...</p>
             </div>
           ) : suppliers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
               {suppliers.map((supplier) => (
                 <div
                   key={supplier.id}
-                  className="border border-foam-deep rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
+                  className="border border-foam-deep rounded-lg shadow-sm hover:border-lake transition-colors overflow-hidden"
                 >
-                  <div className="px-4 py-5 sm:px-6 bg-foam-deep/40 border-b border-foam-deep">
+                  <div className="px-4 py-5 sm:px-6 bg-foam border-b border-foam-deep">
                     <h3 className="text-lg font-medium text-chart-ink truncate">
                       {supplier.name}
                     </h3>
@@ -226,12 +222,12 @@ function FeedSuppliers() {
                     <div className="space-y-2">
                       {supplier.website && (
                         <div className="flex items-start">
-                          <Globe className="h-5 w-5 text-muted mr-2 mt-0.5" />
+                          <Globe className="h-4 w-4 text-muted mr-2 mt-0.5 shrink-0" aria-hidden />
                           <a
                             href={supplier.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-lagoon-800 hover:text-lagoon-800"
+                            className="text-sm text-lake hover:underline break-all"
                           >
                             {supplier.website.replace(/^https?:\/\//, '')}
                           </a>
@@ -239,23 +235,28 @@ function FeedSuppliers() {
                       )}
                     </div>
 
-                    <div className="mt-5 flex space-x-3 justify-end border-t border-foam-deep pt-3">
-                      <button
+                    <div className="mt-5 flex gap-1 justify-end border-t border-foam-deep pt-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEditSupplier(supplier)}
-                        className="text-lagoon-800 hover:text-lagoon-950"
-                        title="Edit Supplier"
+                        className="text-lake"
+                        title="Edit supplier"
+                        aria-label="Edit supplier"
                       >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                        <Edit className="w-4 h-4" aria-hidden />
+                      </Button>
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setDeleteConfirm(supplier)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete Supplier"
+                        className="text-signal"
+                        title="Delete supplier"
+                        aria-label="Delete supplier"
                       >
-                        <Trash className="w-4 h-4" />
-                      </button>
+                        <Trash className="w-4 h-4" aria-hidden />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -278,67 +279,56 @@ function FeedSuppliers() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => setShowAddModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 p-4 sm:p-6" role="dialog" aria-modal="true">
             <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Add New Supplier
+              Add supplier
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
                 {success}
               </div>
             )}
 
             <form onSubmit={handleSubmitAdd} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Company name" htmlFor="supplier-name" required>
+                <Input
+                  id="supplier-name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Website
-                </label>
-                <input
+              <Field label="Website" htmlFor="supplier-website">
+                <Input
+                  id="supplier-website"
                   type="url"
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
-              </div>
+              </Field>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+              <div className="flex flex-wrap justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save
-                </button>
+                </Button>
+                <Button type="submit">
+                  Save supplier
+                </Button>
               </div>
             </form>
           </div>
@@ -352,67 +342,56 @@ function FeedSuppliers() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => setShowEditModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 p-4 sm:p-6" role="dialog" aria-modal="true">
             <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit Supplier
+              Edit supplier
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
                 {success}
               </div>
             )}
 
             <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Company name" htmlFor="supplier-name" required>
+                <Input
+                  id="supplier-name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Website
-                </label>
-                <input
+              <Field label="Website" htmlFor="supplier-website">
+                <Input
+                  id="supplier-website"
                   type="url"
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
-              </div>
+              </Field>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+              <div className="flex flex-wrap justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save Changes
-                </button>
+                </Button>
+                <Button type="submit">
+                  Save changes
+                </Button>
               </div>
             </form>
           </div>

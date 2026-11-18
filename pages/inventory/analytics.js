@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard } from '../../components/ui'
+import { PageHeader, StatCard, Button, Select } from '../../components/ui'
 import { useMoney } from '../../lib/money'
 import { useToast } from '../../components/Toast'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
@@ -167,7 +167,7 @@ function InventoryAnalytics() {
     }))
   }
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   return (
     <Layout title="Inventory Analytics">
@@ -186,37 +186,35 @@ function InventoryAnalytics() {
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              aria-label="Time range"
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="rounded-xl border border-zinc-200 shadow-sm focus:border-lagoon-800 focus:ring-lagoon-800 text-sm min-h-10 px-3"
+              className="w-auto"
             >
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="90d">Last 90 Days</option>
-              <option value="1y">Last Year</option>
-            </select>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="1y">Last year</option>
+            </Select>
 
-            <button
-              onClick={fetchData}
-              className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <Button variant="secondary" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4" aria-hidden />
               Refresh
-            </button>
+            </Button>
           </div>
         }
       />
 
         {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+          <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
             {error}
           </div>
         )}
 
         {/* Transaction Analysis */}
-        <div className="page-card p-6 mb-6">
-          <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction Analysis</h3>
+        <div className="page-card p-4 sm:p-6 mb-6">
+          <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction analysis</h3>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={transactionData}>
@@ -229,15 +227,15 @@ function InventoryAnalytics() {
                   type="monotone"
                   dataKey="in"
                   stackId="1"
-                  stroke="#8884d8"
-                  fill="#8884d8"
+                  stroke="var(--lake)"
+                  fill="var(--lake)"
                 />
                 <Area
                   type="monotone"
                   dataKey="out"
                   stackId="1"
-                  stroke="#82ca9d"
-                  fill="#82ca9d"
+                  stroke="var(--kelp)"
+                  fill="var(--kelp)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -246,8 +244,8 @@ function InventoryAnalytics() {
 
         {/* Category Analysis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Category Distribution</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Category distribution</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -275,8 +273,8 @@ function InventoryAnalytics() {
             </div>
           </div>
 
-          <div className="page-card p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock Trend</h3>
+          <div className="page-card p-4 sm:p-6">
+            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
@@ -288,7 +286,7 @@ function InventoryAnalytics() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#8884d8"
+                    stroke="var(--lake)"
                     strokeWidth={2}
                   />
                 </LineChart>

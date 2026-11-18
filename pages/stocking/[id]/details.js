@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
-import { PageHeader, Button } from '../../../components/ui'
+import { PageHeader, Button, Textarea } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../components/Toast'
 import { api } from '../../../convex/_generated/api'
@@ -12,7 +12,7 @@ import { api } from '../../../convex/_generated/api'
 function statusClass(status) {
   if (status === 'approved') return 'bg-kelp/15 text-kelp'
   if (status === 'rejected') return 'bg-signal/15 text-signal'
-  if (status === 'pending_approval') return 'bg-amber-100 text-amber-900'
+  if (status === 'pending_approval') return 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
   return 'bg-foam-deep text-chart-ink'
 }
 
@@ -135,7 +135,7 @@ function StockingDetails() {
 
         <div className="page-card p-6 space-y-5">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-xl font-semibold text-chart-ink">
+            <h2 className="font-display text-xl font-medium text-chart-ink">
               {stocking.batch_number}
             </h2>
             <span
@@ -260,10 +260,10 @@ function StockingDetails() {
             className="absolute inset-0 modal-backdrop"
             onClick={() => !processing && setRejectOpen(false)}
           />
-          <div className="relative bg-white rounded-2xl border border-foam-deep p-6 w-full max-w-md space-y-4">
+          <div className="relative bg-surface rounded-xl border border-foam-deep shadow-xl p-6 w-full max-w-md space-y-4">
             <h3 className="text-lg font-semibold text-chart-ink">Reject stocking</h3>
-            <textarea
-              className="w-full border border-input-border rounded-xl px-3 py-2 text-sm min-h-24"
+            <Textarea
+              aria-label="Reason for rejection"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reason for rejection"
@@ -276,7 +276,7 @@ function StockingDetails() {
               >
                 Cancel
               </Button>
-              <Button onClick={onReject} disabled={processing}>
+              <Button variant="danger" onClick={onReject} disabled={processing}>
                 Confirm reject
               </Button>
             </div>

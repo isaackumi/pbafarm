@@ -54,7 +54,7 @@ function CageSettings() {
         ) : cages.length === 0 ? (
           <div className="p-8 text-center text-muted">
             No cages yet.{' '}
-            <Link href="/create-cage" className="text-lagoon-800 hover:underline">
+            <Link href="/create-cage" className="text-lake hover:underline">
               Create one
             </Link>
           </div>

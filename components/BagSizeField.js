@@ -1,3 +1,5 @@
+import { Input } from './ui'
+
 const PRESETS = [10, 20, 25]
 
 /** Default bag size when none is set on the feed type or form. */
@@ -20,7 +22,7 @@ export default function BagSizeField({
     <div className={className}>
       <label
         htmlFor={id}
-        className="mb-1 block text-sm font-medium text-chart-ink"
+        className="mb-1.5 block text-sm font-semibold text-chart-ink"
       >
         Bag size (kg)
       </label>
@@ -34,17 +36,18 @@ export default function BagSizeField({
               onClick={() =>
                 onChange({ target: { name: 'bag_size_kg', value: String(preset) } })
               }
-              className={`min-h-9 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              aria-pressed={active}
+              className={`min-h-11 rounded-lg border px-3 text-sm font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lake ${
                 active
-                  ? 'border-lagoon-800 bg-lagoon-800 text-white'
-                  : 'border-input-border bg-surface text-chart-ink hover:bg-foam-deep/40'
+                  ? 'border-lake bg-lake-soft text-lake'
+                  : 'border-input-border bg-surface text-chart-ink hover:bg-foam'
               }`}
             >
               {preset} kg
             </button>
           )
         })}
-        <input
+        <Input
           id={id}
           type="number"
           name="bag_size_kg"
@@ -53,7 +56,7 @@ export default function BagSizeField({
           step="0.1"
           min="0.1"
           placeholder="Custom"
-          className="block w-24 min-h-9 rounded-lg border border-input-border px-3 py-1.5 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+          className="!w-28 font-data tabular-nums"
         />
       </div>
       <p className="mt-1 text-xs text-muted">
