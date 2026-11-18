@@ -1,3 +1,4 @@
+import { insertAuditLog } from './auditChain'
 import { requireUser } from './authz'
 import { apiActorOf } from './apiActor'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
@@ -169,7 +170,7 @@ export async function logAudit(
   // carried on the ctx (convex/lib/apiActor.ts) and recorded with its key.
   const actor = apiActorOf(ctx)
   const user = actor ? actor.user : await requireUser(ctx)
-  await ctx.db.insert('auditLogs', {
+  await insertAuditLog(ctx, {
     ...(actor ? { apiKeyId: actor.apiKeyId } : {}),
     userId: user._id,
     actionType: args.actionType,

@@ -6,6 +6,7 @@
  * - inviteInfo / acceptInvite / declineInvite / listInvites / revokeInvite:
  *   single-use, expiring invite links issued by users.invite.
  */
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { userError } from './lib/errors'
 import { mutation, query } from './_generated/server'
@@ -82,7 +83,7 @@ export const switchActive = mutation({
     }
     const previous = me.companyId
     await activateMembership(ctx, me, membership)
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: me._id,
       companyId,
       actionType: 'switch_organization',
@@ -449,7 +450,7 @@ export const acceptInvite = mutation({
       const membership = (await ctx.db.get(membershipId))!
       await activateMembership(ctx, me, membership)
     }
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: me._id,
       companyId: invite.companyId,
       actionType: 'accept_invite',
@@ -471,7 +472,7 @@ export const declineInvite = mutation({
     }
     if (inviteState(invite, Date.now()) !== 'pending') return { declined: false }
     await ctx.db.patch(invite._id, { status: 'declined', decidedAt: Date.now() })
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: me._id,
       companyId: invite.companyId,
       actionType: 'decline_invite',

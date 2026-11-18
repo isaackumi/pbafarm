@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { query, mutation, internalMutation } from './_generated/server'
 import { scopedRows } from './lib/scope'
@@ -393,7 +394,7 @@ export const backfillLocations = internalMutation({
     }
 
     // Run from the CLI, so there is no signed-in actor to record.
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       actionType: 'backfill',
       tableName: 'farmLocations',
       newValues: { createdLocations, patched, usersUpdated },

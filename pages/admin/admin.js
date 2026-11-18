@@ -6,6 +6,7 @@ import Layout from '../../components/Layout'
 import { PageHeader } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
+import DeletionRequestsPanel from '../../components/DeletionRequestsPanel'
 import { useAuth } from '../../contexts/AuthContext'
 import companyService from '../../lib/companyService'
 import { useToast } from '../../components/Toast'
@@ -157,6 +158,8 @@ function CompaniesList() {
           emptyMessage="No companies found."
         />
       </div>
+
+      <DeletionRequestsPanel />
 
       <ConfirmDeleteModal
         open={showDeleteModal}

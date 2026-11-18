@@ -1,6 +1,9 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
-import { query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
+import type { MutationCtx } from './_generated/server'
+import { GENESIS_HASH, chainHead, checkLink } from './lib/auditChain'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { listForCompany } from './lib/tenancy'
@@ -274,6 +277,163 @@ export const getSummary = query({
       action_types: actionTypeCounts,
       table_names: tableNameCounts,
       top_users: topUsers,
+    }
+  },
+})
+
+// ─── Hash chain verification (TRACE-007) ───────────────────────────────────
+
+/** Rows checked per verification transaction. */
+const VERIFY_BATCH = 300
+
+async function startVerification(
+  ctx: MutationCtx,
+  companyId: Id<'companies'>,
+  requestedBy?: Id<'users'>,
+) {
+  const latest = await ctx.db
+    .query('auditChainVerifications')
+    .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
+    .order('desc')
+    .first()
+  // One run at a time; a run older than an hour is considered stuck.
+  if (latest && latest.status === 'running' && Date.now() - latest.startedAt < 3_600_000) {
+    return latest._id
+  }
+  const id = await ctx.db.insert('auditChainVerifications', {
+    companyId,
+    status: 'running',
+    checkedCount: 0,
+    lastSeq: 0,
+    lastHash: GENESIS_HASH,
+    requestedBy,
+    startedAt: Date.now(),
+  })
+  await ctx.scheduler.runAfter(0, internal.audit.verifyBatch, { verificationId: id })
+  return id
+}
+
+/**
+ * Walk one batch of a company's chain in seq order, then reschedule itself
+ * until the head is reached. Edited rows, missing rows (seq gaps) and rows
+ * removed from the end (head ahead of the last row) all report "broken".
+ */
+export const verifyBatch = internalMutation({
+  args: { verificationId: v.id('auditChainVerifications') },
+  handler: async (ctx, { verificationId }) => {
+    const run = await ctx.db.get(verificationId)
+    if (!run || run.status !== 'running') return null
+    const rows = await ctx.db
+      .query('auditLogs')
+      .withIndex('by_companyId_and_seq', (q) =>
+        q.eq('companyId', run.companyId).gt('seq', run.lastSeq),
+      )
+      .take(VERIFY_BATCH)
+    let expectedSeq = run.lastSeq + 1
+    let prevHash = run.lastHash ?? GENESIS_HASH
+    let checked = run.checkedCount
+    for (const row of rows) {
+      const link = await checkLink(row, expectedSeq, prevHash)
+      if (!link.ok) {
+        await ctx.db.patch(verificationId, {
+          status: 'broken',
+          brokenAtSeq: expectedSeq,
+          reason: link.reason,
+          checkedCount: checked,
+          finishedAt: Date.now(),
+        })
+        return null
+      }
+      checked += 1
+      prevHash = link.hash
+      expectedSeq += 1
+    }
+    const lastSeq = expectedSeq - 1
+    if (rows.length === VERIFY_BATCH) {
+      await ctx.db.patch(verificationId, { checkedCount: checked, lastSeq, lastHash: prevHash })
+      await ctx.scheduler.runAfter(0, internal.audit.verifyBatch, { verificationId })
+      return null
+    }
+    const head = await chainHead(ctx, run.companyId)
+    const headSeq = head?.seq ?? 0
+    const intact = headSeq === lastSeq && (headSeq === 0 || head?.hash === prevHash)
+    await ctx.db.patch(verificationId, {
+      status: intact ? 'ok' : 'broken',
+      checkedCount: checked,
+      lastSeq,
+      lastHash: prevHash,
+      ...(intact
+        ? {}
+        : {
+            brokenAtSeq: lastSeq + 1,
+            reason: `the chain head is at entry ${headSeq} but entries stop at ${lastSeq} (entries removed)`,
+          }),
+      finishedAt: Date.now(),
+    })
+    return null
+  },
+})
+
+/** Daily: verify every company's chain (paged over chain heads). */
+export const verifyAll = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { cursor }) => {
+    const page = await ctx.db
+      .query('auditChainHeads')
+      .paginate({ numItems: 50, cursor: cursor ?? null })
+    for (const head of page.page) await startVerification(ctx, head.companyId)
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.audit.verifyAll, { cursor: page.continueCursor })
+    }
+    return null
+  },
+})
+
+/** Start a verification of the caller's organization chain now. */
+export const verifyChain = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { user, companyId } = await requireMember(ctx, { permission: 'org.audit.view' })
+    if (!companyId) throw new Error('No organization')
+    return await startVerification(ctx, companyId, user._id)
+  },
+})
+
+/** Chain length, the latest verification, and whether pre-chain rows exist. */
+export const chainStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const { companyId } = await requireMember(ctx, { permission: 'org.audit.view' })
+    if (!companyId) return null
+    const head = await ctx.db
+      .query('auditChainHeads')
+      .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
+      .unique()
+    const latest = await ctx.db
+      .query('auditChainVerifications')
+      .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
+      .order('desc')
+      .first()
+    // Rows written before TRACE-007 have no seq.
+    const unchained = await ctx.db
+      .query('auditLogs')
+      .withIndex('by_companyId_and_seq', (q) => q.eq('companyId', companyId).eq('seq', undefined))
+      .take(1001)
+    return {
+      chainLength: head?.seq ?? 0,
+      headHash: head?.hash ?? null,
+      unchainedCount: Math.min(unchained.length, 1000),
+      unchainedMore: unchained.length > 1000,
+      latest: latest
+        ? {
+            status: latest.status,
+            checkedCount: latest.checkedCount,
+            brokenAtSeq: latest.brokenAtSeq ?? null,
+            reason: latest.reason ?? null,
+            startedAt: latest.startedAt,
+            finishedAt: latest.finishedAt ?? null,
+          }
+        : null,
     }
   },
 })

@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { internalAction, internalMutation } from './_generated/server'
 import type { ActionCtx, MutationCtx } from './_generated/server'
@@ -170,7 +171,7 @@ export const verifyLoginCode = internalMutation({
       })
     }
     await ctx.db.patch(user._id, { phoneVerificationTime: now })
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: user._id,
       companyId: row.companyId,
       actionType: 'phone_sign_in',

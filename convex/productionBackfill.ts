@@ -24,6 +24,7 @@
  * Writes use the engine in shadow mode with the legacy cache: they never
  * change `cages.currentCount`.
  */
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { internalMutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
@@ -430,7 +431,7 @@ export const m7StockEvents = internalMutation({
       }
     }
     if (!dryRun && cages.length) {
-      await ctx.db.insert('auditLogs', {
+      await insertAuditLog(ctx, {
         actionType: 'migration',
         tableName: 'stockEvents',
         newValues: { migration: 'M7', phase, cages: cages.length },

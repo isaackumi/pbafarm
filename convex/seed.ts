@@ -1,3 +1,4 @@
+import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { internalMutation } from './_generated/server'
 
@@ -187,7 +188,7 @@ export const seedDemo = internalMutation({
     })
 
     // Run from the CLI, so there is no signed-in actor to record.
-    await ctx.db.insert('auditLogs', {
+    await insertAuditLog(ctx, {
       userId: user._id,
       companyId,
       actionType: 'seed_demo',
