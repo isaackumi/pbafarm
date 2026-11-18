@@ -53,6 +53,7 @@ import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
 import { usePermissions } from '../hooks/usePermission'
+import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 import { navKey } from '../lib/i18n'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -202,6 +203,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   })
   const { showToast } = useToast()
   const t = useT()
+  const term = useTerm()
 
   const role = user?.role || 'user'
   const isSuperAdmin = role === 'super_admin'
@@ -439,7 +441,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                             className={active ? 'text-lagoon-950' : 'text-zinc-400'}
                             aria-hidden
                           />
-                          <span className="truncate">{t.or(navKey(item.path), item.title)}</span>
+                          <span className="truncate">{term.text(t.or(navKey(item.path), item.title))}</span>
                         </Link>
                       </li>
                     )

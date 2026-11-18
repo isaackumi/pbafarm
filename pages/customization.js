@@ -4,10 +4,14 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { EmptyState, PageHeader, TabBar } from '../components/ui'
 import FieldsBuilder from '../components/customization/FieldsBuilder'
+import TerminologyEditor from '../components/customization/TerminologyEditor'
 import { usePermission } from '../hooks/usePermission'
 
 /** Settings → Customization (D-007): one place for the organization's configuration. */
-const TABS = [{ id: 'fields', label: 'Fields' }]
+const TABS = [
+  { id: 'fields', label: 'Fields' },
+  { id: 'words', label: 'Words' },
+]
 
 export default function CustomizationPage() {
   return (
@@ -49,6 +53,7 @@ function Customization() {
         <>
           {TABS.length > 1 && <TabBar tabs={TABS} active={tab} onChange={choose} />}
           {tab === 'fields' && <FieldsBuilder />}
+          {tab === 'words' && <TerminologyEditor />}
         </>
       )}
     </div>

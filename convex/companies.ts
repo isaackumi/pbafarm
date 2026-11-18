@@ -20,6 +20,7 @@ import {
   validateSettingsForPublish,
   DEFAULT_SETTINGS,
 } from './lib/farmRules'
+import { terminologyOf } from './lib/terminology'
 import { can, memberContext, requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
 
 /** A file must be claimed as a logo within this long of its upload. */
@@ -102,6 +103,7 @@ function toClient(c: any, logo_url: string | null = null) {
   const settings = mergeSettings(c.settings)
   return {
     profile: orgProfile(c),
+    terminology: terminologyOf(c),
     id: c._id,
     _id: c._id,
     name: c.name,

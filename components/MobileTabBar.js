@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { House, ClipboardList, LayoutGrid, Package, Menu } from 'lucide-react'
 import { usePermissions } from '../hooks/usePermission'
+import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 
 const TABS = [
@@ -17,7 +18,8 @@ export default function MobileTabBar({ onOpenMenu }) {
   // Only the places this member may use (PERM-003); the menu button stays.
   const { can } = usePermissions()
   const t = useT()
-  const tabs = TABS.filter((t) => can(t.permission))
+  const term = useTerm()
+  const tabs = TABS.filter((tab) => can(tab.permission))
   const isActive = (href) =>
     router.pathname === href || router.pathname.startsWith(`${href}/`)
 
@@ -48,7 +50,7 @@ export default function MobileTabBar({ onOpenMenu }) {
                 >
                   <Icon size={18} aria-hidden />
                 </span>
-                {t.or(labelKey, label)}
+                {term.text(t.or(labelKey, label))}
               </Link>
             </li>
           )
