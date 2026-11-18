@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
@@ -6,6 +7,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { scopedRowsInRange, tenantScope } from './lib/scope'
 import {
   mergeSettings,
   dailyMortalityPct,
@@ -171,6 +173,8 @@ export const list = query({
     const user = await requireUser(ctx)
     const limit = Math.min(Math.max(args.limit ?? 5000, 1), 5000)
     const { dateFrom, dateTo } = args
+    // The company's own window (by_company_and_date): another tenant's rows
+    // can no longer push this company's records out of the `limit`.
     let rows = args.cageId
       ? await ctx.db
           .query('dailyRecords')
@@ -183,16 +187,12 @@ export const list = query({
           })
           .order('desc')
           .take(limit)
-      : await ctx.db
-          .query('dailyRecords')
-          .withIndex('by_date', (q) => {
-            if (dateFrom && dateTo) return q.gte('date', dateFrom).lte('date', dateTo)
-            if (dateFrom) return q.gte('date', dateFrom)
-            if (dateTo) return q.lte('date', dateTo)
-            return q
-          })
-          .order('desc')
-          .take(limit)
+      : await scopedRowsInRange(ctx, user, 'dailyRecords', {
+          from: dateFrom,
+          to: dateTo,
+          locationId: args.locationId,
+          limit,
+        })
 
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
@@ -200,17 +200,87 @@ export const list = query({
 })
 
 /**
+ * Paginated daily records, newest date first (PLAT-001). Same filters as
+ * `list`; use with `usePaginatedQuery`. `cageId` reads `by_cage_date`,
+ * otherwise `by_company_and_date` (or `by_company_location` for one site).
+ */
+export const listPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    cageId: v.optional(v.id('cages')),
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const { dateFrom, dateTo } = args
+    const scope = tenantScope(user)
+    const empty = { page: [], isDone: true, continueCursor: '' }
+    if (scope.kind === 'none') return empty
+
+    let result
+    if (args.cageId) {
+      const cage = await ctx.db.get(args.cageId)
+      if (!cage || !(await listForCompany(user, [cage])).length) return empty
+      result = await ctx.db
+        .query('dailyRecords')
+        .withIndex('by_cage_date', (q) => {
+          const c = q.eq('cageId', args.cageId!)
+          if (dateFrom && dateTo) return c.gte('date', dateFrom).lte('date', dateTo)
+          if (dateFrom) return c.gte('date', dateFrom)
+          if (dateTo) return c.lte('date', dateTo)
+          return c
+        })
+        .order('desc')
+        .paginate(args.paginationOpts)
+    } else if (scope.kind === 'company') {
+      result = await ctx.db
+        .query('dailyRecords')
+        .withIndex('by_company_and_date', (q) => {
+          const c = q.eq('companyId', scope.companyId)
+          if (dateFrom && dateTo) return c.gte('date', dateFrom).lte('date', dateTo)
+          if (dateFrom) return c.gte('date', dateFrom)
+          if (dateTo) return c.lte('date', dateTo)
+          return c
+        })
+        .order('desc')
+        .paginate(args.paginationOpts)
+    } else {
+      // Company-less super_admin: platform view through by_date.
+      result = await ctx.db
+        .query('dailyRecords')
+        .withIndex('by_date', (q) => {
+          if (dateFrom && dateTo) return q.gte('date', dateFrom).lte('date', dateTo)
+          if (dateFrom) return q.gte('date', dateFrom)
+          if (dateTo) return q.lte('date', dateTo)
+          return q
+        })
+        .order('desc')
+        .paginate(args.paginationOpts)
+    }
+    // A site filter on a page keeps the cursor of the company read; pages can
+    // come back short, which load-more handles.
+    const rows = args.locationId
+      ? result.page.filter((r) => r.locationId === args.locationId)
+      : result.page
+    return { ...result, page: rows.map(toClient) }
+  },
+})
+
+/**
  * Lines already logged on one date (for the batch form: mark cages done,
- * and "same as yesterday"). Bounded by the by_date index.
+ * and "same as yesterday"). Reads only the company's rows for that date
+ * (by_company_and_date), so no other tenant's volume can hide a done cage.
  */
 export const listForDate = query({
   args: { date: v.string() },
   handler: async (ctx, { date }) => {
     const user = await requireUser(ctx)
-    const rows = await ctx.db
-      .query('dailyRecords')
-      .withIndex('by_date', (q) => q.eq('date', date))
-      .take(500)
+    const rows = await scopedRowsInRange(ctx, user, 'dailyRecords', {
+      from: date,
+      to: date,
+    })
     const mine = await listForCompany(user, rows)
     return mine.map((r) => ({
       cage_id: r.cageId,
@@ -331,13 +401,16 @@ async function insertDailyRecord(
     }
     if (alerts.length) {
       const admins = (
-        await ctx.db.query('users').collect()
+        await ctx.db
+          .query('users')
+          .withIndex('by_companyId', (q) => q.eq('companyId', user.companyId))
+          .collect()
       ).filter(
         (u) =>
-          u.companyId === user.companyId &&
           (u.role === 'admin' || u.role === 'super_admin') &&
           u.active !== false,
       )
+
       for (const admin of admins) {
         await ctx.db.insert('notifications', {
           userId: admin._id,

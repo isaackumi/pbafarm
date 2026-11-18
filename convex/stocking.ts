@@ -1,7 +1,9 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
+import { asOfDate, scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import {
@@ -10,40 +12,12 @@ import {
   assertTopupAllowed,
 } from './lib/farmRules'
 import { assertNoOtherOpenStocking } from './lib/cycles'
+import { allocateBatchNumber } from './lib/batchNumbers'
 
 async function loadRules(ctx: any, companyId: any) {
   if (!companyId) return mergeSettings(undefined)
   const company = await ctx.db.get(companyId)
   return mergeSettings(company?.settings)
-}
-
-function cageBatchSlug(cage: { code?: string; name?: string }) {
-  const raw = (cage.code || cage.name || 'CAGE')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '')
-    .slice(0, 10)
-  return raw || 'CAGE'
-}
-
-/** Unique batch like CAGE01-20260904 or CAGE01-20260904-2 */
-async function allocateBatchNumber(
-  ctx: any,
-  user: any,
-  cage: { code?: string; name?: string },
-  stockingDate: string,
-) {
-  const datePart = (stockingDate || new Date().toISOString().slice(0, 10)).replace(
-    /-/g,
-    '',
-  )
-  const base = `${cageBatchSlug(cage)}-${datePart}`
-  let rows = await ctx.db.query('stockingHistory').collect()
-  rows = await listForCompany(user, rows)
-  const existing = new Set(rows.map((r: any) => r.batchNumber))
-  if (!existing.has(base)) return base
-  let n = 2
-  while (existing.has(`${base}-${n}`)) n += 1
-  return `${base}-${n}`
 }
 
 /**
@@ -156,7 +130,7 @@ export const listStockingHistory = query({
           .query('stockingHistory')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('stockingHistory').collect()
+      : await scopedRows(ctx, user, 'stockingHistory', { locationId: args.locationId })
 
     stockings = await listForCompanyAndLocation(user, stockings, args.locationId)
 
@@ -189,6 +163,49 @@ export const listStockingHistory = query({
         }),
       )
     ).sort((a, b) => b.stocking_date.localeCompare(a.stocking_date))
+  },
+})
+
+/**
+ * Paginated stocking history (PLAT-001), newest entry first (creation order,
+ * via `by_company`). Status, deleted and site filters apply per page, so a
+ * page can come back short.
+ */
+export const listStockingHistoryPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    status: v.optional(stockingStatus),
+    includeDeleted: v.optional(v.boolean()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const result = await scopedPage(ctx, user, 'stockingHistory', args.paginationOpts)
+    const rows = result.page.filter(
+      (s) =>
+        (!args.status || s.status === args.status) &&
+        (args.includeDeleted || !s.deletedAt) &&
+        (!args.locationId || s.locationId === args.locationId),
+    )
+    const page = []
+    for (const s of rows) {
+      const cage = s.cageId ? await ctx.db.get(s.cageId) : null
+      page.push({
+        ...toClientStocking(s),
+        cage: cage
+          ? {
+              id: cage._id,
+              _id: cage._id,
+              name: cage.name,
+              code: cage.code,
+              status: cage.status,
+              location: cage.location,
+            }
+          : null,
+        cage_name: cage?.name ?? null,
+      })
+    }
+    return { ...result, page }
   },
 })
 
@@ -359,9 +376,9 @@ export const suggestBatchNumber = query({
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
     if (!allowed.length) return null
-    const stockingDate =
-      args.stockingDate || new Date().toISOString().split('T')[0]
-    return allocateBatchNumber(ctx, user, cage, stockingDate)
+    // The client passes stockingDate (its today by default); the server
+    // clock is only the fallback for older clients.
+    return allocateBatchNumber(ctx, user, cage, asOfDate(args.stockingDate))
   },
 })
 
@@ -542,7 +559,7 @@ export const listTopupHistory = query({
           .query('topupHistory')
           .withIndex('by_stocking', (q) => q.eq('stockingId', args.stockingId!))
           .collect()
-      : await ctx.db.query('topupHistory').collect()
+      : await scopedRows(ctx, user, 'topupHistory')
 
     topups = await listForCompany(user, topups)
 
@@ -706,23 +723,19 @@ export const listPendingApprovals = query({
     const user = await requireUser(ctx)
     requireRole(user, 'admin')
 
-    let stockings = await ctx.db
-      .query('stockingHistory')
-      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
-      .take(100)
-    stockings = (await listForCompany(user, stockings)).filter((s) => !s.deletedAt)
+    // The company's whole pending queue (by_company_and_status): another
+    // tenant's backlog can no longer hide this company's pending items.
+    let stockings = (
+      await scopedRowsByStatus(ctx, user, 'stockingHistory', 'pending_approval')
+    ).filter((s) => !s.deletedAt)
+    let topups = await scopedRowsByStatus(ctx, user, 'topupHistory', 'pending_approval')
+    const transfers = await scopedRowsByStatus(
+      ctx,
+      user,
+      'fishTransfers',
+      'pending_approval',
+    )
 
-    let topups = await ctx.db
-      .query('topupHistory')
-      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
-      .take(100)
-    topups = await listForCompany(user, topups)
-
-    let transfers = await ctx.db
-      .query('fishTransfers')
-      .withIndex('by_status', (q) => q.eq('status', 'pending_approval'))
-      .take(100)
-    transfers = await listForCompany(user, transfers)
 
     const linkedStockingIds = new Set(
       transfers

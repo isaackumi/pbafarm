@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from 'convex/react'
+import { usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, Button, Select, StatCard, EmptyState } from '../components/ui'
@@ -19,19 +19,26 @@ function AuditLogsContent() {
   )
 
   const filters = useMemo(() => {
-    const f = { limit: 200, dateFrom }
+    const f = { dateFrom }
     if (tableName) f.tableName = tableName
     if (actionType) f.actionType = actionType
     return f
   }, [tableName, actionType, dateFrom])
 
-  const logs = useQuery(api.audit.list, user ? filters : 'skip')
+  // Paginated (PLAT-001): newest first, 50 at a time, "Load more" below.
+  const {
+    results: logs,
+    status: pageStatus,
+    loadMore,
+  } = usePaginatedQuery(api.audit.listPage, user ? filters : 'skip', {
+    initialNumItems: 50,
+  })
   const summary = useQuery(
     api.audit.getSummary,
     user ? { dateFrom } : 'skip',
   )
 
-  const loading = logs === undefined
+  const loading = pageStatus === 'LoadingFirstPage'
 
   return (
     <Layout title="Audit Logs">
@@ -174,6 +181,18 @@ function AuditLogsContent() {
                 ))}
               </tbody>
             </table>
+            {pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore' ? (
+              <div className="p-4 text-center border-t border-foam-deep">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={pageStatus === 'LoadingMore'}
+                  onClick={() => loadMore(50)}
+                >
+                  {pageStatus === 'LoadingMore' ? 'Loading…' : 'Load more'}
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

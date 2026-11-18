@@ -4,6 +4,7 @@ import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import {
   mergeSettings,
   validateSettingsForPublish,
@@ -126,10 +127,10 @@ async function revokeMemberSessions(
   companyId: Id<'companies'>,
   callerId: Id<'users'>,
 ) {
-  // users has no companyId index yet (TD-083); the table is small.
-  const members = (await ctx.db.query('users').collect()).filter(
-    (u) => u.companyId === companyId,
-  )
+  const members = await ctx.db
+    .query('users')
+    .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
+    .collect()
   let sessions = 0
   for (const member of members) {
     if (member._id === callerId || member.role === 'super_admin') continue
@@ -596,18 +597,23 @@ export const list = query({
     const user = await requireUser(ctx)
     requireRole(user, 'super_admin')
     
-    let companies = await ctx.db.query('companies').collect()
-    
-    if (args.status) {
-      companies = companies.filter((c) => c.status === args.status)
-    }
+    // Platform view (super_admin only): bounded, and filtered by the status
+    // index when a status is given.
+    const companies = args.status
+      ? await ctx.db
+          .query('companies')
+          .withIndex('by_status', (q) => q.eq('status', args.status!))
+          .take(PLATFORM_SCAN_LIMIT)
+      : await ctx.db.query('companies').take(PLATFORM_SCAN_LIMIT)
 
-    const users = await ctx.db.query('users').collect()
+    // Member counts per listed company through users.by_companyId.
     const userCountByCompany = new Map<string, number>()
-    for (const u of users) {
-      if (!u.companyId) continue
-      const key = String(u.companyId)
-      userCountByCompany.set(key, (userCountByCompany.get(key) || 0) + 1)
+    for (const c of companies) {
+      const members = await ctx.db
+        .query('users')
+        .withIndex('by_companyId', (q) => q.eq('companyId', c._id))
+        .collect()
+      userCountByCompany.set(String(c._id), members.length)
     }
     
     return companies

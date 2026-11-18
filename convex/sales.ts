@@ -1,5 +1,9 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
+import type { Doc } from './_generated/dataModel'
+import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import {
   assertOwns,
@@ -54,8 +58,7 @@ export const listCustomers = query({
   args: { includeInactive: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let rows = await ctx.db.query('customers').collect()
-    rows = await listForCompany(user, rows)
+    let rows = await scopedRows(ctx, user, 'customers')
     rows = rows.filter((c) => !c.deletedAt)
     if (!args.includeInactive) rows = rows.filter((c) => c.active !== false)
     return rows.map(toClientCustomer).sort((a, b) => a.name.localeCompare(b.name))
@@ -154,24 +157,61 @@ export const listSales = query({
           .query('sales')
           .withIndex('by_harvest', (q) => q.eq('harvestId', args.harvestId!))
           .collect()
-      : await ctx.db.query('sales').collect()
+      : await scopedRowsInRange(ctx, user, 'sales', {
+          from: args.dateFrom,
+          to: args.dateTo,
+          locationId: args.locationId,
+        })
 
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
     if (args.dateFrom) rows = rows.filter((s) => s.saleDate >= args.dateFrom!)
     if (args.dateTo) rows = rows.filter((s) => s.saleDate <= args.dateTo!)
 
-    const out = []
-    for (const sale of rows) {
-      let cageName: string | null = null
-      if (sale.cageId) {
-        const cage = await ctx.db.get(sale.cageId)
-        cageName = cage?.name || null
-      }
-      out.push(toClientSale(sale, { cage_name: cageName }))
-    }
+    const out = await withCageNames(ctx, rows)
     return out.sort((a, b) => b.sale_date.localeCompare(a.sale_date))
   },
 })
+
+/** Client rows with `cage_name` (one `get` per distinct cage). */
+async function withCageNames(ctx: QueryCtx, rows: Doc<'sales'>[]) {
+  const names = new Map<string, string | null>()
+  const out = []
+  for (const sale of rows) {
+    let cageName: string | null = null
+    if (sale.cageId) {
+      const key = String(sale.cageId)
+      if (!names.has(key)) names.set(key, (await ctx.db.get(sale.cageId))?.name || null)
+      cageName = names.get(key) ?? null
+    }
+    out.push(toClientSale(sale, { cage_name: cageName }))
+  }
+  return out
+}
+
+/**
+ * Paginated sales, newest sale date first (PLAT-001), via
+ * `by_company_and_saleDate`. A site filter is applied per page.
+ */
+export const listSalesPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    locationId: v.optional(v.id('farmLocations')),
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const result = await scopedPageInRange(ctx, user, 'sales', args.paginationOpts, {
+      from: args.dateFrom,
+      to: args.dateTo,
+    })
+    const rows = args.locationId
+      ? result.page.filter((r) => r.locationId === args.locationId)
+      : result.page
+    return { ...result, page: await withCageNames(ctx, rows) }
+  },
+})
+
 
 export const createSale = mutation({
   args: {

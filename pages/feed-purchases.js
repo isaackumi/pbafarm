@@ -269,7 +269,10 @@ function FeedPurchases() {
       setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
       setInventoryMetrics(nextInventory)
       const growth = await getConvexHttpClient()
-        .query(api.cages.growthAll, activeLocationId ? { locationId: activeLocationId } : {})
+        .query(api.cages.growthAll, {
+          ...(activeLocationId ? { locationId: activeLocationId } : {}),
+          asOf: new Date().toISOString().slice(0, 10),
+        })
         .catch(() => null)
       setUsageAnalytics({
         ...calculateUsageAnalytics(purchasesData, usageRows, cagesData),

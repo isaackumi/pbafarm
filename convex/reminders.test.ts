@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
-import { expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
 
@@ -37,6 +37,19 @@ async function setup() {
   return { t, ...ids }
 }
 
+// dailyDigest fans out one scheduled companyDigest per approved company.
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+async function runDigest(t: any) {
+  await t.mutation(internal.reminders.dailyDigest, { date: DATE })
+  await t.finishAllScheduledFunctions(vi.runAllTimers)
+}
+
 const notesFor = (t: any, userId: any) =>
   t.run((ctx: any) =>
     ctx.db.query('notifications').withIndex('by_user', (q: any) => q.eq('userId', userId)).collect(),
@@ -44,7 +57,7 @@ const notesFor = (t: any, userId: any) =>
 
 test('missed entries go to everyone with a pre-filled link; low stock only to admins', async () => {
   const { t, adminId, staffId, otherUserId, b2 } = await setup()
-  await t.mutation(internal.reminders.dailyDigest, { date: DATE })
+  await runDigest(t)
 
   const staff = await notesFor(t, staffId)
   expect(staff).toHaveLength(1)
@@ -68,11 +81,12 @@ test('missed entries go to everyone with a pre-filled link; low stock only to ad
 })
 
 test('running twice on the same day sends nothing new', async () => {
-  const { t, staffId } = await setup()
-  await t.mutation(internal.reminders.dailyDigest, { date: DATE })
-  const second = await t.mutation(internal.reminders.dailyDigest, { date: DATE })
-  expect(second.sent).toBe(0)
+  const { t, staffId, companyId } = await setup()
+  await runDigest(t)
+  await runDigest(t)
   expect(await notesFor(t, staffId)).toHaveLength(1)
+  const again = await t.mutation(internal.reminders.companyDigest, { companyId, date: DATE })
+  expect(again.sent).toBe(0)
 })
 
 test('only admins can trigger reminders by hand', async () => {

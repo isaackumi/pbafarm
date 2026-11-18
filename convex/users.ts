@@ -3,6 +3,7 @@ import { query, mutation, internalMutation, internalQuery } from './_generated/s
 import { v } from 'convex/values'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 
@@ -109,10 +110,17 @@ export const list = query({
   handler: async (ctx) => {
     const me = await requireUser(ctx)
     requireRole(me, 'admin')
-    let users = await ctx.db.query('users').collect()
-    if ((me.role ?? 'user') !== 'super_admin') {
-      users = users.filter((u) => u.companyId && u.companyId === me.companyId)
-    }
+    // Company admins read their company (by_companyId); super_admins keep the
+    // platform-wide user list, bounded.
+    const users =
+      (me.role ?? 'user') === 'super_admin'
+        ? await ctx.db.query('users').take(PLATFORM_SCAN_LIMIT)
+        : me.companyId
+          ? await ctx.db
+              .query('users')
+              .withIndex('by_companyId', (q) => q.eq('companyId', me.companyId))
+              .collect()
+          : []
     return users.map(toClient).sort((a, b) => (a.email || '').localeCompare(b.email || ''))
   },
 })
@@ -125,12 +133,18 @@ export const listDirectory = query({
   args: {},
   handler: async (ctx) => {
     const me = await requireUser(ctx)
-    let users = await ctx.db.query('users').collect()
-    if ((me.role ?? 'user') !== 'super_admin') {
+    let users
+    if ((me.role ?? 'user') === 'super_admin') {
+      users = await ctx.db.query('users').take(PLATFORM_SCAN_LIMIT)
+    } else {
       if (!me.companyId) return []
-      users = users.filter((u) => u.companyId === me.companyId)
+      users = await ctx.db
+        .query('users')
+        .withIndex('by_companyId', (q) => q.eq('companyId', me.companyId))
+        .collect()
     }
     return users
+
       .filter((u) => u.active !== false)
       .map((u) => ({
         id: u._id,

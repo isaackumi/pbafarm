@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import FishTransferForm from '../components/FishTransferForm'
@@ -21,14 +21,15 @@ function FishTransfersContent() {
   const [statusFilter, setStatusFilter] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const transfers = useQuery(
-    api.fishTransfers.listFishTransfers,
-    user
-      ? {
-          ...(statusFilter ? { status: statusFilter } : {}),
-          // refreshKey unused by API; remount trigger via key on parent
-        }
-      : 'skip',
+  // Paginated (PLAT-001): newest first, 50 at a time, "Load more" below.
+  const {
+    results: transfers,
+    status: pageStatus,
+    loadMore,
+  } = usePaginatedQuery(
+    api.fishTransfers.listFishTransfersPage,
+    user ? (statusFilter ? { status: statusFilter } : {}) : 'skip',
+    { initialNumItems: 50 },
   )
   const approveTransfer = useMutation(api.fishTransfers.approveFishTransfer)
   const rejectTransfer = useMutation(api.fishTransfers.rejectFishTransfer)
@@ -103,7 +104,7 @@ function FishTransfersContent() {
             </div>
           </div>
 
-          {transfers === undefined ? (
+          {pageStatus === 'LoadingFirstPage' ? (
             <p className="text-sm text-muted">Loading…</p>
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted">No transfers yet.</p>
@@ -183,6 +184,19 @@ function FishTransfersContent() {
                   ))}
                 </tbody>
               </table>
+              {pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore' ? (
+                <div className="p-4 text-center border-t border-foam-deep">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={pageStatus === 'LoadingMore'}
+                    onClick={() => loadMore(50)}
+                  >
+                    {pageStatus === 'LoadingMore' ? 'Loading…' : 'Load more'}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </section>

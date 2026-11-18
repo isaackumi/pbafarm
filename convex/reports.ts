@@ -1,24 +1,45 @@
 import { v } from 'convex/values'
 import { query } from './_generated/server'
 import { requireUser } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation } from './lib/tenancy'
+import { listForCompany } from './lib/tenancy'
 import { isRealHarvest } from './lib/cycles'
+import { asOfDate, daysBefore, scopedRows, scopedRowsInRange } from './lib/scope'
+import type { QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
+
+/** A cage's daily records with `date` in [from, to], via `by_cage_date`. */
+async function cageDaily(
+  ctx: QueryCtx,
+  cageId: Id<'cages'>,
+  from?: string | null,
+  to?: string | null,
+): Promise<Doc<'dailyRecords'>[]> {
+  return await ctx.db
+    .query('dailyRecords')
+    .withIndex('by_cage_date', (q) => {
+      const c = q.eq('cageId', cageId)
+      if (from && to) return c.gte('date', from).lte('date', to)
+      if (from) return c.gte('date', from)
+      if (to) return c.lte('date', to)
+      return c
+    })
+    .collect()
+}
 
 export const dashboardSummary = query({
   args: {
     dateRange: v.optional(v.number()), // Days to look back
     locationId: v.optional(v.id('farmLocations')),
+    /** Client's today (YYYY-MM-DD); the period ends here. */
+    asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const daysBack = args.dateRange || 30
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack)
-    const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
+    const cutoffDateStr = daysBefore(asOfDate(args.asOf), daysBack)
 
     // Get cage counts by status (scoped to active farm location when provided)
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     
     const cagesByStatus = {
       total: cages.length,
@@ -30,13 +51,11 @@ export const dashboardSummary = query({
       fallow: cages.filter((c) => c.status === 'fallow').length,
     }
 
-    // Get recent mortality sum
-    let dailyRecords = await ctx.db.query('dailyRecords').collect()
-    dailyRecords = await listForCompanyAndLocation(
-      user,
-      dailyRecords,
-      args.locationId,
-    )
+    // Recent daily records only: company + date range, not the full history.
+    const dailyRecords = await scopedRowsInRange(ctx, user, 'dailyRecords', {
+      from: cutoffDateStr,
+      locationId: args.locationId,
+    })
     const recentMortality = dailyRecords
       .filter((r) => r.date >= cutoffDateStr)
       .reduce((sum, r) => sum + r.mortality, 0)
@@ -52,9 +71,11 @@ export const dashboardSummary = query({
       .reduce((sum, r) => sum + r.feedCost, 0)
 
     // Get harvest count in period
-    let harvestRecords = await ctx.db.query('harvestRecords').collect()
-    harvestRecords = (
-      await listForCompanyAndLocation(user, harvestRecords, args.locationId)
+    const harvestRecords = (
+      await scopedRowsInRange(ctx, user, 'harvestRecords', {
+        from: cutoffDateStr,
+        locationId: args.locationId,
+      })
     ).filter(isRealHarvest)
     const recentHarvestCount = harvestRecords
       .filter((h) => h.harvestDate >= cutoffDateStr).length
@@ -70,8 +91,7 @@ export const dashboardSummary = query({
       .reduce((sum, c) => sum + (c.currentCount || 0), 0)
 
     // Get low stock alerts count (company-wide feed types)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
-    feedTypes = await listForCompany(user, feedTypes)
+    const feedTypes = await scopedRows(ctx, user, 'feedTypes')
     const lowStockAlerts = feedTypes.filter(
       (f) =>
         f.active &&
@@ -99,29 +119,30 @@ export const dashboardKpis = query({
   args: {
     dateRange: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
+    /** Client's today (YYYY-MM-DD); the period ends here. */
+    asOf: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const daysBack = args.dateRange || 30
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - daysBack)
-    const cutoffDateStr = cutoff.toISOString().split('T')[0]
+    const cutoffDateStr = daysBefore(asOfDate(args.asOf), daysBack)
 
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     const activeFish = cages
       .filter((c) => c.status === 'active')
       .reduce((s, c) => s + (c.currentCount || 0), 0)
 
-    let daily = await ctx.db.query('dailyRecords').collect()
-    daily = await listForCompanyAndLocation(user, daily, args.locationId)
-    daily = daily.filter((r) => r.date >= cutoffDateStr)
+    const daily = await scopedRowsInRange(ctx, user, 'dailyRecords', {
+      from: cutoffDateStr,
+      locationId: args.locationId,
+    })
     const recentMortality = daily.reduce((s, r) => s + r.mortality, 0)
     const recentFeedCost = daily.reduce((s, r) => s + r.feedCost, 0)
 
-    let biweekly = await ctx.db.query('biweeklyRecords').collect()
-    biweekly = await listForCompanyAndLocation(user, biweekly, args.locationId)
-    biweekly = biweekly.filter((r) => r.date >= cutoffDateStr)
+    const biweekly = await scopedRowsInRange(ctx, user, 'biweeklyRecords', {
+      from: cutoffDateStr,
+      locationId: args.locationId,
+    })
     let avgGrowth: number | null = null
     if (biweekly.length >= 2) {
       const byCage: Record<string, typeof biweekly> = {}
@@ -150,11 +171,12 @@ export const dashboardKpis = query({
       }
     }
 
-    let harvests = await ctx.db.query('harvestRecords').collect()
-    harvests = (await listForCompanyAndLocation(user, harvests, args.locationId)).filter(
-      isRealHarvest,
-    )
-    const periodHarvests = harvests.filter((h) => h.harvestDate >= cutoffDateStr)
+    const periodHarvests = (
+      await scopedRowsInRange(ctx, user, 'harvestRecords', {
+        from: cutoffDateStr,
+        locationId: args.locationId,
+      })
+    ).filter(isRealHarvest)
     const fcrValues = periodHarvests
       .map((h) => h.fcr)
       .filter((f) => typeof f === 'number' && !Number.isNaN(f) && f > 0)
@@ -194,18 +216,13 @@ export const exportBundle = query({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
 
+    const range = { from: args.dateFrom, to: args.dateTo, order: 'asc' as const }
+
     // Get daily records
     let dailyRecords = args.cageId
-      ? await ctx.db
-          .query('dailyRecords')
-          .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
-          .collect()
-      : await ctx.db.query('dailyRecords').collect()
-
+      ? await cageDaily(ctx, args.cageId, args.dateFrom, args.dateTo)
+      : await scopedRowsInRange(ctx, user, 'dailyRecords', range)
     dailyRecords = await listForCompany(user, dailyRecords)
-    dailyRecords = dailyRecords.filter(
-      (r) => r.date >= args.dateFrom && r.date <= args.dateTo
-    )
 
     // Get biweekly records
     let biweeklyRecords = args.cageId
@@ -213,7 +230,7 @@ export const exportBundle = query({
           .query('biweeklyRecords')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('biweeklyRecords').collect()
+      : await scopedRowsInRange(ctx, user, 'biweeklyRecords', range)
 
     biweeklyRecords = await listForCompany(user, biweeklyRecords)
     biweeklyRecords = biweeklyRecords.filter(
@@ -226,7 +243,7 @@ export const exportBundle = query({
           .query('harvestRecords')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('harvestRecords').collect()
+      : await scopedRowsInRange(ctx, user, 'harvestRecords', range)
 
     harvestRecords = await listForCompany(user, harvestRecords)
     harvestRecords = harvestRecords.filter(
@@ -311,23 +328,19 @@ export const getProductionMetrics = query({
     const user = await requireUser(ctx)
 
     // Get cages for context
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
+    let cages: Doc<'cages'>[]
     if (args.cageId) {
-      cages = cages.filter((c) => c._id === args.cageId)
+      const cage = await ctx.db.get(args.cageId)
+      cages = cage ? await listForCompany(user, [cage]) : []
+    } else {
+      cages = await scopedRows(ctx, user, 'cages')
     }
 
     // Calculate metrics per cage
     const cageMetrics = []
     for (const cage of cages) {
       // Get daily records for this cage
-      let dailyRecords = await ctx.db
-        .query('dailyRecords')
-        .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
-        .collect()
-
-      if (args.dateFrom) dailyRecords = dailyRecords.filter((r) => r.date >= args.dateFrom!)
-      if (args.dateTo) dailyRecords = dailyRecords.filter((r) => r.date <= args.dateTo!)
+      const dailyRecords = await cageDaily(ctx, cage._id, args.dateFrom, args.dateTo)
 
       // Get biweekly records for growth tracking
       let biweeklyRecords = await ctx.db
@@ -386,37 +399,24 @@ export const productionReport = query({
     const user = await requireUser(ctx)
     const idSet = new Set(args.cageIds.map(String))
 
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
-    cages = cages.filter((c) => idSet.has(String(c._id)))
+    // Only the selected cages the caller owns, in the order they were chosen.
+    const cages: Doc<'cages'>[] = []
+    for (const id of new Set(args.cageIds)) {
+      const cage = await ctx.db.get(id)
+      if (cage) cages.push(...(await listForCompany(user, [cage])))
+    }
 
-    let daily = await ctx.db.query('dailyRecords').collect()
-    daily = await listForCompany(user, daily)
-    daily = daily.filter(
-      (r) =>
-        idSet.has(String(r.cageId)) &&
-        r.date >= args.startDate &&
-        r.date <= args.endDate,
+    // Company + date range reads, then the cage selection.
+    const range = { from: args.startDate, to: args.endDate, order: 'asc' as const }
+    const daily = (await scopedRowsInRange(ctx, user, 'dailyRecords', range)).filter(
+      (r) => idSet.has(String(r.cageId)),
     )
-
-    let biweekly = await ctx.db.query('biweeklyRecords').collect()
-    biweekly = await listForCompany(user, biweekly)
-    biweekly = biweekly.filter(
-      (r) =>
-        idSet.has(String(r.cageId)) &&
-        r.date >= args.startDate &&
-        r.date <= args.endDate,
-    )
-
-    let harvests = await ctx.db.query('harvestRecords').collect()
-    harvests = await listForCompany(user, harvests)
-    harvests = harvests.filter(
-      (h) =>
-        isRealHarvest(h) &&
-        idSet.has(String(h.cageId)) &&
-        h.harvestDate >= args.startDate &&
-        h.harvestDate <= args.endDate,
-    )
+    const biweekly = (
+      await scopedRowsInRange(ctx, user, 'biweeklyRecords', range)
+    ).filter((r) => idSet.has(String(r.cageId)))
+    const harvests = (
+      await scopedRowsInRange(ctx, user, 'harvestRecords', range)
+    ).filter((h) => isRealHarvest(h) && idSet.has(String(h.cageId)))
 
     const cageName = Object.fromEntries(cages.map((c) => [String(c._id), c.name]))
 
@@ -516,8 +516,11 @@ export const productionReport = query({
 
 /** Compact farm snapshot for the AI assistant. */
 export const farmContextForAi = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    /** Client's today (YYYY-MM-DD); "last 30 days" ends here. */
+    asOf: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
 
     const role = user.role ?? 'user'
@@ -531,16 +534,12 @@ export const farmContextForAi = query({
       }
     }
 
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompany(user, cages)
-    let daily = await ctx.db.query('dailyRecords').collect()
-    daily = await listForCompany(user, daily)
-    const last30 = new Date()
-    last30.setDate(last30.getDate() - 30)
-    const cutoff = last30.toISOString().split('T')[0]
-    const recent = daily.filter((r) => r.date >= cutoff)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
-    feedTypes = await listForCompany(user, feedTypes)
+    // Bounded to the company and the last 30 days.
+    const cages = await scopedRows(ctx, user, 'cages')
+    const recent = await scopedRowsInRange(ctx, user, 'dailyRecords', {
+      from: daysBefore(asOfDate(args.asOf), 30),
+    })
+    const feedTypes = await scopedRows(ctx, user, 'feedTypes')
 
     return {
       user: { email: user.email, role: user.role ?? 'user', name: user.name },
@@ -583,12 +582,7 @@ export const getCagePnL = query({
     const allowed = await listForCompany(user, [cage])
     if (!allowed.length) return null
 
-    let daily = await ctx.db
-      .query('dailyRecords')
-      .withIndex('by_cage', (q) => q.eq('cageId', args.cageId))
-      .collect()
-    if (args.dateFrom) daily = daily.filter((r) => r.date >= args.dateFrom!)
-    if (args.dateTo) daily = daily.filter((r) => r.date <= args.dateTo!)
+    const daily = await cageDaily(ctx, args.cageId, args.dateFrom, args.dateTo)
 
     let harvests = (
       await ctx.db
@@ -601,8 +595,12 @@ export const getCagePnL = query({
     if (args.dateTo)
       harvests = harvests.filter((r) => r.harvestDate <= args.dateTo!)
 
-    let sales = await ctx.db.query('sales').collect()
-    sales = sales.filter((s) => s.cageId === args.cageId)
+    let sales = await ctx.db
+      .query('sales')
+      .withIndex('by_company_and_cage', (q) =>
+        q.eq('companyId', cage.companyId).eq('cageId', args.cageId),
+      )
+      .collect()
     if (args.dateFrom) sales = sales.filter((s) => s.saleDate >= args.dateFrom!)
     if (args.dateTo) sales = sales.filter((s) => s.saleDate <= args.dateTo!)
 
@@ -650,23 +648,25 @@ export const listCagePnL = query({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
+
+    // The company's sales in the period, read once and grouped by cage
+    // (was one full sales-table scan per cage).
+    const salesByCage = new Map<string, Doc<'sales'>[]>()
+    for (const s of await scopedRowsInRange(ctx, user, 'sales', {
+      from: args.dateFrom,
+      to: args.dateTo,
+    })) {
+      if (!s.cageId) continue
+      const key = String(s.cageId)
+      salesByCage.set(key, [...(salesByCage.get(key) ?? []), s])
+    }
 
     const rows = []
     for (const cage of cages) {
-      let daily = await ctx.db
-        .query('dailyRecords')
-        .withIndex('by_cage', (q) => q.eq('cageId', cage._id))
-        .collect()
-      if (args.dateFrom) daily = daily.filter((r) => r.date >= args.dateFrom!)
-      if (args.dateTo) daily = daily.filter((r) => r.date <= args.dateTo!)
+      const daily = await cageDaily(ctx, cage._id, args.dateFrom, args.dateTo)
+      const sales = salesByCage.get(String(cage._id)) ?? []
 
-      let sales = (await ctx.db.query('sales').collect()).filter(
-        (s) => s.cageId === cage._id,
-      )
-      if (args.dateFrom) sales = sales.filter((s) => s.saleDate >= args.dateFrom!)
-      if (args.dateTo) sales = sales.filter((s) => s.saleDate <= args.dateTo!)
 
       let harvests = (
         await ctx.db

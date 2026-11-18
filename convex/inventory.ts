@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import { scopedRows } from './lib/scope'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
@@ -85,7 +86,7 @@ export const listStockLevels = query({
             .query('feedTypes')
             .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
             .collect()
-        : await ctx.db.query('feedTypes').collect()
+        : await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
 
     const company = user.companyId ? await ctx.db.get(user.companyId) : null
@@ -427,7 +428,7 @@ export const listLots = query({
             .query('feedInventory')
             .withIndex('by_company', (q) => q.eq('companyId', user.companyId!))
             .collect()
-        : await ctx.db.query('feedInventory').collect()
+        : await scopedRows(ctx, user, 'feedInventory')
     lots = await listForCompanyAndLocation(user, lots, args.locationId)
     lots = lots.filter((lot) => lot.quantityKg > 0)
 
@@ -453,7 +454,7 @@ export const listAlerts = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireUser(ctx)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
+    let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
 
     const company = user.companyId ? await ctx.db.get(user.companyId) : null
@@ -496,7 +497,7 @@ export const stockTally = query({
   args: { feedTypeId: v.optional(v.id('feedTypes')) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let feedTypes = await ctx.db.query('feedTypes').collect()
+    let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
     if (args.feedTypeId) {
       feedTypes = feedTypes.filter((f) => f._id === args.feedTypeId)

@@ -139,13 +139,24 @@ export default function Dashboard() {
         })
 
         const client = getConvexHttpClient()
-        const scoped = withActiveLocation({ dateRange: 30 })
+        // asOf: the period ends on the client's today (queries should not
+        // read the server clock: their cache does not expire at midnight).
+        const asOf = new Date().toISOString().slice(0, 10)
+        const scoped = withActiveLocation({ dateRange: 30, asOf })
+        // The charts show the last 30 logged days, so load ~90 days of
+        // records, not the company's whole daily history.
+        const trendFrom = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10)
         // No per-query fallbacks: a failed query must show the error state,
         // not a dashboard of zeros that looks like real numbers.
         const [kpis, dashSummary, daily] = await Promise.all([
           client.query(api.reports.dashboardKpis, scoped),
           client.query(api.reports.dashboardSummary, scoped),
-          client.query(api.dailyRecords.list, withActiveLocation()),
+          client.query(
+            api.dailyRecords.list,
+            withActiveLocation({ dateFrom: trendFrom }),
+          ),
         ])
         if (cancelled) return
 

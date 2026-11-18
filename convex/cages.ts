@@ -3,7 +3,33 @@ import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { cageCycleGrowth } from './lib/growth'
 import { mergeSettings } from './lib/farmRules'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
+import { listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
+import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
+import type { QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
+
+/** The caller's active cages (optionally one site), via `by_company_status`. */
+async function activeCages(
+  ctx: QueryCtx,
+  user: Doc<'users'>,
+  locationId?: Id<'farmLocations'>,
+): Promise<Doc<'cages'>[]> {
+  const scope = tenantScope(user)
+  if (scope.kind === 'none') return []
+  const rows =
+    scope.kind === 'company'
+      ? await ctx.db
+          .query('cages')
+          .withIndex('by_company_status', (q) =>
+            q.eq('companyId', scope.companyId).eq('status', 'active'),
+          )
+          .collect()
+      : await ctx.db
+          .query('cages')
+          .withIndex('by_status', (q) => q.eq('status', 'active'))
+          .take(PLATFORM_SCAN_LIMIT)
+  return locationId ? rows.filter((c) => c.locationId === locationId) : rows
+}
 
 const cageStatus = v.union(
   v.literal('active'),
@@ -63,8 +89,7 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
 
     if (args.status) {
       cages = cages.filter((c) => c.status === args.status)
@@ -102,25 +127,25 @@ export const getActive = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let cages = await ctx.db
-      .query('cages')
-      .withIndex('by_status', (q) => q.eq('status', 'active'))
-      .collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const cages = await activeCages(ctx, user, args.locationId)
     return cages.map(toClient)
   },
 })
 
 /** Growth for the cage's current cycle: ABW, biomass, feed, eFCR, SGR, ADG. */
 export const growth = query({
-  args: { id: v.id('cages') },
-  handler: async (ctx, { id }) => {
+  args: {
+    id: v.id('cages'),
+    /** Client's today (YYYY-MM-DD); days of culture count to here. */
+    asOf: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, asOf }) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(id)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
     if (!allowed.length) return null
-    return await cageCycleGrowth(ctx, cage)
+    return await cageCycleGrowth(ctx, cage, asOf || undefined)
   },
 })
 
@@ -129,19 +154,21 @@ export const growth = query({
  * eFCR (total feed ÷ total biomass gained), so one bad cage can't hide.
  */
 export const growthAll = query({
-  args: { locationId: v.optional(v.id('farmLocations')) },
+  args: {
+    locationId: v.optional(v.id('farmLocations')),
+    /** Client's today (YYYY-MM-DD); days of culture count to here. */
+    asOf: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let cages = await ctx.db
-      .query('cages')
-      .withIndex('by_status', (q) => q.eq('status', 'active'))
-      .take(300)
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    // Every active cage of the company (was the first 300 active cages of
+    // all tenants, so cages went missing as the platform grew).
+    const cages = await activeCages(ctx, user, args.locationId)
     const rows = []
     let feed = 0
     let gain = 0
     for (const cage of cages) {
-      const g = await cageCycleGrowth(ctx, cage)
+      const g = await cageCycleGrowth(ctx, cage, args.asOf || undefined)
       rows.push({ cage_id: cage._id, cage_name: cage.name, ...g })
       const cageGain = (g.current_biomass_kg ?? 0) - (g.initial_biomass_kg ?? 0)
       if (g.stocking_date && cageGain > 0) {
@@ -302,9 +329,9 @@ export const analytics = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
-    let cages = await ctx.db.query('cages').collect()
-    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
     const total = cages.length
+
     const active = cages.filter((c) => c.status === 'active').length
     const maintenance = cages.filter((c) => c.status === 'maintenance').length
     const empty = cages.filter((c) => c.status === 'empty').length

@@ -1,10 +1,12 @@
 import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 import { syncCageAbw } from './lib/growth'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { scopedPageInRange, scopedRowsInRange } from './lib/scope'
 
 function toClient(r: any) {
   return {
@@ -42,7 +44,11 @@ export const list = query({
           .query('biweeklyRecords')
           .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
           .collect()
-      : await ctx.db.query('biweeklyRecords').collect()
+      : await scopedRowsInRange(ctx, user, 'biweeklyRecords', {
+          from: args.dateFrom,
+          to: args.dateTo,
+          locationId: args.locationId,
+        })
 
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
     if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
@@ -50,6 +56,31 @@ export const list = query({
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
   },
 })
+
+/**
+ * Paginated growth samples, newest date first (PLAT-001), via
+ * `by_company_and_date`. A site filter is applied per page.
+ */
+export const listPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    dateFrom: v.optional(v.string()),
+    dateTo: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    const result = await scopedPageInRange(ctx, user, 'biweeklyRecords', args.paginationOpts, {
+      from: args.dateFrom,
+      to: args.dateTo,
+    })
+    const rows = args.locationId
+      ? result.page.filter((r) => r.locationId === args.locationId)
+      : result.page
+    return { ...result, page: rows.map(toClient) }
+  },
+})
+
 
 export const get = query({
   args: { id: v.id('biweeklyRecords') },
