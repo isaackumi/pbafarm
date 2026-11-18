@@ -14,6 +14,8 @@ import {
 } from '../components/ui'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import * as XLSX from 'xlsx'
+import { localToday } from '../lib/format'
+import { useLocation } from '../contexts/LocationContext'
 
 function downloadWorkbook(sheets, filename) {
   const wb = XLSX.utils.book_new()
@@ -26,13 +28,15 @@ function downloadWorkbook(sheets, filename) {
 }
 
 function ExportPageInner() {
+  // Exports cover the header site only (FARM-003).
+  const { locationArgs } = useLocation()
   const [exportType, setExportType] = useState('daily_records')
   const [format, setFormat] = useState('xlsx')
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
       .split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    endDate: localToday(),
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -47,6 +51,7 @@ function ExportPageInner() {
       const bundle = await client.query(api.reports.exportBundle, {
         dateFrom: dateRange.startDate,
         dateTo: dateRange.endDate,
+        ...locationArgs,
       })
 
       let sheets = {}
@@ -62,10 +67,10 @@ function ExportPageInner() {
         payload = bundle.harvest_records || []
         sheets = { harvest_records: payload }
       } else if (exportType === 'cages') {
-        payload = await client.query(api.cages.list, {})
+        payload = await client.query(api.cages.list, locationArgs)
         sheets = { cages: payload || [] }
       } else if (exportType === 'stocking_history') {
-        payload = await client.query(api.stocking.listStockingHistory, {})
+        payload = await client.query(api.stocking.listStockingHistory, locationArgs)
         sheets = { stocking_history: payload || [] }
       } else {
         sheets = {

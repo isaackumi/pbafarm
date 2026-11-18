@@ -16,6 +16,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
 import { FISH_SPECIES } from '../lib/fishSpecies'
 import { buildFeedTypeDescription, normalizeBagSizeKg } from '../lib/feedTypeMeta'
+import { localToday } from '../lib/format'
 
 function ModalShell({ title, subtitle, onClose, children }) {
   const [mounted, setMounted] = useState(false)
@@ -525,7 +526,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     cageId: '',
     batchNumber: '',
-    stockingDate: new Date().toISOString().split('T')[0],
+    stockingDate: localToday(),
     fishCount: '',
     averageBodyWeight: '',
     species: 'nile_tilapia',
@@ -825,7 +826,7 @@ export function QuickCreatePurchaseModal({
     bags: '',
     bag_size_kg: '20',
     price_per_kg: '',
-    purchase_date: new Date().toISOString().split('T')[0],
+    purchase_date: localToday(),
     supplier_id: '',
     batch_number: '',
     expiry_date: '',

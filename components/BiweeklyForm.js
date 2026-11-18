@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { cageService } from '../lib/cageService'
+import { localToday } from '../lib/format'
 
 /** Lightweight biweekly ABW entry used from the dashboard modal. */
 const BiweeklyForm = ({ cageId, onSuccess }) => {
   const [cage, setCage] = useState(null)
   const [abwHistory, setAbwHistory] = useState([])
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: localToday(),
     averageBodyWeight: '',
     totalFishCount: '',
     notes: '',

@@ -529,3 +529,40 @@ export const m3CompanyProfileDefaults = internalMutation({
     return { dryRun, count: changes.length, changes }
   },
 })
+
+/**
+ * M4 — make production unit types explicit (FARM-002, D-003). Optional: every
+ * reader already treats a missing unitType as 'cage'. Sets unitType 'cage' on
+ * units without one and copies `size` (m³) into volumeM3 where unset. Pages
+ * through cages; dryRun (default true) only reports; idempotent.
+ *   npx convex run migrations:m4BackfillUnitTypes '{"dryRun":true}'
+ *   npx convex run migrations:m4BackfillUnitTypes '{"dryRun":false}'
+ *   (repeat with '{"dryRun":false,"cursor":"<continueCursor>"}' while isDone is false)
+ */
+export const m4BackfillUnitTypes = internalMutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, { dryRun = true, cursor = null }) => {
+    const page = await ctx.db.query('cages').paginate({ numItems: 300, cursor })
+    const changes: Array<{ cageId: Id<'cages'>; patch: Partial<Doc<'cages'>> }> = []
+    for (const cage of page.page) {
+      const patch: Partial<Doc<'cages'>> = {}
+      if (cage.unitType === undefined) patch.unitType = 'cage'
+      if (cage.volumeM3 === undefined && cage.size !== undefined && cage.size > 0) {
+        patch.volumeM3 = cage.size
+      }
+      if (Object.keys(patch).length === 0) continue
+      changes.push({ cageId: cage._id, patch })
+      if (!dryRun) await ctx.db.patch(cage._id, patch)
+    }
+    return {
+      dryRun,
+      count: changes.length,
+      changes,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    }
+  },
+})

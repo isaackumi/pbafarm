@@ -8,7 +8,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { emitDomainEvent } from './lib/events'
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
-import { harvestFcr } from './lib/growth'
+import { harvestFcr, daysBetween } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
 import { shadowHarvest } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
@@ -273,11 +273,7 @@ export const create = idempotentMutation('harvest.create', {
     const rules = mergeSettings(company?.settings)
     let docDays: number | null = null
     if (cage.stockingDate && args.harvestDate) {
-      docDays = Math.floor(
-        (new Date(args.harvestDate).getTime() -
-          new Date(cage.stockingDate).getTime()) /
-          (1000 * 60 * 60 * 24),
-      )
+      docDays = daysBetween(cage.stockingDate, args.harvestDate)
     }
     const warnings = harvestWarnings({
       docDays,

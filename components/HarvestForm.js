@@ -20,6 +20,7 @@ import {
   Select,
   Textarea,
 } from './ui'
+import { localToday } from '../lib/format'
 
 const SIZE_CATEGORIES = [
   { category: 'S3', range: '800g above' },
@@ -33,7 +34,7 @@ const SIZE_CATEGORIES = [
 ]
 
 const HARVEST_DEFAULTS = {
-  harvestDate: new Date().toISOString().split('T')[0],
+  harvestDate: localToday(),
   cageId: '',
   harvestType: 'complete',
   totalWeight: '',
@@ -243,7 +244,7 @@ const HarvestForm = ({ onComplete }) => {
       clear()
       setFormData({
         ...HARVEST_DEFAULTS,
-        harvestDate: new Date().toISOString().split('T')[0],
+        harvestDate: localToday(),
         sizeBreakdown: SIZE_CATEGORIES.map((category) => ({
           category: category.category,
           range: category.range,

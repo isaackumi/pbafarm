@@ -17,6 +17,7 @@ import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
+import { localToday } from '../../lib/format'
 
 export default function InventoryItemsPage() {
   return (
@@ -48,7 +49,7 @@ const MOVE_LABEL = {
 }
 
 const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString('en-US')
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localToday()
 
 function Items() {
   const { user, hasRole } = useAuth()
