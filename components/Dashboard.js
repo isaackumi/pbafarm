@@ -30,6 +30,7 @@ import {
   TabBar,
   DashboardSkeleton,
 } from './ui'
+import { localToday } from '../lib/format'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -132,7 +133,7 @@ export default function Dashboard() {
         const client = getConvexHttpClient()
         // asOf: the period ends on the client's today (queries should not
         // read the server clock: their cache does not expire at midnight).
-        const asOf = new Date().toISOString().slice(0, 10)
+        const asOf = localToday()
         const scoped = withActiveLocation({ dateRange: 30, asOf })
         // The charts show the last 30 logged days, so load ~90 days of
         // records, not the company's whole daily history.

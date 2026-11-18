@@ -9,6 +9,8 @@ import React, {
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from './AuthContext'
+import { useCompanySettings } from './CompanySettingsContext'
+import { setActiveZone } from '../lib/format'
 
 const STORAGE_KEY = 'pba_active_location_id'
 
@@ -98,6 +100,11 @@ export function LocationProvider({ children }) {
     if (!activeLocationId || typeof window === 'undefined') return
     localStorage.setItem(STORAGE_KEY, activeLocationId)
   }, [activeLocationId])
+
+  // Site time zone, else the organization's, decides "today" for form
+  // defaults (lib/format localToday). Set during render, like the auth token.
+  const { company } = useCompanySettings()
+  setActiveZone(activeLocation?.timezone || company?.profile?.timezone || null)
 
   const locationArgs = useMemo(
     () => (activeLocationId ? { locationId: activeLocationId } : {}),

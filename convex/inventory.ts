@@ -154,6 +154,8 @@ export const listTransactions = query({
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
     limit: v.optional(v.number()),
+    /** Only this site's movements (FARM-003). */
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -178,6 +180,9 @@ export const listTransactions = query({
 
     transactions = await listForCompany(user, transactions)
 
+    if (args.locationId) {
+      transactions = transactions.filter((t) => t.locationId === args.locationId)
+    }
     if (args.transactionType) {
       transactions = transactions.filter((t) => t.transactionType === args.transactionType)
     }
@@ -451,8 +456,11 @@ export const listLots = query({
 })
 
 export const listAlerts = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    /** Stock at this site (its lots plus unassigned stock), FARM-003. */
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
     feedTypes = await listForCompany(user, feedTypes)
@@ -460,14 +468,18 @@ export const listAlerts = query({
     const company = user.companyId ? await ctx.db.get(user.companyId) : null
     const multiplier = mergeSettings(company?.settings).feedRules.lowStockMultiplier || 1
 
-    const lowStockFeedTypes = feedTypes.filter(
-      (f) =>
-        f.active &&
-        !f.deletedAt &&
-        // Min must be configured — otherwise 0 ≤ 0 alerts every empty type
-        (f.minimumStock ?? 0) > 0 &&
-        f.currentStock <= f.minimumStock * multiplier,
-    )
+    const candidates = []
+    for (const f of feedTypes) {
+      // Min must be configured — otherwise 0 ≤ 0 alerts every empty type
+      if (!f.active || f.deletedAt || !((f.minimumStock ?? 0) > 0)) continue
+      const currentStock = args.locationId
+        ? (await siteStock(ctx, f, args.locationId)).available
+        : f.currentStock
+      if (currentStock <= f.minimumStock * multiplier) {
+        candidates.push({ ...f, currentStock })
+      }
+    }
+    const lowStockFeedTypes = candidates
 
     const alerts = []
     for (const feedType of lowStockFeedTypes) {

@@ -5,9 +5,10 @@ import FeedTypeField from './FeedTypeField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { MORTALITY_CAUSES } from '../lib/farmHealth'
 import { Button, Field, Input, Select, Textarea } from './ui'
+import { localToday } from '../lib/format'
 
 const DAILY_ENTRY_DEFAULTS = {
-  date: new Date().toISOString().split('T')[0],
+  date: localToday(),
   mortality: '',
   mortalityCause: 'unknown',
   feedAmount: '',
@@ -83,7 +84,7 @@ export default function DailyEntryForm({ cageId, onSubmit, onCancel }) {
       clear()
       setFormData({
         ...DAILY_ENTRY_DEFAULTS,
-        date: new Date().toISOString().split('T')[0],
+        date: localToday(),
       })
       onSubmit?.(formData)
     } catch (err) {

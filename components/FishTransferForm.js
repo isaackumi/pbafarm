@@ -17,9 +17,10 @@ import PersonPicker from './PersonPicker'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
+import { localToday } from '../lib/format'
 
 const TRANSFER_DEFAULTS = {
-  transferDate: new Date().toISOString().split('T')[0],
+  transferDate: localToday(),
   sourceCageId: '',
   destinationCageId: '',
   quantity: '',

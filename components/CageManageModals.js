@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
+import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs, geometryFromUnit } from './UnitGeometryFields'
 
 const EMPTY_FORM = {
   name: '',
@@ -16,6 +17,7 @@ const EMPTY_FORM = {
   material: '',
   status: 'empty',
   notes: '',
+  ...EMPTY_GEOMETRY,
 }
 
 const STATUS_OPTIONS = [
@@ -41,6 +43,7 @@ function formFromCage(cage) {
     material: cage.material || '',
     status: cage.status || 'empty',
     notes: cage.notes || '',
+    ...geometryFromUnit(cage),
   }
 }
 
@@ -104,13 +107,7 @@ export default function CageManageModals({
         patch.locationId = locationId
         if (locName) patch.location = locName
       }
-      if (form.size !== '' && form.size != null) {
-        const n = Number(form.size)
-        if (!Number.isFinite(n) || n < 0) {
-          throw new Error('Size must be a valid number')
-        }
-        patch.size = n
-      }
+      Object.assign(patch, geometryArgs(form))
       if (form.capacity !== '' && form.capacity != null) {
         const n = Number(form.capacity)
         if (!Number.isFinite(n) || n < 0) {
@@ -182,17 +179,8 @@ export default function CageManageModals({
                   syncWithHeader={false}
                 />
               </Field>
+              <UnitGeometryFields value={form} idPrefix="edit-unit" onChange={patchField} />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Size (m³)">
-                  <Input
-                    type="number"
-                    step="any"
-                    min="0"
-                    className="font-data tabular-nums"
-                    value={form.size}
-                    onChange={(e) => patchField('size', e.target.value)}
-                  />
-                </Field>
                 <Field label="Capacity (fish)">
                   <Input
                     type="number"

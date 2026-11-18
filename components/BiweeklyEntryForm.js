@@ -10,6 +10,7 @@ import {
   Field,
   Input,
 } from './ui'
+import { localToday } from '../lib/format'
 
 function generateBatchCode() {
   const date = new Date()
@@ -27,7 +28,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const [samplings, setSamplings] = useState([
     { id: 1, fish_count: '', total_weight: '', abw: 0 },
   ])
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(localToday())
   const [batchCode, setBatchCode] = useState(generateBatchCode())
   const [dissolvedOxygen, setDissolvedOxygen] = useState('')
   const [temperatureC, setTemperatureC] = useState('')
@@ -140,7 +141,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
 
       showToast('success', 'Biweekly record saved')
       setSuccess(true)
-      setDate(new Date().toISOString().split('T')[0])
+      setDate(localToday())
       setBatchCode(generateBatchCode())
       setDissolvedOxygen('')
       setTemperatureC('')
