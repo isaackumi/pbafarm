@@ -101,11 +101,11 @@ export async function writeLocationId(
   if (!loc || loc.active === false) {
     throw new Error('Farm location not found or inactive')
   }
+  // Only the caller's own company's locations (SEC-002, V14): a company-less
+  // caller or a location with no company is refused too.
   if (
-    user.companyId &&
-    loc.companyId &&
-    loc.companyId !== user.companyId &&
-    (user.role ?? 'user') !== 'super_admin'
+    (user.role ?? 'user') !== 'super_admin' &&
+    (!user.companyId || loc.companyId !== user.companyId)
   ) {
     throw new Error('Location access denied')
   }

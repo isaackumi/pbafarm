@@ -91,7 +91,8 @@ function GrowthPanel({ growth, cage }) {
 
 function CageDetails() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const id = typeof router.query.id === 'string' ? router.query.id : null
 
   const cage = useQuery(api.cages.get, user && id ? { id } : 'skip')
@@ -169,14 +170,16 @@ function CageDetails() {
               >
                 Edit
               </Button>
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                onClick={() => setDeleteCage(cage)}
-              >
-                Delete
-              </Button>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setDeleteCage(cage)}
+                >
+                  Delete
+                </Button>
+              )}
               <Button href="/cages" variant="secondary" size="sm">
                 All cages
               </Button>

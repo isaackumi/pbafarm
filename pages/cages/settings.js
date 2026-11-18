@@ -21,7 +21,8 @@ export default function CageSettingsPage() {
 }
 
 function CageSettings() {
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const [editCage, setEditCage] = useState(null)
@@ -82,15 +83,17 @@ function CageSettings() {
                     <Pencil className="w-4 h-4" />
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    title="Delete"
-                    onClick={() => setDeleteCage(cage)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-signal bg-signal/10 hover:bg-signal/20"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      title="Delete"
+                      onClick={() => setDeleteCage(cage)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-signal bg-signal/10 hover:bg-signal/20"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </li>
             ))}

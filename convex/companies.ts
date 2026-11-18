@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import {
@@ -9,6 +9,73 @@ import {
   validateSettingsForPublish,
   DEFAULT_SETTINGS,
 } from './lib/farmRules'
+
+/** A file must be claimed as a logo within this long of its upload. */
+const LOGO_CLAIM_WINDOW_MS = 60 * 60 * 1000
+
+/**
+ * Record a just-uploaded file as this company's logo (doc 07 V11). Refuses a
+ * file recorded for another company, and an unrecorded file older than the
+ * claim window (it was not uploaded for this logo change), so an admin cannot
+ * point their logo at another company's file and later delete it.
+ */
+async function claimLogoUpload(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  companyId: Id<'companies'>,
+  storageId: Id<'_storage'>,
+) {
+  const recorded = await ctx.db
+    .query('logoUploads')
+    .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
+    .unique()
+  if (recorded) {
+    if (recorded.companyId !== companyId) throw new Error('Logo file not found')
+    return
+  }
+  const file = await ctx.db.system.get(storageId)
+  if (!file || Date.now() - file._creationTime > LOGO_CLAIM_WINDOW_MS) {
+    throw new Error('Logo file not found. Upload the logo again.')
+  }
+  await ctx.db.insert('logoUploads', { companyId, storageId, uploadedBy: user._id })
+}
+
+/** Whether a stored logo file may be published or deleted by this company. */
+async function logoBelongsTo(
+  ctx: MutationCtx,
+  companyId: Id<'companies'>,
+  storageId: Id<'_storage'>,
+) {
+  const recorded = await ctx.db
+    .query('logoUploads')
+    .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
+    .unique()
+  return recorded?.companyId === companyId
+}
+
+/**
+ * Delete the company's current logo file, unless it is recorded as another
+ * company's upload. Logos set before upload records existed are deleted as
+ * before.
+ */
+async function deleteOldLogo(
+  ctx: MutationCtx,
+  companyId: Id<'companies'>,
+  storageId: Id<'_storage'> | undefined,
+) {
+  if (!storageId) return
+  const recorded = await ctx.db
+    .query('logoUploads')
+    .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
+    .unique()
+  if (recorded && recorded.companyId !== companyId) return
+  try {
+    await ctx.storage.delete(storageId)
+  } catch {
+    /* ignore */
+  }
+  if (recorded) await ctx.db.delete(recorded._id)
+}
 
 async function logoUrl(ctx: any, storageId?: any) {
   if (!storageId) return null
@@ -797,7 +864,16 @@ export const publishSettings = mutation({
     if (profile.contactEmail !== undefined) patch.contactEmail = profile.contactEmail
     if (profile.contactPhone !== undefined) patch.contactPhone = profile.contactPhone
     if (profile.logoStorageId !== undefined) {
-      patch.logoStorageId = profile.logoStorageId || undefined
+      const nextLogo = profile.logoStorageId || undefined
+      // Only the current logo or a file this company uploaded (V11).
+      if (
+        nextLogo &&
+        nextLogo !== company.logoStorageId &&
+        !(await logoBelongsTo(ctx, user.companyId, nextLogo))
+      ) {
+        throw new Error('Logo file not found. Upload the logo again.')
+      }
+      patch.logoStorageId = nextLogo
     }
 
     await ctx.db.patch(user.companyId, patch)
@@ -862,13 +938,11 @@ export const setLogo = mutation({
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
     if (!company) throw new Error('Company not found')
-    if (company.logoStorageId) {
-      try {
-        await ctx.storage.delete(company.logoStorageId)
-      } catch {
-        /* ignore */
-      }
+    if (company.logoStorageId === storageId) {
+      return { logoUrl: await logoUrl(ctx, storageId) }
     }
+    await claimLogoUpload(ctx, user, user.companyId, storageId)
+    await deleteOldLogo(ctx, user.companyId, company.logoStorageId)
     await ctx.db.patch(user.companyId, { logoStorageId: storageId })
     await logAudit(ctx, {
       actionType: 'update',
@@ -888,13 +962,7 @@ export const clearLogo = mutation({
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
     if (!company) throw new Error('Company not found')
-    if (company.logoStorageId) {
-      try {
-        await ctx.storage.delete(company.logoStorageId)
-      } catch {
-        /* ignore */
-      }
-    }
+    await deleteOldLogo(ctx, user.companyId, company.logoStorageId)
     await ctx.db.patch(user.companyId, { logoStorageId: undefined })
     return { ok: true }
   },

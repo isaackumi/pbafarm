@@ -16,6 +16,7 @@ import { PageHeader, Button, Field, Input, Select, Textarea, EmptyState } from '
 import FarmLocationSelect from '../components/FarmLocationSelect'
 import { stockingService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function StockingManagementPage() {
   return (
@@ -28,6 +29,8 @@ export default function StockingManagementPage() {
 function StockingManagement() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const [stockings, setStockings] = useState([])
   const [filteredStockings, setFilteredStockings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -553,16 +556,19 @@ function StockingManagement() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-muted">
                         <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleEditStocking(stocking)}
-                            className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-lake hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-                            title="Edit stocking"
-                            aria-label="Edit stocking"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          {stocking.status !== 'approved' && (
+                          {/* Approved stockings: admin only (backend). */}
+                          {(isAdmin || stocking.status !== 'approved') && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditStocking(stocking)}
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-lake hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                              title="Edit stocking"
+                              aria-label="Edit stocking"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {isAdmin && stocking.status !== 'approved' && (
                             <button
                               type="button"
                               onClick={() => setDeleteStocking(stocking)}

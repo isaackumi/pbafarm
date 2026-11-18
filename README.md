@@ -46,10 +46,12 @@ npm run dev           # terminal 2: Next.js on http://localhost:3000
 npx convex run users:promoteToSuperAdmin '{"email":"you@example.com"}'
 ```
 
-3. Optional demo cages:
+3. Optional demo data (dev deployments only). `seed:seedDemo` is internal, so only
+   the CLI can run it; name a user whose company gets the demo cages, feed and
+   records (the company must have no cages yet):
 
 ```bash
-npx convex run seed:seedDemo
+npx convex run seed:seedDemo '{"email":"you@example.com"}'
 ```
 
 ### Phones on the same Wi-Fi

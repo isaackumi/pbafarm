@@ -35,7 +35,7 @@ function FarmLocations() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = hasRole?.('admin')
-  const { setActiveLocation, runBackfill } = useLocation()
+  const { setActiveLocation } = useLocation()
 
   const locations = useQuery(
     api.farmLocations.list,
@@ -54,7 +54,6 @@ function FarmLocations() {
     active: true,
   })
   const [saving, setSaving] = useState(false)
-  const [backfilling, setBackfilling] = useState(false)
 
   useEffect(() => {
     if (!editing) return
@@ -110,22 +109,6 @@ function FarmLocations() {
     }
   }
 
-  const handleBackfill = async () => {
-    if (!isAdmin) return
-    setBackfilling(true)
-    try {
-      const result = await runBackfill({ promoteCageLocationStrings: true })
-      showToast(
-        'success',
-        `Backfill done: ${result.createdLocations} locations, ${result.patched} rows, ${result.usersUpdated} users`,
-      )
-    } catch (err) {
-      showToast('error', err.message || 'Backfill failed')
-    } finally {
-      setBackfilling(false)
-    }
-  }
-
   return (
     <div data-tour="page-farm-locations">
       <PageHeader
@@ -138,14 +121,6 @@ function FarmLocations() {
         actions={
           isAdmin ? (
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleBackfill}
-                disabled={backfilling}
-              >
-                {backfilling ? 'Backfilling…' : 'Backfill existing data'}
-              </Button>
               <Button
                 type="button"
                 onClick={() => {
@@ -250,7 +225,7 @@ function FarmLocations() {
           <p className="px-6 py-8 text-sm text-muted">Loading…</p>
         ) : locations.length === 0 ? (
           <p className="px-6 py-8 text-sm text-muted">
-            No locations yet. Create one or run backfill.
+            No locations yet. Create one to get started.
           </p>
         ) : (
           <ul className="divide-y divide-foam-deep">

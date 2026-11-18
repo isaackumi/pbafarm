@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { query, mutation } from './_generated/server'
+import { query, mutation, internalMutation } from './_generated/server'
 import { requireUser } from './lib/authz'
 import { writeCompanyId, logAudit } from './lib/tenancy'
 
@@ -97,7 +97,12 @@ export const markAllRead = mutation({
   },
 })
 
-export const create = mutation({
+/**
+ * System-generated notification. Internal (SEC-002, V7): no client may post
+ * arbitrary title/message/link to a colleague. Server code calls it with
+ * ctx.runMutation(internal.notifications.create, ...).
+ */
+export const create = internalMutation({
   args: {
     userId: v.id('users'),
     title: v.string(),
@@ -106,15 +111,10 @@ export const create = mutation({
     link: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
-    
-    // Get the target user to inherit their company context
+    // Inherit the recipient's company context
     const targetUser = await ctx.db.get(args.userId)
     if (!targetUser) throw new Error('Target user not found')
-    if (user.role !== 'super_admin' && targetUser.companyId !== user.companyId) {
-      throw new Error('Target user not found')
-    }
-    
+
     const id = await ctx.db.insert('notifications', {
       userId: args.userId,
       title: args.title,
@@ -125,7 +125,8 @@ export const create = mutation({
       companyId: targetUser.companyId,
     })
 
-    await logAudit(ctx, {
+    await ctx.db.insert('auditLogs', {
+      companyId: targetUser.companyId,
       actionType: 'create',
       tableName: 'notifications',
       recordId: id,
@@ -136,7 +137,8 @@ export const create = mutation({
   },
 })
 
-export const createBulk = mutation({
+/** System-generated notification to several users. Internal (SEC-002, V7). */
+export const createBulk = internalMutation({
   args: {
     userIds: v.array(v.id('users')),
     title: v.string(),
@@ -145,15 +147,13 @@ export const createBulk = mutation({
     link: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx)
     const notificationIds = []
-    
+
     for (const userId of args.userIds) {
-      // Get the target user to inherit their company context
+      // Inherit each recipient's company context
       const targetUser = await ctx.db.get(userId)
       if (!targetUser) continue // Skip invalid users
-      if (user.role !== 'super_admin' && targetUser.companyId !== user.companyId) continue
-      
+
       const id = await ctx.db.insert('notifications', {
         userId: userId,
         title: args.title,
@@ -163,11 +163,11 @@ export const createBulk = mutation({
         link: args.link,
         companyId: targetUser.companyId,
       })
-      
+
       notificationIds.push(id)
     }
 
-    await logAudit(ctx, {
+    await ctx.db.insert('auditLogs', {
       actionType: 'create_bulk',
       tableName: 'notifications',
       newValues: { ...args, createdCount: notificationIds.length },

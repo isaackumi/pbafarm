@@ -32,7 +32,8 @@ export default function CagesPage() {
 
 function CagesManagement() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const settingsData = useQuery(api.companies.getEffectiveSettings, user ? {} : 'skip')
@@ -203,19 +204,21 @@ function CagesManagement() {
           >
             <Pencil className="w-4 h-4" />
           </button>
-          <button
-            type="button"
-            title="Delete cage"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setDeleteCage(row)
-            }}
-            aria-label={`Delete ${row.name || 'cage'}`}
-            className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              title="Delete cage"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setDeleteCage(row)
+              }}
+              aria-label={`Delete ${row.name || 'cage'}`}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       ),
     },

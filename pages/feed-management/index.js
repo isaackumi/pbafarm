@@ -20,12 +20,15 @@ import { buildFeedTypeDescription } from '../../lib/feedTypeMeta'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import { withActiveLocation } from '../../lib/locationScope'
 import { useToast } from '../../components/Toast'
+import { useAuth } from '../../contexts/AuthContext'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../../components/FeedPurchaseModal'
 import { Plus, ArrowLeft, Download, Filter, Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
 const FeedManagement = () => {
+  const { hasRole } = useAuth()
+  const isAdmin = Boolean(hasRole?.('admin'))
   const [feedTypes, setFeedTypes] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -475,14 +478,16 @@ const FeedManagement = () => {
                                     >
                                       Edit
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setDeleteConfirm(type)}
-                                      className="text-signal"
-                                    >
-                                      Delete
-                                    </Button>
+                                    {isAdmin && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setDeleteConfirm(type)}
+                                        className="text-signal"
+                                      >
+                                        Delete
+                                      </Button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -691,12 +696,17 @@ const FeedManagement = () => {
                       required
                     />
                   </Field>
-                  <Field label="Price per kg (₵)" htmlFor="fm-type-price-per-kg">
+                  <Field
+                    label="Price per kg (₵)"
+                    htmlFor="fm-type-price-per-kg"
+                    hint={editingType && !isAdmin ? 'Only an admin can change the price' : undefined}
+                  >
                     <Input
                       id="fm-type-price-per-kg"
                       type="number"
                       name="price_per_kg"
                       value={formData.price_per_kg}
+                      disabled={Boolean(editingType) && !isAdmin}
                       onChange={handleChange}
                       step="0.01"
                       required

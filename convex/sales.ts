@@ -303,6 +303,13 @@ export const updateSale = mutation({
     if (!existing) throw new Error('Sale not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    // Price and payment status are financial edits (doc 07 V9): admin only.
+    if (
+      (patch.pricePerKg !== undefined && patch.pricePerKg !== existing.pricePerKg) ||
+      (patch.paymentStatus !== undefined && patch.paymentStatus !== existing.paymentStatus)
+    ) {
+      requireRole(user, 'admin')
+    }
 
     const next: Record<string, unknown> = { updatedAt: Date.now() }
     if (patch.saleDate !== undefined) next.saleDate = patch.saleDate
@@ -325,7 +332,7 @@ export const updateSale = mutation({
 
     if (patch.customerId !== undefined) {
       const customer = await ctx.db.get(patch.customerId)
-      if (!customer) throw new Error('Customer not found')
+      assertOwns(user, customer, 'Customer')
       next.customerId = patch.customerId
       next.customerName = customer.name
     } else if (patch.customerName !== undefined) {

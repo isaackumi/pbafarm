@@ -295,6 +295,8 @@ export const update = mutation({
     const cageTouched =
       (patch.harvestType !== undefined && patch.harvestType !== existing.harvestType) ||
       (patch.estimatedCount !== undefined && patch.estimatedCount !== existing.estimatedCount)
+    // Re-posting fish counts is a stock correction (doc 07 V9): admin only.
+    if (cageTouched) requireRole(user, 'admin')
     let cageEffect = existing.cageEffect
     // Once the cage has moved on (restocked, or harvested again), this harvest
     // belongs to a closed cycle: correct the record, leave the live cage alone.
@@ -384,6 +386,9 @@ export const createSampling = mutation({
 
     const allowed = await listForCompany(user, [harvest])
     if (!allowed.length) throw new Error('Access denied')
+    if (args.cageId) {
+      assertOwns(user, await ctx.db.get(args.cageId), 'Cage')
+    }
 
     const id = await ctx.db.insert('harvestSampling', {
       ...args,
