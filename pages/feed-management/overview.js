@@ -3,20 +3,15 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import {
   Package,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  DollarSign,
   BarChart2,
-  Calendar,
   RefreshCw,
   ShoppingCart,
   Scale,
-  Percent,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader } from '../../components/ui'
+import { PageHeader, StatCard } from '../../components/ui'
+import { useMoney } from '../../lib/money'
 import { useToast } from '../../components/Toast'
 import { getConvexHttpClient, api } from '../../lib/convexBridge'
 import {
@@ -52,9 +47,11 @@ function FeedManagementOverview() {
     totalValue: 0,
     lowStockItems: 0,
     monthlyUsage: 0,
-    averageFCR: 0,
-    feedCostPerKg: 0,
+    averageFCR: null,
+    feedCostPerKg: null,
   })
+  const money = useMoney()
+  const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
   const [feedTypes, setFeedTypes] = useState([])
   const [usageData, setUsageData] = useState([])
   const [costData, setCostData] = useState([])
@@ -77,8 +74,18 @@ function FeedManagementOverview() {
       const from = new Date()
       from.setDate(from.getDate() - 30)
       const dateFrom = from.toISOString().slice(0, 10)
-      const usageData = await client.query(api.feed.listUsage, {
-        dateFrom,
+      const [usageData, suppliers, growth] = await Promise.all([
+        client.query(api.feed.listUsage, { dateFrom }),
+        client.query(api.feed.listSuppliers, {}).catch(() => []),
+        client.query(api.cages.growthAll, {}).catch(() => null),
+      ])
+      const feedName = new Map((feedTypesData || []).map((t) => [t.id || t._id, t.name]))
+      const supplierName = new Map((suppliers || []).map((x) => [x.id || x._id, x.name]))
+      usageData.forEach((u) => {
+        u.feed_type_name = feedName.get(u.feed_type_id) || 'Other'
+      })
+      feedTypesData.forEach((t) => {
+        t.supplier_name = supplierName.get(t.supplier_id) || 'No supplier'
       })
 
       // Calculate metrics
@@ -97,8 +104,8 @@ function FeedManagementOverview() {
         totalValue,
         lowStockItems,
         monthlyUsage,
-        averageFCR: 1.5, // This should be calculated based on actual data
-        feedCostPerKg: 2.5, // This should be calculated based on actual data
+        averageFCR: growth?.farm_efcr ?? null,
+        feedCostPerKg: totalStock > 0 ? totalValue / totalStock : null,
       })
 
       // Process usage data for charts
@@ -115,7 +122,7 @@ function FeedManagementOverview() {
 
     } catch (error) {
       console.error('Error fetching data:', error)
-      showToast('error', 'Failed to load feed management data')
+      showToast('Could not load feed data', 'error')
     } finally {
       setLoading(false)
     }
@@ -126,8 +133,9 @@ function FeedManagementOverview() {
     const grouped = data.reduce((acc, item) => {
       const date = new Date(item.usage_date).toLocaleDateString()
       if (!acc[date]) acc[date] = {}
-      if (!acc[date][item.feed_type.name]) acc[date][item.feed_type.name] = 0
-      acc[date][item.feed_type.name] += item.quantity
+      const name = item.feed_type_name || 'Other'
+      if (!acc[date][name]) acc[date][name] = 0
+      acc[date][name] += item.quantity || 0
       return acc
     }, {})
 
@@ -146,7 +154,7 @@ function FeedManagementOverview() {
 
   const processSupplierData = (data) => {
     const supplierMap = data.reduce((acc, type) => {
-      const supplier = type.supplier?.name || 'Unknown'
+      const supplier = type.supplier_name || 'No supplier'
       if (!acc[supplier]) acc[supplier] = 0
       acc[supplier] += type.current_stock
       return acc
@@ -228,69 +236,31 @@ function FeedManagementOverview() {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          {[
-            {
-              title: 'Total Stock',
-              value: metrics.totalStock.toFixed(2),
-              unit: 'kg',
-              icon: Package,
-              color: 'blue',
-            },
-            {
-              title: 'Total Value',
-              value: metrics.totalValue.toFixed(2),
-              unit: '₵',
-              icon: DollarSign,
-              color: 'green',
-            },
-            {
-              title: 'Low Stock Items',
-              value: metrics.lowStockItems,
-              unit: 'items',
-              icon: AlertTriangle,
-              color: 'red',
-            },
-            {
-              title: 'Monthly Usage',
-              value: metrics.monthlyUsage.toFixed(2),
-              unit: 'kg',
-              icon: TrendingUp,
-              color: 'purple',
-            },
-            {
-              title: 'Average FCR',
-              value: metrics.averageFCR.toFixed(2),
-              unit: '',
-              icon: Percent,
-              color: 'yellow',
-            },
-            {
-              title: 'Feed Cost/kg',
-              value: metrics.feedCostPerKg.toFixed(2),
-              unit: '₵',
-              icon: DollarSign,
-              color: 'indigo',
-            },
-          ].map((metric, index) => (
-            <div
-              key={index}
-              className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
-            >
-              <div className="flex items-center">
-                <div className={`p-3 rounded-full bg-${metric.color}-100 mr-4`}>
-                  <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted">{metric.title}</p>
-                  <p className="text-2xl font-semibold text-chart-ink">
-                    {metric.unit === '₵' ? metric.unit : ''}{metric.value}
-                    {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <StatCard label="Feed in stock" value={kg(metrics.totalStock)} unit="kg" />
+          <StatCard label="Stock value" value={money(metrics.totalValue, { decimals: 0 })} />
+          <StatCard
+            label="Low stock"
+            value={metrics.lowStockItems}
+            unit={metrics.lowStockItems === 1 ? 'feed type' : 'feed types'}
+            tone={metrics.lowStockItems > 0 ? 'warn' : 'default'}
+          />
+          <StatCard label="Used, last 30 days" value={kg(metrics.monthlyUsage)} unit="kg" />
+          <StatCard
+            label="Farm eFCR"
+            value={metrics.averageFCR == null ? '—' : metrics.averageFCR.toFixed(2)}
+            hint={
+              metrics.averageFCR == null
+                ? 'Needs stocking, feed and a bi-weekly sample'
+                : 'Active cycles: feed ÷ biomass gained'
+            }
+            tone="accent"
+          />
+          <StatCard
+            label="Average price in stock"
+            value={metrics.feedCostPerKg == null ? '—' : money(metrics.feedCostPerKg)}
+            unit={metrics.feedCostPerKg == null ? '' : 'per kg'}
+          />
         </div>
 
         {/* Charts */}
@@ -411,7 +381,7 @@ function FeedManagementOverview() {
                   <div>
                     <p className="font-medium text-chart-ink">{type.name}</p>
                     <p className="text-sm text-muted">
-                      Stock: {type.current_stock.toFixed(2)} kg | Price: ₵{type.price_per_kg.toFixed(2)}/kg
+                      Stock: {type.current_stock.toFixed(2)} kg | Price: {money(type.price_per_kg)}/kg
                     </p>
                   </div>
                   <div className="text-sm text-muted">

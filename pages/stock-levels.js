@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { useMoney } from '../lib/money'
 
 export default function StockLevelsPage() {
   return (
@@ -15,6 +16,7 @@ export default function StockLevelsPage() {
 }
 
 function StockLevels() {
+  const money = useMoney()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [stockLevels, setStockLevels] = useState([])
@@ -208,7 +210,7 @@ function StockLevels() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-mono">
-                          ₵{Number(item.stock_value || 0).toFixed(2)}
+                          {money(item.stock_value || 0)}
                         </td>
                       </tr>
                     )

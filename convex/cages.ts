@@ -124,6 +124,39 @@ export const growth = query({
   },
 })
 
+/**
+ * Farm-wide growth across active cages: each cage's cycle plus a combined
+ * eFCR (total feed ÷ total biomass gained), so one bad cage can't hide.
+ */
+export const growthAll = query({
+  args: { locationId: v.optional(v.id('farmLocations')) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx)
+    let cages = await ctx.db
+      .query('cages')
+      .withIndex('by_status', (q) => q.eq('status', 'active'))
+      .take(300)
+    cages = await listForCompanyAndLocation(user, cages, args.locationId)
+    const rows = []
+    let feed = 0
+    let gain = 0
+    for (const cage of cages) {
+      const g = await cageCycleGrowth(ctx, cage)
+      rows.push({ cage_id: cage._id, cage_name: cage.name, ...g })
+      const cageGain = (g.current_biomass_kg ?? 0) - (g.initial_biomass_kg ?? 0)
+      if (g.stocking_date && cageGain > 0) {
+        feed += g.feed_kg ?? 0
+        gain += cageGain
+      }
+    }
+    return {
+      cages: rows,
+      farm_efcr: feed > 0 && gain > 0 ? Math.round((feed / gain) * 100) / 100 : null,
+      farm_biomass_kg: Math.round(rows.reduce((s, r) => s + (r.current_biomass_kg ?? 0), 0)),
+    }
+  },
+})
+
 export const create = mutation({
   args: {
     name: v.string(),

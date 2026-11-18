@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { PageHeader, Button } from '../components/ui'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { cageService } from '../lib/cageService'
+import { useMoney } from '../lib/money'
 
 export default function ReportsPage() {
   return (
@@ -19,6 +20,7 @@ function cageKey(cage) {
 }
 
 function Reports() {
+  const money = useMoney()
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState('production')
   const [dateRange, setDateRange] = useState({
@@ -357,7 +359,7 @@ function Reports() {
                       />
                       <Stat
                         label="Feed Cost"
-                        value={`$${Number(summary.total_feed_cost || 0).toFixed(2)}`}
+                        value={money(summary.total_feed_cost || 0)}
                       />
                       <Stat
                         label="Avg FCR"
