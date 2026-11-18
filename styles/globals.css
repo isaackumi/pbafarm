@@ -34,9 +34,9 @@
   --color-primary-800: #18181b;
   --color-primary-900: #09090b;
 
-  --font-display: 'Lexend', system-ui, sans-serif;
-  --font-sans: 'Figtree', system-ui, sans-serif;
-  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: var(--font-lexend, 'Lexend'), system-ui, sans-serif;
+  --font-sans: var(--font-figtree, 'Figtree'), system-ui, sans-serif;
+  --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
 }
 
 body {

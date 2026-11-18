@@ -9,10 +9,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Lexend', 'system-ui', 'sans-serif'],
-        sans: ['Figtree', 'system-ui', 'sans-serif'],
-        data: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-        montserrat: ['Figtree', 'system-ui', 'sans-serif'],
+        display: ['var(--font-lexend)', 'Lexend', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-figtree)', 'Figtree', 'system-ui', 'sans-serif'],
+        data: ['var(--font-jetbrains)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
+        montserrat: ['var(--font-figtree)', 'Figtree', 'system-ui', 'sans-serif'],
       },
       colors: {
         lagoon: {

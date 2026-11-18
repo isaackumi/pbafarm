@@ -20,6 +20,7 @@ import { AppShellSkeleton } from '../components/ui'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { safeNextPath } from '../lib/safeRedirect'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
+import { fontVariablesCss } from '../lib/fonts'
 import '../styles/globals.css'
 import '../styles/tour.css'
 
@@ -50,6 +51,8 @@ function AppWrapper({ Component, pageProps, router }) {
   useServiceWorker()
   return (
     <ConvexAuthProvider client={convex}>
+      {/* Self-hosted font faces for the CSS variables in globals.css (MOBILE-007). */}
+      <style dangerouslySetInnerHTML={{ __html: fontVariablesCss }} />
       <Provider store={store}>
         <ThemeProvider>
           <SettingsProvider>

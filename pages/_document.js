@@ -10,12 +10,6 @@ export default function Document() {
         <meta name="theme-color" content="#18181b" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="PBA Farm" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
       </Head>
       <body className="bg-foam text-chart-ink antialiased font-sans">
         <Main />
