@@ -262,3 +262,22 @@ Inbound replies (for example a worker replying "12 dead" on WhatsApp) are stored
 2. Should password reset be email, SMS or admin-only (doc 13 Q3)?
 3. Who pays for messages: the organization's own provider account (D-009 assumes yes) or a platform-billed bundle?
 4. Is there an immediate partner (buyer, feed supplier, certifier) that needs API access, which would move the public API earlier?
+
+## 13. As built (Phase 11)
+
+### 13.1 Domain-event outbox (INT-010)
+
+- Helper: `emitDomainEvent(ctx, type, { companyId, subject?, locationId?, actorUserId?, origin?, businessDate?, data })` in `convex/lib/events.ts`. Call it in the mutation that makes the change, after the write. It inserts a `domainEvents` row (`pending`) in the same transaction, so a rolled-back change never emits. Actor and `origin` default from the ctx (`'api'` for public API writes).
+- Catalog: `DOMAIN_EVENT_TYPES` in the same file (type → label for the webhook UI). Unknown types are refused at emit time. Current types: `daily.batch.recorded`, `sampling.recorded`, `stock.harvested`, `stocking.approved`, `transfer.approved`, `inventory.stock.low`.
+- `data` is flat (≤ 40 keys; string, number, boolean, null; strings capped at 500 characters). It goes to customer webhooks: no secrets.
+- Dispatch: the `dispatch domain events` cron (every minute) drains pending events oldest first, 50 per transaction (re-scheduling itself when full), and runs every entry of `CONSUMERS` in `convex/events.ts` as a nested mutation. A consumer that throws is rolled back alone and recorded in `dispatchError`; the event is then `failed`. `internal.events.dispatch({ eventId })` re-runs one event. Consumers must be idempotent per event.
+- Deviation from doc 07 §2 (one `runAfter(0)` per event): batching keeps scheduler volume flat and keeps emitting mutations free of scheduling (convex-test also races real-timer scheduled functions against other tests). Latency is under a minute.
+- Other agents: the production engine emits stock events through this helper (add types to the catalog); the automation engine (Phase 10) adds its dispatcher to `CONSUMERS`.
+
+### 13.2 Public API v1 (INT-004)
+
+- Keys: `pbk_<10 base62>_<32 base62>`, generated in an action (`apiKeys.create`), SHA-256 stored in `apiKeys.hash`, shown once. Scopes from `convex/integrations/apiScopes.ts`; optional site list; optional expiry; revoke. `lastUsedAt` written at most every 5 minutes. A key stops working when its creator is deactivated or leaves the company, or the company is no longer approved.
+- Requests: `Authorization: Bearer <key>` → `internal.publicApi.authorize` (constant-time hash compare, scope, `apiPerKey` 120/min burst 60, `apiPerCompany` 600/min) → internal query/mutation. httpActions are Effect programs (`convex/integrations/apiHttp.ts`); all failures are `{ error: { code, message } }` with 400/401/403/404/413/422/429 (Retry-After).
+- Reads: `GET /api/v1/{cages|daily-records|sampling|harvests|feed-stock|sales}` (cursor pages, `limit` ≤ 200, `from`/`to` on dated lists, newest first) and `GET /api/v1/{resource}/{id}`. Company-indexed; site-limited keys filter by site, so a page may hold fewer than `limit` items.
+- Writes: `POST /api/v1/daily-records` and `POST /api/v1/sampling` call the same functions as the UI batch screens (`saveDailyBatch`, `saveSamplingBatch`). The actor is the key's creator downgraded to role `user` and limited to the key's sites (`convex/lib/apiActor.ts`), so admin overrides are never available; `logAudit` records `apiKeyId`. `Idempotency-Key` is required: same key and body replays the stored response (`Idempotent-Replayed: true`), a different body is 422, a refused write stores nothing. Keys are kept 30 days (`prune api idempotency keys` cron).
+- Contract: `GET /api/v1/openapi.json` (OpenAPI 3.1, `convex/integrations/openapi.ts`); in-app docs at `/api-docs`; key management at `/api-keys` (admins).
