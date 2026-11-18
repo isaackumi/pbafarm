@@ -277,16 +277,13 @@ export function AuthProvider({ children }) {
           break
         }
         // Lazy: keep the service layer out of the first-load bundle.
-        const { dailyRecordService } = await import('../lib/databaseService')
-        const { sent, failed } = await flushOutbox(
-          (payload) => dailyRecordService.createBatch(payload),
-          userId,
-        )
+        const { sendOutboxItem } = await import('../lib/outboxSenders')
+        const { sent, failed } = await flushOutbox(sendOutboxItem, userId)
         pending = outboxCount(userId)
         if (pending > 0) {
           note =
             failed > 0
-              ? `${pending} could not be sent. Open Daily entry to see why, or discard them.`
+              ? `${pending} could not be sent. Open Outbox to see why, or discard them.`
               : sent > 0
                 ? `${sent} sent. ${pending} still waiting; the connection dropped.`
                 : 'Could not reach the server. Try again when you have signal.'

@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
+import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
@@ -486,7 +487,8 @@ export const create = mutation({
  * Save several cages' daily records for one date in a single transaction.
  * Any failure (duplicate, insufficient stock, missing cage) rolls back every line.
  */
-export const createBatch = mutation({
+/** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
+export const createBatch = idempotentMutation('dailyRecords.createBatch', {
   args: {
     date: v.string(),
     records: v.array(

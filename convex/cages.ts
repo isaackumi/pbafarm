@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
-import { cageCycleGrowth } from './lib/growth'
+import { cageGrowth } from './lib/growth'
 import { mergeSettings, unitTypeOf } from './lib/farmRules'
 import { unitTypeValidator } from './schema'
 import { shadowCountEdit } from './lib/productionDualWrite'
@@ -186,7 +186,7 @@ export const growth = query({
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
     if (!allowed.length) return null
-    return await cageCycleGrowth(ctx, cage, asOf || undefined)
+    return await cageGrowth(ctx, cage, asOf || undefined)
   },
 })
 
@@ -209,13 +209,12 @@ export const growthAll = query({
     let feed = 0
     let gain = 0
     for (const cage of cages) {
-      const g = await cageCycleGrowth(ctx, cage, args.asOf || undefined)
+      const g = await cageGrowth(ctx, cage, args.asOf || undefined)
       rows.push({ cage_id: cage._id, cage_name: cage.name, ...g })
-      const cageGain = (g.current_biomass_kg ?? 0) - (g.initial_biomass_kg ?? 0)
-      if (g.stocking_date && cageGain > 0) {
-        feed += g.feed_kg ?? 0
-        gain += cageGain
-      }
+      if (!g.stocking_date) continue
+      // Pooled: every cage's feed and gain count, poor performers included (C7).
+      feed += g.feed_kg ?? 0
+      gain += 'gain_kg' in g ? g.gain_kg : (g.current_biomass_kg ?? 0) - (g.initial_biomass_kg ?? 0)
     }
     return {
       cages: rows,

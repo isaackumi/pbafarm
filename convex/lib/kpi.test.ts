@@ -8,6 +8,8 @@ import {
   efcr,
   flowsOf,
   gainKg,
+  periodGrowthPerDay,
+  periodHarvestFcr,
   periodMortalityPct,
   pooledFcr,
   sampleGrowthPerDay,
@@ -59,6 +61,33 @@ describe('kpi definitions (doc 05 §6)', () => {
   test('growth per day uses one occupancy’s first and last samples', () => {
     expect(sampleGrowthPerDay([{ date: '2026-01-01', abwG: 20 }, { date: '2026-01-11', abwG: 40 }])).toBe(2)
     expect(sampleGrowthPerDay([{ date: '2026-01-01', abwG: 20 }])).toBeNull()
+  })
+
+  test('period FCR: latest stored inputs per occupancy, typed FCRs weighted by kg', () => {
+    expect(
+      periodHarvestFcr([
+        // Two harvests of one occupancy: only the later (cumulative) inputs count.
+        { cageId: 'c1', batchId: 'b1', harvestDate: '2026-06-01', totalWeight: 700, fcrInputs: { feedKg: 500, gainKg: 400 } },
+        { cageId: 'c1', batchId: 'b1', harvestDate: '2026-07-15', totalWeight: 1720, fcrInputs: { feedKg: 3000, gainKg: 2000 } },
+        // An older harvest with a typed FCR of 2 on 100 kg.
+        { cageId: 'c2', harvestDate: '2026-05-01', totalWeight: 100, fcr: 2 },
+        // FCR 0 is ignored, not averaged in.
+        { cageId: 'c3', harvestDate: '2026-05-01', totalWeight: 50, fcr: 0 },
+      ]),
+    ).toBeCloseTo(3200 / 2100, 5)
+  })
+
+  test('period growth never joins samples of different cages or batches', () => {
+    expect(
+      periodGrowthPerDay([
+        { cageId: 'c1', batchId: 'b1', date: '2026-01-01', abwG: 20 },
+        { cageId: 'c1', batchId: 'b1', date: '2026-01-11', abwG: 40 },
+        // Restocked: the new batch's small fish are not a negative slope.
+        { cageId: 'c1', batchId: 'b2', date: '2026-01-21', abwG: 5 },
+        { cageId: 'c1', batchId: 'b2', date: '2026-01-31', abwG: 15 },
+        { cageId: 'c2', date: '2026-01-01', abwG: 500 },
+      ]),
+    ).toBe(1.5)
   })
 
   test('a reversal subtracts from the bucket of the event it reverses', () => {

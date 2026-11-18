@@ -5,6 +5,11 @@ import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import LocationMetaField from './LocationMetaField'
 import { usePersistedForm } from '../hooks/usePersistedForm'
+import { useOnline } from '../hooks/useOutbox'
+import { useAuth } from '../contexts/AuthContext'
+import { cleanError } from '../lib/offlineOutbox'
+import { saveOrQueue } from '../lib/outboxSenders'
+import OutboxPanel from './OutboxPanel'
 import {
   Button,
   Card,
@@ -56,6 +61,8 @@ const HarvestForm = ({ onComplete }) => {
   const [fcrCalc, setFcrCalc] = useState(null)
   const [fcrTouched, setFcrTouched] = useState(false)
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const online = useOnline()
 
   useEffect(() => {
     const fetchCages = async () => {
@@ -64,8 +71,19 @@ const HarvestForm = ({ onComplete }) => {
         if (error) throw error
         setCages(data || [])
       } catch (error) {
-        console.error('Error fetching cages:', error)
-        showToast('Error fetching cages', 'error')
+        // No signal: the cage list daily entry saved on this device last time.
+        let cached = null
+        try {
+          cached = JSON.parse(localStorage.getItem('pbafarm:daily-entry:lookups') || 'null')
+        } catch {
+          cached = null
+        }
+        if (cached?.cages) {
+          setCages(cached.cages)
+        } else {
+          console.error('Error fetching cages:', error)
+          showToast('Error fetching cages', 'error')
+        }
       } finally {
         setCagesReady(true)
       }
@@ -204,11 +222,20 @@ const HarvestForm = ({ onComplete }) => {
         notes: formData.notes,
       }
 
-      const { error, warnings } = await harvestRecordService.createHarvestRecord(harvestData)
+      const { error, warnings, queued } = await saveOrQueue({
+        kind: 'harvest',
+        payload: JSON.parse(JSON.stringify(harvestData)),
+        summary: `${formData.harvestDate} · ${selectedCageObject?.name || 'Cage'} · ${
+          harvestData.total_weight
+        } kg ${formData.harvestType}`,
+        userId: user?.id,
+      })
       if (error) throw error
 
       showToast(
-        formData.harvestType === 'complete'
+        queued
+          ? 'No connection. Harvest saved on this device and will send when you are back online'
+          : formData.harvestType === 'complete'
           ? `Harvest saved. ${selectedCageObject?.name || 'The cage'} is now marked harvested`
           : 'Partial harvest saved. Fish taken off the cage count',
         'success',
@@ -229,7 +256,7 @@ const HarvestForm = ({ onComplete }) => {
       if (onComplete) onComplete()
     } catch (error) {
       console.error('Error saving harvest record:', error)
-      showToast(error.message || 'Error saving harvest record', 'error')
+      showToast(cleanError(error) || 'Error saving harvest record', 'error')
       setLoading(false)
       setShowPreview(false)
     }
@@ -269,6 +296,7 @@ const HarvestForm = ({ onComplete }) => {
 
   return (
     <Card>
+      <OutboxPanel compact online={online} kinds={['harvest']} />
       {!showPreview ? (
         <form onSubmit={handleSubmit} noValidate className="space-y-8">
           <FormSection

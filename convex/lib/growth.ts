@@ -1,7 +1,9 @@
 import type { QueryCtx, MutationCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 
-import { biomassKg, fcr, sgr, adg, daysBetween, round } from './kpi'
+import { biomassKg, fcr, sgr, adg, daysBetween, round, occupancyKpis } from './kpi'
+import { compareLedger, eventsForPair, eventsForUnit, openBatchInUnit, samplesFor } from './productionEngine'
+import { feedFor } from './productionDualWrite'
 
 /** Formulas live in ./kpi (one definition each, PROD-008); re-exported for older imports. */
 export { biomassKg, fcr, sgr, adg, daysBetween }
@@ -137,5 +139,75 @@ export async function syncCageAbw(ctx: MutationCtx, cageId: Id<'cages'>) {
   const next = latest?.averageBodyWeight ?? (start ? cage.initialAbw : undefined)
   if (next !== cage.currentWeight) {
     await ctx.db.patch(cageId, { currentWeight: next, updatedAt: Date.now() })
+  }
+}
+
+/**
+ * Growth for a cage's current (or last) occupancy from the stock ledger,
+ * with the KPI definitions of ./kpi (PROD-008): flows in and out of the cage
+ * count, so transfers, top-ups and partial harvests no longer distort eFCR
+ * or survival. Falls back to `cageCycleGrowth` until the cage's ledger is in
+ * step with its count (before the backfill). Same keys as `cageCycleGrowth`,
+ * plus `source` and `definitions_version`.
+ */
+export async function cageGrowth(ctx: Ctx, cage: Doc<'cages'>, asOf?: string) {
+  const legacy = await cageCycleGrowth(ctx, cage, asOf)
+  const date = asOf ?? new Date().toISOString().slice(0, 10)
+  const unitEvents = await eventsForUnit(ctx, cage._id, date)
+  const inStep =
+    unitEvents.length > 0 &&
+    unitEvents.reduce((s, e) => s + e.qtyDelta, 0) === (cage.currentCount ?? 0)
+  const fallback = { ...legacy, batch_id: null, source: 'legacy' as const, definitions_version: 2 }
+  if (!inStep) return fallback
+  const sorted = [...unitEvents].sort(compareLedger)
+  const lastEvent = sorted[sorted.length - 1]
+  const batchId = (await openBatchInUnit(ctx, cage._id, date)) ?? lastEvent?.batchId ?? null
+  const batch = batchId ? await ctx.db.get(batchId) : null
+  if (!batch) return fallback
+
+  const events = (await eventsForPair(ctx, cage._id, batch._id)).filter((e) => e.eventDate <= date)
+  const openedOn = events.find((e) => e.qtyDelta > 0)?.eventDate ?? batch.openedOn
+  const total = events.reduce((s, e) => s + e.qtyDelta, 0)
+  const end =
+    total <= 0 && events.length
+      ? events.reduce((m, e) => (e.eventDate > m ? e.eventDate : m), openedOn)
+      : date
+  const feed = await feedFor(ctx, cage._id, batch._id, openedOn, end)
+  const k = occupancyKpis({
+    events,
+    samples: await samplesFor(ctx, cage._id, batch._id),
+    feedKg: feed.kg,
+    feedCost: feed.cost,
+    asOf: date,
+  })
+  return {
+    stocking_id: legacy.stocking_id,
+    batch_id: batch._id,
+    batch_number: batch.batchNumber,
+    stocking_date: k.opened_on,
+    cycle_closed: k.closed_on != null,
+    days_of_culture: k.days_of_culture,
+    stocked_count: k.stocked_count + k.in_count,
+    live_count: k.count,
+    mortality: k.mortality,
+    survival_pct: k.survival_pct,
+    mortality_pct: k.mortality_pct,
+    harvested_count: k.harvested_count,
+    harvested_kg: k.harvested_kg,
+    unaccounted: k.unaccounted,
+    initial_abw_g: k.initial_abw_g,
+    current_abw_g: k.current_abw_g,
+    abw_measured_on: k.abw_measured_on,
+    initial_biomass_kg: k.stocked_biomass_kg,
+    current_biomass_kg: k.current_biomass_kg,
+    gain_kg: k.gain_kg,
+    feed_kg: k.feed_kg,
+    feed_cost: k.feed_cost,
+    efcr: k.efcr,
+    biological_fcr: k.biological_fcr,
+    sgr_pct_day: k.sgr_pct_day,
+    adg_g_day: k.adg_g_day,
+    source: 'ledger' as const,
+    definitions_version: 2,
   }
 }

@@ -14,6 +14,25 @@ import {
 } from './lib/costing'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
+import { periodGrowthPerDay, periodHarvestFcr, periodMortalityPct } from './lib/kpi'
+
+/** A bi-weekly row as a KPI sample. */
+const sampleRow = (r: Doc<'biweeklyRecords'>) => ({
+  cageId: String(r.cageId),
+  batchId: r.batchId ? String(r.batchId) : undefined,
+  date: r.date,
+  abwG: r.averageBodyWeight,
+})
+
+/** A harvest row as a KPI input. */
+const harvestRow = (h: Doc<'harvestRecords'>) => ({
+  cageId: String(h.cageId),
+  batchId: h.batchId ? String(h.batchId) : undefined,
+  harvestDate: h.harvestDate,
+  totalWeight: h.totalWeight,
+  fcr: h.fcr,
+  fcrInputs: h.fcrInputs ?? null,
+})
 
 /** A cage's daily records with `date` in [from, to], via `by_cage_date`. */
 async function cageDaily(
@@ -151,33 +170,8 @@ export const dashboardKpis = query({
       from: cutoffDateStr,
       locationId: args.locationId,
     })
-    let avgGrowth: number | null = null
-    if (biweekly.length >= 2) {
-      const byCage: Record<string, typeof biweekly> = {}
-      for (const r of biweekly) {
-        const key = String(r.cageId)
-        if (!byCage[key]) byCage[key] = []
-        byCage[key].push(r)
-      }
-      const rates: number[] = []
-      for (const rows of Object.values(byCage)) {
-        if (rows.length < 2) continue
-        const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date))
-        const first = sorted[0]
-        const last = sorted[sorted.length - 1]
-        const days = Math.max(
-          1,
-          Math.ceil(
-            (new Date(last.date).getTime() - new Date(first.date).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        )
-        rates.push((last.averageBodyWeight - first.averageBodyWeight) / days)
-      }
-      if (rates.length) {
-        avgGrowth = rates.reduce((a, b) => a + b, 0) / rates.length
-      }
-    }
+    // One definition each (convex/lib/kpi.ts, PROD-008).
+    const avgGrowth = periodGrowthPerDay(biweekly.map(sampleRow))
 
     const periodHarvests = (
       await scopedRowsInRange(ctx, user, 'harvestRecords', {
@@ -185,19 +179,12 @@ export const dashboardKpis = query({
         locationId: args.locationId,
       })
     ).filter(isRealHarvest)
-    const fcrValues = periodHarvests
-      .map((h) => h.fcr)
-      .filter((f) => typeof f === 'number' && !Number.isNaN(f) && f > 0)
-    const avgFcr =
-      fcrValues.length > 0
-        ? fcrValues.reduce((a, b) => a + b, 0) / fcrValues.length
-        : null
+    const avgFcr = periodHarvestFcr(periodHarvests.map(harvestRow))
     const harvestWeight = periodHarvests.reduce((s, h) => s + h.totalWeight, 0)
 
-    const mortalityPct =
-      activeFish + recentMortality > 0
-        ? (recentMortality / (activeFish + recentMortality)) * 100
-        : 0
+    // Deaths and the live fish they are compared with come from the same cages.
+    const liveFish = cages.reduce((s, c) => s + Math.max(0, c.currentCount || 0), 0)
+    const mortalityPct = periodMortalityPct(recentMortality, liveFish) ?? 0
 
     return {
       period_days: daysBack,
@@ -300,6 +287,8 @@ export const exportBundle = query({
       total_weight: r.totalWeight,
       estimated_count: r.estimatedCount,
       fcr: r.fcr,
+      fcr_inputs: r.fcrInputs ?? null,
+      batch_id: r.batchId ?? null,
       size_breakdown: r.sizeBreakdown,
       notes: r.notes,
       harvest_type: r.harvestType,
@@ -325,6 +314,9 @@ export const exportBundle = query({
         total_feed_usage: dailyRecords.reduce((sum, r) => sum + r.feedAmount, 0),
         total_feed_cost: dailyRecords.reduce((sum, r) => sum + r.feedCost, 0),
         total_harvest_weight: harvestRecords.reduce((sum, r) => sum + r.totalWeight, 0),
+        // Same definitions as the dashboard and report (convex/lib/kpi.ts).
+        fcr: periodHarvestFcr(harvestRecords.filter(isRealHarvest).map(harvestRow)),
+        growth_g_day: periodGrowthPerDay(biweeklyRecords.map(sampleRow)),
       },
     }
   },
@@ -440,24 +432,8 @@ export const productionReport = query({
       biweekly_samples: biweekly.length,
       harvest_events: harvests.length,
       harvest_weight_kg: harvests.reduce((s, h) => s + h.totalWeight, 0),
-      avg_fcr:
-        harvests.length > 0
-          ? harvests.reduce((s, h) => s + h.fcr, 0) / harvests.length
-          : null,
-      avg_growth_g_day: (() => {
-        if (biweekly.length < 2) return null
-        const sorted = [...biweekly].sort((a, b) => a.date.localeCompare(b.date))
-        const first = sorted[0]
-        const last = sorted[sorted.length - 1]
-        const days = Math.max(
-          1,
-          Math.ceil(
-            (new Date(last.date).getTime() - new Date(first.date).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        )
-        return (last.averageBodyWeight - first.averageBodyWeight) / days
-      })(),
+      avg_fcr: periodHarvestFcr(harvests.map(harvestRow)),
+      avg_growth_g_day: periodGrowthPerDay(biweekly.map(sampleRow)),
     }
 
     const byCage = cages.map((c) => {
