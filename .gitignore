@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Graphify knowledge graph output (regenerate with `graphify extract . --code-only`)
 graphify-out/
+
+# Convex export snapshots (scripts/ops); contain customer data
+backups/

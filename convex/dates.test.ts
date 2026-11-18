@@ -103,6 +103,23 @@ describe('site time zone drives "today"', () => {
     // Site B has no zone: company default (Accra, UTC+0) is still on the 18th.
     await expect(as.mutation(api.dailyRecords.create, daily(cageB, '2026-11-19'))).rejects.toThrow(/today is 2026-11-18/)
     await expect(as.mutation(api.dailyRecords.create, daily(cageB, 'not-a-date'))).rejects.toThrow(/real date/)
+    // Validation and duplicate refusals are ConvexErrors, so prod clients see the message (OPS-001).
+    const dataOf = async (p: Promise<unknown>) => {
+      try {
+        await p
+      } catch (e) {
+        const raw = (e as { data?: unknown }).data
+        return typeof raw === 'string' ? JSON.parse(raw) : raw
+      }
+      throw new Error('expected a rejection')
+    }
+    expect(await dataOf(as.mutation(api.dailyRecords.create, daily(cageA, '2026-11-20')))).toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/in the future/),
+    })
+    expect(await dataOf(as.mutation(api.dailyRecords.create, daily(cageA, '2026-11-19')))).toMatchObject({
+      code: 'DUPLICATE',
+    })
   })
 
   test('reminders use each site\'s local date', async () => {
