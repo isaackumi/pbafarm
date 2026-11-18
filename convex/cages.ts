@@ -3,6 +3,7 @@ import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { cageCycleGrowth } from './lib/growth'
 import { mergeSettings } from './lib/farmRules'
+import { shadowCountEdit } from './lib/productionDualWrite'
 import { listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { QueryCtx } from './_generated/server'
@@ -294,6 +295,17 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, next)
+    // A hand-corrected count becomes a labelled ledger adjustment (dual-write).
+    if (patch.currentCount !== undefined && patch.currentCount !== (existing.currentCount ?? 0)) {
+      await shadowCountEdit(
+        ctx,
+        existing,
+        existing.currentCount ?? 0,
+        patch.currentCount,
+        user._id,
+        new Date().toISOString().slice(0, 10),
+      )
+    }
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'cages',
