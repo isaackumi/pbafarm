@@ -85,6 +85,7 @@ const MENU_SECTIONS = {
       { title: 'All Cages', path: '/cages', icon: Database, tourId: 'cages' },
       { title: 'Unit board', path: '/units', icon: LayoutGrid },
       { title: 'Groups', path: '/units/groups', icon: List },
+      { title: 'Site map', path: '/units/map', icon: Crosshair },
       { title: 'Water quality', path: '/water-quality', icon: Waves },
       { title: 'Maintenance', path: '/maintenance', icon: Settings },
       { title: 'Analytics', path: '/cages/analytics', icon: ChartColumn },

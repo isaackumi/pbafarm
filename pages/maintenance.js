@@ -53,7 +53,12 @@ function Maintenance() {
         title="Maintenance"
         breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Maintenance' }]}
         description="Net inspections and equipment servicing due, the equipment registry and recent jobs."
-        actions={isAdmin && <Button size="sm" onClick={() => setAdding(true)}>Add equipment</Button>}
+        actions={
+          <>
+            <Button size="sm" variant="secondary" href="/inspection-entry">Log inspection</Button>
+            {isAdmin && <Button size="sm" onClick={() => setAdding(true)}>Add equipment</Button>}
+          </>
+        }
         related={[{ label: 'Unit board', href: '/units' }, { label: 'Inventory items', href: '/inventory/items' }]}
       />
       {due && (

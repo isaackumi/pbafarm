@@ -247,7 +247,7 @@ function Groups() {
             </>
           )
         }
-        related={[{ label: 'Unit board', href: '/units' }]}
+        related={[{ label: 'Unit board', href: '/units' }, { label: 'Site map', href: '/units/map' }]}
       />
 
       {adding && (
