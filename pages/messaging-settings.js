@@ -297,6 +297,130 @@ function ChannelCard({ spec, row, providers, platform, encryptionReady }) {
   )
 }
 
+/** Sign-in security: phone sign-in and two-step verification (SEC-006, SEC-007). */
+function SecurityCard() {
+  const { showToast } = useToast()
+  const policy = useQuery(api.security.getPolicy)
+  const updatePolicy = useMutation(api.security.updatePolicy)
+  const [saving, setSaving] = useState(false)
+
+  if (!policy) return <Skeleton className="h-48" />
+
+  const save = async (patch, message) => {
+    setSaving(true)
+    try {
+      await updatePolicy(patch)
+      showToast('success', message)
+    } catch (err) {
+      showToast('error', errorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const channelOptions = (
+    <>
+      <option value="sms">SMS{policy.channelAvailable.sms ? '' : ' (not set up)'}</option>
+      <option value="whatsapp">WhatsApp{policy.channelAvailable.whatsapp ? '' : ' (not set up)'}</option>
+    </>
+  )
+
+  return (
+    <Card>
+      <CardHeader
+        title="Sign-in security"
+        subtitle="Codes are sent through the channels above. Turn these on only after a test message arrives."
+      />
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 text-sm text-chart-ink">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={policy.allowPhoneLogin}
+              disabled={saving}
+              onChange={(e) =>
+                save(
+                  { allowPhoneLogin: e.target.checked },
+                  e.target.checked ? 'Staff can now sign in with a phone code.' : 'Phone sign-in turned off.',
+                )
+              }
+            />
+            <span>
+              Let staff sign in with a code sent to their phone
+              <span className="block text-muted">
+                Only people whose mobile number you added on the Users page can use it.
+              </span>
+            </span>
+          </label>
+          <Field label="Send sign-in codes by" htmlFor="login-channel" className="sm:max-w-xs">
+            <Select
+              id="login-channel"
+              value={policy.phoneLoginChannel}
+              disabled={saving}
+              onChange={(e) => save({ phoneLoginChannel: e.target.value }, 'Saved.')}
+            >
+              {channelOptions}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="space-y-3 border-t border-foam-deep pt-5">
+          <label className="flex items-start gap-3 text-sm text-chart-ink">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={policy.require2fa}
+              disabled={saving}
+              onChange={(e) =>
+                save(
+                  { require2fa: e.target.checked },
+                  e.target.checked
+                    ? 'Two-step verification is on. Everyone enters a code at their next sign-in.'
+                    : 'Two-step verification turned off.',
+                )
+              }
+            />
+            <span>
+              Require a code at every new sign-in (two-step verification)
+              <span className="block text-muted">
+                {policy.adminHasPhone
+                  ? 'Staff without a mobile number add one the first time.'
+                  : 'Add your own mobile number on the Users page first.'}
+              </span>
+            </span>
+          </label>
+          <Field label="Send verification codes by" htmlFor="mfa-channel-policy" className="sm:max-w-xs">
+            <Select
+              id="mfa-channel-policy"
+              value={policy.twoFactorChannel}
+              disabled={saving}
+              onChange={(e) => save({ twoFactorChannel: e.target.value }, 'Saved.')}
+            >
+              {channelOptions}
+            </Select>
+          </Field>
+          <label className="flex items-start gap-3 text-sm text-chart-ink">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={policy.phoneLoginSatisfies2fa}
+              disabled={saving}
+              onChange={(e) => save({ phoneLoginSatisfies2fa: e.target.checked }, 'Saved.')}
+            />
+            <span>
+              A phone sign-in code also counts as the second step
+              <span className="block text-muted">
+                When off and two-step verification is on, phone sign-in is not offered.
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 function PreferencesCard({ data }) {
   const { showToast } = useToast()
   const toast = {
@@ -419,6 +543,7 @@ export default function MessagingSettingsPage() {
                   encryptionReady={data.encryptionReady}
                 />
               ))}
+              <SecurityCard />
               <PreferencesCard data={data} />
             </div>
           )}
