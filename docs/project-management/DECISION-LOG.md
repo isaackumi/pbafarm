@@ -21,6 +21,7 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 | D-011 | Errors and operations: `ConvexError`, error boundary, monitoring, staging + prod | Proposed — awaiting owner approval |
 | D-012 | Globalization: org-level currency/timezone/units/locale, i18n library deferred | Proposed — awaiting owner approval |
 | D-013 | Insert a Phase 0 "Stabilize" before the brief's Phase 1 | Proposed — awaiting owner approval |
+| D-019 | Adopt Effect incrementally for integration code, via a thin in-house bridge | Accepted — owner request 2026-11-18 |
 
 ---
 
@@ -272,3 +273,27 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 **Status.** Proposed — awaiting owner approval.
 
 **Decision.** Turnstile on open sign-up/registration/reset/invite flows, verified in a Convex action, when sign-up stays open (Q-011) or abuse appears. Application rate limiting uses `@convex-dev/rate-limiter`. WAF, Workers, Queues and Workflows wait for their triggers.
+
+## D-019 — Adopt Effect incrementally for integration code, via a thin in-house bridge
+
+**Status.** Accepted — owner request 2026-11-18 ("we will need this https://effect.website/"). Details: `docs/architecture/19-effect-adoption.md`.
+
+**Context.** Upcoming work (messaging providers INT-001, webhooks, automation runs D-008, AI proxy, IoT ingestion) is dominated by outbound calls that need timeouts, retry on transient failures, typed errors and payload validation. Today each call hand-rolls this (or skips it: the AI proxy has no timeout or retry). `effect` 4.1.4 (Nov 2026) bundles typed errors, retry schedules, timeouts, Layers and Schema in one dependency-free package that runs in the Convex default runtime.
+
+**Decision.**
+- Add `effect` (^4.1.4). Use it for integrations/providers, webhooks, automation engine runs, the AI proxy, IoT ingestion, and pure domain pipelines only where it removes code.
+- Do not use it for simple queries/mutations or React components; no rewrite of existing functions.
+- Bridge in-house: `convex/lib/effect.ts` (`runEffect`, `runEffectSync`, `UserFacingError` → `userError`) and `convex/lib/effectHttp.ts` (fetch with timeout, transient-only retry, tagged errors, Schema decoding).
+- Deep imports only (`effect/Effect`); the `effect` barrel is banned by ESLint (measured 4x larger esbuild bundles).
+- Queries run only pure programs through `runEffectSync` (no Clock/Random/timers).
+
+**Alternatives considered.**
+1. Confect (`@confect/*`). Rejected for now: whole-app framework (Effect-defined schema, codegen, own function builders), 10 major versions in 9 months, needs Convex ≥1.48 and Node 24. Re-evaluate when it is stable and we want Effect-defined schemas.
+2. No library; keep hand-written retry/timeout helpers. Rejected: the owner asked for Effect, and typed errors + Schema would be re-invented per provider.
+3. Effect everywhere (rewrite queries/mutations). Rejected: churn without benefit; plain Convex code is clearer for CRUD.
+
+**Consequences.**
+- ~10 kB gzip (runner) to ~30 kB gzip (with Schema + HTTP) added to the Convex bundle; nothing added to the client bundle.
+- Contributors learn a second style for integration code; `CLAUDE.md` and doc 19 §7 hold the checklist.
+- `@effect/vitest` waits for a vitest 5 upgrade; tests use plain vitest.
+
