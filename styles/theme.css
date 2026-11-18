@@ -18,6 +18,22 @@
   --lake: #1d5f8c;
   --lake-soft: #e3eef6;
 
+  /* Charts (dataviz reference palette, validated on --surface in both modes) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --viz-grid: #e4e4e7;
+  --viz-axis: #a1a1aa;
+  --viz-neutral: #f0efec;
+  --viz-negative: #e34948;
+  /* Sequential blue, light to dark (heatmaps) */
+  --seq-1: #cde2fb;
+  --seq-2: #9ec5f4;
+  --seq-3: #6da7ec;
+  --seq-4: #3987e5;
+  --seq-5: #256abf;
+  --seq-6: #184f95;
+  --seq-7: #0d366b;
+
   --font-display: var(--font-lexend, 'Lexend'), system-ui, sans-serif;
   --font-ui: var(--font-figtree, 'Figtree'), system-ui, sans-serif;
   --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
@@ -71,6 +87,20 @@ html[data-theme='dark'] {
   --waterline: #a1a1aa;
   --lake: #7cb7e0;
   --lake-soft: rgba(124, 183, 224, 0.14);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --viz-grid: #2c2c32;
+  --viz-axis: #71717a;
+  --viz-neutral: #383835;
+  --viz-negative: #e66767;
+  /* Sequential blue, dark surface: near-zero recedes toward the surface */
+  --seq-1: #104281;
+  --seq-2: #184f95;
+  --seq-3: #1c5cab;
+  --seq-4: #2a78d6;
+  --seq-5: #5598e7;
+  --seq-6: #86b6ef;
+  --seq-7: #cde2fb;
 }
 
 html.dark body,

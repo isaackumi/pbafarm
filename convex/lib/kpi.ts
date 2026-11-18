@@ -68,6 +68,36 @@ export function sgr(abwStartG: number, abwEndG: number, days: number): number | 
   return ((Math.log(abwEndG) - Math.log(abwStartG)) / days) * 100
 }
 
+/**
+ * ABW after `days` at a constant SGR: the {@link sgr} definition solved for
+ * the end weight (forecasts, target curves; ANLY-003).
+ */
+export function projectAbw(abwG: number, sgrPctDay: number, days: number): number | null {
+  if (!(abwG > 0) || !Number.isFinite(sgrPctDay) || !(days >= 0)) return null
+  return abwG * Math.exp((sgrPctDay / 100) * days)
+}
+
+/**
+ * Days to grow from `abwG` to `targetG` at a constant SGR: the {@link sgr}
+ * definition solved for the days. 0 when already there; null without growth.
+ */
+export function daysToReach(abwG: number, targetG: number, sgrPctDay: number): number | null {
+  if (!(abwG > 0) || !(targetG > 0)) return null
+  if (abwG >= targetG) return 0
+  if (!(sgrPctDay > 0)) return null
+  return Math.ceil(((Math.log(targetG) - Math.log(abwG)) / sgrPctDay) * 100)
+}
+
+/**
+ * Fish left after `days` losing {@link dailyMortalityPct} of the stock each
+ * day (forecasts). Without a rate the count stays.
+ */
+export function projectCount(count: number, dailyPct: number | null, days: number): number {
+  if (!(count > 0)) return 0
+  const rate = dailyPct != null && dailyPct > 0 ? Math.min(dailyPct, 100) / 100 : 0
+  return Math.round(count * Math.pow(1 - rate, Math.max(0, days)))
+}
+
 /** Average daily gain, grams per fish per day (negative growth allowed). */
 export function adg(abwStartG: number, abwEndG: number, days: number): number | null {
   if (!(abwStartG > 0) || !(abwEndG > 0) || !(days > 0)) return null
@@ -457,3 +487,37 @@ export function occupancyKpis(input: {
     adg_g_day: round(adg(initialAbw ?? 0, abw.abwG ?? 0, growthDays), 2),
   }
 }
+
+// ---------------------------------------------------------------------------
+// Hatchery and nursery (HAT-002, HAT-003, NUR-001)
+// ---------------------------------------------------------------------------
+
+/** `part` as a % of `whole`; null when the base is missing or not positive. */
+function pct(part: number | null | undefined, whole: number | null | undefined): number | null {
+  if (part == null || whole == null || !(whole > 0) || !Number.isFinite(part)) return null
+  return (Math.max(0, part) / whole) * 100
+}
+
+/** Fertilization %: fertilized eggs ÷ eggs collected. */
+export const fertilizationPct = (fertilizedEggs: number | null | undefined, eggs: number | null | undefined) =>
+  pct(fertilizedEggs, eggs)
+
+/** Hatch rate %: larvae hatched ÷ eggs set in the incubator. */
+export const hatchRatePct = (larvae: number | null | undefined, eggsIncubated: number | null | undefined) =>
+  pct(larvae, eggsIncubated)
+
+/** Eggs per kg of female broodstock (relative fecundity). */
+export function eggsPerKgFemale(eggs: number | null | undefined, femaleKg: number | null | undefined) {
+  if (eggs == null || femaleKg == null || !(femaleKg > 0)) return null
+  return Math.max(0, eggs) / femaleKg
+}
+
+/** Fry (larvae or fingerlings) produced per kg of female broodstock spawned. */
+export const fryPerKgFemale = eggsPerKgFemale
+
+/**
+ * Larval or nursery survival %: the batch's own flows (survivalPct), so
+ * fingerlings sold, transferred or graded out are not losses and survival
+ * counts recorded as count adjustments are.
+ */
+export const nurserySurvivalPct = (f: Flows) => survivalPct(f)
