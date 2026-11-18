@@ -15,6 +15,7 @@ import {
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { cageService } from '../lib/cageService'
 import { useMoney } from '../lib/money'
+import { localToday } from '../lib/format'
 
 export default function ReportsPage() {
   return (
@@ -36,7 +37,7 @@ function Reports() {
     startDate: new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
       .split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    endDate: localToday(),
   })
   const [cages, setCages] = useState([])
   const [selectedCages, setSelectedCages] = useState([])
@@ -118,7 +119,7 @@ function Reports() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.json`
+    link.download = `${reportType}-report-${localToday()}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

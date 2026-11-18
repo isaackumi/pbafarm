@@ -2,8 +2,9 @@
  * Company-local time for automation schedules (D-012, AUTO-007). Pure
  * functions over `Intl.DateTimeFormat`, so they are DST-safe and testable.
  *
- * The default zone is UTC: the legacy reminder ran at 16:00 UTC, which is
- * 16:00 in Accra (no DST), so companies without a zone keep that time.
+ * The organization's zone comes from companies.timezone (lib/orgProfile,
+ * default Africa/Accra = UTC+0, no DST), so the legacy 16:00 UTC reminder
+ * keeps its time. An unknown zone falls back to UTC.
  */
 export const DEFAULT_TIMEZONE = 'UTC'
 

@@ -4,12 +4,12 @@ import { internal } from './_generated/api'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
+
+import { todayIn, zoneFor } from './lib/dates'
 import { mergeSettings } from './lib/farmRules'
 import { CHECKS } from './automation/checks'
 import { onEngine } from './automation/rules'
 import { createRun } from './automation/engine'
-
-const todayUtc = () => new Date().toISOString().split('T')[0]
 
 async function notifyOnce(
   ctx: MutationCtx,
@@ -36,23 +36,28 @@ async function notifyOnce(
 }
 
 /**
- * One company's end-of-day check (legacy path, kept until the company moves
- * onto automation rules): active cages with no daily entry for the date
- * (sent to everyone, linking straight to a pre-filled daily entry), feed
- * types at or below their minimum stock and non-feed items at or below their
- * reorder level (sent to admins). The checks are shared with the engine's
- * built-in rules (convex/automation/checks.ts), so both send the same text.
+ * One company's end-of-day check (legacy path, used until the company moves
+ * onto automation rules): active cages with no daily entry for their site's
+ * local date (sent to everyone, linking straight to a pre-filled daily
+ * entry), feed types at or below their minimum stock and non-feed items at or
+ * below their reorder level (sent to admins). The checks are shared with the
+ * engine's built-in rules (convex/automation/checks.ts), so both send the
+ * same text with the same dedupe keys.
  */
 async function digestForCompany(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
-  date: string,
+  /** Fixed date for every site (tests, manual runs); omitted = each site's local today. */
+  fixedDate?: string,
 ) {
   const company = await ctx.db.get(companyId)
   const settings = mergeSettings(company?.settings)
-  const missing = await CHECKS.missed_daily_entry.run(ctx, companyId, date, {}, settings)
-  const low = await CHECKS.low_feed_stock.run(ctx, companyId, date, {}, settings)
-  const lowItems = await CHECKS.low_item_stock.run(ctx, companyId, date, {}, settings)
+  const now = Date.now()
+  const date = fixedDate ?? todayIn(zoneFor(null, company), now)
+  const at = fixedDate ? undefined : now
+  const missing = await CHECKS.missed_daily_entry.run(ctx, companyId, date, {}, settings, at)
+  const low = await CHECKS.low_feed_stock.run(ctx, companyId, date, {}, settings, at)
+  const lowItems = await CHECKS.low_item_stock.run(ctx, companyId, date, {}, settings, at)
 
   const people = (
     await ctx.db
@@ -90,7 +95,8 @@ export const dailyDigest = internalMutation({
     ctx,
     { date, cursor },
   ): Promise<{ scheduled: number; done: boolean }> => {
-    const day = date ?? todayUtc()
+    // No date: each company works out its sites' local dates (FARM-001).
+    const day = date
     const page = await ctx.db
       .query('companies')
       .withIndex('by_status', (q) => q.eq('status', 'approved'))
@@ -98,12 +104,12 @@ export const dailyDigest = internalMutation({
     for (const c of page.page) {
       await ctx.scheduler.runAfter(0, internal.reminders.companyDigest, {
         companyId: c._id,
-        date: day,
+        ...(day ? { date: day } : {}),
       })
     }
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.reminders.dailyDigest, {
-        date: day,
+        ...(day ? { date: day } : {}),
         cursor: page.continueCursor,
       })
     }
@@ -113,7 +119,7 @@ export const dailyDigest = internalMutation({
 
 /** One company's daily digest (scheduled by dailyDigest). */
 export const companyDigest = internalMutation({
-  args: { companyId: v.id('companies'), date: v.string() },
+  args: { companyId: v.id('companies'), date: v.optional(v.string()) },
   handler: async (ctx, { companyId, date }) => {
     const company = await ctx.db.get(companyId)
     if (!company || company.status !== 'approved') {
@@ -151,6 +157,6 @@ export const runForMyCompanyNow = mutation({
       }
       return { missingCages: 0, lowFeedTypes: 0, lowItems: 0, sent: 0, onEngine: true, runs }
     }
-    return await digestForCompany(ctx, companyId, todayUtc())
+    return await digestForCompany(ctx, companyId)
   },
 })

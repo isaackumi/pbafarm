@@ -8,7 +8,8 @@ import { logAudit } from '../lib/tenancy'
 import { CHECKS, checkExists } from './checks'
 import { validateConditions } from './conditions'
 import { MAX_ATTEMPTS, companyZone, createRun } from './engine'
-import { isValidTimeZone, localParts, nextRunAt, parseHhmm, zoneOrDefault } from './schedule'
+import { localParts, nextRunAt, parseHhmm, zoneOrDefault } from './schedule'
+import { orgProfile } from '../lib/orgProfile'
 import { BUILT_IN_KEYS, EVENT_TYPES, TEMPLATES, templateByKey, type RuleTemplate } from './templates'
 import {
   automationAction,
@@ -199,7 +200,7 @@ export const overview = query({
       .filter((u) => u.active !== false)
       .map((u) => ({ _id: u._id, name: memberLabel(u), role: u.role ?? 'user', hasPhone: !!u.phone, hasEmail: !!u.email }))
     return {
-      timezone: zoneOrDefault(company?.settings?.timezone),
+      timezone: zoneOrDefault(orgProfile(company).timezone),
       onEngine: rules.some((r) => r.builtIn),
       rules: rules.sort((a, b) => a.name.localeCompare(b.name)),
       templates: TEMPLATES.map((t) => ({
@@ -369,31 +370,6 @@ export const rerun = mutation({
       finishedAt: undefined,
     })
     await ctx.scheduler.runAfter(0, internal.automation.engine.executeRun, { runId })
-    return null
-  },
-})
-
-/** Company time zone for schedules (AUTO-007). Re-times enabled schedule rules. */
-export const setTimezone = mutation({
-  args: { timezone: v.string() },
-  handler: async (ctx, { timezone }) => {
-    const { user, companyId } = await requireAdmin(ctx)
-    const tz = timezone.trim()
-    if (!isValidTimeZone(tz)) throw new Error('Unknown time zone')
-    const company = await ctx.db.get(companyId)
-    if (!company) throw new Error('Company not found')
-    const settings = company.settings ?? { aiAssistantEnabled: false }
-    await ctx.db.patch(companyId, { settings: { ...settings, timezone: tz, updatedAt: Date.now(), updatedBy: user._id } })
-    const now = Date.now()
-    for (const rule of await ctx.db
-      .query('automationRules')
-      .withIndex('by_company', (q) => q.eq('companyId', companyId))
-      .take(MAX_RULES)) {
-      if (rule.trigger.kind === 'schedule' && rule.enabled) {
-        await ctx.db.patch(rule._id, { nextRunAt: nextRunAt(rule.trigger, tz, now) ?? undefined })
-      }
-    }
-    await logAudit(ctx, { actionType: 'update', tableName: 'companies', recordId: companyId, newValues: { timezone: tz } })
     return null
   },
 })

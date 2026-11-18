@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
 import { useCurrency } from '../../hooks/useCurrency'
+import { localToday } from '../../lib/format'
 
 export default function ProcurementPage() {
   return (
@@ -42,7 +43,7 @@ const STATUS_TONE = {
   cancelled: 'bg-foam-deep text-muted',
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localToday()
 const blankLine = () => ({ feedTypeId: '', quantityKg: '', pricePerKg: '' })
 
 function PurchaseOrders() {

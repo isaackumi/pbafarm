@@ -12,6 +12,9 @@ import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { unitLabel } from '../../lib/format'
+
+const unitTypeOfRow = (row) => row.unitType || row.unit_type || 'cage'
 
 const CagePieChart = dynamic(() => import('../../components/charts/CagePieChart'), {
   ssr: false,
@@ -130,7 +133,7 @@ function CagesManagement() {
 
   const columns = [
     {
-      header: 'Cage name',
+      header: 'Name',
       accessor: 'name',
       sortable: true,
       searchable: true,
@@ -140,6 +143,9 @@ function CagesManagement() {
           className="text-lake hover:text-lake font-medium"
         >
           {row.name}
+          {unitTypeOfRow(row) !== 'cage' && (
+            <span className="ml-2 text-xs font-normal text-muted">{unitLabel(row)}</span>
+          )}
         </Link>
       ),
     },

@@ -13,6 +13,7 @@ import {
   fetchLlmEnvStatus,
 } from '../lib/llmClient'
 import { Button, Field, Input, Select } from './ui'
+import { localToday } from '../lib/format'
 
 function TypingDots() {
   return (
@@ -181,7 +182,7 @@ export default function AiAssistant() {
       try {
         const client = getConvexHttpClient()
         farmContext = await client.query(api.reports.farmContextForAi, {
-          asOf: new Date().toISOString().slice(0, 10),
+          asOf: localToday(),
         })
       } catch (err) {
         farmContext = { error: err.message || 'Could not load farm context' }

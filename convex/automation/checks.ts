@@ -1,6 +1,7 @@
 import type { QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { EffectiveSettings } from '../lib/farmRules'
+import { todayIn, zoneFor } from '../lib/dates'
 import { addDays } from './schedule'
 
 /**
@@ -35,6 +36,11 @@ type CheckDef = {
     date: string,
     params: Params,
     settings: EffectiveSettings,
+    /**
+     * Instant the check is for. When given, per-site checks use each site's
+     * local date at that instant (FARM-001); otherwise `date` for every site.
+     */
+    at?: number,
   ) => Promise<CheckResult>
 }
 
@@ -61,19 +67,39 @@ export const CHECKS: Record<string, CheckDef> = {
     label: 'Missed daily entry',
     description: 'Active cages with no daily entry for the day',
     fields: ['count', 'done', 'total', 'cages'],
-    async run(ctx, companyId, date): Promise<CheckResult> {
+    async run(ctx, companyId, date, _params, _settings, at): Promise<CheckResult> {
       const cages = await ctx.db
         .query('cages')
         .withIndex('by_company_status', (q) => q.eq('companyId', companyId).eq('status', 'active'))
         .take(500)
-      const logged = new Set(
-        (
-          await ctx.db
+      // "Today" is each site's local date: its time zone, else the company's.
+      const company = await ctx.db.get(companyId)
+      const siteDates = new Map<string, string>()
+      const dateOf = async (locationId: Id<'farmLocations'> | undefined) => {
+        if (at === undefined) return date
+        const key = locationId ?? 'none'
+        let d = siteDates.get(key)
+        if (!d) {
+          const site = locationId ? await ctx.db.get(locationId) : null
+          d = site?.timezone ? todayIn(zoneFor(site, company), at) : date
+          siteDates.set(key, d)
+        }
+        return d
+      }
+      const cageDates = new Map<Id<'cages'>, string>()
+      for (const c of cages) cageDates.set(c._id, await dateOf(c.locationId))
+      // Only this company's rows for the date(s): other tenants' volume cannot
+      // push a logged cage out of the window and cause a false reminder.
+      const rows = []
+      for (const d of new Set(cageDates.values())) {
+        rows.push(
+          ...(await ctx.db
             .query('dailyRecords')
-            .withIndex('by_company_and_date', (q) => q.eq('companyId', companyId).eq('date', date))
-            .take(2000)
-        ).map((r) => r.cageId),
-      )
+            .withIndex('by_company_and_date', (q) => q.eq('companyId', companyId).eq('date', d))
+            .take(2000)),
+        )
+      }
+      const logged = new Set(rows.filter((r) => cageDates.get(r.cageId) === r.date).map((r) => r.cageId))
       const missing = cages
         .filter((c) => !logged.has(c._id))
         .sort((a, b) => a.name.localeCompare(b.name))

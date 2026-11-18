@@ -11,6 +11,27 @@ import {
   runStatus,
 } from './automation/validators'
 
+/** Production unit kinds (D-003). Rows without unitType are cages. */
+export const unitTypeValidator = v.union(
+  v.literal('cage'),
+  v.literal('pond'),
+  v.literal('tank'),
+  v.literal('raceway'),
+  v.literal('hatchery_tank'),
+  v.literal('incubator'),
+  v.literal('hapa'),
+)
+
+export const siteTypeValidator = v.union(
+  v.literal('cage_farm'),
+  v.literal('pond_farm'),
+  v.literal('hatchery'),
+  v.literal('nursery'),
+  v.literal('ras_facility'),
+  v.literal('mixed'),
+  v.literal('store'),
+)
+
 const cageStatus = v.union(
   v.literal('active'),
   v.literal('harvested'),
@@ -123,6 +144,12 @@ const schema = defineSchema({
     address: v.optional(v.string()),
     active: v.boolean(),
     notes: v.optional(v.string()),
+    /** Site metadata (FARM-001, M5). Timezone falls back to the company's. */
+    siteType: v.optional(siteTypeValidator),
+    timezone: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    waterBody: v.optional(v.string()),
     updatedAt: v.number(),
   }).index('by_company', ['companyId']),
 
@@ -168,6 +195,8 @@ const schema = defineSchema({
             harvestDocMinDays: v.optional(v.number()),
             harvestDocMaxDays: v.optional(v.number()),
             maxDensityFishPerM3: v.optional(v.number()),
+            /** Ponds: stocking density by surface area. */
+            maxDensityFishPerM2: v.optional(v.number()),
             dailyMortalityAlertPct: v.optional(v.number()),
             cumulativeMortalityAlertPct: v.optional(v.number()),
             targetFcr: v.optional(v.number()),
@@ -204,8 +233,6 @@ const schema = defineSchema({
             ),
           }),
         ),
-        /** IANA time zone for schedules (D-012, AUTO-007). Default 'UTC' (Accra time). */
-        timezone: v.optional(v.string()),
         /** ISO 3166 alpha-2 used to read local phone numbers (INT-001). Default 'GH'. */
         defaultCountryCode: v.optional(v.string()),
         /** Messaging preferences (INT-001); channels live in messagingChannels. */
@@ -322,6 +349,14 @@ const schema = defineSchema({
     species: v.optional(v.string()),
     /** Engine cache: the batch whose occupancy is open in this cage. */
     currentBatchId: v.optional(v.id('batches')),
+    /** Production unit type and geometry (FARM-002, M4). Missing unitType = cage. */
+    unitType: v.optional(unitTypeValidator),
+    areaM2: v.optional(v.number()),
+    depthM: v.optional(v.number()),
+    volumeM3: v.optional(v.number()),
+    diameterM: v.optional(v.number()),
+    /** Free-text group label, e.g. "Block A" or "Line 2". */
+    unitGroup: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),

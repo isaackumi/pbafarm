@@ -5,6 +5,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import { internal } from '../_generated/api'
 import { runEffect } from '../lib/effect'
 import { mergeSettings } from '../lib/farmRules'
+import { orgProfile } from '../lib/orgProfile'
 import { deliverMessage } from '../messaging/deliver'
 import { CHECKS } from './checks'
 import { evaluateConditions, renderTemplate, type RunContext } from './conditions'
@@ -37,9 +38,25 @@ const MAX_RULES_PER_EVENT = 50
 
 type Ctx = MutationCtx
 
+/** The organization's time zone (companies.timezone, ORG-005; default Africa/Accra). */
 export async function companyZone(ctx: Ctx, companyId: Id<'companies'>) {
   const company = await ctx.db.get(companyId)
-  return { company, tz: zoneOrDefault(company?.settings?.timezone) }
+  return { company, tz: zoneOrDefault(orgProfile(company).timezone) }
+}
+
+/** Re-time a company's enabled schedule rules (after its time zone changed). */
+export async function retimeScheduleRules(ctx: Ctx, companyId: Id<'companies'>) {
+  const { tz } = await companyZone(ctx, companyId)
+  const now = Date.now()
+  const rules = await ctx.db
+    .query('automationRules')
+    .withIndex('by_company', (q) => q.eq('companyId', companyId))
+    .take(100)
+  for (const rule of rules) {
+    if (rule.trigger.kind === 'schedule' && rule.enabled) {
+      await ctx.db.patch(rule._id, { nextRunAt: nextRunAt(rule.trigger, tz, now) ?? undefined })
+    }
+  }
 }
 
 /** Queue one run of a rule unless a run with the same dedupe key exists. */
@@ -87,7 +104,7 @@ export const dispatchEvent = internalMutation({
     const company = await ctx.db.get(ev.companyId)
     let runs = 0
     if (company?.status === 'approved') {
-      const tz = zoneOrDefault(company.settings?.timezone)
+      const tz = zoneOrDefault(orgProfile(company).timezone)
       const settings = mergeSettings(company.settings)
       const context: RunContext = {
         payload: ev.payload,
@@ -255,7 +272,9 @@ export const startRun = internalMutation({
           await ctx.db.patch(runId, { status: 'failed', error: `Unknown check "${rule.trigger.check}"`, finishedAt: now })
           return null
         }
-        const result = await check.run(ctx, run.companyId, date, rule.trigger.params ?? {}, settings)
+        // Per-site checks use each site's local date at the moment the run was queued.
+        const at = run.triggerKind === 'manual' ? now : run.createdAt
+        const result = await check.run(ctx, run.companyId, date, rule.trigger.params ?? {}, settings, at)
         context.check = result
         if (result.count === 0) {
           await ctx.db.patch(runId, { status: 'skipped', note: 'Nothing to report', localDone: true, finishedAt: now })

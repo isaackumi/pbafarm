@@ -144,14 +144,37 @@ describe('built-in reminders on the engine (M17)', () => {
   test('schedules follow the company time zone', async () => {
     const { t, as, adminId, companyId } = await setup()
     await as(adminId).mutation(api.automation.rules.enableBuiltIns, {})
-    await as(adminId).mutation(api.automation.rules.setTimezone, { timezone: 'Africa/Nairobi' })
+    // The organization profile owns the zone (ORG-005); changing it re-times rules.
+    await as(adminId).mutation(api.companies.updateProfile, { timezone: 'Africa/Nairobi' })
     const rule = await t.run((ctx) =>
       ctx.db.query('automationRules').withIndex('by_company', (q) => q.eq('companyId', companyId)).first(),
     )
     expect(new Date(rule!.nextRunAt!).toISOString()).toBe(`${DAY}T13:00:00.000Z`)
-    await expect(as(adminId).mutation(api.automation.rules.setTimezone, { timezone: 'Mars/Base' })).rejects.toThrow(
-      /Unknown time zone/,
-    )
+    expect((await as(adminId).query(api.automation.rules.overview, {})).timezone).toBe('Africa/Nairobi')
+  })
+
+  test('missed entry uses each site\'s local date, like the legacy digest', async () => {
+    const { t, as, adminId, staffId, companyId } = await setup()
+    // A second site 8 hours ahead: at 16:02 UTC its date is already the 19th,
+    // so its cage counts as missing even though it logged on the 18th.
+    await t.run(async (ctx) => {
+      const far = await ctx.db.insert('farmLocations', {
+        companyId, name: 'Far', active: true, timezone: 'Asia/Singapore', updatedAt: Date.now(),
+      } as any)
+      const f1 = await ctx.db.insert('cages', {
+        name: 'F1', status: 'active', companyId, locationId: far, updatedAt: Date.now(),
+      } as any)
+      await ctx.db.insert('dailyRecords', {
+        cageId: f1, date: DAY, feedAmount: 1, feedPrice: 1, feedCost: 1, mortality: 0, companyId,
+      } as any)
+    })
+    await as(adminId).mutation(api.automation.rules.enableBuiltIns, {})
+    vi.setSystemTime(new Date(`${DAY}T16:02:00Z`))
+    await t.mutation(internal.automation.engine.tick, {})
+    await drain(t)
+    const staff = await notesFor(t, staffId)
+    expect(staff[0].title).toBe('Daily entry missing for 2 cages')
+    expect(staff[0].message).toBe(`No feed or mortality logged on ${DAY} for B2, F1 (1 of 3 done).`)
   })
 })
 

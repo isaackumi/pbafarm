@@ -10,6 +10,7 @@ import Layout from '../../components/Layout'
 import { PageHeader, StatCard, Button } from '../../components/ui'
 import { useMoney } from '../../lib/money'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import {
   LineChart,
@@ -84,13 +85,15 @@ function InventoryOverview() {
   const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
   const dateFrom = useMemo(() => Date.now() - 30 * 24 * 60 * 60 * 1000, [])
 
+  // The header site (FARM-003): stock and movements at that site.
+  const { locationArgs } = useLocation()
   const inventoryItems = useQuery(
     api.inventory.listStockLevels,
-    user ? {} : 'skip',
+    user ? locationArgs : 'skip',
   )
   const transactions = useQuery(
     api.inventory.listTransactions,
-    user ? { dateFrom, limit: 200 } : 'skip',
+    user ? { dateFrom, limit: 200, ...locationArgs } : 'skip',
   )
 
   const loading = inventoryItems === undefined || transactions === undefined
