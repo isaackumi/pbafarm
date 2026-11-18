@@ -5,7 +5,7 @@ import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, requireRole } from './lib/authz'
 
-const todayUtc = () => new Date().toISOString().split('T')[0]
+import { todayIn, zoneFor } from './lib/dates'
 const kg = (n: number) => Math.round(n).toLocaleString('en-US')
 
 /** List names, but keep the message short: "B2, C1, C4 and 3 more". */
@@ -46,24 +46,47 @@ async function notifyOnce(
 async function digestForCompany(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
-  date: string,
+  /** Fixed date for every site (tests, manual runs); omitted = each site's local today. */
+  fixedDate?: string,
 ) {
   const cages = await ctx.db
     .query('cages')
     .withIndex('by_company_status', (q) => q.eq('companyId', companyId).eq('status', 'active'))
     .take(500)
 
-  // Only this company's rows for the date: other tenants' volume cannot push
+  // "Today" is each site's local date (FARM-001): its time zone, else the company's.
+  const company = await ctx.db.get(companyId)
+  const now = Date.now()
+  const siteDates = new Map<string, string>()
+  const dateOf = async (locationId: Id<'farmLocations'> | undefined) => {
+    if (fixedDate) return fixedDate
+    const key = locationId ?? 'none'
+    let d = siteDates.get(key)
+    if (!d) {
+      const site = locationId ? await ctx.db.get(locationId) : null
+      d = todayIn(zoneFor(site, company), now)
+      siteDates.set(key, d)
+    }
+    return d
+  }
+  const cageDates = new Map<Id<'cages'>, string>()
+  for (const c of cages) cageDates.set(c._id, await dateOf(c.locationId))
+  const dates = [...new Set(cageDates.values())]
+  const date = fixedDate ?? (await dateOf(undefined))
+
+  // Only this company's rows for the date(s): other tenants' volume cannot push
   // a logged cage out of the window and cause a false reminder.
-  const logged = new Set(
-    (
-      await ctx.db
+  const loggedRows = []
+  for (const d of dates) {
+    loggedRows.push(
+      ...(await ctx.db
         .query('dailyRecords')
-        .withIndex('by_company_and_date', (q) =>
-          q.eq('companyId', companyId).eq('date', date),
-        )
-        .collect()
-    ).map((r) => r.cageId),
+        .withIndex('by_company_and_date', (q) => q.eq('companyId', companyId).eq('date', d))
+        .collect()),
+    )
+  }
+  const logged = new Set(
+    loggedRows.filter((r) => cageDates.get(r.cageId) === r.date).map((r) => r.cageId),
   )
   const missing = cages
     .filter((c) => !logged.has(c._id))
@@ -174,7 +197,8 @@ export const dailyDigest = internalMutation({
     ctx,
     { date, cursor },
   ): Promise<{ scheduled: number; done: boolean }> => {
-    const day = date ?? todayUtc()
+    // No date: each company works out its sites' local dates (FARM-001).
+    const day = date
     const page = await ctx.db
       .query('companies')
       .withIndex('by_status', (q) => q.eq('status', 'approved'))
@@ -182,12 +206,12 @@ export const dailyDigest = internalMutation({
     for (const c of page.page) {
       await ctx.scheduler.runAfter(0, internal.reminders.companyDigest, {
         companyId: c._id,
-        date: day,
+        ...(day ? { date: day } : {}),
       })
     }
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.reminders.dailyDigest, {
-        date: day,
+        ...(day ? { date: day } : {}),
         cursor: page.continueCursor,
       })
     }
@@ -197,7 +221,7 @@ export const dailyDigest = internalMutation({
 
 /** One company's daily digest (scheduled by dailyDigest). */
 export const companyDigest = internalMutation({
-  args: { companyId: v.id('companies'), date: v.string() },
+  args: { companyId: v.id('companies'), date: v.optional(v.string()) },
   handler: async (ctx, { companyId, date }) => {
     const company = await ctx.db.get(companyId)
     if (!company || company.status !== 'approved') {
@@ -215,6 +239,6 @@ export const runForMyCompanyNow = mutation({
     const user = await requireUser(ctx)
     requireRole(user, 'admin')
     if (!user.companyId) throw new Error('Your account is not linked to a company')
-    return await digestForCompany(ctx, user.companyId, todayUtc())
+    return await digestForCompany(ctx, user.companyId)
   },
 })

@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = {
     harvestDocMinDays: 150,
     harvestDocMaxDays: 210,
     maxDensityFishPerM3: 80,
+    /** Ponds (fish per m² of surface). */
+    maxDensityFishPerM2: 5,
     dailyMortalityAlertPct: 0.5,
     cumulativeMortalityAlertPct: 10,
     targetFcr: 1.4,
@@ -59,6 +61,7 @@ export type EffectiveSettings = {
     harvestDocMinDays: number
     harvestDocMaxDays: number
     maxDensityFishPerM3: number
+    maxDensityFishPerM2: number
     dailyMortalityAlertPct: number
     cumulativeMortalityAlertPct: number
     targetFcr: number
@@ -164,6 +167,7 @@ export function validateSettingsForPublish(settings: any) {
   num(fr.harvestDocMinDays, 'Harvest DOC min')
   num(fr.harvestDocMaxDays, 'Harvest DOC max')
   num(fr.maxDensityFishPerM3, 'Max density')
+  num(fr.maxDensityFishPerM2, 'Max pond density')
   num(fr.dailyMortalityAlertPct, 'Daily mortality alert %')
   num(fr.cumulativeMortalityAlertPct, 'Cumulative mortality alert %')
   num(fr.targetFcr, 'Target FCR', 0.01)
@@ -206,6 +210,48 @@ export function validateSettingsForPublish(settings: any) {
   if (errors.length) throw new Error(errors.join('; '))
 }
 
+export type UnitType =
+  | 'cage'
+  | 'pond'
+  | 'tank'
+  | 'raceway'
+  | 'hatchery_tank'
+  | 'incubator'
+  | 'hapa'
+
+/** A unit's type; rows written before unit types existed are cages. */
+export function unitTypeOf(unit: { unitType?: UnitType | null } | null | undefined): UnitType {
+  return unit?.unitType ?? 'cage'
+}
+
+/** Units whose stocking density is measured per m² of surface, not per m³. */
+export const AREA_BASED_UNITS: ReadonlySet<UnitType> = new Set(['pond'])
+
+/**
+ * Stocking density rule by unit type (FARM-002): ponds use surface area
+ * (areaM2, fish/m²); every other unit uses volume (volumeM3, else the legacy
+ * `size` in m³, fish/m³). Returns the excess, or null when within limits or
+ * when the unit has no area/volume to check against.
+ */
+export function densityExcess(
+  unit: any,
+  fishCount: number,
+  farmRules: EffectiveSettings['farmRules'],
+): { density: number; max: number; unit: string } | null {
+  if (AREA_BASED_UNITS.has(unitTypeOf(unit))) {
+    const area = unit?.areaM2
+    const max = farmRules.maxDensityFishPerM2
+    if (!max || !(area > 0)) return null
+    const density = fishCount / area
+    return density > max ? { density, max, unit: 'fish/m²' } : null
+  }
+  const volume = unit?.volumeM3 > 0 ? unit.volumeM3 : unit?.size
+  const max = farmRules.maxDensityFishPerM3
+  if (!max || !(volume > 0)) return null
+  const density = fishCount / volume
+  return density > max ? { density, max, unit: 'fish/m³' } : null
+}
+
 export function assertStockingAllowed(opts: {
   cage: any
   fishCount: number
@@ -230,14 +276,10 @@ export function assertStockingAllowed(opts: {
       `Fish count ${fishCount} exceeds cage capacity ${cage.capacity}`,
     )
   }
-  if (
-    farmRules.maxDensityFishPerM3 &&
-    cage?.size &&
-    cage.size > 0 &&
-    fishCount / cage.size > farmRules.maxDensityFishPerM3
-  ) {
+  const over = densityExcess(cage, fishCount, farmRules)
+  if (over) {
     throw new Error(
-      `Density ${(fishCount / cage.size).toFixed(1)} fish/m³ exceeds max ${farmRules.maxDensityFishPerM3}`,
+      `Density ${over.density.toFixed(1)} ${over.unit} exceeds max ${over.max}`,
     )
   }
 }
@@ -263,15 +305,9 @@ export function assertTopupAllowed(opts: {
       `Top-up would exceed cage capacity (${nextCount} > ${cage.capacity})`,
     )
   }
-  if (
-    farmRules.maxDensityFishPerM3 &&
-    cage?.size &&
-    cage.size > 0 &&
-    nextCount / cage.size > farmRules.maxDensityFishPerM3
-  ) {
-    throw new Error(
-      `Top-up density would exceed max ${farmRules.maxDensityFishPerM3} fish/m³`,
-    )
+  const over = densityExcess(cage, nextCount, farmRules)
+  if (over) {
+    throw new Error(`Top-up density would exceed max ${over.max} ${over.unit}`)
   }
 }
 

@@ -220,17 +220,21 @@ export const exportBundle = query({
     dateFrom: v.string(),
     dateTo: v.string(),
     cageId: v.optional(v.id('cages')),
+    /** Only this site's records (FARM-003). */
+    locationId: v.optional(v.id('farmLocations')),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
 
     const range = { from: args.dateFrom, to: args.dateTo, order: 'asc' as const }
+    const atSite = <T extends { locationId?: Id<'farmLocations'> }>(rows: T[]) =>
+      args.locationId ? rows.filter((r) => r.locationId === args.locationId) : rows
 
     // Get daily records
     let dailyRecords = args.cageId
       ? await cageDaily(ctx, args.cageId, args.dateFrom, args.dateTo)
       : await scopedRowsInRange(ctx, user, 'dailyRecords', range)
-    dailyRecords = await listForCompany(user, dailyRecords)
+    dailyRecords = atSite(await listForCompany(user, dailyRecords))
 
     // Get biweekly records
     let biweeklyRecords = args.cageId
@@ -240,7 +244,7 @@ export const exportBundle = query({
           .collect()
       : await scopedRowsInRange(ctx, user, 'biweeklyRecords', range)
 
-    biweeklyRecords = await listForCompany(user, biweeklyRecords)
+    biweeklyRecords = atSite(await listForCompany(user, biweeklyRecords))
     biweeklyRecords = biweeklyRecords.filter(
       (r) => r.date >= args.dateFrom && r.date <= args.dateTo
     )
@@ -253,7 +257,7 @@ export const exportBundle = query({
           .collect()
       : await scopedRowsInRange(ctx, user, 'harvestRecords', range)
 
-    harvestRecords = await listForCompany(user, harvestRecords)
+    harvestRecords = atSite(await listForCompany(user, harvestRecords))
     harvestRecords = harvestRecords.filter(
       (h) => h.harvestDate >= args.dateFrom && h.harvestDate <= args.dateTo
     )

@@ -2,7 +2,8 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { cageCycleGrowth } from './lib/growth'
-import { mergeSettings } from './lib/farmRules'
+import { mergeSettings, unitTypeOf } from './lib/farmRules'
+import { unitTypeValidator } from './schema'
 import { shadowCountEdit } from './lib/productionDualWrite'
 import { listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
@@ -30,6 +31,33 @@ async function activeCages(
           .withIndex('by_status', (q) => q.eq('status', 'active'))
           .take(PLATFORM_SCAN_LIMIT)
   return locationId ? rows.filter((c) => c.locationId === locationId) : rows
+}
+
+/** Typed geometry for production units (FARM-002); all optional, metres. */
+const geometryArgs = {
+  unitType: v.optional(unitTypeValidator),
+  areaM2: v.optional(v.number()),
+  depthM: v.optional(v.number()),
+  volumeM3: v.optional(v.number()),
+  diameterM: v.optional(v.number()),
+  unitGroup: v.optional(v.string()),
+}
+
+/**
+ * Validate geometry and keep `size` (the m³ the density rules read) in step
+ * with volumeM3: a new volume also sets size unless size is given.
+ */
+function normalizeGeometry<T extends Record<string, any>>(g: T): T {
+  for (const key of ['areaM2', 'depthM', 'volumeM3', 'diameterM', 'size'] as const) {
+    const n = g[key]
+    if (n !== undefined && !(Number.isFinite(n) && n > 0)) {
+      throw new Error(`${key} must be a positive number`)
+    }
+  }
+  const out: Record<string, any> = { ...g }
+  if (g.volumeM3 !== undefined && g.size === undefined) out.size = g.volumeM3
+  if (typeof g.unitGroup === 'string') out.unitGroup = g.unitGroup.trim() || undefined
+  return out as T
 }
 
 const cageStatus = v.union(
@@ -68,6 +96,18 @@ function toClient(cage: any) {
     status: cage.status,
     notes: cage.notes,
     species: cage.species,
+    unit_type: unitTypeOf(cage),
+    unitType: unitTypeOf(cage),
+    area_m2: cage.areaM2,
+    areaM2: cage.areaM2,
+    depth_m: cage.depthM,
+    depthM: cage.depthM,
+    volume_m3: cage.volumeM3 ?? cage.size,
+    volumeM3: cage.volumeM3 ?? cage.size,
+    diameter_m: cage.diameterM,
+    diameterM: cage.diameterM,
+    unit_group: cage.unitGroup,
+    unitGroup: cage.unitGroup,
     company_id: cage.companyId,
     created_by: cage.createdBy,
     updated_at: cage.updatedAt,
@@ -202,8 +242,10 @@ export const create = mutation({
     initialBiomass: v.optional(v.number()),
     status: v.optional(cageStatus),
     notes: v.optional(v.string()),
+    ...geometryArgs,
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, rawArgs) => {
+    const args = normalizeGeometry(rawArgs)
     const user = await requireUser(ctx)
     const now = Date.now()
     await ensureDefaultLocation(ctx, user)
@@ -228,6 +270,12 @@ export const create = mutation({
       initialBiomass: args.initialBiomass,
       status: args.status ?? 'empty',
       notes: args.notes,
+      unitType: args.unitType,
+      areaM2: args.areaM2,
+      depthM: args.depthM,
+      volumeM3: args.volumeM3,
+      diameterM: args.diameterM,
+      unitGroup: args.unitGroup,
       companyId: await writeCompanyId(user),
       createdBy: user._id,
       updatedAt: now,
@@ -268,9 +316,11 @@ export const update = mutation({
       nextMaintenanceDate: v.optional(v.string()),
       status: v.optional(cageStatus),
       notes: v.optional(v.string()),
+      ...geometryArgs,
     }),
   },
-  handler: async (ctx, { id, patch }) => {
+  handler: async (ctx, { id, patch: rawPatch }) => {
+    const patch = normalizeGeometry(rawPatch)
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Cage not found')

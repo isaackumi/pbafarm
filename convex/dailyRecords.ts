@@ -7,6 +7,7 @@ import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
 import { inCurrentCycle } from './lib/cycles'
+import { isBusinessDate, todayFor } from './lib/dates'
 import { shadowDailyRecord, shadowReverse } from './lib/productionDualWrite'
 import { scopedRowsInRange, tenantScope } from './lib/scope'
 import {
@@ -337,6 +338,14 @@ async function insertDailyRecord(
   }
   if (args.feedTypeId) {
     assertOwns(user, await ctx.db.get(args.feedTypeId), 'Feed type')
+  }
+
+  // The date is the site's local calendar day (FARM-001, D-012): a real date,
+  // not after today in the site's time zone.
+  if (!isBusinessDate(args.date)) throw new Error('Date must be a real date (YYYY-MM-DD)')
+  const today = await todayFor(ctx, { locationId: cage.locationId, companyId: cage.companyId })
+  if (args.date > today) {
+    throw new Error(`Date ${args.date} is in the future for this site (today is ${today})`)
   }
 
   const existing = await ctx.db
