@@ -423,7 +423,15 @@
     "related": "Voir aussi",
     "breadcrumb": "Fil d’Ariane",
     "loadingApp": "Chargement de l’application",
-    "loadingDashboard": "Chargement du tableau de bord"
+    "loadingDashboard": "Chargement du tableau de bord",
+    "outdoorMode": "Mode extérieur",
+    "outdoorModeHint": "Bordures plus marquées et texte plus grand en plein soleil",
+    "on": "Activé",
+    "off": "Désactivé",
+    "askAdmin": "Demandez à un responsable de ferme ou à un administrateur de le configurer.",
+    "loadFailed": "Le chargement a échoué",
+    "tryAgain": "Réessayer",
+    "loading": "Chargement…"
   },
   "species": {
     "title": "Espèces",
@@ -501,5 +509,10 @@
   "scan": {
     "openingCode": "Ouverture de la cage {code}…",
     "unknownCode": "Aucune cage de cette ferme n'a le code {code}"
+  },
+  "pwa": {
+    "updateReady": "Une nouvelle version de PBA Farm est prête.",
+    "reload": "Recharger",
+    "later": "Plus tard"
   }
 }

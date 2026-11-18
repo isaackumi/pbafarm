@@ -3,7 +3,7 @@ import { Download, Pencil, Plus, Trash2, X } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import { PageHeader, Button, Card, Field, Input, Select, EmptyState } from '../components/ui'
+import { PageHeader, Button, Card, Field, Input, Select, EmptyState, ErrorState, LoadingState } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { dailyRecordService } from '../lib/databaseService'
@@ -363,11 +363,11 @@ export default function DailyRecordsPage() {
         </div>
 
         {loadError ? (
-          <p role="alert" className="rounded-lg border border-signal/20 bg-signal/10 p-3 text-sm text-signal">
-            {loadError}
-          </p>
+          <Card>
+            <ErrorState message={loadError} onRetry={load} />
+          </Card>
         ) : loading ? (
-          <p className="text-sm text-muted">Loading records…</p>
+          <LoadingState label="Loading records…" />
         ) : records.length === 0 ? (
           <Card>
             <EmptyState

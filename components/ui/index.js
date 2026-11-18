@@ -1,7 +1,10 @@
 /** Shared UI primitives — Harbor Soft light dashboard */
+import { Children, cloneElement, isValidElement, useRef } from 'react'
 import Link from 'next/link'
 import { useT } from '../../lib/i18n/context'
 import { useTerm } from '../../hooks/useTerm'
+import { usePermission, usePermissions } from '../../hooks/usePermission'
+import { routePermission } from '../../lib/routePermissions'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
@@ -19,7 +22,24 @@ const VARIANT = {
   danger: 'bg-signal text-white hover:opacity-90 border border-transparent',
 }
 
-export function Button({
+/** Renders children only when the member holds `permission` (UX-007). */
+export function IfPermitted({ permission, children, fallback = null }) {
+  return usePermission(permission) ? children : fallback
+}
+
+/**
+ * `permission` hides the button from members who lack it; a link button
+ * (`href`) is also hidden when its page needs a permission they lack
+ * (lib/routePermissions.js), so no visible action ends in "Insufficient
+ * permissions". The server still checks every call.
+ */
+export function Button({ permission, href, ...props }) {
+  const needed = permission || routePermission(href)
+  const button = <ButtonBase href={href} {...props} />
+  return needed ? <IfPermitted permission={needed}>{button}</IfPermitted> : button
+}
+
+function ButtonBase({
   children,
   variant = 'primary',
   size = 'md',
@@ -140,13 +160,71 @@ export function EmptyState({ title, description, action }) {
   )
 }
 
-export function TabBar({ tabs, active, onChange }) {
+/**
+ * A load failed (UX-001). Never show an empty state for a failed load: say
+ * what failed and offer a retry.
+ */
+export function ErrorState({ title, message, onRetry, retryLabel, className = '' }) {
+  const t = useT()
   return (
-    <div className="inline-flex rounded-lg bg-foam p-1 border border-foam-deep">
+    <div
+      role="alert"
+      className={`flex flex-col items-center justify-center py-8 px-4 text-center ${className}`}
+    >
+      <svg viewBox="0 0 24 24" className="mb-3 h-8 w-8 text-signal" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        <path d="M12 9v4M12 17h.01" />
+      </svg>
+      <p className="font-semibold text-chart-ink">{title || t('ui.loadFailed')}</p>
+      {message && <p className="mt-1 max-w-md text-sm text-muted">{message}</p>}
+      {onRetry && (
+        <Button className="mt-5" onClick={onRetry}>
+          {retryLabel || t('ui.tryAgain')}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** Inline loading message that screen readers announce (UX-001). */
+export function LoadingState({ label, className = '' }) {
+  const t = useT()
+  return (
+    <div role="status" aria-live="polite" className={`flex items-center justify-center gap-3 py-8 text-sm text-muted ${className}`}>
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-lake border-t-transparent" aria-hidden />
+      <span>{label || t('ui.loading')}</span>
+    </div>
+  )
+}
+
+export function TabBar({ tabs, active, onChange, label }) {
+  const listRef = useRef(null)
+  // Arrow keys move between tabs (WAI-ARIA tabs pattern, UX-003).
+  const onKeyDown = (e) => {
+    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+    if (!step && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    const i = tabs.findIndex((t) => t.id === active)
+    const next =
+      e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + step + tabs.length) % tabs.length
+    onChange(tabs[next].id)
+    listRef.current?.querySelectorAll('[role="tab"]')[next]?.focus()
+  }
+  return (
+    <div
+      ref={listRef}
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className="inline-flex rounded-lg bg-foam p-1 border border-foam-deep"
+    >
       {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
+          role="tab"
+          aria-selected={active === tab.id}
+          tabIndex={active === tab.id ? 0 : -1}
           onClick={() => onChange(tab.id)}
           className={`px-3 text-sm font-medium rounded-lg min-h-11 sm:min-h-9 transition-colors ${
             active === tab.id
@@ -210,6 +288,8 @@ export function PageHeader({
 }) {
   const t = useT()
   const term = useTerm()
+  const { can } = usePermissions()
+  const links = related.filter((item) => can(routePermission(item.href)))
   return (
     <div className="mb-8">
       <Breadcrumbs items={breadcrumbs} />
@@ -234,7 +314,7 @@ export function PageHeader({
           <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>
         )}
       </div>
-      {related.length > 0 && (
+      {links.length > 0 && (
         <nav
           aria-label={t('ui.relatedPages')}
           className="mt-5 flex flex-wrap items-center gap-2 border-t border-foam-deep pt-4"
@@ -242,7 +322,7 @@ export function PageHeader({
           <span className="text-sm text-muted mr-1">
             {t('ui.related')}
           </span>
-          {related.map((item) => (
+          {links.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -261,7 +341,23 @@ const FIELD_CLASS =
   // 16px text keeps iOS from zooming into fields on focus.
   'w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-base text-chart-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-lake-soft focus:border-lake transition-colors disabled:opacity-50 min-h-12 sm:min-h-11'
 
+/**
+ * Label, hint and error for one control. With `htmlFor` and a single child
+ * element, the control is linked to its hint/error (`aria-describedby`) and
+ * marked `aria-invalid`/`aria-required` (UX-003).
+ */
 export function Field({ label, htmlFor, hint, error, required, children, className = '' }) {
+  const hintId = htmlFor && hint && !error ? `${htmlFor}-hint` : undefined
+  const errorId = htmlFor && error ? `${htmlFor}-error` : undefined
+  let control = children
+  if (htmlFor && Children.count(children) === 1 && isValidElement(children)) {
+    const describedBy = [children.props['aria-describedby'], hintId, errorId].filter(Boolean).join(' ')
+    control = cloneElement(children, {
+      'aria-describedby': describedBy || undefined,
+      'aria-invalid': error ? true : children.props['aria-invalid'],
+      'aria-required': required ? true : children.props['aria-required'],
+    })
+  }
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
@@ -273,9 +369,17 @@ export function Field({ label, htmlFor, hint, error, required, children, classNa
           {required && <span className="text-signal ml-0.5">*</span>}
         </label>
       )}
-      {children}
-      {hint && !error && <p className="text-xs text-muted">{hint}</p>}
-      {error && <p className="text-xs text-signal">{error}</p>}
+      {control}
+      {hint && !error && (
+        <p id={hintId} className="text-xs text-muted">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={errorId} className="text-xs text-signal">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

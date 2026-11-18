@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
 import { Button } from './ui'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 /**
  * Asked before sign-out when this user still has field entries saved on the
@@ -16,13 +16,7 @@ export default function SignOutOutboxDialog({
 }) {
   const online = typeof navigator === 'undefined' || navigator.onLine !== false
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !sending) onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, sending])
+  const panelRef = useDialogA11y({ onClose: onCancel, canClose: !sending })
 
   const batches = `${count} entr${count === 1 ? 'y' : 'ies'}`
 
@@ -34,7 +28,7 @@ export default function SignOutOutboxDialog({
       aria-labelledby="signout-outbox-title"
       aria-describedby="signout-outbox-body"
     >
-      <div className="w-full max-w-md rounded-xl border border-foam-deep bg-surface text-chart-ink shadow-xl p-5 space-y-4">
+      <div ref={panelRef} className="w-full max-w-md rounded-xl border border-foam-deep bg-surface text-chart-ink shadow-xl p-5 space-y-4">
         <h2 id="signout-outbox-title" className="text-lg font-semibold">
           {batches} not sent yet
         </h2>

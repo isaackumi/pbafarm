@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 import { Button } from './ui'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 /**
  * Shared destructive-action confirmation. Use for every permanent/soft delete.
@@ -14,6 +15,7 @@ export default function ConfirmDeleteModal({
   onCancel,
   onConfirm,
 }) {
+  const panelRef = useDialogA11y({ open, onClose: onCancel, canClose: !busy })
   if (!open) return null
 
   return (
@@ -24,6 +26,7 @@ export default function ConfirmDeleteModal({
         aria-hidden
       />
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-delete-title"

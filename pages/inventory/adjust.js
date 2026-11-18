@@ -20,7 +20,7 @@ import FeedTypeField from '../../components/FeedTypeField'
 
 export default function InventoryAdjustPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute permission="inventory.adjust">
       <InventoryAdjust />
     </ProtectedRoute>
   )

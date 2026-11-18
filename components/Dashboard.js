@@ -27,6 +27,7 @@ import {
   StatCard,
   HealthMeter,
   EmptyState,
+  ErrorState,
   TabBar,
   DashboardSkeleton,
 } from './ui'
@@ -264,16 +265,11 @@ export default function Dashboard() {
     return (
       <div className="max-w-[1400px]">
         <Card>
-          <div role="alert" className="flex flex-col items-center text-center py-6">
-            <TriangleAlert className="h-8 w-8 text-signal mb-3" aria-hidden />
-            <p className="font-semibold text-chart-ink">
-              The dashboard could not load
-            </p>
-            <p className="text-sm text-muted mt-1 max-w-md">{error}</p>
-            <Button className="mt-5" onClick={() => setReloadKey((k) => k + 1)}>
-              Try again
-            </Button>
-          </div>
+          <ErrorState
+            title="The dashboard could not load"
+            message={error}
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
         </Card>
       </div>
     )

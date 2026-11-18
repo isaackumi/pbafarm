@@ -35,7 +35,7 @@ module.exports = {
         'chart-ink': '#18181b',
         muted: '#71717a',
         surface: '#ffffff',
-        'input-border': '#d4d4d8',
+        'input-border': '#8a8a93',
         primary: {
           50: '#fafafa',
           100: '#f4f4f5',

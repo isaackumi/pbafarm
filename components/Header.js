@@ -15,6 +15,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useT } from '../lib/i18n/context'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -74,7 +75,8 @@ function OrganizationMenu({ onDone }) {
 const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
   const router = useRouter()
   const { user, signOut } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, contrast, setContrast } = useTheme()
+  const t = useT()
   const { startSystemWalkthrough } = useTour()
   const { count: outboxCount } = useOutbox()
   const {
@@ -351,6 +353,20 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
                   {email}
                 </div>
                 <OrganizationMenu onDone={() => setProfileDropdownOpen(false)} />
+                <button
+                  type="button"
+                  aria-pressed={contrast === 'high'}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm text-chart-ink hover:bg-foam"
+                  onClick={() => setContrast(contrast === 'high' ? 'normal' : 'high')}
+                >
+                  <span>
+                    <span className="block">{t('ui.outdoorMode')}</span>
+                    <span className="block text-xs text-muted">{t('ui.outdoorModeHint')}</span>
+                  </span>
+                  <span className="text-xs font-semibold">
+                    {contrast === 'high' ? t('ui.on') : t('ui.off')}
+                  </span>
+                </button>
                 <Link
                   href="/account"
                   className="block w-full text-left px-4 py-2 text-sm text-chart-ink hover:bg-foam"

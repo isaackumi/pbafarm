@@ -423,7 +423,15 @@
     "related": "Related",
     "breadcrumb": "Breadcrumb",
     "loadingApp": "Loading application",
-    "loadingDashboard": "Loading dashboard"
+    "loadingDashboard": "Loading dashboard",
+    "outdoorMode": "Outdoor mode",
+    "outdoorModeHint": "Stronger borders and larger text for bright sun",
+    "on": "On",
+    "off": "Off",
+    "askAdmin": "Ask a farm manager or admin to set this up.",
+    "loadFailed": "This could not load",
+    "tryAgain": "Try again",
+    "loading": "Loading…"
   },
   "species": {
     "title": "Species",
@@ -501,5 +509,10 @@
   "scan": {
     "openingCode": "Opening cage {code}…",
     "unknownCode": "No cage on this farm has the code {code}"
+  },
+  "pwa": {
+    "updateReady": "A new version of PBA Farm is ready.",
+    "reload": "Reload",
+    "later": "Later"
   }
 }

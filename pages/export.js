@@ -13,7 +13,6 @@ import {
   Input,
 } from '../components/ui'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
-import * as XLSX from 'xlsx'
 import { localToday } from '../lib/format'
 import { useLocation } from '../contexts/LocationContext'
 import { customCell, customColumns } from '../components/CustomFields'
@@ -46,7 +45,9 @@ function flattenCustom(sheets, defs) {
   return out
 }
 
-function downloadWorkbook(sheets, filename) {
+// xlsx (~400 kB) loads only when someone exports a workbook (MOBILE-008).
+async function downloadWorkbook(sheets, filename) {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
   for (const [name, rows] of Object.entries(sheets)) {
     const data = Array.isArray(rows) ? rows : [rows]
@@ -127,7 +128,7 @@ function ExportPageInner() {
         URL.revokeObjectURL(url)
       } else {
         const defs = await client.query(api.customFields.allDefs, {})
-        downloadWorkbook(flattenCustom(sheets, defs), `${base}.xlsx`)
+        await downloadWorkbook(flattenCustom(sheets, defs), `${base}.xlsx`)
       }
     } catch (err) {
       setError(err.message || String(err))
