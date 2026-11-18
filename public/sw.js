@@ -17,6 +17,8 @@ const SHELL_PAGES = [
   '/biweekly-entry',
   '/feed-issue',
   '/harvest',
+  '/water-entry',
+  '/inspection-entry',
   '/outbox',
   '/scan',
   '/dashboard',

@@ -219,6 +219,12 @@ function CageDetails() {
           >
             Bi-weekly entry
           </Button>
+          <Button href={`/water-entry?unit=${cageId}`} variant="secondary" size="sm">
+            Water reading
+          </Button>
+          <Button href={`/inspection-entry?unit=${cageId}`} variant="secondary" size="sm">
+            Inspection
+          </Button>
           <Button href={`/fish-transfers?source=${cageId}`} variant="secondary" size="sm">
             Transfer fish
           </Button>

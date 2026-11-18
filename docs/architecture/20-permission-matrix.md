@@ -297,6 +297,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `units.createWaterBody` | `org.sites.manage` | yes | yes | no | no | no |
 | `units.listGroups` | `production.view` | yes | yes | yes | yes | yes |
 | `units.listWaterBodies` | `production.view` | yes | yes | yes | yes | yes |
+| `units.mapPoints` | `production.view` | yes | yes | yes | yes | yes |
 | `units.setStatus` | `production.stock.adjust` | yes | yes | no | no | no |
 | `units.updateGroup` | `org.sites.manage` | yes | yes | no | no | no |
 | `units.updateWaterBody` | `org.sites.manage` | yes | yes | no | no | no |
