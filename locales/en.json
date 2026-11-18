@@ -71,7 +71,8 @@
       "groupReports": "Group Reports",
       "organizationStructure": "Organization Structure",
       "teams": "Teams",
-      "workforce": "Workforce"
+      "workforce": "Workforce",
+      "feedingPlans": "Feeding Plans"
     },
     "section": {
       "production": "Production",
@@ -830,6 +831,178 @@
       "showInactive": "Show former staff",
       "empty": "No staff records yet",
       "emptyHint": "Workforce admins can add staff here."
+    }
+  },
+  "formLayout": {
+    "title": "Form layouts",
+    "intro": "Arrange a form into sections, order its fields, and show a field only when another one has a value. Built-in fields keep their checks; only their place changes.",
+    "form": "Form",
+    "formName": {
+      "production_sampling": "Bi-weekly sampling",
+      "production_stocking": "Stocking"
+    },
+    "section": {
+      "session": "Session",
+      "water": "Water quality",
+      "samples": "Samples",
+      "more": "More details",
+      "cageBatch": "Cage & batch",
+      "fish": "Fish metrics",
+      "source": "Source & supervisors",
+      "notes": "Notes"
+    },
+    "core": {
+      "date": "Sampling date",
+      "batchCode": "Batch code",
+      "dissolvedOxygen": "Dissolved oxygen",
+      "temperatureC": "Temperature",
+      "secchiCm": "Secchi depth",
+      "samples": "Samples",
+      "cageId": "Cage",
+      "batchNumber": "Batch number",
+      "stockingDate": "Stocking date",
+      "species": "Species",
+      "fishCount": "Fish count",
+      "averageBodyWeight": "Average body weight",
+      "sourceLocation": "Source location",
+      "transferSupervisor": "Transfer supervisor",
+      "samplingSupervisor": "Sampling supervisor",
+      "notes": "Notes"
+    },
+    "sectionTitle": "Section title",
+    "newSection": "New section",
+    "addSection": "Add section",
+    "removeSection": "Remove section (its fields move to the section above)",
+    "emptySection": "No fields here yet. Move fields into this section from another one.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moveToSection": "Section",
+    "required": "Required",
+    "custom": "Custom field",
+    "width": "Width",
+    "widthAuto": "Default width",
+    "widthHalf": "Half width",
+    "widthFull": "Full width",
+    "showWhen": "When to show",
+    "always": "Always show",
+    "whenField": "Only when {field}…",
+    "condition": "Condition",
+    "conditionValue": "Value",
+    "opIsSet": "has a value",
+    "opEq": "equals",
+    "opNeq": "does not equal",
+    "save": "Save layout",
+    "reset": "Back to the built-in layout",
+    "saved": "Layout saved. The form uses it now.",
+    "resetDone": "The form is back to its built-in layout.",
+    "saveFailed": "Could not save the layout"
+  },
+  "dashboardLayout": {
+    "customize": "Customize",
+    "customizeTitle": "Customize this dashboard",
+    "sourceMe": "You are using your own layout.",
+    "sourceOrg": "You are using your organization's layout.",
+    "sourceDefault": "You are using the built-in layout.",
+    "orgTitle": "Organization dashboard",
+    "orgIntro": "The home dashboard every member sees unless they arrange their own.",
+    "widget": {
+      "stat_activeUnits": "Active units",
+      "stat_biomass": "Standing biomass",
+      "stat_fcr": "Average FCR",
+      "stat_mortality": "Mortality",
+      "stat_health": "Farm health",
+      "stat_adg": "Average daily growth",
+      "stat_feed30d": "Feed (30 days)",
+      "insights": "Insights",
+      "chart_feedTrend": "Cumulative feed chart",
+      "chart_mortality": "Daily mortality chart",
+      "siteConditions": "Site conditions",
+      "recentActivity": "Recent activity",
+      "feedingPlan": "Today's feed plan"
+    },
+    "size": "Size",
+    "sizeName": {
+      "sm": "Small",
+      "md": "Medium",
+      "half": "Half",
+      "lg": "Large",
+      "full": "Full width"
+    },
+    "remove": "Remove widget",
+    "addWidget": "Add widget",
+    "empty": "No widgets. Add one below.",
+    "saveMine": "Save for me",
+    "saveOrg": "Save as organization default",
+    "resetMine": "Use the organization layout",
+    "resetOrg": "Back to the built-in layout",
+    "savedMine": "Your dashboard is saved.",
+    "savedOrg": "Organization dashboard saved.",
+    "resetDone": "Dashboard layout reset.",
+    "saveFailed": "Could not save the dashboard"
+  },
+  "branding": {
+    "invalidHex": "Enter a colour as a hex code, for example #1E3A5F.",
+    "contrastPass": "White text on this colour has a contrast of {ratio}:1, which meets WCAG AA.",
+    "contrastFail": "White text on this colour has a contrast of only {ratio}:1; WCAG AA needs {min}:1, so buttons would be hard to read.",
+    "contrastLargeOnly": "White text on this colour has a contrast of {ratio}:1: enough for large text and icons, but WCAG AA needs {min}:1 for normal text.",
+    "contrastAdjusted": "The app uses the nearest readable shade, {hex}, until you change it.",
+    "useAccessible": "Use the accessible colour"
+  },
+  "feedingPlan": {
+    "title": "Feeding plans",
+    "intro": "Feed tables per species and fish size, and today's suggested ration for each stocked unit (fish count × average weight × % body weight).",
+    "todayTitle": "Today's suggested rations",
+    "totalLine": "{kg} kg per day across {planned} of {total} units",
+    "noUnits": "No stocked units here yet.",
+    "col": {
+      "unit": "Unit",
+      "species": "Species",
+      "fish": "Fish",
+      "abw": "ABW",
+      "bodyWeightPct": "% body weight/day",
+      "kgPerDay": "kg/day",
+      "how": "How to feed",
+      "fromAbw": "From ABW (g)",
+      "feedings": "Feedings/day",
+      "pellet": "Pellet (mm)"
+    },
+    "suggestion": "{kg} kg/day in {feedings} feedings of {perFeeding} kg, {pellet} mm pellets",
+    "suggestedRation": "Suggested ration",
+    "seePlan": "Feeding plan",
+    "reason": {
+      "no_fish": "No fish in the unit",
+      "no_abw": "Record a sampling to get the average weight",
+      "no_plan": "No feed table for this species yet",
+      "no_species": "Set the unit's species"
+    },
+    "tablesTitle": "Feed tables",
+    "tablesIntro": "Each row applies from its average body weight up to the next row. Adjust the tables to your feed, water temperature and appetite.",
+    "source": {
+      "saved": "Your organization's table.",
+      "default": "Built-in table. Saving creates your own copy.",
+      "none": "No table yet. Fill in the rows and save."
+    },
+    "planName": "Table name",
+    "addBand": "Add size class",
+    "removeBand": "Remove size class",
+    "save": "Save table",
+    "saved": "Feed table saved.",
+    "resetToDefault": "Back to the built-in table",
+    "remove": "Delete table",
+    "resetDone": "Feed table reset.",
+    "saveFailed": "Could not save the feed table",
+    "widgetTitle": "Today's feed plan",
+    "widgetSubtitle": "Suggested from fish count, weight and the feed tables",
+    "open": "Open",
+    "kgPerDay": "kg/day",
+    "coverage": "{planned} of {total} units have a ration"
+  },
+  "customizePage": {
+    "tab": {
+      "fields": "Fields",
+      "words": "Words",
+      "forms": "Forms",
+      "dashboard": "Dashboard"
     }
   }
 }

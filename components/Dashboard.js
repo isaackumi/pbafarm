@@ -3,6 +3,9 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import {
   ArrowRight,
+  LayoutGrid,
+  RotateCcw,
+  Save,
   Calendar,
   Fish,
   Package,
@@ -32,10 +35,16 @@ import {
   DashboardSkeleton,
 } from './ui'
 import { localToday } from '../lib/format'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
 import SiteConditions from './SiteConditions'
-import { usePermission } from '../hooks/usePermission'
+import { usePermission, usePermissions } from '../hooks/usePermission'
+import { useToast } from './Toast'
+import { useT } from '../lib/i18n/context'
+import WidgetGrid, { visibleWidgets } from './dashboard/WidgetGrid'
+import WidgetListEditor from './dashboard/WidgetListEditor'
+import FeedingPlanWidget from './FeedingPlanWidget'
+import { DEFAULT_DASHBOARD } from '../convex/lib/dashboardLayout'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -92,6 +101,13 @@ export default function Dashboard() {
   const canManageSites = usePermission('org.sites.manage')
   const { activeLocationId, locationArgs } = useLocation()
   const aiStatus = useQuery(api.companies.aiAssistantStatus, user ? {} : 'skip')
+  const t = useT()
+  const { can } = usePermissions()
+  const canReports = can('reports.view')
+  const canManageOrg = can('customization.manage')
+  const layout = useQuery(api.dashboardLayouts.get, user && canReports ? { key: 'home' } : 'skip')
+  const [customizing, setCustomizing] = useState(false)
+  const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
   const [cages, setCages] = useState([])
   const [dailyRecords, setDailyRecords] = useState([])
   const [recentStockings, setRecentStockings] = useState([])
@@ -257,140 +273,120 @@ export default function Dashboard() {
         ? 'good'
         : 'default'
 
-  if (loading) {
-    return <DashboardSkeleton />
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-[1400px]">
-        <Card>
-          <ErrorState
-            title="The dashboard could not load"
-            message={error}
-            onRetry={() => setReloadKey((k) => k + 1)}
-          />
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6 max-w-[1400px]">
-
-      {/* Hero row */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted">Farm overview</p>
-          <h1 className="font-display text-[28px] sm:text-4xl font-medium text-chart-ink mt-1">
-            {new Date().toLocaleDateString(undefined, {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
-          </h1>
-          <p className="text-muted mt-2 text-base tabular-nums">
-            {metrics.totalActiveCages} active cages ·{' '}
-            {Number(metrics.activeFish).toLocaleString()} fish on farm
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button href="/daily-entry" size="lg">
-            <Calendar size={22} />
-            Log daily entry
-          </Button>
-          <Button href="/stocking" variant="secondary" size="lg">
-            <Plus size={22} />
-            New stocking
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <HealthMeter score={health} label="Farm health" />
-        <StatCard
-          label="Active cages"
-          value={metrics.totalActiveCages}
-          icon={Fish}
-          hint={`${metrics.totalCages ?? summary?.cages?.total ?? cages.length} total at this location`}
-        />
-        <StatCard
-          label="Standing biomass"
-          value={metrics.totalBiomass.toLocaleString()}
-          unit="kg"
-          icon={Package}
-          tone="accent"
-        />
-        <StatCard
-          label="Avg FCR"
-          value={metrics.averageFCR}
-          icon={Scale}
-          hint="From harvest records (30d)"
-        />
-        <StatCard
-          label="Mortality"
-          value={metrics.mortalityRate}
-          unit="%"
-          icon={TriangleAlert}
-          tone={mortTone}
-          hint="Last 30 days"
-        />
-      </div>
-
+  const widgetNodes = {
+    'stat.health': (
+      <HealthMeter score={health} label="Farm health" />
+    ),
+    'stat.activeUnits': (
+      <StatCard
+        label="Active cages"
+        value={metrics.totalActiveCages}
+        icon={Fish}
+        hint={`${metrics.totalCages ?? summary?.cages?.total ?? cages.length} total at this location`}
+      />
+    ),
+    'stat.biomass': (
+      <StatCard
+        label="Standing biomass"
+        value={metrics.totalBiomass.toLocaleString()}
+        unit="kg"
+        icon={Package}
+        tone="accent"
+      />
+    ),
+    'stat.fcr': (
+      <StatCard
+        label="Avg FCR"
+        value={metrics.averageFCR}
+        icon={Scale}
+        hint="From harvest records (30d)"
+      />
+    ),
+    'stat.mortality': (
+      <StatCard
+        label="Mortality"
+        value={metrics.mortalityRate}
+        unit="%"
+        icon={TriangleAlert}
+        tone={mortTone}
+        hint="Last 30 days"
+      />
+    ),
+    'stat.adg': (
+      <StatCard
+        label="Avg daily growth"
+        value={metrics.avgDailyGrowth}
+        unit={metrics.avgDailyGrowth === 'N/A' ? '' : 'g/day'}
+        icon={TrendingUp}
+        tone="accent"
+      />
+    ),
+    'stat.feed30d': (
+      <StatCard
+        label="Feed (30d)"
+        value={
+          summary?.recent_feed_usage_kg != null
+            ? Number(summary.recent_feed_usage_kg).toFixed(0)
+            : '—'
+        }
+        unit="kg"
+        icon={Package}
+      />
+    ),
+    'insights': (
       <DashboardInsights
         locationId={locationArgs?.locationId}
         aiEnabled={aiStatus?.enabled === true && aiStatus.canUse === true}
       />
-
-      {/* Charts + table */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <Card className="xl:col-span-2 min-h-[22rem]">
-          <CardHeader
-            title="Cumulative feed"
-            subtitle="Daily feed logged over the last 30 days"
+    ),
+    'chart.feedTrend': (
+      <Card className="min-h-[22rem]">
+        <CardHeader
+          title="Cumulative feed"
+          subtitle="Daily feed logged over the last 30 days"
+        />
+        {feedTrend.length === 0 ? (
+          <EmptyState
+            title="No feed data yet"
+            description="Log daily entries to see cumulative feed usage."
+            action={
+              <Button href="/daily-entry" size="md">
+                Log daily entry
+              </Button>
+            }
           />
-          {feedTrend.length === 0 ? (
-            <EmptyState
-              title="No feed data yet"
-              description="Log daily entries to see cumulative feed usage."
-              action={
-                <Button href="/daily-entry" size="md">
-                  Log daily entry
-                </Button>
-              }
-            />
-          ) : (
-            <div className="h-64 sm:h-72">
-              <FeedTrendChart feedTrend={feedTrend} />
-            </div>
-          )}
-        </Card>
-
-        <Card className="min-h-[22rem]">
-          <CardHeader
-            title="Daily mortality"
-            subtitle="Last 14 logging days"
+        ) : (
+          <div className="h-64 sm:h-72">
+            <FeedTrendChart feedTrend={feedTrend} />
+          </div>
+        )}
+      </Card>
+    ),
+    'chart.mortality': (
+      <Card className="min-h-[22rem]">
+        <CardHeader
+          title="Daily mortality"
+          subtitle="Last 14 logging days"
+        />
+        {mortalityBars.length === 0 ? (
+          <EmptyState
+            title="No mortality logged"
+            description="Daily mortality will appear here once records exist."
           />
-          {mortalityBars.length === 0 ? (
-            <EmptyState
-              title="No mortality logged"
-              description="Daily mortality will appear here once records exist."
-            />
-          ) : (
-            <div className="h-64 sm:h-72">
-              <MortalityBarsChart mortalityBars={mortalityBars} />
-            </div>
-          )}
-        </Card>
-      </div>
-
+        ) : (
+          <div className="h-64 sm:h-72">
+            <MortalityBarsChart mortalityBars={mortalityBars} />
+          </div>
+        )}
+      </Card>
+    ),
+    'siteConditions': (
       <SiteConditions
         locationId={activeLocationId || undefined}
         isAdmin={canManageSites}
       />
-
-      {/* Recent activity */}
+    ),
+    'recentActivity': (
       <Card padding={false}>
         <div className="p-5 sm:p-6 border-b border-foam-deep flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -520,6 +516,133 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+    ),
+    feedingPlan: <FeedingPlanWidget locationId={locationArgs?.locationId} />,
+  }
+
+  if (loading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1400px]">
+        <Card>
+          <ErrorState
+            title="The dashboard could not load"
+            message={error}
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6 max-w-[1400px]">
+
+      {/* Hero row */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted">Farm overview</p>
+          <h1 className="font-display text-[28px] sm:text-4xl font-medium text-chart-ink mt-1">
+            {new Date().toLocaleDateString(undefined, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
+          </h1>
+          <p className="text-muted mt-2 text-base tabular-nums">
+            {metrics.totalActiveCages} active cages ·{' '}
+            {Number(metrics.activeFish).toLocaleString()} fish on farm
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button href="/daily-entry" size="lg">
+            <Calendar size={22} />
+            Log daily entry
+          </Button>
+          <Button href="/stocking" variant="secondary" size="lg">
+            <Plus size={22} />
+            New stocking
+          </Button>
+          {canReports && !customizing && (
+            <Button variant="ghost" size="lg" onClick={() => setCustomizing(true)}>
+              <LayoutGrid size={22} />
+              {t('dashboardLayout.customize')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {customizing && (
+        <DashboardCustomizer
+          layout={layout}
+          canManageOrg={canManageOrg}
+          can={can}
+          onClose={() => setCustomizing(false)}
+        />
+      )}
+
+      <WidgetGrid widgets={shownWidgets} nodes={widgetNodes} />
     </div>
+  )
+}
+
+/** Arrange this dashboard (CUSTOM-005): for me, or as the organization default. */
+function DashboardCustomizer({ layout, canManageOrg, can, onClose }) {
+  const t = useT()
+  const { showToast } = useToast()
+  const save = useMutation(api.dashboardLayouts.save)
+  const reset = useMutation(api.dashboardLayouts.reset)
+  const [draft, setDraft] = useState(() => visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can))
+  const [busy, setBusy] = useState(false)
+  const run = async (fn, done) => {
+    setBusy(true)
+    try {
+      await fn()
+      showToast('success', done)
+      onClose()
+    } catch (err) {
+      showToast('error', errorMessage(err, t('dashboardLayout.saveFailed')))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const sourceText =
+    layout?.source === 'me'
+      ? t('dashboardLayout.sourceMe')
+      : layout?.source === 'org'
+        ? t('dashboardLayout.sourceOrg')
+        : t('dashboardLayout.sourceDefault')
+  return (
+    <Card className="space-y-4">
+      <CardHeader title={t('dashboardLayout.customizeTitle')} subtitle={sourceText} />
+      <WidgetListEditor widgets={draft} onChange={setDraft} can={can} />
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'me', widgets: draft }), t('dashboardLayout.savedMine'))}>
+          <Save className="h-4 w-4" aria-hidden />
+          {t('dashboardLayout.saveMine')}
+        </Button>
+        {canManageOrg && (
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}
+          >
+            {t('dashboardLayout.saveOrg')}
+          </Button>
+        )}
+        {layout?.source === 'me' && (
+          <Button variant="ghost" disabled={busy} onClick={() => run(() => reset({ key: 'home', scope: 'me' }), t('dashboardLayout.resetDone'))}>
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            {t('dashboardLayout.resetMine')}
+          </Button>
+        )}
+        <Button variant="ghost" disabled={busy} onClick={onClose}>
+          {t('common.cancel')}
+        </Button>
+      </div>
+    </Card>
   )
 }

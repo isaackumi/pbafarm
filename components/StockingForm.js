@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useCallback, useMemo, useState, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import stockingService from '../lib/stockingService'
@@ -7,7 +7,6 @@ import {
   Button,
   FormCard,
   FormActions,
-  FormSection,
   Field,
   Input,
   Select,
@@ -21,7 +20,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useSpeciesOptions } from '../hooks/useSpeciesOptions'
 import { localToday } from '../lib/format'
-import CustomFields, { customPayload } from './CustomFields'
+import { customPayload } from './CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 import { DEFAULT_SETTINGS, densityStatus } from '../convex/lib/farmRules'
 
 const STOCKING_DEFAULTS = {
@@ -56,6 +56,8 @@ const StockingForm = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [warn, setWarn] = useState([])
+  const layout = useFormLayout('production.stocking')
+  const setCustom = useCallback((custom) => setFormData((prev) => ({ ...prev, custom })), [setFormData])
 
   const stockableStatuses = useMemo(() => {
     const fromRules = rules?.stockingRules?.allowStockOnlyEmptyStatuses
@@ -120,17 +122,19 @@ const StockingForm = ({ onSuccess, onCancel }) => {
       }
 
       setLoading(true)
+      const hidden = hiddenCoreKeys(layout.sections, formData, formData.custom)
+      const optional = (key) => (hidden.has(key) ? '' : formData[key])
       const stockingData = {
         cage_id: formData.cageId,
-        batch_number: formData.batchNumber,
         stocking_date: formData.stockingDate,
         fish_count: fishCount,
         initial_abw: initialAbw,
         species: formData.species || undefined,
-        source_location: formData.sourceLocation,
-        transfer_supervisor: formData.transferSupervisor,
-        sampling_supervisor: formData.samplingSupervisor,
-        notes: formData.notes,
+        batch_number: optional('batchNumber'),
+        source_location: optional('sourceLocation'),
+        transfer_supervisor: optional('transferSupervisor'),
+        sampling_supervisor: optional('samplingSupervisor'),
+        notes: optional('notes'),
         custom: customPayload(formData.custom),
       }
 
@@ -194,6 +198,198 @@ const StockingForm = ({ onSuccess, onCancel }) => {
     }
   }, [cages, cagesReady, formData.cageId, setFormData])
 
+  const layoutFields = {
+    cageId: (
+      <Field label="Cage" htmlFor="cageId" required>
+        <Select
+          id="cageId"
+          name="cageId"
+          value={formData.cageId}
+          onChange={handleChange}
+          required
+          disabled={!cagesReady || cages.length === 0}
+        >
+          <option value="">
+            {!cagesReady
+              ? 'Loading cages…'
+              : cages.length === 0
+                ? 'No stockable cages available'
+                : 'Choose available cage…'}
+          </option>
+          {cages.map((cage) => (
+            <option key={cage._id || cage.id} value={cage._id || cage.id}>
+              {cage.name} — {cage.status}
+            </option>
+          ))}
+        </Select>
+        {cagesReady && cages.length === 0 && (
+          <DependencyEmpty
+            message={`Stocking needs a cage with status ${stockableStatuses.join(', ')}. Create a cage or harvest/empty an active one first.${
+              allCages?.length
+                ? ` (${allCages.length} cage${allCages.length === 1 ? '' : 's'} on farm, none stockable right now.)`
+                : ''
+            }`}
+            createKind="cage"
+            createLabel="Create a cage"
+            secondaryHref="/cages"
+            secondaryLabel="Manage cages"
+            onCreated={(result) => {
+              const id = result?.id || result?.record?._id || result?.record?.id
+              if (id) {
+                setFormData((prev) => ({ ...prev, cageId: id }))
+              }
+            }}
+          />
+        )}
+      </Field>
+    ),
+    batchNumber: (
+      <Field
+        label="Batch number"
+        htmlFor="batchNumber"
+        hint="Auto-generated from cage + date; edit if needed"
+      >
+        <Input
+          id="batchNumber"
+          type="text"
+          name="batchNumber"
+          value={formData.batchNumber}
+          onChange={handleBatchChange}
+          placeholder={
+            formData.cageId
+              ? suggestedBatch || 'Generating…'
+              : 'Select a cage first'
+          }
+        />
+      </Field>
+    ),
+    stockingDate: (
+      <Field label="Stocking date" htmlFor="stockingDate" required>
+        <Input
+          id="stockingDate"
+          type="date"
+          name="stockingDate"
+          value={formData.stockingDate}
+          onChange={handleChange}
+          required
+        />
+      </Field>
+    ),
+    species: (
+      <Field label="Species" htmlFor="species" required>
+        <Select
+          id="species"
+          name="species"
+          value={formData.species}
+          onChange={handleChange}
+          required
+        >
+          {speciesOptions.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    ),
+    fishCount: (
+      <Field label="Fish count" htmlFor="fishCount" required>
+        <Input
+          id="fishCount"
+          type="number"
+          name="fishCount"
+          value={formData.fishCount}
+          onChange={handleChange}
+          min="1"
+          required
+          className="font-data"
+        />
+      </Field>
+    ),
+    averageBodyWeight: (
+      <Field
+        label="Average body weight (g)"
+        htmlFor="averageBodyWeight"
+        required
+        hint={
+          rules?.stockingRules
+            ? `Fingerling size for initial stocking: ${rules.stockingRules.minInitialAbwG}–${rules.stockingRules.maxInitialAbwG}g (not kg). Adjust in Company Settings if needed.`
+            : 'Enter weight in grams (not kg).'
+        }
+      >
+        <Input
+          id="averageBodyWeight"
+          type="number"
+          name="averageBodyWeight"
+          step="0.1"
+          value={formData.averageBodyWeight}
+          onChange={handleChange}
+          min={rules?.stockingRules?.minInitialAbwG ?? 1}
+          max={rules?.stockingRules?.maxInitialAbwG ?? 500}
+          required
+          className="font-data"
+        />
+      </Field>
+    ),
+    sourceLocation: (
+      <Field
+        label="Source location"
+        htmlFor="sourceLocation"
+       
+        hint="Defaults to header location"
+      >
+        <FarmLocationSelect
+          id="sourceLocation"
+          name="sourceLocation"
+          value={formData.sourceLocation}
+          onChange={handleChange}
+          valueKind="name"
+          locked
+        />
+      </Field>
+    ),
+    transferSupervisor: (
+      <Field
+        label="Transfer supervisor"
+        htmlFor="transferSupervisor"
+        hint="Pick a user or type a name"
+      >
+        <PersonPicker
+          id="transferSupervisor"
+          name="transferSupervisor"
+          value={formData.transferSupervisor}
+          onChange={handleChange}
+        />
+      </Field>
+    ),
+    samplingSupervisor: (
+      <Field
+        label="Sampling supervisor"
+        htmlFor="samplingSupervisor"
+        hint="Pick a user or type a name"
+      >
+        <PersonPicker
+          id="samplingSupervisor"
+          name="samplingSupervisor"
+          value={formData.samplingSupervisor}
+          onChange={handleChange}
+        />
+      </Field>
+    ),
+    notes: (
+      <Field label="Optional notes" htmlFor="notes">
+        <Textarea
+          id="notes"
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+        />
+      </Field>
+    ),
+  }
+
+  const selectedCage = cages.find((c) => (c._id || c.id) === formData.cageId)
+
   return (
     <FormCard
       title="Stocking details"
@@ -213,198 +409,16 @@ const StockingForm = ({ onSuccess, onCancel }) => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        <FormSection title="Cage & batch">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Cage" htmlFor="cageId" required className="md:col-span-2">
-              <Select
-                id="cageId"
-                name="cageId"
-                value={formData.cageId}
-                onChange={handleChange}
-                required
-                disabled={!cagesReady || cages.length === 0}
-              >
-                <option value="">
-                  {!cagesReady
-                    ? 'Loading cages…'
-                    : cages.length === 0
-                      ? 'No stockable cages available'
-                      : 'Choose available cage…'}
-                </option>
-                {cages.map((cage) => (
-                  <option key={cage._id || cage.id} value={cage._id || cage.id}>
-                    {cage.name} — {cage.status}
-                  </option>
-                ))}
-              </Select>
-              {cagesReady && cages.length === 0 && (
-                <DependencyEmpty
-                  message={`Stocking needs a cage with status ${stockableStatuses.join(', ')}. Create a cage or harvest/empty an active one first.${
-                    allCages?.length
-                      ? ` (${allCages.length} cage${allCages.length === 1 ? '' : 's'} on farm, none stockable right now.)`
-                      : ''
-                  }`}
-                  createKind="cage"
-                  createLabel="Create a cage"
-                  secondaryHref="/cages"
-                  secondaryLabel="Manage cages"
-                  onCreated={(result) => {
-                    const id = result?.id || result?.record?._id || result?.record?.id
-                    if (id) {
-                      setFormData((prev) => ({ ...prev, cageId: id }))
-                    }
-                  }}
-                />
-              )}
-            </Field>
-            <Field
-              label="Batch number"
-              htmlFor="batchNumber"
-              hint="Auto-generated from cage + date; edit if needed"
-            >
-              <Input
-                id="batchNumber"
-                type="text"
-                name="batchNumber"
-                value={formData.batchNumber}
-                onChange={handleBatchChange}
-                placeholder={
-                  formData.cageId
-                    ? suggestedBatch || 'Generating…'
-                    : 'Select a cage first'
-                }
-              />
-            </Field>
-            <Field label="Stocking date" htmlFor="stockingDate" required>
-              <Input
-                id="stockingDate"
-                type="date"
-                name="stockingDate"
-                value={formData.stockingDate}
-                onChange={handleChange}
-                required
-              />
-            </Field>
-            <Field label="Species" htmlFor="species" required>
-              <Select
-                id="species"
-                name="species"
-                value={formData.species}
-                onChange={handleChange}
-                required
-              >
-                {speciesOptions.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Fish metrics">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Fish count" htmlFor="fishCount" required>
-              <Input
-                id="fishCount"
-                type="number"
-                name="fishCount"
-                value={formData.fishCount}
-                onChange={handleChange}
-                min="1"
-                required
-                className="font-data"
-              />
-            </Field>
-            <Field
-              label="Average body weight (g)"
-              htmlFor="averageBodyWeight"
-              required
-              hint={
-                rules?.stockingRules
-                  ? `Fingerling size for initial stocking: ${rules.stockingRules.minInitialAbwG}–${rules.stockingRules.maxInitialAbwG}g (not kg). Adjust in Company Settings if needed.`
-                  : 'Enter weight in grams (not kg).'
-              }
-            >
-              <Input
-                id="averageBodyWeight"
-                type="number"
-                name="averageBodyWeight"
-                step="0.1"
-                value={formData.averageBodyWeight}
-                onChange={handleChange}
-                min={rules?.stockingRules?.minInitialAbwG ?? 1}
-                max={rules?.stockingRules?.maxInitialAbwG ?? 500}
-                required
-                className="font-data"
-              />
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Source & supervisors">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field
-              label="Source location"
-              htmlFor="sourceLocation"
-              className="md:col-span-2"
-              hint="Defaults to header location"
-            >
-              <FarmLocationSelect
-                id="sourceLocation"
-                name="sourceLocation"
-                value={formData.sourceLocation}
-                onChange={handleChange}
-                valueKind="name"
-                locked
-              />
-            </Field>
-            <Field
-              label="Transfer supervisor"
-              htmlFor="transferSupervisor"
-              hint="Pick a user or type a name"
-            >
-              <PersonPicker
-                id="transferSupervisor"
-                name="transferSupervisor"
-                value={formData.transferSupervisor}
-                onChange={handleChange}
-              />
-            </Field>
-            <Field
-              label="Sampling supervisor"
-              htmlFor="samplingSupervisor"
-              hint="Pick a user or type a name"
-            >
-              <PersonPicker
-                id="samplingSupervisor"
-                name="samplingSupervisor"
-                value={formData.samplingSupervisor}
-                onChange={handleChange}
-              />
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Notes">
-          <Field label="Optional notes" htmlFor="notes">
-            <Textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-            />
-          </Field>
-        </FormSection>
-
-        <CustomFields
-          entity="stockingHistory"
-          value={formData.custom}
-          onChange={(custom) => setFormData((prev) => ({ ...prev, custom }))}
-          locationId={cages.find((c) => (c._id || c.id) === formData.cageId)?.location_id}
+        <FormLayout
+          formKey="production.stocking"
+          layout={layout}
+          fields={layoutFields}
+          coreValues={formData}
+          custom={formData.custom}
+          onCustomChange={setCustom}
+          locationId={selectedCage?.location_id}
           core={{ species: formData.species, fishCount: Number(formData.fishCount) || 0 }}
-          title="More details"
+          idPrefix="st-cf"
         />
 
         <FormActions>

@@ -127,6 +127,7 @@ const MENU_SECTIONS = {
       { title: 'Purchases', path: '/feed-purchases', permission: 'inventory.view', icon: ShoppingCart, tourId: 'feed-purchases' },
       { title: 'Purchase Orders', path: '/procurement', permission: 'inventory.view', icon: ClipboardList },
       { title: 'Issue Feed', path: '/feed-issue', permission: 'inventory.issue', icon: Package, tourId: 'feed-issue' },
+      { title: 'Feeding Plans', path: '/feeding-plans', permission: 'production.view', icon: Scale },
       { title: 'Analytics', path: '/feed-management/analytics', permission: 'inventory.view', icon: TrendingUp },
     ],
   },

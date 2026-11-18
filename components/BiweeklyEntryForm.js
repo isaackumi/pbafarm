@@ -6,12 +6,12 @@ import {
   Button,
   FormCard,
   FormActions,
-  FormSection,
   Field,
   Input,
 } from './ui'
 import { localToday } from '../lib/format'
-import CustomFields, { customPayload } from './CustomFields'
+import { customPayload } from './CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 
 function generateBatchCode() {
   const date = new Date()
@@ -38,6 +38,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const layout = useFormLayout('production.sampling')
 
   useEffect(() => {
     setBatchCode(generateBatchCode())
@@ -105,6 +106,8 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
     0,
   )
 
+  const coreValues = { date, batchCode, dissolvedOxygen, temperatureC, secchiCm, samples: totalFish || '' }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -115,6 +118,8 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         throw new Error('Please enter valid fish count and weight data')
       }
 
+      const hidden = hiddenCoreKeys(layout.sections, coreValues, custom)
+      const shown = (key, v) => (hidden.has(key) || v === '' ? undefined : Number(v))
       const recordData = {
         cage_id: cage.id || cage._id,
         date,
@@ -122,10 +127,9 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         average_body_weight: calculateAverageABW(),
         total_fish_count: totalFish,
         total_weight: totalWeight,
-        dissolved_oxygen:
-          dissolvedOxygen !== '' ? Number(dissolvedOxygen) : undefined,
-        temperature_c: temperatureC !== '' ? Number(temperatureC) : undefined,
-        secchi_cm: secchiCm !== '' ? Number(secchiCm) : undefined,
+        dissolved_oxygen: shown('dissolvedOxygen', dissolvedOxygen),
+        temperature_c: shown('temperatureC', temperatureC),
+        secchi_cm: shown('secchiCm', secchiCm),
         custom: customPayload(custom),
         samples: samplings
           .filter((s) => s.fish_count && s.total_weight)
@@ -162,6 +166,158 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const layoutFields = {
+    date: (
+      <Field label="Sampling date" htmlFor="date" required>
+        <Input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+        />
+      </Field>
+    ),
+    batchCode: (
+      <Field label="Batch code" htmlFor="batchCode">
+        <div className="flex gap-2">
+          <Input
+            id="batchCode"
+            type="text"
+            value={batchCode}
+            readOnly
+            className="font-data bg-foam"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setBatchCode(generateBatchCode())}
+            aria-label="Generate new batch code"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+      </Field>
+    ),
+    dissolvedOxygen: (
+      <Field label="Dissolved oxygen (mg/L)" htmlFor="bw-do">
+        <Input
+          id="bw-do"
+          type="number"
+          step="0.1"
+          value={dissolvedOxygen}
+          onChange={(e) => setDissolvedOxygen(e.target.value)}
+          className="font-data tabular-nums"
+        />
+      </Field>
+    ),
+    temperatureC: (
+      <Field label="Temperature (°C)" htmlFor="bw-temp">
+        <Input
+          id="bw-temp"
+          type="number"
+          step="0.1"
+          value={temperatureC}
+          onChange={(e) => setTemperatureC(e.target.value)}
+          className="font-data tabular-nums"
+        />
+      </Field>
+    ),
+    secchiCm: (
+      <Field label="Secchi (cm)" htmlFor="bw-secchi">
+        <Input
+          id="bw-secchi"
+          type="number"
+          step="1"
+          value={secchiCm}
+          onChange={(e) => setSecchiCm(e.target.value)}
+          className="font-data tabular-nums"
+        />
+      </Field>
+    ),
+    samples: (
+      <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm text-muted">
+          Each sample needs fish count and total weight.
+        </p>
+        <Button type="button" variant="secondary" size="sm" onClick={addSampling}>
+          <Plus className="w-4 h-4" />
+          Add sample
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {samplings.map((sampling, index) => (
+          <div
+            key={sampling.id}
+            className="rounded-xl border border-foam-deep bg-surface p-4 sm:p-5"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-chart-ink">
+                Sample {index + 1}
+              </h4>
+              {samplings.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeSampling(index)}
+                  className="text-signal p-2.5 rounded-lg hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                  title="Remove sample"
+                  aria-label="Remove sample"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Field label="Fish count" htmlFor={`fish-${index}`}>
+                <Input
+                  id={`fish-${index}`}
+                  type="number"
+                  value={sampling.fish_count}
+                  onChange={(e) =>
+                    updateSampling(index, 'fish_count', e.target.value)
+                  }
+                  min="0"
+                  className="font-data tabular-nums"
+                  placeholder="Count"
+                />
+              </Field>
+              <Field label="Total weight (g)" htmlFor={`weight-${index}`}>
+                <Input
+                  id={`weight-${index}`}
+                  type="number"
+                  value={sampling.total_weight}
+                  onChange={(e) =>
+                    updateSampling(index, 'total_weight', e.target.value)
+                  }
+                  min="0"
+                  step="0.01"
+                  className="font-data tabular-nums"
+                  placeholder="0.00"
+                />
+              </Field>
+              <Field
+                label="ABW (g)"
+                htmlFor={`abw-${index}`}
+                hint="Calculated"
+              >
+                <Input
+                  id={`abw-${index}`}
+                  type="number"
+                  value={sampling.abw}
+                  readOnly
+                  className="font-data bg-foam"
+                />
+              </Field>
+            </div>
+          </div>
+        ))}
+      </div>
+      </div>
+    ),
   }
 
   return (
@@ -210,164 +366,16 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
           </div>
         </div>
 
-        <FormSection title="Session">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field label="Sampling date" htmlFor="date" required>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </Field>
-            <Field label="Batch code" htmlFor="batchCode">
-              <div className="flex gap-2">
-                <Input
-                  id="batchCode"
-                  type="text"
-                  value={batchCode}
-                  readOnly
-                  className="font-data bg-foam"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setBatchCode(generateBatchCode())}
-                  aria-label="Generate new batch code"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              </div>
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Water quality">
-          <p className="text-sm text-muted -mt-2 mb-3">
-            Optional — DO, temperature, and Secchi at sampling time.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <Field label="Dissolved oxygen (mg/L)" htmlFor="bw-do">
-              <Input
-                id="bw-do"
-                type="number"
-                step="0.1"
-                value={dissolvedOxygen}
-                onChange={(e) => setDissolvedOxygen(e.target.value)}
-                className="font-data tabular-nums"
-              />
-            </Field>
-            <Field label="Temperature (°C)" htmlFor="bw-temp">
-              <Input
-                id="bw-temp"
-                type="number"
-                step="0.1"
-                value={temperatureC}
-                onChange={(e) => setTemperatureC(e.target.value)}
-                className="font-data tabular-nums"
-              />
-            </Field>
-            <Field label="Secchi (cm)" htmlFor="bw-secchi">
-              <Input
-                id="bw-secchi"
-                type="number"
-                step="1"
-                value={secchiCm}
-                onChange={(e) => setSecchiCm(e.target.value)}
-                className="font-data tabular-nums"
-              />
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Samples">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted">
-              Each sample needs fish count and total weight.
-            </p>
-            <Button type="button" variant="secondary" size="sm" onClick={addSampling}>
-              <Plus className="w-4 h-4" />
-              Add sample
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {samplings.map((sampling, index) => (
-              <div
-                key={sampling.id}
-                className="rounded-xl border border-foam-deep bg-surface p-4 sm:p-5"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-semibold text-chart-ink">
-                    Sample {index + 1}
-                  </h4>
-                  {samplings.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSampling(index)}
-                      className="text-signal p-2.5 rounded-lg hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-                      title="Remove sample"
-                      aria-label="Remove sample"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Fish count" htmlFor={`fish-${index}`}>
-                    <Input
-                      id={`fish-${index}`}
-                      type="number"
-                      value={sampling.fish_count}
-                      onChange={(e) =>
-                        updateSampling(index, 'fish_count', e.target.value)
-                      }
-                      min="0"
-                      className="font-data tabular-nums"
-                      placeholder="Count"
-                    />
-                  </Field>
-                  <Field label="Total weight (g)" htmlFor={`weight-${index}`}>
-                    <Input
-                      id={`weight-${index}`}
-                      type="number"
-                      value={sampling.total_weight}
-                      onChange={(e) =>
-                        updateSampling(index, 'total_weight', e.target.value)
-                      }
-                      min="0"
-                      step="0.01"
-                      className="font-data tabular-nums"
-                      placeholder="0.00"
-                    />
-                  </Field>
-                  <Field
-                    label="ABW (g)"
-                    htmlFor={`abw-${index}`}
-                    hint="Calculated"
-                  >
-                    <Input
-                      id={`abw-${index}`}
-                      type="number"
-                      value={sampling.abw}
-                      readOnly
-                      className="font-data bg-foam"
-                    />
-                  </Field>
-                </div>
-              </div>
-            ))}
-          </div>
-        </FormSection>
-
-        <CustomFields
-          entity="biweeklyRecords"
-          value={custom}
-          onChange={setCustom}
+        <FormLayout
+          formKey="production.sampling"
+          layout={layout}
+          fields={layoutFields}
+          coreValues={coreValues}
+          custom={custom}
+          onCustomChange={setCustom}
           locationId={cage?.location_id}
           core={{ totalFishCount: totalFish, totalWeight }}
-          title="More details"
+          idPrefix="bw-cf"
         />
 
         <FormActions>

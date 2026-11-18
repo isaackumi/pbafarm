@@ -119,6 +119,9 @@ describe('permission matrix (generated from the source)', () => {
       'farmLocations.setActiveLocation',
       'farmLocations.ensureDefault',
       'files.requestDownload',
+      // own dashboard arrangement; the org default additionally needs customization.manage
+      'dashboardLayouts.save',
+      'dashboardLayouts.reset',
     ])
     for (const f of fns) {
       if (f.kind === 'query' || !f.guard || !f.guard.includes('.') || preferences.has(f.name)) continue
