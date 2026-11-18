@@ -54,6 +54,7 @@ import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_scope from "../lib/scope.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_tokens from "../lib/tokens.js";
+import type * as lib_traceability from "../lib/traceability.js";
 import type * as memberships from "../memberships.js";
 import type * as messaging_channels from "../messaging/channels.js";
 import type * as messaging_deliver from "../messaging/deliver.js";
@@ -80,6 +81,7 @@ import type * as sales from "../sales.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as stocking from "../stocking.js";
+import type * as traceability from "../traceability.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
 
@@ -136,6 +138,7 @@ declare const fullApi: ApiFromModules<{
   "lib/scope": typeof lib_scope;
   "lib/tenancy": typeof lib_tenancy;
   "lib/tokens": typeof lib_tokens;
+  "lib/traceability": typeof lib_traceability;
   memberships: typeof memberships;
   "messaging/channels": typeof messaging_channels;
   "messaging/deliver": typeof messaging_deliver;
@@ -162,6 +165,7 @@ declare const fullApi: ApiFromModules<{
   security: typeof security;
   seed: typeof seed;
   stocking: typeof stocking;
+  traceability: typeof traceability;
   userAccounts: typeof userAccounts;
   users: typeof users;
 }>;

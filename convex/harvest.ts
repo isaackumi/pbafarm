@@ -11,6 +11,7 @@ import { harvestFcr, daysBetween } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
 import { shadowHarvest } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
+import { enforceWithdrawal } from './lib/traceability'
 
 /** Client rows with the cage name/code (one `get` per distinct cage). */
 async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
@@ -261,11 +262,19 @@ export const create = idempotentMutation('harvest.create', {
     notes: v.optional(v.string()),
     harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
     status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+    /** Admin only: harvest inside a treatment withdrawal period (PROD-012). */
+    withdrawalOverrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { withdrawalOverrideReason, ...args }) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
+    const withdrawalOverride = await enforceWithdrawal(ctx, user, {
+      cageId: args.cageId,
+      date: args.harvestDate,
+      action: 'harvest',
+      overrideReason: withdrawalOverrideReason,
+    })
 
     const companyId = (await writeCompanyId(user)) ?? cage.companyId
     const company = companyId ? await ctx.db.get(companyId) : null
@@ -286,6 +295,7 @@ export const create = idempotentMutation('harvest.create', {
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
       cageEffect,
+      withdrawalOverride,
       locationId: cage.locationId,
       companyId,
       createdBy: user._id,
@@ -318,13 +328,26 @@ export const update = mutation({
       harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
       status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
     }),
+    withdrawalOverrideReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch }) => {
+  handler: async (ctx, { id, patch, withdrawalOverrideReason }) => {
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Harvest record not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    // Moving the harvest date is a new harvest date for withdrawal (PROD-012).
+    let withdrawalOverride = existing.withdrawalOverride
+    if (patch.harvestDate !== undefined && patch.harvestDate !== existing.harvestDate) {
+      withdrawalOverride =
+        (await enforceWithdrawal(ctx, user, {
+          cageId: existing.cageId,
+          date: patch.harvestDate,
+          action: 'harvest',
+          overrideReason: withdrawalOverrideReason,
+          batchId: existing.batchId,
+        })) ?? undefined
+    }
 
     // Changing the type or fish count re-posts the harvest against the cage.
     const warnings: string[] = []
@@ -358,7 +381,7 @@ export const update = mutation({
       )
     }
 
-    await ctx.db.patch(id, { ...patch, cageEffect })
+    await ctx.db.patch(id, { ...patch, cageEffect, withdrawalOverride })
     const ledgerTouched = (['harvestDate', 'estimatedCount', 'harvestType', 'totalWeight', 'averageBodyWeight'] as const).some(
       (k) => patch[k] !== undefined && patch[k] !== existing[k],
     )
