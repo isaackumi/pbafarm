@@ -8,6 +8,7 @@ import {
   Calendar,
   ChartColumn,
   ChevronDown,
+  ClipboardList,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
@@ -52,6 +53,7 @@ const MENU_SECTIONS = {
     items: [
       { title: 'Dashboard', path: '/dashboard', icon: House, tourId: 'dashboard' },
       { title: 'Daily Entry', path: '/daily-entry', icon: Calendar, tourId: 'daily-entry' },
+      { title: 'Daily Records', path: '/daily-data', icon: ClipboardList },
       { title: 'Bi-weekly Entry', path: '/biweekly-entry', icon: Scale, tourId: 'biweekly-entry' },
       { title: 'Bi-weekly Records', path: '/biweekly-records', icon: FileText, tourId: 'biweekly-records' },
       { title: 'Harvest Data', path: '/harvest', icon: Package, tourId: 'harvest' },

@@ -30,7 +30,7 @@ const TITLE_BY_PREFIX = [
   ['/pnl', 'Cage P&L'],
   ['/farm-locations', 'Farm Locations'],
   ['/daily-entry', 'Daily Entry'],
-  ['/daily-data', 'Daily Data'],
+  ['/daily-data', 'Daily records'],
   ['/biweekly-entry', 'Bi-weekly Entry'],
   ['/biweekly-records', 'Bi-weekly Records'],
   ['/stocking-management', 'Stocking Management'],

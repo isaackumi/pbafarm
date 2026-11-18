@@ -150,19 +150,36 @@ export const list = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
+    const limit = Math.min(Math.max(args.limit ?? 5000, 1), 5000)
+    const { dateFrom, dateTo } = args
     let rows = args.cageId
       ? await ctx.db
           .query('dailyRecords')
-          .withIndex('by_cage', (q) => q.eq('cageId', args.cageId!))
-          .collect()
-      : await ctx.db.query('dailyRecords').collect()
+          .withIndex('by_cage_date', (q) => {
+            const c = q.eq('cageId', args.cageId!)
+            if (dateFrom && dateTo) return c.gte('date', dateFrom).lte('date', dateTo)
+            if (dateFrom) return c.gte('date', dateFrom)
+            if (dateTo) return c.lte('date', dateTo)
+            return c
+          })
+          .order('desc')
+          .take(limit)
+      : await ctx.db
+          .query('dailyRecords')
+          .withIndex('by_date', (q) => {
+            if (dateFrom && dateTo) return q.gte('date', dateFrom).lte('date', dateTo)
+            if (dateFrom) return q.gte('date', dateFrom)
+            if (dateTo) return q.lte('date', dateTo)
+            return q
+          })
+          .order('desc')
+          .take(limit)
 
     rows = await listForCompanyAndLocation(user, rows, args.locationId)
-    if (args.dateFrom) rows = rows.filter((r) => r.date >= args.dateFrom!)
-    if (args.dateTo) rows = rows.filter((r) => r.date <= args.dateTo!)
     return rows.map(toClient).sort((a, b) => b.date.localeCompare(a.date))
   },
 })

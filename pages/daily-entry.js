@@ -18,6 +18,7 @@ export default function DailyUpload() {
             ]}
             description="Log mortality and feed for several cages at once. Feed amounts deduct stock through the inventory ledger."
             related={[
+              { label: 'Daily records', href: '/daily-data' },
               { label: 'Bulk upload', href: '/bulk-upload' },
               { label: 'Bi-weekly entry', href: '/biweekly-entry' },
               { label: 'Issue feed', href: '/feed-issue' },
