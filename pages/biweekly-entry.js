@@ -6,6 +6,7 @@ import { PageHeader, Button, FormPage } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
 import BiweeklyBatchEntry from '../components/BiweeklyBatchEntry'
 import { cageService } from '../lib/databaseService'
+import { useT } from '../lib/i18n/context'
 
 export default function BiweeklyEntryPage() {
   return (
@@ -21,37 +22,38 @@ export default function BiweeklyEntryPage() {
  */
 function BiweeklyEntry() {
   const router = useRouter()
+  const t = useT()
   const detailed = router.query.mode === 'detailed'
   const cageId = typeof router.query.cage === 'string' ? router.query.cage : null
 
   return (
-    <Layout title="Bi-weekly entry">
+    <Layout title={t('biweekly.pageTitle')}>
       <FormPage width="full">
         <PageHeader
           showTitle={false}
           breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Bi-weekly records', href: '/biweekly-records' },
-            { label: 'Entry' },
+            { label: t('entry.dashboard'), href: '/dashboard' },
+            { label: t('biweekly.crumbRecords'), href: '/biweekly-records' },
+            { label: t('biweekly.crumbEntry') },
           ]}
           description={
             detailed
-              ? 'Several samples for one cage.'
-              : 'Sampling for one or many cages, saved together.'
+              ? t('biweekly.descDetailed')
+              : t('biweekly.descBatch')
           }
           related={[
-            { label: 'All records', href: '/biweekly-records' },
-            { label: 'Daily entry', href: '/daily-entry' },
-            { label: 'Harvest sampling', href: '/harvest-sampling' },
+            { label: t('biweekly.relatedAll'), href: '/biweekly-records' },
+            { label: t('biweekly.relatedDaily'), href: '/daily-entry' },
+            { label: t('biweekly.relatedHarvest'), href: '/harvest-sampling' },
           ]}
           actions={
             detailed ? (
               <Button variant="secondary" size="sm" href="/biweekly-entry">
-                Back to sampling
+                {t('biweekly.backToSampling')}
               </Button>
             ) : (
               <Button href="/biweekly-records" variant="secondary" size="sm">
-                View records
+                {t('biweekly.viewRecords')}
               </Button>
             )
           }
@@ -67,6 +69,7 @@ function BiweeklyEntry() {
 }
 
 function DetailedEntry({ cageId, onDone }) {
+  const t = useT()
   const [cage, setCage] = useState(null)
   const [missing, setMissing] = useState(false)
 
@@ -84,7 +87,7 @@ function DetailedEntry({ cageId, onDone }) {
   }, [cageId])
 
   if (missing) {
-    return <p className="text-sm text-muted">That cage was not found on this farm.</p>
+    return <p className="text-sm text-muted">{t('biweekly.cageNotFound')}</p>
   }
   if (!cage) {
     return <div className="h-64 rounded-xl bg-foam animate-pulse" />

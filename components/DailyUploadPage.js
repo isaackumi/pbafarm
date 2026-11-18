@@ -32,6 +32,7 @@ import { parseCageScan } from '../lib/qrTarget'
 import QrScanner from './QrScanner'
 import { usePermission } from '../hooks/usePermission'
 import CustomFields, { customPayload } from './CustomFields'
+import { useT } from '../lib/i18n/context'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const dayBefore = (iso) => {
@@ -89,6 +90,7 @@ const DailyUploadPage = () => {
   const [confirmBlank, setConfirmBlank] = useState(false)
   const prefilledFor = useRef(null)
   const { showToast } = useToast()
+  const t = useT()
   const { hasRole, user } = useAuth()
   const canOverride = usePermission('inventory.adjust')
   const userId = user?.id
@@ -222,16 +224,16 @@ const DailyUploadPage = () => {
     setScanOpen(false)
     const hit = parseCageScan(text, cages)
     if (!hit) {
-      showToast('No cage on this farm matches that label', 'error')
+      showToast(t('common.noCageMatchesLabel'), 'error')
       return
     }
     const fresh = hit.cageIds.filter((id) => !loggedCageIds.has(id))
     if (!fresh.length) {
-      showToast(`${cageName(hit.cageIds[0])} is already logged for ${formData.date}`, 'info')
+      showToast(t('daily.alreadyLogged', { name: cageName(hit.cageIds[0]), date: formData.date }), 'info')
       return
     }
     addCages(fresh)
-    showToast(`Added ${fresh.map(cageName).join(', ')}`, 'success')
+    showToast(t('common.added', { names: fresh.map(cageName).join(', ') }), 'success')
   }
 
   const selectAllCages = () => addCages(openCages.map(idOf))
@@ -283,7 +285,7 @@ const DailyUploadPage = () => {
         (r) => active.has(r.cage_id) && !loggedCageIds.has(r.cage_id),
       )
       if (!rows.length) {
-        showToast(`Nothing logged on ${prevDate} to copy`, 'info')
+        showToast(t('daily.nothingToCopy', { date: prevDate }), 'info')
         return
       }
       setLines((ls) => {
@@ -304,7 +306,7 @@ const DailyUploadPage = () => {
         }
         return [...byCage.values()]
       })
-      showToast(`Copied feed for ${rows.length} cage${rows.length === 1 ? '' : 's'} from ${prevDate}`, 'success')
+      showToast(t('daily.copied', { count: rows.length, date: prevDate }), 'success')
     } catch (err) {
       showToast(cleanError(err), 'error')
     } finally {
@@ -344,33 +346,35 @@ const DailyUploadPage = () => {
   )
 
   const validate = () => {
-    if (!formData.date) return ['Choose a date', null]
-    if (!lines.length) return ['Select at least one cage', null]
+    if (!formData.date) return [t('daily.chooseDate'), null]
+    if (!lines.length) return [t('entry.selectAtLeastOne'), null]
     const seen = new Set()
     for (const [i, l] of lines.entries()) {
-      const label = `Line ${i + 1}${l.cageId ? ` (${cageName(l.cageId)})` : ''}`
-      if (!l.cageId) return [`${label}: choose a cage`, i]
-      if (seen.has(l.cageId)) return [`${label}: cage is listed twice`, i]
+      const label = l.cageId
+        ? t('daily.lineLabelCage', { n: i + 1, name: cageName(l.cageId) })
+        : t('daily.lineLabel', { n: i + 1 })
+      if (!l.cageId) return [t('daily.errChooseCage', { label }), i]
+      if (seen.has(l.cageId)) return [t('daily.errTwice', { label }), i]
       seen.add(l.cageId)
       if (loggedCageIds.has(l.cageId)) {
-        return [`${label}: already logged for ${formData.date}. Remove the line or change the date.`, i]
+        return [t('daily.errAlreadyLogged', { label, date: formData.date }), i]
       }
       const kg = kgOf(l)
       const mort = num(l.mortality)
-      if (kg < 0 || mort < 0) return [`${label}: values cannot be negative`, i]
-      if (kg > 0 && !l.feedTypeId) return [`${label}: choose a feed type`, i]
-      if (!Number.isInteger(mort)) return [`${label}: mortality must be a whole number`, i]
+      if (kg < 0 || mort < 0) return [t('daily.errNegative', { label }), i]
+      if (kg > 0 && !l.feedTypeId) return [t('daily.errFeedType', { label }), i]
+      if (!Number.isInteger(mort)) return [t('daily.errWholeMortality', { label }), i]
     }
     if (shortages.length && !overrideActive) {
       return [
         shortages
-          .map((s) => `Not enough ${s.name}: ${s.onHand.toFixed(1)} kg on hand, ${s.need.toFixed(1)} kg needed`)
+          .map((s) => t('daily.notEnough', { name: s.name, onHand: s.onHand.toFixed(1), need: s.need.toFixed(1) }))
           .join('. '),
         null,
       ]
     }
     if (formData.allowNegative && !String(formData.overrideReason || '').trim()) {
-      return ['Admin override needs a reason', null]
+      return [t('daily.overrideNeedsReason'), null]
     }
     return ['', null]
   }
@@ -439,15 +443,15 @@ const DailyUploadPage = () => {
       const res = await saveOrQueue({ kind: 'daily-batch', payload, summary, userId })
       if (res.queued) {
         resetForm()
-        showToast('No connection. Saved on this device and will send when you are back online', 'info')
+        showToast(t('common.queuedOffline'), 'info')
         return
       }
       if (res.error) throw res.error
       resetForm()
       showToast(
         mortalityOnly
-          ? `Saved mortality for ${count} cage${count === 1 ? '' : 's'}`
-          : `Saved ${count} daily record${count === 1 ? '' : 's'}. Stock updated`,
+          ? t('daily.savedMortality', { count })
+          : t('daily.savedRecords', { count }),
         'success',
       )
       loadLookups()
@@ -464,14 +468,14 @@ const DailyUploadPage = () => {
     }
   }
 
-  const isInsufficientError = /not enough|insufficient/i.test(error || '')
+  const isInsufficientError = /not enough|insufficient|pas assez|insuffisant/i.test(error || '')
 
   // ---- render ------------------------------------------------------------
 
   return (
     <FormCard
-      title="Daily entry"
-      subtitle="Pick the cages, fill one line each, then save them together. Your draft stays on this device."
+      title={t('daily.title')}
+      subtitle={t('daily.subtitle')}
     >
       <OutboxPanel compact online={online} kinds={['daily-batch']} />
 
@@ -484,14 +488,14 @@ const DailyUploadPage = () => {
           {isInsufficientError && (
             <DependencyEmpty
               className="mt-3 border-signal/20 bg-surface"
-              message="Add stock with a purchase, then save again."
+              message={t('daily.addStockMessage')}
               createKind="purchase"
-              createLabel="Record a purchase"
+              createLabel={t('daily.recordPurchase')}
               createProps={{ defaultFeedTypeId: shortages[0]?.feedTypeId }}
               onCreated={() => {
                 setError('')
                 loadLookups()
-                showToast('Purchase recorded. Stock updated', 'success')
+                showToast(t('daily.purchaseRecorded'), 'success')
               }}
             />
           )}
@@ -501,12 +505,12 @@ const DailyUploadPage = () => {
       <QrScanner open={scanOpen} onClose={() => setScanOpen(false)} onResult={onScan} />
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        <FormSection title="Date and defaults">
+        <FormSection title={t('daily.dateAndDefaults')}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2">
               <LocationMetaField />
             </div>
-            <Field label="Date" htmlFor="date" required hint="Applies to every line">
+            <Field label={t('entry.date')} htmlFor="date" required hint={t('common.appliesToEveryLine')}>
               <Input
                 id="date"
                 type="date"
@@ -521,8 +525,8 @@ const DailyUploadPage = () => {
               <FeedTypeField
                 id="defaultFeedTypeId"
                 name="defaultFeedTypeId"
-                label="Default feed type"
-                hint="New lines start with this feed"
+                label={t('daily.defaultFeedType')}
+                hint={t('daily.defaultFeedHint')}
                 value={formData.defaultFeedTypeId}
                 onChange={handleChange}
                 feedTypes={feedTypes}
@@ -537,17 +541,17 @@ const DailyUploadPage = () => {
               />
               {formData.defaultFeedTypeId && lines.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={applyDefaultFeedToAll}>
-                  Apply to all lines
+                  {t('daily.applyToAll')}
                 </Button>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 md:col-span-2">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted">Feed in</span>
+                <span className="text-sm text-muted">{t('daily.feedIn')}</span>
                 <TabBar
                   tabs={[
                     { id: 'kg', label: 'kg' },
-                    { id: 'bags', label: 'Bags' },
+                    { id: 'bags', label: t('daily.bags') },
                   ]}
                   active={unit}
                   onChange={switchUnit}
@@ -561,7 +565,7 @@ const DailyUploadPage = () => {
                   onChange={handleChange}
                   className="h-4 w-4 rounded border-input-border"
                 />
-                Record water quality (DO, temperature)
+                {t('daily.recordWater')}
               </label>
               <label className="flex items-center gap-2 text-sm text-chart-ink min-h-11">
                 <input
@@ -571,24 +575,24 @@ const DailyUploadPage = () => {
                   onChange={handleChange}
                   className="h-4 w-4 rounded border-input-border"
                 />
-                Mortality only (no feed)
+                {t('daily.mortalityOnly')}
               </label>
             </div>
           </div>
         </FormSection>
 
-        <FormSection title="Cages" description="Tap a cage to add a line for it">
+        <FormSection title={t('common.cages')} description={t('common.tapCageToAdd')}>
           {lookupsReady && cages.length === 0 ? (
             <DependencyEmpty
-              message="Daily entry needs an active cage. Create a cage, then stock it (and approve if required) so it becomes active."
+              message={t('daily.needsCage')}
               createKind="cage"
-              createLabel="Create a cage"
+              createLabel={t('entry.createCage')}
               secondaryCreateKind="stocking"
-              secondaryCreateLabel="Stock a cage"
+              secondaryCreateLabel={t('daily.stockCage')}
               onCreated={(result) => {
                 loadLookups()
                 if (result?.kind === 'stocking') {
-                  showToast('Stocking created. After approval the cage appears here', 'success')
+                  showToast(t('daily.stockingCreated'), 'success')
                 }
               }}
             />
@@ -606,7 +610,7 @@ const DailyUploadPage = () => {
                       onClick={() => toggleCage(id)}
                       disabled={logged}
                       aria-pressed={on}
-                      title={logged ? `Already logged for ${formData.date}` : undefined}
+                      title={logged ? t('daily.alreadyLoggedTitle', { date: formData.date }) : undefined}
                       className={`min-h-11 min-w-[5.5rem] px-3 pt-2 pb-1.5 rounded-lg border text-left text-sm transition-colors disabled:cursor-not-allowed ${
                         on
                           ? 'bg-lagoon-950 text-white border-transparent dark:bg-[#e4e4e7] dark:text-[#18181b]'
@@ -617,7 +621,7 @@ const DailyUploadPage = () => {
                     >
                       <span className="block font-medium leading-5">{cage.name}</span>
                       {logged ? (
-                        <span className="block text-xs leading-4">Logged</span>
+                        <span className="block text-xs leading-4">{t('daily.logged')}</span>
                       ) : (
                         <Waterline
                           count={cage.current_count}
@@ -637,29 +641,29 @@ const DailyUploadPage = () => {
                   onClick={selectAllCages}
                   disabled={!openCages.length}
                 >
-                  Select all open
+                  {t('daily.selectAllOpen')}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={copyYesterday} disabled={copying || !cages.length}>
                   <Copy size={14} aria-hidden />
-                  {copying ? 'Copying…' : 'Same as yesterday'}
+                  {copying ? t('daily.copying') : t('daily.sameAsYesterday')}
                 </Button>
                 {lines.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={() => setLines([])}>
-                    Clear all
+                    {t('daily.clearAll')}
                   </Button>
                 )}
                 <Button variant="secondary" size="sm" onClick={() => setScanOpen(true)}>
                   <ScanLine size={14} aria-hidden />
-                  Scan cage
+                  {t('entry.scanCage')}
                 </Button>
                 <Button variant="ghost" size="sm" href="/cages/qr-codes" className="ml-auto">
                   <QrCode size={14} aria-hidden />
-                  Cage QR codes
+                  {t('daily.qrCodes')}
                 </Button>
               </div>
               {loggedCageIds.size > 0 && (
                 <p className="mt-2 text-xs text-muted tabular-nums">
-                  {loggedCageIds.size} of {cages.length} cages already logged for {formData.date}
+                  {t('daily.loggedCount', { logged: loggedCageIds.size, total: cages.length, date: formData.date })}
                 </p>
               )}
             </>
@@ -667,11 +671,11 @@ const DailyUploadPage = () => {
         </FormSection>
 
         <FormSection
-          title={`Lines${lines.length ? ` (${lines.length})` : ''}`}
-          description="Feed deducts stock through the inventory ledger. Blank feed means not recorded; blank mortality means none"
+          title={lines.length ? t('common.linesCount', { count: lines.length }) : t('common.lines')}
+          description={t('daily.linesDescription')}
         >
           {lines.length === 0 ? (
-            <p className="text-sm text-muted">No cages selected yet</p>
+            <p className="text-sm text-muted">{t('common.noCagesSelected')}</p>
           ) : (
             <div className="space-y-3">
               {lines.map((line, i) => {
@@ -695,14 +699,14 @@ const DailyUploadPage = () => {
                       ) : (
                         <div className="flex-1 min-w-0">
                           <label htmlFor={`cage-${line.key}`} className="sr-only">
-                            Line {i + 1} cage
+                            {t('daily.lineCage', { n: i + 1 })}
                           </label>
                           <Select
                             id={`cage-${line.key}`}
                             value={line.cageId}
                             onChange={(e) => updateLine(line.key, 'cageId', e.target.value)}
                           >
-                            <option value="">Choose a cage</option>
+                            <option value="">{t('daily.chooseCage')}</option>
                             {cages.map((c) => {
                               const id = idOf(c)
                               const taken = selectedCageIds.has(id) || loggedCageIds.has(id)
@@ -718,7 +722,11 @@ const DailyUploadPage = () => {
                       <button
                         type="button"
                         onClick={() => removeLine(line.key)}
-                        aria-label={`Remove line ${i + 1}${line.cageId ? ` (${cageName(line.cageId)})` : ''}`}
+                        aria-label={
+                          line.cageId
+                            ? t('daily.removeLineCage', { n: i + 1, name: cageName(line.cageId) })
+                            : t('daily.removeLine', { n: i + 1 })
+                        }
                         className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-signal/10 hover:text-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                       >
                         <Trash2 size={18} aria-hidden />
@@ -726,10 +734,10 @@ const DailyUploadPage = () => {
                     </div>
                     {!mortalityOnly && (
                     <Field
-                      label={unit === 'bags' ? 'Feed (bags)' : 'Feed (kg)'}
+                      label={unit === 'bags' ? t('daily.feedBags') : t('daily.feedKg')}
                       htmlFor={`qty-${line.key}`}
                       hint={unit === 'bags' && kg > 0 ? `${kg.toFixed(1)} kg` : undefined}
-                      error={confirmBlank && blankFeed ? 'Not recorded' : undefined}
+                      error={confirmBlank && blankFeed ? t('daily.notRecorded') : undefined}
                       className="md:col-span-3"
                     >
                       <Input
@@ -739,14 +747,14 @@ const DailyUploadPage = () => {
                         enterKeyHint="next"
                         step={unit === 'bags' ? '0.5' : '0.1'}
                         min="0"
-                        placeholder="Not recorded"
+                        placeholder={t('daily.notRecorded')}
                         value={line.feedQty}
                         onChange={(e) => updateLine(line.key, 'feedQty', e.target.value)}
                         className="tabular-nums"
                       />
                     </Field>
                     )}
-                    <Field label="Mortality" htmlFor={`mort-${line.key}`} className="md:col-span-3">
+                    <Field label={t('daily.mortality')} htmlFor={`mort-${line.key}`} className="md:col-span-3">
                       <Input
                         id={`mort-${line.key}`}
                         type="number"
@@ -761,13 +769,13 @@ const DailyUploadPage = () => {
                       />
                     </Field>
                     {!mortalityOnly && (
-                    <Field label="Feed type" htmlFor={`feed-${line.key}`} className="col-span-2 md:col-span-3">
+                    <Field label={t('daily.feedType')} htmlFor={`feed-${line.key}`} className="col-span-2 md:col-span-3">
                       <Select
                         id={`feed-${line.key}`}
                         value={line.feedTypeId}
                         onChange={(e) => updateLine(line.key, 'feedTypeId', e.target.value)}
                       >
-                        <option value="">None</option>
+                        <option value="">{t('daily.none')}</option>
                         {feedTypes.map((f) => (
                           <option key={idOf(f)} value={idOf(f)}>
                             {f.name}
@@ -777,7 +785,7 @@ const DailyUploadPage = () => {
                     </Field>
                     )}
                     {mort > 0 && (
-                      <Field label="Cause of death" htmlFor={`cause-${line.key}`} className="col-span-2 md:col-span-3">
+                      <Field label={t('daily.causeOfDeath')} htmlFor={`cause-${line.key}`} className="col-span-2 md:col-span-3">
                         <Select
                           id={`cause-${line.key}`}
                           value={line.mortalityCause || 'unknown'}
@@ -793,7 +801,7 @@ const DailyUploadPage = () => {
                     )}
                     {formData.showWater && (
                       <>
-                        <Field label="DO (mg/L)" htmlFor={`do-${line.key}`} className="md:col-span-3">
+                        <Field label={t('entry.doMgL')} htmlFor={`do-${line.key}`} className="md:col-span-3">
                           <Input
                             id={`do-${line.key}`}
                             type="number"
@@ -805,7 +813,7 @@ const DailyUploadPage = () => {
                             className="tabular-nums"
                           />
                         </Field>
-                        <Field label="Temp (°C)" htmlFor={`temp-${line.key}`} className="md:col-span-3">
+                        <Field label={t('entry.tempC')} htmlFor={`temp-${line.key}`} className="md:col-span-3">
                           <Input
                             id={`temp-${line.key}`}
                             type="number"
@@ -820,16 +828,16 @@ const DailyUploadPage = () => {
                     )}
                     <details className="col-span-2 md:col-span-12" open={Boolean(line.notes) || undefined}>
                       <summary className="inline-flex min-h-12 sm:min-h-9 cursor-pointer items-center text-sm text-muted hover:text-chart-ink select-none">
-                        {line.notes ? 'Note' : 'Add a note'}
+                        {line.notes ? t('daily.note') : t('daily.addNote')}
                       </summary>
                       <label htmlFor={`notes-${line.key}`} className="sr-only">
-                        Note for line {i + 1}
+                        {t('daily.noteFor', { n: i + 1 })}
                       </label>
                       <Input
                         id={`notes-${line.key}`}
                         value={line.notes}
                         onChange={(e) => updateLine(line.key, 'notes', e.target.value)}
-                        placeholder="Feeding response, weather, anything unusual"
+                        placeholder={t('daily.notePlaceholder')}
                       />
                     </details>
                     <div className="col-span-2 md:col-span-12">
@@ -851,18 +859,19 @@ const DailyUploadPage = () => {
                 onClick={() => setLines((ls) => [...ls, newLine('', formData.defaultFeedTypeId)])}
               >
                 <Plus size={14} aria-hidden />
-                Add line
+                {t('daily.addLine')}
               </Button>
             </div>
           )}
 
           {stockCheck.length > 0 && (
             <div className="mt-5 rounded-lg border border-foam-deep p-4 text-sm space-y-1">
-              <p className="font-medium text-chart-ink">Feed in this batch</p>
+              <p className="font-medium text-chart-ink">{t('daily.feedInBatch')}</p>
               {stockCheck.map((s) => (
                 <p key={s.feedTypeId} className={`tabular-nums ${s.short ? 'text-signal' : 'text-muted'}`}>
-                  {s.name}: {s.need.toFixed(1)} kg of {s.onHand.toFixed(1)} kg on hand{siteStockById ? ' at this site' : ''}
-                  {s.short ? ', not enough stock' : ''}
+                  {t('daily.stockLine', { name: s.name, need: s.need.toFixed(1), onHand: s.onHand.toFixed(1) })}
+                  {siteStockById ? t('daily.atThisSite') : ''}
+                  {s.short ? t('daily.notEnoughStockSuffix') : ''}
                 </p>
               ))}
             </div>
@@ -871,14 +880,14 @@ const DailyUploadPage = () => {
           {shortages.length > 0 && (
             <DependencyEmpty
               className="mt-4"
-              message="Not enough stock for this batch. Record a purchase first."
+              message={t('daily.notEnoughForBatch')}
               createKind="purchase"
-              createLabel="Record a purchase"
+              createLabel={t('daily.recordPurchase')}
               createProps={{ defaultFeedTypeId: shortages[0].feedTypeId }}
               onCreated={() => {
                 setError('')
                 loadLookups()
-                showToast('Purchase recorded. Stock updated', 'success')
+                showToast(t('daily.purchaseRecorded'), 'success')
               }}
             />
           )}
@@ -893,17 +902,17 @@ const DailyUploadPage = () => {
                   onChange={handleChange}
                   className="h-4 w-4 rounded border-input-border"
                 />
-                Admin override: allow saving without enough stock
+                {t('daily.overrideLabel')}
               </label>
               {formData.allowNegative && (
-                <Field label="Reason" htmlFor="overrideReason" required>
+                <Field label={t('daily.reason')} htmlFor="overrideReason" required>
                   <Input
                     id="overrideReason"
                     name="overrideReason"
                     value={formData.overrideReason || ''}
                     onChange={handleChange}
                     required
-                    placeholder="Why is this needed"
+                    placeholder={t('daily.reasonPlaceholder')}
                   />
                 </Field>
               )}
@@ -916,15 +925,13 @@ const DailyUploadPage = () => {
             <p role="alert" className="basis-full flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
               <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
               <span>
-                No feed entered for {blankFeedLines.map((l) => cageName(l.cageId)).join(', ')}.
-                They will be saved as 0 kg fed. Enter the amount, or save anyway.
+                {t('daily.noFeedFor', { names: blankFeedLines.map((l) => cageName(l.cageId)).join(', ') })}
               </span>
             </p>
           )}
           {lines.length > 0 && (
             <p className="text-sm text-muted mr-auto tabular-nums">
-              {lines.length} cage{lines.length === 1 ? '' : 's'}, {totals.feed.toFixed(1)} kg,{' '}
-              {totals.mort} dead
+              {t('daily.totals', { count: lines.length, feed: totals.feed.toFixed(1), dead: totals.mort })}
             </p>
           )}
           <Button
@@ -934,12 +941,12 @@ const DailyUploadPage = () => {
             className="ml-auto"
           >
             {loading
-              ? 'Saving…'
+              ? t('common.saving')
               : confirmBlank && blankFeedLines.length
-                ? 'Save anyway'
+                ? t('daily.saveAnyway')
                 : lines.length
-                  ? `Save ${lines.length} record${lines.length === 1 ? '' : 's'}`
-                  : 'Save records'}
+                  ? t('daily.saveN', { count: lines.length })
+                  : t('daily.saveRecords')}
           </Button>
         </StickyActions>
       </form>

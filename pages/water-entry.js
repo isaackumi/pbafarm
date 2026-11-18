@@ -15,6 +15,7 @@ import { useOnline } from '../hooks/useOutbox'
 import { errorMessage } from '../lib/errorMessage'
 import { unitLabel } from '../lib/format'
 import { WQ_PARAMETERS } from '../convex/lib/waterQuality'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Field entry for water quality (mobile first). Works offline: a reading
@@ -25,6 +26,7 @@ function WaterEntry() {
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const t = useT()
   const online = useOnline()
   const { locationArgs } = useLocation()
   const units = useQuery(api.cages.list, user ? locationArgs : 'skip')
@@ -39,7 +41,7 @@ function WaterEntry() {
 
   const save = async ({ values, notes, measuredAt }) => {
     if (!unitId) {
-      showToast('Choose a unit first', 'error')
+      showToast(t('wq.entry.chooseUnitFirst'), 'error')
       return false
     }
     const summary = `${unit?.name || 'Unit'} · ${Object.entries(values)
@@ -53,15 +55,15 @@ function WaterEntry() {
       userId: user?.id,
     })
     if (res.error) {
-      showToast(errorMessage(res.error, 'Could not save the reading'), 'error')
+      showToast(errorMessage(res.error, t('wq.entry.couldNotSave')), 'error')
       return false
     }
     if (res.queued) {
-      showToast('No connection. Saved on this device and will send when you are back online', 'info')
+      showToast(t('common.queuedOffline'), 'info')
     } else if (res.data?.breaches?.length) {
-      showToast(`Saved. Out of range: ${res.data.breaches.map((b) => b.label).join(', ')}`, 'warning')
+      showToast(t('wq.entry.savedOutOfRange', { labels: res.data.breaches.map((b) => b.label).join(', ') }), 'warning')
     } else {
-      showToast('Reading saved', 'success')
+      showToast(t('wq.entry.saved'), 'success')
     }
     return true
   }
@@ -69,14 +71,14 @@ function WaterEntry() {
   return (
     <FormPage width="md">
       <PageHeader
-        title="Water quality entry"
-        breadcrumbs={[{ label: 'Water quality', href: '/water-quality' }, { label: 'Entry' }]}
-        description={online ? 'Readings are checked against the thresholds when saved.' : 'Offline: readings wait on this device and send when you reconnect.'}
+        title={t('wq.entry.title')}
+        breadcrumbs={[{ label: t('wq.entry.crumbWq'), href: '/water-quality' }, { label: t('wq.entry.crumbEntry') }]}
+        description={online ? t('wq.entry.online') : t('wq.entry.offline')}
       />
       <Card className="space-y-4">
-        <Field label="Unit" htmlFor="wq-unit" required>
+        <Field label={t('wq.entry.unit')} htmlFor="wq-unit" required>
           <Select id="wq-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            <option value="">{units === undefined ? 'Loading…' : 'Choose a unit'}</option>
+            <option value="">{units === undefined ? t('common.loading') : t('wq.entry.chooseUnit')}</option>
             {(units || []).map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name} · {unitLabel(u)}
@@ -94,9 +96,10 @@ function WaterEntry() {
 }
 
 export default function WaterEntryPage() {
+  const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title="Water quality entry">
+      <Layout title={t('wq.entry.title')}>
         <WaterEntry />
       </Layout>
     </ProtectedRoute>

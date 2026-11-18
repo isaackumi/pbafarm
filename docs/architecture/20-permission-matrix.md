@@ -281,6 +281,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `security.getPolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `security.updatePolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `sensors.latest` | `production.view` | yes | yes | yes | yes | yes |
+| `species.archive` | `org.settings.manage` | yes | yes | no | no | no |
+| `species.ensureDefaults` | `org.settings.manage` | yes | yes | no | no | no |
+| `species.list` | `production.view` | yes | yes | yes | yes | yes |
+| `species.upsert` | `org.settings.manage` | yes | yes | no | no | no |
 | `stocking.approveStocking` | `production.stocking.approve` | yes | yes | no | no | no |
 | `stocking.approveTopup` | `production.stocking.approve` | yes | yes | no | no | no |
 | `stocking.createStocking` | `production.stocking.request` | yes | yes | yes | yes | no |
@@ -334,6 +338,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `users.listJoinRequests` | `org.members.manage` | yes | yes | no | no | no |
 | `users.myInvites` | `account` | self | self | self | self | self |
 | `users.reactivate` | `org.members.manage` | yes | yes | no | no | no |
+| `users.setLocale` | `account` | self | self | self | self | self |
 | `users.setPhone` | `org.members.manage` | yes | yes | no | no | no |
 | `users.update` | `org.members.manage` | yes | yes | no | no | no |
 | `waterQuality.latestByUnit` | `production.view` | yes | yes | yes | yes | yes |

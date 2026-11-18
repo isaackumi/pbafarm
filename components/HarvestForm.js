@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useQuery } from 'convex/react'
 import { harvestRecordService, cageService } from '../lib/databaseService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useToast } from './Toast'
@@ -23,17 +24,30 @@ import {
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 import CustomFields, { CustomFieldValues, customPayload } from './CustomFields'
+import { useT } from '../lib/i18n/context'
+import { DEFAULT_TILAPIA_GRADES, gradeRange } from '../convex/lib/species'
 
-const SIZE_CATEGORIES = [
-  { category: 'S3', range: '800g above' },
-  { category: 'S2', range: '700g-800g' },
-  { category: 'S1', range: '600g-700g' },
-  { category: 'Reg', range: '500g-600g' },
-  { category: 'Eco', range: '400g-500g' },
-  { category: 'SS', range: '300g-400g' },
-  { category: 'SB', range: '200g-300g' },
-  { category: 'Rej', range: 'less than 200g' },
-]
+/** Grades when the organization has none configured for the cage's species (today's tilapia list). */
+const SIZE_CATEGORIES = DEFAULT_TILAPIA_GRADES.map((g) => ({
+  category: g.key,
+  label: g.label,
+  range: gradeRange(g),
+}))
+
+/**
+ * Harvest grades for a cage (D-012): its species' configured grades, else the
+ * organization's only species, else the standard tilapia list.
+ */
+function gradesFor(cage, speciesList) {
+  const active = (speciesList || []).filter((s) => s.harvestGrades?.length)
+  const species =
+    (cage?.species && active.find((s) => s.key === cage.species)) ||
+    (active.length === 1 ? active[0] : null)
+  if (!species) return SIZE_CATEGORIES
+  return species.harvestGrades.map((g) => ({ category: g.key, label: g.label, range: g.range || gradeRange(g) }))
+}
+
+const gradeTitle = (g) => `${g.label && g.label !== g.category ? g.label : g.category} (${g.range})`
 
 const HARVEST_DEFAULTS = {
   harvestDate: localToday(),
@@ -68,6 +82,8 @@ const HarvestForm = ({ onComplete }) => {
   const { user, hasRole } = useAuth()
   const online = useOnline()
   const isAdmin = usePermission('production.withdrawal.override')
+  const t = useT()
+  const speciesList = useQuery(api.species.list, user ? {} : 'skip')
   const [withdrawal, setWithdrawal] = useState(null)
 
   // A treatment withdrawal period refuses the harvest (PROD-012); say so up front.
@@ -107,7 +123,7 @@ const HarvestForm = ({ onComplete }) => {
           setCages(cached.cages)
         } else {
           console.error('Error fetching cages:', error)
-          showToast('Error fetching cages', 'error')
+          showToast(t('harvest.errorFetchingCages'), 'error')
         }
       } finally {
         setCagesReady(true)
@@ -115,7 +131,7 @@ const HarvestForm = ({ onComplete }) => {
     }
 
     fetchCages()
-  }, [showToast])
+  }, [showToast, t])
 
   // Work out FCR from the feed logged since stocking once cage, date and weight are known.
   useEffect(() => {
@@ -168,15 +184,15 @@ const HarvestForm = ({ onComplete }) => {
     const problems = []
     const next = {}
     if (!formData.cageId || !cages.some((c) => (c.id || c._id) === formData.cageId)) {
-      problems.push('pick a cage')
+      problems.push(t('harvest.problem.pickCage'))
     }
-    if (!formData.harvestDate) problems.push('set the harvest date')
+    if (!formData.harvestDate) problems.push(t('harvest.problem.setDate'))
 
     const badGrade = (formData.sizeBreakdown || []).find((s) => {
       const n = num(s.weight)
       return n != null && (!Number.isFinite(n) || n < 0)
     })
-    if (badGrade) problems.push(`fix the ${badGrade.category} weight`)
+    if (badGrade) problems.push(t('harvest.problem.fixGrade', { grade: badGrade.category }))
     const gradeSum = calculateTotalWeight()
 
     let total = num(formData.totalWeight)
@@ -196,27 +212,27 @@ const HarvestForm = ({ onComplete }) => {
       next.fcr = String(fcrVal)
     }
 
-    if (!(total > 0)) problems.push('enter the total weight (or the size grades)')
-    if (!(abw > 0)) problems.push('enter the average body weight')
-    if (!(count > 0)) problems.push('enter the fish count')
+    if (!(total > 0)) problems.push(t('harvest.problem.totalWeight'))
+    if (!(abw > 0)) problems.push(t('harvest.problem.abw'))
+    if (!(count > 0)) problems.push(t('harvest.problem.count'))
     if (!(fcrVal > 0)) {
       problems.push(
         fcrCalc && fcrCalc.fcr == null
-          ? 'enter the FCR (not enough feed logged to calculate it)'
-          : 'enter the FCR',
+          ? t('harvest.problem.fcrNoFeed')
+          : t('harvest.problem.fcr'),
       )
     }
     if (total > 0 && gradeSum > 0 && Math.abs(gradeSum - total) > 0.5) {
       problems.push(
-        `size grades add up to ${gradeSum.toLocaleString()} kg but total weight is ${total.toLocaleString()} kg`,
+        t('harvest.problem.gradeMismatch', { sum: gradeSum, total }),
       )
     }
 
     if (withdrawal?.blocked) {
       if (!isAdmin) {
-        problems.push(`these fish are in a withdrawal period until ${withdrawal.until}; ask an admin`)
+        problems.push(t('harvest.problem.withdrawal', { until: withdrawal.until }))
       } else if (!formData.withdrawalOverrideReason?.trim()) {
-        problems.push(`give an override reason (withdrawal period until ${withdrawal.until})`)
+        problems.push(t('harvest.problem.overrideReason', { until: withdrawal.until }))
       }
     }
 
@@ -271,10 +287,10 @@ const HarvestForm = ({ onComplete }) => {
 
       showToast(
         queued
-          ? 'No connection. Harvest saved on this device and will send when you are back online'
+          ? t('harvest.queued')
           : formData.harvestType === 'complete'
-          ? `Harvest saved. ${selectedCageObject?.name || 'The cage'} is now marked harvested`
-          : 'Partial harvest saved. Fish taken off the cage count',
+          ? t('harvest.savedComplete', { name: selectedCageObject?.name || t('harvest.theCage') })
+          : t('harvest.savedPartial'),
         'success',
       )
       if (warnings?.length) showToast(warnings.join('. '), 'warning')
@@ -282,7 +298,7 @@ const HarvestForm = ({ onComplete }) => {
       setFormData({
         ...HARVEST_DEFAULTS,
         harvestDate: localToday(),
-        sizeBreakdown: SIZE_CATEGORIES.map((category) => ({
+        sizeBreakdown: grades.map((category) => ({
           category: category.category,
           range: category.range,
           weight: '',
@@ -293,7 +309,7 @@ const HarvestForm = ({ onComplete }) => {
       if (onComplete) onComplete()
     } catch (error) {
       console.error('Error saving harvest record:', error)
-      showToast(cleanError(error) || 'Error saving harvest record', 'error')
+      showToast(cleanError(error) || t('harvest.errorSaving'), 'error')
       setLoading(false)
       setShowPreview(false)
     }
@@ -306,6 +322,30 @@ const HarvestForm = ({ onComplete }) => {
   const selectedCageObject = cages.find(
     (cage) => (cage.id || cage._id) === formData.cageId,
   )
+
+  // The cage's species decides the size grades; weights typed for a grade
+  // that still exists are kept when the cage changes.
+  const grades = useMemo(
+    () => gradesFor(selectedCageObject, speciesList),
+    [selectedCageObject, speciesList],
+  )
+  const gradeKeys = grades.map((g) => g.category).join('|')
+  useEffect(() => {
+    setFormData((prev) => {
+      const current = prev.sizeBreakdown || []
+      if (current.map((s) => s.category).join('|') === gradeKeys) return prev
+      const typed = new Map(current.map((s) => [s.category, s.weight]))
+      return {
+        ...prev,
+        sizeBreakdown: grades.map((g) => ({
+          category: g.category,
+          range: g.range,
+          weight: typed.get(g.category) ?? '',
+        })),
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradeKeys])
 
   const calculateDoc = () => {
     if (!selectedCageObject || !selectedCageObject.stocking_date || !formData.harvestDate) {
@@ -323,6 +363,8 @@ const HarvestForm = ({ onComplete }) => {
     formData.sizeBreakdown?.length > 0
       ? formData.sizeBreakdown
       : HARVEST_DEFAULTS.sizeBreakdown
+  const gradeLabel = (size) =>
+    gradeTitle(grades.find((g) => g.category === size.category) || size)
 
   const previewRow = (label, value) => (
     <div className="flex justify-between gap-4 py-2 border-b border-foam-deep text-sm">
@@ -337,14 +379,14 @@ const HarvestForm = ({ onComplete }) => {
       {!showPreview ? (
         <form onSubmit={handleSubmit} noValidate className="space-y-8">
           <FormSection
-            title="Harvest details"
-            description="Drafts survive a browser refresh."
+            title={t('harvest.details')}
+            description={t('harvest.draftsSurvive')}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <LocationMetaField />
               </div>
-              <Field label="Cage" htmlFor="harvest-cage" required>
+              <Field label={t('harvest.cage')} htmlFor="harvest-cage" required>
                 <Select
                   id="harvest-cage"
                   name="cageId"
@@ -355,8 +397,8 @@ const HarvestForm = ({ onComplete }) => {
                 >
                   <option value="">
                     {cagesReady && cages.length === 0
-                      ? 'No active cages available'
-                      : 'Select a cage'}
+                      ? t('harvest.noActiveCages')
+                      : t('harvest.selectCage')}
                   </option>
                   {cages.map((cage) => (
                     <option key={cage.id || cage._id} value={cage.id || cage._id}>
@@ -366,29 +408,29 @@ const HarvestForm = ({ onComplete }) => {
                 </Select>
                 {cagesReady && cages.length === 0 && (
                   <DependencyEmpty
-                    message="Harvest needs an active cage with fish. Stock a cage first (approve if required)."
+                    message={t('harvest.needsCage')}
                     createKind="stocking"
-                    createLabel="Create stocking"
+                    createLabel={t('harvest.createStocking')}
                     secondaryCreateKind="cage"
-                    secondaryCreateLabel="Create a cage"
+                    secondaryCreateLabel={t('entry.createCage')}
                     onCreated={async () => {
                       try {
                         const { data, error } = await cageService.getActiveCages()
                         if (error) throw error
                         setCages(data || [])
                         showToast(
-                          'If stocking needs approval, the cage appears here after approval.',
+                          t('harvest.afterApproval'),
                           'success',
                         )
                       } catch (err) {
-                        showToast(err.message || 'Failed to refresh cages', 'error')
+                        showToast(err.message || t('harvest.failedRefresh'), 'error')
                       }
                     }}
                   />
                 )}
               </Field>
 
-              <Field label="Harvest date" htmlFor="harvest-date" required>
+              <Field label={t('harvest.date')} htmlFor="harvest-date" required>
                 <Input
                   id="harvest-date"
                   type="date"
@@ -405,28 +447,28 @@ const HarvestForm = ({ onComplete }) => {
                   className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
                 >
                   <p>
-                    <span className="font-medium">Withdrawal period until {withdrawal.until}.</span>{' '}
+                    <span className="font-medium">{t('harvest.withdrawalUntil', { until: withdrawal.until })}</span>{' '}
                     {withdrawal.treatments.map((t) => `${t.product} (${t.date})`).join(', ')}.{' '}
                     {isAdmin
-                      ? 'Harvesting now needs an override reason, which is kept in the audit log.'
-                      : 'Only an admin can record a harvest before then.'}
+                      ? t('harvest.withdrawalAdmin')
+                      : t('harvest.withdrawalOnlyAdmin')}
                   </p>
                   {isAdmin && (
-                    <Field label="Override reason" htmlFor="harvest-withdrawal-reason" required>
+                    <Field label={t('harvest.overrideReason')} htmlFor="harvest-withdrawal-reason" required>
                       <Textarea
                         id="harvest-withdrawal-reason"
                         name="withdrawalOverrideReason"
                         value={formData.withdrawalOverrideReason || ''}
                         onChange={handleChange}
                         rows={2}
-                        placeholder="For example: residue test negative, lab report 2026-118"
+                        placeholder={t('harvest.overridePlaceholder')}
                       />
                     </Field>
                   )}
                 </div>
               )}
 
-              <Field label="Harvest type" htmlFor="harvest-type" required>
+              <Field label={t('harvest.type')} htmlFor="harvest-type" required>
                 <Select
                   id="harvest-type"
                   name="harvestType"
@@ -434,12 +476,12 @@ const HarvestForm = ({ onComplete }) => {
                   onChange={handleChange}
                   required
                 >
-                  <option value="complete">Complete harvest</option>
-                  <option value="partial">Partial harvest</option>
+                  <option value="complete">{t('harvest.complete')}</option>
+                  <option value="partial">{t('harvest.partial')}</option>
                 </Select>
               </Field>
 
-              <Field label="Total weight (kg)" htmlFor="harvest-total" required>
+              <Field label={t('harvest.totalWeightKg')} htmlFor="harvest-total" required>
                 <Input
                   id="harvest-total"
                   type="number"
@@ -452,7 +494,7 @@ const HarvestForm = ({ onComplete }) => {
                 />
               </Field>
 
-              <Field label="Average body weight (g)" htmlFor="harvest-abw" required>
+              <Field label={t('harvest.abwG')} htmlFor="harvest-abw" required>
                 <Input
                   id="harvest-abw"
                   type="number"
@@ -465,7 +507,7 @@ const HarvestForm = ({ onComplete }) => {
                 />
               </Field>
 
-              <Field label="Estimated count" htmlFor="harvest-count" required>
+              <Field label={t('harvest.estimatedCount')} htmlFor="harvest-count" required>
                 <Input
                   id="harvest-count"
                   type="number"
@@ -477,7 +519,7 @@ const HarvestForm = ({ onComplete }) => {
                 />
               </Field>
 
-              <Field label="FCR (feed conversion ratio)" htmlFor="harvest-fcr" required>
+              <Field label={t('harvest.fcrLong')} htmlFor="harvest-fcr" required>
                 <Input
                   id="harvest-fcr"
                   type="number"
@@ -494,8 +536,13 @@ const HarvestForm = ({ onComplete }) => {
                 {fcrCalc && (
                   <p className="text-xs text-muted tabular-nums">
                     {fcrCalc.fcr != null
-                      ? `Calculated ${fcrCalc.fcr.toFixed(2)}: ${Number(fcrCalc.feed_kg).toLocaleString()} kg feed since ${fcrCalc.stocking_date}, ${Number(fcrCalc.stocked_biomass_kg || 0).toLocaleString()} kg stocked`
-                      : 'Not enough feed or growth logged to calculate FCR. Enter it by hand'}
+                      ? t('harvest.fcrCalculated', {
+                          fcr: fcrCalc.fcr.toFixed(2),
+                          feed: Number(fcrCalc.feed_kg),
+                          since: fcrCalc.stocking_date,
+                          stocked: Number(fcrCalc.stocked_biomass_kg || 0),
+                        })
+                      : t('harvest.fcrNotEnough')}
                     {fcrCalc.fcr != null && fcrTouched && Number(formData.fcr) !== fcrCalc.fcr && (
                       <>
                         {' '}
@@ -507,7 +554,7 @@ const HarvestForm = ({ onComplete }) => {
                             setFormData((prev) => ({ ...prev, fcr: String(fcrCalc.fcr) }))
                           }}
                         >
-                          Use calculated
+                          {t('harvest.useCalculated')}
                         </button>
                       </>
                     )}
@@ -517,19 +564,19 @@ const HarvestForm = ({ onComplete }) => {
             </div>
           </FormSection>
 
-          <FormSection title="Size breakdown (kg)">
+          <FormSection title={t('harvest.sizeBreakdown')}>
             <p className="text-xs text-muted -mt-2 tabular-nums">
-              Optional. Leave grades you didn&apos;t sort blank.
+              {t('harvest.gradesOptional')}
               {calculateTotalWeight() > 0 &&
-                ` Grades add up to ${calculateTotalWeight().toLocaleString()} kg${
-                  formData.totalWeight ? '' : ', used as the total weight'
-                }.`}
+                ` ${t(formData.totalWeight ? 'harvest.gradesAddUp' : 'harvest.gradesAddUpAsTotal', {
+                  sum: calculateTotalWeight(),
+                })}`}
             </p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {sizeBreakdown.map((size, index) => (
                 <Field
                   key={size.category}
-                  label={`${size.category} (${size.range})`}
+                  label={gradeLabel(size)}
                   htmlFor={`harvest-grade-${size.category}`}
                 >
                   <Input
@@ -548,14 +595,14 @@ const HarvestForm = ({ onComplete }) => {
             </div>
           </FormSection>
 
-          <Field label="Notes" htmlFor="harvest-notes">
+          <Field label={t('common.notes')} htmlFor="harvest-notes">
             <Textarea
               id="harvest-notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               rows={3}
-              placeholder="Optional notes about the harvest"
+              placeholder={t('harvest.notesPlaceholder')}
             />
           </Field>
 
@@ -570,54 +617,55 @@ const HarvestForm = ({ onComplete }) => {
 
           <FormActions className="justify-end">
             <Button type="button" variant="secondary" onClick={() => onComplete()}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={loading || cages.length === 0}>
-              Review harvest
+              {t('harvest.review')}
             </Button>
           </FormActions>
         </form>
       ) : (
         <div className="space-y-6">
           <h3 className="font-display text-lg font-medium text-chart-ink">
-            Check the harvest before saving
+            {t('harvest.checkBeforeSaving')}
           </h3>
 
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-            {previewRow('Cage', selectedCageObject?.name || 'N/A')}
-            {previewRow('Harvest date', formData.harvestDate)}
+            {previewRow(t('harvest.cage'), selectedCageObject?.name || t('harvest.na'))}
+            {previewRow(t('harvest.date'), formData.harvestDate)}
             {selectedCageObject?.stocking_date &&
-              previewRow('Stocking date', selectedCageObject.stocking_date)}
-            {previewRow('Days of culture (DOC)', cageDoc)}
+              previewRow(t('harvest.stockingDate'), selectedCageObject.stocking_date)}
+            {previewRow(t('harvest.doc'), cageDoc === 'N/A' ? t('harvest.na') : cageDoc)}
             {previewRow(
-              'Harvest type',
-              formData.harvestType === 'complete' ? 'Complete harvest' : 'Partial harvest',
+              t('harvest.type'),
+              formData.harvestType === 'complete' ? t('harvest.complete') : t('harvest.partial'),
             )}
-            {previewRow('Total weight', `${formData.totalWeight} kg`)}
-            {previewRow('Average body weight', `${formData.averageBodyWeight} g`)}
-            {previewRow('Estimated count', formData.estimatedCount)}
+            {previewRow(t('harvest.totalWeight'), `${formData.totalWeight} kg`)}
+            {previewRow(t('harvest.abw'), `${formData.averageBodyWeight} g`)}
+            {previewRow(t('harvest.estimatedCount'), formData.estimatedCount)}
             {previewRow('FCR', formData.fcr)}
           </dl>
 
           <p className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink tabular-nums">
             {formData.harvestType === 'complete'
-              ? `Saving empties ${selectedCageObject?.name || 'this cage'}: its fish count goes to 0, it is marked harvested and its stocking cycle closes.`
-              : `Saving takes ${Number(formData.estimatedCount || 0).toLocaleString()} fish off ${selectedCageObject?.name || 'this cage'}'s count.`}
+              ? t('harvest.previewComplete', { name: selectedCageObject?.name || t('harvest.thisCage') })
+              : t('harvest.previewPartial', {
+                  count: Number(formData.estimatedCount || 0),
+                  name: selectedCageObject?.name || t('harvest.thisCage'),
+                })}
             {selectedCageObject?.current_count != null &&
-              ` On record now: ${Number(selectedCageObject.current_count).toLocaleString()} fish.`}
+              ` ${t('harvest.onRecord', { count: Number(selectedCageObject.current_count) })}`}
           </p>
 
           <div>
-            <h4 className="text-base font-medium text-chart-ink mb-3">Size breakdown (kg)</h4>
+            <h4 className="text-base font-medium text-chart-ink mb-3">{t('harvest.sizeBreakdown')}</h4>
             <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {sizeBreakdown.map((size) => (
                 <li
                   key={size.category}
                   className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink"
                 >
-                  <span className="text-muted">
-                    {size.category} ({size.range})
-                  </span>
+                  <span className="text-muted">{gradeLabel(size)}</span>
                   <span className="block font-medium tabular-nums">
                     {size.weight || '0'} kg
                   </span>
@@ -630,7 +678,7 @@ const HarvestForm = ({ onComplete }) => {
 
           {formData.notes && (
             <div>
-              <h4 className="text-base font-medium text-chart-ink mb-2">Notes</h4>
+              <h4 className="text-base font-medium text-chart-ink mb-2">{t('common.notes')}</h4>
               <p className="text-sm text-chart-ink bg-foam p-3 rounded-lg">
                 {formData.notes}
               </p>
@@ -639,10 +687,10 @@ const HarvestForm = ({ onComplete }) => {
 
           <FormActions className="justify-end">
             <Button type="button" variant="secondary" onClick={handleEdit}>
-              Edit
+              {t('common.edit')}
             </Button>
             <Button type="button" onClick={handleConfirmSave} disabled={loading}>
-              {loading ? 'Saving…' : 'Save harvest'}
+              {loading ? t('common.saving') : t('harvest.save')}
             </Button>
           </FormActions>
         </div>

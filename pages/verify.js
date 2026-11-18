@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import { Button, Field, Input, Select } from '../components/ui'
+import { useT } from '../lib/i18n/context'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
-const CHANNEL_LABEL = { sms: 'Text message (SMS)', whatsapp: 'WhatsApp' }
+const CHANNEL_KEY = { sms: 'auth.verify.channelSms', whatsapp: 'auth.verify.channelWhatsapp' }
 const RESEND_SECONDS = 30
 
 /**
@@ -16,6 +18,8 @@ const RESEND_SECONDS = 30
  */
 export default function VerifyPage() {
   const { user, signOut } = useAuth()
+  const t = useT()
+  const channelLabel = (c) => (CHANNEL_KEY[c] ? t(CHANNEL_KEY[c]) : c)
   const router = useRouter()
   const startChallenge = useAction(api.mfa.startChallenge)
   const startEnrolment = useAction(api.mfa.startEnrolment)
@@ -38,8 +42,8 @@ export default function VerifyPage() {
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
   }, [cooldown])
 
   // Verified (here or elsewhere): continue into the app.
@@ -92,12 +96,12 @@ export default function VerifyPage() {
         <div className="text-center mb-8">
           <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
           <h1 className="text-xl font-semibold text-chart-ink">
-            {enrolling ? 'Add your phone number' : 'Confirm it is you'}
+            {enrolling ? t('auth.verify.titleEnrol') : t('auth.verify.titleConfirm')}
           </h1>
           <p className="mt-1 text-sm text-muted">
             {enrolling
-              ? 'Your company asks for a code at each new sign-in. Add the mobile number the code should go to.'
-              : `Your company asks for a code at each new sign-in. We send it to ${user.maskedPhone}.`}
+              ? t('auth.verify.introEnrol')
+              : t('auth.verify.introConfirm', { phone: user.maskedPhone })}
           </p>
         </div>
 
@@ -109,13 +113,11 @@ export default function VerifyPage() {
           )}
 
           {channels.length === 0 ? (
-            <p className="text-sm text-chart-ink">
-              Codes cannot be sent right now because your company&apos;s messaging channel is not working. Ask your admin to check Messaging settings.
-            </p>
+            <p className="text-sm text-chart-ink">{t('auth.verify.noChannel')}</p>
           ) : !sentTo ? (
             <form className="space-y-5" onSubmit={send}>
               {enrolling && (
-                <Field label="Mobile number" htmlFor="enrol-phone" hint="For example 024 412 3456.">
+                <Field label={t('common.mobileNumber')} htmlFor="enrol-phone" hint={t('auth.verify.phoneHint')}>
                   <Input
                     id="enrol-phone"
                     type="tel"
@@ -128,11 +130,11 @@ export default function VerifyPage() {
                 </Field>
               )}
               {channels.length > 1 && (
-                <Field label="Send the code by" htmlFor="mfa-channel">
+                <Field label={t('auth.verify.sendBy')} htmlFor="mfa-channel">
                   <Select id="mfa-channel" value={channel} onChange={(e) => setChannel(e.target.value)}>
                     {channels.map((c) => (
                       <option key={c} value={c}>
-                        {CHANNEL_LABEL[c] || c}
+                        {channelLabel(c)}
                       </option>
                     ))}
                   </Select>
@@ -144,15 +146,15 @@ export default function VerifyPage() {
                 className="w-full"
                 disabled={busy || !channel || (enrolling && phone.trim().length < 6)}
               >
-                {busy ? 'Sending…' : 'Send code'}
+                {busy ? t('common.sending') : t('common.sendCode')}
               </Button>
             </form>
           ) : (
             <form className="space-y-5" onSubmit={verify}>
               <p className="text-sm text-muted">
-                Code sent by {CHANNEL_LABEL[channel] || channel} to {sentTo}. It expires in 10 minutes.
+                {t('auth.verify.codeSent', { channel: channelLabel(channel), to: sentTo })}
               </p>
-              <Field label="Code" htmlFor="mfa-code">
+              <Field label={t('common.code')} htmlFor="mfa-code">
                 <Input
                   id="mfa-code"
                   inputMode="numeric"
@@ -166,7 +168,7 @@ export default function VerifyPage() {
                 />
               </Field>
               <Button type="submit" size="lg" className="w-full" disabled={busy || code.length !== 6}>
-                {busy ? 'Checking…' : 'Verify'}
+                {busy ? t('common.checking') : t('common.verify')}
               </Button>
               <div className="flex justify-between text-sm">
                 <button
@@ -178,7 +180,7 @@ export default function VerifyPage() {
                     setError('')
                   }}
                 >
-                  {enrolling ? 'Change number' : 'Choose another way'}
+                  {enrolling ? t('common.changeNumber') : t('auth.verify.chooseAnother')}
                 </button>
                 <button
                   type="button"
@@ -186,7 +188,7 @@ export default function VerifyPage() {
                   disabled={cooldown > 0 || busy}
                   onClick={send}
                 >
-                  {cooldown > 0 ? `Send again in ${cooldown}s` : 'Send a new code'}
+                  {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
                 </button>
               </div>
             </form>
@@ -200,8 +202,11 @@ export default function VerifyPage() {
               router.replace('/login')
             }}
           >
-            Sign out
+            {t('common.signOut')}
           </button>
+        </div>
+        <div className="mt-4 flex justify-center">
+          <LanguageSwitcher />
         </div>
       </div>
     </div>

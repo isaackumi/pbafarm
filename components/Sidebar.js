@@ -53,6 +53,9 @@ import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useToast } from './Toast'
 import { usePermissions } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
+import { navKey } from '../lib/i18n'
+import LanguageSwitcher from './LanguageSwitcher'
 
 const MENU_SECTIONS = {
   production: {
@@ -163,6 +166,7 @@ const MENU_SECTIONS = {
       { title: 'Users', path: '/users', permission: 'org.members.manage', icon: Users },
       { title: 'Company Settings', path: '/company-settings', permission: 'org.settings.manage', icon: Building2, tourId: 'company-settings' },
       { title: 'Customization', path: '/customization', permission: 'customization.manage', icon: SlidersHorizontal },
+      { title: 'Species', path: '/species', permission: 'org.settings.manage', icon: Fish },
       { title: 'Messaging', path: '/messaging-settings', permission: 'integrations.manage', icon: MessageSquare },
       { title: 'Automations', path: '/automations', permission: 'automation.manage', icon: Zap },
       { title: 'API keys', path: '/api-keys', permission: 'integrations.manage', icon: KeyRound },
@@ -197,6 +201,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     admin: true,
   })
   const { showToast } = useToast()
+  const t = useT()
 
   const role = user?.role || 'user'
   const isSuperAdmin = role === 'super_admin'
@@ -239,11 +244,11 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     try {
       const { cancelled } = (await signOut()) || {}
       if (cancelled) return
-      showToast('Logged out successfully', 'success')
+      showToast(t('nav.loggedOut'), 'success')
       router.push('/login')
     } catch (error) {
       console.error('Logout failed:', error)
-      showToast('Logout failed', 'error')
+      showToast(t('nav.logoutFailed'), 'error')
     } finally {
       setShowLogoutModal(false)
     }
@@ -285,7 +290,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
       className={`print:hidden fixed top-0 left-0 h-screen flex flex-col z-40 border-r border-lagoon-950/40 bg-lagoon-950 text-foam transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'w-[4.5rem]' : 'w-72 lg:w-64'}`}
-      aria-label="Main navigation"
+      aria-label={t('nav.mainNavigation')}
       data-tour="sidebar"
     >
       <div
@@ -321,7 +326,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
             type="button"
             onClick={onMobileClose}
             className="lg:hidden rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label="Close menu"
+            aria-label={t('nav.closeMenu')}
           >
             <X size={18} />
           </button>
@@ -331,7 +336,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
             type="button"
             onClick={onToggle}
             className="hidden lg:block rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label="Collapse sidebar"
+            aria-label={t('nav.collapse')}
           >
             <ChevronsLeft size={18} />
           </button>
@@ -344,7 +349,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
             type="button"
             onClick={onToggle}
             className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label="Expand sidebar"
+            aria-label={t('nav.expand')}
           >
             <ChevronsRight size={18} />
           </button>
@@ -389,7 +394,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                     ? 'bg-white/10 text-white'
                     : 'text-zinc-100 hover:bg-white/5 hover:text-white'
                 } ${collapsed ? 'justify-center' : 'justify-between'}`}
-                title={collapsed ? section.title : undefined}
+                title={collapsed ? t.or(`nav.section.${key}`, section.title) : undefined}
               >
                 <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}>
                   <SectionIcon
@@ -397,7 +402,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                     className="shrink-0 text-zinc-200"
                     aria-hidden
                   />
-                  {!collapsed && <span className="truncate">{section.title}</span>}
+                  {!collapsed && <span className="truncate">{t.or(`nav.section.${key}`, section.title)}</span>}
                 </span>
                 {!collapsed &&
                   (open ? (
@@ -434,7 +439,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                             className={active ? 'text-lagoon-950' : 'text-zinc-400'}
                             aria-hidden
                           />
-                          <span className="truncate">{item.title}</span>
+                          <span className="truncate">{t.or(navKey(item.path), item.title)}</span>
                         </Link>
                       </li>
                     )
@@ -474,12 +479,13 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
             type="button"
             onClick={() => setShowLogoutModal(true)}
             className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            title="Log out"
-            aria-label="Log out"
+            title={t('nav.logOut')}
+            aria-label={t('nav.logOut')}
           >
             <LogOut size={20} />
           </button>
         </div>
+        {!collapsed && <LanguageSwitcher tone="dark" className="mt-3" />}
       </div>
 
       {showLogoutModal && (

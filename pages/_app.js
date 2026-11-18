@@ -8,6 +8,8 @@ import { ThemeProvider } from '../contexts/ThemeContext'
 import { SettingsProvider } from '../contexts/SettingsContext'
 import { CompanySettingsProvider } from '../contexts/CompanySettingsContext'
 import { LocationProvider } from '../contexts/LocationContext'
+import { I18nProvider } from '../lib/i18n/I18nProvider'
+import { useT } from '../lib/i18n/context'
 import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
 import { AnalyticsProvider } from '../contexts/AnalyticsContext'
@@ -58,6 +60,7 @@ function AppWrapper({ Component, pageProps, router }) {
           <SettingsProvider>
             <AuthProvider>
               <CompanySettingsProvider>
+                <I18nProvider>
                 <LocationProvider>
                 <DataProvider>
                   <ToastProvider>
@@ -78,6 +81,7 @@ function AppWrapper({ Component, pageProps, router }) {
                   </ToastProvider>
                 </DataProvider>
                 </LocationProvider>
+                </I18nProvider>
               </CompanySettingsProvider>
             </AuthProvider>
           </SettingsProvider>
@@ -137,13 +141,13 @@ class AuthErrorBoundary extends Component {
  * Convex could not be reached (offline cold start, MOBILE-001).
  */
 function OfflineSessionBanner() {
+  const t = useT()
   return (
     <div
       role="status"
       className="sticky top-0 z-40 bg-foam-deep px-4 py-2 text-center text-sm text-chart-ink print:hidden"
     >
-      No connection. Using the account saved on this phone. Entries are kept on
-      this device and sent when you are back online.
+      {t('common.offlineSession')}
     </div>
   )
 }

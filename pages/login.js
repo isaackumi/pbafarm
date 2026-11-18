@@ -9,10 +9,13 @@ import {
   authErrorText,
 } from '../convex/lib/authErrors'
 import { Button, Field, Input } from '../components/ui'
+import { useT } from '../lib/i18n/context'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 /** Passwordless sign-in with a code sent to a registered phone (SEC-006). */
 function PhoneSignIn({ onSignedIn }) {
   const { sendPhoneCode, verifyPhoneCode } = useAuth()
+  const t = useT()
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState('phone')
@@ -22,8 +25,8 @@ function PhoneSignIn({ onSignedIn }) {
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
   }, [cooldown])
 
   const send = async (e) => {
@@ -33,7 +36,7 @@ function PhoneSignIn({ onSignedIn }) {
     const { error: sendError } = await sendPhoneCode(phone)
     setBusy(false)
     if (sendError) {
-      setError('Could not reach the server. Check your connection and try again.')
+      setError(t('auth.login.serverUnreachable'))
       return
     }
     setStep('code')
@@ -47,7 +50,7 @@ function PhoneSignIn({ onSignedIn }) {
     const { signedIn } = await verifyPhoneCode(phone, code)
     setBusy(false)
     if (!signedIn) {
-      setError('That code is not valid or has expired. Check it, or ask for a new one.')
+      setError(t('auth.login.codeInvalid'))
       return
     }
     onSignedIn()
@@ -56,16 +59,13 @@ function PhoneSignIn({ onSignedIn }) {
   if (step === 'code') {
     return (
       <form className="space-y-5" onSubmit={verify}>
-        <p className="text-sm text-muted">
-          If {phone} is registered for phone sign-in, a 6-digit code is on its way. It expires in
-          10 minutes.
-        </p>
+        <p className="text-sm text-muted">{t('auth.login.codeOnItsWay', { phone })}</p>
         {error && (
           <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
             {error}
           </div>
         )}
-        <Field label="Code" htmlFor="otp">
+        <Field label={t('common.code')} htmlFor="otp">
           <Input
             id="otp"
             name="otp"
@@ -80,7 +80,7 @@ function PhoneSignIn({ onSignedIn }) {
           />
         </Field>
         <Button type="submit" disabled={busy || code.length !== 6} size="lg" className="w-full">
-          {busy ? 'Checking…' : 'Sign in'}
+          {busy ? t('common.checking') : t('auth.login.signIn')}
         </Button>
         <div className="flex justify-between text-sm">
           <button
@@ -92,7 +92,7 @@ function PhoneSignIn({ onSignedIn }) {
               setError('')
             }}
           >
-            Change number
+            {t('common.changeNumber')}
           </button>
           <button
             type="button"
@@ -100,7 +100,7 @@ function PhoneSignIn({ onSignedIn }) {
             disabled={cooldown > 0 || busy}
             onClick={send}
           >
-            {cooldown > 0 ? `Send again in ${cooldown}s` : 'Send a new code'}
+            {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
           </button>
         </div>
       </form>
@@ -115,9 +115,9 @@ function PhoneSignIn({ onSignedIn }) {
         </div>
       )}
       <Field
-        label="Mobile number"
+        label={t('common.mobileNumber')}
         htmlFor="phone"
-        hint="The number your farm admin registered for you, for example 024 412 3456."
+        hint={t('auth.login.phoneHint')}
       >
         <Input
           id="phone"
@@ -131,7 +131,7 @@ function PhoneSignIn({ onSignedIn }) {
         />
       </Field>
       <Button type="submit" disabled={busy || phone.trim().length < 6} size="lg" className="w-full">
-        {busy ? 'Sending…' : 'Send code'}
+        {busy ? t('common.sending') : t('common.sendCode')}
       </Button>
     </form>
   )
@@ -144,6 +144,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [method, setMethod] = useState('email')
   const { signInWithEmail, user } = useAuth()
+  const t = useT()
   const router = useRouter()
   const reason =
     typeof router.query.reason === 'string' && AUTH_ERROR_CODES[router.query.reason]
@@ -168,8 +169,8 @@ export default function Login() {
       const raw = signInError.message || ''
       const friendly =
         raw.includes('InvalidAccountId') || raw.includes('InvalidSecret')
-          ? 'No account for that email, or the password is wrong. Check the address carefully — or create an account on Sign up.'
-          : raw || 'Sign in failed'
+          ? t('auth.login.wrongCredentials')
+          : raw || t('auth.login.failed')
       setError(friendly)
       setLoading(false)
       return
@@ -183,8 +184,8 @@ export default function Login() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">Sign in</h1>
-          <p className="mt-1 text-sm text-muted">Cage operations, sampling, and feed — one ledger.</p>
+          <h1 className="text-xl font-semibold text-chart-ink">{t('auth.login.title')}</h1>
+          <p className="mt-1 text-sm text-muted">{t('auth.login.tagline')}</p>
         </div>
 
         <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
@@ -193,7 +194,7 @@ export default function Login() {
               role="alert"
               className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm"
             >
-              You have been signed out. {authErrorText(reason)}
+              {t('auth.login.signedOut')} {authErrorText(reason)}
             </div>
           )}
           {error && (
@@ -202,10 +203,10 @@ export default function Login() {
             </div>
           )}
 
-          <div role="tablist" aria-label="Sign-in method" className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-foam p-1">
+          <div role="tablist" aria-label={t('auth.login.method')} className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-foam p-1">
             {[
-              ['email', 'Email'],
-              ['phone', 'Phone'],
+              ['email', t('auth.login.tabEmail')],
+              ['phone', t('auth.login.tabPhone')],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -229,7 +230,7 @@ export default function Login() {
             <PhoneSignIn onSignedIn={() => router.push(safeNextPath(router.query.next))} />
           ) : (
           <form className="space-y-5" onSubmit={handleEmailLogin}>
-            <Field label="Email" htmlFor="email">
+            <Field label={t('auth.login.email')} htmlFor="email">
               <Input
                 id="email"
                 name="email"
@@ -242,11 +243,11 @@ export default function Login() {
             </Field>
 
             <Field
-              label="Password"
+              label={t('auth.login.password')}
               htmlFor="password"
               hint={
                 <Link href="/reset-password" className="text-lake hover:underline">
-                  Forgot password?
+                  {t('auth.login.forgot')}
                 </Link>
               }
             >
@@ -262,17 +263,20 @@ export default function Login() {
             </Field>
 
             <Button type="submit" disabled={loading} size="lg" className="w-full">
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
             </Button>
           </form>
           )}
 
           <p className="mt-6 text-center text-sm text-muted">
-            No account?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link href="/signup" className="font-medium text-lake hover:underline">
-              Create one
+              {t('auth.login.createOne')}
             </Link>
           </p>
+        </div>
+        <div className="mt-4 flex justify-center">
+          <LanguageSwitcher />
         </div>
       </div>
     </div>

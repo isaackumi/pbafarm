@@ -5,10 +5,12 @@ import { api } from '../convex/_generated/api'
 import { Button, Field, Input } from '../components/ui'
 import { safeNextPath } from '../lib/safeRedirect'
 import { errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
 
 /** Confirm the signed-in account's email with a 6-digit code (SEC-005). */
 export default function VerifyEmail() {
   const router = useRouter()
+  const t = useT()
   const status = useQuery(api.emailVerification.status)
   const requestCode = useMutation(api.emailVerification.requestCode)
   const verify = useMutation(api.emailVerification.verify)
@@ -25,7 +27,7 @@ export default function VerifyEmail() {
       await requestCode({})
       setSent(true)
     } catch (err) {
-      setError(errorMessage(err, 'Could not send the code'))
+      setError(errorMessage(err, t('auth.verifyEmail.couldNotSend')))
     } finally {
       setBusy(false)
     }
@@ -38,9 +40,9 @@ export default function VerifyEmail() {
     try {
       const r = await verify({ code })
       if (r.verified) router.push(next)
-      else setError('That code is not right. Check the email and try again.')
+      else setError(t('auth.verifyEmail.wrongCode'))
     } catch (err) {
-      setError(errorMessage(err, 'Could not verify'))
+      setError(errorMessage(err, t('auth.verifyEmail.couldNotVerify')))
     } finally {
       setBusy(false)
     }
@@ -51,7 +53,7 @@ export default function VerifyEmail() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">Verify your email</h1>
+          <h1 className="text-xl font-semibold text-chart-ink">{t('auth.verifyEmail.title')}</h1>
           {status?.email && <p className="mt-1 text-sm text-muted">{status.email}</p>}
         </div>
 
@@ -64,24 +66,21 @@ export default function VerifyEmail() {
 
           {status?.verified ? (
             <>
-              <p className="text-sm text-chart-ink">Your email is verified.</p>
+              <p className="text-sm text-chart-ink">{t('auth.verifyEmail.verified')}</p>
               <Button size="lg" className="w-full" onClick={() => router.push(next)}>
-                Continue
+                {t('common.continue')}
               </Button>
             </>
           ) : !sent ? (
             <>
-              <p className="text-sm text-muted">
-                We will email a 6-digit code to confirm this address is yours. You need
-                this before you can accept an invite.
-              </p>
+              <p className="text-sm text-muted">{t('auth.verifyEmail.intro')}</p>
               <Button size="lg" className="w-full" disabled={busy || !status} onClick={send}>
-                {busy ? 'Sending…' : 'Email me a code'}
+                {busy ? t('common.sending') : t('auth.verifyEmail.emailMe')}
               </Button>
             </>
           ) : (
             <form className="space-y-5" onSubmit={submit}>
-              <Field label="Code" htmlFor="code" hint="The code expires in 15 minutes.">
+              <Field label={t('common.code')} htmlFor="code" hint={t('auth.verifyEmail.expires')}>
                 <Input
                   id="code"
                   inputMode="numeric"
@@ -92,10 +91,10 @@ export default function VerifyEmail() {
                 />
               </Field>
               <Button type="submit" size="lg" className="w-full" disabled={busy}>
-                {busy ? 'Checking…' : 'Verify'}
+                {busy ? t('common.checking') : t('common.verify')}
               </Button>
               <button type="button" className="w-full text-sm text-lake hover:underline" onClick={send} disabled={busy}>
-                Send a new code
+                {t('common.sendNewCode')}
               </button>
             </form>
           )}

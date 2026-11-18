@@ -3,25 +3,27 @@ import DailyUploadPage from '../components/DailyUploadPage'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { PageHeader, FormPage } from '../components/ui'
+import { useT } from '../lib/i18n/context'
 
 export default function DailyUpload() {
+  const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title="Daily Entry">
+      <Layout title={t('daily.pageTitle')}>
         <FormPage data-tour="page-daily-entry">
           <PageHeader
             showTitle={false}
             breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Operations' },
-              { label: 'Daily entry' },
+              { label: t('entry.dashboard'), href: '/dashboard' },
+              { label: t('daily.crumbOperations') },
+              { label: t('daily.crumbEntry') },
             ]}
-            description="Log mortality and feed for several cages at once. Feed amounts deduct stock through the inventory ledger."
+            description={t('daily.pageDescription')}
             related={[
-              { label: 'Daily records', href: '/daily-data' },
-              { label: 'Bulk upload', href: '/bulk-upload' },
-              { label: 'Bi-weekly entry', href: '/biweekly-entry' },
-              { label: 'Issue feed', href: '/feed-issue' },
+              { label: t('daily.relatedRecords'), href: '/daily-data' },
+              { label: t('daily.relatedBulk'), href: '/bulk-upload' },
+              { label: t('daily.relatedBiweekly'), href: '/biweekly-entry' },
+              { label: t('daily.relatedIssue'), href: '/feed-issue' },
             ]}
           />
           <DailyUploadPage />
