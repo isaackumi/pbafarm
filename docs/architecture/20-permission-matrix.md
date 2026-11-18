@@ -179,6 +179,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `procurement.receive` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `procurement.update` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `reminders.runForMyCompanyNow` | `org.settings.manage` | yes | yes | no | no | no |
+| `reports.dailySeries` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.dashboardKpis` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.dashboardSummary` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.exportBundle` | `reports.export` | yes | yes | yes | no | no |
@@ -188,6 +189,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `reports.listCagePnL` | `finance.view` | yes | yes | yes | no | yes |
 | `reports.listCyclePnL` | `finance.view` | yes | yes | yes | no | yes |
 | `reports.pnlOverheads` | `finance.view` | yes | yes | yes | no | yes |
+| `reports.productionOverview` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.productionReport` | `reports.view` | yes | yes | yes | yes | yes |
 | `roles.archive` | `org.roles.manage` | yes | yes | no | no | no |
 | `roles.create` | `org.roles.manage` | yes | yes | no | no | no |
@@ -205,6 +207,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `sales.updateSale` | `finance.sales.record` | yes | yes | yes | no | no |
 | `security.getPolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `security.updatePolicy` | `org.settings.manage` | yes | yes | no | no | no |
+| `sensors.latest` | `production.view` | yes | yes | yes | yes | yes |
 | `stocking.approveStocking` | `production.stocking.approve` | yes | yes | no | no | no |
 | `stocking.approveTopup` | `production.stocking.approve` | yes | yes | no | no | no |
 | `stocking.createStocking` | `production.stocking.request` | yes | yes | yes | yes | no |
@@ -249,6 +252,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `users.reactivate` | `org.members.manage` | yes | yes | no | no | no |
 | `users.setPhone` | `org.members.manage` | yes | yes | no | no | no |
 | `users.update` | `org.members.manage` | yes | yes | no | no | no |
+| `weather.forSites` | `org.view` | yes | yes | yes | yes | yes |
+| `weather.refreshSite` | `allowlisted` | see test | see test | see test | see test | see test |
 | `webhooks.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `webhooks.deliveries` | `integrations.manage` | yes | yes | no | no | no |
 | `webhooks.overview` | `integrations.manage` | yes | yes | no | no | no |

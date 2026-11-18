@@ -45,6 +45,7 @@ const ALLOWLIST: Record<string, string> = {
   'messaging/channels.saveCredentials': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.channelForAdmin',
   'webhooks.create': 'action; guarded by requireWebhookAdmin in internal.webhooks.createEndpointRow',
   'webhooks.rotateSecret': 'action; guarded by requireWebhookAdmin in internal.webhooks.endpointOwner',
+  'weather.refreshSite': 'action; guarded by requireMember(org.sites.manage) in internal.weather.siteForRefresh',
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
 }

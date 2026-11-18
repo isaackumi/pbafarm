@@ -13,7 +13,14 @@ import {
 } from './lib/costing'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { periodGrowthPerDay, periodHarvestFcr, periodMortalityPct } from './lib/kpi'
+import {
+  mean,
+  periodGrowthPerDay,
+  periodHarvestFcr,
+  periodMortalityPct,
+  pooledFcr,
+  survivalPct,
+} from './lib/kpi'
 import { requireMember } from './lib/permissions'
 
 /** A bi-weekly row as a KPI sample. */
@@ -819,5 +826,89 @@ export const pnlOverheads = query({
     ).filter((e) => !e.cageId && (!args.locationId || e.locationId === args.locationId))
     const split = splitExpenses(rows)
     return { total: split.total, by_category: split.byCategory }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Rollup reads (PLAT-002): one row per occupancy or per unit-day.
+// ---------------------------------------------------------------------------
+
+/** Open occupancies of the caller's company (one batchStats row each). */
+async function openOccupancies(
+  ctx: QueryCtx,
+  user: Doc<'users'>,
+  locationId?: Id<'farmLocations'> | null,
+) {
+  const scope = tenantScope(user)
+  if (scope.kind !== 'company') return []
+  const rows = await ctx.db
+    .query('batchStats')
+    .withIndex('by_companyId_and_open', (q) => q.eq('companyId', scope.companyId).eq('open', true))
+    .take(2000)
+  return locationId ? rows.filter((r) => r.locationId === locationId) : rows
+}
+
+/**
+ * Standing production from the rollups: live fish, biomass, cycle-to-date
+ * FCR, survival and SGR over the open occupancies (lib/kpi definitions).
+ * `occupancies` 0 means the rollups are empty (before the backfill).
+ */
+export const productionOverview = query({
+  args: { locationId: v.optional(v.id('farmLocations')) },
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
+    const rows = await openOccupancies(ctx, user, args.locationId)
+    const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0)
+    return {
+      occupancies: rows.length,
+      live_fish: sum((r) => Math.max(0, r.kpis.count)),
+      biomass_kg: sum((r) => r.kpis.current_biomass_kg),
+      feed_kg: sum((r) => r.kpis.feed_kg),
+      feed_cost: sum((r) => r.feedCostLedger),
+      efcr: pooledFcr(rows.map((r) => ({ feedKg: r.kpis.feed_kg, gainKg: r.kpis.gain_kg }))),
+      survival_pct: survivalPct({
+        count: sum((r) => r.kpis.count),
+        harvestedCount: sum((r) => r.kpis.harvested_count),
+        outCount: sum((r) => r.kpis.out_count),
+        stockedCount: sum((r) => r.kpis.stocked_count),
+        inCount: sum((r) => r.kpis.in_count),
+      }),
+      avg_sgr_pct_day: mean(rows.map((r) => r.kpis.sgr_pct_day)),
+      updated_at: rows.reduce((m, r) => Math.max(m, r.updatedAt), 0) || null,
+    }
+  },
+})
+
+/** Feed and deaths per day across the company's units, from unitDailyStats. */
+export const dailySeries = query({
+  args: {
+    from: v.string(),
+    to: v.optional(v.string()),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'reports.view' })
+    const scope = tenantScope(user)
+    if (scope.kind !== 'company') return []
+    const rows = await ctx.db
+      .query('unitDailyStats')
+      .withIndex('by_companyId_and_date', (q) => {
+        const c = q.eq('companyId', scope.companyId).gte('date', args.from)
+        return args.to ? c.lte('date', args.to) : c
+      })
+      .take(10_000)
+    const byDate = new Map<
+      string,
+      { date: string; feed_kg: number; feed_cost: number; mortality: number }
+    >()
+    for (const r of rows) {
+      if (args.locationId && r.locationId !== args.locationId) continue
+      const d = byDate.get(r.date) ?? { date: r.date, feed_kg: 0, feed_cost: 0, mortality: 0 }
+      d.feed_kg += r.feedKg
+      d.feed_cost += r.feedCostList
+      d.mortality += r.mortalityRecorded
+      byDate.set(r.date, d)
+    }
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
   },
 })

@@ -210,6 +210,11 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
     fields: ['date', 'lines', 'cageName', 'averageBodyWeight'],
   },
   {
+    type: 'sensor.readings.recorded',
+    label: 'Sensor readings received',
+    fields: ['readings', 'cageNames', 'minDissolvedOxygen', 'maxTemperatureC'],
+  },
+  {
     type: 'inventory.stock.low',
     label: 'Feed stock fell to its minimum',
     fields: ['feedTypeName', 'stockKg', 'minimumKg'],
