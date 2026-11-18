@@ -10,7 +10,9 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
-  const { user } = useAuth()
+  const { user: authUser, canUseApp } = useAuth()
+  // Tenant data only once access is confirmed (password changed, company approved).
+  const user = canUseApp ? authUser : null
 
   useEffect(() => {
     if (user) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useAction } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import userService from '../lib/userService'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
@@ -28,6 +28,49 @@ const UserManagement = () => {
   const [savingId, setSavingId] = useState(null)
   const [form, setForm] = useState(EMPTY_CREATE)
   const [creating, setCreating] = useState(false)
+  const joinRequests = useQuery(api.users.listJoinRequests, {})
+  const approveJoin = useMutation(api.users.approveJoinRequest)
+  const declineJoin = useMutation(api.users.declineJoinRequest)
+  const inviteByEmail = useMutation(api.users.invite)
+  const [invite, setInvite] = useState({ email: '', role: 'user' })
+  const [inviting, setInviting] = useState(false)
+  const [decidingId, setDecidingId] = useState(null)
+
+  const handleInvite = async (e) => {
+    e.preventDefault()
+    setInviting(true)
+    setError('')
+    setSuccess('')
+    try {
+      const data = await inviteByEmail({ email: invite.email, role: invite.role })
+      setInvite({ email: '', role: 'user' })
+      setSuccess(data?.message || 'Invite saved.')
+    } catch (err) {
+      setError(err.message || 'Failed to invite')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const decideJoin = async (request, approve) => {
+    setDecidingId(request.id)
+    setError('')
+    setSuccess('')
+    try {
+      if (approve) {
+        await approveJoin({ inviteId: request.id })
+        await loadUsers()
+        setSuccess(`${request.email} joined the company.`)
+      } else {
+        await declineJoin({ inviteId: request.id })
+        setSuccess(`Declined ${request.email}.`)
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update the join request')
+    } finally {
+      setDecidingId(null)
+    }
+  }
 
   useEffect(() => {
     loadUsers()
@@ -163,6 +206,85 @@ const UserManagement = () => {
             {creating ? 'Creating…' : 'Create user'}
           </Button>
         </form>
+      </FormCard>
+
+      <FormCard
+        title="Invite by email"
+        subtitle="For people who sign up themselves. They ask to join after signing in, and you approve below."
+      >
+        <form
+          onSubmit={handleInvite}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
+        >
+          <Field label="Email" required>
+            <Input
+              type="email"
+              required
+              value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+              autoComplete="off"
+            />
+          </Field>
+          <Field label="Role">
+            <Select
+              value={invite.role}
+              onChange={(e) => setInvite({ ...invite, role: e.target.value })}
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </Field>
+          <Button type="submit" disabled={inviting}>
+            {inviting ? 'Saving…' : 'Send invite'}
+          </Button>
+        </form>
+      </FormCard>
+
+      <FormCard
+        title="Pending join requests"
+        subtitle="People who signed in with an invited email and asked to join. Approve only people you expect."
+      >
+        {joinRequests === undefined ? (
+          <p className="text-sm text-muted">Loading…</p>
+        ) : joinRequests.length === 0 ? (
+          <p className="text-sm text-muted">No pending requests.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-100">
+            {joinRequests.map((request) => (
+              <li
+                key={request.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div className="text-sm">
+                  <p className="font-medium text-chart-ink">
+                    {request.name || request.email}
+                  </p>
+                  <p className="text-muted">
+                    <span className="font-data">{request.email}</span> · as{' '}
+                    {request.role === 'admin' ? 'Admin' : 'User'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={decidingId === request.id}
+                    onClick={() => decideJoin(request, true)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={decidingId === request.id}
+                    onClick={() => decideJoin(request, false)}
+                  >
+                    Decline
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </FormCard>
 
       {success && (

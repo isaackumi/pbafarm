@@ -50,7 +50,9 @@ const TITLE_BY_PREFIX = [
 
 const Layout = ({ children, title: initialTitle }) => {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user: authUser, canUseApp, loading: authLoading } = useAuth()
+  // Cage data only once access is confirmed (password changed, company approved).
+  const user = canUseApp ? authUser : null
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
