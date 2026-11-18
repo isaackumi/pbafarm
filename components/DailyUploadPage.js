@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Trash2, Plus, Copy, CloudOff, RefreshCw, QrCode, ScanLine, TriangleAlert } from 'lucide-react'
+import { Trash2, Plus, Copy, QrCode, ScanLine, TriangleAlert } from 'lucide-react'
 import { cageService } from '../lib/cageService'
 import { feedTypeService } from '../lib/feedTypeService'
 import { dailyRecordService } from '../lib/databaseService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { getActiveLocationId } from '../lib/locationScope'
-import {
-  enqueue,
-  listOutbox,
-  removeFromOutbox,
-  flushOutbox,
-  isNetworkError,
-  cleanError,
-} from '../lib/offlineOutbox'
+import { cleanError } from '../lib/offlineOutbox'
+import { saveOrQueue } from '../lib/outboxSenders'
+import { useOnline } from '../hooks/useOutbox'
+import OutboxPanel from './OutboxPanel'
 import {
   Button,
   FormCard,
@@ -61,6 +57,7 @@ const DEFAULTS = {
   feedUnit: 'kg',
   showWater: false,
   lines: [],
+  mortalityOnly: false,
   allowNegative: false,
   overrideReason: '',
 }
@@ -84,8 +81,7 @@ const DailyUploadPage = () => {
   const [error, setError] = useState('')
   const [errorLine, setErrorLine] = useState(null)
   const [lookupsReady, setLookupsReady] = useState(false)
-  const [outbox, setOutbox] = useState([])
-  const [online, setOnline] = useState(true)
+  const online = useOnline()
   const [scanOpen, setScanOpen] = useState(false)
   // Blank feed is "not recorded", not 0 kg: the first Save asks (Q-016).
   const [confirmBlank, setConfirmBlank] = useState(false)
@@ -248,8 +244,13 @@ const DailyUploadPage = () => {
   )
   const bagSize = (feedTypeId) =>
     Number(feedTypeById.get(feedTypeId)?.bag_size_kg) || 20
+  const mortalityOnly = Boolean(formData.mortalityOnly)
   const kgOf = (line) =>
-    unit === 'bags' ? num(line.feedQty) * bagSize(line.feedTypeId) : num(line.feedQty)
+    mortalityOnly
+      ? 0
+      : unit === 'bags'
+        ? num(line.feedQty) * bagSize(line.feedTypeId)
+        : num(line.feedQty)
 
   const switchUnit = (next) => {
     if (next === unit) return
@@ -330,9 +331,9 @@ const DailyUploadPage = () => {
   const shortages = stockCheck.filter((s) => s.short)
   const overrideActive = hasRole('admin') && formData.allowNegative
 
-  const blankFeedLines = lines.filter(
-    (l) => l.cageId && (l.feedQty === '' || l.feedQty == null),
-  )
+  const blankFeedLines = mortalityOnly
+    ? []
+    : lines.filter((l) => l.cageId && (l.feedQty === '' || l.feedQty == null))
 
   const totals = lines.reduce(
     (acc, l) => ({ feed: acc.feed + kgOf(l), mort: acc.mort + num(l.mortality) }),
@@ -373,41 +374,12 @@ const DailyUploadPage = () => {
 
   // ---- offline outbox ----------------------------------------------------
 
-  const refreshOutbox = useCallback(() => setOutbox(listOutbox(userId)), [userId])
-
-  const sendQueued = useCallback(async () => {
-    if (!listOutbox(userId).length) return
-    const { sent, failed } = await flushOutbox(
-      (payload) => dailyRecordService.createBatch(payload),
-      userId,
-    )
-    refreshOutbox()
-    if (sent) {
-      showToast(`Sent ${sent} saved batch${sent === 1 ? '' : 'es'}`, 'success')
-      loadLookups()
-      loadLogged(formData.date)
-    }
-    if (failed) showToast(`${failed} saved batch${failed === 1 ? '' : 'es'} need attention`, 'error')
-  }, [refreshOutbox, showToast, loadLookups, loadLogged, formData.date, userId])
-
+  // Queued batches are sent by OutboxSync; refresh what is logged when they go.
   useEffect(() => {
-    refreshOutbox()
-    setOnline(typeof navigator === 'undefined' ? true : navigator.onLine)
-    const goOnline = () => {
-      setOnline(true)
-      sendQueued()
-    }
-    const goOffline = () => setOnline(false)
-    window.addEventListener('online', goOnline)
-    window.addEventListener('offline', goOffline)
-    window.addEventListener('pbafarm:outbox', refreshOutbox)
-    if (navigator.onLine) sendQueued()
-    return () => {
-      window.removeEventListener('online', goOnline)
-      window.removeEventListener('offline', goOffline)
-      window.removeEventListener('pbafarm:outbox', refreshOutbox)
-    }
-  }, [refreshOutbox, sendQueued])
+    const onChange = () => loadLogged(formData.date)
+    window.addEventListener('pbafarm:outbox', onChange)
+    return () => window.removeEventListener('pbafarm:outbox', onChange)
+  }, [loadLogged, formData.date])
 
   // ---- submit ------------------------------------------------------------
 
@@ -419,6 +391,7 @@ const DailyUploadPage = () => {
       defaultFeedTypeId: formData.defaultFeedTypeId,
       feedUnit: unit,
       showWater: formData.showWater,
+      mortalityOnly: formData.mortalityOnly,
     })
   }
 
@@ -441,7 +414,7 @@ const DailyUploadPage = () => {
         return {
           cageId: l.cageId,
           feedAmount: kg,
-          feedTypeId: l.feedTypeId || undefined,
+          feedTypeId: mortalityOnly ? undefined : l.feedTypeId || undefined,
           mortality: mort,
           mortalityCause: mort > 0 ? l.mortalityCause || 'unknown' : undefined,
           notes: l.notes?.trim() || undefined,
@@ -453,32 +426,29 @@ const DailyUploadPage = () => {
       overrideReason: overrideActive ? formData.overrideReason : undefined,
     }
     const count = lines.length
-    const summary = `${formData.date} · ${count} cage${count === 1 ? '' : 's'}`
-
-    const queueIt = () => {
-      enqueue(payload, summary, userId)
-      resetForm()
-      showToast('No connection. Saved on this device and will send when you are back online', 'info')
-    }
-
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      queueIt()
-      return
-    }
+    const summary = `${formData.date} · ${count} cage${count === 1 ? '' : 's'}${
+      mortalityOnly ? ' · mortality only' : ''
+    }`
 
     setLoading(true)
     try {
-      const response = await dailyRecordService.createBatch(payload)
-      if (response.error) throw response.error
+      const res = await saveOrQueue({ kind: 'daily-batch', payload, summary, userId })
+      if (res.queued) {
+        resetForm()
+        showToast('No connection. Saved on this device and will send when you are back online', 'info')
+        return
+      }
+      if (res.error) throw res.error
       resetForm()
-      showToast(`Saved ${count} daily record${count === 1 ? '' : 's'}. Stock updated`, 'success')
+      showToast(
+        mortalityOnly
+          ? `Saved mortality for ${count} cage${count === 1 ? '' : 's'}`
+          : `Saved ${count} daily record${count === 1 ? '' : 's'}. Stock updated`,
+        'success',
+      )
       loadLookups()
       loadLogged(formData.date)
     } catch (err) {
-      if (isNetworkError(err)) {
-        queueIt()
-        return
-      }
       console.error('Error saving daily records:', err)
       const msg = cleanError(err)
       const m = /^Line (\d+)/.exec(msg)
@@ -499,43 +469,7 @@ const DailyUploadPage = () => {
       title="Daily entry"
       subtitle="Pick the cages, fill one line each, then save them together. Your draft stays on this device."
     >
-      {(!online || outbox.length > 0) && (
-        <div className="mb-5 rounded-lg border border-foam-deep bg-foam p-3 text-sm space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CloudOff size={16} className="text-muted shrink-0" aria-hidden />
-            <span className="text-chart-ink">
-              {!online ? 'Offline. Entries will be saved on this device. ' : ''}
-              {outbox.length > 0 &&
-                `${outbox.length} batch${outbox.length === 1 ? '' : 'es'} waiting to send`}
-            </span>
-            {online && outbox.length > 0 && (
-              <Button variant="secondary" size="sm" onClick={sendQueued} className="ml-auto">
-                <RefreshCw size={14} aria-hidden />
-                Send now
-              </Button>
-            )}
-          </div>
-          {outbox
-            .filter((i) => i.lastError)
-            .map((i) => (
-              <div key={i.id} className="flex flex-wrap items-center gap-2 text-signal">
-                <span>
-                  {i.summary}: {i.lastError}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    removeFromOutbox(i.id, userId)
-                    refreshOutbox()
-                  }}
-                >
-                  Discard
-                </Button>
-              </div>
-            ))}
-        </div>
-      )}
+      <OutboxPanel compact online={online} kinds={['daily-batch']} />
 
       {error && (
         <div
@@ -624,6 +558,16 @@ const DailyUploadPage = () => {
                   className="h-4 w-4 rounded border-input-border"
                 />
                 Record water quality (DO, temperature)
+              </label>
+              <label className="flex items-center gap-2 text-sm text-chart-ink min-h-11">
+                <input
+                  type="checkbox"
+                  name="mortalityOnly"
+                  checked={mortalityOnly}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-input-border"
+                />
+                Mortality only (no feed)
               </label>
             </div>
           </div>
@@ -776,6 +720,7 @@ const DailyUploadPage = () => {
                         <Trash2 size={18} aria-hidden />
                       </button>
                     </div>
+                    {!mortalityOnly && (
                     <Field
                       label={unit === 'bags' ? 'Feed (bags)' : 'Feed (kg)'}
                       htmlFor={`qty-${line.key}`}
@@ -796,6 +741,7 @@ const DailyUploadPage = () => {
                         className="tabular-nums"
                       />
                     </Field>
+                    )}
                     <Field label="Mortality" htmlFor={`mort-${line.key}`} className="md:col-span-3">
                       <Input
                         id={`mort-${line.key}`}
@@ -810,6 +756,7 @@ const DailyUploadPage = () => {
                         className="tabular-nums"
                       />
                     </Field>
+                    {!mortalityOnly && (
                     <Field label="Feed type" htmlFor={`feed-${line.key}`} className="col-span-2 md:col-span-3">
                       <Select
                         id={`feed-${line.key}`}
@@ -824,6 +771,7 @@ const DailyUploadPage = () => {
                         ))}
                       </Select>
                     </Field>
+                    )}
                     {mort > 0 && (
                       <Field label="Cause of death" htmlFor={`cause-${line.key}`} className="col-span-2 md:col-span-3">
                         <Select

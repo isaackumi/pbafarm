@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { ScanLine, Trash2 } from 'lucide-react'
 import { cageService } from '../lib/cageService'
-import { biweeklyRecordService } from '../lib/databaseService'
 import { cleanError } from '../lib/offlineOutbox'
+import { saveOrQueue } from '../lib/outboxSenders'
+import { useOnline } from '../hooks/useOutbox'
+import { useAuth } from '../contexts/AuthContext'
+import OutboxPanel from './OutboxPanel'
 import { parseCageScan } from '../lib/qrTarget'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { Button, Field, FormCard, FormSection, Input, StickyActions } from './ui'
@@ -46,6 +49,8 @@ export const lineAbw = (line) => {
 export default function BiweeklyBatchEntry() {
   const router = useRouter()
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const online = useOnline()
   const [cages, setCages] = useState([])
   const [ready, setReady] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -171,14 +176,24 @@ export default function BiweeklyBatchEntry() {
         secchiCm: formData.showWater ? optNum(l.secchiCm) : undefined,
       })),
     }
+    const n = lines.length
     setSaving(true)
     try {
-      const res = await biweeklyRecordService.createBatch(payload)
+      const res = await saveOrQueue({
+        kind: 'biweekly-batch',
+        payload,
+        summary: `${formData.date} · ${n} cage${n === 1 ? '' : 's'}`,
+        userId: user?.id,
+      })
       if (res.error) throw res.error
-      const n = lines.length
       clear()
       setFormData({ ...DEFAULTS, date: isoDay(), showWater: formData.showWater })
-      showToast(`Saved sampling for ${n} cage${n === 1 ? '' : 's'}`, 'success')
+      showToast(
+        res.queued
+          ? 'No connection. Saved on this device and will send when you are back online'
+          : `Saved sampling for ${n} cage${n === 1 ? '' : 's'}`,
+        res.queued ? 'info' : 'success',
+      )
     } catch (err) {
       const msg = cleanError(err)
       const m = /^Line (\d+)/.exec(msg)
@@ -195,6 +210,7 @@ export default function BiweeklyBatchEntry() {
       subtitle="Pick or scan the cages, weigh a sample from each, save them together. Your draft stays on this device."
     >
       <QrScanner open={scanOpen} onClose={() => setScanOpen(false)} onResult={onScan} />
+      <OutboxPanel compact online={online} kinds={['biweekly-batch']} />
 
       {error && (
         <div

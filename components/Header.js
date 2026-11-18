@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import {
   Bell,
   CircleHelp,
+  CloudUpload,
   MapPin,
   Menu,
   Moon,
@@ -15,12 +16,14 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
+import { useOutbox } from '../hooks/useOutbox'
 
 const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { startSystemWalkthrough } = useTour()
+  const { count: outboxCount } = useOutbox()
   const {
     locations,
     activeLocationId,
@@ -184,6 +187,19 @@ const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
               </div>
             )}
           </div>
+
+          {outboxCount > 0 && (
+            <Link
+              href="/outbox"
+              aria-label={`${outboxCount} entr${outboxCount === 1 ? 'y' : 'ies'} waiting to send`}
+              className="relative text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg h-12 w-12 flex items-center justify-center transition-colors"
+            >
+              <CloudUpload size={20} aria-hidden />
+              <span className="absolute top-1 right-0.5 min-w-5 h-5 px-1 rounded-full bg-signal text-white text-xs font-medium leading-5 text-center tabular-nums">
+                {outboxCount > 99 ? '99+' : outboxCount}
+              </span>
+            </Link>
+          )}
 
           <Link
             href="/scan"

@@ -27,6 +27,9 @@ const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
   ssr: false,
 })
 
+/** Sends entries queued on this device when the connection is back (MOBILE-002). */
+const OutboxSync = dynamic(() => import('../components/OutboxSync'), { ssr: false })
+
 function useServiceWorker() {
   useEffect(() => {
     // Production only: a service worker caching dev bundles makes hot reload lie.
@@ -224,6 +227,7 @@ function AuthWrapper({ children }) {
   return (
     <AuthErrorBoundary key={currentPath} onAuthError={signOutWithReason}>
       {offlineMode && <OfflineSessionBanner />}
+      {user && <OutboxSync />}
       {children}
     </AuthErrorBoundary>
   )
