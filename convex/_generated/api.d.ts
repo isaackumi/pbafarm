@@ -104,6 +104,7 @@ import type * as mfa from "../mfa.js";
 import type * as migrations from "../migrations.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as notifications from "../notifications.js";
+import type * as nursery from "../nursery.js";
 import type * as phoneAuth from "../phoneAuth.js";
 import type * as procurement from "../procurement.js";
 import type * as productionBackfill from "../productionBackfill.js";
@@ -228,6 +229,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notificationPreferences: typeof notificationPreferences;
   notifications: typeof notifications;
+  nursery: typeof nursery;
   phoneAuth: typeof phoneAuth;
   procurement: typeof procurement;
   productionBackfill: typeof productionBackfill;

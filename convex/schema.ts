@@ -66,6 +66,10 @@ export const stockSourceTable = v.union(
   v.literal('legacyBackfill'),
   /** Hatch of an incubation lot opens a larval batch (HAT-002). */
   v.literal('incubationLots'),
+  /** Larval mortality and survival counts (HAT-003). */
+  v.literal('larvalLogs'),
+  /** Fingerling transfers, sales and dispatches to other farms (HAT-004, NUR-002). */
+  v.literal('nurseryMovements'),
 )
 
 /** Records a file can be attached to (D-016, TRACE-005). */
@@ -124,6 +128,17 @@ export const broodstockStatus = v.union(
   v.literal('retired'),
   v.literal('dead'),
 )
+
+export const liveFeedKind = v.union(
+  v.literal('artemia'),
+  v.literal('rotifer'),
+  v.literal('microalgae'),
+  v.literal('copepod'),
+  v.literal('other'),
+)
+/** million = million organisms (nauplii, rotifers); L = culture volume; g = weight. */
+export const liveFeedUnit = v.union(v.literal('million'), v.literal('L'), v.literal('g'))
+export const liveFeedEntry = v.object({ kind: liveFeedKind, quantity: v.number(), unit: liveFeedUnit })
 
 const schema = defineSchema({
   ...authTables,
@@ -1009,6 +1024,10 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     /** Admin override of an active treatment withdrawal (PROD-012), audited. */
     withdrawalOverride: v.optional(withdrawalOverride),
+    /** Sales by count (fingerlings, NUR-002): fish sold and price per fish. */
+    unitCount: v.optional(v.number()),
+    pricePerUnit: v.optional(v.number()),
+    batchId: v.optional(v.id('batches')),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -1217,6 +1236,90 @@ const schema = defineSchema({
   })
     .index('by_companyId_and_status', ['companyId', 'status'])
     .index('by_spawningEventId', ['spawningEventId']),
+
+  /**
+   * One day of larval rearing for a batch in a unit (HAT-003): deaths seen,
+   * the survival count (volumetric estimate), feeding and water. Deaths and
+   * the count post to the engine (source 'larvalLogs'); saving the day again
+   * replaces its events.
+   */
+  larvalLogs: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    batchId: v.id('batches'),
+    logDate: v.string(),
+    mortality: v.optional(v.number()),
+    /** Larvae counted alive at the end of the day; the ledger is set to it. */
+    countedAlive: v.optional(v.number()),
+    /** At most 10 entries. */
+    liveFeed: v.optional(v.array(liveFeedEntry)),
+    dryFeedG: v.optional(v.number()),
+    feedingsPerDay: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
+    dissolvedOxygen: v.optional(v.number()),
+    ph: v.optional(v.number()),
+    salinityPpt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_unitId_and_batchId_and_logDate', ['unitId', 'batchId', 'logDate'])
+    .index('by_batchId_and_logDate', ['batchId', 'logDate'])
+    .index('by_companyId_and_logDate', ['companyId', 'logDate']),
+
+  /**
+   * Live feed culture log (HAT-003): artemia, rotifers, algae produced, used
+   * and discarded, inventory-style. Uses recorded on a larval log are written
+   * here with `larvalLogId` and replaced when the log is saved again.
+   */
+  liveFeedLogs: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    date: v.string(),
+    kind: liveFeedKind,
+    movement: v.union(v.literal('produced'), v.literal('used'), v.literal('discarded')),
+    /** Always positive; the movement gives the sign. */
+    quantity: v.number(),
+    unit: liveFeedUnit,
+    /** Culture tank or batch name. */
+    culture: v.optional(v.string()),
+    /** Cysts, algae paste or enrichment used to produce it. */
+    inputNote: v.optional(v.string()),
+    larvalLogId: v.optional(v.id('larvalLogs')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_date', ['companyId', 'date'])
+    .index('by_larvalLogId', ['larvalLogId']),
+
+  /**
+   * Fingerlings leaving a nursery unit (HAT-004, NUR-002): a transfer to
+   * another unit of the farm (engine transfer, the batch moves with them), a
+   * sale by count (a `sales` row) or a dispatch to another farm.
+   */
+  nurseryMovements: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    kind: v.union(v.literal('transfer'), v.literal('sale'), v.literal('external')),
+    moveDate: v.string(),
+    sourceUnitId: v.id('cages'),
+    batchId: v.id('batches'),
+    quantity: v.number(),
+    abwG: v.number(),
+    destinationUnitId: v.optional(v.id('cages')),
+    destinationBatchId: v.optional(v.id('batches')),
+    /** Buyer or receiving farm for sales and external dispatches. */
+    destinationName: v.optional(v.string()),
+    saleId: v.optional(v.id('sales')),
+    status: v.union(v.literal('approved'), v.literal('reversed')),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_moveDate', ['companyId', 'moveDate'])
+    .index('by_batchId', ['batchId']),
 
   /** Source document for engine-only operations: grading, merge, count adjustment. */
   stockOperations: defineTable({
