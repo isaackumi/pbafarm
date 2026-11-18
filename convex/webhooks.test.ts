@@ -260,4 +260,28 @@ describe('delivery', () => {
     expect(await verifySignature(next, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(true)
     expect(await verifySignature(secret, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(false)
   })
+
+  test('automation "call webhook" action sends the event with the rule', async () => {
+    const s = await setup()
+    const calls = fakeFetch(200)
+    // Endpoint subscribed to nothing relevant: only the rule sends.
+    const { id } = await addEndpoint(s, ['inventory.stock.low'])
+    await s.as(s.adminA).mutation(api.automation.rules.save, {
+      name: 'Mortality to partner', enabled: true,
+      trigger: { kind: 'event', eventType: 'daily.recorded' },
+      conditions: [], actions: [{ kind: 'webhook', endpointId: id }],
+    })
+    await recordDaily(s, s.staffA, s.cageA)
+    await settle()
+    expect(calls).toHaveLength(1)
+    const body = JSON.parse(String(calls[0].init.body))
+    expect(body).toMatchObject({ type: 'daily.recorded', rule: { name: 'Mortality to partner' }, data: { cageName: 'A1' } })
+    const b = await addEndpoint(s, ['daily.recorded'], s.adminB)
+    expect(
+      await messageOf(s.as(s.adminA).mutation(api.automation.rules.save, {
+        name: 'x', enabled: true, trigger: { kind: 'event', eventType: 'daily.recorded' },
+        conditions: [], actions: [{ kind: 'webhook', endpointId: b.id }],
+      })),
+    ).toContain('not found')
+  })
 })

@@ -457,6 +457,49 @@ export const fanOut = internalMutation({
   },
 })
 
+/**
+ * Automation "call webhook" action (AUTO-002 + INT-005): queue one delivery
+ * of the triggering event (or, for schedule rules, the check result) to an
+ * endpoint of the rule's company. Returns false when the endpoint is gone,
+ * off, or another company's.
+ */
+export async function queueRuleWebhook(
+  ctx: MutationCtx,
+  a: {
+    companyId: Id<'companies'>
+    endpointId: Id<'webhookEndpoints'>
+    rule: { id: Id<'automationRules'>; name: string }
+    runId: Id<'automationRuns'>
+    eventId?: Id<'domainEvents'>
+    check?: unknown
+  },
+): Promise<boolean> {
+  const endpoint = await ctx.db.get(a.endpointId)
+  if (!endpoint || endpoint.companyId !== a.companyId || endpoint.status !== 'active') return false
+  const event = a.eventId ? await ctx.db.get(a.eventId) : null
+  const rule = { id: a.rule.id, name: a.rule.name, runId: a.runId }
+  const now = Date.now()
+  const body = event
+    ? { ...eventEnvelope(event), rule }
+    : {
+        id: a.runId,
+        type: 'automation.rule',
+        occurredAt: new Date(now).toISOString(),
+        companyId: a.companyId,
+        siteId: null,
+        data: { check: a.check ?? null },
+        rule,
+      }
+  await queueDelivery(ctx, {
+    companyId: a.companyId,
+    endpointId: a.endpointId,
+    eventId: event?._id,
+    eventType: body.type,
+    payload: JSON.stringify(body),
+  })
+  return true
+}
+
 /** Send a `webhook.test` ping to an endpoint now. */
 export const sendTest = mutation({
   args: { endpointId: v.id('webhookEndpoints') },
