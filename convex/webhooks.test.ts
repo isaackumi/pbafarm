@@ -76,22 +76,35 @@ async function recordDaily(s: S, user: Id<'users'>, cageId: Id<'cages'>, date = 
   })
 }
 
+const realTick = () => new Promise<void>((resolve) => setImmediate(resolve))
+
 /**
- * Run scheduled work with fake time. Effect's runtime yields through timers,
- * so time is pumped while actions run (not only between them).
+ * Run scheduled work to completion with fake time. Only timers and Date are
+ * faked (setImmediate stays real), so Web Crypto and Effect's own yields make
+ * progress; time advances until no scheduled function is pending or running.
  */
-async function settle(hours = 1) {
-  for (let i = 0; i < 40 * hours; i += 1) await vi.advanceTimersByTimeAsync(30 * 60_000)
+async function settle(t: S['t']) {
+  for (let i = 0; i < 3000; i += 1) {
+    await realTick()
+    const busy = await t.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).some(
+        (f) => f.state.kind === 'pending' || f.state.kind === 'inProgress',
+      ),
+    )
+    if (!busy) return
+    await vi.advanceTimersByTimeAsync(60_000)
+  }
+  throw new Error('scheduled work did not finish')
 }
 
-async function drain(_s: S, hours = 1) {
-  await settle(hours)
+async function drain(s: S) {
+  await settle(s.t)
 }
 
 const deliveriesOf = (s: S) => s.t.run((ctx) => ctx.db.query('webhookDeliveries').collect())
 
 beforeEach(() => {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   vi.stubEnv('INTEGRATIONS_ENCRYPTION_KEY', TEST_KEY)
 })
 afterEach(() => {
@@ -207,7 +220,7 @@ describe('delivery', () => {
     const calls = fakeFetch(400)
     const { id } = await addEndpoint(s)
     await recordDaily(s, s.staffA, s.cageA)
-    await drain(s, 2)
+    await drain(s)
     expect(calls).toHaveLength(MAX_ATTEMPTS)
     const [d] = await deliveriesOf(s)
     expect(d).toMatchObject({ status: 'failed', attempts: MAX_ATTEMPTS, responseStatus: 400 })
@@ -217,7 +230,7 @@ describe('delivery', () => {
 
     fakeFetch(202)
     await s.as(s.adminA).mutation(api.webhooks.redeliver, { deliveryId: d._id })
-    await settle()
+    await settle(s.t)
     const all = await deliveriesOf(s)
     expect(all).toHaveLength(2)
     const again = all.find((x) => x.redeliveryOf === d._id)
@@ -234,7 +247,7 @@ describe('delivery', () => {
     const { id } = await addEndpoint(s)
     await s.t.run((ctx) => ctx.db.patch(id, { consecutiveFailures: 19 }))
     await s.as(s.adminA).mutation(api.webhooks.sendTest, { endpointId: id })
-    await settle()
+    await settle(s.t)
     const endpoint = await s.t.run((ctx) => ctx.db.get(id))
     expect(endpoint).toMatchObject({ status: 'disabled' })
     expect(endpoint!.disabledReason).toContain('failed')
@@ -255,7 +268,7 @@ describe('delivery', () => {
     const { secret: next } = await s.as(s.adminA).action(api.webhooks.rotateSecret, { endpointId: id })
     expect(next).not.toBe(secret)
     await s.as(s.adminA).mutation(api.webhooks.sendTest, { endpointId: id })
-    await settle()
+    await settle(s.t)
     const headers = calls[0].init.headers as Record<string, string>
     expect(await verifySignature(next, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(true)
     expect(await verifySignature(secret, String(calls[0].init.body), headers['X-PBA-Signature'], Date.now(), 10 ** 9)).toBe(false)
@@ -272,7 +285,7 @@ describe('delivery', () => {
       conditions: [], actions: [{ kind: 'webhook', endpointId: id }],
     })
     await recordDaily(s, s.staffA, s.cageA)
-    await settle()
+    await settle(s.t)
     expect(calls).toHaveLength(1)
     const body = JSON.parse(String(calls[0].init.body))
     expect(body).toMatchObject({ type: 'daily.recorded', rule: { name: 'Mortality to partner' }, data: { cageName: 'A1' } })
