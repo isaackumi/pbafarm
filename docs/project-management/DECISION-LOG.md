@@ -272,3 +272,16 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 **Status.** Proposed — awaiting owner approval.
 
 **Decision.** Turnstile on open sign-up/registration/reset/invite flows, verified in a Convex action, when sign-up stays open (Q-011) or abuse appears. Application rate limiting uses `@convex-dev/rate-limiter`. WAF, Workers, Queues and Workflows wait for their triggers.
+
+## D-018 — Company messaging channels, phone sign-in and SMS/WhatsApp two-step verification
+
+**Status.** Accepted by the owner (2026-11-18 requirements); implemented by INT-001, SEC-006, SEC-007.
+
+**Context.** The owner wants each company to choose its own SMS, WhatsApp and email providers, a platform default, passwordless phone sign-in for staff, and company-required 2FA by SMS or WhatsApp. D-009 designed the general integration platform; doc 10 deferred MFA to TOTP in ENT.
+
+**Decision.** (1) One `messagingChannels` row per company and channel, verified by a successful test send before it is used for codes; credentials AES-256-GCM encrypted in `integrationSecrets` with the key in `INTEGRATIONS_ENCRYPTION_KEY`, decrypted only in actions. (2) A platform default per channel from Convex env, used unless the company opts out. (3) Phone sign-in through a Convex Auth `ConvexCredentials` provider `phone-otp` with our own hashed code table, not the library `Phone` provider, because the latter creates users and accounts before sending and cannot keep unknown numbers indistinguishable. (4) App-level, per-session 2FA enforced in `requireUser` with an `MFA_REQUIRED` code. (5) Rate limits through `@convex-dev/rate-limiter` 0.3.2 (the 0.4 line needs Convex ≥ 1.43).
+
+**Alternatives considered.** Library `Phone` provider with a `createOrUpdateUser` that throws for unknown numbers (rejected: reveals registered numbers, and the callback also governs password sign-up). Storing credentials in channel rows (rejected: dashboard and export readers would see them). Only TOTP for 2FA (deferred: farm staff use basic phones and WhatsApp; SMS/WhatsApp first, TOTP later).
+
+**Consequences.** Design in `docs/architecture/18-messaging-and-verification.md`. Operators must set `INTEGRATIONS_ENCRYPTION_KEY` before companies can save credentials, and keep a platform channel funded if companies rely on it. SMS codes carry SIM-swap risk, accepted for this user base.
+

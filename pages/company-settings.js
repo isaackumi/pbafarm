@@ -317,6 +317,7 @@ function CompanySettings() {
           { label: 'Company settings' },
         ]}
         description="Edit farm branding and operating rules. Preview changes, save a draft, then publish to make them live."
+        related={[{ label: 'Messaging (SMS, WhatsApp, email)', href: '/messaging-settings' }]}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
