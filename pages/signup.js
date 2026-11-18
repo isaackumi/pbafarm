@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
+import { Button, Field, Input } from '../components/ui'
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
@@ -51,7 +52,7 @@ export default function SignUp() {
     <div className="min-h-screen flex items-center justify-center bg-foam px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <p className="font-display text-4xl text-lagoon-950 tracking-tight">PBA Farm</p>
+          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
           <h1 className="text-xl font-semibold text-chart-ink">Create account</h1>
           <p className="mt-1 text-sm text-muted">
             Start with email and password. Next, register your farm or accept your
@@ -59,34 +60,27 @@ export default function SignUp() {
           </p>
         </div>
 
-        <div className="bg-surface border border-foam-deep rounded-lg px-6 py-8 shadow-sm">
+        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
           {error && (
-            <div className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
+            <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
           <form className="space-y-5" onSubmit={handleSignUp}>
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-chart-ink">
-                Full name
-              </label>
-              <input
+            <Field label="Full name" htmlFor="fullName">
+              <Input
                 id="fullName"
                 name="name"
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-chart-ink">
-                Email
-              </label>
-              <input
+            <Field label="Email" htmlFor="email">
+              <Input
                 id="email"
                 name="email"
                 type="email"
@@ -94,15 +88,11 @@ export default function SignUp() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-chart-ink">
-                Password
-              </label>
-              <input
+            <Field label="Password" htmlFor="password">
+              <Input
                 id="password"
                 name="password"
                 type="password"
@@ -110,15 +100,11 @@ export default function SignUp() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-chart-ink">
-                Confirm password
-              </label>
-              <input
+            <Field label="Confirm password" htmlFor="confirmPassword">
+              <Input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
@@ -126,24 +112,17 @@ export default function SignUp() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800 sm:text-sm"
               />
-            </div>
+            </Field>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-semibold text-white ${
-                loading ? 'bg-lagoon-700/70' : 'bg-lagoon-800 hover:bg-lagoon-950'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800`}
-            >
+            <Button type="submit" disabled={loading} size="lg" className="w-full">
               {loading ? 'Creating account…' : 'Create account'}
-            </button>
+            </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-lagoon-800 hover:text-lagoon-950">
+            <Link href="/login" className="font-medium text-lake hover:underline">
               Sign in
             </Link>
           </p>

@@ -369,6 +369,23 @@ export const reverseTransaction = mutation({
     if (txn.transactionType === 'transfer') {
       throw new Error('Transfer reversals are not supported yet — reverse with an adjustment')
     }
+    // Daily usage belongs to a daily record: reversing the ledger row alone
+    // leaves the record counting the feed, and a later edit of the record
+    // returns the stock a second time (doc 09 S13).
+    if (txn.transactionType === 'daily_usage') {
+      throw new Error(
+        'This feed was recorded in a daily entry. To correct it, edit the daily record instead of reversing the stock transaction.',
+      )
+    }
+    const ref = String(args.transactionId)
+    const priorReversal = await ctx.db
+      .query('feedInventoryTransactions')
+      .withIndex('by_reference', (q) => q.eq('referenceId', ref))
+      .filter((q) => q.eq(q.field('transactionType'), 'reversal'))
+      .first()
+    if (priorReversal) {
+      throw new Error('This transaction has already been reversed.')
+    }
 
     const { transactionId, previousStock, nextStock } = await applyStockChange(ctx, {
       user,

@@ -5,12 +5,11 @@ import {
   Plus,
   Edit,
   Trash,
-  Save,
   AlertCircle,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader } from '../components/ui'
+import { PageHeader, Button, Field, Input, Select } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useSelector, useDispatch } from 'react-redux'
@@ -230,28 +229,26 @@ function FeedTypes() {
           { label: 'Stock levels', href: '/stock-levels' },
         ]}
         actions={
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Feed Type
-          </button>
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="w-4 h-4" aria-hidden />
+            Add feed type
+          </Button>
         }
       />
 
         {/* Feed Types Table */}
         <div className="page-card overflow-hidden">
-          <div className="px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Feed Types</h2>
+          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+            <h2 className="font-medium text-chart-ink">Feed types</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
               <p className="mt-3 text-muted">Loading feed types...</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
@@ -287,16 +284,16 @@ function FeedTypes() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-foam-deep">
+              <tbody className="bg-surface divide-y divide-foam-deep">
                 {feedTypes.length > 0 ? (
                   feedTypes.map((type) => (
-                    <tr key={type.id} className="hover:bg-foam-deep/40">
+                    <tr key={type.id} className="hover:bg-foam">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-chart-ink">
                           {type.name}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
                         {fmt(type.price_per_kg || 0)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
@@ -317,23 +314,28 @@ function FeedTypes() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex space-x-3 justify-end">
-                          <button
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleEdit(type)}
-                            className="text-lagoon-800 hover:text-lagoon-950"
-                            title="Edit Feed Type"
+                            className="text-lake"
+                            title="Edit feed type"
+                            aria-label="Edit feed type"
                           >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                            <Edit className="w-4 h-4" aria-hidden />
+                          </Button>
 
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setDeleteConfirm(type)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete Feed Type"
+                            className="text-signal"
+                            title="Delete feed type"
+                            aria-label="Delete feed type"
                           >
-                            <Trash className="w-4 h-4" />
-                          </button>
+                            <Trash className="w-4 h-4" aria-hidden />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -344,13 +346,14 @@ function FeedTypes() {
                       colSpan="6"
                       className="px-6 py-12 text-center text-muted"
                     >
-                      No feed types found. Click &quot;Add Feed Type&quot; to create your
-                      first feed type.
+                      No feed types yet. Use Add feed type to create your
+                      first one.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -361,46 +364,38 @@ function FeedTypes() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => setShowAddModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
             <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Add New Feed Type
+              Add feed type
             </h3>
 
             <form onSubmit={handleAdd} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Name" htmlFor="ft-add-name" required>
+                <Input
+                  id="ft-add-name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  {priceLabel}
-                </label>
-                <input
+              <Field label={priceLabel} htmlFor="ft-add-price-per-kg">
+                <Input
+                  id="ft-add-price-per-kg"
                   type="number"
                   name="price_per_kg"
                   value={formData.price_per_kg}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Protein Percentage (%)
-                </label>
-                <input
+              <Field label="Protein percentage (%)" htmlFor="ft-add-protein-percentage">
+                <Input
+                  id="ft-add-protein-percentage"
                   type="number"
                   name="protein_percentage"
                   value={formData.protein_percentage}
@@ -408,28 +403,22 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Pellet Size
-                </label>
-                <input
+              </Field>
+              <Field label="Pellet size" htmlFor="ft-add-pellet-size">
+                <Input
+                  id="ft-add-pellet-size"
                   type="text"
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Minimum stock (kg)
-                  </label>
-                  <input
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Minimum stock (kg)" htmlFor="ft-add-minimum-stock">
+                  <Input
+                    id="ft-add-minimum-stock"
                     type="number"
                     name="minimum_stock"
                     value={formData.minimum_stock}
@@ -437,38 +426,33 @@ function FeedTypes() {
                     step="1"
                     min="0"
                     placeholder="e.g. 500"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                   />
                   <p className="mt-1 text-xs text-muted">
                     Alert when stock falls to or below this.
                   </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Bag size (kg)
-                  </label>
-                  <input
+                </Field>
+                <Field label="Bag size (kg)" htmlFor="ft-add-bag-size-kg">
+                  <Input
+                    id="ft-add-bag-size-kg"
                     type="number"
                     name="bag_size_kg"
                     value={formData.bag_size_kg}
                     onChange={handleChange}
                     step="0.1"
                     min="0.1"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                   />
-                </div>
+                </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Supplier
-                  </label>
-                  <select
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Supplier" htmlFor="ft-add-supplier-id">
+                  <Select
+                    id="ft-add-supplier-id"
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   >
                     <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
@@ -476,23 +460,23 @@ function FeedTypes() {
                         {supplier.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {suppliers.length === 0 && (
                     <p className="mt-1 text-xs text-muted">
                       No suppliers yet — you can save without one.
                     </p>
                   )}
-                </div>
+                </Field>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center min-h-11">
                 <input
                   type="checkbox"
                   id="active"
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="h-4 w-4 text-lagoon-800 focus:ring-lagoon-800 border-input-border rounded"
+                  className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
                 />
                 <label
                   htmlFor="active"
@@ -502,21 +486,16 @@ function FeedTypes() {
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+              <div className="flex flex-wrap justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save
-                </button>
+                </Button>
+                <Button type="submit">
+                  Save feed type
+                </Button>
               </div>
             </form>
           </div>
@@ -530,46 +509,38 @@ function FeedTypes() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => setShowEditModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
             <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit Feed Type
+              Edit feed type
             </h3>
 
             <form onSubmit={handleUpdate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Name" htmlFor="ft-edit-name" required>
+                <Input
+                  id="ft-edit-name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  {priceLabel}
-                </label>
-                <input
+              <Field label={priceLabel} htmlFor="ft-edit-price-per-kg">
+                <Input
+                  id="ft-edit-price-per-kg"
                   type="number"
                   name="price_per_kg"
                   value={formData.price_per_kg}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Protein Percentage (%)
-                </label>
-                <input
+              <Field label="Protein percentage (%)" htmlFor="ft-edit-protein-percentage">
+                <Input
+                  id="ft-edit-protein-percentage"
                   type="number"
                   name="protein_percentage"
                   value={formData.protein_percentage}
@@ -577,28 +548,22 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-chart-ink mb-1">
-                  Pellet Size
-                </label>
-                <input
+              </Field>
+              <Field label="Pellet size" htmlFor="ft-edit-pellet-size">
+                <Input
+                  id="ft-edit-pellet-size"
                   type="text"
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
-              </div>
+              </Field>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Minimum stock (kg)
-                  </label>
-                  <input
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Minimum stock (kg)" htmlFor="ft-edit-minimum-stock">
+                  <Input
+                    id="ft-edit-minimum-stock"
                     type="number"
                     name="minimum_stock"
                     value={formData.minimum_stock}
@@ -606,38 +571,33 @@ function FeedTypes() {
                     step="1"
                     min="0"
                     placeholder="e.g. 500"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                   />
                   <p className="mt-1 text-xs text-muted">
                     Alert when stock falls to or below this.
                   </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Bag size (kg)
-                  </label>
-                  <input
+                </Field>
+                <Field label="Bag size (kg)" htmlFor="ft-edit-bag-size-kg">
+                  <Input
+                    id="ft-edit-bag-size-kg"
                     type="number"
                     name="bag_size_kg"
                     value={formData.bag_size_kg}
                     onChange={handleChange}
                     step="0.1"
                     min="0.1"
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="font-data tabular-nums"
                   />
-                </div>
+                </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-chart-ink mb-1">
-                    Supplier
-                  </label>
-                  <select
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Supplier" htmlFor="ft-edit-supplier-id">
+                  <Select
+                    id="ft-edit-supplier-id"
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   >
                     <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
@@ -645,18 +605,18 @@ function FeedTypes() {
                         {supplier.name}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </Field>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center min-h-11">
                 <input
                   type="checkbox"
                   id="edit-active"
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="h-4 w-4 text-lagoon-800 focus:ring-lagoon-800 border-input-border rounded"
+                  className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
                 />
                 <label
                   htmlFor="edit-active"
@@ -666,21 +626,16 @@ function FeedTypes() {
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+              <div className="flex flex-wrap justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
-                >
-                  <Save className="w-4 h-4 mr-2 inline-block" />
-                  Save Changes
-                </button>
+                </Button>
+                <Button type="submit">
+                  Save changes
+                </Button>
               </div>
             </form>
           </div>

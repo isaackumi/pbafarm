@@ -9,6 +9,7 @@ import {
   PieChart,
   LineChart,
 } from 'lucide-react'
+import { Button } from './ui'
 
 const CageManagementSidebar = () => {
   const { cages, loading } = useSelector((state) => state.cages)
@@ -99,17 +100,17 @@ const CageManagementSidebar = () => {
       badge: null,
       subItems: [
         {
-          title: 'Status Distribution',
+          title: 'Status distribution',
           icon: <PieChart className="w-4 h-4" />,
           href: '/cages/analytics/status',
         },
         {
-          title: 'Harvest Readiness',
+          title: 'Harvest readiness',
           icon: <LineChart className="w-4 h-4" />,
           href: '/cages/analytics/harvest',
         },
         {
-          title: 'Growth Trends',
+          title: 'Growth trends',
           icon: <LineChart className="w-4 h-4" />,
           href: '/cages/analytics/growth',
         },
@@ -124,29 +125,23 @@ const CageManagementSidebar = () => {
   ]
 
   return (
-    <div className="w-64 bg-white border-r border-foam-deep h-screen">
+    <div className="w-64 bg-surface border-r border-foam-deep h-screen">
       <div className="p-4">
-        <h2 className="text-lg font-semibold text-chart-ink mb-4">Cage Management</h2>
+        <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Cage management</h2>
         
-        {/* Quick Stats */}
-        <div className="mb-6 space-y-3">
-          <div className="bg-foam-deep/40 rounded-lg p-3">
-            <div className="text-sm text-muted">Total Cages</div>
-            <div className="text-2xl font-semibold text-chart-ink">{analytics.totalCages}</div>
-          </div>
-          <div className="bg-foam-deep/40 rounded-lg p-3">
-            <div className="text-sm text-muted">Utilization Rate</div>
-            <div className="text-2xl font-semibold text-chart-ink">{analytics.utilizationRate}%</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3">
-            <div className="text-sm text-green-600">Active Cages</div>
-            <div className="text-2xl font-semibold text-green-700">{analytics.activeCages}</div>
-          </div>
-          <div className="bg-yellow-50 rounded-lg p-3">
-            <div className="text-sm text-yellow-600">Ready for Harvest</div>
-            <div className="text-2xl font-semibold text-yellow-700">{analytics.readyForHarvest}</div>
-          </div>
-        </div>
+        <dl className="mb-6 grid grid-cols-2 gap-2">
+          {[
+            ['Total cages', analytics.totalCages, 'text-chart-ink'],
+            ['Utilization', `${analytics.utilizationRate}%`, 'text-chart-ink'],
+            ['Active', analytics.activeCages, 'text-kelp'],
+            ['Ready to harvest', analytics.readyForHarvest, 'text-amber-700 dark:text-amber-300'],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="rounded-lg border border-foam-deep bg-foam p-3">
+              <dt className="text-xs text-muted">{label}</dt>
+              <dd className={`mt-1 text-xl font-medium tabular-nums ${tone}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
 
         {/* Navigation Menu */}
         <nav className="space-y-1">
@@ -154,7 +149,7 @@ const CageManagementSidebar = () => {
             <div key={item.title}>
               <Link
                 href={item.href}
-                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam-deep/40 hover:text-chart-ink group"
+                className="flex items-center justify-between px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam hover:text-chart-ink group"
               >
                 <div className="flex items-center">
                   {item.icon}
@@ -172,7 +167,7 @@ const CageManagementSidebar = () => {
                     <Link
                       key={subItem.title}
                       href={subItem.href}
-                      className="flex items-center px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam-deep/40 hover:text-chart-ink"
+                      className="flex items-center px-3 py-2 text-sm font-medium text-muted rounded-lg hover:bg-foam hover:text-chart-ink"
                     >
                       {subItem.icon}
                       <span className="ml-3">{subItem.title}</span>
@@ -184,15 +179,11 @@ const CageManagementSidebar = () => {
           ))}
         </nav>
 
-        {/* Create New Cage Button */}
         <div className="mt-6">
-          <Link
-            href="/create-cage"
-            className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-lagoon-800 rounded-lg hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create New Cage
-          </Link>
+          <Button href="/create-cage" className="w-full">
+            <Plus className="w-4 h-4" aria-hidden />
+            Create cage
+          </Button>
         </div>
       </div>
     </div>

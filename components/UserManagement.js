@@ -199,7 +199,7 @@ const UserManagement = () => {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               autoComplete="new-password"
-              className="font-data"
+              className="font-data tabular-nums"
             />
           </Field>
           <Button type="submit" disabled={creating}>
@@ -288,27 +288,27 @@ const UserManagement = () => {
       </FormCard>
 
       {success && (
-        <div className="rounded-xl bg-kelp/10 text-kelp px-4 py-3 text-sm">
+        <div role="status" className="rounded-lg bg-kelp/10 text-kelp border border-kelp/20 px-4 py-3 text-sm">
           {success}
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">
+        <div role="alert" className="rounded-lg bg-signal/10 text-signal border border-signal/20 px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
-      <div className="page-card border border-zinc-200/90 overflow-hidden">
+      <div className="page-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-foam">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Role</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-chart-ink">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -323,15 +323,16 @@ const UserManagement = () => {
                   const id = user._id || user.id
                   const isMe = id === (me?._id || me?.id)
                   return (
-                    <tr key={id} className="border-t border-zinc-100">
-                      <td className="px-4 py-3">{user.name || '—'}</td>
-                      <td className="px-4 py-3 font-data text-sm">{user.email}</td>
+                    <tr key={id} className="border-t border-foam-deep hover:bg-foam">
+                      <td className="px-4 py-3 text-sm text-chart-ink">{user.name || '—'}</td>
+                      <td className="px-4 py-3 font-data text-sm text-chart-ink">{user.email}</td>
                       <td className="px-4 py-3">
-                        <select
+                        <Select
+                          aria-label={`Role for ${user.name || user.email}`}
                           value={user.role || 'user'}
                           disabled={savingId === id || isMe}
                           onChange={(e) => handleRoleChange(id, e.target.value)}
-                          className="border border-zinc-200 rounded-xl px-3 py-1.5 text-sm bg-white"
+                          className="min-w-[9rem]"
                         >
                           {ROLES.filter(
                             (r) =>
@@ -341,13 +342,13 @@ const UserManagement = () => {
                               {r.label}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {user.active === false ? (
                           <span className="text-signal font-medium">Inactive</span>
                         ) : user.mustChangePassword ? (
-                          <span className="text-amber-700 font-medium">Must change password</span>
+                          <span className="text-amber-700 dark:text-amber-300 font-medium">Must change password</span>
                         ) : (
                           <span className="text-kelp font-medium">Active</span>
                         )}

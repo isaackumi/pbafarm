@@ -6,6 +6,7 @@ import {
   applyStockChange,
   bagsFromKg,
   kgFromBags,
+  assertFeedNotAlreadyRecorded,
 } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 
@@ -717,8 +718,20 @@ export const createIssue = mutation({
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
+    /** Admin only: issue even though the daily entry already has feed for this cage and date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { feedOverlapReason, ...args }) => {
+    if (args.cageId) {
+      const user = await requireUser(ctx)
+      await assertFeedNotAlreadyRecorded(ctx, {
+        user,
+        cageId: args.cageId,
+        date: args.usageDate,
+        writing: 'issue',
+        overrideReason: feedOverlapReason,
+      })
+    }
     return await recordOutboundUsage(ctx, {
       ...args,
       source: 'issue',

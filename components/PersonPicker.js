@@ -2,9 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
-
-const FIELD_CLASS =
-  'w-full rounded-xl border border-foam-deep bg-surface px-3.5 py-3 text-sm text-chart-ink placeholder:text-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
+import { Input } from './ui'
 
 /**
  * Searchable person field: pick a company user or type a free-text name.
@@ -100,7 +98,7 @@ export default function PersonPicker({
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      <input
+      <Input
         id={id}
         name={name}
         type="text"
@@ -113,7 +111,6 @@ export default function PersonPicker({
         required={required}
         value={value}
         placeholder={placeholder}
-        className={FIELD_CLASS}
         onChange={(e) => {
           emit(e.target.value)
           setOpen(true)
@@ -125,7 +122,7 @@ export default function PersonPicker({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-foam-deep bg-surface shadow-lg py-1"
+          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-foam-deep bg-surface shadow-md py-1"
         >
           {directory === undefined ? (
             <li className="px-3.5 py-2 text-sm text-muted">Loading users…</li>
@@ -142,8 +139,8 @@ export default function PersonPicker({
                   type="button"
                   className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
                     i === highlight
-                      ? 'bg-foam text-chart-ink'
-                      : 'hover:bg-foam/70 text-chart-ink'
+                      ? 'bg-lake-soft text-chart-ink'
+                      : 'hover:bg-foam text-chart-ink'
                   }`}
                   onMouseEnter={() => setHighlight(i)}
                   onMouseDown={(e) => e.preventDefault()}

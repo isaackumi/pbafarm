@@ -156,7 +156,7 @@ export default function CageManageModals({
             className="absolute inset-0 modal-backdrop"
             onClick={() => !saving && onCloseEdit?.()}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto p-6">
+          <div className="relative bg-surface rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto p-6">
             <h3 className="text-lg font-semibold text-chart-ink mb-1">Edit cage</h3>
             <p className="text-sm text-muted mb-4">
               Update details for <span className="font-medium">{editCage.name}</span>.
@@ -185,7 +185,7 @@ export default function CageManageModals({
                     type="number"
                     step="any"
                     min="0"
-                    className="font-data"
+                    className="font-data tabular-nums"
                     value={form.size}
                     onChange={(e) => patchField('size', e.target.value)}
                   />
@@ -194,7 +194,7 @@ export default function CageManageModals({
                   <Input
                     type="number"
                     min="0"
-                    className="font-data"
+                    className="font-data tabular-nums"
                     value={form.capacity}
                     onChange={(e) => patchField('capacity', e.target.value)}
                   />
@@ -249,7 +249,7 @@ export default function CageManageModals({
             className="absolute inset-0 modal-backdrop"
             onClick={() => !deleting && onCloseDelete?.()}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+          <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-6 h-6 text-signal" />
               <h3 className="text-lg font-semibold text-chart-ink">Delete cage</h3>
@@ -279,17 +279,17 @@ export default function CageManageModals({
               >
                 Cancel
               </Button>
-              <button
+              <Button
                 type="button"
+                variant="danger"
                 disabled={
                   deleting ||
                   confirmName.trim() !== (deleteCage.name || '').trim()
                 }
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-signal hover:opacity-90 disabled:opacity-40 min-h-10"
               >
                 {deleting ? 'Deleting…' : 'Delete cage'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

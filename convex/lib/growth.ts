@@ -75,7 +75,12 @@ export async function cageCycleGrowth(
     .filter((s) => s.date >= startDate! && s.date <= endDate)
     .sort((a, b) => a.date.localeCompare(b.date))
   const latest = inCycle[inCycle.length - 1] ?? null
-  const currentAbw = latest?.averageBodyWeight ?? cage.currentWeight ?? initialAbw
+  // Without a sample in this cycle the fish are still at their stocking
+  // weight. cages.currentWeight may hold the previous cycle's last sample
+  // (doc 09 S7), so it is only used for cages with no cycle start at all.
+  const currentAbw =
+    latest?.averageBodyWeight ??
+    (startDate ? initialAbw : (cage.currentWeight ?? initialAbw))
   const abwDate = latest?.date ?? startDate
 
   const daily = startDate
@@ -139,16 +144,23 @@ export async function harvestFcr(
   }
 }
 
-/** Point the cage's current weight at its latest bi-weekly ABW. */
+/**
+ * Point the cage's current weight at its latest bi-weekly ABW in the current
+ * cycle, or at the stocking ABW when the cycle has no sample yet. Samples from
+ * an earlier cycle never set the weight of fish stocked after them.
+ */
 export async function syncCageAbw(ctx: MutationCtx, cageId: Id<'cages'>) {
+  const cage = await ctx.db.get(cageId)
+  if (!cage) return
   const rows = await ctx.db
     .query('biweeklyRecords')
     .withIndex('by_cage', (q) => q.eq('cageId', cageId))
     .collect()
-  const latest = rows.sort((a, b) => b.date.localeCompare(a.date))[0]
-  const cage = await ctx.db.get(cageId)
-  if (!cage) return
-  const next = latest?.averageBodyWeight ?? undefined
+  const start = cage.stockingDate
+  const latest = rows
+    .filter((r) => !start || r.date >= start)
+    .sort((a, b) => b.date.localeCompare(a.date))[0]
+  const next = latest?.averageBodyWeight ?? (start ? cage.initialAbw : undefined)
   if (next !== cage.currentWeight) {
     await ctx.db.patch(cageId, { currentWeight: next, updatedAt: Date.now() })
   }

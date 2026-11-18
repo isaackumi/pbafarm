@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import { PageHeader, Button, StatCard, Input, Select } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
@@ -23,7 +23,7 @@ import {
 export default function CagesPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Cage Management">
+      <Layout title="Cages">
         <CagesManagement />
       </Layout>
     </ProtectedRoute>
@@ -96,13 +96,13 @@ function CagesManagement() {
       counts[s] = (counts[s] || 0) + 1
     })
     const colors = {
-      active: '#10B981',
-      maintenance: '#F59E0B',
-      harvested: '#3B82F6',
-      fallow: '#6B7280',
-      empty: '#8B5CF6',
+      active: 'var(--kelp)',
+      maintenance: '#d97706',
+      harvested: 'var(--lake)',
+      fallow: 'var(--muted)',
+      empty: '#a1a1aa',
       harvesting: '#06B6D4',
-      unknown: '#9CA3AF',
+      unknown: 'var(--foam-deep)',
     }
     const statusDistribution = Object.entries(counts).map(([name, value]) => ({
       name,
@@ -113,7 +113,7 @@ function CagesManagement() {
       {
         name: 'Active',
         value: cages.filter((c) => c.status === 'active').length,
-        color: '#10B981',
+        color: 'var(--kelp)',
       },
       {
         name: 'Harvesting',
@@ -123,7 +123,7 @@ function CagesManagement() {
       {
         name: 'Harvested',
         value: cages.filter((c) => c.status === 'harvested').length,
-        color: '#3B82F6',
+        color: 'var(--lake)',
       },
     ]
     return { statusDistribution, harvestReadiness }
@@ -131,14 +131,14 @@ function CagesManagement() {
 
   const columns = [
     {
-      header: 'Cage Name',
+      header: 'Cage name',
       accessor: 'name',
       sortable: true,
       searchable: true,
       cell: (row) => (
         <Link
           href={`/cages/${row.id || row._id}`}
-          className="text-lagoon-800 hover:text-lagoon-950 font-medium"
+          className="text-lake hover:text-lake font-medium"
         >
           {row.name}
         </Link>
@@ -166,10 +166,10 @@ function CagesManagement() {
         const styles = {
           active: 'bg-kelp/15 text-kelp',
           maintenance: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-          harvested: 'bg-foam-deep text-lagoon-800',
+          harvested: 'bg-foam-deep text-lake',
           fallow: 'bg-foam-deep/60 text-muted',
-          empty: 'bg-lagoon-800/15 text-lagoon-800',
-          harvesting: 'bg-lagoon-800/15 text-lagoon-800',
+          empty: 'bg-lake-soft text-lake',
+          harvesting: 'bg-lake-soft text-lake',
         }
         return (
           <span
@@ -198,7 +198,8 @@ function CagesManagement() {
               e.stopPropagation()
               setEditCage(row)
             }}
-            className="p-1.5 rounded-lg text-lagoon-800 hover:bg-foam-deep"
+            aria-label={`Edit ${row.name || 'cage'}`}
+            className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-lake hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -210,7 +211,8 @@ function CagesManagement() {
               e.stopPropagation()
               setDeleteCage(row)
             }}
-            className="p-1.5 rounded-lg text-signal hover:bg-signal/10"
+            aria-label={`Delete ${row.name || 'cage'}`}
+            className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -222,7 +224,7 @@ function CagesManagement() {
   if (loading) {
     return (
       <div className="py-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lagoon-800 border-t-transparent" />
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent" />
         <p className="mt-2 text-muted">Loading cages…</p>
       </div>
     )
@@ -245,42 +247,22 @@ function CagesManagement() {
         ]}
         actions={
           <Button href="/create-cage" size="sm">
-            <Plus className="h-4 w-4" />
-            Create New Cage
+            <Plus className="h-4 w-4" aria-hidden />
+            Create cage
           </Button>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        <div className="page-card p-4">
-          <div className="text-sm font-medium text-muted">Total Cages</div>
-          <div className="mt-2 text-2xl font-semibold text-lagoon-800">
-            {analytics.totalCages}
-          </div>
-        </div>
-        <div className="page-card p-4">
-          <div className="text-sm font-medium text-muted">Active</div>
-          <div className="mt-2 text-2xl font-semibold text-green-600">
-            {analytics.activeCages}
-          </div>
-        </div>
-        <div className="page-card p-4">
-          <div className="text-sm font-medium text-muted">Maintenance</div>
-          <div className="mt-2 text-2xl font-semibold text-amber-600">
-            {analytics.maintenanceCages}
-          </div>
-        </div>
-        <div className="page-card p-4">
-          <div className="text-sm font-medium text-muted">Empty</div>
-          <div className="mt-2 text-2xl font-semibold text-purple-600">
-            {analytics.emptyCages}
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total cages" value={analytics.totalCages} />
+        <StatCard label="Active" value={analytics.activeCages} tone="good" />
+        <StatCard label="Maintenance" value={analytics.maintenanceCages} tone="warn" />
+        <StatCard label="Empty" value={analytics.emptyCages} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="page-card p-6">
-          <h3 className="text-lg font-medium text-chart-ink mb-4">
+          <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
             Status distribution
           </h3>
           <div className="h-64">
@@ -308,7 +290,7 @@ function CagesManagement() {
           </div>
         </div>
         <div className="page-card p-6">
-          <h3 className="text-lg font-medium text-chart-ink mb-4">
+          <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
             Harvest readiness
           </h3>
           <div className="h-64">
@@ -340,20 +322,21 @@ function CagesManagement() {
       <div className="mb-6 page-card p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex-1">
-            <input
+            <Input
               type="text"
-              placeholder="Search cages by name or location..."
+              placeholder="Search by name or location"
+              aria-label="Search cages"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-input-border rounded-lg focus:ring-lagoon-800 focus:border-lagoon-800"
             />
           </div>
-          <select
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-input-border rounded-lg focus:ring-lagoon-800 focus:border-lagoon-800"
+            aria-label="Filter by status"
+            className="md:w-56"
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All statuses</option>
             <option value="active">Active</option>
             <option value="maintenance">Maintenance</option>
             <option value="ready_to_harvest">Ready to harvest ({targetAbw} g+)</option>
@@ -361,7 +344,7 @@ function CagesManagement() {
             <option value="harvested">Harvested</option>
             <option value="fallow">Fallow</option>
             <option value="empty">Empty</option>
-          </select>
+          </Select>
         </div>
       </div>
 

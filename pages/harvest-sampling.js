@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import Link from 'next/link'
 import Layout from '../components/Layout'
 import ProtectedRoute from '../components/ProtectedRoute'
 import {
@@ -28,11 +28,11 @@ const SIZE_CATEGORIES = [
 ]
 
 function HarvestSamplingPage() {
-  const router = useRouter()
   const [cages, setCages] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState('')
   const [form, setForm] = useState({
     cageId: '',
     date: new Date().toISOString().split('T')[0],
@@ -70,6 +70,7 @@ function HarvestSamplingPage() {
     e.preventDefault()
     setSaving(true)
     setError('')
+    setSaved('')
     try {
       const client = getConvexHttpClient()
       const sizes = {}
@@ -85,9 +86,21 @@ function HarvestSamplingPage() {
         doc: doc ? Number(doc) : undefined,
         abw: abw ? Number(abw) : undefined,
       })
-      router.push('/harvest')
+      // A sample is not a harvest: stay here so more samples can be entered.
+      const cageName =
+        cages.find((c) => (c.id || c._id) === form.cageId)?.name || 'the cage'
+      setSaved(
+        `Sample saved for ${cageName}. Record the harvest itself on the Harvest page when the fish leave the cage.`,
+      )
+      setForm((f) => ({
+        ...f,
+        weight: '',
+        fishCount: '',
+        sizes: SIZE_CATEGORIES.reduce((acc, s) => ({ ...acc, [s.category]: '' }), {}),
+      }))
     } catch (err) {
       setError(err.message || 'Failed to save sampling')
+    } finally {
       setSaving(false)
     }
   }
@@ -103,13 +116,25 @@ function HarvestSamplingPage() {
               { label: 'Harvest', href: '/harvest' },
               { label: 'Sampling' },
             ]}
-            description="Record sample weight and size mix. DOC and ABW calculate from cage stocking date."
+            description="Record a sample's weight and size mix before harvest. This does not record a harvest or change the cage's fish count. DOC and ABW calculate from the cage stocking date."
             related={[
               { label: 'Harvest', href: '/harvest' },
               { label: 'Bi-weekly entry', href: '/biweekly-entry' },
               { label: 'Cages', href: '/cages' },
             ]}
           />
+
+          {saved && (
+            <div
+              role="status"
+              className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3"
+            >
+              {saved}{' '}
+              <Link href="/harvest" className="font-medium underline-offset-2 hover:underline">
+                Go to Harvest
+              </Link>
+            </div>
+          )}
 
           {error && (
             <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">

@@ -352,6 +352,12 @@ const schema = defineSchema({
         closedStockingId: v.optional(v.id('stockingHistory')),
       }),
     ),
+    /**
+     * Where the record came from. 'sampling_page' marks rows the old
+     * /harvest-sampling page wrote as harvests (migration M0-c); they are kept
+     * for reference but left out of harvest KPIs. Unset = harvest form.
+     */
+    source: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -363,7 +369,8 @@ const schema = defineSchema({
     .index('by_company_location', ['companyId', 'locationId']),
 
   harvestSampling: defineTable({
-    harvestId: v.id('harvestRecords'),
+    /** Unset for a pre-harvest sample from /harvest-sampling. */
+    harvestId: v.optional(v.id('harvestRecords')),
     cageId: v.optional(v.id('cages')),
     date: v.optional(v.string()),
     weight: v.optional(v.number()),
@@ -511,7 +518,9 @@ const schema = defineSchema({
     .index('by_status', ['status'])
     .index('by_source_cage', ['sourceCageId'])
     .index('by_destination_cage', ['destinationCageId'])
-    .index('by_company_location', ['companyId', 'sourceLocationId']),
+    .index('by_company_location', ['companyId', 'sourceLocationId'])
+    .index('by_destinationStockingId', ['destinationStockingId'])
+    .index('by_destinationTopupId', ['destinationTopupId']),
 
   auditLogs: defineTable({
     userId: v.optional(v.id('users')),

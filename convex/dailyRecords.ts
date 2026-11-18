@@ -4,7 +4,8 @@ import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
-import { applyStockChange, bagsFromKg } from './lib/feedLedger'
+import { applyStockChange, bagsFromKg, assertFeedNotAlreadyRecorded } from './lib/feedLedger'
+import { inCurrentCycle } from './lib/cycles'
 import {
   mergeSettings,
   dailyMortalityPct,
@@ -45,9 +46,23 @@ async function deductDailyFeed(
     date: string
     allowNegative?: boolean
     overrideReason?: string
+    /** Admin reason to record feed already issued to this cage on this date. */
+    feedOverlapReason?: string
+    /** The record already held feed for this cage and date (an edit). */
+    skipOverlapCheck?: boolean
   },
 ) {
   if (!args.feedTypeId || !(args.feedAmount > 0)) return
+
+  if (!args.skipOverlapCheck) {
+    await assertFeedNotAlreadyRecorded(ctx, {
+      user,
+      cageId: args.cageId,
+      date: args.date,
+      writing: 'daily',
+      overrideReason: args.feedOverlapReason,
+    })
+  }
 
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType) throw new Error('Feed type not found')
@@ -234,6 +249,7 @@ type DailyRecordInput = {
   secchiCm?: number
   allowNegative?: boolean
   overrideReason?: string
+  feedOverlapReason?: string
 }
 
 /** Insert one daily record: mortality count/alerts, feed ledger deduction, audit. */
@@ -260,6 +276,7 @@ async function insertDailyRecord(
   const {
     allowNegative,
     overrideReason,
+    feedOverlapReason,
     dissolvedOxygen,
     temperatureC,
     secchiCm,
@@ -338,8 +355,9 @@ async function insertDailyRecord(
     cageId: args.cageId,
     feedAmount: args.feedAmount,
     date: args.date,
-    allowNegative: args.allowNegative,
-    overrideReason: args.overrideReason,
+    allowNegative,
+    overrideReason,
+    feedOverlapReason,
   })
 
   await logAudit(ctx, {
@@ -368,6 +386,8 @@ export const create = mutation({
     secchiCm: v.optional(v.number()),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
@@ -396,8 +416,10 @@ export const createBatch = mutation({
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { date, records, allowNegative, overrideReason }) => {
+  handler: async (ctx, { date, records, allowNegative, overrideReason, feedOverlapReason }) => {
     const user = await requireUser(ctx)
     if (!records.length) throw new Error('Add at least one cage line')
     if (records.length > 100) throw new Error('A batch can hold at most 100 lines')
@@ -448,6 +470,7 @@ export const createBatch = mutation({
           temperatureC: rec.temperatureC,
           allowNegative,
           overrideReason,
+          feedOverlapReason,
         })
         ids.push(id)
       } catch (err: any) {
@@ -477,8 +500,13 @@ export const update = mutation({
     }),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { id, patch: rawPatch, allowNegative, overrideReason }) => {
+  handler: async (
+    ctx,
+    { id, patch: rawPatch, allowNegative, overrideReason, feedOverlapReason },
+  ) => {
     const user = await requireUser(ctx)
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Daily record not found')
@@ -524,15 +552,25 @@ export const update = mutation({
 
     await ctx.db.patch(id, patch)
 
-    // A corrected death count moves the cage's live fish count by the difference.
-    if (patch.mortality !== undefined && patch.mortality !== existing.mortality) {
+    // Deaths only move the live fish count for records in the cage's current
+    // cycle; a record from an earlier cycle is corrected on its own.
+    const mortalityTouched =
+      (patch.mortality !== undefined && patch.mortality !== existing.mortality) ||
+      (patch.date !== undefined && patch.date !== existing.date)
+    if (mortalityTouched) {
       const cage = await ctx.db.get(existing.cageId)
       if (cage && cage.currentCount != null) {
-        const diff = patch.mortality - (existing.mortality || 0)
-        await ctx.db.patch(existing.cageId, {
-          currentCount: Math.max(0, cage.currentCount - diff),
-          updatedAt: Date.now(),
-        })
+        const oldIn = await inCurrentCycle(ctx, cage, existing.date)
+        const newIn = await inCurrentCycle(ctx, cage, patch.date ?? existing.date)
+        const delta =
+          (newIn ? (patch.mortality ?? existing.mortality ?? 0) : 0) -
+          (oldIn ? existing.mortality || 0 : 0)
+        if (delta !== 0) {
+          await ctx.db.patch(existing.cageId, {
+            currentCount: Math.max(0, cage.currentCount - delta),
+            updatedAt: Date.now(),
+          })
+        }
       }
     }
 
@@ -550,6 +588,10 @@ export const update = mutation({
         date: updated.date,
         allowNegative,
         overrideReason,
+        feedOverlapReason,
+        // Re-posting feed this record already held for the same cage and day
+        // is not a second recording.
+        skipOverlapCheck: existing.feedAmount > 0 && updated.date === existing.date,
       })
     }
 
@@ -575,10 +617,10 @@ export const remove = mutation({
     if (!allowed.length) throw new Error('Access denied')
 
     await reverseDailyFeed(ctx, user, existing)
-    // Give back the fish this record had counted as dead.
+    // Give back the fish this record had counted as dead (current cycle only).
     if (existing.mortality > 0) {
       const cage = await ctx.db.get(existing.cageId)
-      if (cage && cage.currentCount != null) {
+      if (cage && cage.currentCount != null && (await inCurrentCycle(ctx, cage, existing.date))) {
         await ctx.db.patch(existing.cageId, {
           currentCount: cage.currentCount + existing.mortality,
           updatedAt: Date.now(),
@@ -612,8 +654,10 @@ export const createMany = mutation({
     ),
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
+    /** Admin only: save feed already issued to this cage on this date. */
+    feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { records, allowNegative, overrideReason }) => {
+  handler: async (ctx, { records, allowNegative, overrideReason, feedOverlapReason }) => {
     const user = await requireUser(ctx)
     const ids = []
     for (const record of records) {
@@ -654,6 +698,7 @@ export const createMany = mutation({
         date: record.date,
         allowNegative,
         overrideReason,
+        feedOverlapReason,
       })
       ids.push(id)
     }
