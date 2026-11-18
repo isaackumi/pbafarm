@@ -29,6 +29,7 @@ import {
   tenantTable,
 } from './lib/governance'
 import { buildZip, toCsv, type ZipEntry } from './lib/zip'
+import { deleteUserPreferences } from './userPreferences'
 
 // ─── Organization export ────────────────────────────────────────────────────
 
@@ -526,6 +527,7 @@ export async function anonymizeUser(ctx: MutationCtx, userId: Id<'users'>) {
     .take(50)
   for (const a of accounts) await ctx.db.delete(a._id)
   await revokeUserSessions(ctx, userId)
+  await deleteUserPreferences(ctx, userId)
   await ctx.db.patch(userId, {
     name: 'Deleted user',
     email: undefined,

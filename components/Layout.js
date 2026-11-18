@@ -1,10 +1,8 @@
 // components/Layout.js — Tide Chart app shell
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
-import { fetchCages } from '../store/slices/cagesSlice'
-import { useAuth } from '../contexts/AuthContext'
 import Header from './Header'
+import QueryBoundary from './QueryBoundary'
 import Sidebar from './Sidebar'
 import MobileTabBar from './MobileTabBar'
 import { ActAsBanner } from './ActAs'
@@ -58,14 +56,9 @@ const TITLE_BY_PREFIX = [
 
 const Layout = ({ children, title: initialTitle }) => {
   const router = useRouter()
-  const { user: authUser, canUseApp, loading: authLoading } = useAuth()
-  // Cage data only once access is confirmed (password changed, company approved).
-  const user = canUseApp ? authUser : null
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const dispatch = useDispatch()
-  const { loading, error, hasFetched } = useSelector((state) => state.cages)
 
   useEffect(() => {
     if (initialTitle) {
@@ -81,16 +74,6 @@ const Layout = ({ children, title: initialTitle }) => {
   useEffect(() => {
     setMobileNavOpen(false)
   }, [router.asPath])
-
-  // Wait for auth — cage queries require a signed-in user.
-  useEffect(() => {
-    if (authLoading || !user || hasFetched || loading) return
-    dispatch(fetchCages())
-  }, [dispatch, hasFetched, loading, user, authLoading])
-
-  const authError =
-    typeof error === 'string' &&
-    (error.includes('Not authenticated') || error.includes('Unauthenticated'))
 
   return (
     <div className="min-h-screen font-sans" data-tour="app-shell">
@@ -116,12 +99,7 @@ const Layout = ({ children, title: initialTitle }) => {
         <ActAsBanner />
         <Header title={title} onOpenMenu={() => setMobileNavOpen(true)} />
         <main className="flex-1 px-4 py-5 pb-24 sm:px-8 sm:py-8 lg:pb-8 animate-fade-in bg-transparent">
-          {error && !authError && (
-            <div className="mb-4 p-3 rounded-lg border border-signal/30 bg-signal/10 text-sm text-signal">
-              Cage data temporarily unavailable: {error}
-            </div>
-          )}
-          {children}
+          <QueryBoundary resetKey={router.asPath}>{children}</QueryBoundary>
         </main>
       </div>
       <MobileTabBar onOpenMenu={() => setMobileNavOpen(true)} />

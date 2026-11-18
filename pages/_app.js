@@ -10,18 +10,15 @@ import { CompanySettingsProvider } from '../contexts/CompanySettingsContext'
 import { LocationProvider } from '../contexts/LocationContext'
 import { I18nProvider } from '../lib/i18n/I18nProvider'
 import { useT } from '../lib/i18n/context'
-import { DataProvider } from '../contexts/DataContext'
 import { NotificationProvider } from '../contexts/NotificationContext'
-import { AnalyticsProvider } from '../contexts/AnalyticsContext'
 import { ToastProvider } from '../components/Toast'
 import { TourProvider } from '../components/TourProvider'
-import { Provider } from 'react-redux'
-import { store } from '../store'
 import { convex } from '../lib/convexClient'
 import { AppShellSkeleton } from '../components/ui'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { installGlobalErrorHandlers } from '../lib/monitoring'
 import { safeNextPath } from '../lib/safeRedirect'
+import { clearRetiredData } from '../lib/deviceData'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
 import { fontVariablesCss } from '../lib/fonts'
 import '../styles/globals.css'
@@ -40,8 +37,14 @@ const AppUpdatePrompt = dynamic(() => import('../components/AppUpdatePrompt'), {
 
 function AppWrapper({ Component, pageProps, router }) {
   // Uncaught errors and rejections go to monitoring when a DSN is set (OPS-001).
+  // Server data is read live from Convex (UX-002); drop the old Redux copy.
   useEffect(() => {
     installGlobalErrorHandlers()
+    try {
+      clearRetiredData(window.localStorage)
+    } catch {
+      // storage blocked
+    }
   }, [])
 
   return (
@@ -51,39 +54,33 @@ function AppWrapper({ Component, pageProps, router }) {
     <ConvexAuthProvider client={convex}>
       {/* Self-hosted font faces for the CSS variables in globals.css (MOBILE-007). */}
       <style dangerouslySetInnerHTML={{ __html: fontVariablesCss }} />
-      <Provider store={store}>
-        <ThemeProvider>
+      <ThemeProvider>
+        <AuthProvider>
           <SettingsProvider>
-            <AuthProvider>
-              <CompanySettingsProvider>
-                <I18nProvider>
+            <CompanySettingsProvider>
+              <I18nProvider>
                 <LocationProvider>
-                <DataProvider>
                   <ToastProvider>
                     <NotificationProvider>
-                      <AnalyticsProvider>
-                        <TourProvider>
-                          <AuthWrapper>
-                            <ErrorBoundary resetKey={router.asPath}>
-                              <Component {...pageProps} />
-                            </ErrorBoundary>
-                            <ErrorBoundary resetKey={router.asPath} silent>
-                              <AiAssistant />
-                            </ErrorBoundary>
-                            <AppUpdatePrompt />
-                          </AuthWrapper>
-                        </TourProvider>
-                      </AnalyticsProvider>
+                      <TourProvider>
+                        <AuthWrapper>
+                          <ErrorBoundary resetKey={router.asPath}>
+                            <Component {...pageProps} />
+                          </ErrorBoundary>
+                          <ErrorBoundary resetKey={router.asPath} silent>
+                            <AiAssistant />
+                          </ErrorBoundary>
+                          <AppUpdatePrompt />
+                        </AuthWrapper>
+                      </TourProvider>
                     </NotificationProvider>
                   </ToastProvider>
-                </DataProvider>
                 </LocationProvider>
-                </I18nProvider>
-              </CompanySettingsProvider>
-            </AuthProvider>
+              </I18nProvider>
+            </CompanySettingsProvider>
           </SettingsProvider>
-        </ThemeProvider>
-      </Provider>
+        </AuthProvider>
+      </ThemeProvider>
     </ConvexAuthProvider>
     </ErrorBoundary>
   )

@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import React from 'react'
+import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
-import { PageHeader, Button } from '../../../components/ui'
+import { PageHeader, Button, LoadingState, EmptyState } from '../../../components/ui'
+import { api } from '../../../convex/_generated/api'
+import { useLocation } from '../../../contexts/LocationContext'
 import {
   LineChart,
   Line,
@@ -13,7 +15,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
-import { fetchActiveCages, selectActiveCages, selectCagesLoading, selectCagesError } from '../../../store/slices/cagesSlice'
 
 export default function GrowthAnalyticsPage() {
   return (
@@ -26,14 +27,8 @@ export default function GrowthAnalyticsPage() {
 }
 
 function GrowthAnalytics() {
-  const dispatch = useDispatch()
-  const cages = useSelector(selectActiveCages)
-  const loading = useSelector(selectCagesLoading)
-  const error = useSelector(selectCagesError)
-
-  useEffect(() => {
-    dispatch(fetchActiveCages())
-  }, [dispatch])
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.getActive, locationArgs)
 
   // Calculate growth data
   const growthData = React.useMemo(() => {
@@ -60,48 +55,15 @@ function GrowthAnalytics() {
       .sort((a, b) => b.growthRate - a.growthRate)
   }, [cages])
 
-  if (loading) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent"></div>
-            <p className="mt-2 text-muted">Loading growth analytics…</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-signal">Error</h3>
-                <div className="mt-2 text-sm text-signal">
-                  <p>{error}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  if (cages === undefined) {
+    return <LoadingState />
   }
 
   if (!cages || cages.length === 0) {
     return (
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center text-muted">No cage data available.</div>
+          <EmptyState title="No cage data available." />
         </div>
       </div>
     )

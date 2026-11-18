@@ -46,6 +46,11 @@ const nextConfig = {
         destination: '/inventory-transactions',
         permanent: false,
       },
+      // Legacy cage filter paths → the cage list with a filter
+      { source: '/cages/active', destination: '/cages?filter=active', permanent: false },
+      { source: '/cages/harvest-ready', destination: '/cages?filter=ready_to_harvest', permanent: false },
+      { source: '/cages/maintenance', destination: '/cages?filter=maintenance', permanent: false },
+      { source: '/cages/feed-types', destination: '/feed-types', permanent: false },
     ]
   },
   // Fix chunk loading issues
