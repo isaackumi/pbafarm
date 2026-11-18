@@ -30,6 +30,7 @@ import {
 } from '../lib/databaseService'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { withActiveLocation } from '../lib/locationScope'
+import { errorMessage } from '../lib/errorMessage'
 import {
   Button,
   Card,
@@ -90,6 +91,7 @@ export default function Dashboard() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [tableTab, setTableTab] = useState('stockings')
   const [metrics, setMetrics] = useState({
     totalActiveCages: 0,
@@ -138,12 +140,12 @@ export default function Dashboard() {
 
         const client = getConvexHttpClient()
         const scoped = withActiveLocation({ dateRange: 30 })
+        // No per-query fallbacks: a failed query must show the error state,
+        // not a dashboard of zeros that looks like real numbers.
         const [kpis, dashSummary, daily] = await Promise.all([
-          client.query(api.reports.dashboardKpis, scoped).catch(() => null),
-          client.query(api.reports.dashboardSummary, scoped).catch(() => null),
-          client
-            .query(api.dailyRecords.list, withActiveLocation())
-            .catch(() => []),
+          client.query(api.reports.dashboardKpis, scoped),
+          client.query(api.reports.dashboardSummary, scoped),
+          client.query(api.dailyRecords.list, withActiveLocation()),
         ])
         if (cancelled) return
 
@@ -180,7 +182,7 @@ export default function Dashboard() {
           totalCages,
         })
       } catch (err) {
-        if (!cancelled) setError(err.message || String(err))
+        if (!cancelled) setError(errorMessage(err))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -189,7 +191,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [activeLocationId, locationArgs?.locationId])
+  }, [activeLocationId, locationArgs?.locationId, reloadKey])
 
   const feedTrend = useMemo(() => {
     const byDate = {}
@@ -231,13 +233,27 @@ export default function Dashboard() {
     return <DashboardSkeleton />
   }
 
+  if (error) {
+    return (
+      <div className="max-w-[1400px]">
+        <Card>
+          <div role="alert" className="flex flex-col items-center text-center py-6">
+            <TriangleAlert className="h-8 w-8 text-signal mb-3" aria-hidden />
+            <p className="font-semibold text-chart-ink">
+              The dashboard could not load
+            </p>
+            <p className="text-sm text-muted mt-1 max-w-md">{error}</p>
+            <Button className="mt-5" onClick={() => setReloadKey((k) => k + 1)}>
+              Try again
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 max-w-[1400px]">
-      {error && (
-        <div className="rounded-xl border border-signal/30 bg-signal/10 px-4 py-3 text-sm text-signal">
-          {error}
-        </div>
-      )}
 
       {/* Hero row */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import {
   Plus,
   Edit,
@@ -1013,12 +1014,12 @@ function FeedPurchases() {
                 </span>
               </p>
             </div>
-            <a
+            <Link
               href="/feed-types"
               className="min-h-9 shrink-0 cursor-pointer rounded-lg border border-kelp/40 bg-surface px-3 py-1.5 text-xs font-semibold text-chart-ink transition-colors hover:bg-foam-deep/40"
             >
               Open feed types
-            </a>
+            </Link>
           </div>
         )}
 
