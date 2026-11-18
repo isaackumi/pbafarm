@@ -1,9 +1,31 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
-import type { Doc } from './_generated/dataModel'
 import { v } from 'convex/values'
 import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import type { MutationCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
+
+/** Invite rows written before `status` existed are pending. */
+function inviteStatus(invite: Doc<'userInvites'>) {
+  return invite.status ?? 'pending'
+}
+
+/** Audit row for actions whose actor has no company (or no identity at all). */
+async function insertAudit(
+  ctx: MutationCtx,
+  row: {
+    userId?: Id<'users'>
+    companyId?: Id<'companies'>
+    actionType: string
+    tableName: string
+    recordId?: string
+    previousValues?: unknown
+    newValues?: unknown
+  },
+) {
+  await ctx.db.insert('auditLogs', row)
+}
 
 function toClient(u: any) {
   return {
@@ -140,7 +162,12 @@ export const update = mutation({
   },
 })
 
-/** Invite by email: assign if user exists, otherwise queue invite for signup. */
+/**
+ * Invite by email into the caller's company. Never changes an existing
+ * account: it only records a pending invite (one per company + email). The
+ * invitee asks to join (claimInvite) and a company admin approves the request
+ * (approveJoinRequest). Super_admin accounts cannot be invited.
+ */
 export const invite = mutation({
   args: {
     email: v.string(),
@@ -151,6 +178,7 @@ export const invite = mutation({
     const me = await requireUser(ctx)
     requireRole(me, 'admin')
     if (!me.companyId) throw new Error('No company linked')
+    const companyId = me.companyId
     const email = args.email.trim().toLowerCase()
     if (!email) throw new Error('Email is required')
     const role = args.role || 'user'
@@ -161,57 +189,64 @@ export const invite = mutation({
       .unique()
 
     if (existing) {
-      if (
-        existing.companyId &&
-        existing.companyId !== me.companyId &&
-        (me.role ?? 'user') !== 'super_admin'
-      ) {
+      if ((existing.role ?? 'user') === 'super_admin') {
+        throw new Error('This account cannot be invited')
+      }
+      if (existing.companyId === companyId) {
+        throw new Error('This person is already a member of your company')
+      }
+      if (existing.companyId) {
         throw new Error('User already belongs to another company')
       }
-      await ctx.db.patch(existing._id, {
-        companyId: me.companyId,
-        role,
-        active: true,
-        ...(args.name ? { name: args.name } : {}),
-      })
-      await logAudit(ctx, {
-        actionType: 'invite',
-        tableName: 'users',
-        recordId: existing._id,
-        newValues: { email, role, companyId: me.companyId },
-      })
-      return { status: 'assigned', userId: existing._id }
     }
 
+    const now = Date.now()
     const prior = await ctx.db
       .query('userInvites')
-      .withIndex('by_email', (q) => q.eq('email', email))
+      .withIndex('by_company_and_email', (q) =>
+        q.eq('companyId', companyId).eq('email', email),
+      )
       .first()
+    let inviteId: Id<'userInvites'>
     if (prior) {
+      inviteId = prior._id
       await ctx.db.patch(prior._id, {
         role,
-        companyId: me.companyId,
         invitedBy: me._id,
-        createdAt: Date.now(),
+        createdAt: now,
+        status: 'pending',
+        requestedByUserId: undefined,
+        requestedAt: undefined,
+        decidedBy: undefined,
+        decidedAt: undefined,
       })
     } else {
-      await ctx.db.insert('userInvites', {
+      inviteId = await ctx.db.insert('userInvites', {
         email,
         role,
-        companyId: me.companyId,
+        companyId,
         invitedBy: me._id,
-        createdAt: Date.now(),
+        createdAt: now,
+        status: 'pending',
       })
     }
     await logAudit(ctx, {
       actionType: 'invite',
       tableName: 'userInvites',
-      newValues: { email, role, companyId: me.companyId },
+      recordId: inviteId,
+      newValues: { email, role, companyId, existingUser: !!existing },
     })
-    return {
-      status: 'pending_signup',
-      message: 'Invite saved. User must sign up with this email to join.',
-    }
+    return existing
+      ? {
+          status: 'invited' as const,
+          message:
+            'Invite saved. They will see it after signing in and can ask to join. Approve it under Pending join requests.',
+        }
+      : {
+          status: 'pending_signup' as const,
+          message:
+            'Invite saved. Once they sign up with this email they can ask to join. Approve it under Pending join requests.',
+        }
   },
 })
 
@@ -254,29 +289,195 @@ export const reactivate = mutation({
       }
     }
     await ctx.db.patch(id, { active: true })
+    await logAudit(ctx, {
+      actionType: 'reactivate',
+      tableName: 'users',
+      recordId: id,
+      previousValues: { active: target.active },
+      newValues: { active: true },
+    })
     return id
   },
 })
 
-/** Apply pending invite after signup (call from client when user has no company). */
-export const claimInvite = mutation({
+/** Company-less user: invites addressed to my email that I can ask to accept. */
+export const myInvites = query({
   args: {},
   handler: async (ctx) => {
     const me = await requireUser(ctx)
-    if (!me.email) return { claimed: false }
-    if (me.companyId) return { claimed: false, reason: 'already_in_company' }
-    const invite = await ctx.db
+    if (me.companyId || !me.email) return []
+    const invites = await ctx.db
       .query('userInvites')
       .withIndex('by_email', (q) => q.eq('email', me.email!.toLowerCase()))
-      .first()
-    if (!invite) return { claimed: false }
-    await ctx.db.patch(me._id, {
-      companyId: invite.companyId,
-      role: invite.role,
-      active: true,
+      .take(20)
+    const out = []
+    for (const invite of invites) {
+      const status = inviteStatus(invite)
+      if (status !== 'pending' && status !== 'requested') continue
+      if (status === 'requested' && invite.requestedByUserId !== me._id) continue
+      const company = await ctx.db.get(invite.companyId)
+      if (!company || company.status !== 'approved') continue
+      out.push({
+        id: invite._id,
+        companyId: invite.companyId,
+        companyName: company.name,
+        role: invite.role,
+        status,
+      })
+    }
+    return out
+  },
+})
+
+/**
+ * Ask to join the company that invited my email. Does not change my account:
+ * it turns the invite into a join request that a company admin must approve
+ * (email ownership is not verified yet, so a matching email alone is not proof).
+ * The return keeps `claimed` for older clients; it is always false now.
+ */
+export const claimInvite = mutation({
+  args: { inviteId: v.optional(v.id('userInvites')) },
+  handler: async (ctx, args) => {
+    const me = await requireUser(ctx)
+    if (!me.email) return { claimed: false, requested: false }
+    if (me.companyId) {
+      return { claimed: false, requested: false, reason: 'already_in_company' }
+    }
+    if ((me.role ?? 'user') === 'super_admin') {
+      return { claimed: false, requested: false, reason: 'super_admin' }
+    }
+    const email = me.email.toLowerCase()
+    let invite: Doc<'userInvites'> | null = null
+    if (args.inviteId) {
+      invite = await ctx.db.get(args.inviteId)
+      if (!invite || invite.email !== email) throw new Error('Invite not found')
+    } else {
+      const invites = await ctx.db
+        .query('userInvites')
+        .withIndex('by_email', (q) => q.eq('email', email))
+        .take(20)
+      invite = invites.find((i) => inviteStatus(i) === 'pending') ?? null
+    }
+    if (!invite) return { claimed: false, requested: false }
+    if (inviteStatus(invite) === 'requested' && invite.requestedByUserId === me._id) {
+      return { claimed: false, requested: true, companyId: invite.companyId }
+    }
+    if (inviteStatus(invite) !== 'pending') {
+      throw new Error('This invite is no longer open')
+    }
+    await ctx.db.patch(invite._id, {
+      status: 'requested',
+      requestedByUserId: me._id,
+      requestedAt: Date.now(),
     })
-    await ctx.db.delete(invite._id)
-    return { claimed: true, companyId: invite.companyId, role: invite.role }
+    // The requester has no company yet; file the entry under the inviting one.
+    await insertAudit(ctx, {
+      userId: me._id,
+      companyId: invite.companyId,
+      actionType: 'join_request',
+      tableName: 'userInvites',
+      recordId: invite._id,
+      newValues: { email, role: invite.role, status: 'requested' },
+    })
+    return { claimed: false, requested: true, companyId: invite.companyId }
+  },
+})
+
+/** Company admin: people who asked to join through an invite. */
+export const listJoinRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUser(ctx)
+    requireRole(me, 'admin')
+    if (!me.companyId) return []
+    const companyId = me.companyId
+    const invites = await ctx.db
+      .query('userInvites')
+      .withIndex('by_company', (q) => q.eq('companyId', companyId))
+      .take(500)
+    const out = []
+    for (const invite of invites) {
+      if (inviteStatus(invite) !== 'requested' || !invite.requestedByUserId) continue
+      const requester = await ctx.db.get(invite.requestedByUserId)
+      out.push({
+        id: invite._id,
+        email: invite.email,
+        role: invite.role,
+        name: requester?.name ?? null,
+        requestedAt: invite.requestedAt ?? null,
+      })
+    }
+    return out
+  },
+})
+
+async function loadJoinRequest(
+  ctx: MutationCtx,
+  me: Doc<'users'>,
+  inviteId: Id<'userInvites'>,
+) {
+  const invite = await ctx.db.get(inviteId)
+  if (!invite || !me.companyId || invite.companyId !== me.companyId) {
+    throw new Error('Join request not found')
+  }
+  if (inviteStatus(invite) !== 'requested' || !invite.requestedByUserId) {
+    throw new Error('This join request is no longer pending')
+  }
+  return invite as Doc<'userInvites'> & { requestedByUserId: Id<'users'> }
+}
+
+/** Company admin: let the requester join with the invited role. */
+export const approveJoinRequest = mutation({
+  args: { inviteId: v.id('userInvites') },
+  handler: async (ctx, { inviteId }) => {
+    const me = await requireUser(ctx)
+    requireRole(me, 'admin')
+    const invite = await loadJoinRequest(ctx, me, inviteId)
+    const target = await ctx.db.get(invite.requestedByUserId)
+    if (!target) throw new Error('User not found')
+    if ((target.role ?? 'user') === 'super_admin') {
+      throw new Error('This account cannot be invited')
+    }
+    if (target.companyId) throw new Error('User already belongs to a company')
+    if ((target.email ?? '').toLowerCase() !== invite.email) {
+      throw new Error('Join request does not match the invited email')
+    }
+    await ctx.db.patch(target._id, { companyId: invite.companyId, role: invite.role })
+    await ctx.db.patch(invite._id, {
+      status: 'accepted',
+      decidedBy: me._id,
+      decidedAt: Date.now(),
+    })
+    await logAudit(ctx, {
+      actionType: 'approve_join_request',
+      tableName: 'users',
+      recordId: target._id,
+      previousValues: { companyId: target.companyId, role: target.role },
+      newValues: { companyId: invite.companyId, role: invite.role, inviteId },
+    })
+    return { userId: target._id }
+  },
+})
+
+/** Company admin: refuse a join request. */
+export const declineJoinRequest = mutation({
+  args: { inviteId: v.id('userInvites') },
+  handler: async (ctx, { inviteId }) => {
+    const me = await requireUser(ctx)
+    requireRole(me, 'admin')
+    const invite = await loadJoinRequest(ctx, me, inviteId)
+    await ctx.db.patch(invite._id, {
+      status: 'declined',
+      decidedBy: me._id,
+      decidedAt: Date.now(),
+    })
+    await logAudit(ctx, {
+      actionType: 'decline_join_request',
+      tableName: 'userInvites',
+      recordId: invite._id,
+      newValues: { email: invite.email, requestedByUserId: invite.requestedByUserId },
+    })
+    return invite._id
   },
 })
 
@@ -305,6 +506,15 @@ export const promoteToSuperAdmin = internalMutation({
       throw new Error(`No user found for email: ${email}`)
     }
     await ctx.db.patch(user._id, { role: 'super_admin' })
+    // Run from the CLI, so there is no signed-in actor to record.
+    await insertAudit(ctx, {
+      companyId: user.companyId,
+      actionType: 'promote_super_admin',
+      tableName: 'users',
+      recordId: user._id,
+      previousValues: { role: user.role ?? 'user' },
+      newValues: { role: 'super_admin', email },
+    })
     return user._id
   },
 })
@@ -328,11 +538,13 @@ export const finalizeCreatedUser = internalMutation({
       mustChangePassword: true,
       ...(args.name ? { name: args.name } : {}),
     })
-    // Clear any pending invite for this email
+    // Clear this company's invite for the email (other companies' invites stay)
     if (user.email) {
       const invite = await ctx.db
         .query('userInvites')
-        .withIndex('by_email', (q) => q.eq('email', user.email!.toLowerCase()))
+        .withIndex('by_company_and_email', (q) =>
+          q.eq('companyId', args.companyId).eq('email', user.email!.toLowerCase()),
+        )
         .first()
       if (invite) await ctx.db.delete(invite._id)
     }

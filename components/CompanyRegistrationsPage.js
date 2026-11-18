@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import companyService from '../lib/companyService'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
@@ -45,7 +45,22 @@ const CompanyRegistrationsPage = () => {
     api.companies.myRegistration,
     companyless ? {} : 'skip',
   )
+  const invites = useQuery(api.users.myInvites, companyless ? {} : 'skip')
+  const requestToJoin = useMutation(api.users.claimInvite)
+  const [joiningId, setJoiningId] = useState(null)
   const isSuperAdmin = user?.role === 'super_admin'
+
+  const handleJoin = async (inviteId) => {
+    setError('')
+    setJoiningId(inviteId)
+    try {
+      await requestToJoin({ inviteId })
+    } catch (err) {
+      setError(err.message || 'Could not send the join request')
+    } finally {
+      setJoiningId(null)
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -189,6 +204,8 @@ const CompanyRegistrationsPage = () => {
     )
   }
 
+  const openInvites = invites || []
+
   return (
     <div className="min-h-screen bg-foam px-4 py-10 sm:py-14">
       <div className="max-w-lg mx-auto">
@@ -207,6 +224,43 @@ const CompanyRegistrationsPage = () => {
             become the company admin.
           </p>
         </div>
+
+        {openInvites.length > 0 && (
+          <div className="mb-6 bg-surface border border-foam-deep rounded-2xl px-6 py-6 shadow-sm space-y-3">
+            <h2 className="text-base font-semibold text-chart-ink">
+              You have been invited
+            </h2>
+            <p className="text-sm text-muted">
+              Ask to join, and the company&apos;s admin will approve your request.
+            </p>
+            <ul className="space-y-2">
+              {openInvites.map((invite) => (
+                <li
+                  key={invite.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-foam-deep px-3 py-2"
+                >
+                  <div className="text-sm">
+                    <p className="font-medium text-chart-ink">{invite.companyName}</p>
+                    <p className="text-muted">
+                      As {invite.role === 'admin' ? 'an admin' : 'a user'}
+                    </p>
+                  </div>
+                  {invite.status === 'requested' ? (
+                    <span className="text-sm text-muted">Waiting for approval</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={joiningId === invite.id}
+                      onClick={() => handleJoin(invite.id)}
+                    >
+                      {joiningId === invite.id ? 'Sending…' : 'Ask to join'}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm">
           {registration?.status === 'rejected' && !success && (

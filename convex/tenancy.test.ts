@@ -2,7 +2,7 @@
 import { convexTest } from 'convex-test'
 import { describe, expect, test } from 'vitest'
 import schema from './schema'
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 import { authErrorCode } from './lib/authErrors'
 
 const modules = import.meta.glob('./**/*.ts')
@@ -209,6 +209,116 @@ describe('SEC-001 company-less users', () => {
     await as(loner1).mutation(api.companies.register, { name: 'Pond Co', code: 'POND' })
     expect(await as(loner1).query(api.companies.myRegistration, {})).toMatchObject({
       name: 'Pond Co', status: 'pending',
+    })
+  })
+})
+
+describe('SEC-003 invitations', () => {
+  test('V2: inviting a company-less super_admin is refused and changes nothing', async () => {
+    const { t, as, adminA, platform } = await setup()
+    await expect(
+      as(adminA).mutation(api.users.invite, { email: 'owner@platform.com', role: 'user' }),
+    ).rejects.toThrow(/cannot be invited/)
+    const owner = await t.run((ctx) => ctx.db.get(platform))
+    expect(owner).toMatchObject({ role: 'super_admin' })
+    expect(owner?.companyId).toBeUndefined()
+  })
+
+  test('inviting an existing company-less user does not change their account', async () => {
+    const { t, as, adminA, loner1 } = await setup()
+    const r = await as(adminA).mutation(api.users.invite, { email: 'loner1@x.com', role: 'admin' })
+    expect(r.status).toBe('invited')
+    const loner = await t.run((ctx) => ctx.db.get(loner1))
+    expect(loner).toMatchObject({ role: 'user' })
+    expect(loner?.companyId).toBeUndefined()
+  })
+
+  test('V13: a second company inviting the same email does not overwrite the first invite', async () => {
+    const { t, as, adminA, adminB, companyA, companyB } = await setup()
+    await as(adminA).mutation(api.users.invite, { email: 'new@x.com', role: 'admin' })
+    await as(adminB).mutation(api.users.invite, { email: 'new@x.com', role: 'user' })
+    const invites = await t.run((ctx) =>
+      ctx.db.query('userInvites').withIndex('by_email', (q) => q.eq('email', 'new@x.com')).collect(),
+    )
+    expect(invites).toHaveLength(2)
+    expect(invites.find((i) => i.companyId === companyA)).toMatchObject({ role: 'admin', status: 'pending' })
+    expect(invites.find((i) => i.companyId === companyB)).toMatchObject({ role: 'user', status: 'pending' })
+  })
+
+  test('claiming an invite only files a join request; the company admin approves it', async () => {
+    const { t, as, adminA, loner1, companyA } = await setup()
+    await as(adminA).mutation(api.users.invite, { email: 'loner1@x.com', role: 'admin' })
+
+    const mine = await as(loner1).query(api.users.myInvites, {})
+    expect(mine).toMatchObject([{ companyName: 'Lake Farm', role: 'admin', status: 'pending' }])
+
+    const r = await as(loner1).mutation(api.users.claimInvite, { inviteId: mine[0].id })
+    expect(r).toMatchObject({ claimed: false, requested: true })
+    expect((await t.run((ctx) => ctx.db.get(loner1)))?.companyId).toBeUndefined()
+    const audit = await t.run((ctx) => ctx.db.query('auditLogs').collect())
+    expect(audit.find((a) => a.actionType === 'join_request')).toMatchObject({
+      userId: loner1, companyId: companyA,
+    })
+
+    const requests = await as(adminA).query(api.users.listJoinRequests, {})
+    expect(requests).toMatchObject([{ email: 'loner1@x.com', role: 'admin' }])
+    await as(adminA).mutation(api.users.approveJoinRequest, { inviteId: requests[0].id })
+
+    expect(await t.run((ctx) => ctx.db.get(loner1))).toMatchObject({ companyId: companyA, role: 'admin' })
+    expect(await as(adminA).query(api.users.listJoinRequests, {})).toEqual([])
+  })
+
+  test("another company's admin cannot approve the request", async () => {
+    const { as, adminA, adminB, loner1 } = await setup()
+    await as(adminA).mutation(api.users.invite, { email: 'loner1@x.com' })
+    await as(loner1).mutation(api.users.claimInvite, {})
+    const [req] = await as(adminA).query(api.users.listJoinRequests, {})
+    await expect(
+      as(adminB).mutation(api.users.approveJoinRequest, { inviteId: req.id }),
+    ).rejects.toThrow(/not found/)
+  })
+
+  test('a declined request leaves the user company-less', async () => {
+    const { t, as, adminA, loner1 } = await setup()
+    await as(adminA).mutation(api.users.invite, { email: 'loner1@x.com' })
+    await as(loner1).mutation(api.users.claimInvite, {})
+    const [req] = await as(adminA).query(api.users.listJoinRequests, {})
+    await as(adminA).mutation(api.users.declineJoinRequest, { inviteId: req.id })
+    expect((await t.run((ctx) => ctx.db.get(loner1)))?.companyId).toBeUndefined()
+    await expect(
+      as(adminA).mutation(api.users.approveJoinRequest, { inviteId: req.id }),
+    ).rejects.toThrow(/no longer pending/)
+  })
+
+  test('a super_admin cannot claim an invite', async () => {
+    const { t, as, adminA, platform } = await setup()
+    // Invite rows can predate the super_admin account; write one directly.
+    await t.run(async (ctx) => {
+      const a = await ctx.db.get(adminA)
+      await ctx.db.insert('userInvites', {
+        email: 'owner@platform.com', role: 'user', companyId: a!.companyId!, createdAt: Date.now(),
+      })
+    })
+    const r = await as(platform).mutation(api.users.claimInvite, {})
+    expect(r).toMatchObject({ requested: false, reason: 'super_admin' })
+  })
+
+  test('reactivation is audited', async () => {
+    const { t, as, adminA, inactiveA } = await setup()
+    await as(adminA).mutation(api.users.reactivate, { id: inactiveA })
+    const rows = await t.run((ctx) => ctx.db.query('auditLogs').collect())
+    expect(rows.find((r) => r.actionType === 'reactivate')).toMatchObject({
+      recordId: inactiveA, userId: adminA,
+    })
+    expect(await codeOf(as(inactiveA).query(api.cages.list, {}))).toBe('resolved')
+  })
+
+  test('promoteToSuperAdmin is audited', async () => {
+    const { t, staffA } = await setup()
+    await t.mutation(internal.users.promoteToSuperAdmin, { email: 'staff@a.com' })
+    const rows = await t.run((ctx) => ctx.db.query('auditLogs').collect())
+    expect(rows.find((r) => r.actionType === 'promote_super_admin')).toMatchObject({
+      recordId: staffA, previousValues: { role: 'user' },
     })
   })
 })
