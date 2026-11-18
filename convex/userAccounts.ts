@@ -7,6 +7,7 @@ import {
 import { v } from 'convex/values'
 import { action } from './_generated/server'
 import { api, internal } from './_generated/api'
+import { AUTH_ERROR_MESSAGES } from './lib/authErrors'
 
 function assertPassword(password: string) {
   if (!password || password.length < 6) {
@@ -23,8 +24,9 @@ export const createWithPassword = action({
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    const me = await ctx.runQuery(api.users.current, {})
-    if (!me) throw new Error('Not authenticated')
+    // Same refusals as every other function (inactive, temporary password,
+    // company not approved).
+    const me = await ctx.runQuery(internal.users.authorizedCaller, {})
     const myRole = me.role ?? 'user'
     if (myRole !== 'admin' && myRole !== 'super_admin') {
       throw new Error('Insufficient permissions')
@@ -90,7 +92,10 @@ export const changePassword = action({
     const userId = await getAuthUserId(ctx)
     if (!userId) throw new Error('Not authenticated')
 
+    // users.current, not requireUser: this is how a temporary password is
+    // replaced, so mustChangePassword must not block it.
     const me = await ctx.runQuery(api.users.current, {})
+    if (me?.active === false) throw new Error(AUTH_ERROR_MESSAGES.USER_INACTIVE)
     if (!me?.email) throw new Error('Your account has no email on file')
 
     assertPassword(args.newPassword)

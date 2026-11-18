@@ -1,6 +1,8 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser, requireRole } from './lib/authz'
+import type { MutationCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
+import { requireUser, requireRole, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import {
   mergeSettings,
@@ -45,6 +47,28 @@ function toClient(c: any, logo_url: string | null = null) {
     approved_at: c.approvedAt,
     approved_by: c.approvedBy,
   }
+}
+
+/**
+ * Sign out every member of a company (requireUser already refuses them once
+ * the company is not approved; this ends their open sessions too).
+ * Super_admins and the caller keep their sessions.
+ */
+async function revokeMemberSessions(
+  ctx: MutationCtx,
+  companyId: Id<'companies'>,
+  callerId: Id<'users'>,
+) {
+  // users has no companyId index yet (TD-083); the table is small.
+  const members = (await ctx.db.query('users').collect()).filter(
+    (u) => u.companyId === companyId,
+  )
+  let sessions = 0
+  for (const member of members) {
+    if (member._id === callerId || member.role === 'super_admin') continue
+    sessions += await revokeUserSessions(ctx, member._id)
+  }
+  return sessions
 }
 
 function requireCompanyAdmin(user: any, companyId: string) {
@@ -297,6 +321,29 @@ export const register = mutation({
   },
 })
 
+/** Company-less user: my latest company registration, to show its status. */
+export const myRegistration = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx)
+    if (user.companyId) return null
+    const latest = await ctx.db
+      .query('companies')
+      .withIndex('by_submittedByUserId', (q) => q.eq('submittedByUserId', user._id))
+      .order('desc')
+      .first()
+    if (!latest) return null
+    return {
+      id: latest._id,
+      name: latest.name,
+      code: latest.code,
+      status: latest.status,
+      rejectionReason: latest.rejectionReason ?? null,
+      createdAt: latest.createdAt,
+    }
+  },
+})
+
 export const listPending = query({
   args: {},
   handler: async (ctx) => {
@@ -398,8 +445,10 @@ export const reject = mutation({
   args: {
     companyId: v.id('companies'),
     reason: v.optional(v.string()),
+    /** Sign members out now (default true). */
+    revokeSessions: v.optional(v.boolean()),
   },
-  handler: async (ctx, { companyId, reason }) => {
+  handler: async (ctx, { companyId, reason, revokeSessions }) => {
     const user = await requireUser(ctx)
     requireRole(user, 'super_admin')
     
@@ -416,6 +465,8 @@ export const reject = mutation({
       approvedAt: Date.now(),
       approvedBy: user._id,
     })
+    const sessionsRevoked =
+      revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
     await logAudit(ctx, {
       actionType: 'reject',
@@ -424,6 +475,7 @@ export const reject = mutation({
       newValues: { 
         status: 'rejected',
         reason,
+        sessionsRevoked,
       },
     })
   },
@@ -434,8 +486,10 @@ export const remove = mutation({
   args: {
     companyId: v.id('companies'),
     reason: v.optional(v.string()),
+    /** Sign members out now (default true). */
+    revokeSessions: v.optional(v.boolean()),
   },
-  handler: async (ctx, { companyId, reason }) => {
+  handler: async (ctx, { companyId, reason, revokeSessions }) => {
     const user = await requireUser(ctx)
     requireRole(user, 'super_admin')
 
@@ -451,6 +505,8 @@ export const remove = mutation({
       approvedAt: Date.now(),
       approvedBy: user._id,
     })
+    const sessionsRevoked =
+      revokeSessions === false ? 0 : await revokeMemberSessions(ctx, companyId, user._id)
 
     await logAudit(ctx, {
       actionType: 'reject',
@@ -459,6 +515,7 @@ export const remove = mutation({
       newValues: {
         status: 'rejected',
         reason: reason || 'Removed by admin',
+        sessionsRevoked,
       },
     })
 

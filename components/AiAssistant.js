@@ -35,7 +35,9 @@ function TypingDots() {
  * Keys: .env (GEMINI_API_KEY etc.) via /api/llm, or optional localStorage override.
  */
 export default function AiAssistant() {
-  const { user } = useAuth()
+  const { user: authUser, canUseApp } = useAuth()
+  // Tenant data only once access is confirmed (password changed, company approved).
+  const user = canUseApp ? authUser : null
   const aiStatus = useQuery(api.companies.aiAssistantStatus, user ? {} : 'skip')
   const [open, setOpen] = useState(false)
   const [showKey, setShowKey] = useState(false)

@@ -125,7 +125,10 @@ const schema = defineSchema({
     createdAt: v.number(),
     approvedAt: v.optional(v.number()),
     approvedBy: v.optional(v.id('users')),
-  }).index('by_code', ['code']).index('by_status', ['status']),
+  })
+    .index('by_code', ['code'])
+    .index('by_status', ['status'])
+    .index('by_submittedByUserId', ['submittedByUserId']),
 
   companySettingsDrafts: defineTable({
     companyId: v.id('companies'),
@@ -140,9 +143,27 @@ const schema = defineSchema({
     companyId: v.id('companies'),
     invitedBy: v.optional(v.id('users')),
     createdAt: v.number(),
+    /**
+     * pending (or missing, for older rows): waiting for the invitee.
+     * requested: the invitee asked to join; a company admin must approve.
+     * accepted / declined: decided by a company admin.
+     */
+    status: v.optional(
+      v.union(
+        v.literal('pending'),
+        v.literal('requested'),
+        v.literal('accepted'),
+        v.literal('declined'),
+      ),
+    ),
+    requestedByUserId: v.optional(v.id('users')),
+    requestedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.id('users')),
+    decidedAt: v.optional(v.number()),
   })
     .index('by_email', ['email'])
-    .index('by_company', ['companyId']),
+    .index('by_company', ['companyId'])
+    .index('by_company_and_email', ['companyId', 'email']),
 
   cages: defineTable({
     name: v.string(),

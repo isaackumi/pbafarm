@@ -1,6 +1,6 @@
 // contexts/AuthContext.js — Convex Auth bridge
 import React, { createContext, useContext, useEffect, useMemo } from 'react'
-import { useConvex, useConvexAuth, useQuery, useMutation } from 'convex/react'
+import { useConvex, useConvexAuth, useQuery } from 'convex/react'
 import { useAuthActions, useAuthToken } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
 import {
@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
   const { signIn, signOut: convexSignOut } = useAuthActions()
   const authToken = useAuthToken()
   const convexUser = useQuery(api.users.current)
-  const claimInvite = useMutation(api.users.claimInvite)
 
   // Keep module token in sync during render so child effects (Layout fetch)
   // see auth before their useEffect runs.
@@ -27,10 +26,29 @@ export function AuthProvider({ children }) {
     return () => bindConvexReactClient(null)
   }, [convex])
 
-  useEffect(() => {
-    if (!isAuthenticated || !convexUser || convexUser.companyId) return
-    claimInvite({}).catch(() => {})
-  }, [isAuthenticated, convexUser, claimInvite])
+  // Invites are no longer claimed automatically (SEC-003): a company-less user
+  // asks to join from /register-company and a company admin approves.
+
+  /**
+   * What this account may do right now, mirroring requireUser on the server:
+   * 'ok' | 'USER_INACTIVE' | 'COMPANY_NOT_APPROVED' (both sign out)
+   * | 'PASSWORD_CHANGE_REQUIRED' (only /account) | 'NO_COMPANY' (only /register-company)
+   */
+  const accessState = useMemo(() => {
+    if (!isAuthenticated || !convexUser) return null
+    const role = convexUser.role || 'user'
+    if (convexUser.active === false) return 'USER_INACTIVE'
+    if (
+      role !== 'super_admin' &&
+      convexUser.companyId &&
+      convexUser.companyStatus !== 'approved'
+    ) {
+      return 'COMPANY_NOT_APPROVED'
+    }
+    if (convexUser.mustChangePassword === true) return 'PASSWORD_CHANGE_REQUIRED'
+    if (role !== 'super_admin' && !convexUser.companyId) return 'NO_COMPANY'
+    return 'ok'
+  }, [isAuthenticated, convexUser])
 
   const user = useMemo(() => {
     if (!isAuthenticated || !convexUser) return null
@@ -42,6 +60,9 @@ export function AuthProvider({ children }) {
       role: convexUser.role || 'user',
       companyId: convexUser.companyId,
       mustChangePassword: convexUser.mustChangePassword === true,
+      active: convexUser.active !== false,
+      companyStatus: convexUser.companyStatus ?? null,
+      accessState,
       activeLocationId: convexUser.activeLocationId,
       locationIds: convexUser.locationIds,
       // Compatibility with former Supabase user shape
@@ -50,7 +71,10 @@ export function AuthProvider({ children }) {
         role: convexUser.role || 'user',
       },
     }
-  }, [isAuthenticated, convexUser])
+  }, [isAuthenticated, convexUser, accessState])
+
+  /** True when tenant data may be loaded (providers skip their queries otherwise). */
+  const canUseApp = accessState === 'ok'
 
   const loading = isLoading || (isAuthenticated && convexUser === undefined)
   const initialized = !isLoading
@@ -121,6 +145,8 @@ export function AuthProvider({ children }) {
 
   const authValue = {
     user,
+    accessState,
+    canUseApp,
     loading,
     initialized,
     isAuthenticated,
