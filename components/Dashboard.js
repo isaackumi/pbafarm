@@ -128,14 +128,6 @@ export default function Dashboard() {
         setRecentStockings(sorted)
 
         const active = cagesList.filter((c) => c.status === 'active')
-        let biomass = 0
-        active.forEach((cage) => {
-          const cageId = cage.id || cage._id
-          const stocking = sorted.find(
-            (s) => (s.cage_id || s.cageId) === cageId,
-          )
-          if (stocking) biomass += Number(stocking.initial_biomass || 0)
-        })
 
         const client = getConvexHttpClient()
         // asOf: the period ends on the client's today (queries should not
@@ -149,13 +141,15 @@ export default function Dashboard() {
           .slice(0, 10)
         // No per-query fallbacks: a failed query must show the error state,
         // not a dashboard of zeros that looks like real numbers.
-        const [kpis, dashSummary, daily] = await Promise.all([
+        const [kpis, dashSummary, daily, growth] = await Promise.all([
           client.query(api.reports.dashboardKpis, scoped),
           client.query(api.reports.dashboardSummary, scoped),
           client.query(
             api.dailyRecords.list,
             withActiveLocation({ dateFrom: trendFrom }),
           ),
+          // Standing biomass from the same KPI definitions as the cage page.
+          client.query(api.cages.growthAll, withActiveLocation({ asOf })),
         ])
         if (cancelled) return
 
@@ -170,7 +164,7 @@ export default function Dashboard() {
 
         setMetrics({
           totalActiveCages: totalActive,
-          totalBiomass: Math.round(biomass),
+          totalBiomass: Math.round(growth?.farm_biomass_kg ?? 0),
           averageFCR:
             kpis?.avg_fcr != null ? Number(kpis.avg_fcr).toFixed(2) : 'N/A',
           mortalityRate:
@@ -303,7 +297,7 @@ export default function Dashboard() {
           hint={`${metrics.totalCages ?? summary?.cages?.total ?? cages.length} total at this location`}
         />
         <StatCard
-          label="Stocked biomass"
+          label="Standing biomass"
           value={metrics.totalBiomass.toLocaleString()}
           unit="kg"
           icon={Package}
