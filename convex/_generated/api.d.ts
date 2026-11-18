@@ -94,6 +94,8 @@ import type * as seed from "../seed.js";
 import type * as stocking from "../stocking.js";
 import type * as userAccounts from "../userAccounts.js";
 import type * as users from "../users.js";
+import type * as sensors from "../sensors.js";
+import type * as weather from "../weather.js";
 import type * as webhooks from "../webhooks.js";
 import type * as integrations_apiHttp from "../integrations/apiHttp.js";
 import type * as publicApi from "../publicApi.js";
@@ -192,6 +194,8 @@ declare const fullApi: ApiFromModules<{
   stocking: typeof stocking;
   userAccounts: typeof userAccounts;
   users: typeof users;
+  sensors: typeof sensors;
+  weather: typeof weather;
   webhooks: typeof webhooks;
   "integrations/apiHttp": typeof integrations_apiHttp;
   publicApi: typeof publicApi;

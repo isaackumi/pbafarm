@@ -111,7 +111,7 @@ async function fetchSite(site: SiteJob): Promise<WeatherDay[] | null> {
 /** Cron entry point: every site with coordinates, in pages of 200. */
 export const refreshAll = internalAction({
   args: { cursor: v.optional(v.number()) },
-  handler: async (ctx, { cursor }) => {
+  handler: async (ctx, { cursor }): Promise<{ sites: number; ok: number }> => {
     const { sites, nextCursor }: { sites: SiteJob[]; nextCursor: number | null } = await ctx.runQuery(
       internal.weather.sitesToFetch,
       { cursor },
