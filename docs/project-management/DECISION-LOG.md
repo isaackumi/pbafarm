@@ -22,6 +22,7 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 | D-012 | Globalization: org-level currency/timezone/units/locale, i18n library deferred | Proposed — awaiting owner approval |
 | D-013 | Insert a Phase 0 "Stabilize" before the brief's Phase 1 | Proposed — awaiting owner approval |
 | D-019 | Adopt Effect incrementally for integration code, via a thin in-house bridge | Accepted — owner request 2026-11-18 |
+| D-020 | No analytics warehouse export yet (ANLY-008 won't do); saved and scheduled reports instead | Proposed — awaiting owner approval |
 
 ---
 
@@ -309,3 +310,22 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 - Contributors learn a second style for integration code; `CLAUDE.md` and doc 19 §7 hold the checklist.
 - `@effect/vitest` waits for a vitest 5 upgrade; tests use plain vitest.
 
+## D-020 — No analytics warehouse export yet (ANLY-008 won't do)
+
+**Status.** Proposed — awaiting owner approval. Tracker: ANLY-008 "Won't do (D-020)".
+
+**Context.** ANLY-008 asks for a warehouse export "only with a recorded justification (D-001)". Doc 02 §7 allows an analytics warehouse only when (a) a required report cannot be served from rollups within Convex read limits (multi-year, multi-farm or cross-tenant analysis), or (b) customers ask for BI-tool access; and not before the rollups have been measured against real tenant sizes. D-014 keeps Convex the system of record. What exists today:
+- ANLY-001 report builder (`convex/reportBuilder.ts`) serves production, feed, mortality, harvest, sales and inventory reports from company-indexed reads capped at 10,000 source rows, with CSV/XLSX export. ANLY-002–004 serve comparisons, forecasts and profitability from `batchStats` and the daily rollups.
+- ANLY-007 scheduled reports email a CSV of any saved report daily, weekly or monthly.
+- ENT-005 gives admins a full organization export (JSON + CSV zip, `governance.requestExport`).
+- INT-004 public API (cursor-paged reads) and INT-005 signed webhooks give pull and push access for external tools.
+
+**Decision.** Do not build a warehouse export now. Neither trigger has fired: no required report exceeds the rollup/read caps (the builder flags truncation when it would), no customer has asked for BI access, and the rollups have not yet been measured at real tenant sizes. Recurring extracts go through ANLY-007 scheduled CSVs; ad-hoc full extracts through ENT-005; integrations through INT-004/005.
+
+**Alternatives considered.**
+1. Minimal opt-in incremental NDJSON/CSV snapshots per company into Convex storage with a watermark. Rejected for now: a correct incremental export needs a change watermark on every exported table. `_creationTime` misses updates and deletes, and most of the ~70 tenant tables have no consistent `updatedAt`; adding one means editing every writer, including the stock/production modules (owned elsewhere). A snapshot-only "incremental" export would silently drop corrections, which is worse than the full ENT-005 export.
+2. Convex streaming export (Fivetran/Airbyte connectors) into a columnar store. Deferred: the right shape when a trigger fires (doc 02 §7), but it is a deployment-level, cross-tenant pipe that needs plan availability, per-tenant filtering downstream and a data processing agreement, all owner decisions.
+
+**Consequences.**
+- No second copy of tenant data to secure, retain (ENT-005 retention) or delete on request.
+- Revisit when any of these happens: a customer asks for BI-tool access; a required report hits the builder's source-row cap for normal tenants; cross-tenant benchmarking is approved; the rollup measurement shows read limits are near. The first step then is Convex streaming export per doc 02 §7, not a hand-built per-table exporter.

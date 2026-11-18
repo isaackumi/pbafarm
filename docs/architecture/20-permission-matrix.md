@@ -302,6 +302,12 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `procurement.receive` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `procurement.update` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `reminders.runForMyCompanyNow` | `org.settings.manage` | yes | yes | no | no | no |
+| `reportBuilder.filterOptions` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportBuilder.list` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportBuilder.preview` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportBuilder.remove` | `reports.manage` | yes | yes | yes | no | no |
+| `reportBuilder.runSaved` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportBuilder.save` | `reports.manage` | yes | yes | yes | no | no |
 | `reports.dailySeries` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.dashboardKpis` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.dashboardSummary` | `reports.view` | yes | yes | yes | yes | yes |
@@ -314,6 +320,14 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `reports.pnlOverheads` | `finance.view` | yes | yes | yes | no | yes |
 | `reports.productionOverview` | `reports.view` | yes | yes | yes | yes | yes |
 | `reports.productionReport` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportSchedules.create` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.deliveries` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.list` | `reports.view` | yes | yes | yes | yes | yes |
+| `reportSchedules.recipientOptions` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.remove` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.sendNow` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.setEnabled` | `reports.manage` | yes | yes | yes | no | no |
+| `reportSchedules.update` | `reports.manage` | yes | yes | yes | no | no |
 | `roles.archive` | `org.roles.manage` | yes | yes | no | no | no |
 | `roles.create` | `org.roles.manage` | yes | yes | no | no | no |
 | `roles.list` | `org.view` | yes | yes | yes | yes | yes |
