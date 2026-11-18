@@ -54,6 +54,7 @@ import type * as integrations_weatherLogic from "../integrations/weatherLogic.js
 import type * as integrations_webhookLogic from "../integrations/webhookLogic.js";
 import type * as inventory from "../inventory.js";
 import type * as inventoryItems from "../inventoryItems.js";
+import type * as invoices from "../invoices.js";
 import type * as lib_analytics from "../lib/analytics.js";
 import type * as lib_apiActor from "../lib/apiActor.js";
 import type * as lib_auditChain from "../lib/auditChain.js";
@@ -136,6 +137,7 @@ import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as sensors from "../sensors.js";
 import type * as species from "../species.js";
+import type * as stockCounts from "../stockCounts.js";
 import type * as stocking from "../stocking.js";
 import type * as tasks from "../tasks.js";
 import type * as terminology from "../terminology.js";
@@ -200,6 +202,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/webhookLogic": typeof integrations_webhookLogic;
   inventory: typeof inventory;
   inventoryItems: typeof inventoryItems;
+  invoices: typeof invoices;
   "lib/analytics": typeof lib_analytics;
   "lib/apiActor": typeof lib_apiActor;
   "lib/auditChain": typeof lib_auditChain;
@@ -282,6 +285,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   sensors: typeof sensors;
   species: typeof species;
+  stockCounts: typeof stockCounts;
   stocking: typeof stocking;
   tasks: typeof tasks;
   terminology: typeof terminology;

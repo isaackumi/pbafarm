@@ -13,6 +13,8 @@ export type StockTxnType =
   | 'adjustment'
   | 'transfer'
   | 'reversal'
+  | 'transfer_out'
+  | 'transfer_in'
 
 const round1 = (n: number) => Math.round(n * 10) / 10
 
@@ -106,7 +108,13 @@ export async function siteStock(
   return { own, shared, available: own + shared }
 }
 
-/** FIFO deduct from lots for a feed type (optionally locked to a location). */
+export type TakenLot = { quantityKg: number; batchNumber?: string; expiryDate?: string }
+
+/**
+ * FIFO deduct from lots for a feed type (optionally locked to a location).
+ * Returns what was taken from each lot, so a transfer can recreate the same
+ * batch and expiry at the destination.
+ */
 export async function deductInventoryLots(
   ctx: MutationCtx,
   args: {
@@ -117,7 +125,8 @@ export async function deductInventoryLots(
   },
 ) {
   let remaining = args.quantityKg
-  if (remaining <= 0) return
+  const taken: TakenLot[] = []
+  if (remaining <= 0) return taken
 
   let lots = await ctx.db
     .query('feedInventory')
@@ -153,8 +162,10 @@ export async function deductInventoryLots(
     } else {
       await ctx.db.patch(lot._id, { quantityKg: next, updatedAt: now })
     }
+    taken.push({ quantityKg: take, batchNumber: lot.batchNumber, expiryDate: lot.expiryDate })
     remaining -= take
   }
+  return taken
 }
 
 /** Kg issued from the store to this cage on this date and not reversed since. */
@@ -365,6 +376,8 @@ export async function applyStockChange(
     bags,
     transactionDate: now,
     referenceId: args.referenceId,
+    batchNumber: args.deltaKg > 0 ? args.batchNumber || undefined : undefined,
+    expiryDate: args.deltaKg > 0 ? args.expiryDate || undefined : undefined,
     notes: args.overrideReason
       ? `${args.notes || ''} [override: ${args.overrideReason}]`.trim()
       : args.notes,
@@ -423,4 +436,92 @@ export async function applyStockChange(
     feedType,
     feedRules,
   }
+}
+
+/**
+ * Move feed between two sites (INV-002, d08 §6.3): lots leave the source
+ * (its own lots first, then unassigned stock) and arrive at the destination
+ * with the same batch and expiry; the ledger gets two rows sharing a
+ * `transferId`: `transfer_out` (negative, source site) and `transfer_in`
+ * (positive, destination site). The company total does not change.
+ */
+export async function transferFeedStock(
+  ctx: MutationCtx,
+  args: {
+    user: Doc<'users'>
+    feedType: Doc<'feedTypes'>
+    quantityKg: number
+    fromLocationId?: Id<'farmLocations'>
+    toLocationId?: Id<'farmLocations'>
+    /** Legacy store labels, used when a side has no farm location. */
+    fromLabel: string
+    toLabel: string
+    /** Replaces the moved lots' batch number when given. */
+    batchNumber?: string
+    notes?: string
+  },
+) {
+  const { feedType, quantityKg } = args
+  const companyId = feedType.companyId ?? args.user.companyId
+  const taken = await deductInventoryLots(ctx, {
+    feedTypeId: feedType._id,
+    quantityKg,
+    location: args.fromLocationId ? undefined : args.fromLabel,
+    locationId: args.fromLocationId,
+  })
+  const batchOverride = args.batchNumber?.trim() || undefined
+  const parts: TakenLot[] = [...taken]
+  const fromLots = taken.reduce((s, p) => s + p.quantityKg, 0)
+  // Stock from before lots were tracked has no lot to move.
+  if (quantityKg - fromLots > 1e-6) parts.push({ quantityKg: quantityKg - fromLots })
+  for (const part of parts) {
+    await addInventoryLot(ctx, {
+      feedTypeId: feedType._id,
+      quantityKg: part.quantityKg,
+      companyId,
+      batchNumber: batchOverride ?? part.batchNumber,
+      expiryDate: part.expiryDate,
+      location: args.toLabel,
+      locationId: args.toLocationId,
+    })
+  }
+
+  // Trace on the rows: the batch when the transfer moved one, the earliest expiry.
+  const batches = new Set(parts.map((p) => batchOverride ?? p.batchNumber))
+  const rowBatch = batches.size === 1 ? [...batches][0] : undefined
+  const rowExpiry = parts.map((p) => p.expiryDate).filter((d): d is string => Boolean(d)).sort()[0]
+
+  const now = Date.now()
+  const bags = bagsFromKg(quantityKg, feedType.bagSizeKg)
+  const notes = args.notes?.trim() || `Transfer ${quantityKg} kg from ${args.fromLabel} → ${args.toLabel}`
+  const outId = await ctx.db.insert('feedInventoryTransactions', {
+    feedTypeId: feedType._id,
+    transactionType: 'transfer_out',
+    quantityKg: -quantityKg,
+    bags,
+    transactionDate: now,
+    notes,
+    batchNumber: rowBatch,
+    expiryDate: rowExpiry,
+    locationId: args.fromLocationId,
+    companyId,
+    createdBy: args.user._id,
+  })
+  const transferId = String(outId)
+  await ctx.db.patch(outId, { transferId })
+  const inId = await ctx.db.insert('feedInventoryTransactions', {
+    feedTypeId: feedType._id,
+    transactionType: 'transfer_in',
+    quantityKg,
+    bags,
+    transactionDate: now,
+    transferId,
+    batchNumber: rowBatch,
+    expiryDate: rowExpiry,
+    notes,
+    locationId: args.toLocationId,
+    companyId,
+    createdBy: args.user._id,
+  })
+  return { transferId, outId, inId }
 }

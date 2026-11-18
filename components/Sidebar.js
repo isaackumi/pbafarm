@@ -136,6 +136,7 @@ const MENU_SECTIONS = {
       { title: 'Stock Items', path: '/inventory/items', permission: 'inventory.view', icon: List },
       { title: 'Lots', path: '/inventory/lots', permission: 'inventory.view', icon: Package, tourId: 'inventory-lots' },
       { title: 'Adjust / Transfer', path: '/inventory/adjust', permission: 'inventory.adjust', icon: Package, tourId: 'inventory-adjust' },
+      { title: 'Stock Counts', path: '/inventory/counts', permission: 'inventory.issue', icon: ClipboardList },
       { title: 'Alerts', path: '/inventory-alerts', permission: 'inventory.view', icon: TriangleAlert },
       { title: 'Transactions', path: '/inventory-transactions', permission: 'inventory.view', icon: FileText, tourId: 'inventory-transactions' },
       { title: 'Analytics', path: '/inventory/analytics', permission: 'inventory.view', icon: TrendingUp },

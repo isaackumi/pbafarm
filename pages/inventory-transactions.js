@@ -6,6 +6,7 @@ import { PageHeader, Button, Field, Input } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
+import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
@@ -22,6 +23,8 @@ function InventoryTransactions() {
   const { user } = useAuth()
   const canAdjust = usePermission('inventory.adjust')
   const { showToast } = useToast()
+  const { locations } = useLocation()
+  const siteName = (id) => (locations || []).find((l) => (l.id || l._id) === id)?.name || '—'
   const reverseTransaction = useMutation(api.inventory.reverseTransaction)
 
   const [dateRange, setDateRange] = useState({
@@ -145,6 +148,9 @@ function InventoryTransactions() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Feed
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                    Site
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
                     kg
                   </th>
@@ -169,6 +175,9 @@ function InventoryTransactions() {
                         {txn.transaction_type}
                       </td>
                       <td className="px-4 py-3 text-sm">{ft?.name || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-muted">
+                        {txn.location_id ? siteName(txn.location_id) : '—'}
+                      </td>
                       <td
                         className={`px-4 py-3 text-sm font-data tabular-nums text-right ${
                           txn.quantity_kg < 0 ? 'text-signal' : 'text-kelp'
@@ -183,7 +192,7 @@ function InventoryTransactions() {
                       <td className="px-4 py-3 text-right">
                         {canReverse &&
                           txn.transaction_type !== 'reversal' &&
-                          txn.transaction_type !== 'transfer' && (
+                          !String(txn.transaction_type).startsWith('transfer') && (
                             <Button
                               variant="ghost"
                               size="sm"

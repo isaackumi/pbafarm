@@ -2,14 +2,14 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { scopedRows } from './lib/scope'
-import { assertOwns, listForCompany, listForCompanyAndLocation, logAudit } from './lib/tenancy'
 import {
-  applyStockChange,
-  bagsFromKg,
-  addInventoryLot,
-  deductInventoryLots,
-  siteStock,
-} from './lib/feedLedger'
+  assertOwns,
+  listForCompany,
+  listForCompanyAndLocation,
+  logAudit,
+  writeLocationId,
+} from './lib/tenancy'
+import { applyStockChange, bagsFromKg, siteStock, transferFeedStock } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
 
@@ -23,6 +23,10 @@ function toClientTransaction(t: any) {
     bags: t.bags,
     transaction_date: t.transactionDate,
     reference_id: t.referenceId,
+    transfer_id: t.transferId ?? null,
+    batch_number: t.batchNumber ?? null,
+    expiry_date: t.expiryDate ?? null,
+    location_id: t.locationId ?? null,
     notes: t.notes,
     company_id: t.companyId,
     created_by: t.createdBy,
@@ -150,6 +154,8 @@ export const listTransactions = query({
         v.literal('adjustment'),
         v.literal('transfer'),
         v.literal('reversal'),
+        v.literal('transfer_out'),
+        v.literal('transfer_in'),
       ),
     ),
     dateFrom: v.optional(v.number()),
@@ -210,6 +216,8 @@ export const createAdjustment = mutation({
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
     location: v.optional(v.string()),
+    /** Site of the adjustment (INV-002); defaults to the caller's active site. */
+    locationId: v.optional(v.id('farmLocations')),
     batchNumber: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
   },
@@ -222,6 +230,8 @@ export const createAdjustment = mutation({
     if (!feedType) throw new Error('Feed type not found')
     const allowed = await listForCompany(user, [feedType])
     if (!allowed.length) throw new Error('Access denied')
+    const locationId = await writeLocationId(ctx, user, args.locationId)
+    const site = locationId ? await ctx.db.get(locationId) : null
 
     const { transactionId, previousStock, nextStock } = await applyStockChange(ctx, {
       user,
@@ -232,7 +242,8 @@ export const createAdjustment = mutation({
       notes: args.notes,
       allowNegative: args.allowNegative,
       overrideReason: args.overrideReason,
-      location: args.location,
+      location: args.location || site?.name,
+      locationId,
       batchNumber: args.batchNumber,
       expiryDate: args.expiryDate,
     })
@@ -243,16 +254,21 @@ export const createAdjustment = mutation({
       recordId: transactionId,
       newValues: {
         ...args,
+        locationId,
         oldStock: previousStock,
         newStock: nextStock,
       },
+      locationId,
     })
 
     return transactionId
   },
 })
 
-/** Move stock between farm locations (or legacy store labels) without changing company total. */
+/**
+ * Move stock between farm locations (or legacy store labels) without changing
+ * the company total. Two ledger rows (INV-002); returns the transfer_in row.
+ */
 export const createTransfer = mutation({
   args: {
     feedTypeId: v.id('feedTypes'),
@@ -313,45 +329,27 @@ export const createTransfer = mutation({
       }
     }
 
-    await deductInventoryLots(ctx, {
-      feedTypeId: args.feedTypeId,
+    const { transferId, outId, inId } = await transferFeedStock(ctx, {
+      user,
+      feedType,
       quantityKg: args.quantityKg,
-      location: fromLocationId ? undefined : fromLabel,
-      locationId: fromLocationId,
-    })
-    await addInventoryLot(ctx, {
-      feedTypeId: args.feedTypeId,
-      quantityKg: args.quantityKg,
-      companyId: feedType.companyId ?? user.companyId,
+      fromLocationId,
+      toLocationId,
+      fromLabel,
+      toLabel,
       batchNumber: args.batchNumber,
-      location: toLabel,
-      locationId: toLocationId,
-    })
-
-    const now = Date.now()
-    const transactionId = await ctx.db.insert('feedInventoryTransactions', {
-      feedTypeId: args.feedTypeId,
-      transactionType: 'transfer',
-      quantityKg: args.quantityKg,
-      bags: bagsFromKg(args.quantityKg, feedType.bagSizeKg),
-      transactionDate: now,
-      notes:
-        args.notes ||
-        `Transfer ${args.quantityKg} kg from ${fromLabel} → ${toLabel}`,
-      locationId: toLocationId || fromLocationId,
-      companyId: feedType.companyId ?? user.companyId,
-      createdBy: user._id,
+      notes: args.notes,
     })
 
     await logAudit(ctx, {
       actionType: 'transfer',
       tableName: 'feedInventory',
-      recordId: transactionId,
-      newValues: args,
+      recordId: transferId,
+      newValues: { ...args, outId, inId },
       locationId: toLocationId || fromLocationId,
     })
 
-    return transactionId
+    return inId
   },
 })
 
@@ -373,8 +371,12 @@ export const reverseTransaction = mutation({
     if (txn.transactionType === 'reversal') {
       throw new Error('Cannot reverse a reversal')
     }
-    if (txn.transactionType === 'transfer') {
-      throw new Error('Transfer reversals are not supported yet — reverse with an adjustment')
+    if (
+      txn.transactionType === 'transfer' ||
+      txn.transactionType === 'transfer_out' ||
+      txn.transactionType === 'transfer_in'
+    ) {
+      throw new Error('Transfer reversals are not supported yet — transfer the feed back instead')
     }
     // Daily usage belongs to a daily record: reversing the ledger row alone
     // leaves the record counting the feed, and a later edit of the record
@@ -401,6 +403,7 @@ export const reverseTransaction = mutation({
       transactionType: 'reversal',
       referenceId: String(args.transactionId),
       notes: `Reversal of ${args.transactionId}: ${args.reason}`,
+      locationId: txn.locationId,
       allowNegative: true,
       overrideReason: args.reason,
     })
@@ -561,6 +564,71 @@ export const stockTally = query({
         delta: Math.round((feedType.currentStock - ledgerSum) * 1000) / 1000,
         ok: Math.abs(feedType.currentStock - ledgerSum) < 0.001,
       })
+    }
+    return rows
+  },
+})
+
+/**
+ * Per-site check (INV-002, R03 Phase 9 "site ledger balance = lots"): for each
+ * feed type, Σ ledger kg booked to each site against Σ lot kg held there.
+ * Rows with no site are grouped under `location_id: null`. Legacy one-row
+ * `transfer` rows never recorded their source site, so they are left out and
+ * counted in `legacy_transfers`; a site whose usage drew on unassigned stock
+ * shows a difference that the unassigned group offsets.
+ */
+export const siteLedgerTally = query({
+  args: { feedTypeId: v.optional(v.id('feedTypes')) },
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
+    let feedTypes = await scopedRows(ctx, user, 'feedTypes')
+    feedTypes = await listForCompany(user, feedTypes)
+    if (args.feedTypeId) feedTypes = feedTypes.filter((f) => f._id === args.feedTypeId)
+
+    const round = (n: number) => Math.round(n * 1000) / 1000
+    const rows = []
+    for (const feedType of feedTypes) {
+      if (feedType.deletedAt) continue
+      const txns = await ctx.db
+        .query('feedInventoryTransactions')
+        .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
+        .collect()
+      const lots = await ctx.db
+        .query('feedInventory')
+        .withIndex('by_feed_type', (q) => q.eq('feedTypeId', feedType._id))
+        .collect()
+      const sites = new Map<string, { ledger: number; lots: number }>()
+      const at = (id?: string) => {
+        const key = id ?? ''
+        if (!sites.has(key)) sites.set(key, { ledger: 0, lots: 0 })
+        return sites.get(key)!
+      }
+      let legacyTransfers = 0
+      for (const t of txns) {
+        if (t.transactionType === 'transfer') {
+          legacyTransfers += 1
+          continue
+        }
+        at(t.locationId).ledger += t.quantityKg
+      }
+      for (const l of lots) at(l.locationId).lots += l.quantityKg
+      for (const [key, s] of sites) {
+        const locationId = (key || null) as Id<'farmLocations'> | null
+        if (locationId && !(await listForCompany(user, [{ companyId: feedType.companyId, locationId }])).length) {
+          continue
+        }
+        const delta = round(s.ledger - s.lots)
+        rows.push({
+          feed_type_id: feedType._id,
+          feed_type_name: feedType.name,
+          location_id: locationId,
+          ledger_kg: round(s.ledger),
+          lots_kg: round(s.lots),
+          delta,
+          ok: Math.abs(delta) < 0.001,
+          legacy_transfers: legacyTransfers,
+        })
+      }
     }
     return rows
   },

@@ -37,9 +37,11 @@ export default function InventoryOverviewPage() {
 }
 
 const IN_TYPES = new Set(['purchase', 'adjustment', 'transfer'])
+// The two legs of a site-to-site transfer (INV-002) cancel out company-wide.
+const isTransferLeg = (t) => t.transaction_type === 'transfer_out' || t.transaction_type === 'transfer_in'
 
 function processTransactionData(data) {
-  const grouped = data.reduce((acc, item) => {
+  const grouped = data.filter((t) => !isTransferLeg(t)).reduce((acc, item) => {
     const date = new Date(item.transaction_date).toLocaleDateString()
     if (!acc[date]) acc[date] = { in: 0, out: 0 }
     const qty = Math.abs(item.quantity_kg || 0)
@@ -113,13 +115,13 @@ function InventoryOverview() {
       // Days of cover: stock on hand ÷ average daily use over the last 30 days.
       daysOfCover: (() => {
         const usedKg = txns
-          .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal')
+          .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal' && !isTransferLeg(t))
           .reduce((sum, t) => sum - Number(t.quantity_kg), 0)
         const perDay = usedKg / 30
         return perDay > 0 ? Math.round(totalItems / perDay) : null
       })(),
       usedKg30: txns
-        .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal')
+        .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal' && !isTransferLeg(t))
         .reduce((sum, t) => sum - Number(t.quantity_kg), 0),
     }
   }, [inventoryItems, transactions])

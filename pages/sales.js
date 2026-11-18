@@ -12,6 +12,7 @@ import {
   Input,
   Select,
   Textarea,
+  TabBar,
 } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -22,6 +23,10 @@ import LocationMetaField from '../components/LocationMetaField'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 import { errorCode, errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
+import SaleDetailPanel from '../components/sales/SaleDetailPanel'
+import ReceivablesCard from '../components/sales/ReceivablesCard'
+import CustomersPanel from '../components/sales/CustomersPanel'
 
 export default function SalesPage() {
   return (
@@ -39,6 +44,9 @@ function Sales() {
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency } = useCurrency()
+  const t = useT()
+  const [tab, setTab] = useState('sales')
+  const [selectedId, setSelectedId] = useState(null)
 
   const harvests = useQuery(
     api.harvest.list,
@@ -71,6 +79,10 @@ function Sales() {
     contactName: '',
   })
   const [saving, setSaving] = useState(false)
+  const selectedSale = useMemo(
+    () => (sales || []).find((s) => (s.id || s._id) === selectedId) || null,
+    [sales, selectedId],
+  )
   // Set when the server refuses a sale inside a withdrawal period (PROD-012).
   const [withdrawalBlock, setWithdrawalBlock] = useState(null)
   const [overrideReason, setOverrideReason] = useState('')
@@ -185,6 +197,21 @@ function Sales() {
         }
       />
 
+      <div className="mb-6">
+        <TabBar
+          tabs={[
+            { id: 'sales', label: t('sales.tabSales') },
+            { id: 'customers', label: t('sales.customers') },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === 'customers' && <CustomersPanel canEdit={isAdmin} />}
+
+      {tab === 'sales' && (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="page-card p-4">
           <p className="text-xs text-muted font-semibold">Sales</p>
@@ -454,6 +481,18 @@ function Sales() {
         </FormCard>
       )}
 
+      {selectedSale && (
+        <SaleDetailPanel
+          key={`${selectedSale.id}-${selectedSale.updated_at}`}
+          sale={selectedSale}
+          customers={customers}
+          canCorrect={isAdmin}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
+      <ReceivablesCard locationId={activeLocationId} onOpenSale={setSelectedId} />
+
       <div className="page-card overflow-hidden">
         <div className="px-6 py-4 border-b border-foam-deep">
           <h3 className="text-lg font-medium text-chart-ink">Recent sales</h3>
@@ -490,11 +529,12 @@ function Sales() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Pay
                   </th>
-                  {isAdmin && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Actions
-                    </th>
-                  )}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
+                    {t('sales.balance')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
+                    {t('sales.actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-foam-deep">
@@ -518,9 +558,24 @@ function Sales() {
                     </td>
                     <td className="px-4 py-3 text-sm capitalize">
                       {sale.payment_status}
+                      {sale.invoice_number && (
+                        <span className="ml-2 text-xs text-muted font-data">
+                          {sale.invoice_number}
+                        </span>
+                      )}
                     </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-sm text-right font-data">
+                      {sale.balance > 0 ? formatCurrency(sale.balance) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="text-sm text-lagoon-800 hover:underline"
+                        onClick={() => setSelectedId(sale.id || sale._id)}
+                      >
+                        {t('sales.open')}
+                      </button>
+                      {isAdmin && (
                         <button
                           type="button"
                           className="text-sm text-signal hover:underline"
@@ -529,14 +584,14 @@ function Sales() {
                               await removeSale({ id: sale.id || sale._id })
                               showToast('success', 'Sale deleted')
                             } catch (err) {
-                              showToast('error', err.message)
+                              showToast('error', errorMessage(err))
                             }
                           }}
                         >
                           Delete
                         </button>
-                      </td>
-                    )}
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -544,6 +599,8 @@ function Sales() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }

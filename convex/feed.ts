@@ -246,9 +246,11 @@ export const createFeedType = mutation({
     bagSizeKg: v.optional(v.number()),
     supplierId: v.optional(v.id('feedSuppliers')),
     active: v.optional(v.boolean()),
+    /** Site holding the opening stock (INV-002); defaults to the caller's active site. */
+    openingLocationId: v.optional(v.id('farmLocations')),
   },
   returns: v.id('feedTypes'),
-  handler: async (ctx, args) => {
+  handler: async (ctx, { openingLocationId, ...args }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
     const now = Date.now()
     const opening = Math.max(0, args.currentStock ?? 0)
@@ -278,6 +280,7 @@ export const createFeedType = mutation({
         transactionType: 'adjustment',
         referenceId: String(id),
         notes: 'Opening stock',
+        locationId: await writeLocationId(ctx, user, openingLocationId),
       })
     }
 
@@ -526,6 +529,8 @@ export const updatePurchase = mutation({
           notes: `Purchase qty adjust ${purchase.quantity} → ${nextQty}`,
           batchNumber: args.batchNumber ?? purchase.batchNumber,
           expiryDate: args.expiryDate ?? purchase.expiryDate,
+          // The purchase's site (INV-002), not an unassigned lot.
+          locationId: purchase.locationId,
         })
       }
     }
@@ -567,6 +572,7 @@ export const voidPurchase = mutation({
         notes: args.reason
           ? `Void purchase: ${args.reason}`
           : `Void purchase ${args.id}`,
+        locationId: purchase.locationId,
         allowNegative: true,
         overrideReason: args.reason || 'Void purchase',
       })

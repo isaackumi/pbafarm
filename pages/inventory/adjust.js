@@ -83,6 +83,7 @@ function InventoryAdjust() {
           quantityKg: qty,
           notes: notes.trim(),
           location: locationName(locId),
+          locationId: locId || undefined,
           batchNumber: batchNumber || undefined,
         })
         showToast('success', 'Stock adjusted')
@@ -120,7 +121,7 @@ function InventoryAdjust() {
           { label: 'Inventory', href: '/inventory/overview' },
           { label: 'Adjust' },
         ]}
-        description="Correct on-hand stock or move lots between farm locations."
+        description="Correct on-hand stock at a site, or move lots between sites (an out row at the source and an in row at the destination, keeping batch and expiry)."
         related={[
           { label: 'Ledger', href: '/inventory-transactions' },
           { label: 'Lots', href: '/inventory/lots' },

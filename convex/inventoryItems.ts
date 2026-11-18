@@ -36,7 +36,7 @@ async function siteFor(ctx: MutationCtx, user: Doc<'users'>, locationId?: Id<'fa
   return (await writeLocationId(ctx, user, locationId)) || (await ensureDefaultLocation(ctx, user))
 }
 
-async function stockRow(ctx: QueryCtx | MutationCtx, itemId: Id<'inventoryItems'>, locationId: Id<'farmLocations'>) {
+export async function stockRow(ctx: QueryCtx | MutationCtx, itemId: Id<'inventoryItems'>, locationId: Id<'farmLocations'>) {
   return await ctx.db
     .query('inventoryItemStock')
     .withIndex('by_item_and_location', (q) => q.eq('itemId', itemId).eq('locationId', locationId))
@@ -44,7 +44,7 @@ async function stockRow(ctx: QueryCtx | MutationCtx, itemId: Id<'inventoryItems'
 }
 
 /** Apply one signed movement at a site. Stock never goes below zero. */
-async function move(
+export async function move(
   ctx: MutationCtx,
   user: Doc<'users'>,
   item: Doc<'inventoryItems'>,

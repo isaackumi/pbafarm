@@ -761,6 +761,11 @@ async function reverseMovementDoc(
   reason: string,
   opts: { keepSale?: boolean } = {},
 ) {
+  const sale = mv.saleId && !opts.keepSale ? await ctx.db.get(mv.saleId) : null
+  // Money received stays traceable (INV-009): remove the payments first.
+  if (sale?.amountPaid) {
+    throw userError('CONFLICT', 'Payments are recorded on this sale. Remove them on the Sales page before reversing.')
+  }
   const r = await engine.reverseOperation(
     ctx,
     { companyId: m.companyId, userId: m.user._id },
@@ -768,9 +773,12 @@ async function reverseMovementDoc(
     reason,
   )
   await ctx.db.patch(mv._id, { status: 'reversed', updatedAt: Date.now() })
-  if (mv.saleId && !opts.keepSale) {
-    const sale = await ctx.db.get(mv.saleId)
-    if (sale) await ctx.db.delete(sale._id)
+  if (sale) {
+    if (sale.invoiceId) {
+      const invoice = await ctx.db.get(sale.invoiceId)
+      if (invoice && !invoice.voidedAt) await ctx.db.patch(invoice._id, { voidedAt: Date.now(), updatedAt: Date.now() })
+    }
+    await ctx.db.delete(sale._id)
   }
   await logAudit(ctx, {
     actionType: 'reverse',
