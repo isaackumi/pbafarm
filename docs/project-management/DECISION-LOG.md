@@ -237,3 +237,38 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 **Consequences.** Phase 1 starts later; in exchange, the stockEvents backfill (M7) starts from counts that are no longer being corrupted, and the tenancy migration starts from enforced company boundaries.
 
 **Note added after verification (2026-11-18).** The brief assumed PRs #7–#14 were open and that the S5 defect had to be fixed before #8 merged. GitHub shows #7, #8 and #13 merged into `main` (carrying #9–#12) and deployed to `vibrant-stork-860` by `convex-deploy.yml` (runs at 00:54 and 09:43 UTC on 2026-11-18). S5 is therefore live, and #7's daily-record edit UI makes S8 reachable (doc 09 says S8 "becomes Critical as soon as an edit UI for daily records ships"). PR #14 was merged into `feat/per-site-stock` after #13 had merged, so its commit `89d4f9d` is not on `main`. Phase 0 therefore starts with OPS-000 (reconcile PRs) and treats S5/S8 as hotfixes. See `docs/roadmap/03-development-roadmap.md` §0.1.
+
+
+---
+
+## D-014 — Convex stays the system of record; Cloudflare only on recorded triggers
+
+**Status.** Proposed — awaiting owner approval (2026-11-18).
+
+**Context.** The owner uses Cloudflare (R2, Workers) elsewhere and asked whether it should join this platform. It is not used today (`docs/architecture/14-cloudflare-adoption-assessment.md`).
+
+**Decision.** Convex remains the database and source of truth for business records. Cloudflare services are adopted only when the trigger recorded for each in doc 14 fires. D1, KV and Durable Objects are not used as application databases.
+
+**Alternatives considered.** Adopt R2/Workers/Queues now (rejected: adds a vendor, credentials and failure modes with no current workload that needs them); D1 for some modules (rejected: two sources of truth, no transactional consistency with Convex).
+
+**Consequences.** One backend to operate in Phase 0–7; Cloudflare entry points are designed in (`files` abstraction, Convex-issued presigned URLs) so adoption later is incremental.
+
+## D-015 — Frontend hosting stays on Vercel (Pro)
+
+**Status.** Proposed — awaiting owner approval.
+
+**Decision.** Keep Next.js on Vercel. Re-evaluate Workers/OpenNext only on the triggers in doc 14 §3.3 (Vercel cost above ~$100/month, a frontend residency rule, or the owner standardizing on Cloudflare). Confirm the Vercel plan: Hobby forbids commercial use (CF-001, OPS-001).
+
+**Alternatives.** OpenNext on Cloudflare Workers now (rejected: adapter floor/maturity caveats, migration risk for ~$15/month saving).
+
+## D-016 — Provider-neutral file storage; Convex storage first, R2 behind it when triggered
+
+**Status.** Proposed — awaiting owner approval.
+
+**Decision.** Files are tracked in a `files` table in Convex (companyId, provider, key, size, mime, entity link). Start on Convex file storage; add R2 behind the same table when doc 16's trigger fires (~300 orgs or full-size media). Convex issues every upload/download URL after the permission check; object keys are prefixed `{env}/{companyId}/…`; photos are compressed in the browser; Cloudflare Images is not used.
+
+## D-017 — Bot protection and rate limiting
+
+**Status.** Proposed — awaiting owner approval.
+
+**Decision.** Turnstile on open sign-up/registration/reset/invite flows, verified in a Convex action, when sign-up stays open (Q-011) or abuse appears. Application rate limiting uses `@convex-dev/rate-limiter`. WAF, Workers, Queues and Workflows wait for their triggers.

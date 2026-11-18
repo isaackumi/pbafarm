@@ -249,3 +249,28 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 | I18N-003 | Multi-currency with FX | Rates and reporting currency | P3 | Q-020 | Not started | d13 §31 | `lib/currencyUtils.js` | None | — |
 | I18N-004 | Country settings and compliance templates | — | P3 | TRACE-006 | Not started | — | — | None | — |
 | PLAT-003 | Return validators; no `any` ctx | Progressive across modules | P2 | — | Not started | d04 F12, F22 | all `convex/*.ts` | n/a | All exports have `returns` |
+
+
+## Added 2026-11-18 (after discovery)
+
+### Cloudflare evaluation (proposed — see docs/architecture/17-cloudflare-adoption-roadmap.md)
+
+| ID | Feature | Priority | Dependencies | Status | Docs |
+|---|---|---|---|---|---|
+| CF-001 | Record the Cloudflare position; confirm Vercel plan; Next ≥ 15.5.29 | P1 | OPS-001, OPS-003 | Designed | arch 14, 17 |
+| CF-002 | Production DNS on Cloudflare (DNS-only) | P2 | — | Not started | arch 17 |
+| CF-003 | Turnstile on sign-up, registration, reset, invite | P2 | SEC-001, Q-011, ORG-004 | Designed | arch 14, 17 |
+| CF-004 | `files` table on Convex storage | P2 | PERM-002, SEC-002 | Designed | arch 16 |
+| CF-005 | R2 provider behind `files` | P3 | CF-004, D-016 | Not started | arch 16, 17 |
+| CF-006 | Copy existing files to R2 + reconciliation job | P3 | CF-005 | Not started | arch 17 |
+| CF-007 | Cloudflare Access on the staging frontend | P2 | — | Not started | arch 17 |
+| CF-008 | IoT ingestion Worker | P3 | INT-004, INT-007 | Not started | arch 14 |
+| CF-009 | WAF in front of Convex custom domains | P4 | — | Not started | arch 14 |
+| CF-010 | Hosting re-evaluation | P4 | — | Not started | arch 14 §3.3 |
+
+### Owner requests
+
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
+|---|---|---|---|---|---|---|
+| SEC-006 | Passwordless phone login | An admin registers a staff member's mobile number; the worker signs in with a one-time SMS/WhatsApp code (Convex Auth Phone/OTP provider), no password. Email + password remains for office staff. | P1 (after Phase 0) | SEC-001, SEC-003, INT SMS provider choice (Q-010), rate limiting (D-017) | Designed — blocked on provider choice | Admin can add/change a user's phone; code expires in ≤10 min, single use, ≤5 attempts; per-number and per-IP send limits; works on the installed PWA; audit entry on phone change; tenant isolation tests. |
+| OPS-004 | Staging environment and safe cutover | `release/phase0` deployed to a separate staging Convex deployment loaded with a copy of live data; Vercel preview points at it; cutover = freeze → final export/import into the production deployment → run M1 → switch Vercel env; old deployment kept as rollback. | P0 | Owner creates staging Convex project + Vercel preview env | Ready for implementation (blocked on owner access) | PBA staff sign in on staging with existing passwords; all live rows present after M1; live portal unaffected until cutover; rollback tested. |

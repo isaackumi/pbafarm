@@ -162,6 +162,8 @@ No Sentry, PostHog, Datadog, LogRocket, Vercel Analytics/Speed Insights, Google 
 ## 33. Vercel
 Inferred from README ("Frontend (Vercel)") and the Vercel bot branch `origin/vercel/react-server-components-cve-vu-t2mqt7` (2026-09-02). No `vercel.json`, no `.vercel/` in the repo. Project settings, env vars, domains and which Convex URL production uses cannot be verified. **Unknown – requires verification.**
 
+Cloudflare: not used by this project (verified 2026-11-18; evaluated as a future option in docs/architecture/14–17).
+
 ## 34. GitHub Actions
 `ci.yml` (test → lint [non-gating] → build) and `convex-deploy.yml` (`npx convex deploy` on `main` with a dev deploy key; no tests run before deploy). **Implemented but incomplete** (doc 12 §7).
 

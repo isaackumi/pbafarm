@@ -19,6 +19,8 @@ PBA Farm is a Next.js 15 **pages-router** single-page application, fully client-
 | Offline | `public/sw.js` app-shell cache; `lib/offlineOutbox.js` for daily-entry batches only | doc 11 §5–§6; doc 13 §15–§16 |
 | Hosting | Frontend on Vercel (inferred); backend deployed by `convex-deploy.yml` on push to `main` with a dev key | doc 01 §1, §5; doc 12 §7 |
 
+Cloudflare: not used by this project (verified 2026-11-18; evaluated as a future option in docs/architecture/14–17).
+
 ## 2. Component diagram
 
 ```mermaid

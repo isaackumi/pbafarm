@@ -27,6 +27,65 @@ Status: proposed, 2026-11-18. Binding inputs: decisions D-001 … D-013 (recorde
 | J. Global support | currencies, languages, time zones, units, country settings | `convex/kernel/format/` (server) + `lib/format/` (client) | `companies.settings.locale` extended; `users.preferredLanguage` | — | Phase 1–2 (fields), i18n library when first non-English locale is committed (D-012) |
 | Platform | super-admin, migrations, ops | `convex/platform/` | reads all; writes via owning domain libs | authz (platform admin) | Phase 0 (OPS-001, SEC-002) |
 
+### 2.1 Target component diagram
+
+Solid lines are the committed target. Dashed nodes and edges are **proposed, conditional** Cloudflare components that are adopted only when the trigger recorded in `14-cloudflare-adoption-assessment.md` fires; none is used today. Convex remains the source of truth in every variant.
+
+```mermaid
+flowchart LR
+  subgraph Client["Browser / installed PWA"]
+    UI["Next.js pages router<br/>features/* hooks · lib/format · lib/offline (IndexedDB outbox)"]
+    TS["Turnstile widget<br/>(proposed: when sign-up is open)"]
+  end
+
+  subgraph Host["Frontend host"]
+    VERCEL["Vercel (Pro)<br/>static pages + CDN"]
+  end
+
+  subgraph Convex["Convex — system of record"]
+    AUTH["Convex Auth"]
+    KERNEL["kernel: requireMember · events · idempotency · format"]
+    DOMAINS["domains: org · production(engine) · inventory · finance<br/>customization · automation · integrations · trace · analytics"]
+    HTTP["http.ts httpActions<br/>/webhooks/* · /api/v1/* · /ingest/v1/*"]
+    SCHED["crons + scheduler<br/>workpool (deliveries) · workflow (if needed)"]
+    DB[("tables incl. files (metadata, provider)<br/>domainEvents · auditLogs · rollups")]
+    FS[("Convex file storage<br/>(default provider)")]
+  end
+
+  subgraph CF["Cloudflare (proposed, conditional)"]
+    R2[("R2 bucket per env<br/>{env}/{companyId}/… keys")]
+    WK["Ingestion Worker<br/>(only if IoT volume requires)"]
+    WAF["WAF / proxy for Convex custom domains<br/>(enterprise scale only)"]
+  end
+
+  PROV["SMS · WhatsApp · email · weather · LLM providers"]
+  DEV["IoT devices / gateways"]
+
+  UI --> VERCEL
+  UI -- "WebSocket / HTTPS + JWT" --> KERNEL
+  UI --> AUTH
+  KERNEL --> DOMAINS --> DB
+  DOMAINS --> FS
+  SCHED --> DOMAINS
+  HTTP --> DOMAINS
+  DOMAINS -- "actions via adapters" --> PROV
+  PROV -- "signed callbacks" --> HTTP
+  DEV -- "API key" --> HTTP
+
+  TS -.-> UI
+  DOMAINS -. "siteverify (action)" .-> TS
+  DOMAINS -. "issues presigned PUT/GET after authz" .-> R2
+  UI -. "direct upload / download with presigned URL" .-> R2
+  DEV -.-> WK
+  WK -. "signed service call; never writes records" .-> HTTP
+  UI -.-> WAF
+  WAF -.-> KERNEL
+
+  classDef proposed stroke-dasharray: 5 5,fill:#ffffff,color:#333333;
+  class TS,R2,WK,WAF proposed;
+  style CF stroke-dasharray: 5 5
+```
+
 ## 3. Convex layout
 
 ```
@@ -148,6 +207,17 @@ All money, number, date and unit rendering goes through `lib/format`. The org se
 | Specialized background processing | Accounting syncs or reports that run longer than action limits | Workpool/scheduler chunking has been tried | Queue worker outside Convex calling internal endpoints via signed `httpAction` |
 | Local mobile database | Already in scope as IndexedDB in the PWA (`08`); not a server component | — | — |
 | Native mobile app | PWA cannot meet a hard requirement (background sync on iOS, Bluetooth scales/probes) | D-010: PWA first | React Native / Expo sharing `features/` logic |
+
+### 7.1 Infrastructure options (proposed)
+
+Cloudflare is not used by this project (verified 2026-11-18). It was evaluated as an optional infrastructure provider for the candidates above; the result is trigger-based adoption with Convex as the source of truth, no D1/KV/Durable Objects as a second application database, and the frontend staying on Vercel.
+
+- `14-cloudflare-adoption-assessment.md` — per-service assessment (R2, Workers, Queues, Workflows, Images, CDN, Turnstile, WAF, Access, DNS, Email, D1/KV/DO) and the Vercel vs OpenNext-on-Workers hosting comparison, each with an adoption stage.
+- `15-cloudflare-vs-convex-responsibility-matrix.md` — owner now / owner target / boundary contract per capability (Workers never write business records; Convex issues all presigned URLs; file metadata in Convex with `companyId`).
+- `16-storage-cost-and-scaling-assessment.md` — Convex storage vs R2 cost model at 10/100/1,000 organizations, break-even, residency, backup/lifecycle, and the provider-neutral `files` table.
+- `17-cloudflare-adoption-roadmap.md` — stages mapped to roadmap phases, proposed `CF-0xx` tracker ids and decisions to log.
+
+The "Object storage beyond Convex" row above is refined by doc 16: photos and PDFs stay on Convex storage behind a `files` abstraction until volume, original-resolution media, expiring-link or jurisdiction requirements justify R2.
 
 ## 8. Proposed changes and their impact (Rule 3)
 
