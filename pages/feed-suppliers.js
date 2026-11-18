@@ -284,13 +284,13 @@ function FeedSuppliers() {
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
                 {success}
               </div>
             )}
@@ -305,7 +305,7 @@ function FeedSuppliers() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -319,7 +319,7 @@ function FeedSuppliers() {
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
@@ -328,13 +328,13 @@ function FeedSuppliers() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save
@@ -358,13 +358,13 @@ function FeedSuppliers() {
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
                 {success}
               </div>
             )}
@@ -379,7 +379,7 @@ function FeedSuppliers() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -393,7 +393,7 @@ function FeedSuppliers() {
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="https://example.com"
                 />
               </div>
@@ -402,13 +402,13 @@ function FeedSuppliers() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes

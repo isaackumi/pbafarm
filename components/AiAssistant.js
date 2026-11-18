@@ -226,7 +226,7 @@ ${JSON.stringify(farmContext, null, 2)}`
   }
 
   const fieldClass =
-    'w-full border border-input-border rounded-md px-2 py-1.5 text-sm font-medium bg-white transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800'
+    'w-full border border-input-border rounded-lg px-2 py-1.5 text-sm font-medium bg-white transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800'
 
   return (
     <>
@@ -252,7 +252,7 @@ ${JSON.stringify(farmContext, null, 2)}`
         >
           <div className="px-4 py-3 bg-lagoon-950 text-white flex items-center justify-between shrink-0">
             <div className="min-w-0">
-              <p className="font-display font-bold text-sm">Assistant</p>
+              <p className="font-display font-semibold text-sm">Assistant</p>
               <p className="text-xs text-white/70 font-medium truncate">
                 {provider.label}
                 {hasLocalKey
@@ -265,7 +265,7 @@ ${JSON.stringify(farmContext, null, 2)}`
             <button
               type="button"
               onClick={() => setShowKey((s) => !s)}
-              className="p-2 rounded-md cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               aria-label="Provider and API key settings"
               aria-expanded={showKey}
             >
@@ -340,7 +340,7 @@ ${JSON.stringify(farmContext, null, 2)}`
                 placeholder={provider.defaultModel}
                 className={fieldClass}
               />
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 Prefer server env keys (e.g. GEMINI_API_KEY in .env.local). A
                 key saved here overrides env for this browser only.
                 {hasEnvKey ? ' Env key detected for this provider.' : ''}
@@ -350,7 +350,7 @@ ${JSON.stringify(farmContext, null, 2)}`
                 <button
                   type="button"
                   onClick={saveKey}
-                  className="flex-1 bg-lagoon-800 text-white text-xs font-bold py-1.5 rounded-md cursor-pointer transition-colors duration-200 hover:bg-lagoon-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:ring-offset-1"
+                  className="flex-1 bg-lagoon-800 text-white text-xs font-semibold py-1.5 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-lagoon-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:ring-offset-1"
                 >
                   Save
                 </button>
@@ -397,7 +397,7 @@ ${JSON.stringify(farmContext, null, 2)}`
                 }
               }}
               placeholder="Ask about your farm…"
-              className="flex-1 border border-input-border rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800"
+              className="flex-1 border border-input-border rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 focus-visible:border-lagoon-800"
               aria-label="Message to assistant"
               disabled={busy}
             />
@@ -405,7 +405,7 @@ ${JSON.stringify(farmContext, null, 2)}`
               type="button"
               onClick={send}
               disabled={busy || !input.trim()}
-              className="h-10 w-10 rounded-md bg-kelp text-white flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-kelp-soft disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp focus-visible:ring-offset-1"
+              className="h-10 w-10 rounded-lg bg-kelp text-white flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-kelp-soft disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-kelp focus-visible:ring-offset-1"
               aria-label="Send message"
             >
               {busy ? (

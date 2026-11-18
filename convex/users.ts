@@ -270,8 +270,12 @@ export const claimInvite = mutation({
   },
 })
 
-/** Dev/bootstrap: promote a user to super_admin by email after first signup. */
-export const promoteToSuperAdmin = mutation({
+/**
+ * Bootstrap only: promote a user to super_admin by email.
+ * Internal so it can only be run from the CLI/dashboard:
+ *   npx convex run users:promoteToSuperAdmin '{"email":"you@example.com"}'
+ */
+export const promoteToSuperAdmin = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
     const user = await ctx.db

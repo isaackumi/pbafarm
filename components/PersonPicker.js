@@ -4,7 +4,7 @@ import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 
 const FIELD_CLASS =
-  'w-full rounded-xl border border-foam-deep bg-surface px-3.5 py-3 text-[15px] text-chart-ink placeholder:text-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
+  'w-full rounded-xl border border-foam-deep bg-surface px-3.5 py-3 text-sm text-chart-ink placeholder:text-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-lagoon-800/30 focus:border-lagoon-800 transition-colors disabled:opacity-50 min-h-12'
 
 /**
  * Searchable person field: pick a company user or type a free-text name.

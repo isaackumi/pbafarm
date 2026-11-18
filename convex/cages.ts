@@ -198,6 +198,10 @@ export const update = mutation({
     if (!existing) throw new Error('Cage not found')
     const allowed = await listForCompany(user, [existing])
     if (!allowed.length) throw new Error('Access denied')
+    // Fish counts drive mortality %, biomass and P&L — only admins correct them by hand.
+    if (patch.currentCount !== undefined || patch.initialCount !== undefined) {
+      requireRole(user, 'admin')
+    }
 
     const next: Record<string, unknown> = { ...patch, updatedAt: Date.now() }
     if (patch.locationId) {

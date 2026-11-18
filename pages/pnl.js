@@ -90,17 +90,17 @@ function CagePnL() {
         </Field>
         <div className="md:col-span-2 flex items-end gap-4 text-sm">
           <div>
-            <p className="text-xs uppercase text-muted font-semibold">Feed cost</p>
+            <p className="text-xs text-muted font-semibold">Feed cost</p>
             <p className="font-data font-semibold">{formatCurrency(totals.feed)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-muted font-semibold">Revenue</p>
+            <p className="text-xs text-muted font-semibold">Revenue</p>
             <p className="font-data font-semibold">
               {formatCurrency(totals.revenue)}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase text-muted font-semibold">Gross margin</p>
+            <p className="text-xs text-muted font-semibold">Gross margin</p>
             <p
               className={`font-data font-semibold ${
                 totals.margin >= 0 ? 'text-kelp' : 'text-signal'
@@ -128,19 +128,19 @@ function CagePnL() {
               <table className="min-w-full divide-y divide-foam-deep">
                 <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Cage
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Feed
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Revenue
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Margin
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       %
                     </th>
                   </tr>

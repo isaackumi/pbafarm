@@ -28,7 +28,6 @@ export default async function handler(req, res) {
       model,
       messages,
       temperature,
-      customBaseUrl,
     } = req.body || {}
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -65,7 +64,8 @@ export default async function handler(req, res) {
       model: model || provider.defaultModel,
       messages,
       temperature: typeof temperature === 'number' ? temperature : 0.3,
-      customBaseUrl: customBaseUrl || process.env.CUSTOM_LLM_BASE_URL || '',
+      // Never let the browser choose where the server's key is sent.
+      customBaseUrl: process.env.CUSTOM_LLM_BASE_URL || '',
     })
 
     return res.status(200).json({ text, provider: providerId })

@@ -54,7 +54,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
   return (
     <nav
-      className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+      className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px"
       aria-label="Pagination"
     >
       {/* Previous Page Button */}

@@ -160,7 +160,6 @@ const CompanyRegistrationsPage = () => {
           >
             PBA Farm
           </Link>
-          <div className="waterline mx-auto mt-3 mb-4 max-w-[8rem]" />
           <h1 className="text-xl font-semibold text-chart-ink">
             Register your company
           </h1>
@@ -215,7 +214,7 @@ const CompanyRegistrationsPage = () => {
                 onChange={handleChange}
                 placeholder={previewCode || 'e.g. HEI'}
                 required
-                className="font-data uppercase tracking-wide"
+                className="font-data"
                 maxLength={12}
               />
             </Field>

@@ -257,31 +257,31 @@ function FeedTypes() {
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Name
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Price / kg
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Supplier
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted"
                   >
                     Status
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider"
+                    className="px-6 py-3 text-right text-xs font-medium text-muted"
                   >
                     Actions
                   </th>
@@ -376,7 +376,7 @@ function FeedTypes() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -392,7 +392,7 @@ function FeedTypes() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -408,7 +408,7 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
@@ -420,7 +420,7 @@ function FeedTypes() {
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -437,7 +437,7 @@ function FeedTypes() {
                     step="1"
                     min="0"
                     placeholder="e.g. 500"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                   />
                   <p className="mt-1 text-xs text-muted">
                     Alert when stock falls to or below this.
@@ -454,7 +454,7 @@ function FeedTypes() {
                     onChange={handleChange}
                     step="0.1"
                     min="0.1"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                   />
                 </div>
               </div>
@@ -468,7 +468,7 @@ function FeedTypes() {
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   >
                     <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
@@ -506,13 +506,13 @@ function FeedTypes() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save
@@ -545,7 +545,7 @@ function FeedTypes() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -561,7 +561,7 @@ function FeedTypes() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -577,7 +577,7 @@ function FeedTypes() {
                   step="0.1"
                   min="0"
                   max="100"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
@@ -589,7 +589,7 @@ function FeedTypes() {
                   name="pellet_size"
                   value={formData.pellet_size}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -606,7 +606,7 @@ function FeedTypes() {
                     step="1"
                     min="0"
                     placeholder="e.g. 500"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                   />
                   <p className="mt-1 text-xs text-muted">
                     Alert when stock falls to or below this.
@@ -623,7 +623,7 @@ function FeedTypes() {
                     onChange={handleChange}
                     step="0.1"
                     min="0.1"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                   />
                 </div>
               </div>
@@ -637,7 +637,7 @@ function FeedTypes() {
                     name="supplier_id"
                     value={formData.supplier_id}
                     onChange={handleChange}
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   >
                     <option value="">Select supplier (optional)</option>
                     {suppliers.map((supplier) => (
@@ -670,13 +670,13 @@ function FeedTypes() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes

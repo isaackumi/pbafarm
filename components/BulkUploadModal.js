@@ -465,7 +465,7 @@ const BulkUploadModal = ({
         {/* Content */}
         <div className="p-6">
           {!xlsxLibLoaded && (
-            <div className="bg-yellow-50 p-4 mb-6 rounded-md">
+            <div className="bg-yellow-50 p-4 mb-6 rounded-lg">
               <div className="flex">
                 <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
                 <div>
@@ -533,7 +533,7 @@ const BulkUploadModal = ({
                     type="button"
                     onClick={downloadTemplate}
                     disabled={!xlsxLibLoaded}
-                    className={`inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 ${
+                    className={`inline-flex items-center px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 ${
                       !xlsxLibLoaded ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -545,7 +545,7 @@ const BulkUploadModal = ({
                     type="button"
                     onClick={() => fileData && setStep(2)}
                     disabled={!fileData || processing || !xlsxLibLoaded}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                    className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
                       !fileData || processing || !xlsxLibLoaded
                         ? 'bg-lagoon-700 cursor-not-allowed'
                         : 'bg-lagoon-800 hover:bg-lagoon-950'
@@ -571,7 +571,7 @@ const BulkUploadModal = ({
               </div>
 
               {validationErrors.length > 0 && (
-                <div className="mb-4 bg-red-50 p-4 rounded-md">
+                <div className="mb-4 bg-red-50 p-4 rounded-lg">
                   <div className="flex items-start">
                     <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
                     <div>
@@ -597,13 +597,13 @@ const BulkUploadModal = ({
                 </div>
               )}
 
-              <div className="border border-foam-deep rounded-md overflow-hidden max-h-96 overflow-y-auto">
+              <div className="border border-foam-deep rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                 <table className="min-w-full divide-y divide-foam-deep">
                   <thead className="bg-foam-deep/40 sticky top-0">
                     <tr>
                       <th
                         scope="col"
-                        className="px-3 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                        className="px-3 py-2 text-left text-xs font-medium text-muted"
                       >
                         Row
                       </th>
@@ -611,7 +611,7 @@ const BulkUploadModal = ({
                         <th
                           key={header}
                           scope="col"
-                          className="px-3 py-2 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                          className="px-3 py-2 text-left text-xs font-medium text-muted"
                         >
                           {header}
                         </th>
@@ -679,7 +679,7 @@ const BulkUploadModal = ({
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Back
                 </button>
@@ -688,7 +688,7 @@ const BulkUploadModal = ({
                   type="button"
                   onClick={() => setStep(3)}
                   disabled={processing || validationErrors.length > 0}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
                     processing || validationErrors.length > 0
                       ? 'bg-lagoon-700 cursor-not-allowed'
                       : 'bg-lagoon-800 hover:bg-lagoon-950'
@@ -704,7 +704,7 @@ const BulkUploadModal = ({
 
           {step === 3 && (
             <div>
-              <div className="bg-green-50 p-4 rounded-md mb-6">
+              <div className="bg-green-50 p-4 rounded-lg mb-6">
                 <div className="flex">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
                   <div>
@@ -719,7 +719,7 @@ const BulkUploadModal = ({
                 </div>
               </div>
 
-              <div className="bg-foam-deep/40 p-4 rounded-md mb-6">
+              <div className="bg-foam-deep/40 p-4 rounded-lg mb-6">
                 <h5 className="text-sm font-medium text-gray-800 mb-2">
                   Import Summary
                 </h5>
@@ -747,7 +747,7 @@ const BulkUploadModal = ({
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="inline-flex items-center px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Back
                 </button>
@@ -756,7 +756,7 @@ const BulkUploadModal = ({
                   type="button"
                   onClick={handleConfirmUpload}
                   disabled={processing}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
                     processing
                       ? 'bg-green-400'
                       : 'bg-green-600 hover:bg-green-700'

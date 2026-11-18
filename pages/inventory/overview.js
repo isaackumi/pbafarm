@@ -162,7 +162,7 @@ function InventoryOverview() {
             <Link href="/stock-levels">
               <button
                 type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
               >
                 <Package className="w-5 h-5 mr-2" />
                 Stock levels
@@ -171,7 +171,7 @@ function InventoryOverview() {
             <Link href="/feed-types">
               <button
                 type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-kelp hover:opacity-90"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-kelp hover:opacity-90"
               >
                 <Package className="w-5 h-5 mr-2" />
                 Feed types
@@ -180,7 +180,7 @@ function InventoryOverview() {
             <Link href="/inventory/adjust">
               <button
                 type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-950 hover:bg-lagoon-800"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-950 hover:bg-lagoon-800"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Adjust / transfer
@@ -189,7 +189,7 @@ function InventoryOverview() {
             <Link href="/inventory/analytics">
               <button
                 type="button"
-                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950"
               >
                 <BarChart2 className="w-5 h-5 mr-2" />
                 Analytics

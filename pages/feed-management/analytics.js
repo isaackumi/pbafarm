@@ -77,28 +77,28 @@ const FeedAnalytics = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Total Usage</h3>
-                  <p className="text-2xl font-bold text-lagoon-800 font-data mt-1">
+                  <p className="text-2xl font-semibold text-lagoon-800 font-data mt-1">
                     {analytics.usageStats?.totalUsage?.toFixed(1) || '0'} kg
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Total Cost</h3>
-                  <p className="text-2xl font-bold text-kelp font-data mt-1">
+                  <p className="text-2xl font-semibold text-kelp font-data mt-1">
                     ${analytics.costAnalysis?.totalCost?.toFixed(2) || '0'}
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Avg Cost/kg</h3>
-                  <p className="text-2xl font-bold text-chart-ink font-data mt-1">
+                  <p className="text-2xl font-semibold text-chart-ink font-data mt-1">
                     ${analytics.costAnalysis?.averageCostPerKg?.toFixed(2) || '0'}
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Low Stock Alerts</h3>
-                  <p className="text-2xl font-bold text-signal font-data mt-1">
+                  <p className="text-2xl font-semibold text-signal font-data mt-1">
                     {analytics.lowStockAlerts.length}
                   </p>
                 </div>

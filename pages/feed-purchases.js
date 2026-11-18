@@ -1093,7 +1093,7 @@ function FeedPurchases() {
                 <card.icon className="h-5 w-5" aria-hidden />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                <p className="text-xs font-medium text-muted">
                   {card.label}
                 </p>
                 <p className="truncate font-data text-lg font-semibold text-chart-ink sm:text-xl">
@@ -1110,7 +1110,7 @@ function FeedPurchases() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Cost Trends Chart */}
             <div className="rounded-xl border border-foam-deep bg-surface p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Cost trends</h3>
+              <h3 className="mb-3 text-xs font-semibold text-muted">Cost trends</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsLineChart data={costAnalysis.costTrends}>
@@ -1126,7 +1126,7 @@ function FeedPurchases() {
 
             {/* Supplier Comparison Chart */}
             <div className="rounded-xl border border-foam-deep bg-surface p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Supplier price</h3>
+              <h3 className="mb-3 text-xs font-semibold text-muted">Supplier price</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={costAnalysis.supplierComparison}>
@@ -1157,7 +1157,7 @@ function FeedPurchases() {
                 reorder only when a minimum is set
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 text-[11px] text-muted">
+            <div className="flex flex-wrap gap-3 text-xs text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-kelp" /> OK
               </span>
@@ -1176,7 +1176,7 @@ function FeedPurchases() {
           <div className="grid grid-cols-1 divide-y divide-foam-deep lg:grid-cols-5 lg:divide-x lg:divide-y-0">
             {/* Stock Levels */}
             <div className="p-4 lg:col-span-3">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              <h3 className="mb-3 text-xs font-semibold text-muted">
                 Current stock
               </h3>
               {inventoryMetrics.stockLevels.length === 0 ? (
@@ -1206,12 +1206,12 @@ function FeedPurchases() {
                                 {stock.name}
                               </span>
                               {stock.location ? (
-                                <span className="inline-flex items-center rounded-md border border-foam-deep/80 bg-foam-deep/30 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+                                <span className="inline-flex items-center rounded-lg border border-foam-deep/80 bg-foam-deep/30 px-1.5 py-0.5 text-xs font-medium text-muted">
                                   {stock.location}
                                 </span>
                               ) : null}
                             </div>
-                            <span className="text-[11px] text-muted">
+                            <span className="text-xs text-muted">
                               {stock.protein != null ? `${stock.protein}% protein` : 'Protein —'}
                               {' · '}
                               {stock.bagSizeKg}Kg bags
@@ -1230,7 +1230,7 @@ function FeedPurchases() {
                             style={{ width: `${Math.max(stock.barPct, stock.currentStock > 0 ? 4 : 0)}%` }}
                           />
                         </div>
-                        <div className="mt-1 flex justify-between text-[11px] text-muted">
+                        <div className="mt-1 flex justify-between text-xs text-muted">
                           <span>
                             {stock.minimumStock > 0
                               ? `Min ${formatWeight(stock.minimumStock)}${
@@ -1251,7 +1251,7 @@ function FeedPurchases() {
 
             {/* Reorder Recommendations */}
             <div className="bg-foam-deep/20 p-4 lg:col-span-2">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              <h3 className="mb-3 text-xs font-semibold text-muted">
                 Reorder
               </h3>
               {inventoryMetrics.reorderRecommendations.length === 0 ? (
@@ -1276,7 +1276,7 @@ function FeedPurchases() {
                           <p className="truncate text-sm font-semibold text-chart-ink">
                             {rec.name}
                           </p>
-                          <p className="mt-0.5 text-[11px] text-muted">
+                          <p className="mt-0.5 text-xs text-muted">
                             {formatWeight(rec.currentStock)} on hand · min{' '}
                             {formatWeight(rec.minimumStock)}
                             {rec.protein != null ? ` · ${rec.protein}%` : ''}
@@ -1357,7 +1357,7 @@ function FeedPurchases() {
           <div className="grid grid-cols-1 gap-0 lg:grid-cols-2 lg:divide-x lg:divide-foam-deep">
             {/* Supplier Reliability */}
             <div className="p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              <h3 className="mb-3 text-xs font-semibold text-muted">
                 Order volume
               </h3>
               <div className="space-y-3">
@@ -1413,7 +1413,7 @@ function FeedPurchases() {
                           {' · '}
                           {formatCurrency(supplierMetrics.unassigned.totalCost || 0)}
                         </p>
-                        <p className="mt-1 text-[11px] text-muted">
+                        <p className="mt-1 text-xs text-muted">
                           Edit those purchases and assign a supplier — required for all new purchases.
                         </p>
                       </div>
@@ -1425,7 +1425,7 @@ function FeedPurchases() {
 
             {/* Price Comparison */}
             <div className="p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              <h3 className="mb-3 text-xs font-semibold text-muted">
                 Price comparison
               </h3>
               <div className="h-64">
@@ -1465,31 +1465,31 @@ function FeedPurchases() {
               <table className="min-w-full divide-y divide-foam-deep">
                 <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Feed Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Bags
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Price/kg
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Total Cost
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Purchase Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Supplier
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Batch Number
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted">
                       Actions
                     </th>
                   </tr>
@@ -1586,13 +1586,13 @@ function FeedPurchases() {
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
                 {success}
               </div>
             )}
@@ -1640,7 +1640,7 @@ function FeedPurchases() {
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                     placeholder="e.g. 40"
                   />
                 </div>
@@ -1655,7 +1655,7 @@ function FeedPurchases() {
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                    className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                     required
                   />
                   <p className="mt-1 text-xs text-muted">
@@ -1675,7 +1675,7 @@ function FeedPurchases() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -1689,7 +1689,7 @@ function FeedPurchases() {
                   name="purchase_date"
                   value={formData.purchase_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -1703,7 +1703,7 @@ function FeedPurchases() {
                   value={formData.supplier_id || ''}
                   onChange={handleChange}
                   required
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 >
                   <option value="">Select supplier</option>
                   {suppliers.map((supplier) => (
@@ -1731,7 +1731,7 @@ function FeedPurchases() {
                   name="batch_number"
                   value={formData.batch_number}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -1744,7 +1744,7 @@ function FeedPurchases() {
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -1757,7 +1757,7 @@ function FeedPurchases() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows={3}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
 
@@ -1765,13 +1765,13 @@ function FeedPurchases() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   <Save className="w-4 h-4 mr-2 inline-block" />
                   Save Changes

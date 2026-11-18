@@ -417,14 +417,14 @@ const FeedManagement = () => {
                     <div className="flex space-x-3">
                       <button
                         onClick={handleAddFeedType}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Feed Type
                       </button>
                       <button
                         onClick={() => setShowPurchaseModal(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" />
                         Feed Purchase
@@ -442,7 +442,7 @@ const FeedManagement = () => {
                           placeholder="Search feed types..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="block w-full pl-10 pr-3 py-2 border border-input-border rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                          className="block w-full pl-10 pr-3 py-2 border border-input-border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <Search className="h-5 w-5 text-muted" />
@@ -451,7 +451,7 @@ const FeedManagement = () => {
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="block w-full pl-3 pr-10 py-2 text-base border border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-md"
+                        className="block w-full pl-3 pr-10 py-2 text-base border border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-lg"
                       >
                         <option value="all">All Status</option>
                         <option value="active">Active</option>
@@ -472,11 +472,11 @@ const FeedManagement = () => {
                         <table className="min-w-full divide-y divide-foam-deep">
                           <thead className="bg-foam-deep/40">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Name</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Protein %</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Price/kg</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Protein %</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Price/kg</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Status</th>
+                              <th className="px-6 py-3 text-right text-xs font-medium text-muted">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-foam-deep">
@@ -527,14 +527,14 @@ const FeedManagement = () => {
                             <button
                               onClick={() => handlePageChange(currentPage - 1)}
                               disabled={currentPage === 1}
-                              className="relative inline-flex items-center rounded-md border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
+                              className="relative inline-flex items-center rounded-lg border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                             >
                               Previous
                             </button>
                             <button
                               onClick={() => handlePageChange(currentPage + 1)}
                               disabled={currentPage === totalPages}
-                              className="relative ml-3 inline-flex items-center rounded-md border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
+                              className="relative ml-3 inline-flex items-center rounded-lg border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                             >
                               Next
                             </button>
@@ -550,7 +550,7 @@ const FeedManagement = () => {
                               </p>
                             </div>
                             <div>
-                              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                              <nav className="isolate inline-flex -space-x-px rounded-lg shadow-sm" aria-label="Pagination">
                                 <button
                                   onClick={() => handlePageChange(currentPage - 1)}
                                   disabled={currentPage === 1}
@@ -604,7 +604,7 @@ const FeedManagement = () => {
                       </Link>
                       <button
                         onClick={() => setShowAddSupplierModal(true)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add
@@ -703,7 +703,7 @@ const FeedManagement = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -714,7 +714,7 @@ const FeedManagement = () => {
                       name="protein_content"
                       value={formData.protein_content}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -726,7 +726,7 @@ const FeedManagement = () => {
                       value={formData.price_per_kg}
                       onChange={handleChange}
                       step="0.01"
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -743,7 +743,7 @@ const FeedManagement = () => {
                         step="1"
                         min="0"
                         placeholder="e.g. 500"
-                        className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                        className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                       />
                       <p className="mt-1 text-xs text-muted">
                         Alerts when stock ≤ this
@@ -760,7 +760,7 @@ const FeedManagement = () => {
                         onChange={handleChange}
                         step="0.1"
                         min="0.1"
-                        className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                        className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
                       />
                     </div>
                   </div>
@@ -771,7 +771,7 @@ const FeedManagement = () => {
                       value={formData.description}
                       onChange={handleChange}
                       rows="3"
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -779,13 +779,13 @@ const FeedManagement = () => {
                   <button
                     type="button"
                     onClick={closeFeedModal}
-                    className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                    className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                   >
                     {editingType ? 'Update' : 'Add'} Feed Type
                   </button>
@@ -811,7 +811,7 @@ const FeedManagement = () => {
                       name="name"
                       value={supplierFormData.name}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -822,7 +822,7 @@ const FeedManagement = () => {
                       name="contact_person"
                       value={supplierFormData.contact_person}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -833,7 +833,7 @@ const FeedManagement = () => {
                       name="phone"
                       value={supplierFormData.phone}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -844,7 +844,7 @@ const FeedManagement = () => {
                       name="email"
                       value={supplierFormData.email}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
                   </div>
@@ -855,7 +855,7 @@ const FeedManagement = () => {
                       value={supplierFormData.address}
                       onChange={handleSupplierChange}
                       rows="3"
-                      className="mt-1 block w-full border border-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -863,13 +863,13 @@ const FeedManagement = () => {
                   <button
                     type="button"
                     onClick={() => setShowAddSupplierModal(false)}
-                    className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                    className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
+                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
                   >
                     Add Supplier
                   </button>

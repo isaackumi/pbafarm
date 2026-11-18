@@ -291,7 +291,7 @@ const HarvestPage = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by cage name or code"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
@@ -302,7 +302,7 @@ const HarvestPage = () => {
                   type="date"
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
               <div>
@@ -313,7 +313,7 @@ const HarvestPage = () => {
                   type="date"
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                 />
               </div>
             </div>
@@ -326,7 +326,7 @@ const HarvestPage = () => {
               <p className="mt-4 text-muted">Loading harvest records...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-red-700">{error}</p>
             </div>
           ) : showHarvestForm ? (
@@ -348,7 +348,7 @@ const HarvestPage = () => {
                     {columns.map((column, index) => (
                       <th
                         key={index}
-                        className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-muted"
                       >
                         {column.header}
                       </th>

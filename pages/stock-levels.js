@@ -101,7 +101,7 @@ function StockLevels() {
       />
 
         {error && (
-          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+          <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
             {error}
           </div>
         )}
@@ -124,31 +124,31 @@ function StockLevels() {
               <table className="min-w-full divide-y divide-foam-deep">
                 <thead className="bg-foam-deep/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Feed Type
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Supplier
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       kg
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Bags
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Bag size
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Min kg
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                       Ledger tally
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Value
                     </th>
                   </tr>

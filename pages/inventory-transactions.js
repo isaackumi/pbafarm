@@ -111,7 +111,7 @@ function InventoryTransactions() {
             onChange={(e) =>
               setDateRange((p) => ({ ...p, start: e.target.value }))
             }
-            className="border border-input-border rounded-md px-3 py-2 text-sm"
+            className="border border-input-border rounded-lg px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -120,7 +120,7 @@ function InventoryTransactions() {
             type="date"
             value={dateRange.end}
             onChange={(e) => setDateRange((p) => ({ ...p, end: e.target.value }))}
-            className="border border-input-border rounded-md px-3 py-2 text-sm"
+            className="border border-input-border rounded-lg px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -135,22 +135,22 @@ function InventoryTransactions() {
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     When
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Feed
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
                     kg
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
                     Notes
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
                     Actions
                   </th>
                 </tr>

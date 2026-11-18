@@ -1,13 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Bell, Sun, Moon, Question, MapPin } from '@phosphor-icons/react'
+import {
+  Bell,
+  CircleHelp,
+  MapPin,
+  Menu,
+  Moon,
+  Sun,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNotifications } from '../contexts/NotificationContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useTour } from './TourProvider'
 
-const TopBar = ({ title = 'Dashboard' }) => {
+const TopBar = ({ title = 'Dashboard', onOpenMenu }) => {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { startSystemWalkthrough } = useTour()
@@ -73,31 +80,41 @@ const TopBar = ({ title = 'Dashboard' }) => {
   }
 
   return (
-    <header className="bg-surface/90 backdrop-blur-sm sticky top-0 z-30 text-chart-ink">
-      <div className="waterline" />
-      <div className="flex justify-between items-center px-5 sm:px-8 py-4 border-b border-foam-deep">
-        <h1
-          className="font-display text-xl sm:text-2xl font-bold text-chart-ink tracking-tight"
-          data-tour="header-title"
-        >
-          {title}
-        </h1>
+    <header className="print:hidden bg-surface sticky top-0 z-30 text-chart-ink">
+      <div className="flex justify-between items-center gap-2 px-4 sm:px-8 h-16 border-b border-foam-deep">
+        <div className="flex items-center gap-2 min-w-0">
+          {typeof onOpenMenu === 'function' && (
+            <button
+              type="button"
+              onClick={onOpenMenu}
+              className="lg:hidden -ml-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          <h1
+            className="font-display text-lg sm:text-xl font-medium text-chart-ink truncate"
+            data-tour="header-title"
+          >
+            {title}
+          </h1>
+        </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <div
-            className="flex items-center gap-1.5 sm:gap-2 min-h-12"
+            className="flex items-center gap-2 min-h-11"
             data-tour="location-switcher"
           >
             <MapPin
               size={18}
-              weight="duotone"
               className="text-muted shrink-0"
               aria-hidden
             />
             {locations.length > 0 ? (
               <select
                 aria-label="Farm location"
-                className="max-w-[9rem] sm:max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-xl bg-surface px-3 py-2 text-chart-ink focus:outline-none focus:ring-2 focus:ring-lagoon-800"
+                className="max-w-[7.5rem] sm:max-w-[10rem] md:max-w-[14rem] text-sm border border-input-border rounded-lg bg-surface px-3 h-10 text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                 value={activeLocationId || ''}
                 disabled={locationLoading}
                 title="Changing location refreshes the page"
@@ -124,22 +141,22 @@ const TopBar = ({ title = 'Dashboard' }) => {
           </div>
 
           <div
-            className="relative"
+            className="relative hidden sm:block"
             id="tour-help-menu"
             ref={helpRef}
             data-tour="tour-help"
           >
             <button
               type="button"
-              className="relative p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-xl cursor-pointer min-h-12 min-w-12 flex items-center justify-center"
+              className="relative text-muted hover:text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg cursor-pointer h-11 w-11 flex items-center justify-center transition-colors"
               aria-label="Help and walkthrough"
               aria-expanded={helpOpen}
               onClick={() => setHelpOpen((o) => !o)}
             >
-              <Question size={24} weight="duotone" />
+              <CircleHelp size={20} />
             </button>
             {helpOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1">
+              <div className="absolute right-0 mt-2 w-64 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1">
                 <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep">
                   Help
                 </div>
@@ -163,17 +180,17 @@ const TopBar = ({ title = 'Dashboard' }) => {
 
           <div className="relative" id="notif-dropdown" ref={notifDropdownRef}>
             <button
-              className="relative p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-800 rounded-xl cursor-pointer min-h-12 min-w-12 flex items-center justify-center"
+              className="relative text-muted hover:text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg cursor-pointer h-11 w-11 flex items-center justify-center transition-colors"
               aria-label="Notifications"
               onClick={() => setNotifDropdownOpen((open) => !open)}
             >
-              <Bell size={24} weight="duotone" />
+              <Bell size={20} />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[0.5rem] h-2 px-0.5 bg-signal rounded-full" />
               )}
             </button>
             {notifDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1 max-h-96 overflow-y-auto">
+              <div className="absolute right-0 mt-2 w-80 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1 max-h-96 overflow-y-auto">
                 <div className="px-4 py-2 text-sm font-semibold text-chart-ink border-b border-foam-deep flex items-center justify-between">
                   <span>Notifications</span>
                   {unreadCount > 0 && (
@@ -224,14 +241,14 @@ const TopBar = ({ title = 'Dashboard' }) => {
           <button
             type="button"
             data-tour="theme-toggle"
-            className="p-3 text-muted hover:text-lagoon-800 hover:bg-foam focus:outline-none rounded-xl min-h-12 min-w-12 flex items-center justify-center"
+            className="hidden sm:flex text-muted hover:text-chart-ink hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake rounded-lg h-11 w-11 items-center justify-center transition-colors"
             aria-label="Toggle theme"
             onClick={toggleTheme}
           >
             {theme === 'light' ? (
-              <Moon size={24} weight="duotone" />
+              <Moon size={20} />
             ) : (
-              <Sun size={24} weight="duotone" />
+              <Sun size={20} />
             )}
           </button>
 
@@ -242,7 +259,7 @@ const TopBar = ({ title = 'Dashboard' }) => {
               aria-haspopup="true"
               aria-expanded={profileDropdownOpen}
             >
-              <div className="w-10 h-10 bg-lagoon-950 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+              <div className="w-9 h-9 bg-lagoon-950 rounded-full flex items-center justify-center text-white font-medium text-sm">
                 {avatarLetter}
               </div>
               <div className="hidden sm:block text-right">
@@ -253,7 +270,7 @@ const TopBar = ({ title = 'Dashboard' }) => {
               </div>
             </button>
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-surface border border-foam-deep rounded-md shadow-lg z-50 py-1">
+              <div className="absolute right-0 mt-2 w-56 bg-surface border border-foam-deep rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 py-1">
                 <div className="px-4 py-2 text-xs text-muted border-b border-foam-deep font-data">
                   {email}
                 </div>

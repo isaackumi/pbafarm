@@ -159,7 +159,7 @@ export default function FishTransferForm({ onCreated }) {
     <FormCard title="New fish transfer">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error ? (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             {error}
           </p>
         ) : null}
@@ -278,7 +278,7 @@ export default function FishTransferForm({ onCreated }) {
           </p>
 
           {(source || dest) && (
-            <p className="text-sm rounded-md bg-foam-deep/60 px-3 py-2 text-chart-ink">
+            <p className="text-sm rounded-lg bg-foam-deep/60 px-3 py-2 text-chart-ink">
               {isFull
                 ? 'Full transfer → source will be emptied.'
                 : quantity > 0

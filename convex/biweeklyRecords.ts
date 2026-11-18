@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser } from './lib/authz'
-import { listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
+import { requireUser, requireRole } from './lib/authz'
+import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
 
 function toClient(r: any) {
   return {
@@ -85,7 +85,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx)
     const cage = await ctx.db.get(args.cageId)
-    if (!cage) throw new Error('Cage not found')
+    assertOwns(user, cage, 'Cage')
 
     // Check for unique batch code
     const existing = await ctx.db
@@ -148,7 +148,7 @@ export const createMany = mutation({
     const ids = []
     for (const record of records) {
       const cage = await ctx.db.get(record.cageId)
-      if (!cage) continue
+      assertOwns(user, cage, 'Cage')
       const existing = await ctx.db
         .query('biweeklyRecords')
         .withIndex('by_batch_code', (q) => q.eq('batchCode', record.batchCode))
@@ -223,6 +223,7 @@ export const remove = mutation({
   args: { id: v.id('biweeklyRecords') },
   handler: async (ctx, { id }) => {
     const user = await requireUser(ctx)
+    requireRole(user, 'admin')
     const existing = await ctx.db.get(id)
     if (!existing) throw new Error('Biweekly record not found')
     const allowed = await listForCompany(user, [existing])

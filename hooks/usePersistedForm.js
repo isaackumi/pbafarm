@@ -2,10 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const PREFIX = 'pbafarm:form:'
 
-function readStored(key) {
+function store(kind) {
+  return kind === 'local' ? window.localStorage : window.sessionStorage
+}
+
+function readStored(key, kind) {
   if (typeof window === 'undefined') return null
   try {
-    const raw = sessionStorage.getItem(PREFIX + key)
+    const raw = store(kind).getItem(PREFIX + key)
     if (!raw) return null
     return JSON.parse(raw)
   } catch {
@@ -13,19 +17,19 @@ function readStored(key) {
   }
 }
 
-function writeStored(key, value) {
+function writeStored(key, value, kind) {
   if (typeof window === 'undefined') return
   try {
-    sessionStorage.setItem(PREFIX + key, JSON.stringify(value))
+    store(kind).setItem(PREFIX + key, JSON.stringify(value))
   } catch {
     // quota / private mode — ignore
   }
 }
 
-function clearStored(key) {
+function clearStored(key, kind) {
   if (typeof window === 'undefined') return
   try {
-    sessionStorage.removeItem(PREFIX + key)
+    store(kind).removeItem(PREFIX + key)
   } catch {
     // ignore
   }
@@ -37,13 +41,15 @@ function clearStored(key) {
  *
  * @param {string} key Unique form id, e.g. 'daily-entry'
  * @param {object} defaults Initial form shape
- * @param {{ debounceMs?: number }} [options]
+ * @param {{ debounceMs?: number, storage?: 'session' | 'local' }} [options]
+ *   storage 'local' survives the phone closing the tab (field drafts).
  */
 export function usePersistedForm(key, defaults, options = {}) {
   const debounceMs = options.debounceMs ?? 300
+  const kind = options.storage === 'local' ? 'local' : 'session'
   const defaultsRef = useRef(defaults)
   const [formData, setFormData] = useState(() => {
-    const stored = readStored(key)
+    const stored = readStored(key, kind)
     if (stored && typeof stored === 'object') {
       return { ...defaults, ...stored }
     }
@@ -55,24 +61,24 @@ export function usePersistedForm(key, defaults, options = {}) {
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      writeStored(key, formData)
+      writeStored(key, formData, kind)
     }, debounceMs)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [key, formData, debounceMs])
+  }, [key, formData, debounceMs, kind])
 
   const clear = useCallback(() => {
-    clearStored(key)
+    clearStored(key, kind)
     setFormData(defaultsRef.current)
-  }, [key])
+  }, [key, kind])
 
   const reset = useCallback(
     (next = defaultsRef.current) => {
       setFormData(next)
-      writeStored(key, next)
+      writeStored(key, next, kind)
     },
-    [key],
+    [key, kind],
   )
 
   const updateField = useCallback((name, value) => {

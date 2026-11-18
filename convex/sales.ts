@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { requireUser, requireRole } from './lib/authz'
 import {
+  assertOwns,
   listForCompany,
   listForCompanyAndLocation,
   writeCompanyId,
@@ -213,7 +214,7 @@ export const createSale = mutation({
 
     if (cageId) {
       const cage = await ctx.db.get(cageId)
-      if (!cage) throw new Error('Cage not found')
+      assertOwns(user, cage, 'Cage')
       locationId = locationId || cage.locationId
       companyId = companyId || cage.companyId
     }

@@ -13,15 +13,15 @@ import {
   Cell,
 } from 'recharts'
 import {
-  Fish,
-  Scales,
-  ChartLineUp,
-  Warning,
-  CalendarBlank,
-  Plus,
-  Package,
   ArrowRight,
-} from '@phosphor-icons/react'
+  Calendar,
+  Fish,
+  Package,
+  Plus,
+  Scale,
+  TrendingUp,
+  TriangleAlert,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import {
@@ -101,9 +101,6 @@ export default function Dashboard() {
     feedCostPerKg: 'N/A',
     activeFish: 0,
   })
-
-  const firstName =
-    (user?.name || user?.email || 'there').split(' ')[0] || 'there'
 
   useEffect(() => {
     let cancelled = false
@@ -245,22 +242,26 @@ export default function Dashboard() {
       {/* Hero row */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-muted">Operations overview</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-chart-ink tracking-tight mt-1">
-            Welcome back, {firstName}
+          <p className="text-sm text-muted">Farm overview</p>
+          <h1 className="font-display text-[28px] sm:text-4xl font-medium text-chart-ink mt-1">
+            {new Date().toLocaleDateString(undefined, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
           </h1>
-          <p className="text-muted mt-1 text-base">
+          <p className="text-muted mt-2 text-base tabular-nums">
             {metrics.totalActiveCages} active cages ·{' '}
             {Number(metrics.activeFish).toLocaleString()} fish on farm
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button href="/daily-entry" size="lg">
-            <CalendarBlank size={22} weight="bold" />
+            <Calendar size={22} />
             Log daily entry
           </Button>
           <Button href="/stocking" variant="secondary" size="lg">
-            <Plus size={22} weight="bold" />
+            <Plus size={22} />
             New stocking
           </Button>
         </div>
@@ -285,14 +286,14 @@ export default function Dashboard() {
         <StatCard
           label="Avg FCR"
           value={metrics.averageFCR}
-          icon={Scales}
+          icon={Scale}
           hint="From harvest records (30d)"
         />
         <StatCard
           label="Mortality"
           value={metrics.mortalityRate}
           unit="%"
-          icon={Warning}
+          icon={TriangleAlert}
           tone={mortTone}
           hint="Last 30 days"
         />
@@ -413,7 +414,7 @@ export default function Dashboard() {
       <Card padding={false}>
         <div className="p-5 sm:p-6 border-b border-foam-deep flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-bold text-chart-ink">
+            <h2 className="font-display text-lg font-semibold text-chart-ink">
               Recent activity
             </h2>
             <p className="text-sm text-muted mt-0.5">
@@ -445,7 +446,7 @@ export default function Dashboard() {
             ) : (
               <table className="min-w-full">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted bg-foam/60">
+                  <tr className="text-left text-xs text-muted bg-foam/60">
                     <th className="px-5 py-3.5 font-semibold">Batch</th>
                     <th className="px-5 py-3.5 font-semibold">Date</th>
                     <th className="px-5 py-3.5 font-semibold">DOC</th>
@@ -489,7 +490,7 @@ export default function Dashboard() {
                             onClick={() => router.push('/stocking-management')}
                           >
                             Open
-                            <ArrowRight size={16} weight="bold" />
+                            <ArrowRight size={16} />
                           </Button>
                         </td>
                       </tr>
@@ -508,14 +509,14 @@ export default function Dashboard() {
                 label="Avg daily growth"
                 value={metrics.avgDailyGrowth}
                 unit={metrics.avgDailyGrowth === 'N/A' ? '' : 'g/day'}
-                icon={ChartLineUp}
+                icon={TrendingUp}
                 tone="accent"
               />
               <StatCard
                 label="Feed cost / harvest kg"
                 value={metrics.feedCostPerKg}
                 unit={metrics.feedCostPerKg === 'N/A' ? '' : ''}
-                icon={Scales}
+                icon={Scale}
               />
               <StatCard
                 label="Feed (30d)"

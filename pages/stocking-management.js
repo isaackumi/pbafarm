@@ -331,7 +331,7 @@ function StockingManagement() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search stockings..."
-                className="pl-10 block w-full sm:text-sm border-input-border rounded-md focus:ring-lagoon-800 focus:border-lagoon-800"
+                className="pl-10 block w-full sm:text-sm border-input-border rounded-lg focus:ring-lagoon-800 focus:border-lagoon-800"
               />
             </div>
 
@@ -339,7 +339,7 @@ function StockingManagement() {
               <div className="relative">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center py-2 px-4 border border-input-border rounded-md shadow-sm bg-white text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
+                  className="flex items-center py-2 px-4 border border-input-border rounded-lg shadow-sm bg-white text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
@@ -347,7 +347,7 @@ function StockingManagement() {
                 </button>
 
                 {showFilters && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                  <div className="origin-top-right absolute right-0 mt-2 w-72 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                     <div className="py-1 p-3 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-chart-ink mb-1">
@@ -356,7 +356,7 @@ function StockingManagement() {
                         <select
                           value={yearFilter}
                           onChange={(e) => setYearFilter(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-md"
+                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-lg"
                         >
                           <option value="all">All Years</option>
                           {availableYears.map((year) => (
@@ -374,7 +374,7 @@ function StockingManagement() {
                         <select
                           value={cageFilter}
                           onChange={(e) => setCageFilter(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-md"
+                          className="block w-full pl-3 pr-10 py-2 text-base border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-lg"
                         >
                           <option value="all">All Cages</option>
                           {uniqueCages.map((cage) => (
@@ -406,7 +406,7 @@ function StockingManagement() {
                   <tr>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('batch_number')}
                     >
                       <div className="flex items-center">
@@ -424,7 +424,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('cage_name')}
                     >
                       <div className="flex items-center">
@@ -442,7 +442,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('stocking_date')}
                     >
                       <div className="flex items-center">
@@ -460,7 +460,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('fish_count')}
                     >
                       <div className="flex items-center">
@@ -478,7 +478,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('initial_abw')}
                     >
                       <div className="flex items-center">
@@ -496,7 +496,7 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted cursor-pointer"
                       onClick={() => handleSort('initial_biomass')}
                     >
                       <div className="flex items-center">
@@ -514,13 +514,13 @@ function StockingManagement() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
+                      className="px-6 py-3 text-left text-xs font-medium text-muted"
                     >
                       Source
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider"
+                      className="px-6 py-3 text-right text-xs font-medium text-muted"
                     >
                       Actions
                     </th>
@@ -585,7 +585,7 @@ function StockingManagement() {
               <div className="py-12 text-center">
                 <p className="text-muted">No stocking records found.</p>
                 <Link href="/stocking">
-                  <button className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-lagoon-800 hover:bg-lagoon-950">
+                  <button className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950">
                     <Plus className="w-4 h-4 mr-2" />
                     Create New Stocking
                   </button>
@@ -608,13 +608,13 @@ function StockingManagement() {
             </h3>
 
             {error && (
-              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-md text-sm">
+              <div className="mb-4 bg-green-50 text-green-700 p-3 rounded-lg text-sm">
                 {success}
               </div>
             )}
@@ -629,7 +629,7 @@ function StockingManagement() {
                   name="stocking_date"
                   value={formData.stocking_date}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   required
                 />
               </div>
@@ -643,7 +643,7 @@ function StockingManagement() {
                   name="fish_count"
                   value={formData.fish_count}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   min="1"
                   required
                 />
@@ -659,7 +659,7 @@ function StockingManagement() {
                   value={formData.initial_abw}
                   onChange={handleChange}
                   step="0.1"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   min="0.1"
                   required
                 />
@@ -672,7 +672,7 @@ function StockingManagement() {
                 <input
                   type="text"
                   value={calculateBiomass().toFixed(2)}
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm bg-foam-deep/40"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm bg-foam-deep/40"
                   readOnly
                 />
                 <p className="mt-1 text-xs text-muted">
@@ -702,7 +702,7 @@ function StockingManagement() {
                   value={formData.notes}
                   onChange={handleChange}
                   rows="3"
-                  className="block w-full px-3 py-2 border border-input-border rounded-md shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
+                  className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                   placeholder="Optional notes"
                 ></textarea>
               </div>
@@ -711,13 +711,13 @@ function StockingManagement() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-input-border rounded-md shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
+                  className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950"
                 >
                   Save Changes
                 </button>
@@ -750,7 +750,7 @@ function StockingManagement() {
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteStocking(null)}
-                className="px-4 py-2 border border-input-border rounded-md text-sm font-medium"
+                className="px-4 py-2 border border-input-border rounded-lg text-sm font-medium"
               >
                 Cancel
               </button>
@@ -758,7 +758,7 @@ function StockingManagement() {
                 type="button"
                 disabled={deleting}
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white bg-signal"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-signal"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

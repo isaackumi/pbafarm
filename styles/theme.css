@@ -13,7 +13,10 @@
   --chart-ink: #18181b;
   --muted: #52525b;
   --surface: #ffffff;
-  --waterline: linear-gradient(90deg, #18181b 0%, #3f3f46 100%);
+  --waterline: #18181b;
+  /* Accent: deep lake water (6.6:1 on white) */
+  --lake: #1d5f8c;
+  --lake-soft: #e3eef6;
 
   --font-display: 'Lexend', system-ui, sans-serif;
   --font-ui: 'Figtree', system-ui, sans-serif;
@@ -65,26 +68,23 @@ html[data-theme='dark'] {
   --signal-soft: #fecaca;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
-  --waterline: linear-gradient(90deg, #a1a1aa 0%, #52525b 100%);
+  --waterline: #a1a1aa;
+  --lake: #7cb7e0;
+  --lake-soft: rgba(124, 183, 224, 0.14);
 }
 
 html.dark body,
 html[data-theme='dark'] body {
-  background:
-    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(255, 255, 255, 0.06), transparent 55%),
-    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(255, 255, 255, 0.04), transparent 50%),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
 }
 
 body {
-  background:
-    radial-gradient(ellipse 70% 40% at 0% -10%, rgba(24, 24, 27, 0.04), transparent 55%),
-    radial-gradient(ellipse 50% 30% at 100% 0%, rgba(63, 63, 70, 0.04), transparent 50%),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
-  font-weight: 500;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .font-display {
@@ -134,9 +134,8 @@ body {
   font-family: var(--font-display);
   font-size: 1.5rem;
   line-height: 1.25;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--chart-ink);
-  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
@@ -264,9 +263,7 @@ html[data-theme='dark'] .input-field:focus {
   padding: 0.75rem 1rem;
   text-align: left;
   font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
   color: var(--muted);
 }
 

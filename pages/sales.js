@@ -176,20 +176,20 @@ function Sales() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="page-card p-4">
-          <p className="text-xs uppercase text-muted font-semibold">Sales</p>
-          <p className="mt-1 font-display text-2xl font-bold font-data">
+          <p className="text-xs text-muted font-semibold">Sales</p>
+          <p className="mt-1 font-display text-2xl font-semibold font-data">
             {totals.count}
           </p>
         </div>
         <div className="page-card p-4">
-          <p className="text-xs uppercase text-muted font-semibold">Weight sold</p>
-          <p className="mt-1 font-display text-2xl font-bold font-data">
+          <p className="text-xs text-muted font-semibold">Weight sold</p>
+          <p className="mt-1 font-display text-2xl font-semibold font-data">
             {totals.kg.toFixed(1)} kg
           </p>
         </div>
         <div className="page-card p-4">
-          <p className="text-xs uppercase text-muted font-semibold">Revenue</p>
-          <p className="mt-1 font-display text-2xl font-bold font-data">
+          <p className="text-xs text-muted font-semibold">Revenue</p>
+          <p className="mt-1 font-display text-2xl font-semibold font-data">
             {formatCurrency(totals.revenue)}
           </p>
         </div>
@@ -437,29 +437,29 @@ function Sales() {
             <table className="min-w-full divide-y divide-foam-deep">
               <thead className="bg-foam-deep/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Buyer
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Cage
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                     kg
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                     ₵/kg
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                     Total
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Pay
                   </th>
                   {isAdmin && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
                       Actions
                     </th>
                   )}

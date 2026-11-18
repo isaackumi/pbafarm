@@ -25,7 +25,19 @@ const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
   ssr: false,
 })
 
+function useServiceWorker() {
+  useEffect(() => {
+    // Production only: a service worker caching dev bundles makes hot reload lie.
+    if (process.env.NODE_ENV !== 'production') return
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker registration failed', err)
+    })
+  }, [])
+}
+
 function AppWrapper({ Component, pageProps }) {
+  useServiceWorker()
   return (
     <ConvexAuthProvider client={convex}>
       <Provider store={store}>

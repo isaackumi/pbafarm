@@ -180,26 +180,26 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-foam-deep bg-foam p-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="text-xs font-semibold text-muted">
               Total fish
             </p>
-            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
               {totalFish.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="text-xs font-semibold text-muted">
               Total weight
             </p>
-            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
               {totalWeight.toFixed(2)}g
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="text-xs font-semibold text-muted">
               Average ABW
             </p>
-            <p className="mt-1 font-display text-2xl font-bold font-data text-chart-ink">
+            <p className="mt-1 font-display text-2xl font-semibold font-data text-chart-ink">
               {calculateAverageABW().toFixed(2)}g
             </p>
           </div>
@@ -294,7 +294,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                 className="rounded-xl border border-foam-deep bg-white p-4 sm:p-5"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-bold text-chart-ink">
+                  <h4 className="text-sm font-semibold text-chart-ink">
                     Sample {index + 1}
                   </h4>
                   {samplings.length > 1 && (

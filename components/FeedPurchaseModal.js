@@ -227,7 +227,7 @@ export default function FeedPurchaseModal({
                     supplier_id: e.target.value,
                   }))
                 }
-                className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 required
               >
                 <option value="">Select supplier</option>
@@ -254,7 +254,7 @@ export default function FeedPurchaseModal({
                     purchase_date: e.target.value,
                   }))
                 }
-                className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 required
               />
             </div>
@@ -332,7 +332,7 @@ export default function FeedPurchaseModal({
                       )
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                 >
                   <option value="">Select feed type</option>
                   {activeFeedTypes.map((type) => (
@@ -358,7 +358,7 @@ export default function FeedPurchaseModal({
                       number_of_bags: e.target.value,
                     }))
                   }
-                  className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                   min="1"
                   step="0.01"
                 />
@@ -376,7 +376,7 @@ export default function FeedPurchaseModal({
                       price_per_bag: e.target.value,
                     }))
                   }
-                  className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+                  className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 font-data text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
                   min="0"
                   step="0.01"
                 />
@@ -385,7 +385,7 @@ export default function FeedPurchaseModal({
                 <button
                   type="button"
                   onClick={handleAddFeedEntry}
-                  className="inline-flex min-h-10 w-full items-center justify-center rounded-md border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950"
+                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950"
                 >
                   Add Entry
                 </button>
@@ -418,7 +418,7 @@ export default function FeedPurchaseModal({
                 }))
               }
               rows={3}
-              className="mt-1 block w-full rounded-md border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
+              className="mt-1 block w-full rounded-lg border border-input-border px-3 py-2 text-sm shadow-sm focus:border-lagoon-800 focus:outline-none focus:ring-lagoon-800"
             />
           </div>
 
@@ -427,7 +427,7 @@ export default function FeedPurchaseModal({
               <span className="text-sm font-medium text-chart-ink">
                 Total Amount:
               </span>
-              <span className="text-lg font-bold text-chart-ink">
+              <span className="text-lg font-semibold text-chart-ink">
                 {formatCurrency(purchaseData.total_amount)}
               </span>
             </div>
@@ -438,14 +438,14 @@ export default function FeedPurchaseModal({
               type="button"
               disabled={saving}
               onClick={onClose}
-              className="rounded-md border border-input-border bg-surface px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40 disabled:opacity-50"
+              className="rounded-lg border border-input-border bg-surface px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950 disabled:opacity-50"
+              className="rounded-lg border border-transparent bg-lagoon-800 px-4 py-2 text-sm font-medium text-white hover:bg-lagoon-950 disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save Purchase'}
             </button>
