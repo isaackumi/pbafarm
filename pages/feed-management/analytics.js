@@ -4,8 +4,10 @@ import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { PageHeader } from '../../components/ui'
 import { feedService } from '../../lib/feedService'
+import { useMoney } from '../../lib/money'
 
 const FeedAnalytics = () => {
+  const money = useMoney()
   const [analytics, setAnalytics] = useState({
     usageStats: null,
     costAnalysis: null,
@@ -85,14 +87,14 @@ const FeedAnalytics = () => {
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Total Cost</h3>
                   <p className="text-2xl font-semibold text-kelp font-data mt-1">
-                    ${analytics.costAnalysis?.totalCost?.toFixed(2) || '0'}
+                    {money(analytics.costAnalysis?.totalCost || 0)}
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-zinc-200/90 shadow-sm">
                   <h3 className="text-sm font-semibold text-muted">Avg Cost/kg</h3>
                   <p className="text-2xl font-semibold text-chart-ink font-data mt-1">
-                    ${analytics.costAnalysis?.averageCostPerKg?.toFixed(2) || '0'}
+                    {money(analytics.costAnalysis?.averageCostPerKg || 0)}
                   </p>
                 </div>
 

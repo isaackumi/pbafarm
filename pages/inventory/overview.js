@@ -3,18 +3,13 @@ import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import {
   Package,
-  TrendingUp,
-  AlertTriangle,
-  DollarSign,
   BarChart2,
-  Calendar,
   ShoppingCart,
-  ArrowUp,
-  ArrowDown,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader } from '../../components/ui'
+import { PageHeader, StatCard } from '../../components/ui'
+import { useMoney } from '../../lib/money'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import {
@@ -86,6 +81,8 @@ function processTrendData(data) {
 
 function InventoryOverview() {
   const { user } = useAuth()
+  const money = useMoney()
+  const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
   const dateFrom = useMemo(() => Date.now() - 30 * 24 * 60 * 60 * 1000, [])
 
   const inventoryItems = useQuery(
@@ -111,8 +108,17 @@ function InventoryOverview() {
       totalValue,
       lowStockItems,
       monthlyTransactions: txns.length,
-      averageTurnover: 15,
-      stockValue: totalValue,
+      // Days of cover: stock on hand ÷ average daily use over the last 30 days.
+      daysOfCover: (() => {
+        const usedKg = txns
+          .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal')
+          .reduce((sum, t) => sum - Number(t.quantity_kg), 0)
+        const perDay = usedKg / 30
+        return perDay > 0 ? Math.round(totalItems / perDay) : null
+      })(),
+      usedKg30: txns
+        .filter((t) => Number(t.quantity_kg) < 0 && t.transaction_type !== 'reversal')
+        .reduce((sum, t) => sum - Number(t.quantity_kg), 0),
     }
   }, [inventoryItems, transactions])
 
@@ -197,94 +203,24 @@ function InventoryOverview() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {[
-              {
-                title: 'Total Stock',
-                value: metrics.totalItems.toFixed(0),
-                unit: 'kg',
-                icon: Package,
-                color: 'blue',
-                trend: { value: 5, direction: 'up' },
-              },
-              {
-                title: 'Total Value',
-                value: metrics.totalValue.toFixed(2),
-                unit: '₵',
-                icon: DollarSign,
-                color: 'green',
-                trend: { value: 2.5, direction: 'up' },
-              },
-              {
-                title: 'Low Stock Items',
-                value: metrics.lowStockItems,
-                unit: 'items',
-                icon: AlertTriangle,
-                color: 'red',
-                trend: { value: 1, direction: 'down' },
-              },
-              {
-                title: 'Monthly Transactions',
-                value: metrics.monthlyTransactions,
-                unit: 'transactions',
-                icon: TrendingUp,
-                color: 'purple',
-                trend: { value: 3, direction: 'up' },
-              },
-              {
-                title: 'Average Turnover',
-                value: metrics.averageTurnover,
-                unit: 'days',
-                icon: Calendar,
-                color: 'yellow',
-                trend: { value: 2, direction: 'down' },
-              },
-              {
-                title: 'Stock Value',
-                value: metrics.stockValue.toFixed(2),
-                unit: '₵',
-                icon: DollarSign,
-                color: 'indigo',
-                trend: { value: 4, direction: 'up' },
-              },
-            ].map((metric, index) => (
-              <div
-                key={index}
-                className="page-card p-6 hover:shadow-lg transition-shadow duration-300"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`p-3 rounded-full bg-${metric.color}-100 mr-4`}>
-                      <metric.icon className={`w-6 h-6 text-${metric.color}-600`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted">{metric.title}</p>
-                      <p className="text-2xl font-semibold text-chart-ink">
-                        {metric.unit === '₵' ? metric.unit : ''}
-                        {metric.value}
-                        {metric.unit !== '₵' ? ` ${metric.unit}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    {metric.trend.direction === 'up' ? (
-                      <ArrowUp className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <ArrowDown className="w-4 h-4 text-red-500" />
-                    )}
-                    <span
-                      className={`ml-1 text-sm ${
-                        metric.trend.direction === 'up'
-                          ? 'text-green-500'
-                          : 'text-red-500'
-                      }`}
-                    >
-                      {metric.trend.value}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <StatCard label="Feed on hand" value={kg(metrics.totalItems)} unit="kg" />
+            <StatCard label="Stock value" value={money(metrics.totalValue, { decimals: 0 })} />
+            <StatCard
+              label="Low stock"
+              value={metrics.lowStockItems}
+              unit={metrics.lowStockItems === 1 ? 'feed type' : 'feed types'}
+              tone={metrics.lowStockItems > 0 ? 'warn' : 'default'}
+            />
+            <StatCard label="Used, last 30 days" value={kg(metrics.usedKg30)} unit="kg" />
+            <StatCard
+              label="Days of cover"
+              value={metrics.daysOfCover == null ? '—' : metrics.daysOfCover}
+              unit={metrics.daysOfCover == null ? '' : 'days'}
+              hint="At the last 30 days' rate of use"
+              tone={metrics.daysOfCover != null && metrics.daysOfCover < 14 ? 'warn' : 'accent'}
+            />
+            <StatCard label="Ledger entries, 30 days" value={metrics.monthlyTransactions} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -431,11 +367,11 @@ function InventoryOverview() {
                         {item.current_stock_bags != null
                           ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
                           : ''}{' '}
-                        | Price: ₵{item.price_per_kg}/kg
+                        | Price: {money(item.price_per_kg)}/kg
                       </p>
                     </div>
                     <div className="text-sm text-muted">
-                      Value: ₵{(item.stock_value || 0).toFixed(2)}
+                      Value: {money(item.stock_value || 0)}
                     </div>
                   </div>
                 </div>
