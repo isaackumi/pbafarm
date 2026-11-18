@@ -87,7 +87,7 @@ const HarvestPage = () => {
     e.preventDefault()
     if (!editingHarvest) return
     try {
-      const { error } = await harvestRecordService.updateHarvestRecord(
+      const { error, warnings } = await harvestRecordService.updateHarvestRecord(
         editingHarvest.id || editingHarvest._id,
         {
           harvest_date: editForm.harvest_date,
@@ -105,6 +105,7 @@ const HarvestPage = () => {
       )
       if (error) throw error
       showToast('Harvest updated', 'success')
+      if (warnings?.length) showToast(warnings.join('. '), 'warning')
       setShowEditModal(false)
       setEditingHarvest(null)
       fetchHarvestRecords()
@@ -165,11 +166,12 @@ const HarvestPage = () => {
   const handleDeleteHarvest = async () => {
     if (!deleteConfirm) return
     try {
-      const { error } = await harvestRecordService.deleteHarvestRecord(
+      const { error, warnings } = await harvestRecordService.deleteHarvestRecord(
         deleteConfirm.id || deleteConfirm._id,
       )
       if (error) throw error
       showToast('Harvest deleted', 'success')
+      if (warnings?.length) showToast(warnings.join('. '), 'warning')
       setDeleteConfirm(null)
       fetchHarvestRecords()
     } catch (err) {

@@ -505,6 +505,80 @@ describe('S13: ledger reversals', () => {
   })
 })
 
+describe('INV-003: reversals linked to their source records', () => {
+  test('reversing an issue voids its usage row, so listUsage matches the ledger', async () => {
+    const { t, as, a, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    const kept = await as.mutation(api.feed.createIssue, {
+      feedTypeId,
+      cageId: a.cageId,
+      quantity: 30,
+      usageDate: '2026-11-09',
+    })
+    const wrong = await as.mutation(api.feed.createIssue, {
+      feedTypeId,
+      cageId: a.cageId,
+      quantity: 100,
+      usageDate: '2026-11-10',
+    })
+    const issue = (await ledger(t, feedTypeId)).find(
+      (r: any) => r.transactionType === 'issue' && r.referenceId === String(wrong),
+    )
+    await as.mutation(api.inventory.reverseTransaction, { transactionId: issue._id, reason: 'Wrong cage' })
+
+    const usage = await as.query(api.feed.listUsage, { feedTypeId })
+    expect(usage.map((u: any) => u._id)).toEqual([kept])
+    expect((await getDoc(t, wrong)).deletedAt).toBeTypeOf('number')
+    const netOut = (await ledger(t, feedTypeId))
+      .filter((r: any) => r.transactionType !== 'purchase')
+      .reduce((sum: number, r: any) => sum - r.quantityKg, 0)
+    expect(usage.reduce((sum: number, u: any) => sum + u.quantity, 0)).toBe(netOut)
+  })
+
+  test("deleting a daily record removes only its own usage row", async () => {
+    const { t, as, a, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    const recordId = await as.mutation(api.dailyRecords.create, {
+      cageId: a.cageId,
+      date: '2026-11-10',
+      feedAmount: 50,
+      feedTypeId,
+      feedPrice: 10,
+      feedCost: 500,
+      mortality: 0,
+    })
+    const own = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
+    expect(own.map((u: any) => u.dailyRecordId)).toEqual([recordId])
+
+    // Another daily-sourced row for the same cage and date, from a different record.
+    const otherId = await t.run(async (ctx: any) => {
+      const otherRecord = await ctx.db.insert('dailyRecords', {
+        cageId: a.cageId,
+        date: '2026-11-09',
+        feedAmount: 0,
+        feedPrice: 0,
+        feedCost: 0,
+        mortality: 0,
+        companyId,
+      })
+      return await ctx.db.insert('feedUsage', {
+        feedTypeId,
+        cageId: a.cageId,
+        quantity: 20,
+        usageDate: '2026-11-10',
+        source: 'daily',
+        dailyRecordId: otherRecord,
+        companyId,
+        updatedAt: Date.now(),
+      })
+    })
+
+    await as.mutation(api.dailyRecords.remove, { id: recordId })
+    const left = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
+    expect(left.map((u: any) => u._id)).toEqual([otherId])
+  })
+})
+
 describe('S12: the sampling page no longer records a harvest (interim)', () => {
   const today = new Date().toISOString().split('T')[0]
   const harvestRows = (t: any) => t.run((ctx: any) => ctx.db.query('harvestRecords').collect())

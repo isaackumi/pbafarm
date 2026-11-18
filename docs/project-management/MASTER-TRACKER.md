@@ -21,7 +21,7 @@ Last updated: 2026-11-18. Owner approval of the roadmap: **pending** (MASTER-PRO
 
 Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9–#12) and deployed to `vibrant-stork-860`; #14 merged into `feat/per-site-stock` after #13 merged, so it is **not on `main`** (R03 §0.1).
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | PROD-901 | PR #7 Daily records view/edit/delete | `/daily-data` lists records 7/30/90 days, edit sheet, admin delete, CSV export; `dailyRecords.list` bounded indexed reads | P1 | PROD-000c (S8 guard) | Testing | R03 §0.1, d09 S8 | `pages/daily-data.js`, `lib/databaseService.js:109-180`, `convex/dailyRecords.ts`, `components/Sidebar.js`, `components/Layout.js` | None (no test in PR) | Edits change only the edited record's cycle; delete restores feed and fish within the same cycle; verified in staging |
 | PROD-902 | PR #8 Harvest closes the cage and cycle | Complete harvest zeroes cage, sets `harvested`, closes stocking; undo on edit/delete | P1 | PROD-000a, PROD-000b | Testing | d08 §8, d09 S5, S6 | `convex/harvest.ts:107-345` | Partial (`convex/harvest.test.ts`, 4 tests; S5/S6 not covered) | S5 and S6 regression tests pass |
@@ -34,22 +34,22 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 0 — Stabilize
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | OPS-000 | PR reconciliation + live hotfix sequencing | Freeze `convex/**` merges; hotfix S5/S6/S8; re-land #14; confirm deployed code = `main` | P0 | — | Ready for implementation | R03 §0.1, R06 §4 | `.github/workflows/convex-deploy.yml` | n/a | #14 on `main`; deploy history matches `main`; hotfixes deployed |
 | SEC-001 | Enforce active user, company status; remove shared pool | `requireUser` rejects inactive users, unapproved companies, `mustChangePassword`; deactivate revokes sessions; company-less users get no tenant data | P0 | OPS-002, M1 pre-flight | Implemented (verified 2026-11-18, PR feat/sprint-security) | d07 X1–X3, V5; d04 F1; R03 §0.2; R04 M1; D-005 | `convex/lib/authz.ts` (`requireUser`, `revokeUserSessions`), `convex/lib/tenancy.ts` (`listForCompany`, `assertOwns`, `writeCompanyId`), `convex/users.ts`, `convex/companies.ts`, `lib/llmApiAuth.js`, `pages/_app.js` (`SIGN_OUT_CODES`), `contexts/AuthContext.js` | Covered (`convex/tenancy.test.ts` SEC-001 suites: inactive, temporary password, company status, company-less) | Deactivated user refused on next call; rejected company refused; new sign-up sees no data; approved users unaffected |
 | SEC-002 | Close cross-tenant and role gaps | `backfillLocations`, `seedDemo`, `notifications.create*` → internal; ownership checks on foreign ids; admin gates for high-risk writes; admin-only UI parity; per-company batch codes | P0 | SEC-001 | Implemented (verified 2026-11-18, PR feat/sprint-security: deterministic convex-authz scan of every public `v.id` arg, no open cross-tenant read/write found) | d07 V1, V4, V6, V7, V9, V11, V14, V15; d04 F2, F3; d02 KF2; R03 §0.3 | `convex/lib/permissions.ts` (`requireMember` on every public function), `convex/lib/tenancy.ts`, `convex/farmLocations.ts`, `convex/seed.ts`, `convex/notifications.ts`, `convex/dailyRecords.ts`, `convex/lib/feedLedger.ts`, `convex/feed.ts`, `convex/harvest.ts`, `convex/sales.ts`, `convex/inventory.ts`, `convex/companies.ts`, `convex/biweeklyRecords.ts`, `convex/users.ts` | Covered (`convex/crossTenant.test.ts`, `convex/permissions.test.ts` generated guard matrix). Residual: `files.attach` accepts any fresh unclaimed storage id (needs an upload-binding table; low risk, follow-up) | No public mutation accepts another company's id; buttons match permissions |
 | SEC-003 | Invitation takeover and super-admin protection | Invites never mutate existing accounts; no auto-claim; join requests approved by admin; one invite per company+email; audit | P0 | SEC-001 | Implemented (verified 2026-11-18, PR feat/sprint-security) | d07 V2, V3, V6, V13; R03 §0.4 | `convex/users.ts` (`claimInvite`, `approveJoinRequest`, `declineJoinRequest`), `convex/memberships.ts`, `contexts/AuthContext.js`, `components/UserManagement.js` | Covered (`convex/tenancy.test.ts` SEC-003 suite, `convex/crossTenant.test.ts` V6, `convex/memberships.test.ts`) | V2 and V13 scenarios refused |
-| PROD-000 | Stock-integrity fixes with regression tests (umbrella) | Sub-items a–i below | P0 | OPS-002 | Ready for implementation (a–f, i); Blocked (g, h) | d08 §§3–9; d09 §5; R03 §0.5 | see sub-items | Regression test specified | Each scenario test fails on `main`, passes after |
-| PROD-000a | S5: harvest edit after restock wipes new cycle | Refuse count/type edits on superseded cycles; close the stocking open on the harvest date; reopen only if cage still harvested | P0 | OPS-000 | Ready for implementation | d09 S5 | `convex/harvest.ts:132-187,263-315`, `pages/harvest.js` | Regression test specified | S5 test passes; new cycle untouched |
-| PROD-000b | S6: partial-harvest delete adds fish to later cycle | Refuse undo when a later stocking/complete harvest exists | P0 | PROD-000a | Ready for implementation | d09 S6 | `convex/harvest.ts:183-185,317-345` | Regression test specified | S6 test passes |
-| PROD-000c | S8: daily-record edits move current count across cycles | Refuse mortality edits for records before current stocking or on harvested/empty cages | P0 | — | Ready for implementation | d09 S8; PR #7 | `convex/dailyRecords.ts:444-580`, `pages/daily-data.js` | Regression test specified | S8 test passes; UI shows reason |
-| PROD-000d | S2/S3: transfer-linked approvals double count | Refuse direct approval of linked rows; `applyFishTransfer` adds only if linked row was pending | P0 | M8 indexes | Ready for implementation | d09 S2, S3; d07 V8; d04 F10 | `convex/stocking.ts:385-427,552-595`, `convex/fishTransfers.ts:63-121,409-465`, `pages/stocking/[id]/details.js`, `pages/topup/[id]/details.js` | Regression test specified | Fish added exactly once in every approval order |
-| PROD-000e | S9: second stocking approval overwrites count | Re-run `assertStockingAllowed` at approval; refuse if another approved open stocking | P0 | — | Ready for implementation | d09 S9 | `convex/stocking.ts:385-427`, `convex/lib/farmRules.ts:209-243` | Regression test specified | Second approval refused |
-| PROD-000f | S7: ABW not reset on restock | Set `currentWeight = initialAbw` on stocking apply; growth ignores out-of-cycle ABW; M0-b repair | P0 | — | Ready for implementation | d09 S7; R04 M0-b | `convex/stocking.ts:278-286,410-418`, `convex/fishTransfers.ts:90-98`, `convex/lib/growth.ts:78` | Regression test specified | New cycle shows stocking ABW until first sample |
+| PROD-000 | Stock-integrity fixes with regression tests (umbrella) | Sub-items a–i below | P0 | OPS-002 | Testing (a–f, i shipped in PR #19, follow-ups in feat/sprint-stock-integrity; g, h shipped as interim guards in PR #19) | d08 §§3–9; d09 §5; R03 §0.5 | see sub-items | Covered (`convex/cycleGuards.test.ts`, `convex/stockIntegrity.test.ts`) | Each scenario test fails on `main`, passes after |
+| PROD-000a | S5: harvest edit after restock wipes new cycle | Count/type edits and deletes on a superseded harvest are record-only (live cage untouched) and return a reason the UI shows; complete harvest closes the stocking open on the harvest date; reopen only with the cage | P0 | OPS-000 | Testing (PR #19; delete reason + UI toast in feat/sprint-stock-integrity) | d09 S5 | `convex/harvest.ts`, `convex/lib/cycles.ts` (`harvestIsCurrent`), `lib/databaseService.js`, `pages/harvest.js` | Covered (`convex/cycleGuards.test.ts` S5) | S5 test passes; new cycle untouched |
+| PROD-000b | S6: partial-harvest delete adds fish to later cycle | Undo skipped when a later stocking/complete harvest exists | P0 | PROD-000a | Testing (PR #19) | d09 S6 | `convex/harvest.ts`, `convex/lib/cycles.ts` | Covered (`convex/cycleGuards.test.ts` S6) | S6 test passes |
+| PROD-000c | S8: daily-record edits move current count across cycles | Mortality edits/deletes on records before the current stocking (or on harvested/empty cages) change only the record; mutation returns the reason and `/daily-data` shows it | P0 | — | Testing (PR #19; reason + UI toast in feat/sprint-stock-integrity) | d09 S8; PR #7 | `convex/dailyRecords.ts`, `convex/lib/cycles.ts` (`inCurrentCycle`), `lib/databaseService.js`, `pages/daily-data.js` | Covered (`convex/cycleGuards.test.ts` S8) | S8 test passes; UI shows reason |
+| PROD-000d | S2/S3: transfer-linked approvals double count | Direct approve/reject of linked rows refused; `applyFishTransfer` adds only if linked row was pending | P0 | M8 indexes | Testing (PR #19) | d09 S2, S3; d07 V8; d04 F10 | `convex/stocking.ts`, `convex/fishTransfers.ts`, `convex/schema.ts`, `pages/stocking/[id]/details.js`, `pages/topup/[id]/details.js` | Covered (`convex/stockIntegrity.test.ts` S2, S3) | Fish added exactly once in every approval order |
+| PROD-000e | S9: second stocking approval overwrites count | `assertStockingAllowed` re-run at approval; refused if another approved open stocking | P0 | — | Testing (PR #19) | d09 S9 | `convex/stocking.ts`, `convex/fishTransfers.ts`, `convex/lib/cycles.ts` | Covered (`convex/stockIntegrity.test.ts` S9) | Second approval refused |
+| PROD-000f | S7: ABW not reset on restock | `currentWeight = initialAbw` on stocking apply; growth ignores out-of-cycle ABW; M0-b repair still to run | P0 | — | Testing (PR #19; M0-b data repair not run) | d09 S7; R04 M0-b | `convex/stocking.ts`, `convex/fishTransfers.ts`, `convex/lib/growth.ts` | Covered (`convex/stockIntegrity.test.ts` S7) | New cycle shows stocking ABW until first sample |
 | PROD-000g | S12: `/harvest-sampling` writes fake complete harvests | Interim: write sampling rows only; tag existing rows (M0-c) and exclude from KPIs; final per owner answer | P0 | Q-005 | Blocked | d09 S12; d04 F9; d02 KF1; R04 M0-c | `convex/harvest.ts:386-450`, `pages/harvest-sampling.js` | Regression test specified | No new fake harvests; KPIs exclude tagged rows |
 | PROD-000h | S14: feed issue + daily entry double deduction | Interim: second deduction for same cage/date refused unless admin override; final per owner answer | P0 | Q-003 | Blocked | d09 S14; d02 KF7; d11 §11 risk 5 | `convex/feed.ts:609-720`, `convex/dailyRecords.ts:37-82`, `pages/feed-issue.js` | Regression test specified | One deduction per feeding |
-| PROD-000i | S13: repeatable / unlinked feed reversals | Refuse second reversal; refuse reversing `daily_usage` rows | P0 | — | Ready for implementation | d09 S13 | `convex/inventory.ts:352-394` | Regression test specified | Second reversal refused; tally stays OK |
+| PROD-000i | S13: repeatable / unlinked feed reversals | Second reversal refused; `daily_usage` rows refused (edit the daily record) | P0 | — | Testing (PR #19) | d09 S13 | `convex/inventory.ts` | Covered (`convex/stockIntegrity.test.ts` S13) | Second reversal refused; tally stays OK |
 | OPS-001 | Prod + staging, backups, errors, monitoring | New Convex prod/staging; data move from `vibrant-stork-860`; restore drill; `ConvexError`; error boundary; monitoring; gated deploys | P0 | Q-002, Q-012, Q-032 | Designed | d12 §5b–8; d01 R1; D-011; R03 §0.6; R06 §2–3 | `.github/workflows/convex-deploy.yml`, `pages/_app.js`, `components/Dashboard.js`, `lib/offlineOutbox.js`, `convex/lib/feedLedger.ts`, `convex/dailyRecords.ts` | None | Prod and staging live; restore drill recorded; validation messages visible in prod; boundary catches render errors |
 | OPS-002 | CI gates | Recursive vitest include; source-only gating lint; typecheck incl. tests; tests before Convex deploy; Node 22 | P0 | — | Ready for implementation | d12 §2–4, §7; R05 §8 | `vitest.config.mjs`, `eslint.config.mjs`, `.github/workflows/ci.yml`, `.github/workflows/convex-deploy.yml`, `convex/tsconfig.json` | n/a | `fishTransferLogic.test.ts` runs; a lint/type/test failure blocks merge and deploy |
 | OPS-003 | Dependency security patches | `@auth/core` 0.41.3; Next 15.x patch; delete dead `BulkUploadModal` (`xlsx` parse path) | P2 | OPS-002 | Implemented (verified 2026-11-18: `@auth/core` ^0.41.3 = latest, `next` 15.5.29 = latest 15.x, `BulkUploadModal` deleted; `xlsx` only writes in `pages/export.js`, parse advisories not reachable) | d12 §5.6; d01 §7 | `package.json` | Covered by `npm run build` | `npm audit` critical count reduced; build green |
@@ -59,7 +59,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 1 — Organization and multi-tenancy
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | ORG-001 | Memberships | `memberships` table; user in several orgs; `users.companyId` = active pointer | P1 | SEC-001, PLAT-004, OPS-001 | Implemented (M2 to run) | D-002; R04 M2; A03, A04 | `convex/schema.ts`, `convex/lib/authz.ts`, `convex/users.ts` | Covered (convex/memberships.test.ts): backfill, idempotency, dual-read | Every user has a membership matching old data; switching orgs isolates data |
 | ORG-002 | Organization switcher | Header switcher, active org change audited | P1 | ORG-001 | Implemented | R03 Phase 1 | `components/Header.js`, `contexts/AuthContext.js` | Covered (convex/memberships.test.ts): switch isolates data | User in two orgs switches without sign-out |
@@ -74,7 +74,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 2 — Farms, locations and hierarchy
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | FARM-001 | Site metadata | `siteType`, `timezone`, coordinates, `waterBody` on `farmLocations` | P1 | — | Implemented | D-003; R04 M5 | `convex/farmLocations.ts`, `pages/farm-locations.js` | Covered (convex/dates.test.ts): site zone today, reminders, validation | Site timezone drives "today" |
 | FARM-002 | Production unit types | `unitType` + typed dimensions on `cages`; terminology by type | P1 | — | Implemented (M4 optional) | D-003; R04 M4 | `convex/schema.ts`, `convex/cages.ts`, `components/CageManageModals.js`, `pages/create-cage.js` | Covered (convex/dates.test.ts): pond create, density by type, M4 | A pond can be created and used in daily entry |
@@ -84,7 +84,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 3 — Permissions
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | PERM-001 | Permission catalog + role templates | owner, admin, manager, field_staff, viewer | P1 | ORG-001, Q-010 | Implemented | D-005; A10 | new `convex/lib/permissions.ts` | Covered (convex/permissions.test.ts): catalog, templates, matrix | Catalog covers every public function |
 | PERM-002 | Central guard `requireMember` | Replace `requireUser`/`requireRole`/`listForCompany` in 142 functions; shadow mode first | P1 | PERM-001 | Implemented (direct switch, no shadow mode) | D-005; R04 M9 | all `convex/*.ts` | Covered (convex/permissions.test.ts): every public function guarded; custom roles | Authz matrix test complete and green |
@@ -95,7 +95,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 4 — Production engine
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | PROD-001 | Batches | `batches` with lineage; backfill from `stockingHistory` | P1 | PROD-000, PLAT-004, FARM-002 | Implemented (table, `openBatch`, `lineage`; M6 `productionBackfill:m6Batches`, transfer-made stockings become `transfer_split` children; dual-write links new stockings) | D-004; R04 M6; A05 | `convex/schema.ts`, `convex/lib/productionEngine.ts`, `convex/lib/productionDualWrite.ts`, `convex/productionBackfill.ts` | Covered (`convex/productionEngine.test.ts` 7.3; `convex/productionDualWrite.test.ts` M6 and transfer lineage) | Every approved stocking has a batch; transfer lineage present |
 | PROD-002 | Stock event ledger + engine | `stockEvents`; `convex/lib/productionEngine.ts` sole writer | P1 | PROD-001 | Implemented (stockIn, recordMortality, multi-destination transfer, partial/complete harvest with close-out, gradingSplit, merge, adjustCount, reverse, reverseOperation; strict and shadow modes) | D-004; R04 M7; A05 | `convex/lib/productionEngine.ts`, `convex/schema.ts` | Covered (`convex/productionEngine.test.ts`: doc 05 §7.1–7.8 and I1, I2, I3, I4, I6, I9, I10; `convex/productionEngine.property.test.ts`: conservation, Σ events = cage cache, reversal idempotence, no cross-cycle effects) | Invariants I1–I5 hold (R05 §5) |
@@ -114,7 +114,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 5 — Hatchery and nursery
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | HAT-001 | Broodstock registry | Individuals/groups on broodstock units | P2 | FARM-002 | Implemented | R03 Phase 5 | `convex/hatchery.ts`, `convex/lib/hatcheryAccess.ts`, `convex/schema.ts` (`broodstock`) | Covered (convex/hatchery.test.ts: registry, validation, conditioning, tenancy) | Broodstock listed per unit |
 | HAT-002 | Spawning, incubation, hatching | Events producing hatched batches | P2 | PROD-002, HAT-001 | Implemented | R03 Phase 5 | `convex/hatchery.ts` (`spawningEvents`, `incubationLots`; hatch → engine `stockIn`, batch origin `hatchery` + `spawningEventId`/`broodstockIds`), `convex/lib/kpi.ts` (fertilization, hatch rate, fry/kg female) | Covered (convex/hatchery.test.ts: hatch → batch + ledger, I4 refusal, replay, reversal, failed lot; kpi.test.ts) | Hatch creates a batch with lineage |
@@ -125,7 +125,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 6 — Cage, pond and tank
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | CAGE-001 | Cage workspace | Groups, GPS, dimensions, per-cage tabs | P2 | FARM-002 | Verified | — | `pages/cages/[id].js` | None | Cage page shows type-specific tabs — `convex/units.ts` groups/water bodies/workspace/board, `pages/units/*`, `components/UnitProfile.js`; tests `convex/units.test.ts`; site map `/units/map` (static SVG projection, `lib/mapProjection.test.js`, `units.mapPoints`), board shows latest water reading and overdue maintenance |
 | CAGE-002 | Net inspection and maintenance log | Inspections, repairs, next due | P2 | CAGE-001 | Verified | d04 §3.6 | new `convex/inspections.ts` | None | Overdue inspection visible — `convex/equipment.ts` logInspection (net checklist, next due moves `cages.nextMaintenanceDate`), `equipment.due`, `maintenance_due` automation check, `/units/[id]/maintenance`, `/maintenance`; tests `convex/equipment.test.ts` |
@@ -137,7 +137,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 7 — Mobile and offline
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | MOBILE-002 | Generalized outbox + server idempotency | `clientMutationId`; all field forms offline | P1 | MOBILE-001 | Implemented (`idempotencyKeys` + `convex/lib/idempotency.ts` on daily batch, bi-weekly batch, feed issue, harvest; outbox kinds + `saveOrQueue`, `/outbox`, header badge, global sync; tests `convex/idempotency.test.ts`, `lib/offlineOutbox.test.js`, `lib/outboxSenders.test.js`. Stocking, transfer, health not yet) | D-010; R04 M13 | `lib/offlineOutbox.js`, field forms | None | Replays never double-write — Phase 6: water-quality readings (`/water-entry`) and inspections (`/inspection-entry`) save through the outbox (kinds `water-quality`, `inspection`; `lib/outboxSenders.test.js`) and are precached by the service worker |
 | MOBILE-003 | Offline reference data cache | Cages, feed types, species cached per user | P1 | MOBILE-001 | Not started | d13 §16 (e) | `components/DailyUploadPage.js:98-140` | None | Cold start offline can pick cages |
@@ -156,7 +156,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 8 — Customization
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | CUSTOM-001 | Custom field engine | `customFieldDefs` + validated `custom` values | P2 | PERM-002 | Implemented (one engine for units, sites, batches, daily, sampling, harvest, stocking, expenses, equipment: types text/long text/number/date/choice/multiple choice/yes-no/photo, min/max/whole/pattern/length, required, defaults, show-when conditions on built-in or custom fields, site scope, archive-only; `validateCustom` called by every create/update of those entities and by the public API; `customFields.setValues` for detail pages; values in exports, the API (`custom` on records and write bodies) and OpenAPI; `<CustomFields>` in daily entry lines, sampling, harvest, stocking, unit, expense, equipment and site forms; cards on unit, batch and stocking detail) | D-007; A06 | `convex/lib/customFieldRules.ts`, `convex/lib/customFields.ts`, `convex/customFields.ts`, `components/CustomFields.js` | Covered (`convex/customFields.test.ts`) | Required custom field enforced server-side |
 | CUSTOM-002 | Field builder UI | Define, order, archive fields | P2 | CUSTOM-001 | Implemented (Settings → Customization → Fields: per record type add/edit, choices, validation, default, one show-when condition, sites, reorder, archive/restore, live preview; `customization.manage`, admin-only) | — | `pages/customization.js`, `components/customization/FieldsBuilder.js` | Covered (server rules in `convex/customFields.test.ts`) | Admin adds a field without code |
@@ -168,11 +168,11 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 9 — Inventory, procurement, costing
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | INV-001 | Generic inventory items | Drugs, chemicals, nets, fuel, spares alongside feed | P2 | — | Implemented | d14 §3 | `convex/inventoryItems.ts`, `convex/schema.ts` (`inventoryItems`, `inventoryItemStock`, `inventoryMovements`), `convex/reminders.ts` (low items), `pages/inventory/items.js`. Feed stays in `feedTypes` | Covered (`convex/procurement.test.ts`: receive/issue per site, two-legged transfer, adjust/archive rules, cross-tenant, low-stock reminder) | Non-feed item stocked and issued |
 | INV-002 | Site on every movement; two-legged transfers | M16 | P1 | PROD-000i | Designed | d08 §6.3; d09 S15; R04 M16 | `convex/lib/feedLedger.ts`, `convex/inventory.ts:249-349`, `convex/feed.ts:449-573` | Partial | Per-site ledger = lots |
-| INV-003 | Reversal linkage | Reversals linked to source records; usage rows consistent | P1 | INV-002 | Not started | d04 F5 | `convex/inventory.ts`, `convex/dailyRecords.ts:89-145` | None | `listUsage` matches ledger |
+| INV-003 | Reversal linkage | Reversing an issue/usage voids its `feedUsage` row (`deletedAt`, hidden from `listUsage` and the S14 guard); daily `feedUsage` rows carry `dailyRecordId` and are removed by link (legacy rows by cage/date) | P1 | INV-002 | Testing (feat/sprint-stock-integrity) | d04 F5 | `convex/inventory.ts`, `convex/feed.ts`, `convex/dailyRecords.ts`, `convex/lib/feedLedger.ts`, `convex/schema.ts` | Covered (`convex/stockIntegrity.test.ts` INV-003) | `listUsage` matches ledger |
 | INV-004 | Procurement / purchase orders | PO → receipt → lot | P3 | INV-001 | Implemented (feed POs) | — | `convex/procurement.ts` (draft → ordered → received / cancelled; receipt writes `feedPurchases` via `applyStockChange`), `pages/procurement/index.js` | Covered (`convex/procurement.test.ts`: lifecycle, short delivery, roles, cross-tenant) | Receipt creates lot |
 | INV-005 | Suppliers for all items | Extend `feedSuppliers` | P3 | INV-001 | Implemented | — | `inventoryItems.supplierId`, `inventoryMovements.supplierId`, `expenses.supplierId` reuse `feedSuppliers` | Covered (supplier ownership checked in tests) | — |
 | INV-006 | Lot costing | FIFO / weighted average from purchase prices | P2 | INV-002, Q-015 | Implemented (weighted average, reports only) | d09 §2.5 | `convex/lib/costing.ts` (weighted average of the feed type's purchases up to the feeding day; list price only when nothing was bought). Daily records still store list price; FIFO lot `unitCost` not done | Covered (`convex/expenses.test.ts`: costing helpers, P&L feed at purchase price) | Daily feed cost = lot cost |
@@ -186,7 +186,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 10 — Automation
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | AUTO-001 | Domain events outbox | Engine and writers emit events | P2 | PROD-002 | Implemented (`domainEvents` + `emitDomainEvent(ctx, type, payload, {companyId, locationId})`; `daily.recorded` from daily entry; one `stock.<type>` per engine operation; dispatch scheduled only when a rule listens; 30-day retention cron) | D-008; A07 | `convex/lib/events.ts`, `convex/dailyRecords.ts`, `convex/lib/productionEngine.ts`, `convex/automation/engine.ts` | Covered (`convex/automation.test.ts`: event written per daily entry and per engine operation, dispatch idempotent per event) | Each stock event emits a domain event |
 | AUTO-002 | Rules and runs | `automationRules`, `automationRuns`, retries | P2 | AUTO-001, PERM-002 | Implemented (event/schedule triggers, condition language all/any with thresholds from farm rules, in-app/SMS/WhatsApp/email via the company messaging route, create-task action; runs deduped per event/slot; Effect sends with per-send timeout, run-level back-off 1/5/30 min, admin re-run; webhook action deferred to INT-005) | D-008; A07 | `convex/automation/*.ts`, `pages/automations.js` (rules list, templates, editor, run history with re-run) | Covered (`convex/automation.test.ts`: 429 retried then sent, 400 not retried then admin re-run, quiet hours, preferences, tenancy; `convex/automation/pure.test.ts`: conditions, DST, Effect sends) | Failed run retried and visible |
@@ -198,7 +198,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 11 — Integrations
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | INT-001 | Messaging channels and encrypted credential store | Per-company SMS (Hubtel, Africa's Talking, Twilio), WhatsApp (Cloud API, Twilio) and email (Resend) channels; AES-GCM credentials in `integrationSecrets`; write-only admin UI `/messaging-settings`; test send verifies a channel; platform default from env; rate-limited test sends | P1 | D-017 rate limiter | Implemented (PR #26, merged) | D-009; D-018; A09; A18 | `convex/messaging/*`, `convex/lib/crypto.ts`, `convex/lib/phone.ts`, `convex/lib/rateLimits.ts`, `convex/convex.config.ts`, `pages/messaging-settings.js` | Covered (`convex/messaging.test.ts`) | No public result contains a secret; non-admin and cross-company refused; test send marks verified; missing key refuses only credential saves |
 | INT-002 | Provider adapters (email, SMS, WhatsApp) | Email slice pulled into Phase 1 for auth | P1 (email) / P2 | INT-001, Q-001 | Implemented (email slice: auth email goes through convex/lib/email.ts, which uses the platform default email channel) | D-009; d13 §7–9 | new `convex/integrations/*` | Covered (convex/memberships.test.ts): adapter selection | Test message delivered per provider |
@@ -212,7 +212,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 12 — Traceability
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | TRACE-001 | Batch genealogy view | Multi-hop lineage | P2 | PROD-001 | Implemented (`/batches/[id]`: ancestors and descendants up to 10 steps, every cage with KPIs, stock events; Traceability card: origin (hatchery/supplier from the stocking), movements of the batch and its ancestors (stockings, top-ups, transfers, gradings, harvest), harvest lots and customers) | d08 §1 | `convex/batches.ts`, `convex/traceability.ts`, `pages/batches/[id].js`, `components/BatchTrace.js`, `components/BatchHistory.js` | Covered (`convex/batches.test.ts`, `convex/traceability.test.ts`) | Lineage across split/merge shown |
 | TRACE-002 | Feed and supplier traceability | Lot → unit/batch | P3 | INV-002 | Implemented (feed eaten per batch and ancestors from daily records and cage issues; candidate feed lots first-in-first-out from site purchases with lot number, expiry, supplier and PO) | — | `convex/lib/traceability.ts` (`feedLotsFor`) | Covered (`convex/traceability.test.ts`) | Trace report lists feed lots and suppliers |
@@ -224,7 +224,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 13 — Analytics and AI
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | ANLY-001 | Report builder over rollups | Saved reports | P3 | PLAT-002 | Not started | — | `convex/reports.ts` | None | — |
 | ANLY-002 | Farm comparisons | Sites and units side by side for a week-aligned period (difference of batchStats weekly snapshots): FCR, SGR, survival, mortality, biomass, cost per kg (harvested and produced), margin; ranked chart + table + CSV | P3 | PLAT-002 | Implemented | — | `convex/analytics.ts` (comparison), `convex/lib/analytics.ts`, `pages/analytics/index.js` | Covered (convex/analytics.test.ts): two sites on FCR/survival/cost per kg for the same period, later period = snapshot difference, tenant isolation | Two sites compared on FCR, survival and cost per kg for the same period |
@@ -237,7 +237,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ## Phase 14 — Enterprise and global
 
-| ID | Feature | Description | Priority | Dependencies | Status | Docs | Source files | Testing status | Acceptance criteria |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|---|---|---|---|
 | ENT-001 | Subsidiaries, business units, regions | Parent orgs and groupings | P3 | ORG-001, PERM-002 | Not started | D-003 | — | None | Group admin sees consolidated KPIs |
 | ENT-002 | Consolidated reporting | Cross-org rollups for group roles | P3 | ENT-001, PLAT-002 | Not started | — | — | None | — |
@@ -258,7 +258,7 @@ Verified state on GitHub, 2026-11-18: #7, #8, #13 merged to `main` (carrying #9�
 
 ### Cloudflare evaluation (proposed — see docs/architecture/17-cloudflare-adoption-roadmap.md)
 
-| ID | Feature | Priority | Dependencies | Status | Docs |
+| ID | Feature | Description | Priority | Dependencies | Status | Acceptance criteria |
 |---|---|---|---|---|---|
 | CF-001 | Record the Cloudflare position; confirm Vercel plan; Next ≥ 15.5.29 | P1 | OPS-001, OPS-003 | Designed | arch 14, 17 |
 | CF-002 | Production DNS on Cloudflare (DNS-only) | P2 | — | Not started | arch 17 |

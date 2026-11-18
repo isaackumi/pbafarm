@@ -608,7 +608,8 @@ export const listUsage = query({
       usage = await scopedRows(ctx, user, 'feedUsage')
     }
 
-    usage = await listForCompanyAndLocation(user, usage, args.locationId)
+    // Reversed issues/usage are voided, not deleted (INV-003).
+    usage = (await listForCompanyAndLocation(user, usage, args.locationId)).filter((u) => !u.deletedAt)
     if (args.dateFrom) usage = usage.filter((u) => u.usageDate >= args.dateFrom!)
     if (args.dateTo) usage = usage.filter((u) => u.usageDate <= args.dateTo!)
     return usage.map(toClientUsage).sort((a, b) => b.usage_date.localeCompare(a.usage_date))

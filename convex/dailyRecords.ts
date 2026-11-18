@@ -22,6 +22,10 @@ import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
 
+/** Shown when a mortality change on a record from a closed cycle leaves the live count alone (doc 09 S8). */
+const EARLIER_CYCLE_WARNING =
+  "This record is from an earlier cycle, so the cage's current fish count was not changed"
+
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 /** Whether the company's "High mortality" automation rule replaces the inline alert. */
@@ -63,7 +67,7 @@ async function deductDailyFeed(
   ctx: any,
   user: any,
   args: {
-    dailyRecordId: string
+    dailyRecordId: Id<'dailyRecords'>
     feedTypeId: any
     cageId: any
     feedAmount: number
@@ -100,6 +104,7 @@ async function deductDailyFeed(
     bags,
     usageDate: args.date,
     source: 'daily',
+    dailyRecordId: args.dailyRecordId,
     notes: `Daily record ${args.date}`,
     locationId: cage?.locationId,
     companyId: feedType.companyId ?? user.companyId,
@@ -132,15 +137,18 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
     .withIndex('by_reference', (q: any) => q.eq('referenceId', ref))
     .collect()
 
-  // The usage rows that drive feed reports: one per cage per day from daily entry.
+  // The usage rows that drive feed reports. Rows written since INV-003 carry
+  // the record id; older rows are matched by cage, date and source.
   const usage = await ctx.db
     .query('feedUsage')
     .withIndex('by_cage', (q: any) => q.eq('cageId', dailyRecord.cageId))
     .collect()
   for (const u of usage) {
-    if (u.source === 'daily' && u.usageDate === dailyRecord.date) {
-      await ctx.db.delete(u._id)
-    }
+    if (u.source !== 'daily') continue
+    const mine = u.dailyRecordId
+      ? u.dailyRecordId === dailyRecord._id
+      : u.usageDate === dailyRecord.date
+    if (mine) await ctx.db.delete(u._id)
   }
 
   if (!prior.length) {
@@ -760,6 +768,7 @@ export const update = mutation({
 
     // Deaths only move the live fish count for records in the cage's current
     // cycle; a record from an earlier cycle is corrected on its own.
+    const warnings: string[] = []
     const mortalityTouched =
       (patch.mortality !== undefined && patch.mortality !== existing.mortality) ||
       (patch.date !== undefined && patch.date !== existing.date)
@@ -768,6 +777,9 @@ export const update = mutation({
       if (cage && cage.currentCount != null) {
         const oldIn = await inCurrentCycle(ctx, cage, existing.date)
         const newIn = await inCurrentCycle(ctx, cage, patch.date ?? existing.date)
+        if (!oldIn && !newIn && (patch.mortality ?? existing.mortality ?? 0) !== (existing.mortality ?? 0)) {
+          warnings.push(EARLIER_CYCLE_WARNING)
+        }
         const delta =
           (newIn ? (patch.mortality ?? existing.mortality ?? 0) : 0) -
           (oldIn ? existing.mortality || 0 : 0)
@@ -813,7 +825,7 @@ export const update = mutation({
       previousValues: existing,
       newValues: patch,
     })
-    return id
+    return { id, warnings }
   },
 })
 
@@ -828,13 +840,18 @@ export const remove = mutation({
 
     await reverseDailyFeed(ctx, user, existing)
     // Give back the fish this record had counted as dead (current cycle only).
+    const warnings: string[] = []
     if (existing.mortality > 0) {
       const cage = await ctx.db.get(existing.cageId)
-      if (cage && cage.currentCount != null && (await inCurrentCycle(ctx, cage, existing.date))) {
-        await ctx.db.patch(existing.cageId, {
-          currentCount: cage.currentCount + existing.mortality,
-          updatedAt: Date.now(),
-        })
+      if (cage && cage.currentCount != null) {
+        if (await inCurrentCycle(ctx, cage, existing.date)) {
+          await ctx.db.patch(existing.cageId, {
+            currentCount: cage.currentCount + existing.mortality,
+            updatedAt: Date.now(),
+          })
+        } else {
+          warnings.push(EARLIER_CYCLE_WARNING)
+        }
       }
     }
     await shadowReverse(
@@ -853,6 +870,7 @@ export const remove = mutation({
       recordId: id,
       previousValues: existing,
     })
+    return { warnings }
   },
 })
 

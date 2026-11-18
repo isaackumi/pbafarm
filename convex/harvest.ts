@@ -442,7 +442,14 @@ export const remove = mutation({
     // Put the fish back and reopen the cage if this harvest emptied it, unless
     // the cage has since moved on to a new cycle.
     const current = await harvestIsCurrent(ctx, existing, existing.cageEffect?.closedStockingId)
-    if (current) await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
+    const warnings: string[] = []
+    if (current) {
+      await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
+    } else if (existing.cageEffect) {
+      warnings.push(
+        'The cage has been restocked or harvested again since this harvest, so its current fish count was not changed',
+      )
+    }
     await shadowHarvest(ctx, existing, user._id, 'remove')
     await ctx.db.delete(id)
     await logAudit(ctx, {
@@ -451,7 +458,7 @@ export const remove = mutation({
       recordId: id,
       previousValues: existing,
     })
-    return { ok: true }
+    return { ok: true, warnings }
   },
 })
 

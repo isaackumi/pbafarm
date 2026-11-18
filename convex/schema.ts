@@ -869,6 +869,8 @@ const schema = defineSchema({
     source: v.optional(
       v.union(v.literal('issue'), v.literal('daily'), v.literal('usage')),
     ),
+    /** The daily record this row came from (source 'daily'; INV-003). */
+    dailyRecordId: v.optional(v.id('dailyRecords')),
     notes: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
