@@ -1,5 +1,13 @@
 // contexts/AuthContext.js — Convex Auth bridge
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useConvex, useConvexAuth, useQuery } from 'convex/react'
 import { useAuthActions, useAuthToken } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
@@ -8,7 +16,14 @@ import {
   bindConvexReactClient,
 } from '../lib/convexBridge'
 import { clearLlmKeys } from '../lib/llmClient'
-import { migrateLegacyOutbox } from '../lib/offlineOutbox'
+import {
+  clearOutbox,
+  flushOutbox,
+  migrateLegacyOutbox,
+  outboxCount,
+} from '../lib/offlineOutbox'
+import { clearDeviceData } from '../lib/deviceData'
+import SignOutOutboxDialog from '../components/SignOutOutboxDialog'
 import {
   CONNECT_TIMEOUT_MS,
   accessStateOf,
@@ -189,10 +204,82 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signOut = async () => {
+  // Sign-out on a shared phone (MOBILE-001): unsent entries are sent or
+  // discarded on purpose, then the device forgets this user's data.
+  const [outboxPrompt, setOutboxPrompt] = useState(null)
+  const promptResolve = useRef(null)
+
+  const askOutbox = useCallback(
+    (count, note = '') =>
+      new Promise((resolve) => {
+        promptResolve.current = resolve
+        setOutboxPrompt({ count, note, sending: false })
+      }),
+    [],
+  )
+
+  const answerOutbox = useCallback((choice) => {
+    const resolve = promptResolve.current
+    promptResolve.current = null
+    if (choice === 'send') {
+      setOutboxPrompt((p) => (p ? { ...p, sending: true } : p))
+    } else {
+      setOutboxPrompt(null)
+    }
+    resolve?.(choice)
+  }, [])
+
+  /**
+   * @param {{ force?: boolean }} [options] force: the server ended the session
+   *   (inactive account, company not approved). No prompt; this user's queued
+   *   entries are kept (scoped to them, never sent by anyone else).
+   * @returns {Promise<{ error: any, cancelled?: boolean }>}
+   */
+  const signOut = async ({ force = false } = {}) => {
+    const userId = user?.id
+    if (!force && userId) {
+      let pending = outboxCount(userId)
+      let note = ''
+      while (pending > 0) {
+        const choice = await askOutbox(pending, note)
+        if (choice === 'cancel') return { error: null, cancelled: true }
+        if (choice === 'discard') {
+          clearOutbox(userId)
+          break
+        }
+        // Lazy: keep the service layer out of the first-load bundle.
+        const { dailyRecordService } = await import('../lib/databaseService')
+        const { sent, failed } = await flushOutbox(
+          (payload) => dailyRecordService.createBatch(payload),
+          userId,
+        )
+        pending = outboxCount(userId)
+        if (pending > 0) {
+          note =
+            failed > 0
+              ? `${pending} could not be sent. Open Daily entry to see why, or discard them.`
+              : sent > 0
+                ? `${sent} sent. ${pending} still waiting; the connection dropped.`
+                : 'Could not reach the server. Try again when you have signal.'
+        }
+      }
+      setOutboxPrompt(null)
+    }
     // Pasted assistant keys live in plaintext localStorage: drop them first,
     // even if the network sign-out below fails.
     clearLlmKeys()
+    if (typeof window !== 'undefined') {
+      try {
+        clearDeviceData({
+          local: window.localStorage,
+          session: window.sessionStorage,
+          userId,
+          keepOutbox: force,
+        })
+      } catch {
+        // storage blocked
+      }
+    }
     try {
       await convexSignOut()
       setConvexAuthToken(null)
@@ -240,7 +327,19 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={authValue}>
+      {children}
+      {outboxPrompt && (
+        <SignOutOutboxDialog
+          count={outboxPrompt.count}
+          note={outboxPrompt.note}
+          sending={outboxPrompt.sending}
+          onSend={() => answerOutbox('send')}
+          onDiscard={() => answerOutbox('discard')}
+          onCancel={() => answerOutbox('cancel')}
+        />
+      )}
+    </AuthContext.Provider>
   )
 }
 

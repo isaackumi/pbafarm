@@ -200,7 +200,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
 
   const handleLogout = async () => {
     try {
-      await signOut()
+      const { cancelled } = (await signOut()) || {}
+      if (cancelled) return
       showToast('Logged out successfully', 'success')
       router.push('/login')
     } catch (error) {

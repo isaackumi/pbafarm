@@ -144,7 +144,8 @@ function AuthWrapper({ children }) {
       if (signingOut.current) return
       signingOut.current = true
       try {
-        await signOutRef.current()
+        // Server ended the session: no outbox prompt; queued entries are kept.
+        await signOutRef.current({ force: true })
       } finally {
         signingOut.current = false
         router.replace(`/login?reason=${encodeURIComponent(code)}`)

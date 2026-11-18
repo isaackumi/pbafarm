@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-const PREFIX = 'pbafarm:form:'
+// Shared with sign-out, which clears every draft (lib/deviceData.js).
+import { FORM_DRAFT_PREFIX as PREFIX } from '../lib/deviceData'
 
 function store(kind) {
   return kind === 'local' ? window.localStorage : window.sessionStorage
@@ -105,7 +105,8 @@ export function usePersistedForm(key, defaults, options = {}) {
 }
 
 export function clearPersistedForm(key) {
-  clearStored(key)
+  clearStored(key, 'session')
+  clearStored(key, 'local')
 }
 
 export default usePersistedForm
