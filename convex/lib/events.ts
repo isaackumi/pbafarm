@@ -15,8 +15,10 @@ import { apiActorOf } from './apiActor'
  *   - automation (convex/automation/engine.ts): scheduled only when the
  *     company has an enabled rule for this event type, so events nobody
  *     listens to cost one insert and one index read.
- *   - further consumers (outbound webhooks, Phase 11) hook in below and mark
- *     the event with their name in `processedBy`.
+ *   - outbound webhooks (convex/webhooks.ts `fanOut`, INT-005): scheduled
+ *     only when an active endpoint subscribes to the type; marks
+ *     `processedBy` with 'webhooks'.
+ *   - further consumers hook in the same way and mark `processedBy`.
  *
  * Keep payloads small (a few scalar fields, ids as strings): they are
  * evaluated by rule conditions and rendered into messages.
@@ -47,6 +49,16 @@ export async function emitDomainEvent(
     .first()
   if (listening) {
     await ctx.scheduler.runAfter(0, internal.automation.engine.dispatchEvent, { eventId })
+  }
+
+  // Outbound webhooks (INT-005): scheduled only when an active endpoint of
+  // this company subscribes to the type, like automation above.
+  const endpoints = await ctx.db
+    .query('webhookEndpoints')
+    .withIndex('by_companyId_and_status', (q) => q.eq('companyId', companyId).eq('status', 'active'))
+    .take(20)
+  if (endpoints.some((e) => e.eventTypes.includes(type))) {
+    await ctx.scheduler.runAfter(0, internal.webhooks.fanOut, { eventId })
   }
   return eventId
 }

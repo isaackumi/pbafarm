@@ -66,6 +66,11 @@ export const automationAction = v.union(
     description: v.optional(v.string()),
     dueInHours: v.optional(v.number()),
   }),
+  /** POST the triggering event (or check result) to a webhook endpoint (INT-005). */
+  v.object({
+    kind: v.literal('webhook'),
+    endpointId: v.id('webhookEndpoints'),
+  }),
 )
 
 export const automationTrigger = v.union(

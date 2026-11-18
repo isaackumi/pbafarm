@@ -224,6 +224,15 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `tasks.mine` | `account` | self | self | self | self | self |
 | `tasks.openCount` | `account` | self | self | self | self | self |
 | `tasks.setStatus` | `account` | self | self | self | self | self |
+| `traceability.batchTrace` | `production.view` | yes | yes | yes | yes | yes |
+| `traceability.batchTreatments` | `production.view` | yes | yes | yes | yes | yes |
+| `traceability.createDispatch` | `production.harvest.record` | yes | yes | yes | yes | no |
+| `traceability.createLot` | `production.harvest.record` | yes | yes | yes | yes | no |
+| `traceability.listLots` | `production.view` | yes | yes | yes | yes | yes |
+| `traceability.lotReport` | `production.view` | yes | yes | yes | yes | yes |
+| `traceability.removeDispatch` | `production.records.delete` | yes | yes | no | no | no |
+| `traceability.removeLot` | `production.records.delete` | yes | yes | no | no | no |
+| `traceability.withdrawalStatus` | `production.view` | yes | yes | yes | yes | yes |
 | `userAccounts.changePassword` | `allowlisted` | see test | see test | see test | see test | see test |
 | `userAccounts.createWithPassword` | `org.members.manage` | yes | yes | no | no | no |
 | `users.approveJoinRequest` | `org.members.manage` | yes | yes | no | no | no |
@@ -240,3 +249,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `users.reactivate` | `org.members.manage` | yes | yes | no | no | no |
 | `users.setPhone` | `org.members.manage` | yes | yes | no | no | no |
 | `users.update` | `org.members.manage` | yes | yes | no | no | no |
+| `webhooks.create` | `allowlisted` | see test | see test | see test | see test | see test |
+| `webhooks.deliveries` | `integrations.manage` | yes | yes | no | no | no |
+| `webhooks.overview` | `integrations.manage` | yes | yes | no | no | no |
+| `webhooks.redeliver` | `integrations.manage` | yes | yes | no | no | no |
+| `webhooks.remove` | `integrations.manage` | yes | yes | no | no | no |
+| `webhooks.rotateSecret` | `allowlisted` | see test | see test | see test | see test | see test |
+| `webhooks.sendTest` | `integrations.manage` | yes | yes | no | no | no |
+| `webhooks.update` | `integrations.manage` | yes | yes | no | no | no |

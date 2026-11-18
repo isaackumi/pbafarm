@@ -21,6 +21,7 @@ import { useCurrency } from '../hooks/useCurrency'
 import LocationMetaField from '../components/LocationMetaField'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
+import { errorCode, errorMessage } from '../lib/errorMessage'
 
 export default function SalesPage() {
   return (
@@ -70,6 +71,9 @@ function Sales() {
     contactName: '',
   })
   const [saving, setSaving] = useState(false)
+  // Set when the server refuses a sale inside a withdrawal period (PROD-012).
+  const [withdrawalBlock, setWithdrawalBlock] = useState(null)
+  const [overrideReason, setOverrideReason] = useState('')
 
   const selectedHarvest = useMemo(
     () =>
@@ -110,6 +114,8 @@ function Sales() {
           ? form.customerName.trim() || undefined
           : undefined,
         cageId: selectedHarvest?.cage_id || undefined,
+        withdrawalOverrideReason:
+          withdrawalBlock && overrideReason.trim() ? overrideReason.trim() : undefined,
       }
       if (!args.customerId && !args.customerName) {
         throw new Error('Select or enter a buyer')
@@ -117,6 +123,8 @@ function Sales() {
 
       await createSale(args)
       showToast('success', 'Sale recorded')
+      setWithdrawalBlock(null)
+      setOverrideReason('')
       setShowForm(false)
       setForm({
         harvestId: '',
@@ -129,7 +137,8 @@ function Sales() {
         notes: '',
       })
     } catch (err) {
-      showToast('error', err.message || 'Failed to record sale')
+      if (errorCode(err) === 'WITHDRAWAL_ACTIVE') setWithdrawalBlock(errorMessage(err))
+      showToast('error', errorMessage(err, 'Failed to record sale'))
     } finally {
       setSaving(false)
     }
@@ -332,6 +341,27 @@ function Sales() {
                     <option value="pending">Pending</option>
                   </Select>
                 </Field>
+                {withdrawalBlock && (
+                  <div
+                    role="alert"
+                    className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
+                  >
+                    <p>{withdrawalBlock}</p>
+                    {isAdmin ? (
+                      <Field label="Override reason" htmlFor="sale-withdrawal-reason" required>
+                        <Textarea
+                          id="sale-withdrawal-reason"
+                          rows={2}
+                          value={overrideReason}
+                          onChange={(e) => setOverrideReason(e.target.value)}
+                          placeholder="Kept in the audit log"
+                        />
+                      </Field>
+                    ) : (
+                      <p className="text-muted">Ask an admin to record this sale.</p>
+                    )}
+                  </div>
+                )}
                 <Field label="Notes" htmlFor="sale-notes" className="md:col-span-2">
                   <Textarea
                     id="sale-notes"

@@ -65,6 +65,16 @@ export const stockSourceTable = v.union(
   v.literal('legacyBackfill'),
 )
 
+/** Who overrode an active withdrawal period, when and why (PROD-012). */
+export const withdrawalOverride = v.object({
+  reason: v.string(),
+  by: v.id('users'),
+  at: v.number(),
+  /** Last withdrawal day that was overridden (YYYY-MM-DD). */
+  until: v.string(),
+  treatmentIds: v.array(v.id('healthTreatments')),
+})
+
 export const batchOrigin = v.union(
   v.literal('stocking'),
   v.literal('transfer_split'),
@@ -569,6 +579,8 @@ const schema = defineSchema({
         efcr: v.union(v.number(), v.null()),
       }),
     ),
+    /** Admin override of an active treatment withdrawal (PROD-012), audited. */
+    withdrawalOverride: v.optional(withdrawalOverride),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -801,14 +813,18 @@ const schema = defineSchema({
    */
   integrationSecrets: defineTable({
     companyId: v.id('companies'),
-    channelId: v.id('messagingChannels'),
+    /** Owner: a messaging channel or (INT-005) a webhook endpoint's signing secret. */
+    channelId: v.optional(v.id('messagingChannels')),
+    webhookEndpointId: v.optional(v.id('webhookEndpoints')),
     /** base64 AES-GCM ciphertext (with tag) of the JSON credentials. */
     ciphertext: v.string(),
     /** base64 12-byte IV, random per encryption. */
     iv: v.string(),
     keyVersion: v.number(),
     updatedAt: v.number(),
-  }).index('by_channel', ['channelId']),
+  })
+    .index('by_channel', ['channelId'])
+    .index('by_webhookEndpointId', ['webhookEndpointId']),
 
   /**
    * Pending phone sign-in codes (SEC-006). One row per phone; replaced on
@@ -894,6 +910,8 @@ const schema = defineSchema({
       ),
     ),
     notes: v.optional(v.string()),
+    /** Admin override of an active treatment withdrawal (PROD-012), audited. */
+    withdrawalOverride: v.optional(withdrawalOverride),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
     createdBy: v.optional(v.id('users')),
@@ -1276,6 +1294,56 @@ const schema = defineSchema({
   })
     .index('by_user_and_key', ['userId', 'key'])
     .index('by_createdAt', ['createdAt']),
+  /**
+   * A traceable unit of harvested fish (TRACE-004): part or all of one
+   * harvest, with its own code, weight, grade and destination. Dispatches
+   * send a lot (or part of it) to a customer.
+   */
+  harvestLots: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    harvestId: v.id('harvestRecords'),
+    cageId: v.id('cages'),
+    batchId: v.optional(v.id('batches')),
+    lotCode: v.string(),
+    harvestDate: v.string(),
+    weightKg: v.number(),
+    fishCount: v.optional(v.number()),
+    grade: v.optional(v.string()),
+    destination: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    /** Set by migration M18 for the default lot of a pre-existing harvest. */
+    backfilled: v.optional(v.boolean()),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_lotCode', ['companyId', 'lotCode'])
+    .index('by_companyId_and_harvestDate', ['companyId', 'harvestDate'])
+    .index('by_harvestId', ['harvestId'])
+    .index('by_batchId', ['batchId']),
+
+  /** A harvest lot leaving the farm for a customer (TRACE-004). */
+  dispatches: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    harvestLotId: v.id('harvestLots'),
+    customerId: v.optional(v.id('customers')),
+    customerName: v.optional(v.string()),
+    saleId: v.optional(v.id('sales')),
+    dispatchDate: v.string(),
+    weightKg: v.number(),
+    vehicle: v.optional(v.string()),
+    driver: v.optional(v.string()),
+    /** Product temperature at loading (°C). */
+    temperatureC: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    withdrawalOverride: v.optional(withdrawalOverride),
+    createdBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_harvestLotId', ['harvestLotId'])
+    .index('by_companyId_and_dispatchDate', ['companyId', 'dispatchDate'])
+    .index('by_customerId', ['customerId']),
 })
 
 export default schema

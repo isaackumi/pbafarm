@@ -31,6 +31,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'recordOutboundUsage(ctx': 'inventory.issue',
   'requireApiAdmin(ctx)': 'integrations.manage',
   'requireAdmin(ctx)': 'automation.manage',
+  'requireWebhookAdmin(ctx)': 'integrations.manage',
 }
 
 /** Functions without an organization guard, and why. */
@@ -42,6 +43,8 @@ const ALLOWLIST: Record<string, string> = {
   'mfa.startEnrolment': 'own two-step enrolment; guarded in internal.mfa',
   'mfa.verifyChallenge': 'own two-step code; guarded in internal.mfa',
   'messaging/channels.saveCredentials': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.channelForAdmin',
+  'webhooks.create': 'action; guarded by requireWebhookAdmin in internal.webhooks.createEndpointRow',
+  'webhooks.rotateSecret': 'action; guarded by requireWebhookAdmin in internal.webhooks.endpointOwner',
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
 }
@@ -91,10 +94,13 @@ describe('permission matrix (generated from the source)', () => {
   test('every named permission is in the catalog, and every admin-only permission is used', () => {
     const named = new Set(fns.map((f) => f.guard).filter((g) => g && g.includes('.')))
     for (const p of named) expect(PERMISSIONS).toContain(p)
-    for (const p of ADMIN_ONLY) {
-      if (p === 'org.roles.manage') continue // roles.create/update/archive
-      expect(named.has(p) || p === 'production.stock.adjust' || p === 'inventory.adjust').toBe(true)
+    // Permissions checked inside a function (conditional edits, overrides) count too.
+    for (const file of sourceFiles(ROOT)) {
+      for (const m of readFileSync(file, 'utf8').matchAll(/assertUserCan\(ctx, [\w.]+, '([\w.]+)'\)/g)) {
+        named.add(m[1])
+      }
     }
+    for (const p of ADMIN_ONLY) expect({ p, used: named.has(p) }).toEqual({ p, used: true })
   })
 
   test('templates: viewer writes nothing, field staff and managers never hold admin-only permissions', () => {

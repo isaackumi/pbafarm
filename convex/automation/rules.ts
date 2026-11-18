@@ -72,6 +72,11 @@ async function validateDraft(
   if (d.actions.length > MAX_ACTIONS) throw new Error(`At most ${MAX_ACTIONS} actions per rule`)
   const members = new Set<string>()
   for (const a of d.actions) {
+    if (a.kind === 'webhook') {
+      const endpoint = await ctx.db.get(a.endpointId)
+      if (!endpoint || endpoint.companyId !== companyId) throw new Error('Webhook endpoint not found')
+      continue
+    }
     const r = a.recipients
     if (!r.everyone && !r.roles?.length && !r.userIds?.length) throw new Error('Each action needs recipients')
     if ((r.userIds?.length ?? 0) > 50) throw new Error('At most 50 people per action')

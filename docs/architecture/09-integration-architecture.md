@@ -278,3 +278,13 @@ Inbound replies (for example a worker replying "12 dead" on WhatsApp) are stored
 - Reads: `GET /api/v1/{cages|daily-records|sampling|harvests|feed-stock|sales}` (cursor pages, `limit` ≤ 200, `from`/`to` on dated lists, newest first) and `GET /api/v1/{resource}/{id}`. Company-indexed; site-limited keys filter by site, so a page may hold fewer than `limit` items.
 - Writes: `POST /api/v1/daily-records` and `POST /api/v1/sampling` call the same functions as the UI batch screens (`saveDailyBatch`, `saveSamplingBatch`). The actor is the key's creator downgraded to role `user` and limited to the key's sites (`convex/lib/apiActor.ts`), so admin overrides are never available; `logAudit` records `apiKeyId`. `Idempotency-Key` is required: same key and body replays the stored response (`Idempotent-Replayed: true`), a different body is 422, a refused write stores nothing. Keys are kept 30 days (`prune api idempotency keys` cron).
 - Contract: `GET /api/v1/openapi.json` (OpenAPI 3.1, `convex/integrations/openapi.ts`); in-app docs at `/api-docs`; key management at `/api-keys` (admins).
+
+### 13.3 Outbound webhooks (INT-005)
+
+- Tables: `webhookEndpoints` (url, eventTypes, status, consecutiveFailures, secretHint) and `webhookDeliveries` (payload kept for exact redelivery, status `pending|succeeded|failed`, attempts, responseStatus, short lastError; never the response body). Signing secrets live in `integrationSecrets.webhookEndpointId`, AAD `companyId:webhookEndpoints:endpointId`.
+- Trigger: `emitDomainEvent` schedules `internal.webhooks.fanOut` when an active endpoint of the company subscribes to the type (the same pattern as automation). `fanOut` is idempotent per (event, endpoint) and adds `webhooks` to `processedBy`.
+- Body: `{ id, type, occurredAt, companyId, siteId, data }` (`data` = event payload). Headers: `X-PBA-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, t + "." + body)>`, `X-PBA-Event-Id`, `X-PBA-Event-Type`, `X-PBA-Delivery-Id`. Receivers dedupe by event id.
+- Delivery: `internal.webhooks.deliver` (action, Effect): 10 s per attempt, redirects refused, two quick jittered retries on network errors/5xx/timeouts (safe: receivers dedupe). Then scheduled retries after 1 m, 5 m, 30 m, 2 h, 4 h and 12 h (7 attempts, about 19 hours); then `failed`, redeliverable by hand. Twenty failed attempts in a row turn the endpoint off and notify the company's admins.
+- Automation: action `{ kind: 'webhook', endpointId }` sends the triggering event (plus `rule`) or, for schedule rules, the check result as type `automation.rule`.
+- Retention: deliveries 30 days (`prune webhook deliveries` cron).
+
