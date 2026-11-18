@@ -5,14 +5,13 @@ import { useMutation, useQuery } from 'convex/react'
 import {
   CheckCircle,
   XCircle,
-  AlertCircle,
   Calendar,
   Clock,
   Info,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
+import { PageHeader, Button, EmptyState, Field, Textarea } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -160,7 +159,7 @@ function PendingApprovals() {
   }
 
   return (
-    <Layout title="Pending Approvals">
+    <Layout title="Pending approvals">
       <PageHeader
         showTitle={false}
         breadcrumbs={[
@@ -183,13 +182,13 @@ function PendingApprovals() {
       <div className="page-card overflow-hidden">
         {loading ? (
           <div className="py-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
-            <p className="mt-3 text-muted">Loading pending approvals...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
+            <p className="mt-3 text-muted">Loading pending approvals…</p>
           </div>
         ) : rows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
+              <thead className="bg-foam">
                 <tr>
                   <th
                     scope="col"
@@ -229,20 +228,20 @@ function PendingApprovals() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-foam-deep">
+              <tbody className="bg-surface divide-y divide-foam-deep">
                 {rows.map((record) => (
                   <tr
                     key={`${record.type}-${record.id}`}
-                    className="hover:bg-foam-deep/40"
+                    className="hover:bg-foam"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
                           record.type === 'stocking'
-                            ? 'bg-foam-deep text-lagoon-800'
+                            ? 'bg-lake-soft text-lake'
                             : record.type === 'fish_transfer'
-                              ? 'bg-sky-100 text-sky-900'
-                              : 'bg-orange-100 text-orange-800'
+                              ? 'bg-foam-deep text-chart-ink'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
                         }`}
                       >
                         {typeLabel(record.type)}
@@ -261,16 +260,16 @@ function PendingApprovals() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Calendar className="flex-shrink-0 mr-1.5 h-4 w-4 text-muted" />
-                        <span className="text-sm text-chart-ink">
+                        <span className="text-sm text-chart-ink tabular-nums">
                           {formatDate(record.date)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-chart-ink">
+                      <div className="text-sm text-chart-ink tabular-nums">
                         {record.count.toLocaleString()} fish
                       </div>
-                      <div className="text-sm text-muted">
+                      <div className="text-sm text-muted tabular-nums">
                         {record.abw.toFixed(1)}g /{' '}
                         {(record.biomass || 0).toFixed(1)}kg
                       </div>
@@ -278,7 +277,7 @@ function PendingApprovals() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-muted" />
-                        <div className="text-sm text-muted">
+                        <div className="text-sm text-muted tabular-nums">
                           {formatDate(record.createdAt)}{' '}
                           <span className="text-xs">
                             {formatTime(record.createdAt)}
@@ -287,34 +286,40 @@ function PendingApprovals() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-3">
+                      <div className="flex justify-end gap-1">
                         <button
+                          type="button"
                           onClick={() => handleApprove(record)}
-                          className="text-green-600 hover:text-green-900"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-kelp hover:bg-kelp/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                           title="Approve"
+                          aria-label="Approve"
                         >
                           <CheckCircle className="h-5 w-5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleReject(record)}
-                          className="text-red-600 hover:text-red-900"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                           title="Reject"
+                          aria-label="Reject"
                         >
                           <XCircle className="h-5 w-5" />
                         </button>
                         {record.type !== 'fish_transfer' ? (
                           <Link
                             href={`/${record.type}/${record.id}/details`}
-                            className="text-lagoon-800 hover:text-blue-900"
-                            title="View Details"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-lake hover:bg-lake-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                            title="View details"
+                            aria-label="View details"
                           >
                             <Info className="h-5 w-5" />
                           </Link>
                         ) : (
                           <Link
                             href="/fish-transfers"
-                            className="text-lagoon-800 hover:text-blue-900"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-lake hover:bg-lake-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                             title="View transfers"
+                            aria-label="View transfers"
                           >
                             <Info className="h-5 w-5" />
                           </Link>
@@ -327,13 +332,10 @@ function PendingApprovals() {
             </table>
           </div>
         ) : (
-          <div className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-muted mx-auto" />
-            <p className="mt-3 text-muted">No pending approvals found.</p>
-            <p className="text-sm text-muted">
-              All stocking and top-up requests have been processed.
-            </p>
-          </div>
+          <EmptyState
+            title="No pending approvals"
+            description="All stocking and top-up requests have been processed."
+          />
         )}
       </div>
 
@@ -343,9 +345,9 @@ function PendingApprovals() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => !processingAction && setShowApproveModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Confirm Approval
+          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-chart-ink mb-4">
+              Approve request?
             </h3>
 
             <p className="text-muted mb-4">
@@ -360,29 +362,29 @@ function PendingApprovals() {
               in <span className="font-medium">{currentRecord.cageName}</span>?
             </p>
 
-            <div className="bg-foam-deep p-3 rounded-lg mb-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-foam border border-foam-deep p-3 rounded-lg mb-4">
+              <div className="grid grid-cols-2 gap-2 text-sm tabular-nums">
                 <div>
-                  <span className="font-medium text-lagoon-800">Date:</span>{' '}
-                  <span className="text-lagoon-800">
+                  <span className="font-medium text-muted">Date:</span>{' '}
+                  <span className="text-chart-ink">
                     {formatDate(currentRecord.date)}
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-lagoon-800">Quantity:</span>{' '}
-                  <span className="text-lagoon-800">
+                  <span className="font-medium text-muted">Quantity:</span>{' '}
+                  <span className="text-chart-ink">
                     {currentRecord.count.toLocaleString()} fish
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-lagoon-800">ABW:</span>{' '}
-                  <span className="text-lagoon-800">
+                  <span className="font-medium text-muted">ABW:</span>{' '}
+                  <span className="text-chart-ink">
                     {currentRecord.abw.toFixed(1)}g
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-lagoon-800">Biomass:</span>{' '}
-                  <span className="text-lagoon-800">
+                  <span className="font-medium text-muted">Biomass:</span>{' '}
+                  <span className="text-chart-ink">
                     {(currentRecord.biomass || 0).toFixed(1)}kg
                   </span>
                 </div>
@@ -390,32 +392,26 @@ function PendingApprovals() {
             </div>
 
             {actionError && (
-              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm">
+              <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
                 {actionError}
               </div>
             )}
 
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
                 onClick={() => setShowApproveModal(false)}
                 disabled={processingAction}
-                className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
                 onClick={confirmApprove}
                 disabled={processingAction}
-                className={`px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-                  processingAction
-                    ? 'bg-green-400'
-                    : 'bg-green-600 hover:bg-green-700'
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
               >
-                {processingAction ? 'Processing...' : 'Approve'}
-              </button>
+                {processingAction ? 'Processing…' : 'Approve'}
+              </Button>
             </div>
           </div>
         </div>
@@ -427,9 +423,9 @@ function PendingApprovals() {
             className="fixed inset-0 modal-backdrop"
             onClick={() => !processingAction && setShowRejectModal(false)}
           ></div>
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Confirm Rejection
+          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-chart-ink mb-4">
+              Reject request?
             </h3>
 
             <p className="text-muted mb-4">
@@ -444,47 +440,43 @@ function PendingApprovals() {
               in <span className="font-medium">{currentRecord.cageName}</span>?
             </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-chart-ink mb-1">
-                Reason for Rejection <span className="text-red-500">*</span>
-              </label>
-              <textarea
+            <Field
+              label="Reason for rejection"
+              htmlFor="rejection-reason"
+              required
+              className="mb-4"
+            >
+              <Textarea
+                id="rejection-reason"
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                rows="3"
-                className="block w-full px-3 py-2 border border-input-border rounded-lg shadow-sm focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                placeholder="Please provide a reason for rejection"
+                rows={3}
+                placeholder="Tell the requester why this was rejected"
                 required
-              ></textarea>
-            </div>
+              />
+            </Field>
 
             {actionError && (
-              <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm">
+              <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
                 {actionError}
               </div>
             )}
 
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
                 onClick={() => setShowRejectModal(false)}
                 disabled={processingAction}
-                className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="danger"
                 onClick={confirmReject}
                 disabled={processingAction}
-                className={`px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-                  processingAction
-                    ? 'bg-red-400'
-                    : 'bg-red-600 hover:bg-red-700'
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
               >
-                {processingAction ? 'Processing...' : 'Reject'}
-              </button>
+                {processingAction ? 'Processing…' : 'Reject'}
+              </Button>
             </div>
           </div>
         </div>

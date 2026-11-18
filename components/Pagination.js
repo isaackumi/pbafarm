@@ -54,17 +54,18 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
   return (
     <nav
-      className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px"
+      className="relative z-0 inline-flex rounded-lg -space-x-px"
       aria-label="Pagination"
     >
       {/* Previous Page Button */}
       <button
+        type="button"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
-        className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-input-border bg-white text-sm font-medium ${
+        className={`relative inline-flex items-center justify-center min-h-10 min-w-10 px-2 rounded-l-lg border border-foam-deep bg-surface text-sm font-medium focus:outline-none focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-lake ${
           currentPage === 1
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-muted hover:bg-foam-deep/40'
+            ? 'text-muted opacity-50 cursor-not-allowed'
+            : 'text-muted hover:bg-foam'
         }`}
       >
         <span className="sr-only">Previous</span>
@@ -77,7 +78,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           return (
             <span
               key={`ellipsis-${index}`}
-              className="relative inline-flex items-center px-4 py-2 border border-input-border bg-white text-sm font-medium text-chart-ink"
+              className="relative inline-flex items-center min-h-10 px-3 border border-foam-deep bg-surface text-sm font-medium text-muted"
             >
               ...
             </span>
@@ -87,11 +88,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         return (
           <button
             key={page}
-            onClick={() => onPageChange(page)}
-            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+            type="button"
+        onClick={() => onPageChange(page)}
+            className={`relative inline-flex items-center justify-center min-h-10 min-w-10 px-3 border text-sm font-medium tabular-nums focus:outline-none focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-lake ${
               currentPage === page
-                ? 'z-10 bg-foam-deep border-lagoon-800 text-lagoon-800'
-                : 'bg-white border-input-border text-muted hover:bg-foam-deep/40'
+                ? 'z-10 bg-lake-soft border-lake text-lake'
+                : 'bg-surface border-foam-deep text-muted hover:bg-foam'
             }`}
             aria-current={currentPage === page ? 'page' : undefined}
           >
@@ -102,12 +104,13 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
       {/* Next Page Button */}
       <button
+        type="button"
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
-        className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-input-border bg-white text-sm font-medium ${
+        className={`relative inline-flex items-center justify-center min-h-10 min-w-10 px-2 rounded-r-lg border border-foam-deep bg-surface text-sm font-medium focus:outline-none focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-lake ${
           currentPage === totalPages
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-muted hover:bg-foam-deep/40'
+            ? 'text-muted opacity-50 cursor-not-allowed'
+            : 'text-muted hover:bg-foam'
         }`}
       >
         <span className="sr-only">Next</span>

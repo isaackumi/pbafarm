@@ -3,7 +3,15 @@ import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { formatCurrency, formatNumber } from '../../lib/currencyUtils'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import {
+  PageHeader,
+  Button,
+  Field,
+  Input,
+  Select,
+  Textarea,
+  StatCard,
+} from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import { feedTypeService } from '../../lib/feedTypeService'
 import { supplierService } from '../../lib/supplierService'
@@ -14,7 +22,7 @@ import { withActiveLocation } from '../../lib/locationScope'
 import { useToast } from '../../components/Toast'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../../components/FeedPurchaseModal'
-import { Plus, ArrowLeft, Download, Filter, Search, Utensils, Users, Database, LineChart, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
+import { Plus, ArrowLeft, Download, Filter, Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
 const FeedManagement = () => {
@@ -348,124 +356,81 @@ const FeedManagement = () => {
           />
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="page-card-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-foam-deep">
-                  <Utensils className="h-6 w-6 text-lagoon-800" />
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-sm font-medium text-muted">Total Feed Types</h2>
-                  <p className="text-2xl font-semibold text-chart-ink">
-                    {loading ? '—' : formatNumber(activeFeedTypeCount, { decimals: 0 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="page-card-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-50">
-                  <Users className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-sm font-medium text-muted">Active Suppliers</h2>
-                  <p className="text-2xl font-semibold text-chart-ink">
-                    {formatNumber(activeSupplierCount, { decimals: 0 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="page-card-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-foam-deep">
-                  <Database className="h-6 w-6 text-lagoon-800" />
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-sm font-medium text-muted">Total Feed Stock</h2>
-                  <p className="text-2xl font-semibold text-chart-ink">
-                    {loading ? '—' : `${formatNumber(totalStockKg, { decimals: 0 })} kg`}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="page-card-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-purple-50">
-                  <LineChart className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-sm font-medium text-muted">Monthly Usage</h2>
-                  <p className="text-2xl font-semibold text-chart-ink">
-                    {loading ? '—' : `${formatNumber(monthlyUsageKg, { decimals: 0 })} kg`}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard
+              label="Feed types"
+              value={loading ? '—' : formatNumber(activeFeedTypeCount, { decimals: 0 })}
+            />
+            <StatCard
+              label="Active suppliers"
+              value={formatNumber(activeSupplierCount, { decimals: 0 })}
+            />
+            <StatCard
+              label="Feed in stock"
+              value={loading ? '—' : formatNumber(totalStockKg, { decimals: 0 })}
+              unit={loading ? '' : 'kg'}
+            />
+            <StatCard
+              label="Monthly usage"
+              value={loading ? '—' : formatNumber(monthlyUsageKg, { decimals: 0 })}
+              unit={loading ? '' : 'kg'}
+            />
           </div>
 
           {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Feed Types Card */}
             <div className="lg:col-span-2">
-              <div className="page-card-sm border border-gray-100">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium text-chart-ink">Feed Types</h2>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={handleAddFeedType}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Feed Type
-                      </button>
-                      <button
-                        onClick={() => setShowPurchaseModal(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Feed Purchase
-                      </button>
+              <div className="page-card-sm">
+                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-lg font-medium text-chart-ink">Feed types</h2>
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={handleAddFeedType}>
+                        <Plus className="h-4 w-4" aria-hidden />
+                        Add feed type
+                      </Button>
+                      <Button variant="secondary" onClick={() => setShowPurchaseModal(true)}>
+                        <ShoppingCart className="h-4 w-4" aria-hidden />
+                        Record purchase
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Filters */}
-                  <div className="mb-6 flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search feed types..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="block w-full pl-10 pr-3 py-2 border border-input-border rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
-                        />
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Search className="h-5 w-5 text-muted" />
-                        </div>
+                  <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Input
+                        type="text"
+                        aria-label="Search feed types"
+                        placeholder="Search feed types…"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-muted" aria-hidden />
                       </div>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="block w-full pl-3 pr-10 py-2 text-base border border-input-border focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm rounded-lg"
-                      >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
                     </div>
+                    <Select
+                      aria-label="Status"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="sm:w-44"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </Select>
                   </div>
 
                   {loading ? (
                     <div className="flex justify-center items-center h-32">
-                      <div className="w-8 h-8 border-4 border-lagoon-800 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-8 h-8 border-4 border-lake border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   ) : error ? (
-                    <div className="text-center text-red-600">{error}</div>
+                    <div className="text-center text-signal">{error}</div>
                   ) : (
                     <>
                       <div className="overflow-x-auto">
@@ -479,20 +444,21 @@ const FeedManagement = () => {
                               <th className="px-6 py-3 text-right text-xs font-medium text-muted">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-foam-deep">
+                          <tbody className="bg-surface divide-y divide-foam-deep">
                             {currentItems.map((type) => (
-                              <tr key={type.id} className="hover:bg-foam-deep/40">
+                              <tr key={type.id} className="hover:bg-foam">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{type.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
                                   {type.protein_percentage != null && type.protein_percentage !== ''
                                     ? `${type.protein_percentage}%`
                                     : '—'}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{formatCurrency(type.price_per_kg)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">{formatCurrency(type.price_per_kg)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <button
+                                    type="button"
                                     onClick={() => handleStatusChange(type.id, !type.active)}
-                                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer ${
+                                    className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-lake ${
                                       type.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
                                     }`}
                                   >
@@ -500,19 +466,24 @@ const FeedManagement = () => {
                                   </button>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <button
-                                    onClick={() => handleEditFeedType(type)}
-                                    className="text-lagoon-800 hover:text-lagoon-950 mr-4"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDeleteConfirm(type)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    Delete
-                                  </button>
+                                  <div className="flex justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditFeedType(type)}
+                                      className="text-lake"
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setDeleteConfirm(type)}
+                                      className="text-signal"
+                                    >
+                                      Delete
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -522,26 +493,27 @@ const FeedManagement = () => {
 
                       {/* Pagination */}
                       {totalPages > 1 && (
-                        <div className="flex items-center justify-between border-t border-foam-deep bg-white px-4 py-3 sm:px-6 mt-4">
+                        <div className="flex items-center justify-between border-t border-foam-deep bg-surface px-4 py-3 sm:px-6 mt-4">
                           <div className="flex flex-1 justify-between sm:hidden">
-                            <button
+                            <Button
+                              variant="secondary"
                               onClick={() => handlePageChange(currentPage - 1)}
                               disabled={currentPage === 1}
-                              className="relative inline-flex items-center rounded-lg border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
                             >
                               Previous
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="secondary"
                               onClick={() => handlePageChange(currentPage + 1)}
                               disabled={currentPage === totalPages}
-                              className="relative ml-3 inline-flex items-center rounded-lg border border-input-border bg-white px-4 py-2 text-sm font-medium text-chart-ink hover:bg-foam-deep/40"
+                              className="ml-3"
                             >
                               Next
-                            </button>
+                            </Button>
                           </div>
                           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                             <div>
-                              <p className="text-sm text-chart-ink">
+                              <p className="text-sm text-muted tabular-nums">
                                 Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
                                 <span className="font-medium">
                                   {Math.min(indexOfLastItem, filteredFeedTypes.length)}
@@ -550,33 +522,39 @@ const FeedManagement = () => {
                               </p>
                             </div>
                             <div>
-                              <nav className="isolate inline-flex -space-x-px rounded-lg shadow-sm" aria-label="Pagination">
+                              <nav className="isolate inline-flex -space-x-px rounded-lg" aria-label="Pagination">
                                 <button
+                                  type="button"
                                   onClick={() => handlePageChange(currentPage - 1)}
                                   disabled={currentPage === 1}
-                                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-muted ring-1 ring-inset ring-gray-300 hover:bg-foam-deep/40 focus:z-20 focus:outline-offset-0"
+                                  aria-label="Previous page"
+                                  className="relative inline-flex items-center rounded-l-lg px-2 min-h-9 text-muted border border-foam-deep hover:bg-foam disabled:opacity-50 focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                                 >
-                                  <ChevronLeft className="h-5 w-5" />
+                                  <ChevronLeft className="h-4 w-4" aria-hidden />
                                 </button>
                                 {[...Array(totalPages)].map((_, index) => (
                                   <button
                                     key={index + 1}
+                                    type="button"
                                     onClick={() => handlePageChange(index + 1)}
-                                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                                    aria-current={currentPage === index + 1 ? 'page' : undefined}
+                                    className={`relative inline-flex items-center px-3.5 min-h-9 text-sm font-medium tabular-nums border focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake ${
                                       currentPage === index + 1
-                                        ? 'z-10 bg-lagoon-800 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lagoon-800'
-                                        : 'text-chart-ink ring-1 ring-inset ring-gray-300 hover:bg-foam-deep/40 focus:z-20 focus:outline-offset-0'
+                                        ? 'z-10 border-lake bg-lake-soft text-lake'
+                                        : 'border-foam-deep text-chart-ink hover:bg-foam'
                                     }`}
                                   >
                                     {index + 1}
                                   </button>
                                 ))}
                                 <button
+                                  type="button"
                                   onClick={() => handlePageChange(currentPage + 1)}
                                   disabled={currentPage === totalPages}
-                                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-muted ring-1 ring-inset ring-gray-300 hover:bg-foam-deep/40 focus:z-20 focus:outline-offset-0"
+                                  aria-label="Next page"
+                                  className="relative inline-flex items-center rounded-r-lg px-2 min-h-9 text-muted border border-foam-deep hover:bg-foam disabled:opacity-50 focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
                                 >
-                                  <ChevronRight className="h-5 w-5" />
+                                  <ChevronRight className="h-4 w-4" aria-hidden />
                                 </button>
                               </nav>
                             </div>
@@ -591,38 +569,35 @@ const FeedManagement = () => {
 
             {/* Feed Suppliers Card */}
             <div className="lg:col-span-1">
-              <div className="page-card-sm border border-gray-100 mb-6">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium text-chart-ink">Feed Suppliers</h2>
-                    <div className="flex items-center space-x-2">
+              <div className="page-card-sm mb-6">
+                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-medium text-chart-ink">Feed suppliers</h2>
+                    <div className="flex items-center gap-2">
                       <Link
                         href="/feed-suppliers"
-                        className="text-sm text-lagoon-800 hover:text-lagoon-950"
+                        className="text-sm text-lake hover:underline"
                       >
-                        View All
+                        View all
                       </Link>
-                      <button
-                        onClick={() => setShowAddSupplierModal(true)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
+                      <Button size="sm" variant="secondary" onClick={() => setShowAddSupplierModal(true)}>
+                        <Plus className="h-4 w-4" aria-hidden />
                         Add
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="p-6">
-                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                <div className="p-4 sm:p-6">
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {suppliers.map((supplier) => (
-                      <div key={supplier.id} className="p-4 bg-foam-deep/40 rounded-lg">
-                        <div className="flex justify-between items-start">
+                      <div key={supplier.id} className="p-4 bg-foam border border-foam-deep rounded-lg">
+                        <div className="flex justify-between items-start gap-3">
                           <div>
                             <h3 className="text-sm font-medium text-chart-ink">{supplier.name}</h3>
                             <p className="text-xs text-muted mt-1">{supplier.contact_person}</p>
                             <p className="text-xs text-muted">{supplier.phone}</p>
                           </div>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             supplier.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
                           }`}>
                             {supplier.active ? 'Active' : 'Inactive'}
@@ -635,29 +610,29 @@ const FeedManagement = () => {
               </div>
 
               {/* Recently Used Feed Card */}
-              <div className="page-card-sm border border-gray-100">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium text-chart-ink">Recently Used Feed</h2>
+              <div className="page-card-sm">
+                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-medium text-chart-ink">Recently used feed</h2>
                     <Link
                       href="/feed-types"
-                      className="text-sm text-lagoon-800 hover:text-lagoon-950"
+                      className="text-sm text-lake hover:underline"
                     >
-                      View All
+                      View all
                     </Link>
                   </div>
                 </div>
-                <div className="p-6">
-                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                <div className="p-4 sm:p-6">
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {feedTypes
                       .filter(type => type.active)
                       .slice(0, 5)
                       .map((type) => (
-                        <div key={type.id} className="p-4 bg-foam-deep/40 rounded-lg">
-                          <div className="flex justify-between items-start">
+                        <div key={type.id} className="p-4 bg-foam border border-foam-deep rounded-lg">
+                          <div className="flex justify-between items-start gap-3">
                             <div>
                               <h3 className="text-sm font-medium text-chart-ink">{type.name}</h3>
-                              <p className="text-xs text-muted mt-1">
+                              <p className="text-xs text-muted mt-1 tabular-nums">
                                 {type.protein_percentage != null &&
                                 type.protein_percentage !== ''
                                   ? `${type.protein_percentage}% protein`
@@ -672,7 +647,7 @@ const FeedManagement = () => {
                                 Last used 2 hours ago
                               </p>
                             </div>
-                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-kelp/15 text-kelp">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-kelp/15 text-kelp">
                               Active
                             </span>
                           </div>
@@ -688,54 +663,49 @@ const FeedManagement = () => {
         {/* Add/Edit Feed Type Modal */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
-            <div className="page-card-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b border-foam-deep">
+            <div className="page-card-xl max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+              <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
                 <h3 className="text-lg font-medium text-chart-ink">
-                  {editingType ? 'Edit Feed Type' : 'Add New Feed Type'}
+                  {editingType ? 'Edit feed type' : 'Add feed type'}
                 </h3>
               </div>
-              <form onSubmit={handleSubmit} className="p-6">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6">
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Name</label>
-                    <input
+                  <Field label="Name" htmlFor="fm-type-name">
+                    <Input
+                      id="fm-type-name"
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Protein Content (%)</label>
-                    <input
+                  </Field>
+                  <Field label="Protein content (%)" htmlFor="fm-type-protein-content">
+                    <Input
+                      id="fm-type-protein-content"
                       type="number"
                       name="protein_content"
                       value={formData.protein_content}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Price per kg (₵)</label>
-                    <input
+                  </Field>
+                  <Field label="Price per kg (₵)" htmlFor="fm-type-price-per-kg">
+                    <Input
+                      id="fm-type-price-per-kg"
                       type="number"
                       name="price_per_kg"
                       value={formData.price_per_kg}
                       onChange={handleChange}
                       step="0.01"
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-chart-ink">
-                        Minimum stock (kg)
-                      </label>
-                      <input
+                  </Field>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Minimum stock (kg)" htmlFor="fm-type-minimum-stock">
+                      <Input
+                        id="fm-type-minimum-stock"
                         type="number"
                         name="minimum_stock"
                         value={formData.minimum_stock}
@@ -743,52 +713,42 @@ const FeedManagement = () => {
                         step="1"
                         min="0"
                         placeholder="e.g. 500"
-                        className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                        className="font-data tabular-nums"
                       />
                       <p className="mt-1 text-xs text-muted">
                         Alerts when stock ≤ this
                       </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-chart-ink">
-                        Bag size (kg)
-                      </label>
-                      <input
+                    </Field>
+                    <Field label="Bag size (kg)" htmlFor="fm-type-bag-size-kg">
+                      <Input
+                        id="fm-type-bag-size-kg"
                         type="number"
                         name="bag_size_kg"
                         value={formData.bag_size_kg}
                         onChange={handleChange}
                         step="0.1"
                         min="0.1"
-                        className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm font-data"
+                        className="font-data tabular-nums"
                       />
-                    </div>
+                    </Field>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Description</label>
-                    <textarea
+                  <Field label="Description" htmlFor="fm-type-description">
+                    <Textarea
+                      id="fm-type-description"
                       name="description"
                       value={formData.description}
                       onChange={handleChange}
                       rows="3"
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     />
-                  </div>
+                  </Field>
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={closeFeedModal}
-                    className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                  >
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
+                  <Button variant="secondary" onClick={closeFeedModal}>
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                  >
-                    {editingType ? 'Update' : 'Add'} Feed Type
-                  </button>
+                  </Button>
+                  <Button type="submit">
+                    {editingType ? 'Save changes' : 'Add feed type'}
+                  </Button>
                 </div>
               </form>
             </div>
@@ -798,81 +758,69 @@ const FeedManagement = () => {
         {/* Add Supplier Modal */}
         {showAddSupplierModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
-            <div className="page-card-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b border-foam-deep">
-                <h3 className="text-lg font-medium text-chart-ink">Add New Supplier</h3>
+            <div className="page-card-xl max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+              <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
+                <h3 className="text-lg font-medium text-chart-ink">Add supplier</h3>
               </div>
-              <form onSubmit={handleSupplierSubmit} className="p-6">
+              <form onSubmit={handleSupplierSubmit} className="p-4 sm:p-6">
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Company Name</label>
-                    <input
+                  <Field label="Company name" htmlFor="fm-supplier-name">
+                    <Input
+                      id="fm-supplier-name"
                       type="text"
                       name="name"
                       value={supplierFormData.name}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Contact Person</label>
-                    <input
+                  </Field>
+                  <Field label="Contact person" htmlFor="fm-supplier-contact-person">
+                    <Input
+                      id="fm-supplier-contact-person"
                       type="text"
                       name="contact_person"
                       value={supplierFormData.contact_person}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Phone</label>
-                    <input
+                  </Field>
+                  <Field label="Phone" htmlFor="fm-supplier-phone">
+                    <Input
+                      id="fm-supplier-phone"
                       type="tel"
                       name="phone"
                       value={supplierFormData.phone}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Email</label>
-                    <input
+                  </Field>
+                  <Field label="Email" htmlFor="fm-supplier-email">
+                    <Input
+                      id="fm-supplier-email"
                       type="email"
                       name="email"
                       value={supplierFormData.email}
                       onChange={handleSupplierChange}
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-chart-ink">Address</label>
-                    <textarea
+                  </Field>
+                  <Field label="Address" htmlFor="fm-supplier-address">
+                    <Textarea
+                      id="fm-supplier-address"
                       name="address"
                       value={supplierFormData.address}
                       onChange={handleSupplierChange}
                       rows="3"
-                      className="mt-1 block w-full border border-input-border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-lagoon-800 focus:border-lagoon-800 sm:text-sm"
                     />
-                  </div>
+                  </Field>
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddSupplierModal(false)}
-                    className="px-4 py-2 border border-input-border rounded-lg shadow-sm text-sm font-medium text-chart-ink bg-white hover:bg-foam-deep/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                  >
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
+                  <Button variant="secondary" onClick={() => setShowAddSupplierModal(false)}>
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-lagoon-800 hover:bg-lagoon-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lagoon-800"
-                  >
-                    Add Supplier
-                  </button>
+                  </Button>
+                  <Button type="submit">
+                    Add supplier
+                  </Button>
                 </div>
               </form>
             </div>
@@ -885,7 +833,7 @@ const FeedManagement = () => {
           onSaved={refreshPageData}
           feedTypes={feedTypes}
           suppliers={suppliers}
-          title="New Feed Purchase"
+          title="New feed purchase"
         />
 
         <ConfirmDeleteModal

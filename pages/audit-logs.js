@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
+import { PageHeader, Button, Select, StatCard, EmptyState } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 
@@ -55,21 +55,21 @@ function AuditLogsContent() {
         }
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <select
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:max-w-3xl">
+        <Select
+          aria-label="Date range"
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
-          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm"
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
           <option value={90}>Last 90 days</option>
           <option value={365}>Last year</option>
-        </select>
-        <select
+        </Select>
+        <Select
+          aria-label="Table"
           value={tableName}
           onChange={(e) => setTableName(e.target.value)}
-          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm"
         >
           <option value="">All tables</option>
           <option value="cages">Cages</option>
@@ -83,11 +83,11 @@ function AuditLogsContent() {
           <option value="feedInventoryTransactions">Feed ledger</option>
           <option value="companies">Companies / settings</option>
           <option value="users">Users</option>
-        </select>
-        <select
+        </Select>
+        <Select
+          aria-label="Action"
           value={actionType}
           onChange={(e) => setActionType(e.target.value)}
-          className="border border-input-border rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="">All actions</option>
           <option value="create">Create</option>
@@ -99,24 +99,19 @@ function AuditLogsContent() {
           <option value="reversal">Reversal</option>
           <option value="stock_override">Stock override</option>
           <option value="settings_publish">Settings publish</option>
-        </select>
+        </Select>
       </div>
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="page-card p-4">
-            <p className="text-xs text-muted">Events in range</p>
-            <p className="font-data text-xl font-semibold text-chart-ink">
-              {summary.total_logs ?? 0}
-            </p>
-          </div>
+          <StatCard label="Events in range" value={summary.total_logs ?? 0} />
           {(summary.top_users || []).slice(0, 3).map((u) => (
-            <div key={u.userId} className="page-card p-4">
-              <p className="text-xs text-muted truncate">
-                {u.label || u.userId}
-              </p>
-              <p className="font-data text-xl font-semibold text-chart-ink">{u.count}</p>
-            </div>
+            <StatCard
+              key={u.userId}
+              label={<span className="block truncate">{u.label || u.userId}</span>}
+              value={u.count}
+              unit="events"
+            />
           ))}
         </div>
       )}
@@ -125,25 +120,28 @@ function AuditLogsContent() {
         {loading ? (
           <div className="p-8 text-center text-muted">Loading audit logs…</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-muted">No audit events yet.</div>
+          <EmptyState
+            title="No audit events yet"
+            description="Changes to cages, feed stock, settings and users will show up here."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
+              <thead className="bg-foam">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     When
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Action
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Table
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     Record
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
                     User
                   </th>
                 </tr>
@@ -152,15 +150,15 @@ function AuditLogsContent() {
                 {logs.map((log) => (
                   <tr
                     key={log.id || log._id}
-                    className="hover:bg-foam/60 cursor-pointer"
+                    className="hover:bg-foam cursor-pointer"
                     onClick={() => setSelected(log)}
                   >
-                    <td className="px-4 py-3 text-sm font-data text-chart-ink whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm font-data tabular-nums text-chart-ink whitespace-nowrap">
                       {log.created_at
                         ? new Date(log.created_at).toLocaleString()
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-lagoon-800">
+                    <td className="px-4 py-3 text-sm font-medium text-lake">
                       {log.action_type}
                     </td>
                     <td className="px-4 py-3 text-sm text-chart-ink">
@@ -186,7 +184,7 @@ function AuditLogsContent() {
             className="absolute inset-0 modal-backdrop"
             onClick={() => setSelected(null)}
           />
-          <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto p-6">
+          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-chart-ink">
@@ -199,27 +197,23 @@ function AuditLogsContent() {
                     : '—'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="text-sm text-muted hover:text-chart-ink"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
                 Close
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-muted mb-2">Record: {selected.record_id || '—'}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs font-semibold text-muted mb-1">
+                <p className="text-xs font-medium text-muted mb-1">
                   Previous
                 </p>
-                <pre className="text-xs bg-foam-deep/40 rounded-lg p-3 overflow-auto max-h-64 font-data">
+                <pre className="text-xs bg-foam border border-foam-deep text-chart-ink rounded-lg p-3 overflow-auto max-h-64 font-data">
                   {JSON.stringify(selected.previous_values ?? null, null, 2)}
                 </pre>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted mb-1">New</p>
-                <pre className="text-xs bg-foam-deep/40 rounded-lg p-3 overflow-auto max-h-64 font-data">
+                <p className="text-xs font-medium text-muted mb-1">New</p>
+                <pre className="text-xs bg-foam border border-foam-deep text-chart-ink rounded-lg p-3 overflow-auto max-h-64 font-data">
                   {JSON.stringify(selected.new_values ?? null, null, 2)}
                 </pre>
               </div>

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader } from '../components/ui'
+import { PageHeader, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { getConvexHttpClient, api } from '../lib/convexBridge'
 import { useMoney } from '../lib/money'
@@ -78,9 +78,9 @@ function InventoryAlerts() {
       return `Critical: Stock is at ${percentage.toFixed(0)}% of minimum level`
     }
     if (current <= minimum * 0.8) {
-      return `High Priority: Stock is at ${percentage.toFixed(0)}% of minimum level`
+      return `High priority: Stock is at ${percentage.toFixed(0)}% of minimum level`
     }
-    return `Medium Priority: Stock is at ${percentage.toFixed(0)}% of minimum level`
+    return `Medium priority: Stock is at ${percentage.toFixed(0)}% of minimum level`
   }
 
   return (
@@ -99,13 +99,10 @@ function InventoryAlerts() {
           { label: 'Ledger', href: '/inventory-transactions' },
         ]}
         actions={
-          <button
-            onClick={fetchAlerts}
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-xl text-white bg-lagoon-950 hover:bg-lagoon-800 min-h-10"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="secondary" onClick={fetchAlerts}>
+            <RefreshCw className="w-4 h-4" aria-hidden />
             Refresh
-          </button>
+          </Button>
         }
       />
 
@@ -117,12 +114,12 @@ function InventoryAlerts() {
 
         <div className="page-card overflow-hidden">
           <div className="px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Active Alerts</h2>
+            <h2 className="font-medium text-chart-ink">Active alerts</h2>
           </div>
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lagoon-800 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
               <p className="mt-3 text-muted">Loading alerts...</p>
             </div>
           ) : alerts.length > 0 ? (
@@ -130,13 +127,13 @@ function InventoryAlerts() {
               {alerts.map((item) => {
                 const severity = getAlertSeverity(item.current_stock, item.minimum_stock)
                 return (
-                  <div key={item.id} className="p-6">
+                  <div key={item.id} className="p-4 sm:p-6">
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
                         <AlertTriangle className={`h-6 w-6 ${getSeverityColor(severity).split(' ')[0]}`} />
                       </div>
                       <div className="ml-4 flex-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-3">
                           <h3 className="text-sm font-medium text-chart-ink">
                             {item.name}
                           </h3>
@@ -151,14 +148,14 @@ function InventoryAlerts() {
                         <p className="mt-1 text-sm text-muted">
                           {getAlertMessage(item)}
                         </p>
-                        <div className="mt-2 text-sm text-muted">
-                          <div className="grid grid-cols-2 gap-4">
+                        <div className="mt-2 text-sm text-muted tabular-nums">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                             <div>
-                              <span className="font-medium">Current Stock:</span>{' '}
+                              <span className="font-medium">Current stock:</span>{' '}
                               {item.current_stock?.toFixed(2)} kg
                             </div>
                             <div>
-                              <span className="font-medium">Minimum Stock:</span>{' '}
+                              <span className="font-medium">Minimum stock:</span>{' '}
                               {item.minimum_stock?.toFixed(2)} kg
                             </div>
                             <div>

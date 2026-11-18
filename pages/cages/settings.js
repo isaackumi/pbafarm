@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { Pencil, Trash2 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
@@ -53,9 +54,9 @@ function CageSettings() {
         ) : cages.length === 0 ? (
           <div className="p-8 text-center text-muted">
             No cages yet.{' '}
-            <a href="/create-cage" className="text-lagoon-800 hover:underline">
+            <Link href="/create-cage" className="text-lake hover:underline">
               Create one
-            </a>
+            </Link>
           </div>
         ) : (
           <ul className="divide-y divide-foam-deep">
