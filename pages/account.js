@@ -19,6 +19,7 @@ import {
   InlineError,
   FIELD,
   FIELD_LABEL,
+  RouteGate,
 } from '../components/settings'
 import { usePermissions } from '../hooks/usePermission'
 import { routePermission } from '../lib/routePermissions'
@@ -312,11 +313,13 @@ function DataPrivacyCard({ showDelete }) {
   return (
     <SettingsCard title={t('settingsUi.account.dataPrivacy')}>
       {canExport && (
+        <RouteGate href="/export">
         <SettingsRow label={t('settingsUi.account.download')} helper={t('settingsUi.account.downloadHelper')}>
           <GradientButton href="/export" size="sm">
             {t('settingsUi.account.downloadAction')}
           </GradientButton>
         </SettingsRow>
+        </RouteGate>
       )}
       {showDelete && <AccountDeletionCard />}
     </SettingsCard>

@@ -13,6 +13,7 @@ import {
   SettingsFrame,
   SettingsRow,
   useSettingsEyebrow,
+  RouteGate,
 } from '../components/settings'
 import { useT } from '../lib/i18n/context'
 import { api } from '../convex/_generated/api'
@@ -241,9 +242,9 @@ function CompanySettings() {
       <SettingsCard title={t('settingsUi.company.noCompany')} className="max-w-xl">
         <p className="text-[13px] leading-4 text-muted">{t('settingsUi.company.noCompanyHelp')}</p>
         <div className="flex flex-wrap gap-2 pt-3">
-          <GradientButton href="/register-company" variant="solid">{t('settingsUi.company.register')}</GradientButton>
-          {!user?.companyId && <GhostButton href="/admin/company-registrations">{t('settingsUi.company.registrations')}</GhostButton>}
-          {!user?.companyId && <GhostButton href="/dashboard">{t('nav.item.dashboard')}</GhostButton>}
+          <RouteGate href="/register-company"><GradientButton href="/register-company" variant="solid">{t('settingsUi.company.register')}</GradientButton></RouteGate>
+          {!user?.companyId && <RouteGate href="/admin/company-registrations"><GhostButton href="/admin/company-registrations">{t('settingsUi.company.registrations')}</GhostButton></RouteGate>}
+          {!user?.companyId && <RouteGate href="/dashboard"><GhostButton href="/dashboard">{t('nav.item.dashboard')}</GhostButton></RouteGate>}
         </div>
       </SettingsCard>,
     )
@@ -276,9 +277,9 @@ function CompanySettings() {
     <div className="flex flex-col gap-5">
       <p className="text-[14px] leading-[18px] text-muted">
         {t('settingsUi.company.description')}{' '}
-        <Link href="/messaging-settings" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.company.related.messaging')}</Link>
+        <RouteGate href="/messaging-settings"><Link href="/messaging-settings" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.company.related.messaging')}</Link></RouteGate>
         {' · '}
-        <Link href="/automations" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.nav.automations')}</Link>
+        <RouteGate href="/automations"><Link href="/automations" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.nav.automations')}</Link></RouteGate>
       </p>
 
       {dirty && <Notice tone="warn" role="status">{t('settingsUi.company.unpublished')}</Notice>}

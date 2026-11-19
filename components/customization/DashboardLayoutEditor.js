@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { RotateCcw, Save } from 'lucide-react'
-import { Button, Card, CardHeader } from '../ui'
+import { GhostButton, GradientButton } from '../ui'
 import { useToast } from '../Toast'
 import { api } from '../../convex/_generated/api'
 import { errorMessage } from '../../lib/errorMessage'
@@ -9,6 +9,7 @@ import { useT } from '../../lib/i18n/context'
 import { usePermissions } from '../../hooks/usePermission'
 import { DEFAULT_DASHBOARD } from '../../convex/lib/dashboardLayout'
 import WidgetListEditor from '../dashboard/WidgetListEditor'
+import { SettingsCard } from '../settings'
 
 /**
  * Customization → Dashboard (CUSTOM-005): the organization's default home
@@ -40,20 +41,19 @@ export default function DashboardLayoutEditor() {
   }
 
   return (
-    <Card className="space-y-4">
-      <CardHeader title={t('dashboardLayout.orgTitle')} subtitle={t('dashboardLayout.orgIntro')} />
+    <SettingsCard title={t('dashboardLayout.orgTitle')} className="space-y-4">
+      <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('dashboardLayout.orgIntro')}</p>
       {draft === null ? (
         <p className="text-sm text-muted">{t('common.loading')}</p>
       ) : (
         <>
           <WidgetListEditor widgets={draft} onChange={setDraft} can={can} />
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}>
+            <GradientButton disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}>
               <Save className="h-4 w-4" aria-hidden />
               {t('dashboardLayout.saveOrg')}
-            </Button>
-            <Button
-              variant="ghost"
+            </GradientButton>
+            <GhostButton
               disabled={busy || !org}
               onClick={() =>
                 run(async () => {
@@ -64,10 +64,10 @@ export default function DashboardLayoutEditor() {
             >
               <RotateCcw className="h-4 w-4" aria-hidden />
               {t('dashboardLayout.resetOrg')}
-            </Button>
+            </GhostButton>
           </div>
         </>
       )}
-    </Card>
+    </SettingsCard>
   )
 }

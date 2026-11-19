@@ -3841,6 +3841,19 @@
         "rejected": "Refusée",
         "cancelled": "Annulée"
       }
+    },
+    "custom": {
+      "crumb": "Formulaires, champs, terminologie",
+      "title": "Personnalisation",
+      "description": "Adaptez l'application à votre ferme sans code : champs supplémentaires, vos propres termes, mises en page des formulaires et tableaux de bord.",
+      "deniedTitle": "Seuls les admins de l'organisation peuvent modifier la personnalisation",
+      "deniedBody": "Demandez la permission de personnalisation à un admin.",
+      "tab": {
+        "forms": "Mises en page",
+        "fields": "Champs personnalisés",
+        "words": "Terminologie",
+        "dashboard": "Tableau de bord"
+      }
     }
   },
   "country": {

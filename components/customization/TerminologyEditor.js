@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { RotateCcw, Save } from 'lucide-react'
-import { Button, Card, CardHeader, Field, Input } from '../ui'
+import { GhostButton, GradientButton } from '../ui'
 import { useToast } from '../Toast'
 import { api } from '../../convex/_generated/api'
 import { errorMessage } from '../../lib/errorMessage'
 import { TERM_GROUPS, applyTerms } from '../../lib/terminology'
+import { FIELD, SettingsCard, SettingsField } from '../settings'
 
 const PREVIEW = 'All Cages · Feed Types · Harvest Data · Pond records · Batch history'
 
@@ -64,11 +65,7 @@ export default function TerminologyEditor() {
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <Card className="space-y-4">
-        <CardHeader
-          title="Your words"
-          description="Change what this organization calls things. Blank boxes keep the built-in word; the change reaches menus, page titles, forms and reports."
-        />
+      <SettingsCard title="Your words" className="space-y-4">
         {terms === undefined ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : (
@@ -76,21 +73,22 @@ export default function TerminologyEditor() {
             {TERM_GROUPS.map((group) => (
               <section key={group.id} className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-chart-ink">{group.title}</h3>
+                  <h3 className="text-sm font-semibold text-text">{group.title}</h3>
                   <p className="text-xs text-muted">{group.description}</p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {group.fields.map((field) => (
                     <div
                       key={field.key}
-                      className="rounded-lg border border-foam-deep p-3"
+                      className="rounded-lg border border-line p-3"
                     >
                       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
                         {field.label}
                       </p>
                       <div className="grid grid-cols-2 gap-3">
-                        <Field label="One" htmlFor={`term-${field.key}`}>
-                          <Input
+                        <SettingsField label="One" htmlFor={`term-${field.key}`}>
+                          <input
+                            className={FIELD}
                             id={`term-${field.key}`}
                             value={form[field.key] || ''}
                             onChange={set(field.key)}
@@ -98,9 +96,10 @@ export default function TerminologyEditor() {
                             maxLength={40}
                             autoComplete="off"
                           />
-                        </Field>
-                        <Field label="Many" htmlFor={`term-${field.pluralKey}`}>
-                          <Input
+                        </SettingsField>
+                        <SettingsField label="Many" htmlFor={`term-${field.pluralKey}`}>
+                          <input
+                            className={FIELD}
                             id={`term-${field.pluralKey}`}
                             value={form[field.pluralKey] || ''}
                             onChange={set(field.pluralKey)}
@@ -108,7 +107,7 @@ export default function TerminologyEditor() {
                             maxLength={40}
                             autoComplete="off"
                           />
-                        </Field>
+                        </SettingsField>
                       </div>
                     </div>
                   ))}
@@ -117,27 +116,26 @@ export default function TerminologyEditor() {
             ))}
           </>
         )}
-      </Card>
+      </SettingsCard>
 
-      <Card className="space-y-2">
-        <CardHeader title="Preview" description="How the built-in labels read with these words." />
-        <p className="text-sm text-chart-ink">{applyTerms(PREVIEW, form)}</p>
-      </Card>
+      <SettingsCard title="Preview" className="space-y-2">
+        <p className="text-sm text-text">{applyTerms(PREVIEW, form)}</p>
+      </SettingsCard>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={saving || !canWrite || !dirty}>
+        <GradientButton type="submit" disabled={saving || !canWrite || !dirty}>
           <Save size={16} aria-hidden />
           {saving ? 'Saving…' : 'Save words'}
-        </Button>
-        <Button
+        </GradientButton>
+        <GhostButton
+          size="lg"
           type="button"
-          variant="secondary"
           disabled={saving || !canWrite}
           onClick={() => setForm({})}
         >
           <RotateCcw size={16} aria-hidden />
           Clear all
-        </Button>
+        </GhostButton>
         {!dirty && canWrite && <span className="text-sm text-muted">No unsaved changes</span>}
       </div>
     </form>

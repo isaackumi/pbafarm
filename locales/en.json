@@ -3841,6 +3841,19 @@
         "rejected": "Declined",
         "cancelled": "Cancelled"
       }
+    },
+    "custom": {
+      "crumb": "Forms, fields, terminology",
+      "title": "Customization",
+      "description": "Fit the app to how your farm works without code: extra fields on records, your own words, form layouts and dashboards.",
+      "deniedTitle": "Only organization admins can change customization",
+      "deniedBody": "Ask an admin for the customization permission.",
+      "tab": {
+        "forms": "Form layouts",
+        "fields": "Custom fields",
+        "words": "Terminology",
+        "dashboard": "Dashboard"
+      }
     }
   },
   "country": {

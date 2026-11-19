@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { EmptyState, PageHeader, TabBar } from '../components/ui'
 import FieldsBuilder from '../components/customization/FieldsBuilder'
 import TerminologyEditor from '../components/customization/TerminologyEditor'
 import FormLayoutEditor from '../components/customization/FormLayoutEditor'
 import DashboardLayoutEditor from '../components/customization/DashboardLayoutEditor'
+import { LineTabs, RouteGate, SettingsCard, useSettingsEyebrow } from '../components/settings'
 import { usePermission } from '../hooks/usePermission'
 import { useT } from '../lib/i18n/context'
 
-/** Settings → Customization (D-007): one place for the organization's configuration. */
-const TAB_IDS = ['fields', 'words', 'forms', 'dashboard']
+/** Settings → Customization (D-007, Paper 32): one place for the organization's configuration. */
+const TAB_IDS = ['forms', 'fields', 'words', 'dashboard']
 
 export default function CustomizationPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Customization">
-        <Customization />
-      </Layout>
+      <Customization />
     </ProtectedRoute>
   )
 }
@@ -26,9 +25,10 @@ export default function CustomizationPage() {
 function Customization() {
   const router = useRouter()
   const t = useT()
-  const tabs = TAB_IDS.map((id) => ({ id, label: t(`customizePage.tab.${id}`) }))
+  const eyebrow = useSettingsEyebrow(t('settingsUi.custom.crumb'))
+  const tabs = TAB_IDS.map((value) => ({ value, label: t(`settingsUi.custom.tab.${value}`) }))
   const canManage = usePermission('customization.manage')
-  const [tab, setTab] = useState('fields')
+  const [tab, setTab] = useState('forms')
   useEffect(() => {
     const q = router.query.tab
     if (typeof q === 'string' && TAB_IDS.includes(q)) setTab(q)
@@ -39,27 +39,32 @@ function Customization() {
   }
 
   return (
-    <div className="space-y-6" data-tour="page-customization">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Settings' }, { label: 'Customization' }]}
-        description="Fit the app to how your farm works without code: extra fields on records, your own words, form layouts, dashboards and navigation."
-        related={[
-          { label: 'Company settings', href: '/company-settings' },
-          { label: 'Export data', href: '/export' },
-        ]}
-      />
-      {!canManage ? (
-        <EmptyState title="Only organization admins can change customization" description="Ask an admin for the customization permission." />
-      ) : (
-        <>
-          <TabBar tabs={tabs} active={tab} onChange={choose} />
-          {tab === 'fields' && <FieldsBuilder />}
-          {tab === 'words' && <TerminologyEditor />}
-          {tab === 'forms' && <FormLayoutEditor />}
-          {tab === 'dashboard' && <DashboardLayoutEditor />}
-        </>
-      )}
-    </div>
+    <Layout title={t('settingsUi.custom.title')} eyebrow={eyebrow}>
+      <div className="flex flex-col gap-6" data-tour="page-customization">
+        <p className="text-[14px] leading-[18px] text-muted">
+          {t('settingsUi.custom.description')}{' '}
+          <RouteGate href="/company-settings">
+            <Link href="/company-settings" className="text-pearl-cyan underline-offset-2 hover:underline">
+              {t('settingsUi.nav.company')}
+            </Link>
+          </RouteGate>
+        </p>
+        {!canManage ? (
+          <SettingsCard title={t('settingsUi.custom.deniedTitle')} className="max-w-xl">
+            <p className="text-[13px] leading-4 text-muted">{t('settingsUi.custom.deniedBody')}</p>
+          </SettingsCard>
+        ) : (
+          <>
+            <LineTabs label={t('settingsUi.custom.title')} tabs={tabs} value={tab} onChange={choose} />
+            <div role="tabpanel" aria-label={tabs.find((x) => x.value === tab)?.label}>
+              {tab === 'fields' && <FieldsBuilder />}
+              {tab === 'words' && <TerminologyEditor />}
+              {tab === 'forms' && <FormLayoutEditor />}
+              {tab === 'dashboard' && <DashboardLayoutEditor />}
+            </div>
+          </>
+        )}
+      </div>
+    </Layout>
   )
 }

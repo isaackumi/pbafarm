@@ -4,7 +4,7 @@ import { Camera } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
-import { Button, Card, CardHeader, Field, Input, Select, Textarea } from './ui'
+import { GhostButton, GradientButton } from './ui'
 import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
 import { convexSiteUrl } from '../lib/apiBase'
@@ -17,6 +17,7 @@ import {
 import { MAX_UPLOAD_BYTES, uploadAndAttach } from '../lib/uploadFile'
 import { isCompressible } from '../lib/imageCompression'
 import { useFileThumbnails } from '../hooks/useFileThumbnails'
+import { FIELD, SettingsCard, SettingsField } from './settings'
 
 /**
  * Custom fields (D-007, CUSTOM-001): one renderer for every entity's forms and
@@ -99,20 +100,20 @@ function PhotoInput({ def, value, onChange, id, locationId }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <input ref={input} id={id} type="file" accept="image/*" capture="environment" className="sr-only" onChange={pick} />
-      <Button variant="secondary" size="sm" onClick={() => input.current?.click()} disabled={busy}>
+      <GhostButton onClick={() => input.current?.click()} disabled={busy}>
         <Camera className="h-4 w-4" aria-hidden />
         {busy ? 'Uploading…' : value ? 'Replace photo' : 'Add photo'}
-      </Button>
+      </GhostButton>
       {value && thumbUrl && brokenThumb !== thumbUrl && (
         <button type="button" onClick={view} className="shrink-0" aria-label="View photo">
           {/* eslint-disable-next-line @next/next/no-img-element -- short-lived private link */}
-          <img src={thumbUrl} alt="" className="h-12 w-12 rounded object-cover border border-foam" onError={() => setBrokenThumb(thumbUrl)} />
+          <img src={thumbUrl} alt="" className="h-12 w-12 rounded object-cover border border-line" onError={() => setBrokenThumb(thumbUrl)} />
         </button>
       )}
       {value && (
         <>
-          <Button variant="ghost" size="sm" onClick={view}>View</Button>
-          <Button variant="ghost" size="sm" onClick={() => onChange(null)}>Remove</Button>
+          <GhostButton size="sm" onClick={view}>View</GhostButton>
+          <GhostButton size="sm" onClick={() => onChange(null)}>Remove</GhostButton>
         </>
       )}
     </div>
@@ -123,11 +124,12 @@ function FieldInput({ def, value, onChange, id, error, locationId }) {
   const common = { id, 'aria-invalid': error ? true : undefined }
   switch (def.type) {
     case 'long_text':
-      return <Textarea {...common} value={value ?? ''} maxLength={def.validation?.maxLength ?? 2000} onChange={(e) => onChange(e.target.value)} />
+      return <textarea className={FIELD} rows={3} {...common} value={value ?? ''} maxLength={def.validation?.maxLength ?? 2000} onChange={(e) => onChange(e.target.value)} />
     case 'number':
       return (
         <div className="flex items-center gap-2">
-          <Input
+          <input
+            className={FIELD}
             {...common}
             type="number"
             inputMode="decimal"
@@ -141,25 +143,25 @@ function FieldInput({ def, value, onChange, id, error, locationId }) {
         </div>
       )
     case 'date':
-      return <Input {...common} type="date" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} />
+      return <input className={FIELD} {...common} type="date" value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} />
     case 'boolean':
       return (
-        <Select {...common} value={value === true ? 'yes' : value === false ? 'no' : ''} onChange={(e) => onChange(e.target.value === '' ? null : e.target.value === 'yes')}>
+        <select className={FIELD} {...common} value={value === true ? 'yes' : value === false ? 'no' : ''} onChange={(e) => onChange(e.target.value === '' ? null : e.target.value === 'yes')}>
           <option value="">Not set</option>
           <option value="yes">Yes</option>
           <option value="no">No</option>
-        </Select>
+        </select>
       )
     case 'select':
       return (
-        <Select {...common} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
+        <select className={FIELD} {...common} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
           <option value="">Choose…</option>
           {(def.options ?? [])
             .filter((o) => !o.archived || o.value === value)
             .map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
-        </Select>
+        </select>
       )
     case 'multiselect': {
       const set = new Set(Array.isArray(value) ? value : [])
@@ -181,7 +183,7 @@ function FieldInput({ def, value, onChange, id, error, locationId }) {
                     onChange([...next])
                   }}
                   className={`min-h-10 rounded-lg border px-3 text-sm transition-colors ${
-                    on ? 'border-lake bg-lake-soft text-chart-ink' : 'border-foam-deep text-muted hover:border-lake'
+                    on ? 'border-lake bg-lake-soft text-text' : 'border-line text-muted hover:border-lake'
                   }`}
                 >
                   {o.label}
@@ -195,7 +197,8 @@ function FieldInput({ def, value, onChange, id, error, locationId }) {
       return <PhotoInput def={def} value={value} onChange={onChange} id={id} locationId={locationId} />
     default:
       return (
-        <Input
+        <input
+          className={FIELD}
           {...common}
           value={value ?? ''}
           maxLength={def.validation?.maxLength ?? 200}
@@ -209,7 +212,7 @@ function FieldInput({ def, value, onChange, id, error, locationId }) {
 export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', errorKey, className = '', locationId }) {
   const id = `${idPrefix}-${def.key}`
   return (
-    <Field
+    <SettingsField
       label={<span id={`${id}-label`}>{def.label}{def.type !== 'number' && def.unit ? ` (${def.unit})` : ''}</span>}
       htmlFor={id}
       hint={def.helpText}
@@ -218,7 +221,7 @@ export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', erro
       className={className}
     >
       <FieldInput def={def} value={value} onChange={onChange} id={id} error={errorKey === def.key} locationId={locationId} />
-    </Field>
+    </SettingsField>
   )
 }
 
@@ -258,12 +261,12 @@ export default function CustomFields({
   const grid = columns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
   return (
     <fieldset className="space-y-3">
-      {title && <legend className="text-sm font-semibold text-chart-ink mb-2">{title}</legend>}
+      {title && <legend className="text-sm font-semibold text-text mb-2">{title}</legend>}
       <div className={`grid gap-4 ${grid}`}>
         {shown.map((def) => {
           const id = `${idPrefix}-${def.key}`
           return (
-            <Field
+            <SettingsField
               key={def._id}
               label={<span id={`${id}-label`}>{def.label}{def.type !== 'number' && def.unit ? ` (${def.unit})` : ''}</span>}
               htmlFor={id}
@@ -273,7 +276,7 @@ export default function CustomFields({
               className={def.type === 'long_text' || def.type === 'multiselect' ? 'sm:col-span-2' : ''}
             >
               <FieldInput def={def} value={values[def.key]} onChange={(v) => set(def.key, v)} id={id} error={errorKey === def.key} locationId={locationId} />
-            </Field>
+            </SettingsField>
           )
         })}
       </div>
@@ -309,7 +312,7 @@ export function CustomFieldValues({ entity, values, className = '' }) {
       {rows.map((d) => (
         <div key={d._id} className="min-w-0">
           <dt className="text-xs text-muted">{d.label}{d.archived ? ' (archived)' : ''}</dt>
-          <dd className="text-sm text-chart-ink break-words">{formatValue(d, values[d.key])}</dd>
+          <dd className="text-sm text-text break-words">{formatValue(d, values[d.key])}</dd>
         </div>
       ))}
     </dl>
@@ -352,15 +355,11 @@ export function CustomFieldsCard({ entity, recordId, values, locationId, core, e
   }
 
   return (
-    <Card>
-      <CardHeader
-        title={title}
-        action={
+    <SettingsCard title={title} action={
           canEdit && defs.length > 0 && !editing ? (
-            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+            <GhostButton onClick={() => setEditing(true)}>Edit</GhostButton>
           ) : null
-        }
-      />
+        }>
       {editing ? (
         <div className="space-y-4">
           <CustomFields
@@ -374,8 +373,8 @@ export function CustomFieldsCard({ entity, recordId, values, locationId, core, e
             applyDefaults={false}
           />
           <div className="flex gap-2">
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-            <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+            <GradientButton onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</GradientButton>
+            <GhostButton onClick={() => setEditing(false)} disabled={saving}>Cancel</GhostButton>
           </div>
         </div>
       ) : hasValues ? (
@@ -383,7 +382,7 @@ export function CustomFieldsCard({ entity, recordId, values, locationId, core, e
       ) : (
         <p className="text-sm text-muted">Nothing recorded yet.</p>
       )}
-    </Card>
+    </SettingsCard>
   )
 }
 

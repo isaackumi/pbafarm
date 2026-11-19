@@ -12,6 +12,7 @@ import {
   SettingsCard,
   SettingsField as Field,
   SettingsFrame,
+  RouteGate,
   SettingsRow,
   useSettingsEyebrow,
 } from '../components/settings'
@@ -250,7 +251,7 @@ function StructurePanel({ units, sites }) {
                 </span>
                 <h2 className="truncate text-[22px] font-semibold leading-7 tracking-tight text-text">{pickedSite.name}</h2>
               </div>
-              <GhostButton size="lg" href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton>
+              <RouteGate href="/farm-locations"><GhostButton size="lg" href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton></RouteGate>
             </div>
             <DetailList
               className="border-t border-line"
@@ -446,9 +447,9 @@ export default function OrganizationStructurePage() {
         title={t('settingsUi.org.title')}
         eyebrow={eyebrow}
         actions={
-          <GradientButton icon={Plus} href="/farm-locations?new=1">
+          <RouteGate href="/farm-locations"><GradientButton icon={Plus} href="/farm-locations?new=1">
             {t('settingsUi.org.addSite')}
-          </GradientButton>
+          </GradientButton></RouteGate>
         }
       >
         <SettingsFrame active="sites">

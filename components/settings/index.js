@@ -1,6 +1,8 @@
 import SettingsNav from '../SettingsNav'
 import { useCompanySettings } from '../../contexts/CompanySettingsContext'
 import { useT } from '../../lib/i18n/context'
+import { usePermission } from '../../hooks/usePermission'
+import { routePermission } from '../../lib/routePermissions'
 
 /** "Settings · <company>" eyebrow, optionally followed by more crumbs. */
 export function useSettingsEyebrow(...crumbs) {
@@ -136,7 +138,7 @@ export function DetailList({ items = [], className = '' }) {
 
 /** Paper input style: radius 14, bg fill, line-strong border (21 Automations, 58 Anowa). */
 export const FIELD =
-  'w-full rounded-input border border-line-strong bg-bg px-[14px] py-3 text-[14px] leading-[18px] text-text placeholder:text-faint focus:border-muted focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50'
+  'w-full rounded-input border border-line-strong bg-bg px-[14px] py-3 text-[14px] leading-[18px] text-text placeholder:text-faint focus:border-muted focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-cyan aria-[invalid=true]:border-alert disabled:opacity-50'
 
 /** 12px muted label above a field. */
 export const FIELD_LABEL = 'mb-1.5 block text-[12px] leading-4 text-muted'
@@ -221,7 +223,7 @@ export function LineTabs({ tabs = [], value, onChange, label, className = '' }) 
 }
 
 /** 12px label above a Paper field. Children get FIELD styling from the caller. */
-export function SettingsField({ label, htmlFor, hint, required = false, children, className = '' }) {
+export function SettingsField({ label, htmlFor, hint, error, required = false, children, className = '' }) {
   return (
     <div className={`flex min-w-0 flex-col ${className}`}>
       <label htmlFor={htmlFor} className={FIELD_LABEL}>
@@ -229,7 +231,22 @@ export function SettingsField({ label, htmlFor, hint, required = false, children
         {required && <span aria-hidden className="text-alert"> *</span>}
       </label>
       {children}
-      {hint && <span className="mt-1 text-[12px] leading-4 text-faint">{hint}</span>}
+      {error ? (
+        <span role="alert" className="mt-1 text-[12px] leading-4 text-alert">
+          {error}
+        </span>
+      ) : (
+        hint && <span className="mt-1 text-[12px] leading-4 text-faint">{hint}</span>
+      )}
     </div>
   )
+}
+
+/**
+ * Renders a link action only when the member may open its page
+ * (lib/routePermissions.js), like the legacy `Button href`. The server
+ * still checks every call.
+ */
+export function RouteGate({ href, children }) {
+  return usePermission(routePermission(href)) ? children : null
 }
