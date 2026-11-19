@@ -4,7 +4,11 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
-import { isoWeek, periodOf } from './lib/compliance'
+import { COUNTRY_TEMPLATES, TEMPLATE_PACKS, isoWeek, libraryTemplate, periodOf } from './lib/compliance'
+import { COUNTRY_PRESETS } from './lib/countries'
+import { isCurrencyCode } from './lib/currencies'
+import { isValidLocale, isValidTimezone } from './lib/orgProfile'
+import { isSupportedCountry } from './lib/phone'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -386,5 +390,87 @@ describe('document register site scope (PERM-004, audit C)', () => {
     expect((await t.run((c) => c.db.get(ids.legacyPhoto)))?.locationId).toBe(ids.siteB)
     expect(await errorOf(asField.mutation(api.files.requestDownload, { fileId: ids.legacyPhoto }))).toMatchObject({ code: 'NOT_FOUND' })
     expect(await t.mutation(internal.migrations.stampCustomFieldPhotoSites, { entity: 'cages', dryRun: false })).toMatchObject({ stamped: 0 })
+  })
+})
+
+describe('country settings and compliance templates (I18N-004)', () => {
+  test('every preset is usable and every pack names real templates', () => {
+    for (const c of COUNTRY_PRESETS) {
+      expect({ c: c.code, ok: isValidTimezone(c.timezone) && isValidLocale(c.locale) && isCurrencyCode(c.currency) && isSupportedCountry(c.code) }).toEqual({ c: c.code, ok: true })
+      expect(TEMPLATE_PACKS.some((p) => p.id === c.pack)).toBe(true)
+    }
+    for (const p of TEMPLATE_PACKS) for (const key of p.templateKeys) expect(libraryTemplate(key)?.key).toBe(key)
+    for (const t of COUNTRY_TEMPLATES) expect(t.items.length).toBeLessThanOrEqual(50)
+  })
+
+  test('installing a pack is admin-only, idempotent and scoped to the caller’s company', async () => {
+    const { t, as, asStaff, asOutsider, ids } = await setup()
+    await expect(asStaff.mutation(api.compliance.installTemplatePack, { pack: 'gh' })).rejects.toThrow(/permission/i)
+    expect(await errorOf(as.mutation(api.compliance.installTemplatePack, { pack: 'nope' }))).toMatchObject({ code: 'VALIDATION' })
+
+    // Default country is Ghana: its pack comes first and is recommended.
+    const before = await asStaff.query(api.compliance.templatePacks, {})
+    expect(before.country).toBe('GH')
+    expect(before.packs[0]).toMatchObject({ id: 'gh', recommended: true, installed_count: 0 })
+
+    // The standard checklists already there are not added twice.
+    expect((await as.mutation(api.compliance.seedDefaultTemplates, {})).added).toHaveLength(3)
+    expect((await as.mutation(api.compliance.installTemplatePack, { pack: 'gh' })).added).toEqual(['gh_monthly_regulatory'])
+    expect((await as.mutation(api.compliance.installTemplatePack, { pack: 'gh' })).added).toEqual([])
+    const after = await as.query(api.compliance.templatePacks, {})
+    expect(after.packs.find((p) => p.id === 'gh')).toMatchObject({ installed_count: 4 })
+    expect(after.packs.find((p) => p.id === 'standard')).toMatchObject({ installed_count: 3 })
+
+    // A French pack shares nothing with the English templates.
+    expect((await as.mutation(api.compliance.installTemplatePack, { pack: 'ci' })).added).toHaveLength(4)
+    const names = (await as.query(api.compliance.listTemplates, {})).map((x) => x.name)
+    expect(names).toContain('Contrôle quotidien de biosécurité')
+    expect(names).toHaveLength(8)
+
+    // The other company has none of them and installs its own copy.
+    expect(await asOutsider.query(api.compliance.listTemplates, {})).toEqual([])
+    expect((await asOutsider.mutation(api.compliance.installTemplatePack, { pack: 'gh' })).added).toHaveLength(4)
+    const theirs = await t.run((c) =>
+      c.db.query('complianceTemplates').withIndex('by_companyId', (q) => q.eq('companyId', ids.companyId)).collect(),
+    )
+    expect(theirs).toHaveLength(8)
+  })
+
+  test('country defaults fill in only the fields asked for; non-admins cannot', async () => {
+    const { t, as, asStaff, ids } = await setup()
+    await expect(
+      asStaff.mutation(api.companies.applyCountryDefaults, { country: 'CI', fields: ['timezone'] }),
+    ).rejects.toThrow(/permission/i)
+
+    // An open settings draft still holding the old currency.
+    await as.mutation(api.companies.saveSettingsDraft, { draft: { name: 'Lake Farm', locale: { currency: 'GHS' } } })
+
+    const res = await as.mutation(api.companies.applyCountryDefaults, {
+      country: 'ci',
+      fields: ['timezone', 'locale', 'phone', 'currency'],
+    })
+    expect(res).toEqual({
+      profile: { country: 'CI', timezone: 'Africa/Abidjan', unitSystem: 'metric', defaultLocale: 'fr-CI' },
+      currency: 'XOF',
+      defaultCountryCode: 'CI',
+      applied: ['timezone', 'locale', 'phone', 'currency'],
+    })
+    const company = await t.run((c) => c.db.get(ids.companyId))
+    expect(company).toMatchObject({ country: 'CI', timezone: 'Africa/Abidjan', defaultLocale: 'fr-CI' })
+    expect(company?.settings).toMatchObject({ defaultCountryCode: 'CI', locale: { currency: 'XOF' } })
+    // Publishing the old draft keeps the new currency.
+    await as.mutation(api.companies.publishSettings, {})
+    expect((await t.run((c) => c.db.get(ids.companyId)))?.settings?.locale?.currency).toBe('XOF')
+
+    // Only the country: nothing else moves.
+    const only = await as.mutation(api.companies.applyCountryDefaults, { country: 'US', fields: [] })
+    expect(only).toMatchObject({ profile: { country: 'US', timezone: 'Africa/Abidjan', unitSystem: 'metric' }, currency: 'XOF', applied: [] })
+    expect((await as.query(api.compliance.templatePacks, {})).packs[0]).toMatchObject({ id: 'standard', recommended: true })
+
+    // A country without a preset can be set, but has no defaults to apply.
+    await expect(as.mutation(api.companies.applyCountryDefaults, { country: 'FR', fields: ['timezone'] })).rejects.toThrow(
+      /No suggested defaults/,
+    )
+    await expect(as.mutation(api.companies.applyCountryDefaults, { country: 'Ghana', fields: [] })).rejects.toThrow(/two-letter/)
   })
 })

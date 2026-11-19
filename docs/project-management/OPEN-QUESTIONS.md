@@ -64,6 +64,7 @@ Questions marked **Blocking now** gate Phase 0 work.
 | ID | Question | Why it matters | Blocks | Source |
 |---|---|---|---|---|
 | Q-020 | **Target first markets: which countries, currencies, languages and time zones after Ghana?** May existing companies default to `Africa/Accra`, metric, `GH`? | Decides when an i18n library is introduced (D-012), FX needs, timezone handling priority and pilot selection. | ORG-005, M3, I18N-002, I18N-003, pilot choice | D-012; roadmap |
+| Q-044 | Are the built-in country checklist templates (Ghana: Fisheries Commission licence, EPA permit, monthly production return, registered hatcheries; Côte d’Ivoire: ministry operating authorisation, monthly production declaration, approved hatcheries) accurate, and which other countries need their own pack? | The wording is a starting point, not checked with the regulators. | I18N-004 (content) | I18N-004 |
 | Q-022 | Which farms will pilot after the existing customer (ideally a pond farm, a hatchery/nursery, one outside UTC+0)? | Release strategy §7. | Phase 1+ pilots | R06 §7 |
 
 ## Integrations and channels
