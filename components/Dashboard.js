@@ -30,6 +30,8 @@ import SiteConditions from './SiteConditions'
 import { usePermission, usePermissions } from '../hooks/usePermission'
 import { useToast } from './Toast'
 import { useSettings } from '../contexts/SettingsContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { effectiveHomeHeader } from '../convex/lib/userPreferences'
 import { HomeSkyTitle, SkyButton } from './dashboard/HomeSkyHeader'
 import { useT } from '../lib/i18n/context'
 import WidgetGrid, { visibleWidgets } from './dashboard/WidgetGrid'
@@ -89,7 +91,8 @@ function DashboardView() {
   const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
   const [feedRange, setFeedRange] = useState('30')
   const { settings } = useSettings()
-  const sky = settings.dashboard?.homeHeader === 'sky'
+  const { theme } = useTheme()
+  const sky = effectiveHomeHeader(settings.dashboard?.homeHeader, theme) === 'sky'
 
   // asOf: the period ends on the client's today (queries should not
   // read the server clock: their cache does not expire at midnight).

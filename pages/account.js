@@ -5,6 +5,8 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { effectiveHomeHeader } from '../convex/lib/userPreferences'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import AccountDeletionCard from '../components/AccountDeletionCard'
@@ -312,7 +314,8 @@ function HomeHeaderRow() {
   const t = useT()
   const { showToast } = useToast()
   const { settings, updateDashboard } = useSettings()
-  const value = settings.dashboard?.homeHeader === 'sky' ? 'sky' : 'plain'
+  const { theme } = useTheme()
+  const value = effectiveHomeHeader(settings.dashboard?.homeHeader, theme)
   const choose = async (next) => {
     if (next === value) return
     try {
