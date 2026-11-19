@@ -163,6 +163,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `feedingPlans.reset` | `org.settings.manage` | yes | yes | no | no | no |
 | `feedingPlans.save` | `org.settings.manage` | yes | yes | no | no | no |
 | `files.attach` | `files.upload` | yes | yes | yes | yes | no |
+| `files.attachR2` | `allowlisted` | see test | see test | see test | see test | see test |
 | `files.generateUploadUrl` | `files.upload` | yes | yes | yes | yes | no |
 | `files.list` | `org.view` | yes | yes | yes | yes | yes |
 | `files.remove` | `files.upload` | yes | yes | yes | yes | no |
@@ -260,6 +261,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `llmGateway.saveCredential` | `allowlisted` | see test | see test | see test | see test | see test |
 | `llmGateway.updateCredential` | `integrations.manage` | yes | yes | no | no | no |
 | `llmGateway.usage` | `integrations.manage` | yes | yes | no | no | no |
+| `llmQuota.consumeServerKeyQuota` | `ai.use` | yes | yes | yes | no | no |
 | `memberships.acceptInvite` | `account` | self | self | self | self | self |
 | `memberships.declineInvite` | `account` | self | self | self | self | self |
 | `memberships.inviteInfo` | `allowlisted` | see test | see test | see test | see test | see test |
@@ -422,6 +424,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `units.workspace` | `production.view` | yes | yes | yes | yes | yes |
 | `userAccounts.changePassword` | `allowlisted` | see test | see test | see test | see test | see test |
 | `userAccounts.createWithPassword` | `org.members.manage` | yes | yes | no | no | no |
+| `userPreferences.importFromDevice` | `account` | self | self | self | self | self |
+| `userPreferences.mine` | `account` | self | self | self | self | self |
+| `userPreferences.update` | `account` | self | self | self | self | self |
 | `users.approveJoinRequest` | `org.members.manage` | yes | yes | no | no | no |
 | `users.claimInvite` | `account` | self | self | self | self | self |
 | `users.current` | `allowlisted` | see test | see test | see test | see test | see test |
