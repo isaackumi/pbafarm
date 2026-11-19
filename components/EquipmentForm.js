@@ -119,11 +119,13 @@ export default function EquipmentForm({ unitId, onDone }) {
   }
 
   const itemList = Array.isArray(items) ? items : []
-  return (
-    <form onSubmit={submit} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  const fields = {
+    name: (
       <Field label="Name" htmlFor="eq-name" required>
         <Input id="eq-name" value={form.name} onChange={set('name')} required placeholder="Pump 1" />
       </Field>
+    ),
+    kind: (
       <Field label="Kind" htmlFor="eq-kind">
         <Select id="eq-kind" value={form.kind} onChange={set('kind')}>
           {EQUIPMENT_KINDS.map((k) => (
@@ -131,94 +133,127 @@ export default function EquipmentForm({ unitId, onDone }) {
           ))}
         </Select>
       </Field>
-      {!unitId && (
-        <Field label="Unit" htmlFor="eq-unit">
-          <Select id="eq-unit" value={form.unitId} onChange={set('unitId')}>
-            <option value="">None</option>
-            {(units || []).map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </Select>
-        </Field>
-      )}
-      {groups && groups.length > 0 && (
-        <Field label="Group or system" htmlFor="eq-group">
-          <Select id="eq-group" value={form.unitGroupId} onChange={set('unitGroupId')}>
-            <option value="">None</option>
-            {groups.map((g) => (
-              <option key={g._id} value={g._id}>{g.name}</option>
-            ))}
-          </Select>
-        </Field>
-      )}
-      {!unitId && !form.unitId && !form.unitGroupId && (locations || []).length > 1 && (
-        <Field label="Site" htmlFor="eq-site" hint="For boats, vehicles and generators not tied to a unit">
-          <Select id="eq-site" value={form.locationId || activeLocationId || ''} onChange={set('locationId')}>
-            <option value="">None</option>
-            {(locations || []).map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </Select>
-        </Field>
-      )}
+    ),
+    unitId: !unitId ? (
+      <Field label="Unit" htmlFor="eq-unit">
+        <Select id="eq-unit" value={form.unitId} onChange={set('unitId')}>
+          <option value="">None</option>
+          {(units || []).map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </Select>
+      </Field>
+    ) : null,
+    unitGroupId: groups && groups.length > 0 ? (
+      <Field label="Group or system" htmlFor="eq-group">
+        <Select id="eq-group" value={form.unitGroupId} onChange={set('unitGroupId')}>
+          <option value="">None</option>
+          {groups.map((g) => (
+            <option key={g._id} value={g._id}>{g.name}</option>
+          ))}
+        </Select>
+      </Field>
+    ) : null,
+    locationId: !unitId && !form.unitId && !form.unitGroupId && (locations || []).length > 1 ? (
+      <Field label="Site" htmlFor="eq-site" hint="For boats, vehicles and generators not tied to a unit">
+        <Select id="eq-site" value={form.locationId || activeLocationId || ''} onChange={set('locationId')}>
+          <option value="">None</option>
+          {(locations || []).map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </Select>
+      </Field>
+    ) : null,
+    assetTag: (
       <Field label="Asset tag" htmlFor="eq-tag">
         <Input id="eq-tag" value={form.assetTag} onChange={set('assetTag')} />
       </Field>
+    ),
+    make: (
       <Field label="Make" htmlFor="eq-make">
         <Input id="eq-make" value={form.make} onChange={set('make')} />
       </Field>
+    ),
+    model: (
       <Field label="Model" htmlFor="eq-model">
         <Input id="eq-model" value={form.model} onChange={set('model')} />
       </Field>
+    ),
+    serialNumber: (
       <Field label="Serial number" htmlFor="eq-serial">
         <Input id="eq-serial" value={form.serialNumber} onChange={set('serialNumber')} />
       </Field>
+    ),
+    rating: (
       <Field label="Rating" htmlFor="eq-rating" hint="e.g. 2.2 kW, 40 m³/h">
         <Input id="eq-rating" value={form.rating} onChange={set('rating')} />
       </Field>
+    ),
+    installationDate: (
       <Field label="Installed on" htmlFor="eq-installed">
         <Input id="eq-installed" type="date" value={form.installedOn} onChange={set('installedOn')} />
       </Field>
+    ),
+    purchasedOn: (
       <Field label="Purchased on" htmlFor="eq-purchased">
         <Input id="eq-purchased" type="date" value={form.purchasedOn} onChange={set('purchasedOn')} />
       </Field>
+    ),
+    purchaseCost: (
       <Field label="Purchase cost" htmlFor="eq-cost">
         <Input id="eq-cost" type="number" min="0" step="0.01" inputMode="decimal" value={form.purchaseCost} onChange={set('purchaseCost')} />
       </Field>
+    ),
+    supplier: (
       <Field label="Supplier" htmlFor="eq-supplier">
         <Input id="eq-supplier" value={form.supplier} onChange={set('supplier')} />
       </Field>
+    ),
+    warrantyUntil: (
       <Field label="Warranty until" htmlFor="eq-warranty">
         <Input id="eq-warranty" type="date" value={form.warrantyUntil} onChange={set('warrantyUntil')} />
       </Field>
+    ),
+    maintenanceIntervalDays: (
       <Field label="Service every (days)" htmlFor="eq-interval">
         <Input id="eq-interval" type="number" min="1" inputMode="numeric" value={form.maintenanceIntervalDays} onChange={set('maintenanceIntervalDays')} />
       </Field>
+    ),
+    nextMaintenanceDue: (
       <Field label="Next service" htmlFor="eq-next">
         <Input id="eq-next" type="date" value={form.nextMaintenanceDue} onChange={set('nextMaintenanceDue')} />
       </Field>
-      {itemList.length > 0 && (
-        <Field label="Spare part kept" htmlFor="eq-spare" hint="From non-feed inventory">
-          <Select id="eq-spare" value={form.spareId} onChange={set('spareId')}>
-            <option value="">None</option>
-            {itemList.map((i) => (
-              <option key={i._id || i.id} value={i._id || i.id}>{i.name}</option>
-            ))}
-          </Select>
-        </Field>
-      )}
-      <Field label="Notes" htmlFor="eq-notes" className="col-span-2 sm:col-span-3">
+    ),
+    sparePartId: itemList.length > 0 ? (
+      <Field label="Spare part kept" htmlFor="eq-spare" hint="From non-feed inventory">
+        <Select id="eq-spare" value={form.spareId} onChange={set('spareId')}>
+          <option value="">None</option>
+          {itemList.map((i) => (
+            <option key={i._id || i.id} value={i._id || i.id}>{i.name}</option>
+          ))}
+        </Select>
+      </Field>
+    ) : null,
+    notes: (
+      <Field label="Notes" htmlFor="eq-notes">
         <Textarea id="eq-notes" rows={2} value={form.notes} onChange={set('notes')} />
       </Field>
-      <div className="col-span-2 sm:col-span-3">
-        <CustomFields
-          entity="equipment"
-          value={form.custom}
-          onChange={(custom) => setForm((f) => ({ ...f, custom }))}
-          core={{ kind: form.kind }}
-        />
-      </div>
-      <div className="col-span-2 sm:col-span-3 flex justify-end gap-2">
+    ),
+  }
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <FormLayout
+        formKey="operations.equipment"
+        layout={layout}
+        fields={fields}
+        coreValues={coreValues}
+        custom={form.custom}
+        onCustomChange={setCustom}
+        locationId={form.locationId || activeLocationId}
+        core={{ kind: form.kind }}
+        idPrefix="eq-cf"
+      />
+      <div className="flex justify-end gap-2">
         {onDone && <Button variant="secondary" onClick={onDone}>Cancel</Button>}
         <Button type="submit" disabled={saving || !form.name.trim()}>{saving ? 'Saving…' : 'Add equipment'}</Button>
       </div>
