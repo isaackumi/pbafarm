@@ -7,6 +7,9 @@
 export const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const
 export const TIME_FORMATS = ['12h', '24h'] as const
 export const TIME_RANGES = ['7d', '30d', '90d', '1y'] as const
+/** Home greeting header: the plain page title, or the "Sky & lake" panel (Paper L · 01 Home). */
+export const HOME_HEADERS = ['plain', 'sky'] as const
+export type HomeHeader = (typeof HOME_HEADERS)[number]
 /** The phone bottom bar holds at most this many shortcuts plus "More" (UX-004). */
 export const MAX_MOBILE_SHORTCUTS = 5
 
@@ -23,6 +26,8 @@ export type DashboardPrefs = {
   showCharts: boolean
   showMetrics: boolean
   showStockings: boolean
+  /** Saved rows from before this field read as 'plain'. */
+  homeHeader: HomeHeader
 }
 
 export type Preferences = {
@@ -51,6 +56,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
     showCharts: true,
     showMetrics: true,
     showStockings: true,
+    homeHeader: 'plain',
   },
   mobileShortcuts: null,
 }
@@ -99,13 +105,15 @@ export function cleanPreferences(input: unknown): Partial<Preferences> {
       (TIME_RANGES as readonly unknown[]).includes(d.defaultTimeRange) &&
       typeof d.showCharts === 'boolean' &&
       typeof d.showMetrics === 'boolean' &&
-      typeof d.showStockings === 'boolean'
+      typeof d.showStockings === 'boolean' &&
+      (d.homeHeader === undefined || (HOME_HEADERS as readonly unknown[]).includes(d.homeHeader))
     ) {
       out.dashboard = {
         defaultTimeRange: d.defaultTimeRange as string,
         showCharts: d.showCharts,
         showMetrics: d.showMetrics,
         showStockings: d.showStockings,
+        homeHeader: (d.homeHeader as HomeHeader | undefined) ?? 'plain',
       }
     }
   }

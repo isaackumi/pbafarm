@@ -24,6 +24,8 @@ const dashboard = v.object({
   showCharts: v.boolean(),
   showMetrics: v.boolean(),
   showStockings: v.boolean(),
+  /** 'plain' | 'sky'; checked by invalidPreferenceFields. */
+  homeHeader: v.optional(v.string()),
 })
 
 const prefsFields = {

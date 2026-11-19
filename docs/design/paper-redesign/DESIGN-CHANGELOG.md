@@ -6,6 +6,7 @@ Format: `date · artboard (node id) · change · status`
 
 ## 2026-11-19
 
+- 01 Home · Light theme page, "L · 01 Home — Sky & lake (proposal v2)" (INK-0, layer "Sky & lake panel") · optional "Sky & lake" header: each user picks Plain or Sky & lake under Account → Preferences (`dashboard.homeHeader`, default plain); night variant for dark theme · built in #PR_NUMBER
 - 27–32 (9GK-0, 9OW-0, 9XM-0, A4K-0, ACU-0, AJU-0) · new: Compliance, Sensors, Procurement, Notifications, Account & security, Customization · pending
 - 24 Sales (98M-0) · rebuilt: customer and lot merged into one cell, table column fixed at 700px · pending
 - Light theme page (p-3-0) · light tokens for 01, 02, 03, 10, 15, 21, 22 · tokens built in #90 · pages pending

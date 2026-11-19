@@ -29,6 +29,8 @@ import FarmAlerts from './FarmAlerts'
 import SiteConditions from './SiteConditions'
 import { usePermission, usePermissions } from '../hooks/usePermission'
 import { useToast } from './Toast'
+import { useSettings } from '../contexts/SettingsContext'
+import { HomeSkyTitle, SkyButton } from './dashboard/HomeSkyHeader'
 import { useT } from '../lib/i18n/context'
 import WidgetGrid, { visibleWidgets } from './dashboard/WidgetGrid'
 import WidgetListEditor from './dashboard/WidgetListEditor'
@@ -86,6 +88,8 @@ function DashboardView() {
   const [customizing, setCustomizing] = useState(false)
   const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
   const [feedRange, setFeedRange] = useState('30')
+  const { settings } = useSettings()
+  const sky = settings.dashboard?.homeHeader === 'sky'
 
   // asOf: the period ends on the client's today (queries should not
   // read the server clock: their cache does not expire at midnight).
@@ -293,7 +297,14 @@ function DashboardView() {
   const cardTitle = 'text-base font-semibold leading-5 text-text'
 
   const widgetNodes = {
-    __kpis: <KpiStrip items={kpiCells} className="py-1" />,
+    // Over the sky panel the strip needs its own surface to stay readable.
+    __kpis: sky ? (
+      <div className="rounded-card border border-line bg-surface px-[22px] py-5 shadow-[var(--shadow-card)]">
+        <KpiStrip items={kpiCells} className="py-1" />
+      </div>
+    ) : (
+      <KpiStrip items={kpiCells} className="py-1" />
+    ),
     insights: (
       <div className="flex flex-col gap-5">
         <FarmAlerts locationId={locationArgs?.locationId} />
@@ -392,31 +403,64 @@ function DashboardView() {
     ? t(`home.greeting.${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}`, { name: firstName })
     : t('home.greeting.anon')
 
+  const eyebrow = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  const canCustomize = canReports && !customizing
+  const canLogDaily = can(routePermission('/daily-entry'))
+  const canIssueFeed = can(routePermission('/feed-issue'))
+
   return (
-    <div className="flex max-w-[1400px] flex-col gap-7">
-      <PageTitle
-        eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-        title={greeting}
-        actions={
-          <>
-            {canReports && !customizing && (
-              <GhostButton size="lg" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
-                {t('dashboardLayout.customize')}
-              </GhostButton>
-            )}
-            {can(routePermission('/daily-entry')) && (
-              <GradientButton href="/daily-entry" icon={ClipboardPen}>
-                {t('home.logDaily')}
-              </GradientButton>
-            )}
-            {can(routePermission('/feed-issue')) && (
-              <GradientButton href="/feed-issue" reverse icon={Wheat}>
-                {t('home.issueFeed')}
-              </GradientButton>
-            )}
-          </>
-        }
-      />
+    <div className={`flex max-w-[1400px] flex-col gap-7 ${sky ? 'relative isolate' : ''}`}>
+      {sky ? (
+        <HomeSkyTitle
+          eyebrow={eyebrow}
+          title={greeting}
+          actions={
+            canCustomize || canLogDaily || canIssueFeed ? (
+              <>
+                {canCustomize && (
+                  <SkyButton size="sm" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
+                    {t('dashboardLayout.customize')}
+                  </SkyButton>
+                )}
+                {canLogDaily && (
+                  <SkyButton href="/daily-entry" tone="lime" icon={ClipboardPen}>
+                    {t('home.logDaily')}
+                  </SkyButton>
+                )}
+                {canIssueFeed && (
+                  <SkyButton href="/feed-issue" icon={Wheat}>
+                    {t('home.issueFeed')}
+                  </SkyButton>
+                )}
+              </>
+            ) : null
+          }
+        />
+      ) : (
+        <PageTitle
+          eyebrow={eyebrow}
+          title={greeting}
+          actions={
+            <>
+              {canCustomize && (
+                <GhostButton size="lg" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
+                  {t('dashboardLayout.customize')}
+                </GhostButton>
+              )}
+              {canLogDaily && (
+                <GradientButton href="/daily-entry" icon={ClipboardPen}>
+                  {t('home.logDaily')}
+                </GradientButton>
+              )}
+              {canIssueFeed && (
+                <GradientButton href="/feed-issue" reverse icon={Wheat}>
+                  {t('home.issueFeed')}
+                </GradientButton>
+              )}
+            </>
+          }
+        />
+      )}
 
       {customizing && (
         <DashboardCustomizer

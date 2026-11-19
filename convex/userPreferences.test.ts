@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api } from './_generated/api'
 import { anonymizeUser } from './governance'
-import { cleanPreferences, resolvePreferences } from './lib/userPreferences'
+import { DEFAULT_PREFERENCES, cleanPreferences, invalidPreferenceFields, resolvePreferences } from './lib/userPreferences'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -58,6 +58,17 @@ describe('userPreferences (CUSTOM-007)', () => {
     expect(await as(a).query(api.userPreferences.mine, {})).toBeNull()
   })
 
+  test('saves the Home header style and rejects unknown ones', async () => {
+    const { as, a } = await setup()
+    const dashboard = { ...DEFAULT_PREFERENCES.dashboard, homeHeader: 'sky' }
+    await as(a).mutation(api.userPreferences.update, { dashboard })
+    expect((await as(a).query(api.userPreferences.mine, {}))?.dashboard).toEqual(dashboard)
+    await expect(
+      as(a).mutation(api.userPreferences.update, { dashboard: { ...dashboard, homeHeader: 'sunset' } }),
+    ).rejects.toThrow(/dashboard/)
+    expect((await as(a).query(api.userPreferences.mine, {}))?.dashboard?.homeHeader).toBe('sky')
+  })
+
   test('device import runs once and never overwrites saved preferences', async () => {
     const { as, a } = await setup()
     const legacy = { language: 'fr', dateFormat: 'MM/DD/YYYY', currency: 'USD', timeFormat: 'bogus' }
@@ -100,5 +111,23 @@ describe('preference helpers', () => {
   test('resolvePreferences layers saved values over defaults', () => {
     const p = resolvePreferences({ dateFormat: 'MM/DD/YYYY' }, { timeFormat: '24h', dateFormat: 'bad' })
     expect(p).toMatchObject({ dateFormat: 'MM/DD/YYYY', timeFormat: '24h', currency: 'GHS', mobileShortcuts: null })
+  })
+
+  test('Home header defaults to plain, also for rows saved before it existed', () => {
+    expect(DEFAULT_PREFERENCES.dashboard.homeHeader).toBe('plain')
+    expect(resolvePreferences(null).dashboard.homeHeader).toBe('plain')
+    const old = { defaultTimeRange: '7d', showCharts: false, showMetrics: true, showStockings: true }
+    expect(resolvePreferences({ dashboard: old }).dashboard).toEqual({ ...old, homeHeader: 'plain' })
+    expect(resolvePreferences({ dashboard: { ...old, homeHeader: 'sky' } }).dashboard.homeHeader).toBe('sky')
+  })
+
+  test('an unknown Home header invalidates the dashboard field', () => {
+    const dashboard = { ...DEFAULT_PREFERENCES.dashboard }
+    expect(invalidPreferenceFields({ dashboard: { ...dashboard, homeHeader: 'sky' } })).toEqual([])
+    expect(invalidPreferenceFields({ dashboard: { ...dashboard, homeHeader: 'neon' } })).toEqual(['dashboard'])
+    expect(invalidPreferenceFields({ dashboard: { ...dashboard, homeHeader: 1 } })).toEqual(['dashboard'])
+    expect(cleanPreferences({ dashboard: { ...dashboard, homeHeader: 'neon' } })).toEqual({})
+    // A bad value falls back to the saved/default style instead of breaking Home.
+    expect(resolvePreferences({ dashboard: { ...dashboard, homeHeader: 'neon' } }).dashboard.homeHeader).toBe('plain')
   })
 })
