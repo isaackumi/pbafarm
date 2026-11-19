@@ -161,14 +161,14 @@ function CagePnL() {
                 aria-labelledby="pnl-net"
                 className="flex min-h-[330px] min-w-0 grow-[1.15] basis-0 flex-col gap-1 rounded-card border border-line bg-surface px-5 py-[26px] shadow-[var(--shadow-card)] sm:px-7"
               >
-                <h2 id="pnl-net" className="text-sm font-normal leading-4 text-muted">
+                <h2 id="pnl-net" className="text-[13px] font-normal leading-4 text-muted">
                   {dateFrom || dateTo ? t('ops.pnl.netRange') : t('ops.pnl.netToDate')}
                 </h2>
                 <p className="text-[40px] font-semibold leading-[48px] tracking-[-0.035em] text-text tabular-nums sm:text-[48px] sm:leading-[58px]">
                   {loading ? '—' : formatCurrency(totals.net)}
                 </p>
                 {!loading && (
-                  <p className={`text-sm leading-4 ${totals.net >= 0 ? 'text-good' : 'text-alert'}`}>
+                  <p className={`text-[13px] leading-4 ${totals.net >= 0 ? 'text-good' : 'text-alert'}`}>
                     {totals.marginPct == null ? t('ops.pnl.noRevenue') : t('ops.pnl.marginPct', { pct: totals.marginPct.toFixed(1) })}
                     {totals.costPerKg != null && (
                       <span className="text-faint"> · {t('ops.pnl.costPerKgProduced', { value: formatCurrency(totals.costPerKg) })}</span>
@@ -211,7 +211,7 @@ function CagePnL() {
 
               <Panel title={t('ops.pnl.costBreakdown')} titleId="pnl-breakdown" className="grow basis-0">
                 {breakdown.length === 0 ? (
-                  <p className="border-t border-line py-[11px] text-sm text-muted">{loading ? t('common.loading') : t('ops.pnl.noCosts')}</p>
+                  <p className="border-t border-line py-[11px] text-[13px] leading-5 text-muted">{loading ? t('common.loading') : t('ops.pnl.noCosts')}</p>
                 ) : (
                   breakdown.map((line, i) => (
                     <ListRow
@@ -239,16 +239,17 @@ function CagePnL() {
               rows={visibleRows}
               empty={rows === undefined ? t('common.loading') : t('ops.pnl.empty')}
               columns={[
-                { key: 'cage', header: t('ops.pnl.cage'), render: cageCell, sub: (r) => (r.species ? speciesLabel(r.species) : null) },
-                { key: 'revenue', header: t('ops.pnl.revenue'), align: 'right', render: (r) => formatCurrency(r.revenue) },
-                { key: 'cost', header: t('ops.pnl.cost'), align: 'right', render: (r) => formatCurrency(r.total_cost) },
+                { key: 'cage', header: t('ops.pnl.cage'), width: 126, render: cageCell, sub: (r) => (r.species ? speciesLabel(r.species) : null) },
+                { key: 'revenue', header: t('ops.pnl.revenue'), width: 164, align: 'right', render: (r) => formatCurrency(r.revenue) },
+                { key: 'cost', header: t('ops.pnl.cost'), width: 164, align: 'right', render: (r) => formatCurrency(r.total_cost) },
                 {
                   key: 'margin',
                   header: t('ops.pnl.margin'),
+                  width: 164,
                   align: 'right',
                   render: (r) => <span className={r.net_margin_pct == null ? 'text-muted' : marginClass(r.net_margin)}>{fmtPct(r.net_margin_pct)}</span>,
                 },
-                { key: 'perKg', header: t('ops.pnl.costKg'), align: 'right', render: (r) => perKg(r.cost_per_kg) },
+                { key: 'perKg', header: t('ops.pnl.costKg'), width: 144, align: 'right', render: (r) => perKg(r.cost_per_kg) },
                 {
                   key: 'net',
                   header: t('ops.pnl.net'),
@@ -293,9 +294,9 @@ function CageDetail({ detail, perKg, formatCurrency, onClose, t }) {
         </GhostButton>
       </div>
       {detail === undefined ? (
-        <p className="text-sm text-muted">{t('common.loading')}</p>
+        <p className="text-[13px] leading-5 text-muted">{t('common.loading')}</p>
       ) : !detail ? (
-        <p className="text-sm text-muted">{t('ops.pnl.notFound')}</p>
+        <p className="text-[13px] leading-5 text-muted">{t('ops.pnl.notFound')}</p>
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-[14px] border border-line bg-bg p-4 sm:grid-cols-4">
@@ -318,9 +319,9 @@ function CageDetail({ detail, perKg, formatCurrency, onClose, t }) {
             <p className="text-xs text-muted">{t('ops.pnl.listPricedNote', { kg: detail.feed_list_priced_kg.toFixed(1) })}</p>
           )}
           <div>
-            <p className="pb-1 text-sm font-semibold text-text">{t('ops.pnl.mortality', { count: detail.mortality })}</p>
+            <p className="pb-1 text-[13px] leading-5 font-semibold text-text">{t('ops.pnl.mortality', { count: detail.mortality })}</p>
             {Object.keys(detail.mortality_by_cause || {}).length === 0 ? (
-              <p className="text-sm text-muted">—</p>
+              <p className="text-[13px] leading-5 text-muted">—</p>
             ) : (
               Object.entries(detail.mortality_by_cause).map(([k, v]) => (
                 <ListRow key={k} title={mortalityCauseLabel(k)} value={v} />
@@ -336,7 +337,7 @@ function CageDetail({ detail, perKg, formatCurrency, onClose, t }) {
 function CycleTable({ cycles, formatCurrency, perKg, t }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted">{t('ops.pnl.cycleIntro')}</p>
+      <p className="text-[13px] leading-5 text-muted">{t('ops.pnl.cycleIntro')}</p>
       <Table
         title={t('ops.pnl.byCycleTitle')}
         rows={cycles || []}

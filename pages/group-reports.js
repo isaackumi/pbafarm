@@ -32,7 +32,7 @@ function GroupReports() {
     <Layout title={t('ent.group.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
-        <p className="max-w-[720px] text-sm leading-5 text-muted">{t('ent.group.description')}</p>
+        <p className="max-w-[720px] text-[13px] leading-5 text-muted">{t('ent.group.description')}</p>
         <div className="grid max-w-md grid-cols-2 gap-3">
           <Field label={t('ent.common.from')} htmlFor="gr-from">
             <Input id="gr-from" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
@@ -51,7 +51,7 @@ function GroupReports() {
             </h2>
           </div>
           {!data ? (
-            <p className="px-6 py-[14px] text-sm text-muted">{t('common.loading')}</p>
+            <p className="px-6 py-[14px] text-[13px] leading-5 text-muted">{t('common.loading')}</p>
           ) : rows.length <= 1 ? (
             <>
               <SiteKpiTable rows={rows} showSites />
@@ -63,8 +63,8 @@ function GroupReports() {
           ) : (
             <SiteKpiTable rows={rows} showSites onSelect={(r) => setSelected(r)} />
           )}
-          {currencies.size > 1 && <p className="border-t border-line px-6 py-3 text-sm text-muted">{t('ent.group.currencies')}</p>}
-          {rows.some((r) => r.truncated) && <p className="border-t border-line px-6 py-3 text-sm text-muted">{t('ent.common.truncated')}</p>}
+          {currencies.size > 1 && <p className="border-t border-line px-6 py-3 text-[13px] leading-5 text-muted">{t('ent.group.currencies')}</p>}
+          {rows.some((r) => r.truncated) && <p className="border-t border-line px-6 py-3 text-[13px] leading-5 text-muted">{t('ent.common.truncated')}</p>}
         </section>
         {selected && (
           <section
@@ -77,7 +77,7 @@ function GroupReports() {
             </h2>
           </div>
             {!detail ? (
-              <p className="px-6 py-[14px] text-sm text-muted">{t('common.loading')}</p>
+              <p className="px-6 py-[14px] text-[13px] leading-5 text-muted">{t('common.loading')}</p>
             ) : (
               <SiteKpiTable rows={detail.sites.map((s) => ({ ...s, key: s.siteId }))} currency={detail.currency} />
             )}

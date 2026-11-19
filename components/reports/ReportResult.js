@@ -102,7 +102,7 @@ function ResultView({ definition, result, name }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
+        <p className="text-[13px] leading-5 text-muted">
           {result.from && result.to
             ? t('reportBuilder.result.period', { from: result.from, to: result.to })
             : t('reportBuilder.result.snapshot', { date: result.today })}
@@ -121,12 +121,12 @@ function ResultView({ definition, result, name }) {
         )}
       </div>
       {result.sourceTruncated && (
-        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
+        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-[13px] leading-5 text-warn">
           {t('reportBuilder.result.sourceTruncated')}
         </p>
       )}
       {result.rowsTruncated && (
-        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
+        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-[13px] leading-5 text-warn">
           {t('reportBuilder.result.rowsTruncated')}
         </p>
       )}
@@ -145,7 +145,7 @@ function ResultView({ definition, result, name }) {
             </div>
           )}
           <div className="overflow-x-auto rounded-lg border border-foam-deep">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-[13px] leading-5">
               <thead className="bg-foam text-left">
                 <tr>
                   {columns.map((c) => (

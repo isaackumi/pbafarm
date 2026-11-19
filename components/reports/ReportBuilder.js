@@ -33,7 +33,7 @@ function useDebounced(value, ms) {
 function Chip({ checked, disabled, onChange, children }) {
   return (
     <label
-      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${
+      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[13px] leading-5 ${
         checked ? 'border-lagoon-700 bg-foam text-chart-ink' : 'border-foam-deep text-muted'
       } ${disabled ? 'opacity-50' : 'cursor-pointer'}`}
     >
@@ -149,7 +149,7 @@ export default function ReportBuilder({ report, onSaved, onDeleted }) {
           </Field>
 
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-chart-ink">
+            <legend className="mb-2 text-[13px] leading-5 font-medium text-chart-ink">
               {t('reportBuilder.builder.groupBy', { max: LIMITS.dimensions })}
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -179,7 +179,7 @@ export default function ReportBuilder({ report, onSaved, onDeleted }) {
           )}
 
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-chart-ink">{t('reportBuilder.builder.measures')}</legend>
+            <legend className="mb-2 text-[13px] leading-5 font-medium text-chart-ink">{t('reportBuilder.builder.measures')}</legend>
             <div className="flex flex-wrap gap-2">
               {ds.measures.map((m) => (
                 <Chip
@@ -231,7 +231,7 @@ export default function ReportBuilder({ report, onSaved, onDeleted }) {
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted">{t('reportBuilder.builder.snapshotNote')}</p>
+            <p className="text-[13px] leading-5 text-muted">{t('reportBuilder.builder.snapshotNote')}</p>
           )}
 
           {filterDims.map((d) => {
@@ -345,7 +345,7 @@ export default function ReportBuilder({ report, onSaved, onDeleted }) {
             </div>
           )}
           {canManage && report && !report.canEdit && (
-            <p className="text-sm text-muted">{t('reportBuilder.builder.readOnly', { name: report.createdByName })}</p>
+            <p className="text-[13px] leading-5 text-muted">{t('reportBuilder.builder.readOnly', { name: report.createdByName })}</p>
           )}
         </div>
       </Card>

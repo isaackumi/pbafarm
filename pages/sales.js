@@ -337,7 +337,7 @@ function Sales() {
                   {isAdmin && (
                     <button
                       type="button"
-                      className="mt-2 text-sm font-semibold text-lagoon-800 underline-offset-2 hover:underline"
+                      className="mt-2 text-[13px] leading-5 font-semibold text-lagoon-800 underline-offset-2 hover:underline"
                       onClick={() => setShowCustomer(true)}
                     >
                       Add customer
@@ -406,7 +406,7 @@ function Sales() {
                 {withdrawalBlock && (
                   <div
                     role="alert"
-                    className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
+                    className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-[13px] leading-5 text-chart-ink space-y-3"
                   >
                     <p>{withdrawalBlock}</p>
                     {isAdmin ? (
@@ -436,7 +436,7 @@ function Sales() {
                 </Field>
               </div>
               {form.weightKg && form.pricePerKg && (
-                <p className="mt-3 text-sm text-muted">
+                <p className="mt-3 text-[13px] leading-5 text-muted">
                   Total:{' '}
                   <span className="font-data font-semibold text-chart-ink">
                     {formatCurrency(
@@ -589,7 +589,7 @@ function Sales() {
                   return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
                 })()}
               </div>
-              <div className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-sm leading-4">
+              <div className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-[13px] leading-4">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">
                     {[
@@ -654,7 +654,7 @@ function Sales() {
             action={{ label: t('ops.sales.allCustomers'), onClick: () => setTab('customers') }}
           >
             {top.length === 0 ? (
-              <p className="py-3 text-sm text-muted">{t('ops.sales.noCustomers')}</p>
+              <p className="py-3 text-[13px] leading-5 text-muted">{t('ops.sales.noCustomers')}</p>
             ) : (
               top.map((c) => (
                 <ListRow

@@ -51,8 +51,8 @@ function Invoice() {
   const invoice = useQuery(api.invoices.getInvoice, id ? { invoiceId: id } : 'skip')
   usePrintLightTheme()
 
-  if (invoice === undefined) return <p className="text-sm text-muted">{t('common.loading')}</p>
-  if (invoice === null) return <p className="text-sm text-muted">{t('sales.invoiceNotFound')}</p>
+  if (invoice === undefined) return <p className="text-[13px] leading-5 text-muted">{t('common.loading')}</p>
+  if (invoice === null) return <p className="text-[13px] leading-5 text-muted">{t('sales.invoiceNotFound')}</p>
 
   const sale = invoice.sale
   const isUnit = sale?.unit_count != null
@@ -71,7 +71,7 @@ function Invoice() {
       <nav aria-label={t('ops.invoice.breadcrumb')} className="flex items-center justify-between gap-3 print:hidden">
         <Link
           href="/sales"
-          className="inline-flex items-center gap-2 rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          className="inline-flex items-center gap-2 rounded-sm text-[13px] leading-5 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
           <ArrowLeft size={14} aria-hidden />
           {t('sales.tabSales')}
@@ -83,7 +83,7 @@ function Invoice() {
 
       <article className="mx-auto flex w-full max-w-3xl flex-col gap-1 rounded-lg border border-line bg-surface px-5 py-6 sm:px-[26px] print:max-w-none print:border-0">
         {invoice.voided && (
-          <p role="alert" className="mb-3 rounded-[14px] border border-alert/40 bg-alert/10 px-4 py-2 text-sm font-semibold text-alert">
+          <p role="alert" className="mb-3 rounded-[14px] border border-alert/40 bg-alert/10 px-4 py-2 text-[13px] leading-5 font-semibold text-alert">
             {t('sales.invoiceVoidedBanner')}
           </p>
         )}
@@ -95,7 +95,7 @@ function Invoice() {
           <Pill tone={status.tone}>{status.label}</Pill>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 pb-5 text-sm sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 pb-5 text-[13px] leading-5 sm:grid-cols-2">
           <section aria-label={t('ops.invoice.from')}>
             <p className="pb-1 text-xs leading-4 text-muted">{t('ops.invoice.from')}</p>
             <p className="font-medium text-text">{invoice.company?.name}</p>
@@ -132,7 +132,7 @@ function Invoice() {
           </dl>
         </div>
 
-        <dl className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-sm leading-4">
+        <dl className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-[13px] leading-4">
           {sale && (
             <div className="flex justify-between gap-4">
               <dt className="text-muted">
@@ -170,7 +170,7 @@ function Invoice() {
           </div>
         </dl>
 
-        {invoice.notes && <p className="whitespace-pre-line pt-5 text-sm text-muted">{invoice.notes}</p>}
+        {invoice.notes && <p className="whitespace-pre-line pt-5 text-[13px] leading-5 text-muted">{invoice.notes}</p>}
       </article>
     </div>
   )

@@ -265,7 +265,7 @@ function SensorsPage() {
                     }`}
                   >
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm leading-4 text-muted">
+                      <span className="truncate text-[13px] leading-4 text-muted">
                         {r.unitName} · {r.label}
                       </span>
                       <StatusDot tone={r.status} size={8} label={t(`sensorsPage.status.${r.status}`)} />
@@ -434,7 +434,7 @@ function SeriesCard({ unitId, parameter, from, to }) {
         )}
       </div>
       {points.length === 0 ? (
-        <p className="text-sm text-muted">{t('integ.sensors.noReadings')}</p>
+        <p className="text-[13px] leading-5 text-muted">{t('integ.sensors.noReadings')}</p>
       ) : (
         <div className="h-72">
           <WaterQualityChart points={points} range={data.range} unit={data.unit} label={data.label} />

@@ -226,16 +226,13 @@ function PendingApprovals() {
       eyebrow={approvals === undefined ? t('approvalsPage.eyebrowLoading') : t('approvalsPage.eyebrow', { count: counts.all })}
     >
       <div className="flex flex-col gap-[28px]">
-      <div className="-mt-1 border-b border-line">
-        <Tabs
-          variant="underline"
-          label={t('approvalsPage.filter')}
-          value={tab}
-          onChange={setTab}
-          className="gap-[28px] overflow-x-auto [&>[role=tab]]:pt-0 [&>[role=tab]]:pb-3 [&>[aria-selected=true]]:border-button"
-          tabs={APPROVAL_TABS.map((k) => ({ value: k, label: `${t.or(`approvalsPage.tab.${k}`, k)} ${counts[k]}` }))}
-        />
-      </div>
+      <Tabs
+        variant="page"
+        label={t('approvalsPage.filter')}
+        value={tab}
+        onChange={setTab}
+        tabs={APPROVAL_TABS.map((k) => ({ value: k, label: `${t.or(`approvalsPage.tab.${k}`, k)} ${counts[k]}` }))}
+      />
       {approvals === undefined ? (
         <p className="text-[14px] leading-[18px] text-muted">{t('approvalsPage.loading')}</p>
       ) : list.length === 0 ? (

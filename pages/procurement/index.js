@@ -291,10 +291,10 @@ function PurchaseOrders() {
               >
                 <div className="flex items-center justify-between px-1 pb-[6px] pt-[2px]">
                   <Pill tone={STATUS_TONE[col]}>{t(`ops.po.status.${col}`)}</Pill>
-                  <span className="text-sm leading-4 text-muted">{orders === undefined ? '—' : all.length}</span>
+                  <span className="text-[13px] leading-4 text-muted">{orders === undefined ? '—' : all.length}</span>
                 </div>
                 {cards.length === 0 ? (
-                  <p className="px-1 py-3 text-sm text-faint">{orders === undefined ? t('ops.common.loading') : t('ops.po.emptyColumn')}</p>
+                  <p className="px-1 py-3 text-[13px] leading-5 text-faint">{orders === undefined ? t('ops.common.loading') : t('ops.po.emptyColumn')}</p>
                 ) : (
                   cards.map((po) => {
                     const active = selected?.id === po.id
@@ -313,7 +313,7 @@ function PurchaseOrders() {
                       >
                         <span className="text-xs leading-4 text-muted">{po.po_number}</span>
                         <span className="text-[14px] font-medium leading-[18px] text-text">{cardLine(po)}</span>
-                        <span className="text-sm leading-4 text-muted">
+                        <span className="text-[13px] leading-4 text-muted">
                           {formatCurrency(po.status === 'received' ? po.received_value : po.ordered_value)}
                         </span>
                       </button>
@@ -386,7 +386,7 @@ function PurchaseOrders() {
                   </Field>
                   {selected.lines.map((l, i) => (
                     <div key={i} className="grid grid-cols-2 items-end gap-3 sm:grid-cols-5">
-                      <p className="col-span-2 self-center text-sm font-medium text-text sm:col-span-1">{l.feed_type_name}</p>
+                      <p className="col-span-2 self-center text-[13px] leading-5 font-medium text-text sm:col-span-1">{l.feed_type_name}</p>
                       <Field label={t('ops.po.kgReceived')}>
                         <Input type="number" inputMode="decimal" min="0" step="any" value={receiving.lines[i].receivedKg} onChange={setRecv(i, 'receivedKg')} />
                       </Field>
@@ -446,13 +446,13 @@ function PurchaseOrders() {
             </section>
           ) : (
             <Panel title={t('ops.po.detail')}>
-              <p className="py-3 text-sm text-muted">{orders === undefined ? t('ops.common.loading') : t('ops.po.empty')}</p>
+              <p className="py-3 text-[13px] leading-5 text-muted">{orders === undefined ? t('ops.common.loading') : t('ops.po.empty')}</p>
             </Panel>
           )}
 
           <Panel title={t('ops.po.suppliers')} action={{ label: t('ops.po.allSuppliers'), href: '/feed-suppliers' }}>
             {suppliersBySpend.length === 0 ? (
-              <p className="py-3 text-sm text-muted">{t('ops.po.noSpend')}</p>
+              <p className="py-3 text-[13px] leading-5 text-muted">{t('ops.po.noSpend')}</p>
             ) : (
               suppliersBySpend.map((row) => (
                 <ListRow

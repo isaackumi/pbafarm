@@ -29,7 +29,7 @@ const STANDARD = [
 function ReportCard({ icon: Icon, title, sub, footer, href, onOpen, current }) {
   const t = useT()
   const openCls =
-    'rounded-sm text-sm leading-4 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+    'rounded-sm text-[13px] leading-4 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
   return (
     <li
       className={`flex flex-col gap-[14px] rounded-card border bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px] ${
@@ -40,8 +40,8 @@ function ReportCard({ icon: Icon, title, sub, footer, href, onOpen, current }) {
         <Icon size={16} strokeWidth={2} />
       </span>
       <div className="flex min-w-0 flex-col gap-1">
-        <h3 className="truncate text-base font-semibold leading-[18px] text-text">{title}</h3>
-        <p className="truncate text-sm leading-4 text-muted">{sub}</p>
+        <h3 className="truncate text-[15px] font-semibold leading-[18px] text-text">{title}</h3>
+        <p className="truncate text-[13px] leading-4 text-muted">{sub}</p>
       </div>
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3">
         <span className="truncate text-xs leading-4 text-faint">{footer}</span>
@@ -99,7 +99,7 @@ function Library({ selected, onSelect }) {
           )
         })}
       </ul>
-      {reports.length === 0 && <p className="text-sm text-muted">{t('reportBuilder.saved.empty')}</p>}
+      {reports.length === 0 && <p className="text-[13px] leading-5 text-muted">{t('reportBuilder.saved.empty')}</p>}
       {(report || selected === 'new') && (
         <section aria-label={report ? report.name : t('reportBuilder.saved.new')}>
           <ReportBuilder key={report?._id ?? 'new'} report={report} onSaved={onSelect} onDeleted={() => onSelect(null)} />
