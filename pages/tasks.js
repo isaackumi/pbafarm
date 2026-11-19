@@ -1,125 +1,186 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import Link from 'next/link'
+import { Check, Plus, X } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
-import { Button, Card, EmptyState, FormPage, PageHeader, Skeleton } from '../components/ui'
+import { EmptyState, GradientButton, LoadingState, Pill, Tabs } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
+import { useLocale, useT } from '../lib/i18n/context'
+import { usePermissions } from '../hooks/usePermission'
+import { routePermission } from '../lib/routePermissions'
 
-function today() {
+function isoToday() {
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function DueLabel({ dueDate }) {
-  if (!dueDate) return <span className="text-muted">No due date</span>
-  const t = today()
-  if (dueDate < t) return <span className="text-signal font-medium">Overdue · {dueDate}</span>
-  if (dueDate === t) return <span className="text-chart-ink font-medium">Due today</span>
-  return <span className="text-muted">Due {dueDate}</span>
+function shortDate(iso, locale) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-function TaskRow({ task, onStatus, busy }) {
+/** Category pill: overdue wins, then automation, team, or a plain assignment. */
+function TaskPill({ task, today, t }) {
+  if (task.status === 'open' && task.dueDate && task.dueDate < today) return <Pill tone="red">{t('tasksUi.pill.overdue')}</Pill>
+  if (task.status === 'cancelled') return <Pill tone="neutral">{t('tasksUi.pill.dismissed')}</Pill>
+  if (task.ruleId) return <Pill tone="cyan">{t('tasksUi.pill.automation')}</Pill>
+  if (task.teamName) return <Pill tone="pink">{task.teamName}</Pill>
+  return <Pill tone="neutral">{t('tasksUi.pill.assigned')}</Pill>
+}
+
+function TaskRow({ task, onStatus, busy, today, t, locale }) {
   const open = task.status === 'open'
+  const sub = [
+    task.cageName && t('tasksUi.cage', { name: task.cageName }),
+    task.description,
+  ].filter(Boolean).join(' · ')
+  const when = !task.dueDate
+    ? t('tasksUi.noDue')
+    : task.dueDate === today
+      ? t('tasksUi.today')
+      : shortDate(task.dueDate, locale)
   return (
-    <li className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <p className={`font-medium ${open ? 'text-chart-ink' : 'text-muted line-through'}`}>{task.title}</p>
-        {task.description && <p className="mt-1 text-sm text-muted whitespace-pre-line">{task.description}</p>}
-        <p className="mt-1 text-sm">
-          {open ? <DueLabel dueDate={task.dueDate} /> : <span className="text-muted">Done</span>}
-          {task.cageName && <span className="text-muted"> · Cage {task.cageName}</span>}
-          {task.teamName && <span className="text-muted"> · Team {task.teamName}</span>}
-        </p>
+    <li className="group flex items-center gap-4 border-b border-line px-6 py-4 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => onStatus(task._id, open ? 'done' : 'open')}
+        disabled={busy}
+        aria-label={open ? t('tasksUi.markDone', { title: task.title }) : t('tasksUi.reopen', { title: task.title })}
+        className={`flex size-5 shrink-0 items-center justify-center rounded-pill focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 ${
+          open ? 'border-[1.5px] border-line-strong hover:border-text' : 'bg-text text-bg'
+        }`}
+      >
+        {!open && <Check size={12} strokeWidth={3} aria-hidden />}
+      </button>
+      <div className="flex min-w-0 grow basis-0 flex-col gap-[3px]">
+        <span className={`text-[14px] leading-[18px] ${open ? 'text-text' : 'text-faint line-through'}`}>{task.title}</span>
+        {sub && <span className="truncate text-xs leading-4 text-muted">{sub}</span>}
       </div>
-      <div className="flex shrink-0 gap-2">
-        {open ? (
-          <>
-            <Button size="sm" onClick={() => onStatus(task._id, 'done')} disabled={busy}>
-              Mark done
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onStatus(task._id, 'cancelled')} disabled={busy}>
-              Dismiss
-            </Button>
-          </>
-        ) : (
-          <Button size="sm" variant="secondary" onClick={() => onStatus(task._id, 'open')} disabled={busy}>
-            Reopen
-          </Button>
-        )}
-      </div>
+      <TaskPill task={task} today={today} t={t} />
+      <span className="w-[72px] shrink-0 text-right text-sm text-muted">{open ? when : t('tasksUi.done')}</span>
+      {open && (
+        <button
+          type="button"
+          onClick={() => onStatus(task._id, 'cancelled')}
+          disabled={busy}
+          aria-label={t('tasksUi.dismiss', { title: task.title })}
+          title={t('tasksUi.dismissShort')}
+          className="flex size-7 shrink-0 items-center justify-center rounded-pill text-faint hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50"
+        >
+          <X size={14} aria-hidden />
+        </button>
+      )}
     </li>
   )
 }
 
-export default function TasksPage() {
-  const [showDone, setShowDone] = useState(false)
-  const data = useQuery(api.tasks.mine, { includeClosed: showDone })
+function Tasks() {
+  const t = useT()
+  const { can } = usePermissions()
+  const [tab, setTab] = useState('today')
+  const data = useQuery(api.tasks.mine, { includeClosed: tab === 'done' })
   const setStatus = useMutation(api.tasks.setStatus)
   const { showToast } = useToast()
   const [busy, setBusy] = useState(false)
+  const today = isoToday()
+  const { formatLocale } = useLocale()
+  const locale = formatLocale || undefined
 
   const onStatus = async (taskId, status) => {
     setBusy(true)
     try {
       await setStatus({ taskId, status })
-      if (status === 'done') showToast('success', 'Task done')
+      if (status === 'done') showToast(t('tasksUi.doneToast'), 'success')
     } catch (err) {
-      showToast('error', errorMessage(err))
+      showToast(errorMessage(err), 'error')
     } finally {
       setBusy(false)
     }
   }
 
+  const groups = useMemo(() => {
+    const open = data?.open || []
+    return {
+      today: open.filter((task) => !task.dueDate || task.dueDate <= today),
+      upcoming: open.filter((task) => task.dueDate && task.dueDate > today),
+      done: data?.closed || [],
+    }
+  }, [data, today])
+
+  const rows = groups[tab]
+  const openCount = data?.open.length
+  const dateText = new Date().toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })
+  const canCreate = can('automation.manage') && can(routePermission('/teams'))
+
+  return (
+    <Layout
+      title={t('tasksUi.title')}
+      eyebrow={
+        openCount == null
+          ? t('tasksUi.eyebrowLoading', { date: dateText })
+          : t('tasksUi.eyebrow', { date: dateText, count: openCount })
+      }
+      actions={
+        canCreate && (
+          <GradientButton href="/teams" icon={Plus}>
+            {t('tasksUi.new')}
+          </GradientButton>
+        )
+      }
+    >
+      <div className="flex flex-col gap-7">
+        <Tabs
+          variant="underline"
+          label={t('tasksUi.tabsLabel')}
+          className="gap-7 border-b border-line"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { value: 'today', label: t('tasksUi.tab.today') },
+            { value: 'upcoming', label: t('tasksUi.tab.upcoming') },
+            { value: 'done', label: t('tasksUi.tab.done') },
+          ]}
+        />
+        <section
+          aria-label={t(`tasksUi.tab.${tab}`)}
+          className="max-w-4xl rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
+        >
+          {!data ? (
+            <LoadingState />
+          ) : rows.length ? (
+            <ul>
+              {rows.map((task) => (
+                <TaskRow key={task._id} task={task} onStatus={onStatus} busy={busy} today={today} t={t} locale={locale} />
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              title={t(`tasksUi.empty.${tab}`)}
+              description={tab === 'done' ? undefined : t('tasksUi.emptyHint')}
+            />
+          )}
+        </section>
+        {tab !== 'done' && (
+          <p className="text-xs text-muted">
+            {t('tasksUi.footer')}{' '}
+            <Link href="/calendar" className="text-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+              {t('tasksUi.calendarLink')}
+            </Link>
+          </p>
+        )}
+      </div>
+    </Layout>
+  )
+}
+
+export default function TasksPage() {
   return (
     <ProtectedRoute>
-      <Layout title="My tasks">
-        <FormPage width="md">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'My tasks' }]}
-            description="Work assigned to you by an admin or by an automation rule."
-            actions={
-              <Button variant="secondary" size="sm" onClick={() => setShowDone((s) => !s)}>
-                {showDone ? 'Hide done' : 'Show done'}
-              </Button>
-            }
-          />
-          {!data ? (
-            <Skeleton className="h-40" />
-          ) : (
-            <div className="space-y-6">
-              <Card>
-                {data.open.length ? (
-                  <ul className="divide-y divide-foam-deep -my-4">
-                    {data.open.map((t) => (
-                      <TaskRow key={t._id} task={t} onStatus={onStatus} busy={busy} />
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyState title="Nothing to do" description="Tasks assigned to you show up here." />
-                )}
-              </Card>
-              {showDone && (
-                <Card>
-                  <h3 className="text-base font-medium text-chart-ink mb-2">Done recently</h3>
-                  {data.closed.length ? (
-                    <ul className="divide-y divide-foam-deep">
-                      {data.closed.map((t) => (
-                        <TaskRow key={t._id} task={t} onStatus={onStatus} busy={busy} />
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted">No finished tasks yet.</p>
-                  )}
-                </Card>
-              )}
-            </div>
-          )}
-        </FormPage>
-      </Layout>
+      <Tasks />
     </ProtectedRoute>
   )
 }

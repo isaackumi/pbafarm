@@ -79,7 +79,9 @@
       "inboundWebhooks": "Webhooks entrants",
       "aiSettings": "Paramètres IA",
       "weeklyReport": "Rapport hebdomadaire",
-      "alerts": "Alertes et analyses"
+      "alerts": "Alertes et analyses",
+      "calendar": "Calendrier",
+      "assistant": "Demander à PBA"
     },
     "section": {
       "production": "Production",
@@ -93,7 +95,8 @@
       "management": "Paramètres",
       "admin": "Administration",
       "home": "Accueil",
-      "tasks": "Mes tâches"
+      "tasks": "Mes tâches",
+      "calendar": "Calendrier"
     },
     "home": "Accueil",
     "dailyEntry": "Saisie du jour",
@@ -704,7 +707,27 @@
   },
   "scan": {
     "openingCode": "Ouverture de la cage {code}…",
-    "unknownCode": "Aucune cage de cette ferme n'a le code {code}"
+    "unknownCode": "Aucune cage de cette ferme n'a le code {code}",
+    "title": "Scanner une cage",
+    "eyebrow": "Pointez l’appareil photo vers l’étiquette de la cage",
+    "subtitle": "Ouvre l’écran choisi avec cette cage déjà sélectionnée.",
+    "openIn": "Ouvrir dans",
+    "daily": "Saisie journalière",
+    "biweekly": "Échantillonnage bimensuel",
+    "start": "Commencer le scan",
+    "noMatch": "Aucune cage de cette ferme ne correspond à cette étiquette",
+    "labelTitle": "Scanner l’étiquette de la cage",
+    "close": "Fermer le scanner",
+    "pointAt": "Visez une étiquette de cage",
+    "starting": "Démarrage de la caméra…",
+    "reason": {
+      "unsupported": "Ce navigateur ne peut pas scanner dans l’application. Saisissez le code ou le nom de la cage, ou scannez avec l’appareil photo du téléphone.",
+      "denied": "L’accès à la caméra a été refusé. Saisissez plutôt le code ou le nom de la cage.",
+      "failed": "La caméra n’a pas pu démarrer. Saisissez plutôt le code ou le nom de la cage."
+    },
+    "typeLabel": "Ou saisissez le code ou le nom de la cage",
+    "typePlaceholder": "ex. C-012 ou A3",
+    "openCage": "Ouvrir la cage"
   },
   "pwa": {
     "updateReady": "Une nouvelle version de PBA Farm est prête.",
@@ -1197,6 +1220,502 @@
     "savedOrg": "Tableau de bord de l'organisation enregistré.",
     "resetDone": "Disposition du tableau de bord réinitialisée.",
     "saveFailed": "Impossible d'enregistrer le tableau de bord"
+  },
+  "home": {
+    "insightsTitle": "Analyses du jour",
+    "insightsSubtitle": "À partir de vos données, selon des règles fixes",
+    "openAnalytics": "Ouvrir les analyses",
+    "severity": {
+      "critical": "Critique",
+      "warning": "Avertissement",
+      "note": "Note"
+    },
+    "greeting": {
+      "morning": "Bonjour, {name}",
+      "afternoon": "Bon après-midi, {name}",
+      "evening": "Bonsoir, {name}",
+      "anon": "Bon retour"
+    },
+    "logDaily": "Saisie quotidienne",
+    "issueFeed": "Sortie d’aliment",
+    "kpi": {
+      "activeCages": "Cages actives",
+      "ofTotal": "sur {count}",
+      "biomass": "Biomasse",
+      "fcr": "IC moyen",
+      "fcrHint": "récoltes · 30 j",
+      "mortality": "Mortalité · 30 j",
+      "adg": "Croissance journalière",
+      "feed30d": "Aliment · 30 j",
+      "health": "Santé de la ferme"
+    },
+    "feed": {
+      "title": "Aliment saisi",
+      "range": "Période du graphique",
+      "cumulative": "cumul sur {count} jours saisis",
+      "emptyTitle": "Pas encore de données d’aliment",
+      "emptyBody": "Saisissez les entrées quotidiennes pour voir l’aliment cumulé.",
+      "series": "Cumul kg"
+    },
+    "mortality": {
+      "title": "Mortalité quotidienne",
+      "subtitle": "14 derniers jours saisis",
+      "emptyTitle": "Aucune mortalité saisie",
+      "emptyBody": "La mortalité quotidienne apparaîtra ici dès qu’il y aura des saisies."
+    },
+    "activity": {
+      "title": "Activité de la ferme",
+      "date": "Date",
+      "type": "Type",
+      "unit": "Unité",
+      "batch": "Lot",
+      "fish": "Poissons",
+      "abw": "PMI à l’empoissonnement",
+      "status": "Statut",
+      "stocking": "Empoissonnement",
+      "empty": "Aucun empoissonnement. Créez un lot pour suivre les jours d’élevage et la biomasse.",
+      "newStocking": "Nouvel empoissonnement",
+      "open": "Ouvrir la gestion des empoissonnements"
+    },
+    "stockingStatus": {
+      "approved": "Approuvé",
+      "pending_approval": "En attente d’approbation",
+      "rejected": "Rejeté"
+    }
+  },
+  "siteConditions": {
+    "title": "Conditions du site",
+    "subtitle": "Météo Open-Meteo et dernières mesures des capteurs",
+    "today": "Aujourd’hui",
+    "tomorrow": "Demain",
+    "yesterday": "Hier",
+    "justNow": "à l’instant",
+    "minAgo": "il y a {count} min",
+    "hAgo": "il y a {count} h",
+    "daysAgo": "il y a {count} jours",
+    "noCoordinates": "{site} : ajoutez la latitude et la longitude pour voir la météo.",
+    "farmLocations": "Sites de la ferme",
+    "updated": "Météo mise à jour",
+    "updating": "Mise à jour…",
+    "refresh": "Actualiser",
+    "noWeather": "Pas encore de météo. Elle est récupérée chaque matin.",
+    "sensors": "Capteurs"
+  },
+  "unitsUi": {
+    "title": "Cages",
+    "views": "Vues des cages",
+    "view": {
+      "board": "Tableau",
+      "table": "Liste",
+      "map": "Plan du site",
+      "groups": "Groupes"
+    },
+    "newCage": "Nouvelle cage",
+    "qrCodes": "Codes QR",
+    "loading": "Chargement des unités…",
+    "filterGroup": "Groupe",
+    "allGroups": "Tous les groupes",
+    "filterSpecies": "Espèce",
+    "anySpecies": "Espèce : toutes",
+    "alertsOnly": "Alertes seulement · {count}",
+    "emptyTitle": "Aucune unité",
+    "emptyBody": "Ajoutez vos cages, étangs ou bassins pour les voir ici.",
+    "noMatch": "Aucune unité ne correspond à ces filtres.",
+    "eyebrow": "{stocked} empoissonnées · {idle} en jachère ou vides · {units} unités",
+    "densityOfLimit": "Densité d’élevage, part de la limite",
+    "signal": {
+      "doLow": "OD {value} bas",
+      "outOfRange": "Eau hors plage",
+      "overDensity": "Densité dépassée",
+      "maintenanceOverdue": "Entretien en retard",
+      "do": "OD {value}"
+    },
+    "status": {
+      "empty": "Vide",
+      "active": "Empoissonnée",
+      "harvesting": "En récolte",
+      "harvested": "Récoltée",
+      "fallow": "Jachère",
+      "maintenance": "Entretien"
+    }
+  },
+  "cagesTable": {
+    "eyebrow": "{active} empoissonnées · {total} unités",
+    "name": "Nom",
+    "location": "Emplacement",
+    "size": "Taille",
+    "abw": "PMI",
+    "status": "Statut",
+    "unknown": "Inconnu",
+    "actions": "Actions",
+    "edit": "Modifier",
+    "editNamed": "Modifier {name}",
+    "archive": "Archiver",
+    "archiveNamed": "Archiver {name}",
+    "loading": "Chargement des cages…",
+    "tab": {
+      "all": "Toutes",
+      "ready": "Prêtes ({abw} g+)"
+    },
+    "title": "Unités · {count}",
+    "filterStatus": "Filtrer par statut",
+    "search": "Rechercher par nom ou emplacement",
+    "empty": "Aucune unité. Créez votre première cage pour commencer."
+  },
+  "groupsUi": {
+    "title": "Groupes et plans d’eau",
+    "eyebrow": "Lignes de cages, blocs d’étangs et systèmes RAS, gérés ensemble",
+    "addGroup": "Ajouter un groupe",
+    "addWaterBody": "Ajouter un plan d’eau",
+    "newGroup": "Nouveau groupe",
+    "newWaterBody": "Nouveau plan d’eau",
+    "groups": "Groupes",
+    "noGroups": "Aucun groupe",
+    "noGroupsBody": "Regroupez les cages d’une ligne d’amarrage, les étangs d’un bloc ou les bassins d’une même boucle de filtration pour les gérer ensemble.",
+    "units": {
+      "one": "{count} unité",
+      "other": "{count} unités"
+    },
+    "stocked": "{count} empoissonnées",
+    "fish": "{count} poissons",
+    "waterBodies": "Plans d’eau",
+    "noWater": "Aucun plan d’eau",
+    "noWaterBody": "Ajoutez le lac ou le réservoir de vos cages, ou la source qui alimente vos étangs."
+  },
+  "mapUi": {
+    "title": "Carte de la ferme",
+    "eyebrow": {
+      "one": "Cages · {count} unité placée",
+      "other": "Cages · {count} unités placées"
+    },
+    "loading": "Chargement de la carte…",
+    "legendLabel": "Légende",
+    "legend": {
+      "inRange": "Dans la plage",
+      "watch": "À surveiller",
+      "alert": "Alerte",
+      "idle": "En jachère ou vide"
+    },
+    "emptyTitle": "Rien à placer pour l’instant",
+    "emptyBody": "Ajoutez une latitude et une longitude à vos unités, groupes ou sites pour les voir sur la carte.",
+    "doShort": "{value} mg/L",
+    "do": "OD",
+    "biomass": "Biomasse",
+    "abw": "PMI",
+    "fish": "Poissons",
+    "units": "Unités",
+    "stocked": "Empoissonnées",
+    "unplaced": "Sans position",
+    "group": "Groupe",
+    "site": "Site",
+    "waterBody": "Plan d’eau",
+    "close": "Fermer",
+    "openCage": "Ouvrir la cage",
+    "openGroup": "Ouvrir le groupe",
+    "logWater": "Saisir l’eau",
+    "osm": "OpenStreetMap"
+  },
+  "unitTabs": {
+    "label": "Sections de l’unité",
+    "overview": "Aperçu",
+    "water": "Qualité de l’eau",
+    "waterPond": "Eau et traitements",
+    "netsEquipment": "Filets et équipements",
+    "equipment": "Équipements"
+  },
+  "cageDetail": {
+    "unit": "Unité",
+    "loading": "Chargement de l’unité…",
+    "notFound": "Unité introuvable",
+    "back": "Retour aux unités",
+    "batch": "Lot {batch}",
+    "stocked": "Empoissonnée le {date}",
+    "kpi": {
+      "fish": "Poissons",
+      "abw": "PMI",
+      "biomass": "Biomasse",
+      "fcr": "IC éco.",
+      "survival": "Survie"
+    },
+    "of": "sur {count}",
+    "sampled": "échantillonné le {date}",
+    "biweekly": "Saisie bimensuelle",
+    "waterReading": "Relevé d’eau",
+    "inspection": "Inspection",
+    "grade": "Trier",
+    "edit": "Modifier",
+    "archive": "Archiver",
+    "logEntry": "Saisir",
+    "transfer": "Transférer des poissons",
+    "waterNow": "L’eau maintenant",
+    "loggedAt": "Relevé {when}",
+    "noWater": "Aucun relevé d’eau ces 14 derniers jours.",
+    "outOfRange": "Hors plage",
+    "inRange": "Dans la plage",
+    "growth": "Croissance",
+    "actualAbw": "PMI échantillonné",
+    "abwG": "PMI (g)",
+    "growthEmpty": "La courbe de croissance apparaît après deux échantillons dans ce cycle.",
+    "feedUsed": "Aliment utilisé",
+    "sgr": "TCS",
+    "adg": "Gain quotidien",
+    "mortality": "Morts / empoissonnés",
+    "stockedBiomass": "Biomasse empoissonnée",
+    "feedCost": "Coût de l’aliment",
+    "lastCycle": "Dernier cycle",
+    "currentCycle": "Cycle en cours",
+    "dayOf": "Jour {day}",
+    "fishCount": {
+      "one": "{count} poisson",
+      "other": "{count} poissons"
+    },
+    "ofCapacity": "sur une capacité de {capacity}",
+    "noCapacity": "Aucune capacité définie",
+    "notSampled": "Les chiffres de croissance utilisent le poids à l’empoissonnement jusqu’au premier échantillon bimensuel.",
+    "recentLog": "Journal récent",
+    "tab": {
+      "daily": "Quotidien",
+      "sampling": "Échantillonnage"
+    },
+    "col": {
+      "date": "Date",
+      "feed": "Aliment",
+      "mortality": "Mortalité",
+      "cause": "Cause",
+      "do": "OD",
+      "temp": "Temp.",
+      "abw": "PMI"
+    },
+    "noDaily": "Aucune saisie quotidienne.",
+    "noSamples": "Aucun échantillon."
+  },
+  "waterUi": {
+    "title": "Qualité de l’eau",
+    "thresholdsFor": "seuils pour {units}",
+    "logReading": "Saisir un relevé",
+    "logHint": "Les relevés enregistrés sont comparés aux seuils immédiatement.",
+    "trend": "Tendance",
+    "parameter": "Paramètre",
+    "range": "Période",
+    "days": {
+      "one": "{count} jour",
+      "other": "{count} jours"
+    },
+    "noParam": "Aucun relevé de ce paramètre sur cette période.",
+    "oneReading": "Un seul relevé pour l’instant ; la tendance apparaîtra avec le suivant.",
+    "threshold": "Seuil",
+    "noReadings": "Aucun relevé sur cette période",
+    "noReadingsBody": "Saisissez-en un ci-dessus, ou relevez l’OD et la température dans la saisie quotidienne.",
+    "readings": "Relevés",
+    "when": "Quand",
+    "source": "Source",
+    "sourceLabel": {
+      "manual": "Saisi",
+      "sensor": "Capteur",
+      "daily_record": "Saisie quotidienne",
+      "biweekly_record": "Échantillonnage"
+    },
+    "management": "Gestion de l’eau",
+    "events": "Événements d’eau",
+    "eventsHint": "Renouvellements, chaulage, fertilisation et traitements de l’eau pour cette unité.",
+    "treatments": "Traitements sanitaires",
+    "recordTreatment": "Enregistrer un traitement",
+    "noTreatments": "Aucun traitement enregistré pour cette unité.",
+    "withdrawalUntil": "Délai d’attente jusqu’au {date}"
+  },
+  "equipmentUi": {
+    "title": "Équipements",
+    "eyebrow": "Aérateurs, distributeurs, énergie, filets et amarrages",
+    "logInspection": "Saisir une inspection",
+    "add": "Ajouter un équipement",
+    "kpi": {
+      "dueWeek": "À faire cette semaine",
+      "overdue": "En retard",
+      "faulty": "En panne ou en réparation",
+      "inService": "En service"
+    },
+    "ofActive": "sur {count}",
+    "registry": "Équipements",
+    "tab": {
+      "all": "Tous",
+      "aeration": "Aération",
+      "power": "Énergie",
+      "nets": "Filets",
+      "other": "Autres"
+    },
+    "search": "Rechercher un équipement, une unité ou un n° de série",
+    "loading": "Chargement…",
+    "empty": "Aucun équipement. Enregistrez pompes, aérateurs, filets, bateaux, groupes électrogènes et véhicules pour planifier leur entretien.",
+    "noMatch": "Aucun équipement ne correspond.",
+    "noneOnUnit": "Aucun équipement rattaché à cette unité.",
+    "recent": "Interventions récentes",
+    "dueTitle": "À faire et en retard",
+    "next7": "7 prochains jours",
+    "nothingDue": "Rien à faire cette semaine.",
+    "overdue": "En retard",
+    "dueSoon": "Bientôt dû",
+    "col": {
+      "unit": "Unité",
+      "equipment": "Équipement · n° de série",
+      "checked": "Vérifié",
+      "nextDue": "Prochaine échéance",
+      "status": "Statut"
+    },
+    "kind": {
+      "pump": "Pompe",
+      "blower": "Soufflante",
+      "aerator": "Aérateur",
+      "biofilter": "Biofiltre",
+      "mechanical_filter": "Filtre mécanique",
+      "uv": "Stérilisateur UV",
+      "oxygen_cone": "Cône à oxygène",
+      "net": "Filet",
+      "mooring": "Amarrage",
+      "feeder": "Distributeur",
+      "generator": "Groupe électrogène",
+      "sensor": "Capteur",
+      "boat": "Bateau",
+      "vehicle": "Véhicule",
+      "other": "Autre"
+    },
+    "status": {
+      "in_service": "En service",
+      "standby": "En réserve",
+      "faulty": "En panne",
+      "under_maintenance": "En maintenance",
+      "retired": "Retiré"
+    },
+    "lastMaintained": "dernier entretien {date}",
+    "never": "jamais",
+    "nextDue": "prochaine échéance {date}",
+    "netOverdue": "Inspection du filet en retard depuis le {date}.",
+    "maintOverdue": "Entretien en retard depuis le {date}.",
+    "logNet": "Saisir une inspection de filet ou une intervention",
+    "logMaint": "Saisir un entretien",
+    "history": "Historique"
+  },
+  "farmSetup": {
+    "label": "Configuration de la ferme",
+    "units": "Cages et unités",
+    "groups": "Groupes et plans d’eau",
+    "species": "Espèces",
+    "qr": "Étiquettes QR"
+  },
+  "cageSettings": {
+    "title": "Paramètres des cages",
+    "eyebrow": "Modifiez les unités ou archivez-les. Les changements se synchronisent en direct.",
+    "units": "Unités",
+    "helper": "Nom, emplacement et taille de chaque unité de la ferme.",
+    "empty": "Aucune unité",
+    "noLocation": "Aucun emplacement"
+  },
+  "qrUi": {
+    "title": "QR codes des cages",
+    "eyebrow": "Imprimer les étiquettes · une par unité",
+    "print": "Imprimer",
+    "help": "Imprimez-les et fixez-en un sur chaque cage. Scanner un code ouvre la saisie journalière avec cette cage déjà remplie. Les codes restent valides si l’application change d’adresse ; les étiquettes déjà imprimées continuent de fonctionner.",
+    "loading": "Chargement des cages…",
+    "emptyTitle": "Aucune cage",
+    "emptyDescription": "Créez d’abord une cage, puis revenez imprimer son code.",
+    "create": "Créer une cage",
+    "cage": "Cage",
+    "scanTo": "Scanner pour saisir l’aliment"
+  },
+  "tasksUi": {
+    "title": "Mes tâches",
+    "eyebrow": "Aujourd’hui · {date} · {count} ouvertes",
+    "eyebrowLoading": "Aujourd’hui · {date}",
+    "new": "Nouvelle tâche",
+    "tabsLabel": "Vues des tâches",
+    "tab": {
+      "today": "Aujourd’hui",
+      "upcoming": "À venir",
+      "done": "Terminées"
+    },
+    "pill": {
+      "overdue": "En retard",
+      "dismissed": "Écartée",
+      "automation": "Automatisation",
+      "assigned": "Assignée"
+    },
+    "cage": "Cage {name}",
+    "noDue": "Sans date",
+    "today": "Aujourd’hui",
+    "done": "Terminée",
+    "markDone": "Marquer « {title} » comme terminée",
+    "reopen": "Rouvrir « {title} »",
+    "dismiss": "Écarter « {title} »",
+    "dismissShort": "Écarter",
+    "doneToast": "Tâche terminée",
+    "empty": {
+      "today": "Rien à faire aujourd’hui",
+      "upcoming": "Rien de prévu",
+      "done": "Aucune tâche terminée"
+    },
+    "emptyHint": "Les tâches qui vous sont assignées par un administrateur ou une règle d’automatisation apparaissent ici.",
+    "footer": "Les tâches datées apparaissent aussi dans le",
+    "calendarLink": "calendrier"
+  },
+  "assistantUi": {
+    "title": "Demander à PBA",
+    "eyebrow": "Fondé sur les données de votre ferme",
+    "dialog": "Assistant de la ferme",
+    "welcome": "Posez vos questions sur vos unités, l’aliment, la mortalité, la croissance ou le moment de la récolte. Les réponses utilisent les données enregistrées de votre ferme.",
+    "noKeyReply": "L’assistant n’a pas encore de clé de modèle sur le serveur. Demandez à votre administrateur de définir GEMINI_API_KEY (ou la clé d’un autre fournisseur) sur le serveur.",
+    "failed": "Impossible d’obtenir une réponse : {message}",
+    "noKey": "Aucune clé de modèle sur le serveur",
+    "typing": "L’assistant écrit",
+    "srAssistant": "Assistant :",
+    "placeholder": "Posez une question sur les cages, l’aliment, les coûts…",
+    "inputLabel": "Message à l’assistant",
+    "send": "Envoyer le message",
+    "noProvider": "Aucune clé de fournisseur n’est définie sur le serveur. Un administrateur en ajoute une (par exemple GEMINI_API_KEY) dans l’environnement du serveur.",
+    "provider": "Fournisseur",
+    "model": "Modèle",
+    "privacy": "Les clés restent sur le serveur ; les questions et réponses ne sont pas conservées.",
+    "open": "Ouvrir l’assistant",
+    "close": "Fermer l’assistant",
+    "newChat": "Nouvelle conversation",
+    "settings": "Réglages du modèle",
+    "fullPage": "Ouvrir en pleine page",
+    "offTitle": "L’assistant est désactivé",
+    "offBody": "Un administrateur active l’assistant dans les paramètres IA, et votre rôle doit avoir le droit de l’utiliser.",
+    "insights": "Points du jour",
+    "tryAsking": "Essayez de demander",
+    "prompt": {
+      "losses": "Quelles cages ont perdu le plus de poissons ce cycle ?",
+      "harvest": "Quelles unités sont les plus proches du poids de récolte ?",
+      "report": "Résume l’aliment et la mortalité de cette semaine"
+    }
+  },
+  "calendarUi": {
+    "title": "Calendrier",
+    "eyebrow": "Opérations · {month}",
+    "schedule": "Planifier une tâche",
+    "prev": "Mois précédent",
+    "next": "Mois suivant",
+    "today": "Aujourd’hui",
+    "viewLabel": "Vue du calendrier",
+    "view": {
+      "month": "Mois",
+      "week": "Semaine",
+      "agenda": "Agenda"
+    },
+    "legend": "Légende",
+    "kind": {
+      "task": "Tâches",
+      "maintenance": "Entretien",
+      "harvest": "Récoltes",
+      "withdrawal": "Fin de délai d’attente"
+    },
+    "cage": "Cage {name}",
+    "harvest": "Récolte {name}",
+    "withdrawal": "Fin du délai d’attente {name}",
+    "kg": "{kg} kg",
+    "more": "+{count} de plus",
+    "empty": "Rien de daté ce mois-ci",
+    "emptyHint": "Les tâches avec échéance, les récoltes enregistrées, les échéances d’entretien et les fins de délai d’attente apparaissent ici.",
+    "sources": "Affiche les tâches qui vous sont assignées, les récoltes enregistrées, l’entretien dû dans les 90 prochains jours et les fins de délai d’attente des traitements."
   },
   "branding": {
     "invalidHex": "Saisissez une couleur en code hexadécimal, par exemple #1E3A5F.",

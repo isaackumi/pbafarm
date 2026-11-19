@@ -1,7 +1,6 @@
 /**
  * The waterline: a thin bar showing how full a cage is (fish count against
- * capacity). PBA Farm's one signature detail. Use it wherever a cage is named
- * in a list, and nowhere else.
+ * capacity). Use it wherever a cage is named in a list, and nowhere else.
  */
 export default function Waterline({ count, capacity, inverted = false, className = '' }) {
   const cap = Number(capacity)
@@ -11,16 +10,16 @@ export default function Waterline({ count, capacity, inverted = false, className
   const label = `${n.toLocaleString()} of ${cap.toLocaleString()} fish (${pct.toFixed(0)}% full)`
   return (
     <span
-      className={`block h-1 w-full overflow-hidden rounded-full ${
-        inverted ? 'bg-white/25 dark:bg-black/20' : 'bg-foam-deep'
+      className={`block h-1 w-full overflow-hidden rounded-pill ${
+        inverted ? 'bg-[color-mix(in_oklab,var(--button-text)_25%,transparent)]' : 'bg-line-strong'
       } ${className}`}
       role="img"
       aria-label={label}
       title={label}
     >
       <span
-        className={`block h-full rounded-full ${inverted ? 'bg-white dark:bg-[#18181b]' : 'bg-lake'}`}
-        style={{ width: `${pct}%` }}
+        className={`block h-full rounded-pill ${inverted ? 'bg-button-text' : ''}`}
+        style={{ width: `${pct}%`, backgroundImage: inverted ? undefined : 'var(--gradient-bar)' }}
       />
     </span>
   )

@@ -1,144 +1,185 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
+import { ClipboardCheck, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import EquipmentForm, { EQUIPMENT_KINDS, EQUIPMENT_STATUS } from '../components/EquipmentForm'
+import EquipmentForm from '../components/EquipmentForm'
 import InspectionHistory from '../components/InspectionHistory'
-import { Button, Card, EmptyState, PageHeader, StatCard } from '../components/ui'
+import { Card, GradientButton, KpiStrip, StatusDot, Table } from '../components/ui'
+import { useEquipmentColumns } from '../components/units/equipmentColumns'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
-import { localToday } from '../lib/format'
-import { usePermission } from '../hooks/usePermission'
+import { formatDate, localToday } from '../lib/format'
+import { usePermission, usePermissions } from '../hooks/usePermission'
+import { routePermission } from '../lib/routePermissions'
+import { useT } from '../lib/i18n/context'
 
-function DueList({ title, items, tone }) {
-  if (!items.length) return null
+/** Table tabs (Paper 48): equipment kinds grouped the way crews talk about them. */
+const KIND_GROUP = {
+  aerator: 'aeration',
+  blower: 'aeration',
+  oxygen_cone: 'aeration',
+  generator: 'power',
+  net: 'nets',
+  mooring: 'nets',
+}
+const TABS = ['all', 'aeration', 'power', 'nets', 'other']
+
+const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+
+function DueCard({ due }) {
+  const t = useT()
+  const items = [...due.overdue.map((i) => ({ ...i, overdue: true })), ...due.dueSoon]
   return (
-    <Card padding={false}>
-      <div className="px-5 py-4 border-b border-foam-deep">
-        <h2 className={`font-display text-lg font-medium ${tone}`}>{title}</h2>
+    <section aria-labelledby="due-title" className={`flex flex-col gap-1 p-6 ${card}`}>
+      <div className="flex items-center justify-between pb-[10px]">
+        <h2 id="due-title" className="text-base font-semibold leading-[18px] text-text">
+          {t('equipmentUi.dueTitle')}
+        </h2>
+        <span className="text-xs text-muted">{t('equipmentUi.next7')}</span>
       </div>
-      <ul className="divide-y divide-foam-deep text-sm">
-        {items.map((i) => (
-          <li key={`${i.kind}-${i.id}`} className="px-5 py-3 flex flex-wrap items-baseline justify-between gap-2">
-            <span>
-              {i.unitId ? (
-                <Link href={`/units/${i.unitId}/maintenance`} className="text-lake hover:underline font-medium">{i.name}</Link>
-              ) : (
-                <span className="font-medium">{i.name}</span>
-              )}{' '}
-              <span className="text-muted">{i.detail}</span>
-            </span>
-            <span className="tabular-nums">{i.due}</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
+      {items.length === 0 ? (
+        <p className="border-t border-line py-4 text-sm text-muted">{t('equipmentUi.nothingDue')}</p>
+      ) : (
+        <ul>
+          {items.map((i) => (
+            <li key={`${i.kind}-${i.id}`} className="flex items-center gap-[14px] border-t border-line py-[11px]">
+              <StatusDot tone={i.overdue ? 'alert' : 'warn'} size={7} label={i.overdue ? t('equipmentUi.overdue') : t('equipmentUi.dueSoon')} />
+              <span className="flex min-w-0 grow basis-0 flex-col">
+                {i.unitId ? (
+                  <Link href={`/units/${i.unitId}/maintenance`} className="truncate text-[14px] text-text hover:underline">
+                    {i.name}
+                  </Link>
+                ) : (
+                  <span className="truncate text-[14px] text-text">{i.name}</span>
+                )}
+                {i.detail && <span className="truncate text-xs text-muted">{i.detail}</span>}
+              </span>
+              <span className={`shrink-0 text-right text-[13px] tabular-nums ${i.overdue ? 'text-alert' : 'text-muted'}`}>
+                {formatDate(i.due)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
 function Maintenance() {
-  const { user, hasRole } = useAuth()
+  const t = useT()
+  const { user } = useAuth()
+  const { can } = usePermissions()
   const isAdmin = usePermission('org.sites.manage')
   const { locationArgs, locations } = useLocation()
   const locationName = (id) => (id ? (locations || []).find((l) => l.id === id)?.name : null)
   const asOf = localToday()
-  const due = useQuery(api.equipment.due, user ? { asOf, days: 14, ...locationArgs } : 'skip')
+  const due = useQuery(api.equipment.due, user ? { asOf, days: 7, ...locationArgs } : 'skip')
   const gear = useQuery(api.equipment.list, user ? locationArgs : 'skip')
   const recent = useQuery(api.equipment.listInspections, user ? { limit: 30 } : 'skip')
   const [adding, setAdding] = useState(false)
+  const [tab, setTab] = useState('all')
+  const [search, setSearch] = useState('')
+  const columns = useEquipmentColumns({ asOf, locationName })
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return (gear || []).filter((e) => {
+      const group = KIND_GROUP[e.kind] || 'other'
+      if (tab !== 'all' && group !== tab) return false
+      if (!q) return true
+      return [e.name, e.unitName, e.groupName, e.assetTag, e.serialNumber].some((v) => v && v.toLowerCase().includes(q))
+    })
+  }, [gear, tab, search])
+
+  const faulty = (gear || []).filter((e) => e.status === 'faulty' || e.status === 'under_maintenance').length
+  const inService = (gear || []).filter((e) => e.status === 'in_service').length
+  const active = (gear || []).filter((e) => e.status !== 'retired').length
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <PageHeader
-        title="Maintenance"
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Maintenance' }]}
-        description="Net inspections and equipment servicing due, the equipment registry and recent jobs."
-        actions={
-          <>
-            <Button size="sm" variant="secondary" href="/inspection-entry">Log inspection</Button>
-            {isAdmin && <Button size="sm" onClick={() => setAdding(true)}>Add equipment</Button>}
-          </>
-        }
-        related={[{ label: 'Unit board', href: '/units' }, { label: 'Inventory items', href: '/inventory/items' }]}
-      />
-      {due && (
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard label="Overdue" value={due.overdue.length} tone={due.overdue.length ? 'warn' : 'default'} />
-          <StatCard label="Due in 14 days" value={due.dueSoon.length} />
-        </div>
-      )}
-      {adding && (
-        <Card>
-          <EquipmentForm onDone={() => setAdding(false)} />
-        </Card>
-      )}
-      {due && <DueList title="Overdue" items={due.overdue} tone="text-signal" />}
-      {due && <DueList title="Due soon" items={due.dueSoon} tone="" />}
+    <Layout
+      title={t('equipmentUi.title')}
+      eyebrow={t('equipmentUi.eyebrow')}
+      actions={
+        <>
+          {can(routePermission('/inspection-entry')) && (
+            <GradientButton href="/inspection-entry" icon={ClipboardCheck}>
+              {t('equipmentUi.logInspection')}
+            </GradientButton>
+          )}
+          {isAdmin && (
+            <GradientButton reverse icon={Plus} onClick={() => setAdding(true)}>
+              {t('equipmentUi.add')}
+            </GradientButton>
+          )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-7">
+        <KpiStrip
+          items={[
+            { key: 'due', label: t('equipmentUi.kpi.dueWeek'), value: due ? due.dueSoon.length : '—' },
+            {
+              key: 'overdue',
+              label: t('equipmentUi.kpi.overdue'),
+              value: due ? due.overdue.length : '—',
+              valueTone: due?.overdue.length ? 'alert' : undefined,
+            },
+            { key: 'faulty', label: t('equipmentUi.kpi.faulty'), value: gear ? faulty : '—', valueTone: faulty ? 'warn' : undefined },
+            {
+              key: 'inService',
+              label: t('equipmentUi.kpi.inService'),
+              value: gear ? inService : '—',
+              suffix: gear ? t('equipmentUi.ofActive', { count: active }) : undefined,
+            },
+          ]}
+        />
 
-      <Card padding={false}>
-        <div className="px-5 py-4 border-b border-foam-deep">
-          <h2 className="font-display text-lg font-medium">Equipment</h2>
-        </div>
-        {!gear ? (
-          <p className="p-5 text-sm text-muted">Loading…</p>
-        ) : gear.length === 0 ? (
-          <EmptyState title="No equipment yet" description="Register pumps, aerators, nets, boats, generators and vehicles to schedule their servicing." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted border-b border-foam-deep">
-                  <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Asset tag</th>
-                  <th className="px-4 py-2 font-medium">Kind</th>
-                  <th className="px-4 py-2 font-medium">Attached to</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Next service</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foam-deep">
-                {gear.map((e) => (
-                  <tr key={e._id}>
-                    <td className="px-4 py-2 font-medium">{e.name}</td>
-                    <td className="px-4 py-2 text-muted">{e.assetTag || '—'}</td>
-                    <td className="px-4 py-2 text-muted">{EQUIPMENT_KINDS.find((k) => k.value === e.kind)?.label}</td>
-                    <td className="px-4 py-2">
-                      {e.unitId ? (
-                        <Link href={`/units/${e.unitId}/maintenance`} className="text-lake hover:underline">{e.unitName}</Link>
-                      ) : (
-                        e.groupName || locationName(e.locationId) || '—'
-                      )}
-                    </td>
-                    <td className={`px-4 py-2 ${e.status === 'faulty' ? 'text-signal' : ''}`}>{EQUIPMENT_STATUS[e.status]}</td>
-                    <td className={`px-4 py-2 tabular-nums ${e.nextMaintenanceDue && e.nextMaintenanceDue < asOf ? 'text-signal' : ''}`}>
-                      {e.nextMaintenanceDue || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {adding && (
+          <Card>
+            <h2 className="mb-5 text-[17px] font-semibold leading-[22px] text-text">{t('equipmentUi.add')}</h2>
+            <EquipmentForm onDone={() => setAdding(false)} />
+          </Card>
         )}
-      </Card>
 
-      <Card padding={false}>
-        <div className="px-5 py-4 border-b border-foam-deep">
-          <h2 className="font-display text-lg font-medium">Recent jobs</h2>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+          <Table
+            className="min-w-0 xl:grow-[1.6] xl:basis-0"
+            title={t('equipmentUi.registry')}
+            tabsLabel={t('equipmentUi.registry')}
+            tabs={TABS.map((v) => ({ value: v, label: t(`equipmentUi.tab.${v}`) }))}
+            tab={tab}
+            onTabChange={setTab}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={t('equipmentUi.search')}
+            columns={columns}
+            rows={rows}
+            empty={gear === undefined ? t('equipmentUi.loading') : gear.length === 0 ? t('equipmentUi.empty') : t('equipmentUi.noMatch')}
+          />
+          <div className="flex min-w-0 flex-col gap-5 xl:grow xl:basis-0">
+            {due && <DueCard due={due} />}
+            <section aria-labelledby="jobs-title" className={card}>
+              <div className="border-b border-line px-6 py-5">
+                <h2 id="jobs-title" className="text-base font-semibold leading-[18px] text-text">
+                  {t('equipmentUi.recent')}
+                </h2>
+              </div>
+              <InspectionHistory rows={recent} showUnit />
+            </section>
+          </div>
         </div>
-        <InspectionHistory rows={recent} showUnit />
-      </Card>
-    </div>
+      </div>
+    </Layout>
   )
 }
 
 export default function MaintenancePage() {
   return (
     <ProtectedRoute>
-      <Layout title="Maintenance">
-        <Maintenance />
-      </Layout>
+      <Maintenance />
     </ProtectedRoute>
   )
 }

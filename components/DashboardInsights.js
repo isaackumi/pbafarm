@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { getConvexAuthToken } from '../lib/convexBridge'
 import { localToday } from '../lib/format'
-import { Card, CardHeader } from './ui'
+import { StatusDot } from './ui'
+import { useT } from '../lib/i18n/context'
 
 const SEVERITY = {
-  critical: { icon: CircleAlert, label: 'Critical', className: 'text-signal' },
-  warning: { icon: TriangleAlert, label: 'Warning', className: 'text-warn' },
-  info: { icon: Info, label: 'Note', className: 'text-lake' },
+  critical: { tone: 'alert', key: 'critical', label: 'Critical' },
+  warning: { tone: 'warn', key: 'warning', label: 'Warning' },
+  info: { tone: 'good', key: 'note', label: 'Note' },
 }
 
 /**
@@ -19,7 +19,8 @@ const SEVERITY = {
  * company has the assistant on, the server may reword them
  * (/api/llm/insights); a reworded line is only shown if it keeps the facts.
  */
-export default function DashboardInsights({ locationId, aiEnabled }) {
+export default function DashboardInsights({ locationId, aiEnabled, title, className = '' }) {
+  const t = useT()
   const asOf = localToday()
   const insights = useQuery(api.assistant.forDashboard, {
     asOf,
@@ -56,34 +57,41 @@ export default function DashboardInsights({ locationId, aiEnabled }) {
   if (!insights?.length) return null
 
   return (
-    <Card>
-      <CardHeader
-        title="Insights"
-        subtitle="From your recorded data, by fixed rules"
-        action={
-          <Link href="/analytics" className="text-sm text-lake hover:underline">
-            Open analytics
-          </Link>
-        }
-      />
-      <ul className="space-y-4">
+    <section
+      aria-labelledby="dashboard-insights-title"
+      className={`flex flex-col gap-1 rounded-card border border-line bg-surface px-[26px] py-6 shadow-[var(--shadow-card)] ${className}`}
+    >
+      <div className="flex items-center justify-between gap-3 pb-[10px]">
+        <div>
+          <h2 id="dashboard-insights-title" className="text-base font-semibold leading-5 text-text">
+            {title || t('home.insightsTitle')}
+          </h2>
+          <p className="mt-1 text-xs leading-4 text-muted">{t('home.insightsSubtitle')}</p>
+        </div>
+        <Link
+          href="/analytics"
+          className="rounded-sm text-xs leading-4 text-muted underline-offset-2 hover:text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          {t('home.openAnalytics')}
+        </Link>
+      </div>
+      <ul>
         {insights.map((i) => {
           const s = SEVERITY[i.severity] || SEVERITY.info
-          const Icon = s.icon
           return (
-            <li key={i.id} className="flex gap-3">
-              <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${s.className}`} aria-hidden />
-              <div className="min-w-0">
-                <p className="font-medium text-chart-ink">
-                  <span className="sr-only">{s.label}: </span>
+            <li key={i.id} className="flex items-center gap-[14px] border-t border-line py-[11px]">
+              <StatusDot tone={s.tone} size={7} />
+              <div className="flex min-w-0 grow basis-0 flex-col gap-[2px]">
+                <p className="text-[14px] leading-[18px] text-text">
+                  <span className="sr-only">{t.or(`home.severity.${s.key}`, s.label)}: </span>
                   {phrased[i.id] || i.title}
                 </p>
-                <p className="text-sm text-muted mt-0.5">{i.detail}</p>
+                <p className="text-xs leading-4 text-muted">{i.detail}</p>
               </div>
             </li>
           )
         })}
       </ul>
-    </Card>
+    </section>
   )
 }

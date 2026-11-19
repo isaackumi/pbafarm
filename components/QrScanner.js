@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
-import { Button, Field, Input } from './ui'
+import { Field, Input, StatusDot } from './ui'
+import { useT } from '../lib/i18n/context'
 
 /** True when this browser can read QR codes from the camera itself. */
 export function canScanInApp() {
@@ -17,7 +18,9 @@ export function canScanInApp() {
  * older Android WebViews) or the camera is refused, the person types the cage
  * code or name instead. Calls `onResult(text)` with the raw value once.
  */
-export default function QrScanner({ open, onClose, onResult, title = 'Scan cage label' }) {
+export default function QrScanner({ open, onClose, onResult, title }) {
+  const t = useT()
+  const heading = title || t('scan.labelTitle')
   const videoRef = useRef(null)
   const [status, setStatus] = useState('idle') // idle | starting | scanning | fallback
   const [reason, setReason] = useState('')
@@ -34,7 +37,7 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan cage 
 
     const start = async () => {
       if (!canScanInApp()) {
-        setReason('This browser cannot scan inside the app. Type the cage code or name, or scan with the phone camera.')
+        setReason('unsupported')
         setStatus('fallback')
         return
       }
@@ -72,11 +75,7 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan cage 
       } catch (err) {
         if (cancelled) return
         const denied = /denied|notallowed|permission/i.test(String(err?.name || err?.message))
-        setReason(
-          denied
-            ? 'Camera access was refused. Type the cage code or name instead.'
-            : 'The camera could not start. Type the cage code or name instead.',
-        )
+        setReason(denied ? 'denied' : 'failed')
         setStatus('fallback')
       }
     }
@@ -85,7 +84,7 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan cage 
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
-      stream?.getTracks().forEach((t) => t.stop())
+      stream?.getTracks().forEach((track) => track.stop())
     }
     // onResult is read once per scan; restarting the camera on every render is wasteful.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,65 +100,83 @@ export default function QrScanner({ open, onClose, onResult, title = 'Scan cage 
     onResult(value)
   }
 
+  const iconBtn =
+    'inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={title}
-      className="fixed inset-0 z-[70] flex flex-col bg-black text-white"
+      aria-label={heading}
+      className="fixed inset-0 z-[70] flex flex-col bg-bg text-text"
     >
-      <div className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
-        <p className="font-medium">{title}</p>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close scanner"
-          className="inline-flex h-12 w-12 items-center justify-center rounded-lg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          <X size={22} aria-hidden />
+      <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <span className="h-11 w-11" aria-hidden />
+        <p className="text-[17px] font-semibold leading-[22px]">{heading}</p>
+        <button type="button" onClick={onClose} aria-label={t('scan.close')} className={iconBtn}>
+          <X size={20} aria-hidden />
         </button>
       </div>
 
-      <div className="relative flex-1 overflow-hidden">
+      <div
+        className="relative mx-4 flex-1 overflow-hidden rounded-[24px] bg-surface"
+        style={{ backgroundImage: 'radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cyan) 14%, transparent), transparent 70%)' }}
+      >
         <video
           ref={videoRef}
           playsInline
           muted
           className={`h-full w-full object-cover ${status === 'scanning' ? '' : 'hidden'}`}
         />
-        {status === 'scanning' && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-60 w-60 rounded-2xl border-2 border-white/80" />
+        {(status === 'scanning' || status === 'starting') && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5">
+            <ScanFrame className="h-60 w-60" />
+            <span className="inline-flex items-center gap-2 rounded-pill border border-line bg-bg px-4 py-2 text-[14px]">
+              <StatusDot tone={status === 'scanning' ? 'good' : 'neutral'} size={8} />
+              {status === 'scanning' ? t('scan.pointAt') : t('scan.starting')}
+            </span>
           </div>
         )}
-        {status === 'starting' && (
-          <p className="absolute inset-0 flex items-center justify-center text-sm text-white/80">
-            Starting camera…
-          </p>
-        )}
         {status === 'fallback' && (
-          <p className="px-6 pt-8 text-sm text-white/80">{reason}</p>
+          <p className="px-6 pt-8 text-[14px] leading-5 text-muted">{t(`scan.reason.${reason}`)}</p>
         )}
       </div>
 
       <form
         onSubmit={submitTyped}
-        className="bg-surface text-chart-ink px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-3"
+        className="space-y-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
       >
-        <Field label="Or type the cage code or name" htmlFor="qr-typed">
+        <Field label={t('scan.typeLabel')} htmlFor="qr-typed">
           <Input
             id="qr-typed"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             autoComplete="off"
             autoCapitalize="characters"
-            placeholder="e.g. C-012 or A3"
+            placeholder={t('scan.typePlaceholder')}
           />
         </Field>
-        <Button type="submit" size="lg" className="w-full" disabled={!typed.trim()}>
-          Open cage
-        </Button>
+        <button
+          type="submit"
+          disabled={!typed.trim()}
+          className="flex min-h-[52px] w-full items-center justify-center rounded-[16px] bg-button text-[16px] font-medium text-button-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {t('scan.openCage')}
+        </button>
       </form>
+    </div>
+  )
+}
+
+/** Corner brackets from 54 Mobile Scan: cyan on the left, pink on the right. */
+export function ScanFrame({ className = 'h-40 w-40' }) {
+  const corner = 'absolute h-[22%] w-[22%] border-[3px]'
+  return (
+    <div className={`relative ${className}`} aria-hidden>
+      <span className={`${corner} left-0 top-0 rounded-tl-[18px] border-b-0 border-r-0 border-cyan`} />
+      <span className={`${corner} right-0 top-0 rounded-tr-[18px] border-b-0 border-l-0 border-pink`} />
+      <span className={`${corner} bottom-0 left-0 rounded-bl-[18px] border-r-0 border-t-0 border-cyan`} />
+      <span className={`${corner} bottom-0 right-0 rounded-br-[18px] border-l-0 border-t-0 border-pink`} />
     </div>
   )
 }

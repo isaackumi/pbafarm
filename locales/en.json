@@ -79,7 +79,9 @@
       "inboundWebhooks": "Inbound webhooks",
       "aiSettings": "AI settings",
       "weeklyReport": "Weekly report",
-      "alerts": "Alerts & insights"
+      "alerts": "Alerts & insights",
+      "calendar": "Calendar",
+      "assistant": "Ask PBA"
     },
     "section": {
       "production": "Production",
@@ -93,7 +95,8 @@
       "management": "Settings",
       "admin": "Admin",
       "home": "Home",
-      "tasks": "My tasks"
+      "tasks": "My tasks",
+      "calendar": "Calendar"
     },
     "home": "Home",
     "dailyEntry": "Daily entry",
@@ -704,7 +707,27 @@
   },
   "scan": {
     "openingCode": "Opening cage {code}…",
-    "unknownCode": "No cage on this farm has the code {code}"
+    "unknownCode": "No cage on this farm has the code {code}",
+    "title": "Scan cage",
+    "eyebrow": "Point the camera at the label on the cage",
+    "subtitle": "Opens the chosen screen with that cage already selected.",
+    "openIn": "Open in",
+    "daily": "Daily entry",
+    "biweekly": "Bi-weekly sampling",
+    "start": "Start scanning",
+    "noMatch": "No cage on this farm matches that label",
+    "labelTitle": "Scan cage label",
+    "close": "Close scanner",
+    "pointAt": "Point at a cage label",
+    "starting": "Starting camera…",
+    "reason": {
+      "unsupported": "This browser cannot scan inside the app. Type the cage code or name, or scan with the phone camera.",
+      "denied": "Camera access was refused. Type the cage code or name instead.",
+      "failed": "The camera could not start. Type the cage code or name instead."
+    },
+    "typeLabel": "Or type the cage code or name",
+    "typePlaceholder": "e.g. C-012 or A3",
+    "openCage": "Open cage"
   },
   "pwa": {
     "updateReady": "A new version of PBA Farm is ready.",
@@ -1197,6 +1220,502 @@
     "savedOrg": "Organization dashboard saved.",
     "resetDone": "Dashboard layout reset.",
     "saveFailed": "Could not save the dashboard"
+  },
+  "home": {
+    "insightsTitle": "Insights today",
+    "insightsSubtitle": "From your recorded data, by fixed rules",
+    "openAnalytics": "Open analytics",
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "note": "Note"
+    },
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}",
+      "anon": "Welcome back"
+    },
+    "logDaily": "Log daily entry",
+    "issueFeed": "Issue feed",
+    "kpi": {
+      "activeCages": "Active cages",
+      "ofTotal": "of {count}",
+      "biomass": "Biomass",
+      "fcr": "Avg FCR",
+      "fcrHint": "harvests · 30d",
+      "mortality": "Mortality · 30d",
+      "adg": "Avg daily growth",
+      "feed30d": "Feed · 30d",
+      "health": "Farm health"
+    },
+    "feed": {
+      "title": "Feed logged",
+      "range": "Chart range",
+      "cumulative": "cumulative over {count} logged days",
+      "emptyTitle": "No feed data yet",
+      "emptyBody": "Log daily entries to see cumulative feed usage.",
+      "series": "Cumulative kg"
+    },
+    "mortality": {
+      "title": "Daily mortality",
+      "subtitle": "Last 14 logging days",
+      "emptyTitle": "No mortality logged",
+      "emptyBody": "Daily mortality will appear here once records exist."
+    },
+    "activity": {
+      "title": "Farm activity",
+      "date": "Date",
+      "type": "Type",
+      "unit": "Unit",
+      "batch": "Batch",
+      "fish": "Fish",
+      "abw": "Stocked ABW",
+      "status": "Status",
+      "stocking": "Stocking",
+      "empty": "No stockings yet. Create a stocking batch to track days of culture and biomass.",
+      "newStocking": "New stocking",
+      "open": "Open stocking management"
+    },
+    "stockingStatus": {
+      "approved": "Approved",
+      "pending_approval": "Pending approval",
+      "rejected": "Rejected"
+    }
+  },
+  "siteConditions": {
+    "title": "Site conditions",
+    "subtitle": "Weather from Open-Meteo and the latest sensor readings",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "justNow": "just now",
+    "minAgo": "{count} min ago",
+    "hAgo": "{count} h ago",
+    "daysAgo": "{count} days ago",
+    "noCoordinates": "{site}: add latitude and longitude to see weather.",
+    "farmLocations": "Farm locations",
+    "updated": "Weather updated",
+    "updating": "Updating…",
+    "refresh": "Refresh",
+    "noWeather": "No weather yet. It is fetched every morning.",
+    "sensors": "Sensors"
+  },
+  "unitsUi": {
+    "title": "Cages",
+    "views": "Cage views",
+    "view": {
+      "board": "Board",
+      "table": "Table",
+      "map": "Site map",
+      "groups": "Groups"
+    },
+    "newCage": "New cage",
+    "qrCodes": "QR codes",
+    "loading": "Loading units…",
+    "filterGroup": "Group",
+    "allGroups": "All groups",
+    "filterSpecies": "Species",
+    "anySpecies": "Species: any",
+    "alertsOnly": "Alerts only · {count}",
+    "emptyTitle": "No units yet",
+    "emptyBody": "Add your cages, ponds or tanks to see them here.",
+    "noMatch": "No units match these filters.",
+    "eyebrow": "{stocked} stocked · {idle} fallow or empty · {units} units",
+    "densityOfLimit": "Stocking density, share of the limit",
+    "signal": {
+      "doLow": "DO {value} low",
+      "outOfRange": "Water out of range",
+      "overDensity": "Over density",
+      "maintenanceOverdue": "Maintenance overdue",
+      "do": "DO {value}"
+    },
+    "status": {
+      "empty": "Empty",
+      "active": "Stocked",
+      "harvesting": "Harvesting",
+      "harvested": "Harvested",
+      "fallow": "Fallow",
+      "maintenance": "Maintenance"
+    }
+  },
+  "cagesTable": {
+    "eyebrow": "{active} stocked · {total} units",
+    "name": "Name",
+    "location": "Location",
+    "size": "Size",
+    "abw": "ABW",
+    "status": "Status",
+    "unknown": "Unknown",
+    "actions": "Actions",
+    "edit": "Edit",
+    "editNamed": "Edit {name}",
+    "archive": "Archive",
+    "archiveNamed": "Archive {name}",
+    "loading": "Loading cages…",
+    "tab": {
+      "all": "All",
+      "ready": "Ready ({abw} g+)"
+    },
+    "title": "Units · {count}",
+    "filterStatus": "Filter by status",
+    "search": "Search by name or location",
+    "empty": "No units match. Create your first cage to get started."
+  },
+  "groupsUi": {
+    "title": "Groups and water bodies",
+    "eyebrow": "Cage lines, pond blocks and RAS systems, managed together",
+    "addGroup": "Add group",
+    "addWaterBody": "Add water body",
+    "newGroup": "New group",
+    "newWaterBody": "New water body",
+    "groups": "Groups",
+    "noGroups": "No groups yet",
+    "noGroupsBody": "Group cages on a mooring line, ponds in a block or tanks on one filter loop to see and manage them together.",
+    "units": {
+      "one": "{count} unit",
+      "other": "{count} units"
+    },
+    "stocked": "{count} stocked",
+    "fish": "{count} fish",
+    "waterBodies": "Water bodies",
+    "noWater": "No water bodies yet",
+    "noWaterBody": "Add the lake or reservoir your cages sit in, or the source that feeds your ponds."
+  },
+  "mapUi": {
+    "title": "Farm map",
+    "eyebrow": {
+      "one": "Cages · {count} placed unit",
+      "other": "Cages · {count} placed units"
+    },
+    "loading": "Loading map…",
+    "legendLabel": "Legend",
+    "legend": {
+      "inRange": "In range",
+      "watch": "Watch",
+      "alert": "Alert",
+      "idle": "Fallow or empty"
+    },
+    "emptyTitle": "Nothing to place yet",
+    "emptyBody": "Give your units, groups or sites a latitude and longitude to see them on the map.",
+    "doShort": "{value} mg/L",
+    "do": "DO",
+    "biomass": "Biomass",
+    "abw": "ABW",
+    "fish": "Fish",
+    "units": "Units",
+    "stocked": "Stocked",
+    "unplaced": "Without a position",
+    "group": "Group",
+    "site": "Site",
+    "waterBody": "Water body",
+    "close": "Close",
+    "openCage": "Open cage",
+    "openGroup": "Open group",
+    "logWater": "Log water",
+    "osm": "OpenStreetMap"
+  },
+  "unitTabs": {
+    "label": "Unit sections",
+    "overview": "Overview",
+    "water": "Water quality",
+    "waterPond": "Water and treatments",
+    "netsEquipment": "Nets and equipment",
+    "equipment": "Equipment"
+  },
+  "cageDetail": {
+    "unit": "Unit",
+    "loading": "Loading unit…",
+    "notFound": "Unit not found",
+    "back": "Back to units",
+    "batch": "Batch {batch}",
+    "stocked": "Stocked {date}",
+    "kpi": {
+      "fish": "Fish",
+      "abw": "ABW",
+      "biomass": "Biomass",
+      "fcr": "eFCR",
+      "survival": "Survival"
+    },
+    "of": "of {count}",
+    "sampled": "sampled {date}",
+    "biweekly": "Bi-weekly entry",
+    "waterReading": "Water reading",
+    "inspection": "Inspection",
+    "grade": "Grade",
+    "edit": "Edit",
+    "archive": "Archive",
+    "logEntry": "Log entry",
+    "transfer": "Transfer fish",
+    "waterNow": "Water now",
+    "loggedAt": "Logged {when}",
+    "noWater": "No water readings in the last 14 days.",
+    "outOfRange": "Out of range",
+    "inRange": "In range",
+    "growth": "Growth",
+    "actualAbw": "Sampled ABW",
+    "abwG": "ABW (g)",
+    "growthEmpty": "The growth curve appears after two samples in this cycle.",
+    "feedUsed": "Feed used",
+    "sgr": "SGR",
+    "adg": "Daily gain",
+    "mortality": "Dead / stocked",
+    "stockedBiomass": "Stocked biomass",
+    "feedCost": "Feed cost",
+    "lastCycle": "Last cycle",
+    "currentCycle": "Current cycle",
+    "dayOf": "Day {day}",
+    "fishCount": {
+      "one": "{count} fish",
+      "other": "{count} fish"
+    },
+    "ofCapacity": "of {capacity} capacity",
+    "noCapacity": "No capacity set",
+    "notSampled": "Growth figures use the stocking weight until the first bi-weekly sample is recorded.",
+    "recentLog": "Recent log",
+    "tab": {
+      "daily": "Daily",
+      "sampling": "Sampling"
+    },
+    "col": {
+      "date": "Date",
+      "feed": "Feed",
+      "mortality": "Mortality",
+      "cause": "Cause",
+      "do": "DO",
+      "temp": "Temp",
+      "abw": "ABW"
+    },
+    "noDaily": "No daily records yet.",
+    "noSamples": "No samples yet."
+  },
+  "waterUi": {
+    "title": "Water quality",
+    "thresholdsFor": "thresholds for {units}",
+    "logReading": "Log a reading",
+    "logHint": "Saved readings are checked against the thresholds right away.",
+    "trend": "Trend",
+    "parameter": "Parameter",
+    "range": "Range",
+    "days": {
+      "one": "{count} day",
+      "other": "{count} days"
+    },
+    "noParam": "No readings of this parameter in this period.",
+    "oneReading": "One reading so far; the trend appears with the next.",
+    "threshold": "Threshold",
+    "noReadings": "No readings in this period",
+    "noReadingsBody": "Log one above, or capture DO and temperature on the daily entry.",
+    "readings": "Readings",
+    "when": "When",
+    "source": "Source",
+    "sourceLabel": {
+      "manual": "Logged",
+      "sensor": "Sensor",
+      "daily_record": "Daily entry",
+      "biweekly_record": "Sampling"
+    },
+    "management": "Water management",
+    "events": "Water events",
+    "eventsHint": "Exchanges, liming, fertilization and water treatments for this unit.",
+    "treatments": "Health treatments",
+    "recordTreatment": "Record treatment",
+    "noTreatments": "No treatments recorded for this unit.",
+    "withdrawalUntil": "Withdrawal until {date}"
+  },
+  "equipmentUi": {
+    "title": "Equipment",
+    "eyebrow": "Aerators, feeders, power, nets and moorings",
+    "logInspection": "Log inspection",
+    "add": "Add equipment",
+    "kpi": {
+      "dueWeek": "Due this week",
+      "overdue": "Overdue",
+      "faulty": "Faulty or in repair",
+      "inService": "In service"
+    },
+    "ofActive": "of {count}",
+    "registry": "Equipment",
+    "tab": {
+      "all": "All",
+      "aeration": "Aeration",
+      "power": "Power",
+      "nets": "Nets",
+      "other": "Other"
+    },
+    "search": "Search equipment, unit or serial",
+    "loading": "Loading…",
+    "empty": "No equipment yet. Register pumps, aerators, nets, boats, generators and vehicles to schedule their servicing.",
+    "noMatch": "No equipment matches.",
+    "noneOnUnit": "No equipment attached to this unit.",
+    "recent": "Recent jobs",
+    "dueTitle": "Due and overdue",
+    "next7": "Next 7 days",
+    "nothingDue": "Nothing due this week.",
+    "overdue": "Overdue",
+    "dueSoon": "Due soon",
+    "col": {
+      "unit": "Unit",
+      "equipment": "Equipment · serial",
+      "checked": "Checked",
+      "nextDue": "Next due",
+      "status": "Status"
+    },
+    "kind": {
+      "pump": "Pump",
+      "blower": "Blower",
+      "aerator": "Aerator",
+      "biofilter": "Biofilter",
+      "mechanical_filter": "Mechanical filter",
+      "uv": "UV steriliser",
+      "oxygen_cone": "Oxygen cone",
+      "net": "Net",
+      "mooring": "Mooring",
+      "feeder": "Feeder",
+      "generator": "Generator",
+      "sensor": "Sensor",
+      "boat": "Boat",
+      "vehicle": "Vehicle",
+      "other": "Other"
+    },
+    "status": {
+      "in_service": "In service",
+      "standby": "Standby",
+      "faulty": "Faulty",
+      "under_maintenance": "Under maintenance",
+      "retired": "Retired"
+    },
+    "lastMaintained": "last maintained {date}",
+    "never": "never",
+    "nextDue": "next due {date}",
+    "netOverdue": "Net inspection overdue since {date}.",
+    "maintOverdue": "Maintenance overdue since {date}.",
+    "logNet": "Log a net inspection or job",
+    "logMaint": "Log maintenance",
+    "history": "History"
+  },
+  "farmSetup": {
+    "label": "Farm setup",
+    "units": "Cages and units",
+    "groups": "Groups and water bodies",
+    "species": "Species",
+    "qr": "QR labels"
+  },
+  "cageSettings": {
+    "title": "Cage settings",
+    "eyebrow": "Edit unit details or archive units. Changes sync live.",
+    "units": "Units",
+    "helper": "Name, location and size for each unit on this farm.",
+    "empty": "No units yet",
+    "noLocation": "No location"
+  },
+  "qrUi": {
+    "title": "Cage QR codes",
+    "eyebrow": "Print labels · one per unit",
+    "print": "Print",
+    "help": "Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in. Codes stay valid if the app moves to a new address; labels printed earlier keep working.",
+    "loading": "Loading cages…",
+    "emptyTitle": "No cages yet",
+    "emptyDescription": "Create a cage first, then come back to print its code.",
+    "create": "Create a cage",
+    "cage": "Cage",
+    "scanTo": "Scan to log feed"
+  },
+  "tasksUi": {
+    "title": "My tasks",
+    "eyebrow": "Today · {date} · {count} open",
+    "eyebrowLoading": "Today · {date}",
+    "new": "New task",
+    "tabsLabel": "Task views",
+    "tab": {
+      "today": "Today",
+      "upcoming": "Upcoming",
+      "done": "Done"
+    },
+    "pill": {
+      "overdue": "Overdue",
+      "dismissed": "Dismissed",
+      "automation": "Automation",
+      "assigned": "Assigned"
+    },
+    "cage": "Cage {name}",
+    "noDue": "No date",
+    "today": "Today",
+    "done": "Done",
+    "markDone": "Mark “{title}” done",
+    "reopen": "Reopen “{title}”",
+    "dismiss": "Dismiss “{title}”",
+    "dismissShort": "Dismiss",
+    "doneToast": "Task done",
+    "empty": {
+      "today": "Nothing due today",
+      "upcoming": "Nothing scheduled",
+      "done": "No finished tasks yet"
+    },
+    "emptyHint": "Work assigned to you by an admin or by an automation rule shows up here.",
+    "footer": "Dated tasks also appear on the",
+    "calendarLink": "calendar"
+  },
+  "assistantUi": {
+    "title": "Ask PBA",
+    "eyebrow": "Grounded in your farm data",
+    "dialog": "Farm assistant",
+    "welcome": "Ask about your units, feed, deaths, growth or harvest timing. Answers use your farm’s recorded data.",
+    "noKeyReply": "The assistant has no model key on the server yet. Ask your administrator to set GEMINI_API_KEY (or another provider key) on the server.",
+    "failed": "Could not get an answer: {message}",
+    "noKey": "No model key on the server",
+    "typing": "Assistant is typing",
+    "srAssistant": "Assistant:",
+    "placeholder": "Ask about cages, feed, costs…",
+    "inputLabel": "Message to assistant",
+    "send": "Send message",
+    "noProvider": "No provider key is set on the server. An administrator adds one (for example GEMINI_API_KEY) to the server environment.",
+    "provider": "Provider",
+    "model": "Model",
+    "privacy": "Keys stay on the server; questions and answers are not stored.",
+    "open": "Open assistant",
+    "close": "Close assistant",
+    "newChat": "New chat",
+    "settings": "Model settings",
+    "fullPage": "Open full page",
+    "offTitle": "The assistant is off",
+    "offBody": "An administrator turns the farm assistant on in AI settings, and your role needs permission to use it.",
+    "insights": "Insights today",
+    "tryAsking": "Try asking",
+    "prompt": {
+      "losses": "Which cages lost the most fish this cycle?",
+      "harvest": "Which units are closest to harvest weight?",
+      "report": "Summarise this week’s feed and mortality"
+    }
+  },
+  "calendarUi": {
+    "title": "Calendar",
+    "eyebrow": "Operations · {month}",
+    "schedule": "Schedule a task",
+    "prev": "Previous month",
+    "next": "Next month",
+    "today": "Today",
+    "viewLabel": "Calendar view",
+    "view": {
+      "month": "Month",
+      "week": "Week",
+      "agenda": "Agenda"
+    },
+    "legend": "Legend",
+    "kind": {
+      "task": "Tasks",
+      "maintenance": "Maintenance",
+      "harvest": "Harvests",
+      "withdrawal": "Withdrawal ends"
+    },
+    "cage": "Cage {name}",
+    "harvest": "Harvest {name}",
+    "withdrawal": "Withdrawal ends {name}",
+    "kg": "{kg} kg",
+    "more": "+{count} more",
+    "empty": "Nothing dated this month",
+    "emptyHint": "Tasks with a due date, recorded harvests, maintenance due dates and withdrawal end dates show up here.",
+    "sources": "Shows tasks assigned to you, recorded harvests, maintenance due in the next 90 days and treatment withdrawal end dates."
   },
   "branding": {
     "invalidHex": "Enter a colour as a hex code, for example #1E3A5F.",

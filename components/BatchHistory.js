@@ -3,45 +3,62 @@ import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { EmptyState, Field, Input } from './ui'
-import { localToday } from '../lib/format'
+import { formatDate, localToday } from '../lib/format'
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 1 }))
 const signed = (n) => (n > 0 ? `+${fmt(n)}` : fmt(n))
 const today = () => localToday()
 
-/** One ledger event as a compact row: date, what happened, batch, fish ±. */
+const EVENT_TONE = {
+  stock_in: 'var(--cyan)',
+  transfer_in: 'var(--cyan)',
+  transfer_out: 'var(--cyan)',
+  harvest: 'var(--good)',
+  mortality: 'var(--alert)',
+  grading_split: 'var(--pink)',
+  merge: 'var(--pink)',
+  count_adjustment: 'var(--warn)',
+  reversal: 'var(--faint)',
+}
+
+/** One ledger event on the Paper 26 timeline: coloured ring, kind, date and fish ±, then detail. */
 export function EventRow({ e, showCage = false }) {
+  const tone = e.reversed ? 'var(--faint)' : EVENT_TONE[e.type] || 'var(--muted)'
   const detail = [
     showCage ? e.cage_name : null,
     e.counterpart_cage ? `${e.qty < 0 ? 'to' : 'from'} ${e.counterpart_cage}` : null,
+    e.kg ? `${signed(e.kg)} kg` : null,
     e.reason,
   ]
     .filter(Boolean)
     .join(' · ')
   return (
-    <li className={`px-4 py-3 flex items-start justify-between gap-3 ${e.reversed ? 'opacity-60' : ''}`}>
-      <div className="min-w-0">
-        <p className="text-sm text-chart-ink">
-          <span className={e.reversed ? 'line-through' : ''}>{e.label}</span>
-          {e.batch_number && (
-            <>
-              {' · '}
-              <Link href={`/batches/${e.batch_id}`} className="text-lake hover:underline">
-                {e.batch_number}
-              </Link>
-            </>
-          )}
-        </p>
-        <p className="text-xs text-muted mt-0.5 font-data">
-          {e.date}
-          {detail ? ` · ${detail}` : ''}
-          {e.reversed ? ' · reversed' : ''}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className={`font-data tabular-nums text-sm ${e.qty < 0 ? 'text-signal' : 'text-kelp'}`}>{signed(e.qty)}</p>
-        {e.kg ? <p className="text-xs text-muted tabular-nums">{signed(e.kg)} kg</p> : null}
-      </div>
+    <li className={`group relative pb-6 pl-[34px] last:pb-0 ${e.reversed ? 'opacity-60' : ''}`}>
+      <span
+        aria-hidden
+        className="absolute left-0 top-[3px] size-3 rounded-pill border-2 bg-surface"
+        style={{ borderColor: tone }}
+      />
+      <span aria-hidden className="absolute bottom-0 left-[5px] top-[19px] border-l border-dashed border-line-strong group-last:hidden" />
+      <p className="text-xs uppercase leading-4 tracking-[0.06em]" style={{ color: tone }}>
+        <span className={e.reversed ? 'line-through' : ''}>{e.label}</span>
+      </p>
+      <p className="mt-1 text-[16px] font-medium leading-[22px] text-text tabular-nums">
+        {formatDate(e.date)} ·{' '}
+        <span className={e.qty < 0 ? 'text-alert' : 'text-good'}>{signed(e.qty)}</span> fish
+      </p>
+      <p className="mt-0.5 text-[13px] leading-[18px] text-muted">
+        {e.batch_number && (
+          <>
+            <Link href={`/batches/${e.batch_id}`} className="text-cyan hover:underline">
+              {e.batch_number}
+            </Link>
+            {detail || e.reversed ? ' · ' : ''}
+          </>
+        )}
+        {detail}
+        {e.reversed ? `${detail ? ' · ' : ''}reversed` : ''}
+      </p>
     </li>
   )
 }
@@ -55,10 +72,10 @@ export default function BatchHistory({ cageId }) {
   const data = useQuery(api.batches.forCage, cageId ? { cageId, asOf } : 'skip')
 
   return (
-    <section className="page-card overflow-hidden" aria-labelledby="batch-history-title">
-      <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-foam-deep flex flex-wrap items-end justify-between gap-4">
+    <section className="rounded-card border border-line bg-surface shadow-[var(--shadow-card)] overflow-hidden" aria-labelledby="batch-history-title">
+      <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-line flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 id="batch-history-title" className="font-display text-lg font-medium">
+          <h2 id="batch-history-title" className="text-lg font-medium">
             Batch history
           </h2>
           <p className="text-sm text-muted mt-1">Every change to this cage&apos;s fish, from the stock ledger.</p>
@@ -83,7 +100,7 @@ export default function BatchHistory({ cageId }) {
         />
       ) : (
         <>
-          <dl className="px-4 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-3 gap-4 border-b border-foam-deep">
+          <dl className="px-4 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-3 gap-4 border-b border-line">
             <div>
               <dt className="text-sm text-muted">Fish on {data.as_of?.date ?? asOf}</dt>
               <dd className="mt-1 text-xl font-medium tabular-nums">{fmt(data.as_of?.count)}</dd>
@@ -96,7 +113,7 @@ export default function BatchHistory({ cageId }) {
             </div>
             <div className="col-span-2 sm:col-span-1">
               <dt className="text-sm text-muted">Ledger today</dt>
-              <dd className={`mt-1 text-sm ${data.in_step ? 'text-kelp' : 'text-signal'}`}>
+              <dd className={`mt-1 text-sm ${data.in_step ? 'text-good' : 'text-alert'}`}>
                 {data.in_step
                   ? `${fmt(data.ledger_count)} fish, matches the cage`
                   : `${fmt(data.ledger_count)} fish; the cage shows ${fmt(data.cage_count)}`}
@@ -105,16 +122,16 @@ export default function BatchHistory({ cageId }) {
           </dl>
 
           {data.occupancies.length > 0 && (
-            <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-              <h3 className="text-sm font-medium text-chart-ink mb-2">Batches in this cage</h3>
+            <div className="px-4 sm:px-6 py-4 border-b border-line">
+              <h3 className="text-sm font-medium text-text mb-2">Batches in this cage</h3>
               <ul className="flex flex-wrap gap-2">
                 {data.occupancies.map((o) => (
                   <li key={o.batch_id}>
                     <Link
                       href={`/batches/${o.batch_id}`}
-                      className="inline-flex items-baseline gap-2 rounded-lg border border-foam-deep px-3 py-2 text-sm hover:border-lake"
+                      className="inline-flex items-baseline gap-2 rounded-lg border border-line px-3 py-2 text-sm hover:border-line-strong"
                     >
-                      <span className="font-medium text-chart-ink">{o.batch_number}</span>
+                      <span className="font-medium text-text">{o.batch_number}</span>
                       <span className="text-muted tabular-nums">
                         {o.closed_on ? `${o.opened_on} – ${o.closed_on}` : `since ${o.opened_on}, ${fmt(o.count)} fish`}
                       </span>
@@ -125,7 +142,7 @@ export default function BatchHistory({ cageId }) {
             </div>
           )}
 
-          <ul className="divide-y divide-foam-deep">
+          <ul className="px-6 py-6">
             {data.events.map((e) => (
               <EventRow key={e.id} e={e} />
             ))}

@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAction, useQuery } from 'convex/react'
-import { CloudSun } from 'lucide-react'
 import { api } from '../convex/_generated/api'
-import { Button, Card, CardHeader } from './ui'
+import { Card, GhostButton } from './ui'
+import { useT } from '../lib/i18n/context'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { addDays, localToday } from '../lib/format'
 
-function dayName(date, today) {
-  if (date === today) return 'Today'
-  if (date === addDays(today, 1)) return 'Tomorrow'
-  if (date === addDays(today, -1)) return 'Yesterday'
+function dayName(date, today, t) {
+  if (date === today) return t('siteConditions.today')
+  if (date === addDays(today, 1)) return t('siteConditions.tomorrow')
+  if (date === addDays(today, -1)) return t('siteConditions.yesterday')
   try {
     return new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short' })
   } catch {
@@ -21,24 +21,27 @@ function dayName(date, today) {
 
 const round = (n) => (n == null ? '–' : Math.round(n))
 
-function timeAgo(ms) {
+function timeAgo(ms, t) {
   const mins = Math.round((Date.now() - ms) / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins} min ago`
+  if (mins < 1) return t('siteConditions.justNow')
+  if (mins < 60) return t('siteConditions.minAgo', { count: mins })
   const h = Math.round(mins / 60)
-  if (h < 48) return `${h} h ago`
-  return `${Math.round(h / 24)} days ago`
+  if (h < 48) return t('siteConditions.hAgo', { count: h })
+  return t('siteConditions.daysAgo', { count: Math.round(h / 24) })
 }
 
 function SiteWeather({ site, today, isAdmin }) {
+  const t = useT()
   const { showToast } = useToast()
   const refresh = useAction(api.weather.refreshSite)
   const [busy, setBusy] = useState(false)
   if (!site.hasCoordinates) {
     return (
       <p className="text-sm text-muted">
-        {site.name}: add latitude and longitude under{' '}
-        <Link href="/farm-locations" className="text-lake underline">Farm locations</Link> to see weather.
+        {t('siteConditions.noCoordinates', { site: site.name })}{' '}
+        <Link href="/farm-locations" className="rounded-sm text-text underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+          {t('siteConditions.farmLocations')}
+        </Link>
       </p>
     )
   }
@@ -46,7 +49,7 @@ function SiteWeather({ site, today, isAdmin }) {
     setBusy(true)
     try {
       await refresh({ locationId: site.id })
-      showToast('success', 'Weather updated')
+      showToast('success', t('siteConditions.updated'))
     } catch (err) {
       showToast('error', errorMessage(err))
     } finally {
@@ -56,24 +59,24 @@ function SiteWeather({ site, today, isAdmin }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-chart-ink">{site.name}</p>
+        <p className="text-[14px] font-medium leading-[18px] text-text">{site.name}</p>
         {isAdmin && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={onRefresh}>
-            {busy ? 'Updating…' : 'Refresh'}
-          </Button>
+          <GhostButton size="sm" disabled={busy} onClick={onRefresh}>
+            {busy ? t('siteConditions.updating') : t('siteConditions.refresh')}
+          </GhostButton>
         )}
       </div>
       {site.days.length === 0 ? (
-        <p className="text-sm text-muted">No weather yet. It is fetched every morning.</p>
+        <p className="mt-2 text-sm text-muted">{t('siteConditions.noWeather')}</p>
       ) : (
-        <ul className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <ul className="mt-3 grid grid-cols-2 gap-[10px] sm:grid-cols-4">
           {site.days.map((d) => (
-            <li key={d.date} className="rounded-lg border border-foam-deep px-3 py-2">
-              <p className="text-xs text-muted">{dayName(d.date, today)}</p>
-              <p className="text-base font-medium text-chart-ink tabular-nums">
-                {round(d.tempMaxC)}° <span className="text-muted">/ {round(d.tempMinC)}°</span>
+            <li key={d.date} className="flex flex-col gap-1 rounded-input border border-line bg-bg px-4 py-3">
+              <p className="text-xs leading-4 text-faint">{dayName(d.date, today, t)}</p>
+              <p className="text-[17px] font-semibold leading-[22px] text-text tabular-nums">
+                {round(d.tempMaxC)}° <span className="font-normal text-muted">/ {round(d.tempMinC)}°</span>
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-xs leading-4 text-muted">
                 {d.label || '—'}
                 {d.precipitationMm ? ` · ${d.precipitationMm.toFixed(1)} mm` : ''}
               </p>
@@ -87,6 +90,7 @@ function SiteWeather({ site, today, isAdmin }) {
 
 /** Weather per site and latest sensor readings (INT-006, INT-007). */
 export default function SiteConditions({ locationId, isAdmin }) {
+  const t = useT()
   const today = useMemo(() => localToday(), [])
   const fromDate = addDays(today, -1)
   const args = locationId ? { locationId, fromDate } : { fromDate }
@@ -99,25 +103,24 @@ export default function SiteConditions({ locationId, isAdmin }) {
 
   return (
     <Card>
-      <CardHeader
-        title="Site conditions"
-        subtitle="Weather from Open-Meteo, and the latest sensor readings"
-        action={<CloudSun size={20} className="text-muted" aria-hidden />}
-      />
-      <div className="space-y-5">
+      <h2 className="text-base font-semibold leading-5 text-text">{t('siteConditions.title')}</h2>
+      <p className="mb-5 mt-1 text-xs leading-4 text-muted">{t('siteConditions.subtitle')}</p>
+      <div className="flex flex-col gap-6">
         {weather.sites.map((site) => (
           <SiteWeather key={site.id} site={site} today={today} isAdmin={isAdmin} />
         ))}
         {readings.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-chart-ink">Sensors</p>
-            <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <p className="text-[14px] font-medium leading-[18px] text-text">{t('siteConditions.sensors')}</p>
+            <ul className="mt-1">
               {readings.map((r) => (
-                <li key={r.id} className="rounded-lg border border-foam-deep px-3 py-2 text-sm">
-                  <p className="text-xs text-muted">{r.source} · {r.label}</p>
-                  <p className="font-medium text-chart-ink tabular-nums">
+                <li key={r.id} className="flex items-center gap-[14px] border-t border-line py-[11px] first:border-t-0">
+                  <div className="flex min-w-0 grow basis-0 flex-col gap-[2px]">
+                    <p className="text-[14px] leading-[18px] text-text">{r.label}</p>
+                    <p className="text-xs leading-4 text-muted">{r.source} · {timeAgo(r.measuredAt, t)}</p>
+                  </div>
+                  <p className="text-[14px] font-medium leading-[18px] text-text tabular-nums">
                     {r.value} {r.unit}
-                    <span className="ml-2 text-xs font-normal text-muted">{timeAgo(r.measuredAt)}</span>
                   </p>
                 </li>
               ))}

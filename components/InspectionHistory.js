@@ -1,9 +1,10 @@
 import { INSPECTION_KINDS } from './InspectionForm'
+import { Pill } from './ui'
 
 const RESULT_TONE = {
-  ok: 'text-kelp',
-  needs_attention: 'text-warn',
-  failed: 'text-signal',
+  ok: 'green',
+  needs_attention: 'amber',
+  failed: 'red',
 }
 const RESULT_LABEL = { ok: 'OK', needs_attention: 'Needs attention', failed: 'Failed' }
 
@@ -12,11 +13,11 @@ export default function InspectionHistory({ rows, showUnit = false }) {
   if (!rows) return <p className="p-5 text-sm text-muted">Loading…</p>
   if (!rows.length) return <p className="p-5 text-sm text-muted">Nothing logged yet.</p>
   return (
-    <ul className="divide-y divide-foam-deep text-sm">
+    <ul className="divide-y divide-line text-sm">
       {rows.map((r) => {
         const faults = (r.checklist || []).filter((c) => !c.ok)
         return (
-          <li key={r._id} className="px-5 py-3">
+          <li key={r._id} className="px-6 py-[14px]">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span>
                 <span className="tabular-nums">{r.date}</span>{' '}
@@ -24,7 +25,7 @@ export default function InspectionHistory({ rows, showUnit = false }) {
                 {r.equipmentName ? ` · ${r.equipmentName}` : ''}
                 {showUnit && r.unitName ? ` · ${r.unitName}` : ''}
               </span>
-              <span className={RESULT_TONE[r.result]}>{RESULT_LABEL[r.result]}</span>
+              <Pill tone={RESULT_TONE[r.result] || 'neutral'}>{RESULT_LABEL[r.result]}</Pill>
             </div>
             {faults.length > 0 && (
               <p className="mt-1 text-muted">

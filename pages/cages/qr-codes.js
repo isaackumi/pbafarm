@@ -4,12 +4,9 @@ import QRCode from 'qrcode'
 import { Printer } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import {
-  PageHeader,
-  Button,
-  EmptyState,
-  LoadingState,
-} from '../../components/ui'
+import { EmptyState, GradientButton, LoadingState } from '../../components/ui'
+import FarmSetupNav from '../../components/units/FarmSetupNav'
+import { useT } from '../../lib/i18n/context'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
 import { labelUrl, shortCodeFor } from '../../lib/qrTarget'
@@ -21,14 +18,13 @@ import { labelUrl, shortCodeFor } from '../../lib/qrTarget'
 export default function CageQrCodes() {
   return (
     <ProtectedRoute>
-      <Layout title="Cage QR codes">
-        <CageQrSheet />
-      </Layout>
+      <CageQrSheet />
     </ProtectedRoute>
   )
 }
 
 function CageQrSheet() {
+  const t = useT()
   const { locationArgs } = useLocation()
   const allCages = useQuery(api.cages.list, locationArgs)
   const cages = useMemo(
@@ -67,59 +63,54 @@ function CageQrSheet() {
   }, [cages])
 
   return (
-    <>
-      <div className="print:hidden">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Cages', href: '/cages' },
-            { label: 'QR codes' },
-          ]}
-          description="Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in. Codes stay valid if the app moves to a new address; labels printed earlier keep working."
-          actions={
-            <Button onClick={() => window.print()} disabled={!cages?.length}>
-              <Printer size={16} aria-hidden />
-              Print
-            </Button>
-          }
-        />
+    <Layout
+      title={t('qrUi.title')}
+      eyebrow={t('qrUi.eyebrow')}
+      actions={
+        <GradientButton icon={Printer} onClick={() => window.print()} disabled={!cages?.length}>
+          {t('qrUi.print')}
+        </GradientButton>
+      }
+    >
+      <div className="flex flex-col gap-8 md:flex-row">
+        <FarmSetupNav className="print:hidden" />
+        <div className="flex min-w-0 grow flex-col gap-5">
+          <p className="max-w-2xl text-[14px] leading-[20px] text-muted print:hidden">{t('qrUi.help')}</p>
+          {!ready ? (
+            <LoadingState label={t('qrUi.loading')} />
+          ) : cages.length === 0 ? (
+            <EmptyState
+              title={t('qrUi.emptyTitle')}
+              description={t('qrUi.emptyDescription')}
+              action={<GradientButton href="/create-cage">{t('qrUi.create')}</GradientButton>}
+            />
+          ) : (
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 print:grid-cols-3 print:gap-6">
+              {cages.map((c) => {
+                const id = c.id || c._id
+                return (
+                  // Printed labels stay black on white in both themes so they scan.
+                  <li
+                    key={id}
+                    className="break-inside-avoid rounded-card border border-line bg-white p-5 text-center text-black shadow-[var(--shadow-card)]"
+                  >
+                    <div
+                      className="mx-auto w-full max-w-[10rem] [&>svg]:h-auto [&>svg]:w-full"
+                      // qrcode returns a self-contained SVG string
+                      dangerouslySetInnerHTML={{ __html: codes[id] || '' }}
+                    />
+                    <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">
+                      {t('qrUi.cage')} · <span className="font-mono">{shortCodeFor(c, cages)}</span>
+                    </p>
+                    <p className="text-[20px] font-semibold leading-6 tracking-[-0.01em]">{c.name}</p>
+                    <p className="mt-1 text-xs text-neutral-600">{t('qrUi.scanTo')}</p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
       </div>
-
-      {!ready ? (
-        <LoadingState label="Loading cages…" />
-      ) : cages.length === 0 ? (
-        <EmptyState
-          title="No cages yet"
-          description="Create a cage first, then come back to print its code."
-          action={<Button href="/create-cage">Create a cage</Button>}
-        />
-      ) : (
-        <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-3 print:gap-6">
-          {cages.map((c) => {
-            const id = c.id || c._id
-            return (
-              <li
-                key={id}
-                className="rounded-xl border border-foam-deep bg-white p-4 text-center break-inside-avoid"
-              >
-                <div
-                  className="mx-auto w-full max-w-[10rem] [&>svg]:h-auto [&>svg]:w-full"
-                  // qrcode returns a self-contained SVG string
-                  dangerouslySetInnerHTML={{ __html: codes[id] || '' }}
-                />
-                <p className="mt-3 text-base font-medium text-[#18181b]">
-                  {c.name}
-                </p>
-                <p className="text-sm font-mono font-semibold text-[#18181b]">
-                  {shortCodeFor(c, cages)}
-                </p>
-                <p className="mt-1 text-xs text-[#52525b]">Scan to log feed</p>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </>
+    </Layout>
   )
 }

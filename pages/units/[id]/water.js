@@ -6,13 +6,20 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
 import UnitTabs from '../../../components/UnitTabs'
 import WaterQualityForm from '../../../components/WaterQualityForm'
-import { Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from '../../../components/ui'
+import Link from 'next/link'
+import { Droplets } from 'lucide-react'
+import { Button, EmptyState, Field, GhostButton, GradientButton, Input, LoadingState, Pill, Segmented, Select, Table, Textarea } from '../../../components/ui'
+import { FilterSelect } from '../../../components/units/UnitViewSwitch'
+import { usePermissions } from '../../../hooks/usePermission'
+import { useT } from '../../../lib/i18n/context'
 import { useToast } from '../../../components/Toast'
 import { useAuth } from '../../../contexts/AuthContext'
 import { api } from '../../../convex/_generated/api'
 import { WQ_PARAMETERS } from '../../../convex/lib/waterQuality'
 import { errorMessage } from '../../../lib/errorMessage'
-import { localToday, unitLabel } from '../../../lib/format'
+import { formatDate, localToday, unitLabel } from '../../../lib/format'
+
+const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
 
 const WaterQualityChart = dynamic(() => import('../../../components/charts/WaterQualityChart'), {
   ssr: false,
@@ -24,13 +31,6 @@ const RANGES = [
   { days: 30, label: '30 days' },
   { days: 90, label: '90 days' },
 ]
-
-const SOURCE_LABEL = {
-  manual: 'Logged',
-  sensor: 'Sensor',
-  daily_record: 'Daily entry',
-  biweekly_record: 'Sampling',
-}
 
 const EVENT_KINDS = [
   { value: 'exchange', label: 'Water exchange' },
@@ -150,6 +150,8 @@ function WaterEventForm({ unitId }) {
 }
 
 function WaterPage() {
+  const t = useT()
+  const { can } = usePermissions()
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
@@ -179,10 +181,10 @@ function WaterPage() {
   }, [log])
 
   if (ws === undefined || !id) {
-    return <Layout title="Water quality"><p className="text-muted p-6">Loading…</p></Layout>
+    return <Layout title={t('waterUi.title')}><LoadingState /></Layout>
   }
   if (ws === null) {
-    return <Layout title="Water quality"><EmptyState title="Unit not found" action={<Button href="/units">All units</Button>} /></Layout>
+    return <Layout title={t('waterUi.title')}><EmptyState title={t('cageDetail.notFound')} action={<Button href="/units">{t('cageDetail.back')}</Button>} /></Layout>
   }
   const unit = ws.unit
   const spec = WQ_PARAMETERS[param]
@@ -204,154 +206,169 @@ function WaterPage() {
     }
   }
 
+  const head = 'flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5'
+  const h2 = 'text-[17px] font-semibold leading-[22px] text-text'
+
   return (
-    <Layout title={`${unit.name} water`}>
-      <div className="max-w-5xl space-y-6">
-        <PageHeader
-          title={unit.name}
-          breadcrumbs={[
-            { label: 'Units', href: '/units' },
-            { label: unit.name, href: `/cages/${id}` },
-            { label: 'Water' },
-          ]}
-          description={`${unitLabel(ws.unitType)} · thresholds for ${unitLabel(ws.unitType, { plural: true }).toLowerCase()}`}
-        />
+    <Layout
+      title={unit.name}
+      eyebrow={
+        <>
+          <Link href="/cages" className="hover:text-text hover:underline">{unitLabel(ws.unitType, { plural: true })}</Link>
+          {ws.group?.name ? ` / ${ws.group.name}` : ''} · {t('waterUi.thresholdsFor', { units: unitLabel(ws.unitType, { plural: true }).toLowerCase() })}
+        </>
+      }
+      actions={
+        can('production.daily.record') && (
+          <GradientButton href="#log-reading" icon={Droplets}>
+            {t('waterUi.logReading')}
+          </GradientButton>
+        )
+      }
+    >
+      <div className="flex flex-col gap-7">
         <UnitTabs unitId={id} active="water" unitType={ws.unitType} />
 
-        <Card>
-          <CardHeader
-            title="Trend"
-            action={
-              <div className="flex flex-wrap gap-2">
-                <Select aria-label="Parameter" value={param} onChange={(e) => setParam(e.target.value)} className="w-auto">
-                  {(present.length ? present : ['dissolvedOxygen']).map((k) => (
-                    <option key={k} value={k}>{WQ_PARAMETERS[k].label}</option>
-                  ))}
-                </Select>
-                <Select aria-label="Range" value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-auto">
-                  {RANGES.map((r) => (
-                    <option key={r.days} value={r.days}>{r.label}</option>
-                  ))}
-                </Select>
-              </div>
-            }
-          />
-          {points.length < 2 ? (
-            <p className="text-sm text-muted">
-              {points.length === 0 ? 'No readings of this parameter in this period.' : 'One reading so far; the trend appears with the next.'}
-            </p>
-          ) : (
-            <div className="h-64">
-              <WaterQualityChart points={points} range={range} unit={spec.unit} label={spec.label} />
+        <section aria-labelledby="trend-title" className={card}>
+          <div className={head}>
+            <h2 id="trend-title" className={h2}>{t('waterUi.trend')}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterSelect label={t('waterUi.parameter')} value={param} onChange={setParam}>
+                {(present.length ? present : ['dissolvedOxygen']).map((k) => (
+                  <option key={k} value={k}>{WQ_PARAMETERS[k].label}</option>
+                ))}
+              </FilterSelect>
+              <Segmented
+                label={t('waterUi.range')}
+                options={RANGES.map((r) => ({ value: String(r.days), label: t('waterUi.days', { count: r.days }) }))}
+                value={String(days)}
+                onChange={(v) => setDays(Number(v))}
+              />
             </div>
-          )}
-          {range && (
-            <p className="mt-2 text-xs text-muted">
-              Threshold: {range.min != null ? `min ${range.min}` : ''}
-              {range.min != null && range.max != null ? ', ' : ''}
-              {range.max != null ? `max ${range.max}` : ''} {spec.unit}
-            </p>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader title="Log a reading" subtitle="Saved readings are checked against the thresholds right away." />
-          <WaterQualityForm unitType={ws.unitType} onSave={save} />
-        </Card>
-
-        <Card padding={false}>
-          <div className="px-5 py-4 border-b border-foam-deep">
-            <h2 className="font-display text-lg font-medium">Readings</h2>
           </div>
-          {!log ? (
-            <p className="p-5 text-sm text-muted">Loading…</p>
-          ) : log.rows.length === 0 ? (
-            <EmptyState title="No readings in this period" description="Log one above, or capture DO and temperature on the daily entry." />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted border-b border-foam-deep">
-                    <th className="px-4 py-2 font-medium">When</th>
-                    <th className="px-4 py-2 font-medium">Source</th>
-                    {present.map((k) => (
-                      <th key={k} className="px-3 py-2 font-medium text-right whitespace-nowrap">
-                        {WQ_PARAMETERS[k].short}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-foam-deep">
-                  {log.rows.slice(0, 100).map((r) => {
-                    const bad = new Set(r.breaches.map((b) => b.parameter))
-                    return (
-                      <tr key={r.id}>
-                        <td className="px-4 py-2 whitespace-nowrap tabular-nums">
-                          {r.date && r.source !== 'manual' ? r.date : new Date(r.measuredAt).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-2 text-muted">{SOURCE_LABEL[r.source]}</td>
-                        {present.map((k) => (
-                          <td key={k} className={`px-3 py-2 text-right tabular-nums ${bad.has(k) ? 'text-signal font-medium' : ''}`}>
-                            {fmt(r.values[k])}
-                          </td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+          <div className="p-6">
+            {points.length < 2 ? (
+              <p className="text-sm text-muted">
+                {points.length === 0 ? t('waterUi.noParam') : t('waterUi.oneReading')}
+              </p>
+            ) : (
+              <div className="h-64">
+                <WaterQualityChart points={points} range={range} unit={spec.unit} label={spec.label} />
+              </div>
+            )}
+            {range && (
+              <p className="mt-3 text-xs text-faint">
+                {t('waterUi.threshold')}: {range.min != null ? `min ${range.min}` : ''}
+                {range.min != null && range.max != null ? ', ' : ''}
+                {range.max != null ? `max ${range.max}` : ''} {spec.unit}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {can('production.daily.record') && (
+          <section id="log-reading" aria-labelledby="log-title" className={`${card} scroll-mt-24`}>
+            <div className={head}>
+              <div className="flex flex-col gap-1">
+                <h2 id="log-title" className={h2}>{t('waterUi.logReading')}</h2>
+                <p className="text-xs text-muted">{t('waterUi.logHint')}</p>
+              </div>
             </div>
-          )}
-        </Card>
+            <div className="p-6">
+              <WaterQualityForm unitType={ws.unitType} onSave={save} />
+            </div>
+          </section>
+        )}
 
-        <Card>
-          <CardHeader
-            title={isPond ? 'Water management' : 'Water events'}
-            subtitle="Exchanges, liming, fertilization and water treatments for this unit."
+        {!log ? (
+          <LoadingState />
+        ) : log.rows.length === 0 ? (
+          <section className={card}>
+            <EmptyState title={t('waterUi.noReadings')} description={t('waterUi.noReadingsBody')} />
+          </section>
+        ) : (
+          <Table
+            title={t('waterUi.readings')}
+            columns={[
+              {
+                key: 'when',
+                header: t('waterUi.when'),
+                render: (r) => (
+                  <span className="whitespace-nowrap tabular-nums">
+                    {r.date && r.source !== 'manual' ? formatDate(r.date) : new Date(r.measuredAt).toLocaleString()}
+                  </span>
+                ),
+              },
+              { key: 'source', header: t('waterUi.source'), render: (r) => <span className="text-muted">{t.or(`waterUi.sourceLabel.${r.source}`, r.source)}</span> },
+              ...present.map((k) => ({
+                key: k,
+                header: WQ_PARAMETERS[k].short,
+                align: 'right',
+                render: (r) => {
+                  const bad = r.breaches.some((b) => b.parameter === k)
+                  return <span className={`tabular-nums ${bad ? 'font-medium text-alert' : ''}`}>{fmt(r.values[k])}</span>
+                },
+              })),
+            ]}
+            rows={log.rows.slice(0, 100)}
+            rowKey={(r) => r.id}
           />
-          <WaterEventForm unitId={id} />
-          {events && events.length > 0 && (
-            <ul className="mt-5 divide-y divide-foam-deep text-sm">
-              {events.map((e) => (
-                <li key={e._id} className="py-2 flex flex-wrap justify-between gap-2">
-                  <span>
-                    <span className="tabular-nums">{e.date}</span>{' '}
-                    <span className="font-medium">{EVENT_KINDS.find((k) => k.value === e.kind)?.label || e.kind}</span>
-                    {e.product ? ` · ${e.product}` : ''}
-                  </span>
-                  <span className="text-muted tabular-nums">
-                    {e.exchangePct ? `${e.exchangePct}% ` : ''}
-                    {e.volumeM3 ? `${fmt(e.volumeM3)} m³ ` : ''}
-                    {e.quantity ? `${fmt(e.quantity)} ${e.quantityUnit || ''}` : ''}
-                    {e.hours ? `${fmt(e.hours)} h` : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        )}
 
-        <Card padding={false}>
-          <div className="px-5 py-4 border-b border-foam-deep flex flex-wrap justify-between gap-2">
-            <h2 className="font-display text-lg font-medium">Health treatments</h2>
-            <Button size="sm" variant="secondary" href="/health">Record treatment</Button>
+        <section aria-labelledby="events-title" className={card}>
+          <div className={head}>
+            <div className="flex flex-col gap-1">
+              <h2 id="events-title" className={h2}>{isPond ? t('waterUi.management') : t('waterUi.events')}</h2>
+              <p className="text-xs text-muted">{t('waterUi.eventsHint')}</p>
+            </div>
+          </div>
+          <div className="p-6">
+            {can('production.daily.record') && <WaterEventForm unitId={id} />}
+            {events && events.length > 0 && (
+              <ul className="mt-5 text-sm">
+                {events.map((e) => (
+                  <li key={e._id} className="flex flex-wrap justify-between gap-2 border-t border-line py-[11px]">
+                    <span>
+                      <span className="tabular-nums text-muted">{formatDate(e.date)}</span>{' '}
+                      <span className="font-medium text-text">{EVENT_KINDS.find((k) => k.value === e.kind)?.label || e.kind}</span>
+                      {e.product ? ` · ${e.product}` : ''}
+                    </span>
+                    <span className="text-muted tabular-nums">
+                      {e.exchangePct ? `${e.exchangePct}% ` : ''}
+                      {e.volumeM3 ? `${fmt(e.volumeM3)} m³ ` : ''}
+                      {e.quantity ? `${fmt(e.quantity)} ${e.quantityUnit || ''}` : ''}
+                      {e.hours ? `${fmt(e.hours)} h` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section aria-labelledby="treat-title" className={card}>
+          <div className={head}>
+            <h2 id="treat-title" className={h2}>{t('waterUi.treatments')}</h2>
+            <GhostButton size="sm" href="/health">{t('waterUi.recordTreatment')}</GhostButton>
           </div>
           {!treatments || treatments.length === 0 ? (
-            <p className="p-5 text-sm text-muted">No treatments recorded for this unit.</p>
+            <p className="px-6 py-5 text-sm text-muted">{t('waterUi.noTreatments')}</p>
           ) : (
-            <ul className="divide-y divide-foam-deep text-sm">
+            <ul className="text-sm">
               {treatments.slice(0, 20).map((tr) => (
-                <li key={tr.id || tr._id} className="px-5 py-2 flex flex-wrap justify-between gap-2">
+                <li key={tr.id || tr._id} className="flex flex-wrap justify-between gap-2 border-t border-line px-6 py-[11px] first:border-t-0">
                   <span>
-                    <span className="tabular-nums">{tr.date}</span> {tr.treatment}
+                    <span className="tabular-nums text-muted">{formatDate(tr.date)}</span> <span className="text-text">{tr.treatment}</span>
                     {tr.product_name ? ` · ${tr.product_name}` : ''}
                   </span>
-                  {tr.withdrawal_until && <span className="text-muted">Withdrawal until {tr.withdrawal_until}</span>}
+                  {tr.withdrawal_until && (
+                    <Pill tone="amber">{t('waterUi.withdrawalUntil', { date: formatDate(tr.withdrawal_until) })}</Pill>
+                  )}
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </section>
       </div>
     </Layout>
   )

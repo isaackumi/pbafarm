@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { X, Send, Settings2, Loader2, MessageCircle } from 'lucide-react'
+import { ArrowUp, Loader2, Maximize2, MessageCircle, Plus, Settings2, Sparkles, X } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import { api } from '../lib/convexBridge'
 import {
   LLM_PROVIDERS,
@@ -11,58 +13,45 @@ import {
   chatCompletion,
   fetchLlmEnvStatus,
 } from '../lib/llmClient'
-import { Button, Field, Input, Select } from './ui'
+import { Field, GradientButton, Select } from './ui'
+import Layout from './Layout'
+import DashboardInsights from './DashboardInsights'
 import { localToday } from '../lib/format'
+import { useT } from '../lib/i18n/context'
 
-function TypingDots() {
-  return (
-    <div
-      className="mr-auto flex items-center gap-1 rounded-lg border border-foam-deep bg-foam px-3 py-2"
-      aria-label="Assistant is typing"
-      role="status"
-    >
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="inline-block h-2 w-2 rounded-full bg-muted ai-typing-dot"
-          style={{ animationDelay: `${i * 160}ms` }}
-        />
-      ))}
-    </div>
-  )
-}
-
-/**
- * Floating farm assistant (ANLY-005). Every question goes to the server
- * proxy (/api/llm/chat), which holds the provider keys and adds the farm
- * context this user may see (company rollups, last 14 days). The browser
- * only picks a provider and model among those the server has keys for.
- */
 /** Field entry screens with a save bar at the bottom: no floating button on phones. */
 const FIELD_ROUTES = ['/daily-entry', '/biweekly-entry', '/scan']
+const FULL_PAGE = '/assistant'
+const PROMPTS = ['losses', 'harvest', 'report']
 
-export default function AiAssistant() {
-  const router = useRouter()
-  const onFieldRoute = FIELD_ROUTES.includes(router?.pathname)
+const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+
+/** Access gate shared by the drawer and the full page. */
+export function useAssistantAccess() {
   const { user: authUser, canUseApp } = useAuth()
   // Tenant data only once access is confirmed (password changed, company approved).
   const user = canUseApp ? authUser : null
   const aiStatus = useQuery(api.companies.aiAssistantStatus, user ? {} : 'skip')
-  const [open, setOpen] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  return {
+    loading: !!user && aiStatus === undefined,
+    allowed: !!user && aiStatus?.enabled === true && aiStatus.canUse === true,
+  }
+}
+
+/**
+ * Chat state for the farm assistant (ANLY-005). Every question goes to the
+ * server proxy (/api/llm/chat), which holds the provider keys and adds the
+ * farm context this user may see (company rollups, last 14 days). The
+ * browser only picks a provider and model among those the server has keys for.
+ */
+function useAssistantChat(active) {
+  const t = useT()
+  const welcome = useCallback(() => [{ role: 'assistant', content: t('assistantUi.welcome') }], [t])
   const [settings, setSettings] = useState(() => loadLlmSettings())
   const [envStatus, setEnvStatus] = useState(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content:
-        'Ask about your units, feed, deaths, growth or harvest timing. Answers use your farm’s recorded data.',
-    },
-  ])
-  const bottomRef = useRef(null)
-  const inputRef = useRef(null)
+  const [messages, setMessages] = useState(welcome)
 
   const configured = envStatus?.providers || {}
   const providerId = configured[settings.provider]
@@ -71,21 +60,11 @@ export default function AiAssistant() {
   const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.gemini
   const model = settings.models?.[providerId] || provider.defaultModel
 
-  // Only hit /api/llm/status when the panel is opened (avoids polling on every page).
+  // Only hit /api/llm/status once the chat is shown (avoids polling on every page).
   useEffect(() => {
-    if (!open || envStatus) return
+    if (!active || envStatus) return
     fetchLlmEnvStatus().then((status) => status && setEnvStatus(status))
-  }, [open, envStatus])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, open, busy])
-
-  useEffect(() => {
-    if (open && !showSettings) inputRef.current?.focus()
-  }, [open, showSettings])
-
-  if (!user || !aiStatus?.enabled || !aiStatus.canUse) return null
+  }, [active, envStatus])
 
   const update = (patch) =>
     setSettings((prev) => {
@@ -94,8 +73,8 @@ export default function AiAssistant() {
       return next
     })
 
-  const send = async () => {
-    const question = input.trim()
+  const send = async (text) => {
+    const question = (text ?? input).trim()
     if (!question || busy) return
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: question }])
@@ -120,9 +99,7 @@ export default function AiAssistant() {
         ...m,
         {
           role: 'assistant',
-          content: /no api key/i.test(msg)
-            ? 'The assistant has no model key on the server yet. Ask your administrator to set GEMINI_API_KEY (or another provider key) on the server.'
-            : `Could not get an answer: ${msg}`,
+          content: /no api key/i.test(msg) ? t('assistantUi.noKeyReply') : t('assistantUi.failed', { message: msg }),
         },
       ])
     } finally {
@@ -130,15 +107,186 @@ export default function AiAssistant() {
     }
   }
 
+  const reset = () => {
+    if (busy) return
+    setInput('')
+    setMessages(welcome())
+  }
+
   const available = Object.values(LLM_PROVIDERS).filter((p) => configured[p.id])
+  const modelLine = envStatus && !envStatus.hasAny ? t('assistantUi.noKey') : `${provider.label} · ${model}`
+
+  return { input, setInput, busy, messages, send, reset, update, settings, providerId, provider, model, available, modelLine }
+}
+
+function TypingDots() {
+  const t = useT()
+  return (
+    <div className="flex items-center gap-1 py-2" aria-label={t('assistantUi.typing')} role="status">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="ai-typing-dot inline-block h-2 w-2 rounded-full bg-muted"
+          style={{ animationDelay: `${i * 160}ms` }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function Avatar({ size = 'size-8' }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-pill border border-line-strong bg-bg text-cyan ${size}`} aria-hidden>
+      <Sparkles size={14} />
+    </span>
+  )
+}
+
+/** 17 message thread: user bubble right on surface-2, assistant with avatar on the left. */
+function Thread({ chat, compact = false }) {
+  const t = useT()
+  const bottomRef = useRef(null)
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [chat.messages, chat.busy])
+  const text = compact ? 'text-[14px] leading-[20px]' : 'text-base leading-6'
+  return (
+    <div className={`flex flex-col ${compact ? 'gap-4' : 'gap-[22px]'}`} aria-live="polite">
+      {chat.messages.map((m, i) =>
+        m.role === 'user' ? (
+          <div key={i} className="flex justify-end">
+            <div className={`max-w-[520px] whitespace-pre-wrap rounded-t-[18px] rounded-bl-[18px] rounded-br-[4px] bg-surface-2 text-text ${compact ? 'px-4 py-3' : 'px-[18px] py-[14px]'} ${text}`}>
+              {m.content}
+            </div>
+          </div>
+        ) : (
+          <div key={i} className={`flex ${compact ? 'gap-3' : 'gap-[14px]'}`}>
+            <Avatar size={compact ? 'size-7' : 'size-8'} />
+            <div className={`min-w-0 grow basis-0 whitespace-pre-wrap pt-1 text-text ${text}`}>
+              {i > 0 && <span className="sr-only">{t('assistantUi.srAssistant')} </span>}
+              {m.content}
+            </div>
+          </div>
+        ),
+      )}
+      {chat.busy && (
+        <div className={`flex ${compact ? 'gap-3' : 'gap-[14px]'}`}>
+          <Avatar size={compact ? 'size-7' : 'size-8'} />
+          <TypingDots />
+        </div>
+      )}
+      <div ref={bottomRef} />
+    </div>
+  )
+}
+
+/** 17 pill input bar with the round send button. */
+function Composer({ chat, inputRef, compact = false }) {
+  const t = useT()
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        chat.send()
+      }}
+      className={`flex items-center gap-3 rounded-pill border border-line-strong bg-bg focus-within:border-cyan ${compact ? 'py-2 pl-4 pr-2' : 'py-[10px] pl-5 pr-[10px]'}`}
+    >
+      <input
+        ref={inputRef}
+        value={chat.input}
+        onChange={(e) => chat.setInput(e.target.value)}
+        placeholder={t('assistantUi.placeholder')}
+        aria-label={t('assistantUi.inputLabel')}
+        disabled={chat.busy}
+        className="min-w-0 grow basis-0 bg-transparent text-[14px] text-text placeholder:text-faint focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={chat.busy || !chat.input.trim()}
+        aria-label={t('assistantUi.send')}
+        className={`flex size-9 shrink-0 items-center justify-center rounded-pill bg-button text-button-text disabled:opacity-40 ${focusRing}`}
+      >
+        {chat.busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowUp size={16} aria-hidden />}
+      </button>
+    </form>
+  )
+}
+
+function ModelSettings({ chat, idPrefix }) {
+  const t = useT()
+  if (chat.available.length === 0) return <p className="text-xs text-muted">{t('assistantUi.noProvider')}</p>
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label={t('assistantUi.provider')} htmlFor={`${idPrefix}-provider`}>
+        <Select id={`${idPrefix}-provider`} value={chat.providerId} onChange={(e) => chat.update({ provider: e.target.value })}>
+          {chat.available.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {chat.provider.models.length > 0 && (
+        <Field label={t('assistantUi.model')} htmlFor={`${idPrefix}-model`}>
+          <Select
+            id={`${idPrefix}-model`}
+            value={chat.model}
+            onChange={(e) => chat.update({ models: { ...chat.settings.models, [chat.providerId]: e.target.value } })}
+          >
+            {chat.provider.models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+      <p className="text-xs text-muted">{t('assistantUi.privacy')}</p>
+    </div>
+  )
+}
+
+function IconButton({ label, onClick, href, expanded, children }) {
+  const cls = `inline-flex size-9 items-center justify-center rounded-pill text-muted transition-colors hover:bg-surface-2 hover:text-text ${focusRing}`
+  if (href) {
+    return (
+      <Link href={href} aria-label={label} title={label} className={cls}>
+        {children}
+      </Link>
+    )
+  }
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label} aria-expanded={expanded} className={cls}>
+      {children}
+    </button>
+  )
+}
+
+/** Floating assistant drawer, mounted once in _app. */
+export default function AiAssistant() {
+  const t = useT()
+  const router = useRouter()
+  const pathname = router?.pathname
+  const onFieldRoute = FIELD_ROUTES.includes(pathname)
+  const { allowed } = useAssistantAccess()
+  const [open, setOpen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const chat = useAssistantChat(open)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (open && !showSettings) inputRef.current?.focus()
+  }, [open, showSettings])
+
+  if (!allowed || pathname === FULL_PAGE) return null
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`${onFieldRoute && !open ? 'hidden lg:flex' : 'flex'} fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-40 h-14 w-14 rounded-full bg-lagoon-950 text-white shadow-md items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-lagoon-800 dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lake`}
-        aria-label={open ? 'Close assistant' : 'Open assistant'}
+        className={`${onFieldRoute && !open ? 'hidden lg:flex' : 'flex'} fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 size-14 items-center justify-center rounded-full bg-button text-button-text shadow-[var(--shadow-card)] transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg lg:bottom-6 lg:right-6`}
+        aria-label={open ? t('assistantUi.close') : t('assistantUi.open')}
         aria-expanded={open}
       >
         {open ? <X className="h-6 w-6" aria-hidden /> : <MessageCircle className="h-6 w-6" aria-hidden />}
@@ -146,111 +294,137 @@ export default function AiAssistant() {
 
       {open && (
         <div
-          className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-24 lg:right-6 z-50 w-[min(100vw-2rem,22rem)] h-[min(70vh,28rem)] bg-surface border border-foam-deep rounded-xl shadow-xl flex flex-col overflow-hidden"
+          className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex h-[min(72vh,34rem)] w-[min(100vw-2rem,24rem)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)] lg:bottom-24 lg:right-6"
           role="dialog"
-          aria-label="Farm assistant"
+          aria-label={t('assistantUi.dialog')}
         >
-          <div className="px-4 py-3 border-b border-foam-deep flex items-center justify-between shrink-0">
-            <div className="min-w-0">
-              <p className="font-display font-medium text-sm text-chart-ink">Assistant</p>
-              <p className="text-xs text-muted truncate">
-                {envStatus && !envStatus.hasAny ? 'No model key on the server' : `${provider.label} · ${model}`}
-              </p>
+          <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
+            <Avatar />
+            <div className="min-w-0 grow">
+              <p className="text-[14px] font-semibold leading-[18px] text-text">{t('assistantUi.title')}</p>
+              <p className="truncate text-xs text-muted">{chat.modelLine}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowSettings((s) => !s)}
-              className="h-10 w-10 inline-flex items-center justify-center rounded-lg text-muted cursor-pointer transition-colors duration-200 hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-              aria-label="Model settings"
-              aria-expanded={showSettings}
-            >
-              <Settings2 className="h-4 w-4" aria-hidden />
-            </button>
+            <IconButton label={t('assistantUi.newChat')} onClick={chat.reset}>
+              <Plus size={16} aria-hidden />
+            </IconButton>
+            <IconButton label={t('assistantUi.settings')} onClick={() => setShowSettings((s) => !s)} expanded={showSettings}>
+              <Settings2 size={16} aria-hidden />
+            </IconButton>
+            <IconButton label={t('assistantUi.fullPage')} href={FULL_PAGE}>
+              <Maximize2 size={16} aria-hidden />
+            </IconButton>
           </div>
 
           {showSettings && (
-            <div className="p-3 border-b border-foam-deep bg-foam space-y-3 max-h-64 overflow-y-auto shrink-0">
-              {available.length === 0 ? (
-                <p className="text-xs text-muted">
-                  No provider key is set on the server. An administrator adds one (for example GEMINI_API_KEY) to the server environment.
-                </p>
-              ) : (
-                <>
-                  <Field label="Provider" htmlFor="ai-provider">
-                    <Select id="ai-provider" value={providerId} onChange={(e) => update({ provider: e.target.value })}>
-                      {available.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  {provider.models.length > 0 && (
-                    <Field label="Model" htmlFor="ai-model">
-                      <Select
-                        id="ai-model"
-                        value={model}
-                        onChange={(e) => update({ models: { ...settings.models, [providerId]: e.target.value } })}
-                      >
-                        {provider.models.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                  )}
-                  <p className="text-xs text-muted">Keys stay on the server; questions and answers are not stored.</p>
-                </>
-              )}
+            <div className="max-h-64 shrink-0 overflow-y-auto border-b border-line bg-surface-2 p-4">
+              <ModelSettings chat={chat} idPrefix="ai-drawer" />
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`text-sm leading-relaxed rounded-lg px-3 py-2 max-w-[90%] whitespace-pre-wrap ${
-                  m.role === 'user'
-                    ? 'ml-auto bg-lake-soft text-chart-ink'
-                    : 'mr-auto bg-foam text-chart-ink border border-foam-deep'
-                }`}
-              >
-                {m.role === 'assistant' && i > 0 && <span className="sr-only">Assistant: </span>}
-                {m.content}
-              </div>
-            ))}
-            {busy && <TypingDots />}
-            <div ref={bottomRef} />
+          <div className="flex-1 overflow-y-auto p-4">
+            <Thread chat={chat} compact />
           </div>
 
-          <div className="p-3 border-t border-foam-deep flex gap-2 shrink-0">
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  send()
-                }
-              }}
-              placeholder="Ask about your farm…"
-              className="flex-1 min-w-0"
-              aria-label="Message to assistant"
-              disabled={busy}
-            />
-            <Button
-              onClick={send}
-              disabled={busy || !input.trim()}
-              className="w-11 shrink-0 !px-0"
-              aria-label="Send message"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
-            </Button>
+          <div className="shrink-0 border-t border-line p-3">
+            <Composer chat={chat} inputRef={inputRef} compact />
           </div>
         </div>
       )}
     </>
+  )
+}
+
+/** 17 Ask PBA full page: chat on the left, insights and prompts on the right. */
+export function AssistantPage() {
+  const t = useT()
+  const { locationArgs } = useLocation()
+  const { loading, allowed } = useAssistantAccess()
+  const chat = useAssistantChat(allowed)
+  const inputRef = useRef(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+  const fresh = chat.messages.length === 1
+
+  return (
+    <Layout
+      title={t('assistantUi.title')}
+      eyebrow={allowed ? `${t('assistantUi.eyebrow')} · ${chat.modelLine}` : t('assistantUi.eyebrow')}
+      actions={
+        allowed && (
+          <GradientButton icon={Plus} onClick={chat.reset} disabled={chat.busy}>
+            {t('assistantUi.newChat')}
+          </GradientButton>
+        )
+      }
+    >
+      {loading ? (
+        <div className={`${card} h-64 animate-pulse`} />
+      ) : !allowed ? (
+        <section className={`${card} flex flex-col items-center gap-3 px-6 py-14 text-center`}>
+          <Sparkles size={28} className="text-faint" aria-hidden />
+          <h2 className="text-[17px] font-semibold text-text">{t('assistantUi.offTitle')}</h2>
+          <p className="max-w-md text-[14px] text-muted">{t('assistantUi.offBody')}</p>
+        </section>
+      ) : (
+        <div className="flex w-full flex-col items-start gap-5 xl:flex-row">
+          <section aria-label={t('assistantUi.dialog')} className={`${card} flex w-full min-w-0 flex-col gap-[22px] p-5 sm:p-7 xl:grow-[1.7] xl:basis-0`}>
+            <Thread chat={chat} />
+            {fresh && (
+              <div className="flex flex-wrap gap-[10px] pl-0 sm:pl-[46px]">
+                {PROMPTS.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => chat.send(t(`assistantUi.prompt.${k}`))}
+                    className={`rounded-pill border border-line-strong px-[14px] py-2 text-sm text-text hover:bg-surface-2 ${focusRing}`}
+                  >
+                    {t(`assistantUi.prompt.${k}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <Composer chat={chat} inputRef={inputRef} />
+            <div className="flex items-center justify-between gap-3 text-xs text-faint">
+              <span>{t('assistantUi.privacy')}</span>
+              <button
+                type="button"
+                onClick={() => setShowSettings((s) => !s)}
+                aria-expanded={showSettings}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-pill px-2 py-1 text-muted hover:text-text ${focusRing}`}
+              >
+                <Settings2 size={14} aria-hidden />
+                {t('assistantUi.settings')}
+              </button>
+            </div>
+            {showSettings && (
+              <div className="rounded-[14px] border border-line bg-bg p-4">
+                <ModelSettings chat={chat} idPrefix="ai-page" />
+              </div>
+            )}
+          </section>
+          <div className="flex w-full flex-col gap-5 xl:basis-0 xl:grow">
+            <DashboardInsights locationId={locationArgs?.locationId} aiEnabled title={t('assistantUi.insights')} />
+            <section aria-labelledby="ai-try-title" className={`${card} flex flex-col gap-[10px] px-[26px] py-6`}>
+              <h2 id="ai-try-title" className="pb-[6px] text-base font-semibold text-text">
+                {t('assistantUi.tryAsking')}
+              </h2>
+              {PROMPTS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    chat.setInput(t(`assistantUi.prompt.${k}`))
+                    inputRef.current?.focus()
+                  }}
+                  className={`rounded-[10px] bg-surface-2 px-[14px] py-3 text-left text-sm text-text hover:bg-line ${focusRing}`}
+                >
+                  {t(`assistantUi.prompt.${k}`)}
+                </button>
+              ))}
+            </section>
+          </div>
+        </div>
+      )}
+    </Layout>
   )
 }

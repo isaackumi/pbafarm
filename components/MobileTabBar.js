@@ -40,18 +40,16 @@ export default function MobileTabBar({ onOpenMenu }) {
               <Link
                 href={path}
                 aria-current={active ? 'page' : undefined}
-                className={`flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors focus:outline-none focus-visible:bg-surface-2 ${
-                  active ? 'text-text font-medium' : 'text-muted'
-                }`}
+                className="group flex h-16 items-center justify-center px-1 focus:outline-none"
               >
                 <span
-                  className={`flex h-7 w-12 items-center justify-center rounded-pill transition-colors ${
-                    active ? 'bg-button text-button-text' : ''
+                  className={`flex min-w-[56px] max-w-full flex-col items-center justify-center gap-[2px] rounded-pill px-3 py-1.5 text-[11px] leading-[14px] transition-colors group-focus-visible:ring-2 group-focus-visible:ring-cyan ${
+                    active ? 'bg-button font-medium text-button-text' : 'text-muted'
                   }`}
                 >
-                  <Icon size={18} aria-hidden />
+                  <Icon size={20} aria-hidden />
+                  <span className="max-w-full truncate">{label}</span>
                 </span>
-                <span className="max-w-full truncate px-1">{label}</span>
               </Link>
             </li>
           )
@@ -60,12 +58,12 @@ export default function MobileTabBar({ onOpenMenu }) {
           <button
             type="button"
             onClick={onOpenMenu}
-            className="flex h-16 w-full flex-col items-center justify-center gap-1 text-xs text-muted focus:outline-none focus-visible:bg-surface-2"
+            className="group flex h-16 w-full items-center justify-center px-1 focus:outline-none"
           >
-            <span className="flex h-7 w-12 items-center justify-center">
-              <Menu size={18} aria-hidden />
+            <span className="flex min-w-[56px] flex-col items-center justify-center gap-[2px] rounded-pill px-3 py-1.5 text-[11px] leading-[14px] text-muted group-focus-visible:ring-2 group-focus-visible:ring-cyan">
+              <Menu size={20} aria-hidden />
+              {t('nav.more')}
             </span>
-            {t('nav.more')}
           </button>
         </li>
       </ul>

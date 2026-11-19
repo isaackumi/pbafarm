@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import QrScanner from '../components/QrScanner'
-import { Button, FormCard, TabBar } from '../components/ui'
+import QrScanner, { ScanFrame } from '../components/QrScanner'
+import { ScanLine } from 'lucide-react'
+import { Segmented } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { findCageByCode, parseCageScan, scanHref } from '../lib/qrTarget'
 import { useT } from '../lib/i18n/context'
@@ -16,9 +17,7 @@ const TARGET_KEY = 'pbafarm:scan:target'
 export default function ScanPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Scan cage">
-        <Scan />
-      </Layout>
+      <Scan />
     </ProtectedRoute>
   )
 }
@@ -62,10 +61,10 @@ function Scan() {
     router.replace(scanHref({ cageIds: [String(cage.id || cage._id)], target: null }, target))
   }, [labelCode, cagesLoaded, cages, target, router, showToast, t])
 
-  const chooseTarget = (t) => {
-    setTarget(t)
+  const chooseTarget = (next) => {
+    setTarget(next)
     try {
-      localStorage.setItem(TARGET_KEY, t)
+      localStorage.setItem(TARGET_KEY, next)
     } catch {
       // storage blocked
     }
@@ -76,7 +75,7 @@ function Scan() {
     const hit = parseCageScan(text, cages?.length ? cages : null)
     const href = hit && (cages?.length || /^https?:|^\//.test(text.trim())) ? scanHref(hit, target) : null
     if (!href) {
-      showToast('No cage on this farm matches that label', 'error')
+      showToast(t('scan.noMatch'), 'error')
       setOpen(false)
       return
     }
@@ -84,29 +83,45 @@ function Scan() {
   }
 
   return (
-    <FormCard title="Scan cage" subtitle="Point the camera at the label on the cage.">
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-muted">Open in</span>
-          <TabBar
-            tabs={[
-              { id: 'daily', label: 'Daily entry' },
-              { id: 'biweekly', label: 'Bi-weekly sampling' },
+    <Layout title={t('scan.title')} eyebrow={t('scan.eyebrow')}>
+      <section
+        aria-labelledby="scan-card-title"
+        className="mx-auto flex w-full max-w-[480px] flex-col items-center gap-6 rounded-[24px] border border-line bg-surface p-6 text-center shadow-[var(--shadow-card)]"
+      >
+        <ScanFrame />
+        <div className="flex flex-col gap-1">
+          <h2 id="scan-card-title" className="text-[20px] font-semibold leading-6 text-text">
+            {t('scan.title')}
+          </h2>
+          <p className="text-[14px] leading-5 text-muted">{t('scan.subtitle')}</p>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-xs text-muted">{t('scan.openIn')}</span>
+          <Segmented
+            label={t('scan.openIn')}
+            options={[
+              { value: 'daily', label: t('scan.daily') },
+              { value: 'biweekly', label: t('scan.biweekly') },
             ]}
-            active={target}
+            value={target}
             onChange={chooseTarget}
           />
         </div>
-        <Button size="lg" onClick={() => setOpen(true)} className="w-full sm:w-auto">
-          Start scanning
-        </Button>
-      </div>
-      {labelCode && (
-        <p role="status" className="mt-4 text-sm text-muted">
-          {t('scan.openingCode', { code: labelCode })}
-        </p>
-      )}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[16px] bg-button text-[16px] font-medium text-button-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+        >
+          <ScanLine size={20} aria-hidden />
+          {t('scan.start')}
+        </button>
+        {labelCode && (
+          <p role="status" className="text-sm text-muted">
+            {t('scan.openingCode', { code: labelCode })}
+          </p>
+        )}
+      </section>
       <QrScanner open={open && !labelCode} onClose={() => setOpen(false)} onResult={onResult} />
-    </FormCard>
+    </Layout>
   )
 }

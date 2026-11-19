@@ -2,42 +2,67 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
+import { Pencil, Archive } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button, StatCard, Input, Select } from '../../components/ui'
-import DataTable from '../../components/DataTable'
+import { LoadingState, Pill, Table } from '../../components/ui'
 import CageManageModals from '../../components/CageManageModals'
+import UnitViewSwitch from '../../components/units/UnitViewSwitch'
+import { UnitsHeaderActions } from '../../components/units/UnitsHeader'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
-import { Plus, Pencil, Archive } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import { unitLabel } from '../../lib/format'
 import { usePermission } from '../../hooks/usePermission'
+import { useTerm } from '../../hooks/useTerm'
+import { useT } from '../../lib/i18n/context'
 
 const unitTypeOfRow = (row) => row.unitType || row.unit_type || 'cage'
 
-const CagePieChart = dynamic(() => import('../../components/charts/CagePieChart'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />,
-})
+const STATUS_TONE = {
+  active: 'green',
+  maintenance: 'amber',
+  harvesting: 'cyan',
+  harvested: 'neutral',
+  fallow: 'neutral',
+  empty: 'neutral',
+}
+
+const iconButton =
+  'inline-flex h-8 w-8 items-center justify-center rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
 export default function CagesPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Cages">
-        <CagesManagement />
-      </Layout>
+      <CagesTablePage />
     </ProtectedRoute>
   )
 }
 
-function CagesManagement() {
-  const router = useRouter()
-  const { user, hasRole } = useAuth()
-  const isAdmin = usePermission('production.units.delete')
+function CagesTablePage() {
+  const t = useT()
+  const term = useTerm()
+  const { user } = useAuth()
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
+  const active = (cages || []).filter((c) => c.status === 'active').length
+  return (
+    <Layout
+      title={term.text(t('unitsUi.title'))}
+      eyebrow={cages ? t('cagesTable.eyebrow', { active, total: cages.length }) : undefined}
+      actions={<UnitsHeaderActions />}
+    >
+      <CagesManagement cages={cages} />
+    </Layout>
+  )
+}
+
+function CagesManagement({ cages }) {
+  const t = useT()
+  const router = useRouter()
+  const { user } = useAuth()
+  const isAdmin = usePermission('production.units.delete')
+  const canEdit = usePermission('production.units.manage')
   const settingsData = useQuery(api.companies.getEffectiveSettings, user ? {} : 'skip')
   const targetAbw = Number(settingsData?.settings?.farmRules?.targetHarvestAbwG) || 600
   const loading = cages === undefined
@@ -72,76 +97,15 @@ function CagesManagement() {
     })
   }, [cages, searchQuery, statusFilter, targetAbw])
 
-  const analytics = useMemo(() => {
-    if (!cages) {
-      return {
-        totalCages: 0,
-        activeCages: 0,
-        maintenanceCages: 0,
-        emptyCages: 0,
-      }
-    }
-    return {
-      totalCages: cages.length,
-      activeCages: cages.filter((c) => c.status === 'active').length,
-      maintenanceCages: cages.filter((c) => c.status === 'maintenance').length,
-      emptyCages: cages.filter((c) => c.status === 'empty').length,
-    }
-  }, [cages])
-
-  const analyticsData = useMemo(() => {
-    if (!cages?.length) {
-      return { statusDistribution: [], harvestReadiness: [] }
-    }
-    const counts = {}
-    cages.forEach((c) => {
-      const s = c.status || 'unknown'
-      counts[s] = (counts[s] || 0) + 1
-    })
-    const colors = {
-      active: 'var(--kelp)',
-      maintenance: '#d97706',
-      harvested: 'var(--lake)',
-      fallow: 'var(--muted)',
-      empty: '#a1a1aa',
-      harvesting: '#06B6D4',
-      unknown: 'var(--foam-deep)',
-    }
-    const statusDistribution = Object.entries(counts).map(([name, value]) => ({
-      name,
-      value,
-      color: colors[name] || colors.unknown,
-    }))
-    const harvestReadiness = [
-      {
-        name: 'Active',
-        value: cages.filter((c) => c.status === 'active').length,
-        color: 'var(--kelp)',
-      },
-      {
-        name: 'Harvesting',
-        value: cages.filter((c) => c.status === 'harvesting').length,
-        color: '#06B6D4',
-      },
-      {
-        name: 'Harvested',
-        value: cages.filter((c) => c.status === 'harvested').length,
-        color: 'var(--lake)',
-      },
-    ]
-    return { statusDistribution, harvestReadiness }
-  }, [cages])
-
   const columns = [
     {
-      header: 'Name',
-      accessor: 'name',
-      sortable: true,
-      searchable: true,
-      cell: (row) => (
+      key: 'name',
+      header: t('cagesTable.name'),
+      render: (row) => (
         <Link
           href={`/cages/${row.id || row._id}`}
-          className="text-lake hover:text-lake font-medium"
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-sm font-medium text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
           {row.name}
           {unitTypeOfRow(row) !== 'cage' && (
@@ -151,186 +115,109 @@ function CagesManagement() {
       ),
     },
     {
-      header: 'Location',
-      accessor: 'location',
-      sortable: true,
-      searchable: true,
-      cell: (row) => row.location || '—',
+      key: 'location',
+      header: t('cagesTable.location'),
+      render: (row) => <span className="text-muted">{row.location || '—'}</span>,
     },
     {
-      header: 'Size',
-      accessor: 'size',
-      sortable: true,
-      cell: (row) => (row.size ? `${row.size} m³` : '—'),
+      key: 'size',
+      header: t('cagesTable.size'),
+      width: 120,
+      align: 'right',
+      render: (row) => (row.size ? `${row.size} m³` : '—'),
     },
     {
-      header: 'Status',
-      accessor: 'status',
-      sortable: true,
-      filterable: true,
-      cell: (row) => {
-        const styles = {
-          active: 'bg-kelp/15 text-kelp',
-          maintenance: 'bg-warn/10 text-warn',
-          harvested: 'bg-foam-deep text-lake',
-          fallow: 'bg-foam-deep/60 text-muted',
-          empty: 'bg-lake-soft text-lake',
-          harvesting: 'bg-lake-soft text-lake',
-        }
-        return (
-          <span
-            className={`px-2 py-1 text-xs font-medium rounded-full ${
-              styles[row.status] || 'bg-foam-deep/60 text-muted'
-            }`}
-          >
-            {row.status
-              ? row.status.charAt(0).toUpperCase() + row.status.slice(1)
-              : 'Unknown'}
-          </span>
-        )
-      },
+      key: 'abw',
+      header: t('cagesTable.abw'),
+      width: 120,
+      align: 'right',
+      render: (row) => (Number(row.current_weight) > 0 ? `${Math.round(row.current_weight)} g` : '—'),
     },
     {
-      header: 'Actions',
-      accessor: 'id',
-      sortable: false,
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            title="Edit cage"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setEditCage(row)
-            }}
-            aria-label={`Edit ${row.name || 'cage'}`}
-            className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-lake hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          {isAdmin && (
-            <button
-              type="button"
-              title="Archive unit"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setDeleteCage(row)
-              }}
-              aria-label={`Archive ${row.name || 'unit'}`}
-              className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-signal hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-            >
-              <Archive className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+      key: 'status',
+      header: t('cagesTable.status'),
+      width: 160,
+      render: (row) => (
+        <Pill tone={STATUS_TONE[row.status] || 'neutral'}>
+          {t.or(`unitsUi.status.${row.status}`, row.status || t('cagesTable.unknown'))}
+        </Pill>
       ),
     },
+    ...(canEdit || isAdmin
+      ? [
+          {
+            key: 'actions',
+            header: <span className="sr-only">{t('cagesTable.actions')}</span>,
+            width: 96,
+            align: 'right',
+            render: (row) => (
+              <div className="flex items-center justify-end gap-1">
+                {canEdit && (
+                  <button
+                    type="button"
+                    title={t('cagesTable.edit')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditCage(row)
+                    }}
+                    aria-label={t('cagesTable.editNamed', { name: row.name || '' })}
+                    className={iconButton}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    title={t('cagesTable.archive')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDeleteCage(row)
+                    }}
+                    aria-label={t('cagesTable.archiveNamed', { name: row.name || '' })}
+                    className={`${iconButton} hover:text-alert`}
+                  >
+                    <Archive className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
+              </div>
+            ),
+          },
+        ]
+      : []),
   ]
 
-  if (loading) {
-    return (
-      <div className="py-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent" />
-        <p className="mt-2 text-muted">Loading cages…</p>
-      </div>
-    )
-  }
+  if (loading) return <LoadingState label={t('cagesTable.loading')} />
+
+  const tabs = [
+    { value: 'all', label: t('cagesTable.tab.all') },
+    { value: 'active', label: t('unitsUi.status.active') },
+    { value: 'ready_to_harvest', label: t('cagesTable.tab.ready', { abw: targetAbw }) },
+    { value: 'harvesting', label: t('unitsUi.status.harvesting') },
+    { value: 'maintenance', label: t('unitsUi.status.maintenance') },
+    { value: 'fallow', label: t('unitsUi.status.fallow') },
+    { value: 'empty', label: t('unitsUi.status.empty') },
+    { value: 'harvested', label: t('unitsUi.status.harvested') },
+  ]
 
   return (
-    <div data-tour="page-cages">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Cages' },
-        ]}
-        description="Manage cages — create, edit, update status, or delete."
-        related={[
-          { label: 'Create cage', href: '/create-cage' },
-          { label: 'Cage settings', href: '/cages/settings' },
-          { label: 'Stocking', href: '/stocking' },
-          { label: 'Analytics', href: '/cages/analytics' },
-        ]}
-        actions={
-          <Button href="/create-cage" size="sm">
-            <Plus className="h-4 w-4" aria-hidden />
-            Create cage
-          </Button>
-        }
+    <div data-tour="page-cages" className="flex flex-col gap-7">
+      <UnitViewSwitch className="self-start" />
+      <Table
+        title={t('cagesTable.title', { count: filteredCages.length })}
+        tabsLabel={t('cagesTable.filterStatus')}
+        tabs={tabs}
+        tab={statusFilter}
+        onTabChange={setStatusFilter}
+        search={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder={t('cagesTable.search')}
+        columns={columns}
+        rows={filteredCages}
+        rowKey={(row) => row.id || row._id}
+        onRowClick={(row) => router.push(`/cages/${row.id || row._id}`)}
+        empty={t('cagesTable.empty')}
       />
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total cages" value={analytics.totalCages} />
-        <StatCard label="Active" value={analytics.activeCages} tone="good" />
-        <StatCard label="Maintenance" value={analytics.maintenanceCages} tone="warn" />
-        <StatCard label="Empty" value={analytics.emptyCages} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="page-card p-6">
-          <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
-            Status distribution
-          </h3>
-          <div className="h-64">
-            <CagePieChart data={analyticsData.statusDistribution} />
-          </div>
-        </div>
-        <div className="page-card p-6">
-          <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
-            Harvest readiness
-          </h3>
-          <div className="h-64">
-            <CagePieChart data={analyticsData.harvestReadiness} />
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 page-card p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex-1">
-            <Input
-              type="text"
-              placeholder="Search by name or location"
-              aria-label="Search cages"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Filter by status"
-            className="md:w-56"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="ready_to_harvest">Ready to harvest ({targetAbw} g+)</option>
-            <option value="harvesting">Harvesting</option>
-            <option value="harvested">Harvested</option>
-            <option value="fallow">Fallow</option>
-            <option value="empty">Empty</option>
-          </Select>
-        </div>
-      </div>
-
-      <div className="page-card overflow-hidden">
-        <DataTable
-          data={filteredCages}
-          columns={columns}
-          pagination={true}
-          currentPage={1}
-          totalPages={1}
-          recordsPerPage={100}
-          loading={false}
-          searchable={false}
-          filterable={false}
-          sortable={true}
-          emptyMessage="No cages found. Create your first cage to get started."
-        />
-      </div>
 
       <CageManageModals
         editCage={editCage}
