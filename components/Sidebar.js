@@ -23,22 +23,8 @@ import { MENU_SECTIONS } from '../lib/navigation'
 import { routePermission } from '../lib/routePermissions'
 import { api } from '../convex/_generated/api'
 import { Avatar } from './ui/Avatar'
+import { AnowaLockup, AnowaMark } from './brand/AnowaLogo'
 
-/** PBA Farm mark: gradient fish (Paper FG-0). */
-export function BrandMark({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden className="shrink-0">
-      <defs>
-        <linearGradient id="pba-brand-fish" x1="0" y1="0" x2="28" y2="28">
-          <stop style={{ stopColor: 'var(--pink-fill)' }} />
-          <stop offset="1" style={{ stopColor: 'var(--cyan-fill)' }} />
-        </linearGradient>
-      </defs>
-      <path d="M3 14c4-6 11-8 17-4l5-4v16l-5-4c-6 4-13 2-17-4z" fill="url(#pba-brand-fish)" />
-      <circle cx="10" cy="13" r="1.6" className="fill-bg" />
-    </svg>
-  )
-}
 
 /**
  * Workspace switcher (Paper EZ-0): company, active site (switches location),
@@ -199,7 +185,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
 
   const label = (item) => term.text(t.or(item.labelKey || navKey(item.path), item.title))
   const sectionLabel = (key, section) => t.or(`nav.section.${key}`, section.title)
-  const name = displayName || 'PBA Farm'
+  const name = displayName || 'Anowa'
 
   return (
     <aside
@@ -213,14 +199,9 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
         <Link
           href="/dashboard"
           className={`flex min-w-0 items-center gap-2.5 ${collapsed ? '' : 'px-1.5'}`}
-          title="PBA Farm"
+          title="Anowa"
         >
-          <BrandMark />
-          {!collapsed && (
-            <span className="whitespace-nowrap font-sans text-[20px] font-extrabold leading-6 tracking-[-0.03em] text-text">
-              PBA FARM
-            </span>
-          )}
+          {collapsed ? <AnowaMark size={32} /> : <AnowaLockup height={26} />}
         </Link>
         {typeof onMobileClose === 'function' && mobileOpen && (
           <button

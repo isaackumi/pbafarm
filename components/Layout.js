@@ -72,7 +72,7 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
     }
     const path = router.pathname
     const match = TITLE_BY_PREFIX.find(([prefix]) => path.startsWith(prefix))
-    setTitle(match ? match[1] : 'PBA Farm')
+    setTitle(match ? match[1] : 'Anowa')
   }, [router.pathname, initialTitle])
 
   // Close the phone drawer whenever the route changes

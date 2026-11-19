@@ -84,7 +84,7 @@ export function CompanySettingsProvider({ children }) {
       company,
       terminology: company?.terminology || {},
       displayName:
-        settings?.branding?.displayName || company?.name || 'PBA Farm',
+        settings?.branding?.displayName || company?.name || 'Anowa',
       logoUrl: company?.logo_url,
       currency: settings?.locale?.currency || 'GHS',
       loading: user && data === undefined,
@@ -106,7 +106,7 @@ export function useCompanySettings() {
       settings: null,
       company: null,
       terminology: {},
-      displayName: 'PBA Farm',
+      displayName: 'Anowa',
       logoUrl: null,
       currency: 'GHS',
       loading: false,

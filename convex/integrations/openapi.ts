@@ -258,7 +258,7 @@ export function openApiDocument(serverUrl: string) {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'PBA Farm API',
+      title: 'Anowa API',
       version: '1.0.0',
       description:
         'Read your organization\'s farm data and record daily entries and sampling. ' +

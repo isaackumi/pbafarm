@@ -11,7 +11,7 @@ import { base64ToHex, copyObjects, reconcileObjects } from '../r2Sync'
 
 const modules = import.meta.glob('../**/*.ts')
 
-const config: R2Config = { accountId: 'acct', accessKeyId: 'AK', secretAccessKey: 'SK', bucket: 'pba-files' }
+const config: R2Config = { accountId: 'acct', accessKeyId: 'AK', secretAccessKey: 'SK', bucket: 'anowa-files' }
 const fixedNow = () => new Date('2026-11-18T00:00:00Z')
 
 type Stored = { bytes: Uint8Array; sha256?: string; contentType?: string }
@@ -105,8 +105,8 @@ describe('R2 storage service', () => {
     expect(v.head).toMatchObject({ size: 5, sha256: 'ab' })
     expect(await v.body.text()).toBe('hello')
     expect(v.missing).toBeNull()
-    expect(r2.calls[0]).toMatchObject({ method: 'PUT', path: '/pba-files/files/a', signed: 'host;x-amz-meta-sha256' })
-    expect(r2.calls[0].path.startsWith('/pba-files/')).toBe(true)
+    expect(r2.calls[0]).toMatchObject({ method: 'PUT', path: '/anowa-files/files/a', signed: 'host;x-amz-meta-sha256' })
+    expect(r2.calls[0].path.startsWith('/anowa-files/')).toBe(true)
   })
 
   test('5xx and network errors are retried; 4xx is not', async () => {
@@ -154,7 +154,7 @@ describe('copy and reconciliation (CF-006)', () => {
     expect(r2.objects.size).toBe(0)
 
     await run(copyObjects(items, load, { dryRun: false }), r2.fetchFn)
-    expect(r2.objects.get('/pba-files/files/a')?.sha256).toBe(base64ToHex(sha))
+    expect(r2.objects.get('/anowa-files/files/a')?.sha256).toBe(base64ToHex(sha))
     const again = await run(copyObjects(items, load, { dryRun: false }), r2.fetchFn)
     expect((again as any).success[0].status).toBe('exists')
 

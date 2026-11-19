@@ -1,4 +1,4 @@
-# PBA Farm redesign: build handoff
+# Anowa redesign: build handoff
 
 The source of truth is the Paper file **"PBA Farm — Redesign"**, file id `01M7RD5Z2VX87M2KSRH9YKX8XA`.
 - Page **Desktop** (`p-1-0`) holds the app screens.
@@ -146,7 +146,7 @@ Role model changes behind 22/23 are listed in [ROLES-CLEANUP.md](./ROLES-CLEANUP
 
 ## 6. Prompt to give the build agent
 
-> You are rebuilding the PBA Farm web UI to match a Paper design exactly. Paper Desktop is open with file `01M7RD5Z2VX87M2KSRH9YKX8XA`, and you have the Paper MCP tools.
+> You are rebuilding the Anowa web UI to match a Paper design exactly. Paper Desktop is open with file `01M7RD5Z2VX87M2KSRH9YKX8XA`, and you have the Paper MCP tools.
 >
 > Read `docs/design/paper-redesign/HANDOFF.md` first and follow it.
 >

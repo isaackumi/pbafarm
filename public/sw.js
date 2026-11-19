@@ -1,4 +1,4 @@
-/* PBA Farm service worker: keeps the app shell available with weak signal.
+/* Anowa service worker: keeps the app shell available with weak signal.
  * Data never goes through here. Convex runs on another origin and is skipped,
  * and unsent field entries live in the page's own outbox (lib/offlineOutbox.js).
  *

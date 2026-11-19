@@ -560,7 +560,7 @@ export const sendTest = mutation({
       occurredAt: new Date(now).toISOString(),
       companyId,
       siteId: null,
-      data: { message: 'Test delivery from PBA Farm' },
+      data: { message: 'Test delivery from Anowa' },
     })
     return await queueDelivery(ctx, { companyId, endpointId, eventType: TEST_EVENT_TYPE, payload })
   },
@@ -759,7 +759,7 @@ export const deliver = internalAction({
           redirect: 'manual',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'PBAFarm-Webhooks/1',
+            'User-Agent': 'Anowa-Webhooks/1',
             [SIGNATURE_HEADER]: signature,
             'X-PBA-Event-Id': job.eventId ?? 'test',
             'X-PBA-Event-Type': job.eventType,

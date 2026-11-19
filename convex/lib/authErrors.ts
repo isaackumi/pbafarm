@@ -25,7 +25,7 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   USER_INACTIVE:
     'USER_INACTIVE: Your account has been deactivated. Ask your company admin to reactivate it.',
   COMPANY_NOT_APPROVED:
-    'COMPANY_NOT_APPROVED: Your company does not have access to PBA Farm right now. Contact support.',
+    'COMPANY_NOT_APPROVED: Your company does not have access to Anowa right now. Contact support.',
   PASSWORD_CHANGE_REQUIRED:
     'PASSWORD_CHANGE_REQUIRED: Change your temporary password before continuing.',
   NO_COMPANY:
@@ -35,7 +35,7 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   MFA_REQUIRED:
     'MFA_REQUIRED: Your company requires a verification code for this sign-in. Enter the code we send to your phone.',
   TENANT_SUSPENDED:
-    'TENANT_SUSPENDED: Your organization\'s access to PBA Farm is suspended. Its owner can settle billing on the Billing page, or contact support.',
+    'TENANT_SUSPENDED: Your organization\'s access to Anowa is suspended. Its owner can settle billing on the Billing page, or contact support.',
 }
 
 /** Codes that end the session: the client signs out and shows the message. */

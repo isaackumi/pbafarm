@@ -62,7 +62,7 @@ async function setup(security: Record<string, unknown> = { allowPhoneLogin: true
 
 function stubPlatformSms() {
   vi.stubEnv('PLATFORM_SMS_PROVIDER', 'hubtel')
-  vi.stubEnv('PLATFORM_SMS_SENDER', 'PBAFarm')
+  vi.stubEnv('PLATFORM_SMS_SENDER', 'Anowa')
   vi.stubEnv('PLATFORM_HUBTEL_CLIENT_ID', 'pid')
   vi.stubEnv('PLATFORM_HUBTEL_CLIENT_SECRET', 'psecret')
 }

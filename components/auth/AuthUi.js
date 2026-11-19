@@ -7,7 +7,7 @@ import { useId, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
-import { BrandMark } from '../Sidebar'
+import { AnowaLockup } from '../brand/AnowaLogo'
 import LanguageSwitcher from '../LanguageSwitcher'
 import { useT } from '../../lib/i18n/context'
 
@@ -17,8 +17,7 @@ export function Brand({ href = '/' }) {
       href={href}
       className="inline-flex items-center gap-2.5 rounded-pill focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
     >
-      <BrandMark size={26} />
-      <span className="text-lg font-medium leading-[22px] tracking-tight text-text">PBA Farm</span>
+      <AnowaLockup height={26} />
     </Link>
   )
 }
@@ -97,7 +96,7 @@ export function AuthLayout({ title, eyebrow, headline, children, footer }) {
     <div className="flex min-h-screen bg-bg text-text">
       {title && (
         <Head>
-          <title>{`${title} · PBA Farm`}</title>
+          <title>{`${title} · Anowa`}</title>
         </Head>
       )}
       <div className="flex w-full shrink-0 flex-col justify-between gap-10 px-6 py-8 sm:px-12 lg:w-[620px] lg:px-24 lg:py-11">

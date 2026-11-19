@@ -7,10 +7,10 @@ export default function RegisterCompany() {
   return (
     <>
       <Head>
-        <title>Register Your Company - PBA Farm Management</title>
+        <title>Register your company · Anowa</title>
         <meta
           name="description"
-          content="Register your company to access PBA Farm Management features"
+          content="Register your company to access Anowa features"
         />
       </Head>
       <CompanyRegistrationPage />

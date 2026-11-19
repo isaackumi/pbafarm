@@ -57,7 +57,7 @@ export const requestCode = mutation({
     })
     await ctx.scheduler.runAfter(0, internal.emails.send, {
       to: me.email,
-      subject: 'Your PBA Farm verification code',
+      subject: 'Your Anowa verification code',
       text: `Your verification code is ${code}. It expires in 15 minutes.\n\nIf you did not ask for it, ignore this email.`,
     })
     return { alreadyVerified: false }

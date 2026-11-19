@@ -96,7 +96,7 @@ Usage is in `llmUsage` with feature `bot`, and counts against the same per-user 
 | `TELEGRAM_BOT_TOKEN` | Telegram | |
 | `TELEGRAM_WEBHOOK_SECRET` | Telegram | Without it every POST is 401 |
 | `TELEGRAM_BOT_USERNAME` | Telegram | For the deep link |
-| `SITE_URL` | recommended | App URL in onboarding replies |
+| `SITE_URL` | recommended | App URL in onboarding replies (prod `https://app.getanowa.com`) |
 | LLM keys | for free text | §4 |
 
 ## 6. Operations

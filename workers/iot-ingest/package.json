@@ -1,5 +1,5 @@
 {
-  "name": "pbafarm-iot-ingest",
+  "name": "anowa-iot-ingest",
   "private": true,
   "version": "0.1.0",
   "description": "Cloudflare Worker: authenticates IoT devices and forwards sensor readings to Convex (CF-008).",

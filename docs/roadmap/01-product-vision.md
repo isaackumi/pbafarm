@@ -4,7 +4,7 @@ Date: 2026-11-18. Inputs: `docs/MASTER-PROMPT.md` PART 1 and PART 10, discovery 
 
 ## 1. What the product is today
 
-PBA Farm is a working single-species (tilapia) cage-farm operations app used by one Ghanaian farm business, built over about a year on Next.js 15 Pages Router + Convex (doc 01 §1). It is already multi-tenant in shape (companies with super-admin approval, per-company settings, multiple farm sites) but tenant isolation is enforced by in-memory filtering and has holes (doc 07 §1).
+Anowa is a working single-species (tilapia) cage-farm operations app used by one Ghanaian farm business, built over about a year on Next.js 15 Pages Router + Convex (doc 01 §1). It is already multi-tenant in shape (companies with super-admin approval, per-company settings, multiple farm sites) but tenant isolation is enforced by in-memory filtering and has holes (doc 07 §1).
 
 What it does well today (doc 14 §2, rows marked "Implemented and working"):
 

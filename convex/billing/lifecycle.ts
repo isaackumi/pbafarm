@@ -64,7 +64,7 @@ async function applyTransition(ctx: MutationCtx, sub: Doc<'subscriptions'>, t: T
   const when = t.patch.graceEndsAt ? new Date(t.patch.graceEndsAt).toISOString().slice(0, 10) : null
   if (t.to === 'past_due') {
     await notifyBilling(ctx, sub.companyId, {
-      title: t.reason === 'trial_ended' ? 'Your PBA Farm trial has ended' : 'Your PBA Farm plan is due for renewal',
+      title: t.reason === 'trial_ended' ? 'Your Anowa trial has ended' : 'Your Anowa plan is due for renewal',
       message:
         `Pay ${invoiceNumber ? `invoice ${invoiceNumber}` : 'your plan'} by ${when} to keep access. ` +
         'Open Billing for the amount and how to pay.',
@@ -72,7 +72,7 @@ async function applyTransition(ctx: MutationCtx, sub: Doc<'subscriptions'>, t: T
     })
   } else if (t.to === 'suspended') {
     await notifyBilling(ctx, sub.companyId, {
-      title: 'PBA Farm access suspended',
+      title: 'Anowa access suspended',
       message: 'Your organization was suspended because the plan was not paid. Pay the open invoice on the Billing page to restore access.',
       level: 'error',
       dedupeKey: `billing.suspended.${sub._id}.${t.patch.suspendedAt}`,
