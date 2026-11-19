@@ -34,9 +34,29 @@ function requireKey(key: string) {
   if (!(DASHBOARD_KEYS as readonly string[]).includes(key)) throw userError('VALIDATION', 'Unknown dashboard', { field: 'key' })
 }
 
+const widgetRow = v.object({
+  widget: v.string(),
+  size: v.union(
+    v.literal('full'),
+    v.literal('half'),
+    v.literal('sm'),
+    v.literal('md'),
+    v.literal('lg'),
+  ),
+})
+
 /** The layout to show, and where it came from ('me' | 'org' | 'default'). */
 export const get = query({
   args: { key: v.string() },
+  returns: v.union(
+    v.object({
+      widgets: v.array(widgetRow),
+      source: v.literal('default'),
+      hasOrgDefault: v.boolean(),
+    }),
+    v.object({ widgets: v.array(widgetRow), source: v.literal('me'), hasOrgDefault: v.boolean() }),
+    v.object({ widgets: v.array(widgetRow), source: v.literal('org'), hasOrgDefault: v.boolean() }),
+  ),
   handler: async (ctx, { key }) => {
     const m = await requireMember(ctx, { permission: 'reports.view' })
     const fallback = { widgets: DEFAULT_DASHBOARD, source: 'default' as const, hasOrgDefault: false }
@@ -51,6 +71,7 @@ export const get = query({
 /** The organization default only (the Customization editor). */
 export const getOrgDefault = query({
   args: { key: v.string() },
+  returns: v.union(v.object({ widgets: v.array(widgetRow), updatedAt: v.number() }), v.null()),
   handler: async (ctx, { key }) => {
     const m = await requireMember(ctx, { permission: 'customization.manage' })
     if (!m.companyId || !(DASHBOARD_KEYS as readonly string[]).includes(key)) return null

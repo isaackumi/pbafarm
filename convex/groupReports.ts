@@ -45,6 +45,26 @@ async function orgRow(
 /** One row per organization: the caller's own (within their site scope), then each sharing subsidiary. */
 export const overview = query({
   args: rangeArgs,
+  returns: v.object({
+    rows: v.array(
+      v.object({
+        isSelf: v.boolean(),
+        activeUnits: v.number(),
+        fish: v.number(),
+        salesAmount: v.number(),
+        salesCount: v.number(),
+        harvestKg: v.number(),
+        expensesAmount: v.number(),
+        overdueMaintenance: v.number(),
+        companyId: v.id('companies'),
+        name: v.string(),
+        code: v.string(),
+        currency: v.string(),
+        sites: v.number(),
+        truncated: v.boolean(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'group.reports.view' })
     if (!m.companyId) return { rows: [] }
@@ -64,6 +84,24 @@ export const overview = query({
 /** Per-site KPIs of one sharing subsidiary. */
 export const subsidiarySites = query({
   args: { ...rangeArgs, childCompanyId: v.id('companies') },
+  returns: v.object({
+    name: v.string(),
+    currency: v.string(),
+    truncated: v.boolean(),
+    sites: v.array(
+      v.object({
+        activeUnits: v.number(),
+        fish: v.number(),
+        salesAmount: v.number(),
+        salesCount: v.number(),
+        harvestKg: v.number(),
+        expensesAmount: v.number(),
+        overdueMaintenance: v.number(),
+        siteId: v.id('farmLocations'),
+        name: v.string(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'group.reports.view' })
     if (!m.companyId) throw userError('NOT_FOUND', 'Organization not found')

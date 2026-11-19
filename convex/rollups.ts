@@ -103,6 +103,25 @@ export const backfill = internalMutation({
     cageCursor: v.optional(v.union(v.string(), v.null())),
     totals: v.optional(v.object({ cages: v.number(), unitDays: v.number() })),
   },
+  returns: v.union(
+    v.object({ cages: v.number(), unitDays: v.number(), dryRun: v.boolean(), done: v.boolean() }),
+    v.object({
+      cages: v.number(),
+      unitDays: v.number(),
+      dryRun: v.literal(true),
+      done: v.boolean(),
+      cageId: v.id('cages'),
+      wouldRebuild: v.array(v.string()),
+    }),
+    v.object({
+      cages: v.number(),
+      unitDays: v.number(),
+      dryRun: v.literal(false),
+      done: v.boolean(),
+      cageId: v.id('cages'),
+      rebuilt: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun ?? true
     const totals = args.totals ?? { cages: 0, unitDays: 0 }

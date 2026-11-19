@@ -70,9 +70,57 @@ function contact(s: Doc<'staffRecords'>, showContact: boolean) {
   return showContact ? { phone: s.phone ?? null, email: s.email ?? null, notes: s.notes ?? null } : {}
 }
 
+const employmentTypeValues = v.union(
+  v.literal('permanent'),
+  v.literal('contract'),
+  v.literal('casual'),
+  v.literal('seasonal'),
+  v.null(),
+)
+
 /** The roster (active by default). Contact details only for workforce.manage. */
 export const list = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.object({
+    canSeeContact: v.boolean(),
+    staff: v.array(
+      v.union(
+        v.object({
+          phone: v.union(v.string(), v.null()),
+          email: v.union(v.string(), v.null()),
+          notes: v.union(v.string(), v.null()),
+          _id: v.id('staffRecords'),
+          fullName: v.string(),
+          userId: v.union(v.id('users'), v.null()),
+          jobTitle: v.union(v.string(), v.null()),
+          employeeCode: v.union(v.string(), v.null()),
+          employmentType: employmentTypeValues,
+          locationId: v.union(v.id('farmLocations'), v.null()),
+          siteName: v.union(v.string(), v.null()),
+          departmentId: v.union(v.id('teams'), v.null()),
+          departmentName: v.union(v.string(), v.null()),
+          startDate: v.union(v.string(), v.null()),
+          endDate: v.union(v.string(), v.null()),
+          status: v.union(v.literal('active'), v.literal('inactive')),
+        }),
+        v.object({
+          _id: v.id('staffRecords'),
+          fullName: v.string(),
+          userId: v.union(v.id('users'), v.null()),
+          jobTitle: v.union(v.string(), v.null()),
+          employeeCode: v.union(v.string(), v.null()),
+          employmentType: employmentTypeValues,
+          locationId: v.union(v.id('farmLocations'), v.null()),
+          siteName: v.union(v.string(), v.null()),
+          departmentId: v.union(v.id('teams'), v.null()),
+          departmentName: v.union(v.string(), v.null()),
+          startDate: v.union(v.string(), v.null()),
+          endDate: v.union(v.string(), v.null()),
+          status: v.union(v.literal('active'), v.literal('inactive')),
+        }),
+      ),
+    ),
+  }),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'workforce.view' })
     if (!m.companyId) return { canSeeContact: false, staff: [] }

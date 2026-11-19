@@ -533,6 +533,15 @@ type Plan = {
  */
 export const start = internalMutation({
   args: { deliveryId: v.id('reportDeliveries') },
+  returns: v.union(
+    v.object({
+      companyId: v.id('companies'),
+      reportId: v.id('savedReports'),
+      ownerId: v.id('users'),
+      pending: v.array(v.object({ index: v.number(), to: v.string() })),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { deliveryId }): Promise<Plan | null> => {
     const d = await ctx.db.get(deliveryId)
     if (!d || !['queued', 'retrying'].includes(d.status)) return null

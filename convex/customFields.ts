@@ -64,9 +64,73 @@ function defOut(d: Doc<'customFieldDefs'>) {
   }
 }
 
+const customFieldDefRow = v.object({
+  _id: v.id('customFieldDefs'),
+  entity: v.union(
+    v.literal('farmLocations'),
+    v.literal('cages'),
+    v.literal('batches'),
+    v.literal('equipment'),
+    v.literal('dailyRecords'),
+    v.literal('biweeklyRecords'),
+    v.literal('stockingHistory'),
+    v.literal('harvestRecords'),
+    v.literal('expenses'),
+  ),
+  key: v.string(),
+  label: v.string(),
+  helpText: v.optional(v.string()),
+  type: v.union(
+    v.literal('number'),
+    v.literal('boolean'),
+    v.literal('date'),
+    v.literal('text'),
+    v.literal('long_text'),
+    v.literal('select'),
+    v.literal('multiselect'),
+    v.literal('photo'),
+  ),
+  unit: v.optional(v.string()),
+  options: v.optional(
+    v.array(v.object({ archived: v.optional(v.boolean()), value: v.string(), label: v.string() })),
+  ),
+  validation: v.optional(
+    v.object({
+      min: v.optional(v.number()),
+      max: v.optional(v.number()),
+      maxLength: v.optional(v.number()),
+      pattern: v.optional(v.string()),
+      integer: v.optional(v.boolean()),
+    }),
+  ),
+  required: v.boolean(),
+  defaultValue: v.optional(v.union(v.boolean(), v.string(), v.number(), v.array(v.string()))),
+  conditions: v.optional(
+    v.array(
+      v.object({
+        value: v.optional(v.union(v.boolean(), v.string(), v.number(), v.array(v.string()))),
+        field: v.string(),
+        op: v.union(
+          v.literal('eq'),
+          v.literal('neq'),
+          v.literal('gt'),
+          v.literal('lt'),
+          v.literal('is_set'),
+          v.literal('in'),
+          v.literal('is_not_set'),
+        ),
+      }),
+    ),
+  ),
+  locationIds: v.optional(v.array(v.id('farmLocations'))),
+  sortOrder: v.number(),
+  archived: v.boolean(),
+})
+
 /** Definitions of one entity, in order. Forms filter out archived ones; displays keep them for old values. */
 export const defs = query({
   args: { entity: customEntityValidator, includeArchived: v.optional(v.boolean()) },
+  returns: v.array(customFieldDefRow),
   handler: async (ctx, { entity, includeArchived }) => {
     const m = await requireMember(ctx, { permission: 'org.view' })
     if (!m.companyId) return []
@@ -81,6 +145,7 @@ export const defs = query({
 /** Definitions of every entity (exports, the field builder overview). */
 export const allDefs = query({
   args: {},
+  returns: v.array(customFieldDefRow),
   handler: async (ctx) => {
     const m = await requireMember(ctx, { permission: 'org.view' })
     if (!m.companyId) return []
@@ -332,6 +397,7 @@ type Located = {
  */
 export const setValues = mutation({
   args: { entity: customEntityValidator, id: v.string(), custom: customValues },
+  returns: v.record(v.string(), v.union(v.boolean(), v.string(), v.number(), v.array(v.string()))),
   handler: async (ctx, { entity, id, custom }) => {
     const m = await requireEntityEditor(ctx, entity)
     const docId = ctx.db.normalizeId(entity, id)

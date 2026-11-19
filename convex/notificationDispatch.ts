@@ -27,6 +27,23 @@ type Plan = {
 
 export const start = internalMutation({
   args: { dispatchId: v.id('notificationDispatches') },
+  returns: v.union(
+    v.object({
+      companyId: v.id('companies'),
+      pending: v.array(
+        v.object({
+          index: v.number(),
+          input: v.object({
+            channel: v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp')),
+            to: v.string(),
+            subject: v.string(),
+            body: v.string(),
+          }),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { dispatchId }): Promise<Plan | null> => {
     const d = await ctx.db.get(dispatchId)
     if (!d || !['queued', 'retrying'].includes(d.status)) return null
@@ -73,6 +90,7 @@ export const finish = internalMutation({
       }),
     ),
   },
+  returns: v.null(),
   handler: async (ctx, { dispatchId, outcomes }) => {
     const d = await ctx.db.get(dispatchId)
     if (!d) return null
@@ -106,6 +124,7 @@ export const finish = internalMutation({
 /** The attempt crashed before sending (transient database error or bug). */
 export const fail = internalMutation({
   args: { dispatchId: v.id('notificationDispatches'), error: v.string() },
+  returns: v.null(),
   handler: async (ctx, { dispatchId, error }) => {
     const d = await ctx.db.get(dispatchId)
     if (!d) return null
@@ -116,6 +135,7 @@ export const fail = internalMutation({
 
 export const send = internalAction({
   args: { dispatchId: v.id('notificationDispatches') },
+  returns: v.null(),
   handler: async (ctx, { dispatchId }) => {
     let plan: Plan | null
     try {
@@ -138,6 +158,7 @@ export const send = internalAction({
 /** Kept as long as domain events (30 days). */
 export const prune = internalMutation({
   args: {},
+  returns: v.number(),
   handler: async (ctx): Promise<number> => {
     const cutoff = Date.now() - EVENT_RETENTION_DAYS * 86_400_000
     const old = await ctx.db

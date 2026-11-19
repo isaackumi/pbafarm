@@ -118,9 +118,26 @@ export const dailyDigest = internalMutation({
   },
 })
 
+const companyDigestItem = v.object({
+  missingCages: v.number(),
+  lowFeedTypes: v.number(),
+  lowItems: v.number(),
+  sent: v.number(),
+})
+
 /** One company's daily digest (scheduled by dailyDigest). */
 export const companyDigest = internalMutation({
   args: { companyId: v.id('companies'), date: v.optional(v.string()) },
+  returns: v.union(
+    companyDigestItem,
+    v.object({
+      missingCages: v.number(),
+      lowFeedTypes: v.number(),
+      lowItems: v.number(),
+      sent: v.number(),
+      onEngine: v.boolean(),
+    }),
+  ),
   handler: async (ctx, { companyId, date }) => {
     const company = await ctx.db.get(companyId)
     if (!company || company.status !== 'approved') {
@@ -139,6 +156,17 @@ export const companyDigest = internalMutation({
 /** Admins can send today's reminders now instead of waiting for the evening run. */
 export const runForMyCompanyNow = mutation({
   args: {},
+  returns: v.union(
+    companyDigestItem,
+    v.object({
+      missingCages: v.number(),
+      lowFeedTypes: v.number(),
+      lowItems: v.number(),
+      sent: v.number(),
+      onEngine: v.boolean(),
+      runs: v.number(),
+    }),
+  ),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('Your account is not linked to a company')

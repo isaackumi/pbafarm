@@ -235,6 +235,23 @@ type Plan = {
  */
 export const startRun = internalMutation({
   args: { runId: v.id('automationRuns') },
+  returns: v.union(
+    v.object({
+      companyId: v.id('companies'),
+      pending: v.array(
+        v.object({
+          index: v.number(),
+          input: v.object({
+            channel: v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp')),
+            to: v.string(),
+            subject: v.string(),
+            body: v.string(),
+          }),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { runId }): Promise<Plan | null> => {
     const run = await ctx.db.get(runId)
     if (!run || !['queued', 'retrying', 'running'].includes(run.status)) return null

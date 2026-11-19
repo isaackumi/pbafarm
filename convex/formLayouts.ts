@@ -31,6 +31,31 @@ function requireFormKey(formKey: string) {
 /** The organization's saved layout of a form, or null (the form renders as in code). */
 export const get = query({
   args: { formKey: v.string() },
+  returns: v.union(
+    v.object({
+      sections: v.array(
+        v.object({
+          title: v.optional(v.string()),
+          fields: v.array(
+            v.object({
+              width: v.optional(v.union(v.literal('full'), v.literal('half'))),
+              showWhen: v.optional(
+                v.object({
+                  value: v.optional(v.union(v.boolean(), v.string(), v.number())),
+                  op: v.union(v.literal('eq'), v.literal('neq'), v.literal('is_set')),
+                  ref: v.string(),
+                }),
+              ),
+              ref: v.string(),
+            }),
+          ),
+          key: v.string(),
+        }),
+      ),
+      updatedAt: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { formKey }) => {
     const m = await requireMember(ctx, { permission: 'org.view' })
     if (!m.companyId || !isFormKey(formKey)) return null
@@ -42,6 +67,7 @@ export const get = query({
 /** Which forms have a saved layout (the editor's overview). */
 export const listSaved = query({
   args: {},
+  returns: v.array(v.object({ formKey: v.string(), updatedAt: v.number() })),
   handler: async (ctx) => {
     const m = await requireMember(ctx, { permission: 'customization.manage' })
     if (!m.companyId) return []

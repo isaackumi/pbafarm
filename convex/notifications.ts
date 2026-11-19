@@ -1,7 +1,7 @@
 import type { Doc } from './_generated/dataModel'
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation, internalMutation } from './_generated/server'
 import { writeCompanyId, logAudit } from './lib/tenancy'
 import { requireAccount } from './lib/permissions'
@@ -23,12 +23,26 @@ function toClient(n: Doc<'notifications'>) {
 
 const MAX_LIST = 200
 
+const notificationRow = v.object({
+  id: v.id('notifications'),
+  _id: v.id('notifications'),
+  user_id: v.id('users'),
+  title: v.string(),
+  message: v.string(),
+  type: v.optional(v.string()),
+  read: v.boolean(),
+  link: v.optional(v.string()),
+  company_id: v.optional(v.id('companies')),
+  created_at: v.number(),
+})
+
 /** Newest first. Reactive: the bell subscribes to it (AUTO-003). */
 export const listForCurrentUser = query({
   args: {
     limit: v.optional(v.number()),
     unreadOnly: v.optional(v.boolean()),
   },
+  returns: v.array(notificationRow),
   handler: async (ctx, args) => {
     const user = await requireAccount(ctx)
     const limit = Math.max(1, Math.min(Math.floor(args.limit ?? 50), MAX_LIST))
@@ -53,6 +67,7 @@ export const listPage = query({
     paginationOpts: paginationOptsValidator,
     unreadOnly: v.optional(v.boolean()),
   },
+  returns: paginationResultValidator(notificationRow),
   handler: async (ctx, { paginationOpts, unreadOnly }) => {
     const user = await requireAccount(ctx)
     const page = unreadOnly

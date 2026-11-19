@@ -67,6 +67,25 @@ export const dashboardSummary = query({
     /** Client's today (YYYY-MM-DD); the period ends here. */
     asOf: v.optional(v.string()),
   },
+  returns: v.object({
+    period_days: v.number(),
+    cages: v.object({
+      total: v.number(),
+      active: v.number(),
+      maintenance: v.number(),
+      empty: v.number(),
+      harvested: v.number(),
+      harvesting: v.number(),
+      fallow: v.number(),
+    }),
+    recent_mortality: v.number(),
+    recent_feed_usage_kg: v.number(),
+    recent_feed_cost: v.number(),
+    recent_harvest_count: v.number(),
+    recent_harvest_weight_kg: v.number(),
+    active_fish_count: v.number(),
+    low_stock_alerts: v.number(),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const daysBack = args.dateRange || 30
@@ -156,6 +175,18 @@ export const dashboardKpis = query({
     /** Client's today (YYYY-MM-DD); the period ends here. */
     asOf: v.optional(v.string()),
   },
+  returns: v.object({
+    period_days: v.number(),
+    active_cages: v.number(),
+    active_fish_count: v.number(),
+    recent_mortality: v.number(),
+    mortality_rate_pct: v.number(),
+    avg_fcr: v.union(v.number(), v.null()),
+    avg_daily_growth_g: v.union(v.number(), v.null()),
+    recent_feed_cost: v.number(),
+    harvest_weight_kg: v.number(),
+    feed_cost_per_kg_harvested: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const daysBack = args.dateRange || 30
@@ -217,6 +248,82 @@ export const exportBundle = query({
     /** Only this site's records (FARM-003). */
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.object({
+    date_range: v.object({ from: v.string(), to: v.string() }),
+    cage_filter: v.union(v.id('cages'), v.null()),
+    daily_records: v.array(
+      v.object({
+        id: v.id('dailyRecords'),
+        cage_id: v.id('cages'),
+        date: v.string(),
+        feed_amount: v.number(),
+        feed_type_id: v.optional(v.id('feedTypes')),
+        feed_type: v.optional(v.string()),
+        feed_price: v.number(),
+        feed_cost: v.number(),
+        mortality: v.number(),
+        notes: v.optional(v.string()),
+        created_by: v.optional(v.id('users')),
+        created_at: v.number(),
+        custom: v.record(v.string(), v.any()),
+      }),
+    ),
+    biweekly_records: v.array(
+      v.object({
+        id: v.id('biweeklyRecords'),
+        cage_id: v.id('cages'),
+        date: v.string(),
+        batch_code: v.string(),
+        average_body_weight: v.number(),
+        total_fish_count: v.number(),
+        total_weight: v.number(),
+        created_by: v.optional(v.id('users')),
+        updated_by: v.optional(v.id('users')),
+        updated_at: v.number(),
+        created_at: v.number(),
+        custom: v.record(v.string(), v.any()),
+      }),
+    ),
+    harvest_records: v.array(
+      v.object({
+        id: v.id('harvestRecords'),
+        cage_id: v.id('cages'),
+        harvest_date: v.string(),
+        average_body_weight: v.number(),
+        total_weight: v.number(),
+        estimated_count: v.number(),
+        fcr: v.number(),
+        fcr_inputs: v.union(
+          v.object({
+            feedKg: v.number(),
+            gainKg: v.number(),
+            method: v.union(v.literal('complete'), v.literal('interim')),
+            efcr: v.union(v.number(), v.null()),
+          }),
+          v.null(),
+        ),
+        batch_id: v.union(v.id('batches'), v.null()),
+        size_breakdown: v.optional(v.any()),
+        notes: v.optional(v.string()),
+        harvest_type: v.optional(v.union(v.literal('partial'), v.literal('complete'))),
+        status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+        created_by: v.optional(v.id('users')),
+        created_at: v.number(),
+        custom: v.record(v.string(), v.any()),
+      }),
+    ),
+    totals: v.object({
+      daily_records_count: v.number(),
+      biweekly_records_count: v.number(),
+      harvest_records_count: v.number(),
+      total_mortality: v.number(),
+      total_feed_usage: v.number(),
+      total_feed_cost: v.number(),
+      total_harvest_weight: v.number(),
+      fcr: v.union(v.number(), v.null()),
+      growth_g_day: v.union(v.number(), v.null()),
+    }),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.export' })
 
@@ -257,7 +364,7 @@ export const exportBundle = query({
     )
 
     // Transform to client format
-    const transformDailyRecord = (r: any) => ({
+    const transformDailyRecord = (r: Doc<'dailyRecords'>) => ({
       id: r._id,
       cage_id: r.cageId,
       date: r.date,
@@ -273,7 +380,7 @@ export const exportBundle = query({
       custom: r.custom ?? {},
     })
 
-    const transformBiweeklyRecord = (r: any) => ({
+    const transformBiweeklyRecord = (r: Doc<'biweeklyRecords'>) => ({
       id: r._id,
       cage_id: r.cageId,
       date: r.date,
@@ -288,7 +395,7 @@ export const exportBundle = query({
       custom: r.custom ?? {},
     })
 
-    const transformHarvestRecord = (r: any) => ({
+    const transformHarvestRecord = (r: Doc<'harvestRecords'>) => ({
       id: r._id,
       cage_id: r.cageId,
       harvest_date: r.harvestDate,
@@ -333,12 +440,38 @@ export const exportBundle = query({
   },
 })
 
+const statusValues = v.union(
+  v.literal('active'),
+  v.literal('harvested'),
+  v.literal('harvesting'),
+  v.literal('maintenance'),
+  v.literal('fallow'),
+  v.literal('empty'),
+)
+
 export const getProductionMetrics = query({
   args: {
     cageId: v.optional(v.id('cages')),
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      cage_id: v.id('cages'),
+      cage_name: v.string(),
+      status: statusValues,
+      current_count: v.number(),
+      total_feed_kg: v.number(),
+      total_mortality: v.number(),
+      total_feed_cost: v.number(),
+      mortality_rate: v.number(),
+      feed_per_fish: v.number(),
+      cost_per_fish: v.number(),
+      growth_rate_per_day: v.number(),
+      days_of_data: v.number(),
+      biweekly_samples: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
 
@@ -410,6 +543,76 @@ export const productionReport = query({
     endDate: v.string(),
     cageIds: v.array(v.id('cages')),
   },
+  returns: v.object({
+    report_type: v.string(),
+    date_range: v.object({ start: v.string(), end: v.string() }),
+    summary: v.object({
+      cages_selected: v.number(),
+      total_feed_kg: v.number(),
+      total_feed_cost: v.number(),
+      total_mortality: v.number(),
+      biweekly_samples: v.number(),
+      harvest_events: v.number(),
+      harvest_weight_kg: v.number(),
+      avg_fcr: v.union(v.number(), v.null()),
+      avg_growth_g_day: v.union(v.number(), v.null()),
+    }),
+    by_cage: v.array(
+      v.object({
+        cage_id: v.id('cages'),
+        cage_name: v.string(),
+        status: statusValues,
+        current_count: v.number(),
+        feed_kg: v.number(),
+        feed_cost: v.number(),
+        mortality: v.number(),
+        latest_abw: v.union(v.number(), v.null()),
+        harvest_weight_kg: v.number(),
+      }),
+    ),
+    daily_rows: v.array(
+      v.object({
+        date: v.string(),
+        cage: v.string(),
+        feed_kg: v.number(),
+        feed_cost: v.number(),
+        mortality: v.number(),
+        notes: v.string(),
+      }),
+    ),
+    growth_rows: v.array(
+      v.object({
+        date: v.string(),
+        cage: v.string(),
+        batch_code: v.string(),
+        abw: v.number(),
+        fish_count: v.number(),
+        total_weight: v.number(),
+      }),
+    ),
+    mortality_rows: v.array(
+      v.object({ date: v.string(), cage: v.string(), mortality: v.number(), notes: v.string() }),
+    ),
+    financial_rows: v.array(
+      v.object({
+        date: v.string(),
+        cage: v.string(),
+        feed_kg: v.number(),
+        unit_price: v.number(),
+        feed_cost: v.number(),
+      }),
+    ),
+    harvest_rows: v.array(
+      v.object({
+        date: v.string(),
+        cage: v.string(),
+        weight_kg: v.number(),
+        abw: v.number(),
+        count: v.number(),
+        fcr: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const idSet = new Set(args.cageIds.map(String))
@@ -519,6 +722,30 @@ export const farmContextForAi = query({
     /** Client's today (YYYY-MM-DD); "last 30 days" ends here. */
     asOf: v.optional(v.string()),
   },
+  returns: v.object({
+    user: v.object({
+      email: v.optional(v.string()),
+      role: v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')),
+      name: v.optional(v.string()),
+    }),
+    cages: v.array(
+      v.object({
+        name: v.string(),
+        status: statusValues,
+        current_count: v.number(),
+        stocking_date: v.optional(v.string()),
+      }),
+    ),
+    last_30_days: v.object({
+      feed_kg: v.number(),
+      feed_cost: v.number(),
+      mortality: v.number(),
+      daily_entries: v.number(),
+    }),
+    feed_stock: v.array(
+      v.object({ name: v.string(), stock_kg: v.number(), min_kg: v.number(), low: v.boolean() }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'ai.use' })
 
@@ -639,6 +866,37 @@ export const getCagePnL = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.union(
+    v.object({
+      mortality_by_cause: v.record(v.string(), v.number()),
+      sale_count: v.number(),
+      expense_count: v.number(),
+      daily_entries: v.number(),
+      total_cost: v.number(),
+      cost_per_kg: v.union(v.number(), v.null()),
+      cost_basis_kg: v.number(),
+      net_margin: v.number(),
+      net_margin_pct: v.union(v.number(), v.null()),
+      feed_kg: v.number(),
+      feed_cost: v.number(),
+      feed_cost_list: v.number(),
+      feed_list_priced_kg: v.number(),
+      fingerling_cost: v.number(),
+      other_expenses: v.number(),
+      expenses_by_category: v.record(v.string(), v.number()),
+      mortality: v.number(),
+      harvest_kg: v.number(),
+      sold_kg: v.number(),
+      revenue: v.number(),
+      gross_margin: v.number(),
+      margin_pct: v.union(v.number(), v.null()),
+      cage_id: v.id('cages'),
+      cage_name: v.string(),
+      species: v.union(v.string(), v.null()),
+      status: statusValues,
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const cage = await ctx.db.get(args.cageId)
@@ -687,6 +945,32 @@ export const listCagePnL = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      total_cost: v.number(),
+      cost_per_kg: v.union(v.number(), v.null()),
+      cost_basis_kg: v.number(),
+      net_margin: v.number(),
+      net_margin_pct: v.union(v.number(), v.null()),
+      feed_kg: v.number(),
+      feed_cost: v.number(),
+      feed_cost_list: v.number(),
+      feed_list_priced_kg: v.number(),
+      fingerling_cost: v.number(),
+      other_expenses: v.number(),
+      expenses_by_category: v.record(v.string(), v.number()),
+      mortality: v.number(),
+      harvest_kg: v.number(),
+      sold_kg: v.number(),
+      revenue: v.number(),
+      gross_margin: v.number(),
+      margin_pct: v.union(v.number(), v.null()),
+      cage_id: v.id('cages'),
+      cage_name: v.string(),
+      species: v.union(v.string(), v.null()),
+      status: statusValues,
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
@@ -742,6 +1026,37 @@ export const listCyclePnL = query({
     locationId: v.optional(v.id('farmLocations')),
     cageId: v.optional(v.id('cages')),
   },
+  returns: v.array(
+    v.object({
+      total_cost: v.number(),
+      cost_per_kg: v.union(v.number(), v.null()),
+      cost_basis_kg: v.number(),
+      net_margin: v.number(),
+      net_margin_pct: v.union(v.number(), v.null()),
+      feed_kg: v.number(),
+      feed_cost: v.number(),
+      feed_cost_list: v.number(),
+      feed_list_priced_kg: v.number(),
+      fingerling_cost: v.number(),
+      other_expenses: v.number(),
+      expenses_by_category: v.record(v.string(), v.number()),
+      mortality: v.number(),
+      harvest_kg: v.number(),
+      sold_kg: v.number(),
+      revenue: v.number(),
+      gross_margin: v.number(),
+      margin_pct: v.union(v.number(), v.null()),
+      cycle_id: v.id('stockingHistory'),
+      batch_number: v.string(),
+      cage_id: v.id('cages'),
+      cage_name: v.string(),
+      species: v.union(v.string(), v.null()),
+      start_date: v.string(),
+      end_date: v.union(v.string(), v.null()),
+      open: v.boolean(),
+      fish_stocked: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
@@ -812,6 +1127,7 @@ export const pnlOverheads = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.object({ total: v.number(), by_category: v.record(v.string(), v.number()) }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)
@@ -859,6 +1175,17 @@ async function openOccupancies(
  */
 export const productionOverview = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    occupancies: v.number(),
+    live_fish: v.number(),
+    biomass_kg: v.number(),
+    feed_kg: v.number(),
+    feed_cost: v.number(),
+    efcr: v.union(v.number(), v.null()),
+    survival_pct: v.union(v.number(), v.null()),
+    avg_sgr_pct_day: v.union(v.number(), v.null()),
+    updated_at: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const rows = await openOccupancies(ctx, user, args.locationId)
