@@ -4348,6 +4348,74 @@
         "task": "Task for {who}",
         "notify": "{channels} to {who}"
       }
+    },
+    "global": {
+      "crumb": "Display & currency"
+    },
+    "admin": {
+      "regTitle": "Company registrations",
+      "regCrumb": "Platform · Tenant onboarding",
+      "globalSettings": "Global settings",
+      "kpi": {
+        "tenants": "Tenants",
+        "pending": "Pending",
+        "rejected": "Rejected",
+        "oldest": {
+          "one": "oldest {count} day",
+          "other": "oldest {count} days"
+        }
+      },
+      "queue": "Queue",
+      "search": "Search companies",
+      "emptyPending": "No registrations waiting for review.",
+      "empty": "No companies here.",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "col": {
+        "company": "Company",
+        "code": "Code",
+        "sent": "Sent",
+        "actions": "Actions",
+        "contact": "Contact",
+        "users": "Users",
+        "created": "Created",
+        "status": "Status"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveNamed": "Approve {name}",
+      "rejectNamed": "Reject {name}",
+      "approved": "{name} approved",
+      "approveFailed": "Could not approve the company",
+      "rejected": "Registration rejected",
+      "rejectFailed": "Could not reject the registration",
+      "rejectPrompt": "Why are you rejecting {name}? The owner sees this reason.",
+      "noSubmitter": "This registration has no submitting user, so it can't be approved. Ask them to register again.",
+      "detail": {
+        "email": "Contact email",
+        "phone": "Phone",
+        "address": "Address",
+        "abbreviation": "Short name",
+        "code": "Company code",
+        "approvedAt": "Approved",
+        "reason": "Rejection reason"
+      },
+      "tenants": {
+        "title": "Tenants",
+        "crumb": "Platform · All tenants",
+        "description": "Organisations on the platform. New organisations register themselves and are approved under Company registrations.",
+        "all": "All",
+        "actAs": "Act as…",
+        "remove": "Remove",
+        "removeNamed": "Remove {name}",
+        "removeTitle": "Remove company?",
+        "removeMessage": "Remove {name} from the active company list? The company will be marked rejected. Tenant data is not permanently deleted.",
+        "removed": "Company removed",
+        "removeFailed": "Could not remove the company"
+      }
     }
   },
   "country": {

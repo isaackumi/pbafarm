@@ -4348,6 +4348,74 @@
         "task": "Tâche pour {who}",
         "notify": "{channels} à {who}"
       }
+    },
+    "global": {
+      "crumb": "Affichage et devise"
+    },
+    "admin": {
+      "regTitle": "Inscriptions d'entreprises",
+      "regCrumb": "Plateforme · Intégration des clients",
+      "globalSettings": "Paramètres globaux",
+      "kpi": {
+        "tenants": "Clients",
+        "pending": "En attente",
+        "rejected": "Refusées",
+        "oldest": {
+          "one": "la plus ancienne : {count} jour",
+          "other": "la plus ancienne : {count} jours"
+        }
+      },
+      "queue": "File",
+      "search": "Rechercher des entreprises",
+      "emptyPending": "Aucune inscription à examiner.",
+      "empty": "Aucune entreprise ici.",
+      "status": {
+        "pending": "En attente",
+        "approved": "Approuvée",
+        "rejected": "Refusée"
+      },
+      "col": {
+        "company": "Entreprise",
+        "code": "Code",
+        "sent": "Envoyée",
+        "actions": "Actions",
+        "contact": "Contact",
+        "users": "Utilisateurs",
+        "created": "Créée",
+        "status": "Statut"
+      },
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "approveNamed": "Approuver {name}",
+      "rejectNamed": "Refuser {name}",
+      "approved": "{name} approuvée",
+      "approveFailed": "Impossible d'approuver l'entreprise",
+      "rejected": "Inscription refusée",
+      "rejectFailed": "Impossible de refuser l'inscription",
+      "rejectPrompt": "Pourquoi refusez-vous {name} ? Le propriétaire verra ce motif.",
+      "noSubmitter": "Cette inscription n'a pas d'utilisateur demandeur et ne peut pas être approuvée. Demandez-lui de s'inscrire à nouveau.",
+      "detail": {
+        "email": "E-mail de contact",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "abbreviation": "Nom court",
+        "code": "Code entreprise",
+        "approvedAt": "Approuvée",
+        "reason": "Motif du refus"
+      },
+      "tenants": {
+        "title": "Clients",
+        "crumb": "Plateforme · Tous les clients",
+        "description": "Les organisations de la plateforme. Les nouvelles organisations s'inscrivent elles-mêmes et sont approuvées dans Inscriptions d'entreprises.",
+        "all": "Toutes",
+        "actAs": "Agir en tant que…",
+        "remove": "Retirer",
+        "removeNamed": "Retirer {name}",
+        "removeTitle": "Retirer l'entreprise ?",
+        "removeMessage": "Retirer {name} de la liste des entreprises actives ? L'entreprise sera marquée refusée. Les données ne sont pas supprimées définitivement.",
+        "removed": "Entreprise retirée",
+        "removeFailed": "Impossible de retirer l'entreprise"
+      }
     }
   },
   "country": {
