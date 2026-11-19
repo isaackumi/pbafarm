@@ -10,6 +10,12 @@ export const TIME_RANGES = ['7d', '30d', '90d', '1y'] as const
 /** Home greeting header: the plain page title, or the "Sky & lake" panel (Paper L · 01 Home). */
 export const HOME_HEADERS = ['plain', 'sky'] as const
 export type HomeHeader = (typeof HOME_HEADERS)[number]
+
+/** The Home header to show: the user's choice, else "Sky & lake" in light and plain in dark. */
+export function effectiveHomeHeader(choice: unknown, theme: string | undefined): HomeHeader {
+  if (choice === 'plain' || choice === 'sky') return choice
+  return theme === 'light' ? 'sky' : 'plain'
+}
 /** The phone bottom bar holds at most this many shortcuts plus "More" (UX-004). */
 export const MAX_MOBILE_SHORTCUTS = 5
 
@@ -26,8 +32,11 @@ export type DashboardPrefs = {
   showCharts: boolean
   showMetrics: boolean
   showStockings: boolean
-  /** Saved rows from before this field read as 'plain'. */
-  homeHeader: HomeHeader
+  /**
+   * Unset = follow the theme (see effectiveHomeHeader): "Sky & lake" in the
+   * light theme, plain in the dark theme. Set only when the user picks one.
+   */
+  homeHeader?: HomeHeader
 }
 
 export type Preferences = {
@@ -56,7 +65,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
     showCharts: true,
     showMetrics: true,
     showStockings: true,
-    homeHeader: 'plain',
   },
   mobileShortcuts: null,
 }
@@ -113,7 +121,7 @@ export function cleanPreferences(input: unknown): Partial<Preferences> {
         showCharts: d.showCharts,
         showMetrics: d.showMetrics,
         showStockings: d.showStockings,
-        homeHeader: (d.homeHeader as HomeHeader | undefined) ?? 'plain',
+        ...(d.homeHeader === undefined ? {} : { homeHeader: d.homeHeader as HomeHeader }),
       }
     }
   }

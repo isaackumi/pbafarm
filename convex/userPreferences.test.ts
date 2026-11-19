@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api } from './_generated/api'
 import { anonymizeUser } from './governance'
-import { DEFAULT_PREFERENCES, cleanPreferences, invalidPreferenceFields, resolvePreferences } from './lib/userPreferences'
+import { DEFAULT_PREFERENCES, cleanPreferences, invalidPreferenceFields, resolvePreferences, effectiveHomeHeader } from './lib/userPreferences'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -114,10 +114,16 @@ describe('preference helpers', () => {
   })
 
   test('Home header defaults to plain, also for rows saved before it existed', () => {
-    expect(DEFAULT_PREFERENCES.dashboard.homeHeader).toBe('plain')
-    expect(resolvePreferences(null).dashboard.homeHeader).toBe('plain')
+    // Unset = follow the theme: Sky & lake in light, plain in dark.
+    expect(DEFAULT_PREFERENCES.dashboard.homeHeader).toBeUndefined()
+    expect(resolvePreferences(null).dashboard.homeHeader).toBeUndefined()
+    expect(effectiveHomeHeader(undefined, 'light')).toBe('sky')
+    expect(effectiveHomeHeader(undefined, 'dark')).toBe('plain')
+    expect(effectiveHomeHeader('plain', 'light')).toBe('plain')
+    expect(effectiveHomeHeader('sky', 'dark')).toBe('sky')
+    expect(effectiveHomeHeader('neon', 'light')).toBe('sky')
     const old = { defaultTimeRange: '7d', showCharts: false, showMetrics: true, showStockings: true }
-    expect(resolvePreferences({ dashboard: old }).dashboard).toEqual({ ...old, homeHeader: 'plain' })
+    expect(resolvePreferences({ dashboard: old }).dashboard).toEqual(old)
     expect(resolvePreferences({ dashboard: { ...old, homeHeader: 'sky' } }).dashboard.homeHeader).toBe('sky')
   })
 
@@ -128,6 +134,6 @@ describe('preference helpers', () => {
     expect(invalidPreferenceFields({ dashboard: { ...dashboard, homeHeader: 1 } })).toEqual(['dashboard'])
     expect(cleanPreferences({ dashboard: { ...dashboard, homeHeader: 'neon' } })).toEqual({})
     // A bad value falls back to the saved/default style instead of breaking Home.
-    expect(resolvePreferences({ dashboard: { ...dashboard, homeHeader: 'neon' } }).dashboard.homeHeader).toBe('plain')
+    expect(resolvePreferences({ dashboard: { ...dashboard, homeHeader: 'neon' } }).dashboard.homeHeader).toBeUndefined()
   })
 })
