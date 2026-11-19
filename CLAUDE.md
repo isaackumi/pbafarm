@@ -25,6 +25,14 @@ The backend uses [Effect](https://effect.website/) (`effect` 4.1.x) **incrementa
 - **Tests:** plain vitest (`Effect.runPromise(Effect.result(...))`) with scripted fakes for success, 4xx, 5xx-retry, timeout and decode failure.
 - Checklist for new code: doc 19 §7.
 
+## Security audits (security-audit skill)
+
+The Cloudflare `security-audit` skill is installed in `.agents/skills/security-audit` (symlinked into `.claude/skills`).
+
+- **Use it** for any security audit, vulnerability hunt, "is this safe/secure" review, and before merging changes that touch auth, permissions/tenant isolation, file uploads/storage, webhooks, public API/HTTP actions, the AI proxy, payments/SMS, or Cloudflare/Vercel/Convex deployment config.
+- Follow its phases (recon → coverage-led hunting → independent validation → `findings.json` validated by `validate-findings.cjs` → verification → report). Write audit artifacts under `docs/security/audits/<date>/`, never secrets.
+- Only `confirmed` findings become fixes; `needs_validation` items go to `docs/project-management/OPEN-QUESTIONS.md` or the tracker.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
