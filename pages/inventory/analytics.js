@@ -5,6 +5,7 @@ import Layout from '../../components/Layout'
 import { PageHeader, StatCard, Select, LoadingState } from '../../components/ui'
 import { useMoney } from '../../lib/money'
 import { api } from '../../convex/_generated/api'
+import { useLocation } from '../../contexts/LocationContext'
 import {
   LineChart,
   Line,
@@ -48,10 +49,13 @@ function InventoryAnalytics() {
     else start.setDate(start.getDate() - 30)
     return { dateFrom: start.getTime(), dateTo: Date.now() }
   }, [timeRange])
-  const itemsResult = useQuery(api.inventory.listStockLevels, {})
+  // Stock and movements at the header site (INV-901), like the overview page.
+  const { activeLocationId, locationArgs } = useLocation()
+  const itemsResult = useQuery(api.inventory.listStockLevels, locationArgs)
   const transactionsResult = useQuery(api.inventory.listTransactions, {
     ...range,
     limit: 500,
+    ...locationArgs,
   })
   const loading = itemsResult === undefined || transactionsResult === undefined
   const inventoryItems = itemsResult || []
@@ -62,9 +66,12 @@ function InventoryAnalytics() {
   const qtyKg = (item) => Number(item.quantity_kg ?? item.quantity ?? 0)
 
   const processTransactionData = (data) => {
-    // Transfer legs (INV-002) move stock between sites; company-wide they net to zero.
+    // Transfer legs (INV-002) move stock between sites; company-wide they net
+    // to zero, but at one site they are real movements in or out.
     const moves = (data || []).filter(
-      (t) => t.transaction_type !== 'transfer_out' && t.transaction_type !== 'transfer_in',
+      (t) =>
+        activeLocationId ||
+        (t.transaction_type !== 'transfer_out' && t.transaction_type !== 'transfer_in'),
     )
     const grouped = moves.reduce((acc, item) => {
       const date = new Date(item.transaction_date).toLocaleDateString()

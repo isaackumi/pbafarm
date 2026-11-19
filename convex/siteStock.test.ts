@@ -89,3 +89,54 @@ describe('feed stock is checked per site', () => {
     expect((await t.run((ctx) => ctx.db.get(feedTypeId)))?.currentStock).toBe(1000)
   })
 })
+
+describe('INV-901: feed and inventory figures equal the ledger for the selected site', () => {
+  test('stock levels per site and company-wide match the ledger after usage and a transfer', async () => {
+    const { t, as, cageA, cageB, feedTypeId, siteA, siteB } = await setup()
+    // The seeded lot as its opening ledger row at Site A.
+    await t.run(async (ctx) => {
+      const feedType = await ctx.db.get(feedTypeId)
+      await ctx.db.insert('feedInventoryTransactions', {
+        feedTypeId, transactionType: 'purchase', quantityKg: 1000, transactionDate: Date.now(),
+        locationId: siteA, companyId: feedType!.companyId,
+      } as any)
+    })
+    await as.mutation(api.dailyRecords.create, daily(cageA, feedTypeId, 100))
+    await as.mutation(api.inventory.createTransfer, {
+      feedTypeId, quantityKg: 300, fromLocationId: siteA, toLocationId: siteB,
+    })
+    await as.mutation(api.dailyRecords.create, daily(cageB, feedTypeId, 50))
+
+    const tally = await as.query(api.inventory.siteLedgerTally, { feedTypeId })
+    const ledgerAt = (site: any) => tally.find((r: any) => r.location_id === site)!.ledger_kg
+    expect(tally.every((r: any) => r.ok)).toBe(true)
+    const [a] = await as.query(api.inventory.listStockLevels, { locationId: siteA })
+    const [b] = await as.query(api.inventory.listStockLevels, { locationId: siteB })
+    expect(a.current_stock).toBe(600)
+    expect(a.current_stock).toBe(ledgerAt(siteA))
+    expect(b.current_stock).toBe(250)
+    expect(b.current_stock).toBe(ledgerAt(siteB))
+    expect(b.stock_value).toBe(2500)
+
+    const [all] = await as.query(api.inventory.listStockLevels, {})
+    const [company] = await as.query(api.inventory.stockTally, { feedTypeId })
+    expect(all.current_stock).toBe(850)
+    expect(company).toMatchObject({ ledger_sum: 850, ok: true })
+
+    // The site's movement list holds only that site's rows, transfer leg included.
+    const movesB = await as.query(api.inventory.listTransactions, { locationId: siteB })
+    expect(movesB.reduce((s: number, r: any) => s + r.quantity_kg, 0)).toBe(ledgerAt(siteB))
+  })
+})
+
+describe('INV-902: existing entries at a site without stock', () => {
+  test('raising the feed on an existing record fails with a clear message and leaves it unchanged', async () => {
+    const { t, as, cageB, feedTypeId } = await setup()
+    const id = await as.mutation(api.dailyRecords.create, daily(cageB, feedTypeId, 0))
+    await expect(
+      as.mutation(api.dailyRecords.update, { id, patch: { feedAmount: 100, feedTypeId } }),
+    ).rejects.toThrow(/Not enough Grower at Site B: 0 kg there, 100 kg needed/)
+    expect((await t.run((ctx) => ctx.db.get(id)))?.feedAmount).toBe(0)
+    expect((await t.run((ctx) => ctx.db.get(feedTypeId)))?.currentStock).toBe(1000)
+  })
+})

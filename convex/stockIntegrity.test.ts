@@ -139,6 +139,19 @@ describe('S2: transfer into an active cage, linked top-up approved directly', ()
     expect((await getDoc(t, b.cageId)).currentCount).toBe(5000)
   })
 
+  test('approving the transfer a second time does not move the fish again', async () => {
+    const { t, as, a, b, emptyId } = await setup()
+    const intoActive = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, b.cageId, 2000))
+    const intoEmpty = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, emptyId, 1000))
+    for (const id of [intoActive, intoEmpty]) {
+      await as.mutation(api.fishTransfers.approveFishTransfer, { id })
+      await as.mutation(api.fishTransfers.approveFishTransfer, { id }).catch(() => undefined)
+    }
+    expect((await getDoc(t, a.cageId)).currentCount).toBe(7000)
+    expect((await getDoc(t, b.cageId)).currentCount).toBe(7000)
+    expect((await getDoc(t, emptyId)).currentCount).toBe(1000)
+  })
+
   test('the top-up detail query says which transfer it belongs to', async () => {
     const { t, as, a, b } = await setup()
     const transferId = await as.mutation(api.fishTransfers.createFishTransfer, transfer(a.cageId, b.cageId, 2000))
@@ -505,6 +518,28 @@ describe('S13: ledger reversals', () => {
   })
 })
 
+describe('S13 (PROD-000i): the stock tally stays in balance', () => {
+  test('after a reversal and a refused second reversal, stock = ledger', async () => {
+    const { t, as, a, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    // The seeded 1,000 kg as an opening ledger row, so the tally starts balanced.
+    await t.run((ctx: any) =>
+      ctx.db.insert('feedInventoryTransactions', {
+        feedTypeId, transactionType: 'purchase', quantityKg: 1000, transactionDate: Date.now(), companyId,
+      }),
+    )
+    expect((await as.query(api.inventory.stockTally, { feedTypeId }))[0].ok).toBe(true)
+    await as.mutation(api.feed.createIssue, { feedTypeId, cageId: a.cageId, quantity: 100, usageDate: '2026-11-10' })
+    const issue = (await ledger(t, feedTypeId)).find((r: any) => r.transactionType === 'issue')
+    await as.mutation(api.inventory.reverseTransaction, { transactionId: issue._id, reason: 'Wrong cage' })
+    await expect(
+      as.mutation(api.inventory.reverseTransaction, { transactionId: issue._id, reason: 'Again' }),
+    ).rejects.toThrow(/already been reversed/)
+    const [tally] = await as.query(api.inventory.stockTally, { feedTypeId })
+    expect(tally).toMatchObject({ current_stock: 1000, ledger_sum: 1000, ok: true })
+  })
+})
+
 describe('INV-003: reversals linked to their source records', () => {
   test('reversing an issue voids its usage row, so listUsage matches the ledger', async () => {
     const { t, as, a, companyId } = await setup()
@@ -576,6 +611,29 @@ describe('INV-003: reversals linked to their source records', () => {
     await as.mutation(api.dailyRecords.remove, { id: recordId })
     const left: any[] = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
     expect(left.map((u: any) => u._id)).toEqual([otherId])
+  })
+  test('a legacy usage row without a record link is removed by cage and date', async () => {
+    const { t, as, a, b, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    const { recordId, mine, otherDay, otherCage } = await t.run(async (ctx: any) => {
+      const recordId = await ctx.db.insert('dailyRecords', {
+        cageId: a.cageId, date: '2026-11-10', feedAmount: 0, feedPrice: 0, feedCost: 0, mortality: 0, companyId,
+      })
+      const usage = (cageId: any, usageDate: string) =>
+        ctx.db.insert('feedUsage', {
+          feedTypeId, cageId, quantity: 20, usageDate, source: 'daily', companyId, updatedAt: Date.now(),
+        })
+      return {
+        recordId,
+        mine: await usage(a.cageId, '2026-11-10'),
+        otherDay: await usage(a.cageId, '2026-11-09'),
+        otherCage: await usage(b.cageId, '2026-11-10'),
+      }
+    })
+    await as.mutation(api.dailyRecords.remove, { id: recordId })
+    const left: any[] = await t.run((ctx: any) => ctx.db.query('feedUsage').collect())
+    expect(left.map((u: any) => u._id).sort()).toEqual([otherDay, otherCage].sort())
+    expect(left.some((u: any) => u._id === mine)).toBe(false)
   })
 })
 
