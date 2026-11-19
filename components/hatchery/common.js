@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Pill as UiPill } from '../ui'
 import { useT } from '../../lib/i18n/context'
+import { usePermissions } from '../../hooks/usePermission'
 
 export const fmt = (v, dp = 0) =>
   v == null || v === '' ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -46,7 +47,7 @@ export const LIVE_FEED_UNIT = { million: 'million', L: 'L', g: 'g' }
 const TABS = [
   { href: '/hatchery', key: 'board' },
   { href: '/hatchery/broodstock', key: 'broodstock' },
-  { href: '/hatchery/spawning', key: 'spawning' },
+  { href: '/hatchery/spawning', key: 'spawning', permission: 'hatchery.spawning.record' },
   { href: '/hatchery/larval', key: 'larval' },
   { href: '/hatchery/live-feed', key: 'liveFeed' },
 ]
@@ -68,10 +69,11 @@ export const label = (t, group, value) => t.or(`hatcheryPage.${group}.${value}`,
 export function HatcheryNav() {
   const t = useT()
   const { pathname } = useRouter()
+  const { can } = usePermissions()
   return (
     <nav aria-label={t('hatcheryPage.nav')} className="overflow-x-auto border-b border-line">
       <ul className="flex min-w-max gap-[28px]">
-        {TABS.map((tab) => {
+        {TABS.filter((tab) => can(tab.permission)).map((tab) => {
           const active = tab.href === '/hatchery' ? pathname === tab.href : pathname.startsWith(tab.href)
           return (
             <li key={tab.href}>

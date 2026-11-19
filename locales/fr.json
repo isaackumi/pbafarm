@@ -1016,7 +1016,10 @@
         "one": "Ponte enregistrée ; {count} lot d'incubation démarré",
         "other": "Ponte enregistrée ; {count} lots d'incubation démarrés"
       },
-      "saveFailed": "Impossible d'enregistrer la ponte"
+      "saveFailed": "Impossible d'enregistrer la ponte",
+      "noAccess": "Vous ne pouvez pas enregistrer de pontes",
+      "noAccessHint": "Demandez à un administrateur la permission de ponte de l'écloserie.",
+      "toBoard": "Retour au tableau"
     },
     "larval": {
       "title": "Larves et alevins",

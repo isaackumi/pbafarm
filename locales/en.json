@@ -1016,7 +1016,10 @@
         "one": "Spawning saved; {count} incubation lot started",
         "other": "Spawning saved; {count} incubation lots started"
       },
-      "saveFailed": "Could not save the spawning"
+      "saveFailed": "Could not save the spawning",
+      "noAccess": "You can't record spawnings",
+      "noAccessHint": "Ask an admin for the hatchery spawning permission.",
+      "toBoard": "Back to the board"
     },
     "larval": {
       "title": "Larvae & fingerlings",

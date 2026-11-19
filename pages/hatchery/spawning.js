@@ -6,6 +6,7 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import { EmptyState, Field, GhostButton, GradientButton, Input, Select, Textarea } from '../../components/ui'
 import { useT } from '../../lib/i18n/context'
+import { usePermissions } from '../../hooks/usePermission'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -17,7 +18,7 @@ const STEPS = ['broodstock', 'spawning', 'eggs', 'incubation']
 
 export default function SpawningPage() {
   return (
-    <ProtectedRoute permission="hatchery.spawning.record">
+    <ProtectedRoute>
       <SpawningWizard />
     </ProtectedRoute>
   )
@@ -25,6 +26,7 @@ export default function SpawningPage() {
 
 function SpawningWizard() {
   const t = useT()
+  const { can, loading: permLoading } = usePermissions()
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
@@ -105,6 +107,19 @@ function SpawningWizard() {
   }
 
   const setLot = (i, k) => (e) => setLots((p) => p.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
+
+  if (!permLoading && !can('hatchery.spawning.record')) {
+    return (
+      <Layout title={t('hatcheryPage.spawn.title')} eyebrow={t('hatcheryPage.spawn.eyebrow')}>
+        <HatcheryNav />
+        <EmptyState
+          title={t('hatcheryPage.spawn.noAccess')}
+          description={t('hatcheryPage.spawn.noAccessHint')}
+          action={<GhostButton href="/hatchery">{t('hatcheryPage.spawn.toBoard')}</GhostButton>}
+        />
+      </Layout>
+    )
+  }
 
   return (
     <Layout title={t('hatcheryPage.spawn.title')} eyebrow={t('hatcheryPage.spawn.eyebrow')}>
