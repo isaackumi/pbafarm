@@ -1,6 +1,6 @@
 {
-  "name": "PBA Farm",
-  "short_name": "PBA Farm",
+  "name": "Anowa",
+  "short_name": "Anowa",
   "description": "Anowa: daily feed, mortality, growth and harvest records for the farm",
   "start_url": "/daily-entry",
   "scope": "/",
