@@ -907,6 +907,212 @@
       "saveFailed": "Impossible d’enregistrer le seuil"
     }
   },
+  "tracePage": {
+    "lotsTitle": "Lots de récolte",
+    "eyebrowLots": "Traçabilité",
+    "eyebrowLot": "Lot de récolte",
+    "reportTitle": "Rapport de traçabilité",
+    "lotTitle": "Lot {code}",
+    "loadingReport": "Chargement du rapport de traçabilité…",
+    "loadingLots": "Chargement des lots…",
+    "loadingTrace": "Chargement de la traçabilité…",
+    "notFound": "Lot introuvable",
+    "notFoundHint": "Il appartient peut-être à une autre entreprise, ou le lien est incorrect.",
+    "back": "Retour aux lots de récolte",
+    "addDispatch": "Ajouter une expédition",
+    "exportRecall": "Exporter le dossier de rappel",
+    "print": "Imprimer",
+    "kpi": {
+      "weight": "Poids",
+      "fish": "Poissons",
+      "dispatched": "Expédié",
+      "withdrawal": "Délai d'attente",
+      "lots": "Lots",
+      "notDispatched": "Pas encore expédié",
+      "unlotted": "Récoltes à lotir"
+    },
+    "grade": "calibre {grade}",
+    "avgG": "moy. {g} g",
+    "dispatchCount": {
+      "one": "{count} expédition",
+      "other": "{count} expéditions"
+    },
+    "openCount": {
+      "one": "{count} ouvert",
+      "other": "{count} ouverts"
+    },
+    "harvestsSuffix": "avec du poids hors lot",
+    "clear": "Levé",
+    "clearedOn": "Levé le {date}",
+    "since": "depuis le {date}",
+    "overridden": "Dérogation : {reason}",
+    "overrideShort": "Dérogation",
+    "running": "En cours à la récolte",
+    "runningShort": "En cours",
+    "farmToCustomer": "De la ferme au client",
+    "batch": "Lot d'élevage {batch}",
+    "noBatch": "Cette récolte n'est liée à aucun lot d'élevage : son origine, son alimentation et ses traitements ne peuvent pas être tracés.",
+    "batchTraceHint": "Origine, alimentation, traitements et destination des poissons.",
+    "parents": {
+      "one": "Inclut {count} lot parent : les poissons gardent leur historique.",
+      "other": "Inclut {count} lots parents : les poissons gardent leur historique."
+    },
+    "noHistory": "Aucune origine, aucun mouvement ni traitement enregistré.",
+    "noLotsYet": "Aucun lot de récolte pour l'instant.",
+    "createLot": "En créer un après une récolte →",
+    "origin": {
+      "stocking": "Empoissonné",
+      "transfer_split": "Séparé par un transfert",
+      "grading_split": "Trié depuis un lot parent",
+      "merge": "Formé par une fusion",
+      "hatchery": "Écloserie",
+      "legacy": "Importé"
+    },
+    "move": {
+      "stocked": "Empoissonné",
+      "topped_up": "Complété",
+      "transfer_in": "Entrée",
+      "transfer_out": "Sortie",
+      "graded": "Trié vers",
+      "merged": "Fusionné dans",
+      "harvested": "Récolté"
+    },
+    "step": {
+      "treatment": "Traitement",
+      "growout": {
+        "one": "Grossissement · {count} jour",
+        "other": "Grossissement · {count} jours"
+      },
+      "harvest": "Récolte",
+      "dispatch": "Expédition",
+      "lot": "Lot de récolte"
+    },
+    "fishN": "{n} poissons",
+    "fishAt": "{n} poissons à {g} g",
+    "with": "avec {name}",
+    "withdrawalDays": "délai d'attente de {n} jours",
+    "withdrawalUntil": "délai d'attente jusqu'au {date}",
+    "feedKg": "Aliment {kg} kg",
+    "noFeed": "Aucun aliment avec un type enregistré",
+    "feedLots": "Lots d'aliment",
+    "feedLotsHint": "Premier entré, premier sorti",
+    "noLotNumber": "Sans numéro de lot",
+    "noPurchases": "Aucun achat de cet aliment enregistré.",
+    "dispatches": "Expéditions",
+    "notDispatched": "Pas encore expédié.",
+    "complianceChecks": "Contrôles de conformité",
+    "check": {
+      "withdrawal": "Délai d'attente",
+      "coldChain": "Chaîne du froid",
+      "remaining": "Stock restant"
+    },
+    "notRecorded": "Non enregistré",
+    "allDispatched": "Tout expédié",
+    "documents": "Documents",
+    "documentsHint": "Certificats sanitaires, résultats de laboratoire et bons de livraison de ce lot.",
+    "lotsTable": "Lots",
+    "filter": "Statut du lot",
+    "tab": {
+      "all": "Tous",
+      "open": "En stock",
+      "dispatched": "Expédiés"
+    },
+    "search": "Rechercher un lot, une cage, un calibre ou une destination",
+    "emptyLots": "Aucun lot de récolte pour l'instant. Enregistrez une récolte, puis divisez-la en lots pour que chaque vente remonte à sa cage, son aliment et ses traitements.",
+    "noMatch": "Aucun lot ne correspond à ces filtres.",
+    "col": {
+      "lot": "Lot",
+      "harvested": "Récolté",
+      "cage": "Cage",
+      "weight": "Poids",
+      "dispatched": "Expédié",
+      "status": "Statut"
+    },
+    "status": {
+      "open": "En stock",
+      "partial": "Partiellement expédié",
+      "dispatched": "Expédié"
+    },
+    "newLot": {
+      "action": "Nouveau lot",
+      "title": "Nouveau lot de récolte",
+      "description": "Chaque lot est une partie traçable d'une récolte.",
+      "harvest": "Récolte",
+      "selectHarvest": "Sélectionnez une récolte",
+      "harvestOption": "{date} · {cage} · {kg} kg hors lot",
+      "weight": "Poids (kg)",
+      "upTo": "Jusqu'à {kg} kg",
+      "fishCount": "Nombre de poissons",
+      "grade": "Calibre",
+      "gradeHint": "Par exemple Reg, S1 ou Eco",
+      "destination": "Destination",
+      "destinationHint": "Marché, transformateur ou chambre froide",
+      "code": "Code du lot",
+      "codeHint": "Laissez vide pour le numéroter d'après le lot d'élevage et la date de récolte.",
+      "automatic": "Automatique",
+      "submit": "Créer le lot",
+      "pickHarvest": "Choisissez une récolte",
+      "enterWeight": "Saisissez le poids du lot",
+      "created": "Lot {code} créé",
+      "failed": "Impossible de créer le lot"
+    },
+    "dispatch": {
+      "title": "Expédier {code}",
+      "left": "{kg} kg restants",
+      "date": "Date",
+      "weight": "Poids (kg)",
+      "customer": "Client",
+      "otherBuyer": "Autre acheteur…",
+      "buyerName": "Nom de l'acheteur",
+      "vehicle": "Véhicule",
+      "vehicleHint": "Numéro d'immatriculation",
+      "driver": "Chauffeur",
+      "temperature": "Température au chargement (°C)",
+      "overrideReason": "Motif de la dérogation",
+      "overrideHint": "Conservé dans le journal d'audit",
+      "askAdmin": "Demandez à un administrateur d'enregistrer cette expédition.",
+      "submit": "Enregistrer l'expédition",
+      "saved": "Expédition enregistrée",
+      "failed": "Impossible d'enregistrer l'expédition"
+    },
+    "history": {
+      "title": "Historique des lots",
+      "hint": "Chaque changement des poissons de cette cage, d'après le registre de stock.",
+      "countOn": "Effectif au",
+      "loading": "Chargement de l'historique…",
+      "emptyTitle": "Pas encore d'historique dans le registre",
+      "emptyHint": "Les mouvements de stock apparaissent ici dès l'empoissonnement, ou après la reprise des anciens cycles.",
+      "fishOn": "Poissons au {date}",
+      "biomass": "Biomasse à cette date",
+      "ledgerToday": "Registre aujourd'hui",
+      "matches": "conforme à la cage",
+      "cageShows": "la cage indique {n}",
+      "batches": "Lots dans cette cage",
+      "since": "depuis le {date}, {n} poissons",
+      "to": "vers {cage}",
+      "from": "depuis {cage}",
+      "reversed": "annulé"
+    },
+    "inspection": {
+      "label": "Inspections et maintenance",
+      "empty": "Rien d'enregistré pour l'instant.",
+      "faults": "Défauts : {list}",
+      "nextDue": "Prochaine échéance le {date}",
+      "kind": {
+        "net_inspection": "Inspection du filet",
+        "maintenance": "Maintenance",
+        "repair": "Réparation",
+        "cleaning": "Nettoyage",
+        "calibration": "Étalonnage",
+        "inspection": "Inspection"
+      },
+      "result": {
+        "ok": "OK",
+        "needs_attention": "À surveiller",
+        "failed": "Échec"
+      }
+    }
+  },
   "ui": {
     "farmHealth": "Santé de la ferme",
     "relatedPages": "Pages associées",

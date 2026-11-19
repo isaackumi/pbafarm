@@ -907,6 +907,212 @@
       "saveFailed": "Could not save the threshold"
     }
   },
+  "tracePage": {
+    "lotsTitle": "Harvest lots",
+    "eyebrowLots": "Traceability",
+    "eyebrowLot": "Harvest lot",
+    "reportTitle": "Trace report",
+    "lotTitle": "Lot {code}",
+    "loadingReport": "Loading trace report…",
+    "loadingLots": "Loading lots…",
+    "loadingTrace": "Loading trace…",
+    "notFound": "Lot not found",
+    "notFoundHint": "It may belong to another company, or the link is wrong.",
+    "back": "Back to harvest lots",
+    "addDispatch": "Add dispatch",
+    "exportRecall": "Export recall pack",
+    "print": "Print",
+    "kpi": {
+      "weight": "Weight",
+      "fish": "Fish",
+      "dispatched": "Dispatched",
+      "withdrawal": "Withdrawal",
+      "lots": "Lots",
+      "notDispatched": "Not yet dispatched",
+      "unlotted": "Harvests to lot"
+    },
+    "grade": "grade {grade}",
+    "avgG": "avg {g} g",
+    "dispatchCount": {
+      "one": "{count} dispatch",
+      "other": "{count} dispatches"
+    },
+    "openCount": {
+      "one": "{count} open",
+      "other": "{count} open"
+    },
+    "harvestsSuffix": "with weight not in a lot",
+    "clear": "Clear",
+    "clearedOn": "Cleared {date}",
+    "since": "since {date}",
+    "overridden": "Overridden: {reason}",
+    "overrideShort": "Overridden",
+    "running": "Running at harvest",
+    "runningShort": "Running",
+    "farmToCustomer": "Farm to customer",
+    "batch": "Batch {batch}",
+    "noBatch": "This harvest is not linked to a batch, so its origin, feed and treatments cannot be traced.",
+    "batchTraceHint": "Origin, feed, treatments and where the fish went.",
+    "parents": {
+      "one": "Includes {count} parent batch: fish carry their history with them.",
+      "other": "Includes {count} parent batches: fish carry their history with them."
+    },
+    "noHistory": "No origin, movements or treatments on record.",
+    "noLotsYet": "No harvest lots yet.",
+    "createLot": "Create one after a harvest →",
+    "origin": {
+      "stocking": "Stocked",
+      "transfer_split": "Split off by a transfer",
+      "grading_split": "Graded from a parent batch",
+      "merge": "Formed by a merge",
+      "hatchery": "Hatchery",
+      "legacy": "Imported"
+    },
+    "move": {
+      "stocked": "Stocked",
+      "topped_up": "Topped up",
+      "transfer_in": "Moved in",
+      "transfer_out": "Moved out",
+      "graded": "Graded into",
+      "merged": "Merged into",
+      "harvested": "Harvested"
+    },
+    "step": {
+      "treatment": "Treatment",
+      "growout": {
+        "one": "Grow-out · {count} day",
+        "other": "Grow-out · {count} days"
+      },
+      "harvest": "Harvest",
+      "dispatch": "Dispatch",
+      "lot": "Harvest lot"
+    },
+    "fishN": "{n} fish",
+    "fishAt": "{n} fish @ {g} g",
+    "with": "with {name}",
+    "withdrawalDays": "{n}-day withdrawal",
+    "withdrawalUntil": "withdrawal until {date}",
+    "feedKg": "Feed {kg} kg",
+    "noFeed": "No feed with a feed type on record",
+    "feedLots": "Feed lots",
+    "feedLotsHint": "Matched first in, first out",
+    "noLotNumber": "No lot number",
+    "noPurchases": "No purchases of this feed on record.",
+    "dispatches": "Dispatches",
+    "notDispatched": "Not dispatched yet.",
+    "complianceChecks": "Compliance checks",
+    "check": {
+      "withdrawal": "Withdrawal period",
+      "coldChain": "Cold chain",
+      "remaining": "Remaining stock"
+    },
+    "notRecorded": "Not recorded",
+    "allDispatched": "All dispatched",
+    "documents": "Documents",
+    "documentsHint": "Health certificates, lab results and delivery notes for this lot.",
+    "lotsTable": "Lots",
+    "filter": "Lot status",
+    "tab": {
+      "all": "All",
+      "open": "In stock",
+      "dispatched": "Dispatched"
+    },
+    "search": "Search lot, cage, grade or destination",
+    "emptyLots": "No harvest lots yet. Record a harvest, then split it into lots so every sale can be traced back to its cage, feed and treatments.",
+    "noMatch": "No lots match these filters.",
+    "col": {
+      "lot": "Lot",
+      "harvested": "Harvested",
+      "cage": "Cage",
+      "weight": "Weight",
+      "dispatched": "Dispatched",
+      "status": "Status"
+    },
+    "status": {
+      "open": "In stock",
+      "partial": "Partly dispatched",
+      "dispatched": "Dispatched"
+    },
+    "newLot": {
+      "action": "New lot",
+      "title": "New harvest lot",
+      "description": "Each lot is a traceable part of a harvest.",
+      "harvest": "Harvest",
+      "selectHarvest": "Select a harvest",
+      "harvestOption": "{date} · {cage} · {kg} kg not in a lot",
+      "weight": "Weight (kg)",
+      "upTo": "Up to {kg} kg",
+      "fishCount": "Fish count",
+      "grade": "Grade",
+      "gradeHint": "For example Reg, S1 or Eco",
+      "destination": "Destination",
+      "destinationHint": "Market, processor or cold store",
+      "code": "Lot code",
+      "codeHint": "Leave blank to number it from the batch and harvest date.",
+      "automatic": "Automatic",
+      "submit": "Create lot",
+      "pickHarvest": "Pick a harvest",
+      "enterWeight": "Enter the lot weight",
+      "created": "Lot {code} created",
+      "failed": "Could not create the lot"
+    },
+    "dispatch": {
+      "title": "Dispatch {code}",
+      "left": "{kg} kg left",
+      "date": "Date",
+      "weight": "Weight (kg)",
+      "customer": "Customer",
+      "otherBuyer": "Other buyer…",
+      "buyerName": "Buyer name",
+      "vehicle": "Vehicle",
+      "vehicleHint": "Registration number",
+      "driver": "Driver",
+      "temperature": "Temperature at loading (°C)",
+      "overrideReason": "Override reason",
+      "overrideHint": "Kept in the audit log",
+      "askAdmin": "Ask an admin to record this dispatch.",
+      "submit": "Record dispatch",
+      "saved": "Dispatch recorded",
+      "failed": "Could not record the dispatch"
+    },
+    "history": {
+      "title": "Batch history",
+      "hint": "Every change to this cage's fish, from the stock ledger.",
+      "countOn": "Count on",
+      "loading": "Loading history…",
+      "emptyTitle": "No ledger history yet",
+      "emptyHint": "Stock events appear here once fish are stocked, or after the backfill has run for older cycles.",
+      "fishOn": "Fish on {date}",
+      "biomass": "Biomass then",
+      "ledgerToday": "Ledger today",
+      "matches": "matches the cage",
+      "cageShows": "cage shows {n}",
+      "batches": "Batches in this cage",
+      "since": "since {date}, {n} fish",
+      "to": "to {cage}",
+      "from": "from {cage}",
+      "reversed": "reversed"
+    },
+    "inspection": {
+      "label": "Inspections and maintenance",
+      "empty": "Nothing logged yet.",
+      "faults": "Faults: {list}",
+      "nextDue": "Next due {date}",
+      "kind": {
+        "net_inspection": "Net inspection",
+        "maintenance": "Maintenance",
+        "repair": "Repair",
+        "cleaning": "Cleaning",
+        "calibration": "Calibration",
+        "inspection": "Inspection"
+      },
+      "result": {
+        "ok": "OK",
+        "needs_attention": "Needs attention",
+        "failed": "Failed"
+      }
+    }
+  },
   "ui": {
     "farmHealth": "Farm health",
     "relatedPages": "Related pages",
