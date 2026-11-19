@@ -8,8 +8,14 @@ Named after the founder's mother. The product brand is **Anowa**; PBA is one cli
 | 2 | Ring fish | A cage ring seen from above that flicks into a fish tail | Inter Tight 500, lowercase |
 | 3 | Cradle | Two hands cupping a drop of water, a mother's care | Instrument Serif, "Anowa" |
 | 4 | Lake ripple | A drop lands and rings spread across the lake | Inter Tight 500, lowercase |
+| 5 | Talking fish | A speech bubble that is also a fish, "the farm that talks back" | Inter Tight 700, lowercase |
+| 6 | Four cages | An Adinkra-style pinwheel of four fish around one centre | Geist 500, lowercase |
+| 7 | Droplet a | A single-storey "a" whose dot is a water drop; also reads as "ai" | Inter Tight 600, lowercase |
+| 8 | First light | The sun rising over the lake | Fraunces 500, "Anowa" |
 
-**Recommendation:** Concept 3 (Cradle), with Concept 1 as the runner-up.
+Concepts 1–4 are on artboard DOM-0 and concepts 5–8 on DVT-0, both on the "Brand — Anowa" page.
+
+**Recommendation:** Concept 3 (Cradle), with Concept 1 as the runner-up. Of concepts 5–8, Talking fish is the strongest; it fits Anowa if the brand leads with the AI.
 - **Cradle** carries the story behind the name, is distinct from other agri-tech marks, and still reads at 16px.
 - **Waterline A** is the best pure lettermark if you want something more technical.
 
