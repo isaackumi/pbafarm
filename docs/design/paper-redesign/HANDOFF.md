@@ -64,7 +64,7 @@ Add these as CSS variables in `styles/theme.css` and Tailwind theme keys. The ap
 | 14 Settings: Team | 38C-0 | `/users`, `/teams` (use the settings sub-nav from 22/23) |
 | 15 / 15b Sign in | 50X-0 / 54F-0 | `/login` (email and phone-OTP states) |
 | 16 Onboarding | 4U7-0 | `/register-company` and first-run setup |
-| 17 Ask PBA | 3UX-0 | `components/AiAssistant.js` (full page) |
+| 17 Anowa (AI assistant) | 3UX-0 | `components/AiAssistant.js` (full page) |
 | 18 Calendar | 40N-0 | new `/calendar` (tasks, schedules, withdrawal ends) |
 | 19 Cost accounting | 48S-0 | `/expenses`, `/accounting-export` |
 | 20 Projects | 4HK-0 | new (tasks grouped by cycle) |

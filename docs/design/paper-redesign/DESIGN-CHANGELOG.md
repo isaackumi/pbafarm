@@ -6,6 +6,10 @@ Format: `date · artboard (node id) · change · status`
 
 ## 2026-11-19
 
+- ALL · **The AI is now named "Anowa"** (named after the founder's mother) · replaces "Ask PBA", "AI assistant" and "Farm Assistant" everywhere:
+  - Paper: 17 (3UX-0) title and eyebrow are "Anowa"; the composer placeholder reads "Ask Anowa about cages, feed, costs…". Permission rows in 22 (57B-0) and light 22 (7BH-0) read "Use Anowa AI" and "Use Anowa (own unit data)". On the landing page (B9Q-0), the chip reads "Meet Anowa — your farm’s AI co-pilot", and the cards, footer and pricing say "Anowa". The WhatsApp bot (CJH-0) is named "Anowa" with an "A" avatar.
+  - Code to update: `components/AiAssistant.js` (header label and the `sr-only` "Assistant:" prefix become "Anowa"), `pages/company-settings.js` ("Enable Anowa (AI assistant) for this company"), nav labels and tour copy in `locales/en.json` and `fr.json` (keep the name "Anowa" untranslated), the `X-Title` header in `convex/lib/llmProviders.ts` ("PBA Farm · Anowa"), the WhatsApp bot display name, and the server-built system prompt (it should introduce itself as "Anowa, PBA Farm's assistant"). Keep the route `/ai` unchanged. · pending
+
 - Website · Landing v2 — Sky (B9Q-0) · ELEVATED (same artboard, supersedes the v2 entry below):
   - Editorial type: every section headline pairs Inter Tight with an **Instrument Serif italic** accent ("data, not *guesswork*", "*and traceable*", "*in one calm place*", "*without the spreadsheets*", "*not per seat*", "*answered*", "*finally in one place*"). Load Instrument Serif (400 + italic) on marketing pages only.
   - Hero polish: the nine cards now fan out in an arc using `rotate()` (−14°, −10°, −6°, −3°, 0, 3°, 6°, 10°, 14°, with the outer cards dropping up to 34px) instead of `skewY`. A blurred white haze softens the horizon line. A soft white glow (blur 90px, 14% opacity) sits behind the headline. Lake shimmer lines are kept clear of the rating.
