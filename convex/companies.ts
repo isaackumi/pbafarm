@@ -815,7 +815,7 @@ export const updateProfile = mutation({
  */
 export const aiAssistantStatus = query({
   args: {},
-  returns: v.object({ enabled: v.boolean(), canManage: v.boolean() }),
+  returns: v.object({ enabled: v.boolean(), canManage: v.boolean(), canUse: v.boolean() }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     if ((user.role ?? 'user') === 'super_admin') {
