@@ -3597,6 +3597,42 @@
       "passwordHint": "Au moins 6 caractères. À changer après la connexion.",
       "accountsTitle": "Comptes de connexion",
       "noUsers": "Aucun utilisateur pour cette entreprise."
+    },
+    "roles": {
+      "saveFailed": "Impossible d'enregistrer le rôle",
+      "archiveConfirm": "Archiver le rôle {name} ?",
+      "new": "Nouveau rôle personnalisé",
+      "compare": "Comparer",
+      "list": "Rôles",
+      "custom": "personnalisé",
+      "template": "modèle",
+      "basedOn": "Basé sur {role}",
+      "permissionCount": {
+        "one": "{count} permission",
+        "other": "{count} permissions"
+      },
+      "extraCount": {
+        "one": "+{count} permission",
+        "other": "+{count} permissions"
+      },
+      "name": "Nom du rôle",
+      "startFrom": "Partir de",
+      "startFromHint": "Copie les permissions d'un modèle",
+      "nothing": "Rien",
+      "groupGranted": "{granted} / {total} accordées",
+      "create": "Créer le rôle",
+      "save": "Enregistrer le rôle",
+      "archive": "Archiver ce rôle",
+      "archiveHelper": "Attribuez d'abord un autre rôle à ses membres.",
+      "archiveAction": "Archiver",
+      "noManage": "Vous pouvez consulter ce rôle mais pas le modifier.",
+      "templateNote": "Les modèles sont fixes. Créez un rôle personnalisé pour une autre combinaison, puis attribuez-le dans Membres.",
+      "matrix": "Matrice des permissions",
+      "matrixLegend": "✓ accordée",
+      "permission": "Permission",
+      "cellOn": "{role} : {permission} accordée",
+      "cellOff": "{role} : {permission} non accordée",
+      "eyebrowCounts": "{templates} modèles, {custom} personnalisés"
     }
   },
   "country": {

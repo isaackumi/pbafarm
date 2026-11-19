@@ -39,28 +39,38 @@ export default function UsersPage() {
     )
   }
 
+  if (view === 'roles') {
+    return (
+      <ProtectedRoute permission="org.members.manage">
+        <RolesPanel
+          renderShell={({ meta, actions, children }) => (
+            <Layout
+              title={t('settingsUi.nav.roles')}
+              eyebrow={[eyebrow, meta].filter(Boolean).join(' · ')}
+              actions={actions}
+            >
+              <SettingsFrame active="roles">{children}</SettingsFrame>
+            </Layout>
+          )}
+        />
+      </ProtectedRoute>
+    )
+  }
+
   return (
     <ProtectedRoute permission="org.members.manage">
       <Layout
         title={t('settingsUi.nav.label')}
         eyebrow={eyebrow}
         actions={
-          view === 'members' ? (
-            <GradientButton icon={UserRound} href="#invite">
-              {t('settingsUi.team.invite')}
-            </GradientButton>
-          ) : null
+          <GradientButton icon={UserRound} href="#invite">
+            {t('settingsUi.team.invite')}
+          </GradientButton>
         }
       >
-        <SettingsFrame active={view}>
-          {view === 'roles' ? (
-            <RolesPanel />
-          ) : (
-            <>
-              <MembersPanel />
-              <UserManagement />
-            </>
-          )}
+        <SettingsFrame active="members">
+          <MembersPanel />
+          <UserManagement />
         </SettingsFrame>
       </Layout>
     </ProtectedRoute>

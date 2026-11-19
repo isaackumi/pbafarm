@@ -3597,6 +3597,42 @@
       "passwordHint": "At least 6 characters. They must change it after signing in.",
       "accountsTitle": "Login accounts",
       "noUsers": "No users found for this company."
+    },
+    "roles": {
+      "saveFailed": "Could not save the role",
+      "archiveConfirm": "Archive the role {name}?",
+      "new": "New custom role",
+      "compare": "Compare",
+      "list": "Roles",
+      "custom": "custom",
+      "template": "template",
+      "basedOn": "Based on {role}",
+      "permissionCount": {
+        "one": "{count} permission",
+        "other": "{count} permissions"
+      },
+      "extraCount": {
+        "one": "+{count} permission",
+        "other": "+{count} permissions"
+      },
+      "name": "Role name",
+      "startFrom": "Start from",
+      "startFromHint": "Copies a template's permissions",
+      "nothing": "Nothing",
+      "groupGranted": "{granted} / {total} granted",
+      "create": "Create role",
+      "save": "Save role",
+      "archive": "Archive this role",
+      "archiveHelper": "Move its members to another role first.",
+      "archiveAction": "Archive",
+      "noManage": "You can view this role but not change it.",
+      "templateNote": "Templates are fixed. Make a custom role for a different mix, then assign it under Members.",
+      "matrix": "Permission matrix",
+      "matrixLegend": "✓ granted",
+      "permission": "Permission",
+      "cellOn": "{role}: {permission} granted",
+      "cellOff": "{role}: {permission} not granted",
+      "eyebrowCounts": "{templates} templates, {custom} custom"
     }
   },
   "country": {
