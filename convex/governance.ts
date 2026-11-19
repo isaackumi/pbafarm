@@ -17,6 +17,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
 import { requireAccount, requireMember, requirePlatformAdmin, assertUserCan } from './lib/permissions'
 import { revokeUserSessions } from './lib/authz'
+import { revokeBindingsForUser } from './bot/bindings'
 import { logAudit } from './lib/tenancy'
 import { insertAuditLog } from './lib/auditChain'
 import { userError } from './lib/errors'
@@ -599,6 +600,7 @@ export async function anonymizeUser(ctx: MutationCtx, userId: Id<'users'>) {
     .take(50)
   for (const a of accounts) await ctx.db.delete(a._id)
   await revokeUserSessions(ctx, userId)
+  await revokeBindingsForUser(ctx, userId, 'account_deleted')
   await deleteUserPreferences(ctx, userId)
   await ctx.db.patch(userId, {
     name: 'Deleted user',

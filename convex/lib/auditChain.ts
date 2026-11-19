@@ -31,6 +31,8 @@ export type AuditRow = {
   companyId?: Id<'companies'>
   apiKeyId?: Id<'apiKeys'>
   actAsSessionId?: Id<'actAsSessions'>
+  channel?: 'whatsapp' | 'telegram'
+  sourceMessageId?: string
 }
 
 /** JSON with sorted keys and no undefined values: one string per value. */

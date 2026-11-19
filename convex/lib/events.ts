@@ -31,13 +31,20 @@ export async function emitDomainEvent(
 ): Promise<Id<'domainEvents'> | null> {
   const companyId = opts?.companyId
   if (!companyId) return null
-  // Changes made through the public API carry the key (INT-004).
+  // Changes made through the public API carry the key (INT-004); farm-bot
+  // changes carry the chat channel (BOT-003).
   const actor = apiActorOf(ctx)
   const eventId = await ctx.db.insert('domainEvents', {
     companyId,
     locationId: opts?.locationId,
     type,
-    payload: cleanPayload(actor ? { ...payload, origin: 'api', apiKeyId: actor.apiKeyId } : payload),
+    payload: cleanPayload(
+      actor
+        ? actor.channel
+          ? { ...payload, origin: 'bot', channel: actor.channel.provider }
+          : { ...payload, origin: 'api', apiKeyId: actor.apiKeyId }
+        : payload,
+    ),
     createdAt: Date.now(),
   })
 

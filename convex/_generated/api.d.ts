@@ -35,6 +35,20 @@ import type * as billing_provider from "../billing/provider.js";
 import type * as billing_tables from "../billing/tables.js";
 import type * as billing_tenant from "../billing/tenant.js";
 import type * as biweeklyRecords from "../biweeklyRecords.js";
+import type * as bot_agent from "../bot/agent.js";
+import type * as bot_bindings from "../bot/bindings.js";
+import type * as bot_http from "../bot/http.js";
+import type * as bot_i18n from "../bot/i18n.js";
+import type * as bot_inbound from "../bot/inbound.js";
+import type * as bot_outbound from "../bot/outbound.js";
+import type * as bot_pending from "../bot/pending.js";
+import type * as bot_process from "../bot/process.js";
+import type * as bot_reads from "../bot/reads.js";
+import type * as bot_reminders from "../bot/reminders.js";
+import type * as bot_scope from "../bot/scope.js";
+import type * as bot_tables from "../bot/tables.js";
+import type * as bot_validators from "../bot/validators.js";
+import type * as bot_verify from "../bot/verify.js";
 import type * as businessUnits from "../businessUnits.js";
 import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
@@ -166,6 +180,7 @@ import type * as messaging_providers_hubtel from "../messaging/providers/hubtel.
 import type * as messaging_providers_index from "../messaging/providers/index.js";
 import type * as messaging_providers_resend from "../messaging/providers/resend.js";
 import type * as messaging_providers_send from "../messaging/providers/send.js";
+import type * as messaging_providers_telegramBot from "../messaging/providers/telegramBot.js";
 import type * as messaging_providers_twilio from "../messaging/providers/twilio.js";
 import type * as messaging_providers_types from "../messaging/providers/types.js";
 import type * as messaging_providers_whatsappCloud from "../messaging/providers/whatsappCloud.js";
@@ -251,6 +266,20 @@ declare const fullApi: ApiFromModules<{
   "billing/tables": typeof billing_tables;
   "billing/tenant": typeof billing_tenant;
   biweeklyRecords: typeof biweeklyRecords;
+  "bot/agent": typeof bot_agent;
+  "bot/bindings": typeof bot_bindings;
+  "bot/http": typeof bot_http;
+  "bot/i18n": typeof bot_i18n;
+  "bot/inbound": typeof bot_inbound;
+  "bot/outbound": typeof bot_outbound;
+  "bot/pending": typeof bot_pending;
+  "bot/process": typeof bot_process;
+  "bot/reads": typeof bot_reads;
+  "bot/reminders": typeof bot_reminders;
+  "bot/scope": typeof bot_scope;
+  "bot/tables": typeof bot_tables;
+  "bot/validators": typeof bot_validators;
+  "bot/verify": typeof bot_verify;
   businessUnits: typeof businessUnits;
   cages: typeof cages;
   companies: typeof companies;
@@ -382,6 +411,7 @@ declare const fullApi: ApiFromModules<{
   "messaging/providers/index": typeof messaging_providers_index;
   "messaging/providers/resend": typeof messaging_providers_resend;
   "messaging/providers/send": typeof messaging_providers_send;
+  "messaging/providers/telegramBot": typeof messaging_providers_telegramBot;
   "messaging/providers/twilio": typeof messaging_providers_twilio;
   "messaging/providers/types": typeof messaging_providers_types;
   "messaging/providers/whatsappCloud": typeof messaging_providers_whatsappCloud;
@@ -462,4 +492,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  agent: import("@convex-dev/agent/_generated/component.js").ComponentApi<"agent">;
 };

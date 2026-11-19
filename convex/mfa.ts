@@ -19,6 +19,7 @@ import { channelAvailable, deliverMessage } from './messaging/deliver'
 import { messagingPrefs } from './messaging/channels'
 import { securityPolicy } from './messaging/policy'
 import { assertPhoneFree } from './users'
+import { revokeWhatsAppNotMatching } from './bot/bindings'
 
 /**
  * Two-step verification per sign-in session (SEC-007, doc 18 §8).
@@ -211,6 +212,7 @@ export const checkChallenge = internalMutation({
     if (row.purpose === 'enrol' && row.pendingPhone) {
       await assertPhoneFree(ctx, row.pendingPhone, user._id)
       await ctx.db.patch(user._id, { phone: row.pendingPhone, phoneVerificationTime: now })
+      await revokeWhatsAppNotMatching(ctx, user._id, row.pendingPhone, true)
       await insertAuditLog(ctx, {
         userId: user._id,
         companyId: user.companyId,

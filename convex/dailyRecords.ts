@@ -892,6 +892,19 @@ export const remove = mutation({
   returns: v.object({ warnings: v.array(v.string()) }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
+    return await removeDailyRecordAs(ctx, user, id)
+  },
+})
+
+/**
+ * remove's body for a caller that has passed its own guard: the mutation
+ * above and the farm bot's 10-minute undo of its own entry (BOT-003).
+ */
+export async function removeDailyRecordAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'dailyRecords'>,
+): Promise<{ warnings: string[] }> {
     const existing = await ctx.db.get(id)
     if (!existing) throw userError('NOT_FOUND', 'Daily record not found')
     const allowed = await listForCompany(user, [existing])
@@ -929,8 +942,7 @@ export const remove = mutation({
       previousValues: existing,
     })
     return { warnings }
-  },
-})
+}
 
 export const createMany = mutation({
   args: {

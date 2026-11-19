@@ -89,7 +89,11 @@ export const PasswordProvider = {
       if (purpose) {
         await actionCtx.runMutation(internal.humanVerification.consumeTicket, { ticket, purpose, email })
       }
-      return await passwordOptions.authorize(params, ctx)
+      const result = await passwordOptions.authorize(params, ctx)
+      if (params.flow === 'reset-verification') {
+        await actionCtx.runMutation(internal.bot.bindings.revokeAfterPasswordReset, { email })
+      }
+      return result
     },
   },
 } as typeof BasePasswordProvider

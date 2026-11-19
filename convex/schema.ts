@@ -5,6 +5,7 @@ import { messagingChannel, messagingProvider } from './messaging/validators'
 import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
 import { billingTables } from './billing/tables'
+import { botTables } from './bot/tables'
 import {
   automationAction,
   automationCondition,
@@ -239,6 +240,7 @@ const schema = defineSchema({
   ...authTables,
   ...integrationTables,
   ...billingTables,
+  ...botTables,
 
   users: defineTable({
     name: v.optional(v.string()),
@@ -1430,6 +1432,9 @@ const schema = defineSchema({
     apiKeyId: v.optional(v.id('apiKeys')),
     /** Set when a super-admin wrote this during support access (ENT-006). */
     actAsSessionId: v.optional(v.id('actAsSessions')),
+    /** Set when the change came from the farm bot (BOT-003): chat channel and provider message id. */
+    channel: v.optional(v.union(v.literal('whatsapp'), v.literal('telegram'))),
+    sourceMessageId: v.optional(v.string()),
     /**
      * Hash chain per company (TRACE-007, convex/lib/auditChain.ts): position,
      * the previous row's hash, write time and SHA-256 over the canonical row.

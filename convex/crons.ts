@@ -88,4 +88,11 @@ crons.cron('farm early-warning alerts', '0 5 * * *', internal.farmAlerts.tick, {
 // week that ended on Sunday, delivered in-app and by email.
 crons.cron('weekly farm reports', '30 6 * * 1', internal.aiReports.weeklyTick, {})
 
+// Farm bot (BOT-004, doc 23): opt-in daily reminders at each user's time.
+crons.interval('bot reminders', { minutes: 15 }, internal.bot.reminders.tick, {})
+
+// Farm bot drafts expire after 24 h; inbound message log is kept 30 days.
+crons.interval('bot expire drafts', { hours: 1 }, internal.bot.pending.expireDrafts, {})
+crons.cron('prune bot inbound', '5 4 * * *', internal.bot.inbound.pruneInbound, {})
+
 export default crons

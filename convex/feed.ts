@@ -710,25 +710,33 @@ export const listUsage = query({
   },
 })
 
-async function recordOutboundUsage(
-  ctx: MutationCtx,
-  args: {
-    feedTypeId: Id<'feedTypes'>
-    cageId?: Id<'cages'>
-    quantity?: number
-    bags?: number
-    usageDate: string
-    notes?: string
-    source: 'issue' | 'daily' | 'usage'
-    allowNegative?: boolean
-    overrideReason?: string
-    transactionType: 'issue' | 'daily_usage' | 'usage'
-    referenceId?: string
-    locationId?: Id<'farmLocations'>
-  },
-) {
+export type OutboundUsageArgs = {
+  feedTypeId: Id<'feedTypes'>
+  cageId?: Id<'cages'>
+  quantity?: number
+  bags?: number
+  usageDate: string
+  notes?: string
+  source: 'issue' | 'daily' | 'usage'
+  allowNegative?: boolean
+  overrideReason?: string
+  transactionType: 'issue' | 'daily_usage' | 'usage'
+  referenceId?: string
+  locationId?: Id<'farmLocations'>
+}
+
+async function recordOutboundUsage(ctx: MutationCtx, args: OutboundUsageArgs) {
   // Feed leaving stock (issue, usage): the createIssue/createUsage guard.
   const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
+  return await recordOutboundUsageAs(ctx, user, args)
+}
+
+/**
+ * createIssue/createUsage's body for a caller that has already passed the
+ * `inventory.issue` guard: the web mutations above and the farm bot's
+ * confirmed feed issue (BOT-003), which acts as a scoped actor user.
+ */
+export async function recordOutboundUsageAs(ctx: MutationCtx, user: Doc<'users'>, args: OutboundUsageArgs) {
   const feedType = await ctx.db.get(args.feedTypeId)
   if (!feedType || feedType.deletedAt) throw new Error('Feed type not found')
   const allowed = await listForCompany(user, [feedType])

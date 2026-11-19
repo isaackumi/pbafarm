@@ -201,6 +201,16 @@ export async function revokeUserSessions(
     }
     await ctx.db.delete(session._id)
   }
+  // Signing out everywhere also unlinks chat bots, which act without a web session.
+  const bindings = await ctx.db
+    .query('channelBindings')
+    .withIndex('by_userId', (q) => q.eq('userId', userId))
+    .take(50)
+  for (const b of bindings) {
+    if (!b.revokedAt) {
+      await ctx.db.patch(b._id, { revokedAt: Date.now(), revokedReason: 'sessions_revoked', reminderEnabled: false })
+    }
+  }
   return sessions.length
 }
 

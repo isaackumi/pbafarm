@@ -53,6 +53,17 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   uploadUrlPerCompany: { kind: 'token bucket', rate: 1200, period: HOUR, capacity: 300 },
   /** Sensor threshold alerts (ANLY-006), key = `${unitId}:${parameter}`. */
   sensorBreachAlertPerUnit: { kind: 'fixed window', rate: 1, period: HOUR },
+  /** Farm bot (BOT-001, doc 23) messages handled, key = channelBindings id. */
+  botPerBinding: { kind: 'token bucket', rate: 30, period: MINUTE, capacity: 10 },
+  botPerBindingHour: { kind: 'fixed window', rate: 300, period: HOUR },
+  /** All of a company's bot messages, key = companyId. */
+  botPerCompany: { kind: 'token bucket', rate: 300, period: MINUTE, capacity: 100 },
+  /** Replies to unbound chats (onboarding, LINK attempts), key = `${provider}:${address}`. */
+  botUnboundPerAddress: { kind: 'fixed window', rate: 10, period: HOUR },
+  /** Unbound replies across the platform (no key): bounds what spam can cost. */
+  botUnboundGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
+  /** Connect codes from /account, key = userId. */
+  botConnectCodePerUser: { kind: 'fixed window', rate: 10, period: HOUR },
 })
 
 /** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */

@@ -233,7 +233,7 @@ export const integrationTables = {
     model: v.string(),
     /** Whose key paid: the organization's or the platform's. */
     source: v.union(v.literal('org_key'), v.literal('server_key')),
-    feature: v.union(v.literal('chat'), v.literal('insights'), v.literal('report')),
+    feature: v.union(v.literal('chat'), v.literal('insights'), v.literal('report'), v.literal('bot')),
     ok: v.boolean(),
     error: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
