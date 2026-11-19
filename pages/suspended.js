@@ -8,8 +8,9 @@ import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import { balanceDue } from '../lib/billingBalance'
 import { formatMinor } from '../lib/billingFormat'
 import { useT } from '../lib/i18n/context'
+import { BRAND } from '../lib/brand'
 
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'hello@getanowa.com'
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || BRAND.email
 
 /**
  * Where members of a suspended organization land (PLAT-104, Paper 46).
