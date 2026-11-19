@@ -4071,6 +4071,81 @@
         "limit4": "Les corps de requête sont limités à 1 Mo et à 100 lignes par écriture.",
         "endpointsTitle": "Points d'accès"
       }
+    },
+    "audit": {
+      "crumb": "Chaque modification, chaînée par hachage",
+      "title": "Journal d'audit",
+      "summaryTitle": "Activité",
+      "events": "Événements sur la période",
+      "eventsTitle": "Événements",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "unknownUser": "Utilisateur inconnu",
+      "col": {
+        "when": "Quand",
+        "actor": "Auteur",
+        "action": "Action · cible",
+        "category": "Catégorie"
+      },
+      "category": {
+        "access": "Accès",
+        "finance": "Finances",
+        "data": "Données"
+      },
+      "range": "Période",
+      "table": "Table",
+      "action": "Action",
+      "allTables": "Toutes les tables",
+      "allActions": "Toutes les actions",
+      "ranges": {
+        "d7": "7 derniers jours",
+        "d30": "30 derniers jours",
+        "d90": "90 derniers jours",
+        "d365": "Dernière année"
+      },
+      "tables": {
+        "cages": "Cages",
+        "dailyRecords": "Saisies quotidiennes",
+        "biweeklyRecords": "Saisies bimensuelles",
+        "stockingHistory": "Empoissonnement",
+        "topupHistory": "Compléments",
+        "feedTypes": "Types d'aliment",
+        "feedPurchases": "Achats d'aliment",
+        "feedInventory": "Lots d'aliment",
+        "feedInventoryTransactions": "Registre d'aliment",
+        "companies": "Entreprises / réglages",
+        "users": "Utilisateurs"
+      },
+      "actions": {
+        "create": "Création",
+        "update": "Modification",
+        "delete": "Suppression",
+        "approve": "Approbation",
+        "reject": "Refus",
+        "transfer": "Transfert",
+        "reversal": "Annulation",
+        "stock_override": "Forçage de stock",
+        "settings_publish": "Publication des réglages"
+      },
+      "loading": "Chargement des événements…",
+      "empty": "Aucun événement pour l'instant. Les modifications des cages, du stock d'aliment, des réglages et des utilisateurs s'affichent ici.",
+      "loadMore": "Voir plus",
+      "loadingMore": "Chargement…",
+      "record": "Enregistrement",
+      "previous": "Avant",
+      "next": "Après",
+      "chain": {
+        "label": "Contrôle d'intégrité",
+        "notChecked": "Chaîne pas encore vérifiée",
+        "running": "Vérification… {count} entrées pour l'instant",
+        "ok": "Chaîne intacte · {count} entrées vérifiées",
+        "broken": "Chaîne rompue à l'entrée {seq}",
+        "lastCheck": "Dernier contrôle {time}",
+        "length": "{count} entrées chaînées",
+        "head": "hachage de tête",
+        "unchained": "{count} entrées plus anciennes non chaînées (écrites avant le contrôle d'intégrité)",
+        "verify": "Vérifier maintenant"
+      }
     }
   },
   "country": {

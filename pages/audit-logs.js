@@ -2,22 +2,81 @@ import { useMemo, useState } from 'react'
 import { usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Select, StatCard, EmptyState, Modal } from '../components/ui'
+import { Avatar, GhostButton, Modal, Pill, Table } from '../components/ui'
+import { FIELD, SettingsCard, SettingsFrame, useSettingsEyebrow } from '../components/settings'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import AuditChainStatus from '../components/AuditChainStatus'
+import { useLocale, useT } from '../lib/i18n/context'
+
+const TABLES = [
+  'cages',
+  'dailyRecords',
+  'biweeklyRecords',
+  'stockingHistory',
+  'topupHistory',
+  'feedTypes',
+  'feedPurchases',
+  'feedInventory',
+  'feedInventoryTransactions',
+  'companies',
+  'users',
+]
+const ACTIONS = ['create', 'update', 'delete', 'approve', 'reject', 'transfer', 'reversal', 'stock_override', 'settings_publish']
+const RANGES = [7, 30, 90, 365]
+
+/** Category pill for a row, derived from the table it touched (Paper 47). */
+const ACCESS_TABLES = new Set(['users', 'companies', 'memberships', 'roles', 'invitations', 'apiKeys'])
+const FINANCE_TABLES = new Set(['feedPurchases', 'sales', 'expenses', 'invoices', 'payments', 'payroll'])
+function category(table) {
+  if (ACCESS_TABLES.has(table)) return { key: 'access', tone: 'pink' }
+  if (FINANCE_TABLES.has(table)) return { key: 'finance', tone: 'cyan' }
+  return { key: 'data', tone: 'neutral' }
+}
+
+const SELECT = `${FIELD} !w-auto !py-2 !text-[13px]`
+
+function useLabels() {
+  const t = useT()
+  return {
+    table: (name) => (TABLES.includes(name) ? t(`settingsUi.audit.tables.${name}`) : name),
+    action: (type) => (ACTIONS.includes(type) ? t(`settingsUi.audit.actions.${type}`) : type),
+  }
+}
+
+function useWhen() {
+  const t = useT()
+  const { formatLocale, locale } = useLocale()
+  const loc = formatLocale || locale || undefined
+  return (ms) => {
+    if (!ms) return { time: '—', day: '' }
+    const d = new Date(ms)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    const same = (a, b) => a.toDateString() === b.toDateString()
+    const time = d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+    const day = same(d, today)
+      ? t('settingsUi.audit.today')
+      : same(d, yesterday)
+        ? t('settingsUi.audit.yesterday')
+        : d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' })
+    return { time, day }
+  }
+}
 
 function AuditLogsContent() {
+  const t = useT()
   const { user } = useAuth()
+  const labels = useLabels()
+  const when = useWhen()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.audit.crumb'))
   const [tableName, setTableName] = useState('')
   const [actionType, setActionType] = useState('')
   const [days, setDays] = useState(30)
   const [selected, setSelected] = useState(null)
 
-  const dateFrom = useMemo(
-    () => Date.now() - Number(days) * 24 * 60 * 60 * 1000,
-    [days],
-  )
+  const dateFrom = useMemo(() => Date.now() - Number(days) * 24 * 60 * 60 * 1000, [days])
 
   const filters = useMemo(() => {
     const f = { dateFrom }
@@ -27,215 +86,166 @@ function AuditLogsContent() {
   }, [tableName, actionType, dateFrom])
 
   // Paginated (PLAT-001): newest first, 50 at a time, "Load more" below.
-  const {
-    results: logs,
-    status: pageStatus,
-    loadMore,
-  } = usePaginatedQuery(api.audit.listPage, user ? filters : 'skip', {
+  const { results: logs, status: pageStatus, loadMore } = usePaginatedQuery(api.audit.listPage, user ? filters : 'skip', {
     initialNumItems: 50,
   })
-  const summary = useQuery(
-    api.audit.getSummary,
-    user ? { dateFrom } : 'skip',
-  )
+  const summary = useQuery(api.audit.getSummary, user ? { dateFrom } : 'skip')
 
   const loading = pageStatus === 'LoadingFirstPage'
 
+  const columns = [
+    {
+      key: 'when',
+      header: t('settingsUi.audit.col.when'),
+      width: '120px',
+      render: (log) => {
+        const w = when(log.created_at)
+        return <span className="whitespace-nowrap font-data tabular-nums">{w.time}</span>
+      },
+      sub: (log) => when(log.created_at).day,
+    },
+    {
+      key: 'actor',
+      header: t('settingsUi.audit.col.actor'),
+      render: (log) => {
+        const name = log.user_label || log.user_id || t('settingsUi.audit.unknownUser')
+        return (
+          <span className="flex min-w-0 items-center gap-3">
+            <Avatar name={name} size={32} />
+            <span className="truncate">{name}</span>
+          </span>
+        )
+      },
+    },
+    {
+      key: 'action',
+      header: t('settingsUi.audit.col.action'),
+      render: (log) => (
+        <button
+          type="button"
+          onClick={() => setSelected(log)}
+          className="rounded text-left text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          {labels.action(log.action_type)} · {labels.table(log.table_name)}
+        </button>
+      ),
+      sub: (log) => <span className="font-mono">{log.record_id || '—'}</span>,
+    },
+    {
+      key: 'category',
+      header: t('settingsUi.audit.col.category'),
+      width: '140px',
+      render: (log) => {
+        const c = category(log.table_name)
+        return <Pill tone={c.tone}>{t(`settingsUi.audit.category.${c.key}`)}</Pill>
+      },
+    },
+  ]
+
+  const filtersUi = (
+    <div className="flex flex-wrap items-center gap-2">
+      <select aria-label={t('settingsUi.audit.range')} className={SELECT} value={days} onChange={(e) => setDays(Number(e.target.value))}>
+        {RANGES.map((d) => (
+          <option key={d} value={d}>
+            {t(`settingsUi.audit.ranges.d${d}`)}
+          </option>
+        ))}
+      </select>
+      <select aria-label={t('settingsUi.audit.table')} className={SELECT} value={tableName} onChange={(e) => setTableName(e.target.value)}>
+        <option value="">{t('settingsUi.audit.allTables')}</option>
+        {TABLES.map((name) => (
+          <option key={name} value={name}>
+            {labels.table(name)}
+          </option>
+        ))}
+      </select>
+      <select aria-label={t('settingsUi.audit.action')} className={SELECT} value={actionType} onChange={(e) => setActionType(e.target.value)}>
+        <option value="">{t('settingsUi.audit.allActions')}</option>
+        {ACTIONS.map((a) => (
+          <option key={a} value={a}>
+            {labels.action(a)}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+
   return (
-    <Layout title="Audit Logs">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Admin' },
-          { label: 'Audit logs' },
-        ]}
-        description="Who changed what across cages, feed stock, settings, and users."
-        related={[
-          { label: 'Approvals', href: '/approvals' },
-          { label: 'Company settings', href: '/company-settings' },
-          { label: 'Users', href: '/users' },
-        ]}
-        actions={
-          <Button href="/dashboard" variant="secondary" size="sm">
-            Dashboard
-          </Button>
-        }
-      />
+    <Layout title={t('settingsUi.audit.title')} eyebrow={eyebrow}>
+      <SettingsFrame active="audit">
+        <div className="flex flex-col gap-5">
+          <AuditChainStatus />
 
-      <AuditChainStatus />
-
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:max-w-3xl">
-        <Select
-          aria-label="Date range"
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-        >
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
-          <option value={365}>Last year</option>
-        </Select>
-        <Select
-          aria-label="Table"
-          value={tableName}
-          onChange={(e) => setTableName(e.target.value)}
-        >
-          <option value="">All tables</option>
-          <option value="cages">Cages</option>
-          <option value="dailyRecords">Daily records</option>
-          <option value="biweeklyRecords">Biweekly records</option>
-          <option value="stockingHistory">Stocking</option>
-          <option value="topupHistory">Top-ups</option>
-          <option value="feedTypes">Feed types</option>
-          <option value="feedPurchases">Feed purchases</option>
-          <option value="feedInventory">Feed inventory lots</option>
-          <option value="feedInventoryTransactions">Feed ledger</option>
-          <option value="companies">Companies / settings</option>
-          <option value="users">Users</option>
-        </Select>
-        <Select
-          aria-label="Action"
-          value={actionType}
-          onChange={(e) => setActionType(e.target.value)}
-        >
-          <option value="">All actions</option>
-          <option value="create">Create</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="approve">Approve</option>
-          <option value="reject">Reject</option>
-          <option value="transfer">Transfer</option>
-          <option value="reversal">Reversal</option>
-          <option value="stock_override">Stock override</option>
-          <option value="settings_publish">Settings publish</option>
-        </Select>
-      </div>
-
-      {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <StatCard label="Events in range" value={summary.total_logs ?? 0} />
-          {(summary.top_users || []).slice(0, 3).map((u) => (
-            <StatCard
-              key={u.userId}
-              label={<span className="block truncate">{u.label || u.userId}</span>}
-              value={u.count}
-              unit="events"
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="page-card overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-muted">Loading audit logs…</div>
-        ) : logs.length === 0 ? (
-          <EmptyState
-            title="No audit events yet"
-            description="Changes to cages, feed stock, settings and users will show up here."
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    When
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Action
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Table
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Record
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    User
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foam-deep">
-                {logs.map((log) => (
-                  <tr
-                    key={log.id || log._id}
-                    className="hover:bg-foam cursor-pointer"
-                    onClick={() => setSelected(log)}
-                  >
-                    <td className="px-4 py-3 text-sm font-data tabular-nums text-chart-ink whitespace-nowrap">
-                      {log.created_at
-                        ? new Date(log.created_at).toLocaleString()
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-lake">
-                      {log.action_type}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-chart-ink">
-                      {log.table_name}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-data text-muted truncate max-w-[10rem]">
-                      {log.record_id || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted truncate max-w-[12rem]">
-                      {log.user_label || log.user_id || '—'}
-                    </td>
-                  </tr>
+          {summary && (
+            <SettingsCard title={t('settingsUi.audit.summaryTitle')} meta={t(`settingsUi.audit.ranges.d${days}`)}>
+              <dl className="grid gap-4 border-t border-line pt-4 sm:grid-cols-4">
+                <div>
+                  <dt className="text-[12px] leading-4 text-muted">{t('settingsUi.audit.events')}</dt>
+                  <dd className="mt-1 text-[24px] font-semibold leading-7 tabular-nums text-text">{(summary.total_logs ?? 0).toLocaleString()}</dd>
+                </div>
+                {(summary.top_users || []).slice(0, 3).map((u) => (
+                  <div key={u.userId} className="min-w-0">
+                    <dt className="truncate text-[12px] leading-4 text-muted">{u.label || u.userId}</dt>
+                    <dd className="mt-1 text-[24px] font-semibold leading-7 tabular-nums text-text">{u.count.toLocaleString()}</dd>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-            {pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore' ? (
-              <div className="p-4 text-center border-t border-foam-deep">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={pageStatus === 'LoadingMore'}
-                  onClick={() => loadMore(50)}
-                >
-                  {pageStatus === 'LoadingMore' ? 'Loading…' : 'Load more'}
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        )}
-      </div>
+              </dl>
+            </SettingsCard>
+          )}
+
+          <Table
+            title={t('settingsUi.audit.eventsTitle')}
+            actions={filtersUi}
+            columns={columns}
+            rows={loading ? [] : logs}
+            rowKey={(log) => log.id || log._id}
+            empty={loading ? t('settingsUi.audit.loading') : t('settingsUi.audit.empty')}
+          />
+          {(pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore') && (
+            <div className="flex justify-center">
+              <GhostButton size="lg" disabled={pageStatus === 'LoadingMore'} onClick={() => loadMore(50)}>
+                {pageStatus === 'LoadingMore' ? t('settingsUi.audit.loadingMore') : t('settingsUi.audit.loadMore')}
+              </GhostButton>
+            </div>
+          )}
+        </div>
+      </SettingsFrame>
 
       <Modal
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
         size="2xl"
-        title={selected ? `${selected.action_type} · ${selected.table_name}` : ''}
+        title={selected ? `${labels.action(selected.action_type)} · ${labels.table(selected.table_name)}` : ''}
         description={
           selected
-            ? `${selected.user_label || selected.user_id || 'Unknown user'} · ${
+            ? `${selected.user_label || selected.user_id || t('settingsUi.audit.unknownUser')} · ${
                 selected.created_at ? new Date(selected.created_at).toLocaleString() : '—'
               }`
             : ''
         }
         footer={
-          <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-            Close
-          </Button>
+          <GhostButton size="sm" onClick={() => setSelected(null)}>
+            {t('common.close')}
+          </GhostButton>
         }
       >
         {selected && (
           <>
-            <p className="text-xs text-muted mb-2">Record: {selected.record_id || '—'}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-medium text-muted mb-1">
-                  Previous
-                </p>
-                <pre className="text-xs bg-foam border border-foam-deep text-chart-ink rounded-lg p-3 overflow-auto max-h-64 font-data">
-                  {JSON.stringify(selected.previous_values ?? null, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted mb-1">New</p>
-                <pre className="text-xs bg-foam border border-foam-deep text-chart-ink rounded-lg p-3 overflow-auto max-h-64 font-data">
-                  {JSON.stringify(selected.new_values ?? null, null, 2)}
-                </pre>
-              </div>
+            <p className="mb-2 text-[12px] leading-4 text-muted">
+              {t('settingsUi.audit.record')} <span className="font-mono text-text">{selected.record_id || '—'}</span>
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {[
+                ['previous', selected.previous_values],
+                ['next', selected.new_values],
+              ].map(([key, value]) => (
+                <div key={key}>
+                  <p className="mb-1 text-[12px] font-medium leading-4 text-muted">{t(`settingsUi.audit.${key}`)}</p>
+                  <pre className="max-h-64 overflow-auto rounded-input border border-line-strong bg-bg p-3 font-data text-[12px] text-text">
+                    {JSON.stringify(value ?? null, null, 2)}
+                  </pre>
+                </div>
+              ))}
             </div>
           </>
         )}

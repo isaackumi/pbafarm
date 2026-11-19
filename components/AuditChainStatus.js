@@ -1,42 +1,77 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import { formatDateTime } from '../lib/format'
-import { Button, Card } from './ui'
+import { useT } from '../lib/i18n/context'
+import { GhostButton } from './ui'
 
-/** Tamper-evidence status of the organization's audit log (TRACE-007). */
+const TONE = { ok: 'var(--good)', broken: 'var(--alert)', running: 'var(--cyan)' }
+
+function shortHash(hash) {
+  if (!hash) return null
+  return hash.length > 10 ? `${hash.slice(0, 4)}…${hash.slice(-4)}` : hash
+}
+
+/** Tamper-evidence status of the organization's audit log (TRACE-007, Paper 47 chain banner). */
 export default function AuditChainStatus() {
+  const t = useT()
   const status = useQuery(api.audit.chainStatus, {})
   const verify = useMutation(api.audit.verifyChain)
   const [error, setError] = useState('')
   if (!status) return null
   const latest = status.latest
-  const tone =
-    latest?.status === 'broken' ? 'text-signal' : latest?.status === 'ok' ? 'text-kelp' : 'text-muted'
-  const summary = !latest
-    ? 'Not checked yet'
+  const color = TONE[latest?.status] || 'var(--muted)'
+  const Icon = latest?.status === 'broken' ? ShieldAlert : ShieldCheck
+  const headline = !latest
+    ? t('settingsUi.audit.chain.notChecked')
     : latest.status === 'running'
-      ? `Checking… ${latest.checkedCount.toLocaleString()} entries so far`
+      ? t('settingsUi.audit.chain.running', { count: latest.checkedCount.toLocaleString() })
       : latest.status === 'ok'
-        ? `Intact: ${latest.checkedCount.toLocaleString()} entries checked ${formatDateTime(latest.finishedAt)}`
-        : `Broken at entry ${latest.brokenAtSeq}: ${latest.reason}`
+        ? t('settingsUi.audit.chain.ok', { count: latest.checkedCount.toLocaleString() })
+        : t('settingsUi.audit.chain.broken', { seq: latest.brokenAtSeq ?? '—' })
+  const hash = shortHash(status.headHash)
 
   return (
-    <Card className="mb-6 sm:max-w-3xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm">
-          <p className="font-medium text-chart-ink">Tamper check</p>
-          <p className={tone}>{summary}</p>
-          <p className="text-muted">
-            {status.chainLength.toLocaleString()} chained entries
-            {status.unchainedCount > 0 &&
-              ` · ${status.unchainedCount.toLocaleString()}${status.unchainedMore ? '+' : ''} older entries unchained (before the tamper check existed)`}
+    <section
+      aria-label={t('settingsUi.audit.chain.label')}
+      className="flex flex-col gap-3 rounded-card border border-line bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-[26px]"
+    >
+      <div className="flex flex-wrap items-center gap-4">
+        <span
+          aria-hidden
+          className="flex size-12 shrink-0 items-center justify-center rounded-full border"
+          style={{ borderColor: `color-mix(in oklab, ${color} 45%, transparent)`, color }}
+        >
+          <Icon size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p role="status" className="text-[17px] font-medium leading-[22px] text-text">
+            {headline}
           </p>
+          <p className="mt-1 text-[14px] leading-[18px] text-muted">
+            {latest?.finishedAt ? t('settingsUi.audit.chain.lastCheck', { time: formatDateTime(latest.finishedAt) }) : null}
+            {latest?.finishedAt ? ' · ' : ''}
+            {t('settingsUi.audit.chain.length', { count: status.chainLength.toLocaleString() })}
+            {hash && (
+              <>
+                {' · '}
+                {t('settingsUi.audit.chain.head')} <span className="font-mono text-[13px] text-pearl-cyan">{hash}</span>
+              </>
+            )}
+          </p>
+          {latest?.status === 'broken' && latest.reason && <p className="mt-1 text-[13px] leading-4 text-alert">{latest.reason}</p>}
+          {status.unchainedCount > 0 && (
+            <p className="mt-1 text-[13px] leading-4 text-faint">
+              {t('settingsUi.audit.chain.unchained', {
+                count: `${status.unchainedCount.toLocaleString()}${status.unchainedMore ? '+' : ''}`,
+              })}
+            </p>
+          )}
         </div>
-        <Button
-          size="sm"
-          variant="secondary"
+        <GhostButton
+          size="lg"
           disabled={latest?.status === 'running'}
           onClick={async () => {
             setError('')
@@ -47,10 +82,14 @@ export default function AuditChainStatus() {
             }
           }}
         >
-          Check now
-        </Button>
+          {t('settingsUi.audit.chain.verify')}
+        </GhostButton>
       </div>
-      {error && <p className="text-sm text-signal mt-2">{error}</p>}
-    </Card>
+      {error && (
+        <p role="alert" className="text-[13px] leading-4 text-alert">
+          {error}
+        </p>
+      )}
+    </section>
   )
 }

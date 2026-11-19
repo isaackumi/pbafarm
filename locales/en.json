@@ -4071,6 +4071,81 @@
         "limit4": "Bodies are limited to 1 MB and 100 lines per write.",
         "endpointsTitle": "Endpoints"
       }
+    },
+    "audit": {
+      "crumb": "Every change, hash-chained",
+      "title": "Audit log",
+      "summaryTitle": "Activity",
+      "events": "Events in range",
+      "eventsTitle": "Events",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "unknownUser": "Unknown user",
+      "col": {
+        "when": "When",
+        "actor": "Actor",
+        "action": "Action · target",
+        "category": "Category"
+      },
+      "category": {
+        "access": "Access",
+        "finance": "Finance",
+        "data": "Data"
+      },
+      "range": "Date range",
+      "table": "Table",
+      "action": "Action",
+      "allTables": "All tables",
+      "allActions": "All actions",
+      "ranges": {
+        "d7": "Last 7 days",
+        "d30": "Last 30 days",
+        "d90": "Last 90 days",
+        "d365": "Last year"
+      },
+      "tables": {
+        "cages": "Cages",
+        "dailyRecords": "Daily records",
+        "biweeklyRecords": "Biweekly records",
+        "stockingHistory": "Stocking",
+        "topupHistory": "Top-ups",
+        "feedTypes": "Feed types",
+        "feedPurchases": "Feed purchases",
+        "feedInventory": "Feed inventory lots",
+        "feedInventoryTransactions": "Feed ledger",
+        "companies": "Companies / settings",
+        "users": "Users"
+      },
+      "actions": {
+        "create": "Create",
+        "update": "Update",
+        "delete": "Delete",
+        "approve": "Approve",
+        "reject": "Reject",
+        "transfer": "Transfer",
+        "reversal": "Reversal",
+        "stock_override": "Stock override",
+        "settings_publish": "Settings publish"
+      },
+      "loading": "Loading audit events…",
+      "empty": "No audit events yet. Changes to cages, feed stock, settings and users show up here.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "record": "Record",
+      "previous": "Previous",
+      "next": "New",
+      "chain": {
+        "label": "Tamper check",
+        "notChecked": "Chain not checked yet",
+        "running": "Checking… {count} entries so far",
+        "ok": "Chain intact · {count} entries verified",
+        "broken": "Chain broken at entry {seq}",
+        "lastCheck": "Last check {time}",
+        "length": "{count} chained entries",
+        "head": "head hash",
+        "unchained": "{count} older entries unchained (written before the tamper check existed)",
+        "verify": "Verify now"
+      }
     }
   },
   "country": {
