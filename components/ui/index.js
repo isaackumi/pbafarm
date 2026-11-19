@@ -440,9 +440,9 @@ export function PageHeader({
   )
 }
 
-export { Pill } from './Pill'
+export { Pill, Badge } from './Pill'
 export { StatusDot } from './StatusDot'
-export { GradientButton, GhostButton } from './Buttons'
+export { GradientButton, GhostButton, SolidButton } from './Buttons'
 export { Toggle } from './Toggle'
 export { CheckCell, ScopeChip } from './CheckCell'
 export { Avatar, initials } from './Avatar'
@@ -454,6 +454,7 @@ export { KpiStrip } from './KpiStrip'
 export { Tabs } from './Tabs'
 export { Table } from './Table'
 export { PageTitle } from './PageTitle'
+export { SummaryCard } from './SummaryCard'
 
 const FIELD_CLASS =
   // 16px text keeps iOS from zooming into fields on focus.

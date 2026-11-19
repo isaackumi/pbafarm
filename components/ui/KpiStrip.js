@@ -1,12 +1,14 @@
 /**
  * Row of KPI cells divided by hairlines (Paper 01 Home, 28 Sensors).
- * items: [{ label, value, suffix, suffixTone: 'muted'|'good'|'alert' }]
+ * items: [{ label, value, valueTone: 'warn'|'alert'|'good', suffix, suffixTone: 'muted'|'good'|'alert'|'cyan' }]
  */
 const SUFFIX = {
   muted: 'text-muted text-[13px] leading-4',
   good: 'text-good text-[13px] leading-4',
   alert: 'text-alert text-[13px] leading-4',
+  cyan: 'text-pearl-cyan text-[13px] leading-4',
 }
+const VALUE = { warn: 'text-warn', alert: 'text-alert', good: 'text-good' }
 
 export function KpiStrip({ items = [], className = '' }) {
   return (
@@ -23,7 +25,7 @@ export function KpiStrip({ items = [], className = '' }) {
           <div className="text-[12px] uppercase leading-4 tracking-[0.06em] text-faint">
             {item.label}
           </div>
-          <div className="text-[26px] font-semibold leading-8 tracking-[-0.02em] text-text tabular-nums">
+          <div className={`text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums ${VALUE[item.valueTone] || 'text-text'}`}>
             {item.value}
             {item.suffix != null && (
               <span className={`font-normal ${SUFFIX[item.suffixTone] || SUFFIX.muted}`}> {item.suffix}</span>

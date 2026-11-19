@@ -11,6 +11,7 @@ import Tabs from './Tabs'
  */
 export function Table({
   title,
+  tabsLabel,
   tabs,
   tab,
   onTabChange,
@@ -33,7 +34,7 @@ export function Table({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
           <div className="flex flex-wrap items-center gap-5">
             {title && <h2 className="font-sans text-[17px] font-semibold leading-[22px] text-text">{title}</h2>}
-            {tabs && <Tabs tabs={tabs} value={tab} onChange={onTabChange} label={title} />}
+            {tabs && <Tabs tabs={tabs} value={tab} onChange={onTabChange} label={tabsLabel || title} />}
           </div>
           <div className="flex items-center gap-3">
             {onSearchChange &&

@@ -21,4 +21,30 @@ export function Pill({ tone = 'neutral', children, className = '', ...props }) {
   )
 }
 
+/**
+ * Filled status badge (Paper 43/44 invoice status): the tone at 12% behind
+ * its own colour. The text always names the status.
+ */
+const BADGE = {
+  neutral: 'bg-surface-2 text-muted',
+  good: 'bg-[color-mix(in_oklab,var(--good)_12%,transparent)] text-good',
+  warn: 'bg-[color-mix(in_oklab,var(--warn)_12%,transparent)] text-warn',
+  alert: 'bg-[color-mix(in_oklab,var(--alert)_12%,transparent)] text-alert',
+  cyan: 'bg-[color-mix(in_oklab,var(--cyan)_12%,transparent)] text-pearl-cyan',
+  pink: 'bg-[color-mix(in_oklab,var(--pink)_12%,transparent)] text-pearl-pink',
+}
+
+export function Badge({ tone = 'neutral', children, className = '', ...props }) {
+  return (
+    <span
+      className={`inline-flex items-center whitespace-nowrap rounded-pill px-2 py-[3px] text-[11px] leading-[14px] ${
+        BADGE[tone] || BADGE.neutral
+      } ${className}`}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+}
+
 export default Pill

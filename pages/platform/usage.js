@@ -4,6 +4,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import PlatformLayout, { SimpleTable } from '../../components/platform/PlatformLayout'
 import { Card, CardHeader, LoadingState, Select, StatCard } from '../../components/ui'
+import { useT } from '../../lib/i18n/context'
 
 const SORTS = {
   aiCostUsd: 'AI cost',
@@ -59,7 +60,7 @@ function UsageTable() {
               key: 'companyName',
               label: 'Tenant',
               render: (r) => (
-                <Link className="text-lake hover:underline" href={`/platform/tenants/${r.companyId}`}>
+                <Link className="text-pearl-cyan hover:underline" href={`/platform/tenants/${r.companyId}`}>
                   {r.companyName}
                 </Link>
               ),
@@ -79,8 +80,9 @@ function UsageTable() {
 }
 
 export default function PlatformUsagePage() {
+  const t = useT()
   return (
-    <PlatformLayout title="Usage & cost">
+    <PlatformLayout title={t('platform.nav.usage')}>
       <UsageTable />
     </PlatformLayout>
   )

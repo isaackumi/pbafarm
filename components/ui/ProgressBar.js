@@ -1,5 +1,5 @@
 /** 8px track (Paper 09 Feed). Brand fill is the pink→cyan gradient. */
-const FILL = { alert: 'bg-alert', warn: 'bg-warn', good: 'bg-good' }
+const FILL = { alert: 'bg-alert', warn: 'bg-warn', good: 'bg-good', cyan: 'bg-pearl-cyan', pink: 'bg-pearl-pink' }
 
 export function ProgressBar({ value = 0, max = 100, tone = 'brand', label, className = '' }) {
   const pct = Math.max(0, Math.min(100, max ? (value / max) * 100 : 0))

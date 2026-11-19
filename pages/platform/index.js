@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api'
 import PlatformLayout, { SimpleTable } from '../../components/platform/PlatformLayout'
 import { Card, CardHeader, LoadingState, StatCard } from '../../components/ui'
 import { formatDate, formatMinor } from '../../lib/billingFormat'
+import { useT } from '../../lib/i18n/context'
 
 function moneyList(list) {
   if (!list || list.length === 0) return '—'
@@ -17,7 +18,7 @@ function RecordsChart({ days }) {
       {days.map((d) => (
         <div key={d.date} className="flex-1 flex flex-col items-center gap-1 min-w-0">
           <div
-            className="w-full rounded-t bg-lake/70"
+            className="w-full rounded-t bg-pearl-cyan/70"
             style={{ height: `${Math.max(2, (d.records / max) * 100)}%` }}
             title={`${d.date}: ${d.records}`}
           />
@@ -34,7 +35,7 @@ function Overview() {
   return (
     <div className="space-y-6">
       {k.truncated && (
-        <p className="text-sm text-signal">Counts cover the first organizations only; the platform has outgrown this scan.</p>
+        <p className="text-sm text-alert">Counts cover the first organizations only; the platform has outgrown this scan.</p>
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Active tenants" value={k.tenants.active} hint={`${k.tenants.total} total`} tone="good" />
@@ -81,7 +82,7 @@ function Overview() {
                 key: 'name',
                 label: 'Tenant',
                 render: (r) => (
-                  <Link className="text-lake hover:underline" href={`/platform/tenants/${r.companyId}`}>
+                  <Link className="text-pearl-cyan hover:underline" href={`/platform/tenants/${r.companyId}`}>
                     {r.name}
                   </Link>
                 ),
@@ -107,8 +108,9 @@ function Overview() {
 }
 
 export default function PlatformOverviewPage() {
+  const t = useT()
   return (
-    <PlatformLayout title="Overview">
+    <PlatformLayout title={t('platform.nav.overview')}>
       <Overview />
     </PlatformLayout>
   )

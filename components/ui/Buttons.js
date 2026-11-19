@@ -57,10 +57,32 @@ export function GradientButton({
   )
 }
 
-export function GhostButton({ icon: Icon, children, className = '', ...props }) {
+const GHOST_SIZE = {
+  md: 'px-[18px] py-[9px] text-[13px] leading-4',
+  lg: 'h-10 px-[18px] text-[14px] leading-[18px]',
+  sm: 'px-3 py-[7px] text-xs leading-4',
+}
+
+/** Outlined pill. `tone="danger"` for destructive actions (red text, still outlined). */
+export function GhostButton({ icon: Icon, children, size = 'md', tone = 'default', className = '', ...props }) {
   return (
     <Base
-      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-pill border border-line-strong px-[18px] py-[9px] text-[13px] leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-pill border border-line-strong ${GHOST_SIZE[size] || GHOST_SIZE.md} ${
+        tone === 'danger' ? 'text-alert' : 'text-text'
+      } hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      {...props}
+    >
+      {Icon && <Icon size={14} strokeWidth={2} aria-hidden className="shrink-0" />}
+      {children}
+    </Base>
+  )
+}
+
+/** Solid light pill, no ring: the platform console's primary action (Paper 40/44). */
+export function SolidButton({ icon: Icon, children, size = 'lg', className = '', ...props }) {
+  return (
+    <Base
+      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-pill bg-text font-medium text-bg ${GHOST_SIZE[size] || GHOST_SIZE.lg} hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       {...props}
     >
       {Icon && <Icon size={14} strokeWidth={2} aria-hidden className="shrink-0" />}

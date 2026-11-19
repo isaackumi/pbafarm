@@ -1,19 +1,21 @@
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import PlatformLayout, { SimpleTable, StatusPill } from '../../components/platform/PlatformLayout'
-import { Button, Card, CardHeader, Field, Input, LoadingState, Modal, Select, TabBar, Textarea } from '../../components/ui'
+import { Button, Card, CardHeader, Field, Input, LoadingState, Modal, Select, Tabs, Textarea } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
 import { formatDate, formatMinor, minorDigits, toMinor } from '../../lib/billingFormat'
+import { useT } from '../../lib/i18n/context'
 
 const CURRENCIES = ['GHS', 'XOF', 'USD']
 const LIMIT_KEYS = ['sites', 'users', 'units', 'aiCredits', 'smsIncluded']
 const FEATURE_KEYS = ['ai_assistant', 'sms_alerts', 'whatsapp', 'public_api', 'webhooks', 'hatchery', 'multi_site_reports']
 
 const tenantLink = (r) => (
-  <Link className="text-lake hover:underline" href={`/platform/tenants/${r.companyId}`}>
+  <Link className="text-pearl-cyan hover:underline" href={`/platform/tenants/${r.companyId}`}>
     {r.companyName}
   </Link>
 )
@@ -391,16 +393,29 @@ const TABS = [
 ]
 
 export default function PlatformBillingPage() {
-  const [tab, setTab] = useState('plans')
+  const t = useT()
+  const router = useRouter()
+  const tab = TABS.some((x) => x.id === router.query.tab) ? router.query.tab : 'plans'
+  const setTab = (next) => router.replace({ pathname: router.pathname, query: { tab: next } }, undefined, { shallow: true })
   return (
-    <PlatformLayout title="Billing">
+    <PlatformLayout title={t('platform.nav.billing')}>
       <div className="space-y-4">
-        <TabBar tabs={TABS} active={tab} onChange={setTab} label="Billing sections" />
-        {tab === 'plans' && <Plans />}
-        {tab === 'subscriptions' && <Subscriptions />}
-        {tab === 'invoices' && <Invoices />}
-        {tab === 'payments' && <Payments />}
-        {tab === 'dunning' && <Dunning />}
+        <div className="border-b border-line">
+          <Tabs
+            variant="underline"
+            tabs={TABS.map((x) => ({ value: x.id, label: x.label, controls: 'billing-panel' }))}
+            value={tab}
+            onChange={setTab}
+            label="Billing sections"
+          />
+        </div>
+        <div id="billing-panel" role="tabpanel">
+          {tab === 'plans' && <Plans />}
+          {tab === 'subscriptions' && <Subscriptions />}
+          {tab === 'invoices' && <Invoices />}
+          {tab === 'payments' && <Payments />}
+          {tab === 'dunning' && <Dunning />}
+        </div>
       </div>
     </PlatformLayout>
   )
