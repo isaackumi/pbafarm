@@ -230,7 +230,7 @@ function Reports() {
 
                 <fieldset className="flex flex-col gap-2">
                   <legend className="mb-2 text-xs leading-4 text-muted">{t('ops.report.dateRange')}</legend>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                     <Field label={t('ops.ledger.from')} htmlFor="report-start">
                       <Input id="report-start" type="date" name="startDate" value={dateRange.startDate} onChange={handleDateRangeChange} />
                     </Field>
@@ -280,7 +280,7 @@ function Reports() {
                   </div>
                 </fieldset>
 
-                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} className="w-full justify-center">
+                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} className="w-full [&>span]:grow [&>span]:justify-center">
                   {loading ? t('ops.report.generating') : t('ops.report.generate')}
                 </GradientButton>
 
