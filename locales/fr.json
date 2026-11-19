@@ -72,7 +72,8 @@
       "organizationStructure": "Structure de l’organisation",
       "teams": "Équipes",
       "workforce": "Personnel",
-      "feedingPlans": "Plans d'alimentation"
+      "feedingPlans": "Plans d'alimentation",
+      "reports": "Générateur de rapports"
     },
     "section": {
       "production": "Production",
@@ -1007,6 +1008,248 @@
       "words": "Mots",
       "forms": "Formulaires",
       "dashboard": "Tableau de bord"
+    }
+  },
+  "reportBuilder": {
+    "title": "Générateur de rapports",
+    "description": "Créez des rapports à partir des données de production, d’aliment, de mortalité, de récolte, de ventes et de stock. Enregistrez-les pour vous ou votre entreprise, exportez-les ou envoyez-les par e-mail selon un calendrier.",
+    "crumbs": {
+      "dashboard": "Tableau de bord"
+    },
+    "related": {
+      "production": "Rapport de production",
+      "export": "Exporter les données"
+    },
+    "tabs": {
+      "reports": "Rapports",
+      "schedules": "Envois programmés",
+      "log": "Journal d’envoi"
+    },
+    "saved": {
+      "title": "Rapports enregistrés",
+      "new": "Nouveau rapport",
+      "empty": "Aucun rapport enregistré. Créez-en un ci-dessous et enregistrez-le."
+    },
+    "visibility": {
+      "private": "Moi uniquement",
+      "company": "Toute l’entreprise"
+    },
+    "builder": {
+      "dataset": "Données",
+      "groupBy": "Regrouper par (jusqu’à {max})",
+      "granularity": "Période",
+      "measures": "Mesures",
+      "range": "Période couverte",
+      "from": "Du",
+      "to": "Au",
+      "snapshotNote": "Le stock est un instantané du stock actuel ; aucune période ne s’applique.",
+      "filter": "Filtrer par {dimension}",
+      "filterAll": "Tout (Ctrl ou ⌘ pour en choisir plusieurs)",
+      "filterCount": {
+        "one": "{count} sélectionné",
+        "other": "{count} sélectionnés"
+      },
+      "chart": "Graphique",
+      "chartMeasure": "Mesure du graphique",
+      "limit": "Nombre de lignes",
+      "limitHint": "Jusqu’à {max} lignes",
+      "name": "Nom du rapport",
+      "description": "Description",
+      "visibility": "Partagé avec",
+      "save": "Enregistrer le rapport",
+      "update": "Enregistrer les modifications",
+      "saveAsNew": "Enregistrer comme nouveau",
+      "delete": "Supprimer",
+      "saved": "Rapport enregistré",
+      "deleted": "Rapport supprimé",
+      "nameRequired": "Donnez un nom au rapport",
+      "confirmDelete": "Supprimer le rapport « {name} » et ses envois programmés ?",
+      "readOnly": "Partagé par {name}. Enregistrez une copie pour le modifier."
+    },
+    "result": {
+      "period": "Du {from} au {to}",
+      "snapshot": "Stock au {date}",
+      "rows": {
+        "one": "{count} ligne",
+        "other": "{count} lignes"
+      },
+      "csv": "Exporter en CSV",
+      "xlsx": "Exporter en Excel",
+      "preparing": "Préparation…",
+      "sourceTruncated": "Ce rapport a atteint la limite d’enregistrements lus ; réduisez la période ou ajoutez des filtres pour des totaux complets.",
+      "rowsTruncated": "Seules les premières lignes sont affichées ; augmentez la limite ou regroupez moins finement.",
+      "emptyTitle": "Aucune donnée",
+      "emptyBody": "Rien ne correspond à ce rapport pour la période et les filtres choisis.",
+      "incomplete": "Complétez le rapport",
+      "failed": "Le rapport n’a pas pu s’exécuter"
+    },
+    "dataset": {
+      "production": "Production par cycle",
+      "feed": "Aliment",
+      "mortality": "Mortalité",
+      "harvest": "Récoltes",
+      "sales": "Ventes",
+      "inventory": "Stock"
+    },
+    "dimension": {
+      "site": "Site",
+      "cage": "Cage",
+      "species": "Espèce",
+      "batch": "Lot",
+      "period": "Période",
+      "customer": "Client",
+      "payment_status": "Statut de paiement",
+      "item": "Article",
+      "category": "Catégorie"
+    },
+    "measure": {
+      "production": {
+        "cycles": "Cycles",
+        "live_fish": "Poissons vivants",
+        "biomass_kg": "Biomasse (kg)",
+        "fish_in": "Poissons empoissonnés",
+        "feed_kg": "Aliment (kg)",
+        "feed_cost": "Coût de l’aliment",
+        "gain_kg": "Gain de poids (kg)",
+        "harvested_kg": "Récolté (kg)",
+        "mortality": "Mortalité",
+        "efcr": "IC économique",
+        "survival_pct": "Survie (%)",
+        "mortality_pct": "Mortalité (%)"
+      },
+      "feed": {
+        "feed_kg": "Aliment (kg)",
+        "feed_cost": "Coût de l’aliment"
+      },
+      "mortality": {
+        "mortality": "Poissons morts",
+        "mortality_kg": "Poids mort (kg)",
+        "unaccounted": "Poissons manquants"
+      },
+      "harvest": {
+        "harvested_count": "Poissons récoltés",
+        "harvested_kg": "Récolté (kg)",
+        "avg_weight_g": "Poids moyen (g)"
+      },
+      "sales": {
+        "sales": "Ventes",
+        "weight_kg": "Poids vendu (kg)",
+        "revenue": "Chiffre d’affaires",
+        "amount_paid": "Montant payé",
+        "outstanding": "Reste à payer",
+        "avg_price_kg": "Prix moyen au kg"
+      },
+      "inventory": {
+        "quantity": "Quantité",
+        "stock_value": "Valeur du stock"
+      }
+    },
+    "granularity": {
+      "day": "Jour",
+      "week": "Semaine",
+      "month": "Mois",
+      "quarter": "Trimestre",
+      "year": "Année"
+    },
+    "range": {
+      "last_7_days": "7 derniers jours",
+      "last_30_days": "30 derniers jours",
+      "last_90_days": "90 derniers jours",
+      "month_to_date": "Ce mois-ci",
+      "last_month": "Le mois dernier",
+      "quarter_to_date": "Ce trimestre",
+      "year_to_date": "Cette année",
+      "last_12_months": "12 derniers mois",
+      "custom": "Dates personnalisées"
+    },
+    "chart": {
+      "table": "Tableau seul",
+      "bar": "Barres",
+      "line": "Courbe",
+      "pie": "Secteurs"
+    },
+    "paymentStatus": {
+      "paid": "Payé",
+      "partial": "Payé en partie",
+      "pending": "Non payé"
+    },
+    "frequency": {
+      "daily": "Quotidien",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel"
+    },
+    "status": {
+      "queued": "En attente",
+      "running": "Envoi en cours",
+      "retrying": "Nouvel essai prévu",
+      "succeeded": "Envoyé",
+      "partial": "Envoyé en partie",
+      "failed": "Échec",
+      "skipped": "Ignoré"
+    },
+    "recipientStatus": {
+      "pending": "en attente",
+      "sent": "envoyé",
+      "failed": "échec",
+      "skipped": "ignoré"
+    },
+    "schedules": {
+      "new": "Nouvel envoi programmé",
+      "edit": "Modifier l’envoi programmé",
+      "editShort": "Modifier",
+      "report": "Rapport",
+      "frequency": "Fréquence",
+      "weekday": "Jour de la semaine",
+      "dayOfMonth": "Jour du mois",
+      "dayOfMonthHint": "De 1 à 28, pour que chaque mois l’ait",
+      "time": "Heure",
+      "timezone": "Fuseau horaire",
+      "recipients": "Destinataires",
+      "recipientsHint": "Jusqu’à 20 membres qui peuvent voir le rapport et ses données. Les membres qui ont désactivé les e-mails de rapport ou sont en heures calmes sont ignorés.",
+      "enabled": "Actif",
+      "create": "Créer l’envoi",
+      "update": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "saved": "Envoi programmé enregistré",
+      "removed": "Envoi programmé supprimé",
+      "queued": "Le rapport est en cours d’envoi",
+      "confirmRemove": "Supprimer cet envoi programmé ?",
+      "remove": "Supprimer",
+      "pause": "Suspendre",
+      "resume": "Reprendre",
+      "sendNow": "Envoyer maintenant",
+      "everyDay": "Tous les jours à {time}",
+      "everyWeek": "Chaque {day} à {time}",
+      "everyMonth": "Le {day} de chaque mois à {time}",
+      "recipientCount": {
+        "one": "{count} destinataire",
+        "other": "{count} destinataires"
+      },
+      "next": "Prochain : {when}",
+      "paused": "Suspendu",
+      "last": "Dernier : {status}",
+      "owner": "Propriétaire : {name}",
+      "emptyTitle": "Aucun rapport programmé",
+      "emptyBody": "Programmez un rapport enregistré pour l’envoyer en CSV chaque jour, semaine ou mois.",
+      "needReport": "Enregistrez d’abord un rapport, puis programmez-le ici.",
+      "footnote": "Les rapports programmés s’exécutent avec les droits de leur propriétaire et sont envoyés en pièce jointe CSV. Les envois échoués ne sont réessayés que si le service d’e-mail est saturé ou indisponible."
+    },
+    "log": {
+      "when": "Date",
+      "report": "Rapport",
+      "status": "Statut",
+      "recipients": "Destinataires",
+      "manual": "Envoyé maintenant",
+      "scheduled": "Programmé",
+      "truncated": "tronqué",
+      "attempts": {
+        "one": "{count} tentative",
+        "other": "{count} tentatives"
+      },
+      "nextAttempt": "Nouvel essai {when}",
+      "more": "Charger plus",
+      "emptyTitle": "Aucun envoi pour l’instant",
+      "emptyBody": "Les rapports programmés et envoyés maintenant apparaissent ici."
     }
   }
 }

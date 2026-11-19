@@ -76,6 +76,7 @@ export const PERMISSION_GROUPS = {
   Reports: {
     'reports.view': 'See dashboards and reports',
     'reports.export': 'Export data',
+    'reports.manage': 'Create, share and schedule saved reports',
     'ai.use': 'Use the farm assistant',
   },
 } as const

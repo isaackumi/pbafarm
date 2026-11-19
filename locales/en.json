@@ -72,7 +72,8 @@
       "organizationStructure": "Organization Structure",
       "teams": "Teams",
       "workforce": "Workforce",
-      "feedingPlans": "Feeding Plans"
+      "feedingPlans": "Feeding Plans",
+      "reports": "Report Builder"
     },
     "section": {
       "production": "Production",
@@ -1007,6 +1008,248 @@
       "words": "Words",
       "forms": "Forms",
       "dashboard": "Dashboard"
+    }
+  },
+  "reportBuilder": {
+    "title": "Report Builder",
+    "description": "Build reports from production, feed, mortality, harvest, sales and inventory data. Save them for yourself or your company, export them, or email them on a schedule.",
+    "crumbs": {
+      "dashboard": "Dashboard"
+    },
+    "related": {
+      "production": "Production report",
+      "export": "Export data"
+    },
+    "tabs": {
+      "reports": "Reports",
+      "schedules": "Schedules",
+      "log": "Delivery log"
+    },
+    "saved": {
+      "title": "Saved reports",
+      "new": "New report",
+      "empty": "No saved reports yet. Build one below and save it."
+    },
+    "visibility": {
+      "private": "Only me",
+      "company": "Everyone in the company"
+    },
+    "builder": {
+      "dataset": "Data",
+      "groupBy": "Group by (up to {max})",
+      "granularity": "Period",
+      "measures": "Measures",
+      "range": "Date range",
+      "from": "From",
+      "to": "To",
+      "snapshotNote": "Inventory is a snapshot of current stock; no date range applies.",
+      "filter": "Filter by {dimension}",
+      "filterAll": "All (hold Ctrl or ⌘ to pick several)",
+      "filterCount": {
+        "one": "{count} selected",
+        "other": "{count} selected"
+      },
+      "chart": "Chart",
+      "chartMeasure": "Chart measure",
+      "limit": "Row limit",
+      "limitHint": "Up to {max} rows",
+      "name": "Report name",
+      "description": "Description",
+      "visibility": "Shared with",
+      "save": "Save report",
+      "update": "Save changes",
+      "saveAsNew": "Save as new",
+      "delete": "Delete",
+      "saved": "Report saved",
+      "deleted": "Report deleted",
+      "nameRequired": "Give the report a name",
+      "confirmDelete": "Delete the report “{name}” and its schedules?",
+      "readOnly": "Shared by {name}. Save as new from a copy to change it."
+    },
+    "result": {
+      "period": "{from} to {to}",
+      "snapshot": "Stock as of {date}",
+      "rows": {
+        "one": "{count} row",
+        "other": "{count} rows"
+      },
+      "csv": "Export CSV",
+      "xlsx": "Export Excel",
+      "preparing": "Preparing…",
+      "sourceTruncated": "This report reached the limit of source records read; narrow the date range or add filters for complete totals.",
+      "rowsTruncated": "Only the first rows are shown; raise the row limit or group less finely.",
+      "emptyTitle": "No data",
+      "emptyBody": "Nothing matches this report for the selected period and filters.",
+      "incomplete": "Finish the report",
+      "failed": "The report could not run"
+    },
+    "dataset": {
+      "production": "Production by cycle",
+      "feed": "Feed",
+      "mortality": "Mortality",
+      "harvest": "Harvests",
+      "sales": "Sales",
+      "inventory": "Inventory stock"
+    },
+    "dimension": {
+      "site": "Site",
+      "cage": "Cage",
+      "species": "Species",
+      "batch": "Batch",
+      "period": "Period",
+      "customer": "Customer",
+      "payment_status": "Payment status",
+      "item": "Item",
+      "category": "Category"
+    },
+    "measure": {
+      "production": {
+        "cycles": "Cycles",
+        "live_fish": "Live fish",
+        "biomass_kg": "Biomass (kg)",
+        "fish_in": "Fish stocked",
+        "feed_kg": "Feed (kg)",
+        "feed_cost": "Feed cost",
+        "gain_kg": "Weight gain (kg)",
+        "harvested_kg": "Harvested (kg)",
+        "mortality": "Mortality",
+        "efcr": "eFCR",
+        "survival_pct": "Survival (%)",
+        "mortality_pct": "Mortality (%)"
+      },
+      "feed": {
+        "feed_kg": "Feed (kg)",
+        "feed_cost": "Feed cost"
+      },
+      "mortality": {
+        "mortality": "Dead fish",
+        "mortality_kg": "Dead weight (kg)",
+        "unaccounted": "Unaccounted fish"
+      },
+      "harvest": {
+        "harvested_count": "Fish harvested",
+        "harvested_kg": "Harvested (kg)",
+        "avg_weight_g": "Average weight (g)"
+      },
+      "sales": {
+        "sales": "Sales",
+        "weight_kg": "Weight sold (kg)",
+        "revenue": "Revenue",
+        "amount_paid": "Amount paid",
+        "outstanding": "Outstanding",
+        "avg_price_kg": "Average price per kg"
+      },
+      "inventory": {
+        "quantity": "Quantity",
+        "stock_value": "Stock value"
+      }
+    },
+    "granularity": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter",
+      "year": "Year"
+    },
+    "range": {
+      "last_7_days": "Last 7 days",
+      "last_30_days": "Last 30 days",
+      "last_90_days": "Last 90 days",
+      "month_to_date": "This month",
+      "last_month": "Last month",
+      "quarter_to_date": "This quarter",
+      "year_to_date": "This year",
+      "last_12_months": "Last 12 months",
+      "custom": "Custom dates"
+    },
+    "chart": {
+      "table": "Table only",
+      "bar": "Bar",
+      "line": "Line",
+      "pie": "Pie"
+    },
+    "paymentStatus": {
+      "paid": "Paid",
+      "partial": "Partly paid",
+      "pending": "Unpaid"
+    },
+    "frequency": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Sending",
+      "retrying": "Retrying",
+      "succeeded": "Sent",
+      "partial": "Partly sent",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "recipientStatus": {
+      "pending": "pending",
+      "sent": "sent",
+      "failed": "failed",
+      "skipped": "skipped"
+    },
+    "schedules": {
+      "new": "New schedule",
+      "edit": "Edit schedule",
+      "editShort": "Edit",
+      "report": "Report",
+      "frequency": "Frequency",
+      "weekday": "Day of the week",
+      "dayOfMonth": "Day of the month",
+      "dayOfMonthHint": "1 to 28, so every month has it",
+      "time": "Time",
+      "timezone": "Time zone",
+      "recipients": "Recipients",
+      "recipientsHint": "Up to 20 members who can see the report and its data. Members who turned off report emails or are in quiet hours are skipped.",
+      "enabled": "Active",
+      "create": "Create schedule",
+      "update": "Save changes",
+      "cancel": "Cancel",
+      "saved": "Schedule saved",
+      "removed": "Schedule removed",
+      "queued": "The report is being sent",
+      "confirmRemove": "Remove this schedule?",
+      "remove": "Remove",
+      "pause": "Pause",
+      "resume": "Resume",
+      "sendNow": "Send now",
+      "everyDay": "Every day at {time}",
+      "everyWeek": "Every {day} at {time}",
+      "everyMonth": "Monthly on day {day} at {time}",
+      "recipientCount": {
+        "one": "{count} recipient",
+        "other": "{count} recipients"
+      },
+      "next": "Next: {when}",
+      "paused": "Paused",
+      "last": "Last: {status}",
+      "owner": "Owner: {name}",
+      "emptyTitle": "No scheduled reports",
+      "emptyBody": "Schedule a saved report to email it as a CSV every day, week or month.",
+      "needReport": "Save a report first, then schedule it here.",
+      "footnote": "Scheduled reports run as their owner and are sent as a CSV attachment. Failed sends are retried only when the email service is busy or unavailable."
+    },
+    "log": {
+      "when": "When",
+      "report": "Report",
+      "status": "Status",
+      "recipients": "Recipients",
+      "manual": "Sent now",
+      "scheduled": "Scheduled",
+      "truncated": "truncated",
+      "attempts": {
+        "one": "{count} attempt",
+        "other": "{count} attempts"
+      },
+      "nextAttempt": "Next try {when}",
+      "more": "Load more",
+      "emptyTitle": "No deliveries yet",
+      "emptyBody": "Scheduled and sent-now reports appear here."
     }
   }
 }

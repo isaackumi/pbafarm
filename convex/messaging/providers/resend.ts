@@ -16,7 +16,8 @@ const ResendSent = Schema.Struct({ id: Schema.optional(Schema.NullOr(Schema.Stri
  * Verified 2026-11-18 against:
  * - https://resend.com/docs/api-reference/emails/send-email
  *   POST https://api.resend.com/emails, Bearer API key, JSON { from, to, subject, text };
- *   200 with { id }.
+ *   200 with { id }. Optional `attachments: [{ filename, content (base64) }]`,
+ *   content type derived from the filename, 40 MB per email after encoding.
  * - https://resend.com/docs/api-reference/introduction: every request must
  *   carry a User-Agent header (403 otherwise).
  * - https://resend.com/docs/api-reference/errors
@@ -47,6 +48,11 @@ export const resend: ProviderAdapter = {
             to: [input.to],
             subject: input.subject ?? 'Message from PBA Farm',
             text: input.body,
+            ...(input.attachments?.length
+              ? {
+                  attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })),
+                }
+              : {}),
           }),
         },
         (status, json, text) => {

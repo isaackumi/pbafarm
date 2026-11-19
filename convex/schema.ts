@@ -14,6 +14,13 @@ import {
   runStatus,
 } from './automation/validators'
 import { CURRENCY_CODES } from './lib/currencies'
+import {
+  reportDefinition,
+  reportDeliveryStatus,
+  reportRecipient,
+  reportVisibility,
+  scheduleFrequency,
+} from './lib/reportValidators'
 
 const [cur0, cur1, ...curRest] = CURRENCY_CODES.map((c) => v.literal(c))
 /** Organization currency codes (I18N-003). */
@@ -2636,6 +2643,79 @@ const schema = defineSchema({
   })
     .index('by_templateId_and_locationId_and_period', ['templateId', 'locationId', 'period'])
     .index('by_companyId_and_completedOn', ['companyId', 'completedOn']),
+
+  /**
+   * A saved report definition (ANLY-001, convex/reportBuilder.ts): dataset,
+   * dimensions, measures, filters, range and chart. `private` reports are
+   * seen by their author only; `company` reports by every member who may
+   * read the dataset.
+   */
+  savedReports: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    description: v.optional(v.string()),
+    visibility: reportVisibility,
+    definition: reportDefinition,
+    createdBy: v.id('users'),
+    updatedBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_visibility', ['companyId', 'visibility'])
+    .index('by_companyId_and_createdBy', ['companyId', 'createdBy']),
+
+  /** A saved report emailed as CSV on a schedule (ANLY-007, convex/reportSchedules.ts). */
+  reportSchedules: defineTable({
+    companyId: v.id('companies'),
+    reportId: v.id('savedReports'),
+    frequency: scheduleFrequency,
+    /** HH:MM in `timezone`. */
+    localTime: v.string(),
+    /** 0 = Sunday … 6 = Saturday (weekly). */
+    weekday: v.optional(v.number()),
+    /** 1–28 (monthly). */
+    dayOfMonth: v.optional(v.number()),
+    timezone: v.string(),
+    /** Members of the company; at most 20. */
+    recipientIds: v.array(v.id('users')),
+    enabled: v.boolean(),
+    /** Unset while disabled. */
+    nextRunAt: v.optional(v.number()),
+    lastRunAt: v.optional(v.number()),
+    lastStatus: v.optional(reportDeliveryStatus),
+    createdBy: v.id('users'),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_reportId', ['reportId'])
+    .index('by_enabled_and_nextRunAt', ['enabled', 'nextRunAt']),
+
+  /** Delivery log of scheduled and "send now" reports (ANLY-007); kept 90 days. */
+  reportDeliveries: defineTable({
+    companyId: v.id('companies'),
+    reportId: v.id('savedReports'),
+    scheduleId: v.optional(v.id('reportSchedules')),
+    reportName: v.string(),
+    trigger: v.union(v.literal('schedule'), v.literal('manual')),
+    /** Local date of the scheduled slot; one delivery per schedule and slot. */
+    slot: v.optional(v.string()),
+    requestedBy: v.optional(v.id('users')),
+    status: reportDeliveryStatus,
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    /** Planned on the first attempt; at most 20. */
+    recipients: v.array(reportRecipient),
+    rowCount: v.optional(v.number()),
+    truncated: v.optional(v.boolean()),
+    rangeFrom: v.optional(v.string()),
+    rangeTo: v.optional(v.string()),
+    error: v.optional(v.string()),
+    nextAttemptAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_scheduleId_and_slot', ['scheduleId', 'slot'])
+    .index('by_createdAt', ['createdAt']),
 })
 
 export default schema

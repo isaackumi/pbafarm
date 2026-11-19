@@ -62,4 +62,9 @@ crons.cron('prune data exports', '45 4 * * *', internal.governance.pruneExports,
 // (INV-012), one bounded job per company.
 crons.cron('equipment maintenance reminders', '0 6 * * *', internal.equipment.maintenanceReminders, {})
 
+// Scheduled report emails (ANLY-007): queue due schedules, each in its own
+// time zone; the delivery log is kept 90 days.
+crons.interval('report schedules tick', { minutes: 15 }, internal.reportSchedules.tick, {})
+crons.cron('prune report deliveries', '55 3 * * *', internal.reportSchedules.prune, {})
+
 export default crons

@@ -153,6 +153,7 @@ const MENU_SECTIONS = {
     tourId: 'reports-section',
     items: [
       { title: 'Production Report', path: '/report', permission: 'reports.view', icon: FileText, tourId: 'report' },
+      { title: 'Report Builder', path: '/reports', permission: 'reports.view', icon: ChartColumn },
       { title: 'Regional Report', path: '/reports/regions', permission: 'reports.view', icon: MapPin },
       { title: 'Group Reports', path: '/group-reports', permission: 'group.reports.view', icon: Globe },
       { title: 'Export Data', path: '/export', permission: 'reports.export', icon: Download },
