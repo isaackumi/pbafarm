@@ -10,13 +10,13 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper 
 
 | | Item | Source |
 |---|---|---|
-| [ ] | Design tokens as CSS variables, dark default plus `[data-theme="light"]` | HANDOFF §2, §3b |
-| [ ] | Inter font, radii (card 24, control 999, inner 14), shadows | HANDOFF §2 |
-| [ ] | Primitives: Card, KPI strip, Tabs, Pill (6 tones), Status dot, Table, GradientButton, GhostButton, Toggle, Checkbox cell, Avatar, SearchField, Segmented, Progress bar, Sparkline | Shell 7Z-0, 01, 22, 28 |
-| [ ] | `components/Layout.js`, `Sidebar.js`, `Header.js` (workspace switcher, feed cover, nav with Production sub-nav, search ⌘K, bell, avatar) | 7Z-0 |
-| [ ] | Settings sub-nav (Company, Farm sites, Members, Roles & permissions, Access policies, Audit log, Automations, API keys, Billing) | 22 / 23 / 31 |
-| [ ] | Theme toggle (user menu), persisted per user | 3b |
-| [ ] | `MobileTabBar.js` uses tokens only (no mobile artboard yet) | pattern P-MOBILE |
+| [x] | Design tokens as CSS variables, dark default plus `[data-theme="light"]` | HANDOFF §2, §3b |
+| [x] | Inter font, radii (card 24, control 999, inner 14), shadows | HANDOFF §2 |
+| [x] | Primitives: Card, KPI strip, Tabs, Pill (6 tones), Status dot, Table, GradientButton, GhostButton, Toggle, Checkbox cell, Avatar, SearchField, Segmented, Progress bar, Sparkline | Shell 7Z-0, 01, 22, 28 |
+| [x] | `components/Layout.js`, `Sidebar.js`, `Header.js` (workspace switcher, feed cover, nav with Production sub-nav, search ⌘K, bell, avatar) | 7Z-0 |
+| [x] | Settings sub-nav (Company, Farm sites, Members, Roles & permissions, Access policies, Audit log, Automations, API keys, Billing) — `components/SettingsNav.js`; Access policies and Billing hidden until their routes exist | 22 / 23 / 31 |
+| [x] | Theme toggle (user menu), persisted per user (per device via localStorage for now) | 3b |
+| [x] | `MobileTabBar.js` uses tokens only (no mobile artboard yet) | pattern P-MOBILE |
 
 ## Phase 1: routes
 
