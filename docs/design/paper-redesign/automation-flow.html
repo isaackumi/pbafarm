@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PBA Farm · Automation flow (animated)</title>
+<style>
+  :root{--bg:#0A0B0C;--surface:#111315;--s2:#181A1D;--line:#1F2226;--ls:#2A2E33;--text:#F2F3F4;--muted:#8B9097;--faint:#5C6168;--pink:#E8A6C8;--cyan:#9FE3E6;--good:#4ADE80;--warn:#FBBF24;--alert:#F87171}
+  *{box-sizing:border-box;margin:0}
+  body{font-family:Inter,system-ui,sans-serif;color:var(--text)}
+  .wrap{display:flex;justify-content:center}
+  .canvas{position:relative;width:100%;max-width:712px;padding:20px 28px 32px;border-radius:20px;border:1px solid var(--line);
+    background:#0D0E10 radial-gradient(circle,#1F2226 1px,transparent 1px);background-size:22px 22px;display:flex;flex-direction:column;align-items:center}
+  .bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding-bottom:22px}
+  .live{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#0F1F1A;border:1px solid #1E4A36;font-size:12px;color:#86EFAC}
+  .live i{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);animation:blink 1.6s ease-in-out infinite}
+  .chips{display:flex;gap:8px}.chips span{padding:6px 12px;border-radius:999px;border:1px solid var(--ls);font-size:12px;color:var(--muted);cursor:pointer}
+  .node{width:420px;display:flex;gap:14px;padding:16px 18px;border-radius:16px;background:var(--surface);border:1px solid var(--ls);transition:box-shadow .3s,border-color .3s}
+  .node.half{width:300px}
+  .node .ic{width:36px;height:36px;border-radius:10px;background:var(--s2);display:grid;place-items:center;flex-shrink:0}
+  .node .ic b{width:10px;height:10px;border-radius:3px}
+  .node .k{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em}
+  .node .t{font-size:14px;font-weight:600;margin-top:3px}.node .s{font-size:12px;color:var(--muted);margin-top:3px}
+  .st{letter-spacing:0;color:var(--faint)}
+  .node.active{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(159,227,230,.12),0 0 28px rgba(159,227,230,.2)}
+  .node.active .st{color:var(--cyan)}
+  .node.done .st{color:var(--good)}
+  .row{display:flex;gap:20px}
+  svg.edge{display:block;overflow:visible}
+  .flow{stroke-dasharray:2 6;stroke-linecap:round;stroke-width:2;fill:none;animation:march .6s linear infinite}
+  .flow.idle{animation:none;stroke:#2A2E33}
+  @keyframes march{to{stroke-dashoffset:-8}}
+  @keyframes blink{50%{opacity:.35}}
+  .pill{font-size:11px;fill:var(--muted)}
+  .add{margin-top:0;padding:8px 16px;border-radius:999px;border:1px dashed var(--ls);font-size:13px;color:var(--muted)}
+  .log{width:100%;margin-top:22px;padding:14px 16px;border-radius:14px;background:#0A0B0C;border:1px solid var(--line);font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);height:118px;overflow:hidden}
+  .log b{color:var(--text);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="canvas">
+  <div class="bar">
+    <div class="live"><i></i><span id="status">Live · 1 run in flight · C-07</span></div>
+    <div class="chips"><span>Fit</span><span>100%</span><span id="replay">↻ Replay run</span></div>
+  </div>
+
+  <div class="node" id="n1"><div class="ic"><b style="background:var(--cyan)"></b></div><div style="flex:1"><div class="k"><span style="color:var(--cyan)">WHEN · EVENT</span><span class="st">● waiting</span></div><div class="t">Water reading recorded</div><div class="s">daily.recorded · any cage</div></div></div>
+
+  <svg class="edge" width="620" height="52" viewBox="0 0 620 52">
+    <path id="e1" class="flow" d="M310 0V50" stroke="#9FE3E6"/>
+    <path d="M305 44L310 50L315 44" stroke="#9FE3E6" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g><circle r="8" fill="#9FE3E6" fill-opacity=".15"/><circle r="3.5" fill="#9FE3E6"/><animateMotion dur="1.2s" repeatCount="indefinite" path="M310 0V50"/></g>
+    <rect x="326" y="14" width="96" height="22" rx="11" fill="#0D0E10" stroke="#1F2226"/><text x="374" y="29" text-anchor="middle" class="pill">6 runs · 30d</text>
+  </svg>
+
+  <div class="node" id="n2"><div class="ic"><b style="background:var(--pink)"></b></div><div style="flex:1"><div class="k"><span style="color:var(--pink)">IF · CONDITION</span><span class="st">● waiting</span></div><div class="t">Dissolved O₂ below 4.0 mg/L</div><div class="s">payload.do &lt; 4.0 AND time before 09:00</div></div></div>
+
+  <svg class="edge" width="620" height="60" viewBox="0 0 620 60">
+    <path class="flow" d="M310 0V22H150V58M310 22H470V58" stroke="#E8A6C8"/>
+    <path d="M145 52L150 58L155 52M465 52L470 58L475 52" stroke="#E8A6C8" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g><circle r="8" fill="#E8A6C8" fill-opacity=".15"/><circle r="3.5" fill="#E8A6C8"/><animateMotion dur="1.6s" repeatCount="indefinite" path="M310 0V22H150V58"/></g>
+    <g><circle r="8" fill="#E8A6C8" fill-opacity=".15"/><circle r="3.5" fill="#E8A6C8"/><animateMotion dur="1.6s" begin=".4s" repeatCount="indefinite" path="M310 0V22H470V58"/></g>
+    <rect x="326" y="30" width="86" height="22" rx="11" fill="#0D0E10" stroke="#1F2226"/><text x="369" y="45" text-anchor="middle" class="pill">passed 6 / 6</text>
+  </svg>
+
+  <div class="row">
+    <div class="node half" id="n3"><div class="ic"><b style="background:var(--good)"></b></div><div style="flex:1"><div class="k"><span style="color:var(--good)">THEN</span><span class="st">● waiting</span></div><div class="t">Create task</div><div class="s">Aerate C-07 · Kofi A.</div></div></div>
+    <div class="node half" id="n4"><div class="ic"><b style="background:var(--warn)"></b></div><div style="flex:1"><div class="k"><span style="color:var(--warn)">AND</span><span class="st">● waiting</span></div><div class="t">Send SMS</div><div class="s">Supervisor + manager</div></div></div>
+  </div>
+
+  <svg class="edge" width="620" height="60" viewBox="0 0 620 60">
+    <path id="e3" class="flow idle" d="M150 0V30H470V0M310 30V58" stroke="#5C6168"/>
+    <path d="M305 52L310 58L315 52" stroke="#5C6168" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <rect x="326" y="38" width="104" height="22" rx="11" fill="#0D0E10" stroke="#1F2226"/><text x="378" y="53" text-anchor="middle" class="pill" id="e3l">waiting 60 min</text>
+  </svg>
+
+  <div class="node" id="n5"><div class="ic"><b style="background:var(--alert)"></b></div><div style="flex:1"><div class="k"><span style="color:var(--alert)">AFTER 60 MIN · IF STILL LOW</span><span class="st">◷ idle</span></div><div class="t">Escalate to owner</div><div class="s">WhatsApp + push · mark at risk</div></div></div>
+
+  <svg class="edge" width="2" height="22"><path class="flow idle" d="M1 0V22"/></svg>
+  <div class="add">+ Add step</div>
+
+  <div class="log" id="log"></div>
+</div></div>
+
+<script>
+  const steps = [
+    ['n1', 'event daily.recorded · cage <b>C-07</b> · do=3.1'],
+    ['n2', 'condition <b>do &lt; 4.0</b> → true (06:40 before 09:00)'],
+    ['n3', 'task created · <b>Aerate C-07</b> → Kofi Asante'],
+    ['n4', 'sms queued · Hubtel · 2 recipients · <b>delivered</b>'],
+    ['n5', 'timer 60m · re-check DO · <b>6.0 ok</b> → no escalation'],
+  ];
+  const log = document.getElementById('log');
+  const nodes = steps.map(([id]) => document.getElementById(id));
+  function setState(el, cls, text) {
+    el.classList.remove('active', 'done'); if (cls) el.classList.add(cls);
+    el.querySelector('.st').textContent = text;
+  }
+  function run() {
+    log.innerHTML = '';
+    nodes.forEach(n => setState(n, null, '● waiting'));
+    const e3 = document.getElementById('e3');
+    e3.classList.add('idle');
+    steps.forEach(([id, msg], i) => {
+      setTimeout(() => {
+        if (i > 0) setState(nodes[i - 1], 'done', '● done');
+        setState(nodes[i], 'active', i === 4 ? '◷ checking' : '● running');
+        if (i === 4) e3.classList.remove('idle');
+        const t = new Date(Date.UTC(2026, 10, 18, 6, 40, i * 2)).toISOString().slice(11, 19);
+        log.innerHTML += `<div>${t}  ${msg}</div>`;
+        log.scrollTop = log.scrollHeight;
+      }, i * 1400);
+    });
+    setTimeout(() => setState(nodes[4], 'done', '● done'), steps.length * 1400);
+  }
+  document.getElementById('replay').onclick = run;
+  run(); setInterval(run, steps.length * 1400 + 2500);
+</script>
+</body>
+</html>
