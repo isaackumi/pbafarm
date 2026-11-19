@@ -2,17 +2,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import {
-  PageHeader,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Field,
-  Input,
-  Select,
-  StatCard,
-} from '../components/ui'
+import { Download, Plus } from 'lucide-react'
+import { Field, GhostButton, GradientButton, Input, KpiStrip, Pill, Select, Table } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { ListRow, Panel } from '../components/ui/Panel'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -22,13 +15,14 @@ import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 import { CustomFieldValues, customCell, customColumns, customPayload, useCustomFieldDefs } from '../components/CustomFields'
 import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
+import { useT } from '../lib/i18n/context'
+import { financeTabs } from '../lib/sectionTabs'
+import { costBuildUp, splitDirect, summarizePnl } from '../lib/pnlSummary'
 
 export default function ExpensesPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Expenses">
-        <Expenses />
-      </Layout>
+      <Expenses />
     </ProtectedRoute>
   )
 }
@@ -47,8 +41,10 @@ const emptyForm = () => ({
 })
 
 function Expenses() {
-  const { user, hasRole } = useAuth()
+  const t = useT()
+  const { user } = useAuth()
   const isAdmin = usePermission('finance.expenses.manage')
+  const canRecord = usePermission('finance.expenses.record')
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency, symbol } = useCurrency()
@@ -85,6 +81,13 @@ function Expenses() {
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [newCategory, setNewCategory] = useState('')
+  const [showForm, setShowForm] = useState(false)
+
+  const pnlArgs = user
+    ? { ...locationArgs, ...(dateFrom ? { dateFrom } : {}), ...(dateTo ? { dateTo } : {}) }
+    : 'skip'
+  const pnlRows = useQuery(api.reports.listCagePnL, pnlArgs)
+  const overheads = useQuery(api.reports.pnlOverheads, pnlArgs)
 
   const labelOf = useMemo(() => {
     const map = new Map((categories || []).map((c) => [c.key, c.label]))
@@ -107,7 +110,7 @@ function Expenses() {
     e.preventDefault()
     const amount = Number(form.amount)
     if (!(amount > 0)) {
-      showToast('error', 'Enter an amount greater than zero')
+      showToast('error', t('ops.expenses.toast.amount'))
       return
     }
     // Optional fields a layout condition hides: not saved on create, left as they are on edit.
@@ -126,7 +129,7 @@ function Expenses() {
           ...(hidden.has('notes') ? {} : { notes: form.notes }),
           custom: form.custom || {},
         })
-        showToast('success', 'Expense updated')
+        showToast('success', t('ops.expenses.toast.updated'))
       } else {
         await createExpense({
           amount,
@@ -137,12 +140,13 @@ function Expenses() {
           ...(shown('notes', form.notes).trim() ? { notes: form.notes.trim() } : {}),
           custom: customPayload(form.custom),
         })
-        showToast('success', 'Expense saved')
+        showToast('success', t('ops.expenses.toast.saved'))
       }
       setForm((f) => ({ ...emptyForm(), category: f.category, date: f.date }))
       setEditingId(null)
+      setShowForm(false)
     } catch (err) {
-      showToast('error', err.message || 'Could not save the expense')
+      showToast('error', err.message || t('ops.expenses.toast.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -163,12 +167,12 @@ function Expenses() {
   }
 
   const remove = async (row) => {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete this ${formatCurrency(row.amount)} expense?`)) return
+    if (typeof window !== 'undefined' && !window.confirm(t('ops.expenses.confirmDelete', { amount: formatCurrency(row.amount) }))) return
     try {
       await removeExpense({ id: row.id })
-      showToast('success', 'Expense deleted')
+      showToast('success', t('ops.expenses.toast.deleted'))
     } catch (err) {
-      showToast('error', err.message || 'Could not delete the expense')
+      showToast('error', err.message || t('ops.expenses.toast.deleteFailed'))
     }
   }
 
@@ -177,17 +181,13 @@ function Expenses() {
     try {
       await createCategory({ label: newCategory.trim() })
       setNewCategory('')
-      showToast('success', 'Category added')
+      showToast('success', t('ops.expenses.toast.categoryAdded'))
     } catch (err) {
-      showToast('error', err.message || 'Could not add the category')
+      showToast('error', err.message || t('ops.expenses.toast.categoryFailed'))
     }
   }
 
   const rows = data?.rows || []
-  const topCategories = Object.entries(data?.by_category || {})
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-
   const exportCsv = () => {
     const extra = customColumns(expenseFieldDefs)
     const header = ['Date', 'Category', 'Amount', 'Currency', 'Site', 'Cage', 'Supplier', 'Notes', ...extra.map((c) => c.header)]
@@ -218,44 +218,83 @@ function Expenses() {
   const activeCategories = (categories || []).filter((c) => c.active)
   const customCategories = (categories || []).filter((c) => !c.builtIn)
 
+  const split = splitDirect(rows)
+  const buildUp = costBuildUp(pnlRows || [], overheads)
+  const pnlTotals = summarizePnl(pnlRows || [], overheads)
+  const byCategory = Object.entries(data?.by_category || {}).sort((a, b) => b[1] - a[1])
+  const formOpen = canRecord && (showForm || Boolean(editingId))
+  const closeForm = () => {
+    setEditingId(null)
+    setForm(emptyForm())
+    setShowForm(false)
+  }
+  const barMax = Math.max(buildUp.total || 0, ...buildUp.lines.map((l) => l.perKg))
+
   return (
-    <div data-tour="page-expenses">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Expenses' }]}
-        description="Labour, fingerlings, treatments and other running costs. Tag a cage so its cost per kg in Cage P&L includes it."
-        related={[
-          { label: 'Cage P&L', href: '/pnl' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
+    <Layout
+      title={t('ops.expenses.title')}
+      eyebrow={t('ops.expenses.eyebrow')}
+      actions={
+        <>
+          {canRecord && (
+            <GradientButton
+              icon={Plus}
+              onClick={() => {
+                setShowForm(true)
+                if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            >
+              {t('ops.pnl.addExpense')}
+            </GradientButton>
+          )}
+          <GradientButton reverse icon={Download} onClick={exportCsv} disabled={rows.length === 0}>
+            {t('ops.expenses.exportCsv')}
+          </GradientButton>
+        </>
+      }
+    >
+    <div data-tour="page-expenses" className="flex flex-col gap-[28px]">
+      <NavTabs tabs={financeTabs(t)} label={t('ops.tabs.finance')} />
+
+      <KpiStrip
+        items={[
+          {
+            label: t('ops.expenses.costPerKg'),
+            value: pnlTotals.costPerKg == null ? '—' : formatCurrency(pnlTotals.costPerKg),
+            suffix: pnlTotals.costPerKg == null ? undefined : t('ops.expenses.inclOverheads'),
+          },
+          {
+            label: t('ops.expenses.total'),
+            value: data === undefined ? '—' : formatCurrency(data.total),
+            suffix: data === undefined ? undefined : t('ops.expenses.entries', { count: rows.length }),
+          },
+          {
+            label: t('ops.expenses.direct'),
+            value: data === undefined ? '—' : formatCurrency(split.direct),
+            suffix: split.directPct == null ? undefined : `${split.directPct}%`,
+          },
+          {
+            label: t('ops.expenses.siteWide'),
+            value: data === undefined ? '—' : formatCurrency(split.overhead),
+            suffix: split.overheadPct == null ? undefined : `${split.overheadPct}%`,
+          },
         ]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-1">
-          <CardHeader
-            title={editingId ? 'Edit expense' : 'Add expense'}
-            action={
-              editingId ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEditingId(null)
-                    setForm(emptyForm())
-                  }}
-                >
-                  Cancel
-                </Button>
-              ) : null
-            }
-          />
-          <form onSubmit={submit} className="space-y-4">
+      {formOpen && (
+        <Panel
+          title={editingId ? t('ops.expenses.edit') : t('ops.pnl.addExpense')}
+          titleId="exp-form-title"
+          action={{ label: t('common.cancel'), onClick: closeForm }}
+        >
+          <form onSubmit={submit} className="flex flex-col gap-4 border-t border-line pt-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <FormLayout
               formKey="finance.expense"
               layout={layout}
               fields={{
                 amount: (
-                  <Field label={`Amount (${symbol})`} htmlFor="exp-amount" required>
+                  <Field label={t('ops.expenses.amountIn', { symbol })} htmlFor="exp-amount" required>
                     <Input
                       id="exp-amount"
                       type="number"
@@ -270,7 +309,7 @@ function Expenses() {
                   </Field>
                 ),
                 category: (
-                  <Field label="Category" htmlFor="exp-category" required>
+                  <Field label={t('ops.expenses.category')} htmlFor="exp-category" required>
                     <Select id="exp-category" value={form.category} onChange={set('category')}>
                       {activeCategories.map((c) => (
                         <option key={c.key} value={c.key}>
@@ -281,14 +320,14 @@ function Expenses() {
                   </Field>
                 ),
                 expenseDate: (
-                  <Field label="Date" htmlFor="exp-date" required>
+                  <Field label={t('ops.expenses.date')} htmlFor="exp-date" required>
                     <Input id="exp-date" type="date" value={form.date} onChange={set('date')} required />
                   </Field>
                 ),
                 cageId: (
-                  <Field label="Cage" htmlFor="exp-cage">
+                  <Field label={t('ops.pnl.cage')} htmlFor="exp-cage">
                     <Select id="exp-cage" value={form.cageId} onChange={set('cageId')}>
-                      <option value="">Whole site</option>
+                      <option value="">{t('ops.expenses.wholeSite')}</option>
                       {(cages || []).map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -298,9 +337,9 @@ function Expenses() {
                   </Field>
                 ),
                 supplierId: (
-                  <Field label="Supplier" htmlFor="exp-supplier">
+                  <Field label={t('ops.expenses.supplier')} htmlFor="exp-supplier">
                     <Select id="exp-supplier" value={form.supplierId} onChange={set('supplierId')}>
-                      <option value="">None</option>
+                      <option value="">{t('ops.common.none')}</option>
                       {(suppliers || []).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -310,8 +349,8 @@ function Expenses() {
                   </Field>
                 ),
                 notes: (
-                  <Field label="Notes" htmlFor="exp-notes">
-                    <Input id="exp-notes" value={form.notes} onChange={set('notes')} placeholder="What it was for" />
+                  <Field label={t('ops.expenses.notes')} htmlFor="exp-notes">
+                    <Input id="exp-notes" value={form.notes} onChange={set('notes')} placeholder={t('ops.expenses.notesPlaceholder')} />
                   </Field>
                 ),
               }}
@@ -321,147 +360,196 @@ function Expenses() {
               locationId={activeLocationId}
               core={{ category: form.category, amount: Number(form.amount) || 0 }}
             />
-            <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add expense'}
-            </Button>
+            </div>
+            <div className="flex justify-end gap-2">
+              <GhostButton onClick={closeForm}>{t('common.cancel')}</GhostButton>
+              <GradientButton type="submit" variant="solid" disabled={saving}>
+                {saving ? t('ops.common.saving') : editingId ? t('ops.expenses.saveChanges') : t('ops.pnl.addExpense')}
+              </GradientButton>
+            </div>
           </form>
-        </Card>
+        </Panel>
+      )}
 
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard label="Total" value={formatCurrency(data?.total || 0)} hint={`${rows.length} expenses`} />
-            {topCategories.map(([key, amount]) => (
-              <StatCard key={key} label={labelOf(key)} value={formatCurrency(amount)} />
-            ))}
+      <div className="flex flex-col gap-[20px] lg:flex-row">
+        <section
+          aria-labelledby="exp-buildup"
+          className="flex min-w-0 grow-[1.4] basis-0 flex-col gap-4 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
+        >
+          <div className="flex justify-between gap-3">
+            <h2 id="exp-buildup" className="text-base font-semibold leading-[18px] text-text">
+              {t('ops.expenses.buildUp')}
+            </h2>
+            <span className="text-xs leading-4 text-muted">{t('ops.expenses.perKgUnit', { symbol })}</span>
           </div>
-
-          <Card padding={false}>
-            <div className="p-4 sm:p-5 border-b border-foam-deep grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Field label="From" htmlFor="f-from">
-                <Input id="f-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-              </Field>
-              <Field label="To" htmlFor="f-to">
-                <Input id="f-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-              </Field>
-              <Field label="Category" htmlFor="f-cat">
-                <Select id="f-cat" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                  <option value="">All</option>
-                  {(categories || []).map((c) => (
-                    <option key={c.key} value={c.key}>
-                      {c.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Cage" htmlFor="f-cage">
-                <Select id="f-cage" value={filterCage} onChange={(e) => setFilterCage(e.target.value)}>
-                  <option value="">All</option>
-                  {(cages || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-
-            <div className="flex items-center justify-between px-4 sm:px-5 py-3">
-              <p className="text-sm text-muted">
-                {data === undefined ? 'Loading…' : `${rows.length} in range`}
-                {data?.truncated ? ' (first 2,000; narrow the dates)' : ''}
-              </p>
-              <Button variant="secondary" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
-                Export CSV
-              </Button>
-            </div>
-
-            {data !== undefined && rows.length === 0 ? (
-              <EmptyState
-                title="No expenses in this range"
-                description="Add one with the form, or widen the dates."
-              />
-            ) : (
-              <ul className="divide-y divide-foam-deep">
-                {rows.map((r) => (
-                  <li key={r.id} className="px-4 sm:px-5 py-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-chart-ink">
-                        {labelOf(r.category)}
-                        <span className="text-muted font-normal">
-                          {' · '}
-                          {r.cage_name || r.location_name || 'Company'}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted truncate">
-                        {r.date}
-                        {r.supplier_name ? ` · ${r.supplier_name}` : ''}
-                        {r.notes ? ` · ${r.notes}` : ''}
-                      </p>
-                      <CustomFieldValues entity="expenses" values={r.custom} className="mt-2" />
+          {buildUp.lines.length === 0 ? (
+            <p className="text-sm text-muted">{pnlRows === undefined ? t('common.loading') : t('ops.expenses.noHarvest')}</p>
+          ) : (
+            <ul className="flex items-end gap-[14px] overflow-x-auto">
+              {[...buildUp.lines.map((l) => ({ ...l, label: labelOf(l.key) })), { key: '__total', label: t('ops.expenses.totalBar'), perKg: buildUp.total }].map(
+                (l) => (
+                  <li key={l.key} className="flex min-w-[48px] grow basis-0 flex-col items-center gap-2">
+                    <span className="text-xs leading-4 text-text tabular-nums">{l.perKg.toFixed(2)}</span>
+                    <div className="flex h-[190px] w-full shrink-0 flex-col justify-end" aria-hidden>
+                      <div
+                        className={`shrink-0 rounded-[6px] ${l.key === '__total' ? 'bg-button' : ''}`}
+                        style={{
+                          height: `${Math.max((l.perKg / barMax) * 100, 2)}%`,
+                          ...(l.key === '__total' ? {} : { backgroundImage: 'linear-gradient(in oklab 180deg, var(--cyan-fill) 0%, var(--pink-fill) 100%)' }),
+                        }}
+                      />
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-data text-sm font-semibold">{formatCurrency(r.amount)}</span>
-                      {isAdmin && (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => startEdit(r)}>
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => remove(r)}>
-                            Delete
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    <span className="max-w-full truncate text-xs leading-4 text-muted">{l.label}</span>
                   </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
+                ),
+              )}
+            </ul>
+          )}
+        </section>
+
+        <Panel title={t('ops.expenses.byCategory')} titleId="exp-by-cat" meta={t('ops.expenses.inRange')} className="grow basis-0">
+          {byCategory.length === 0 ? (
+            <p className="border-t border-line py-[11px] text-sm text-muted">{data === undefined ? t('common.loading') : t('ops.expenses.empty')}</p>
+          ) : (
+            byCategory.map(([key, amount], i) => (
+              <ListRow
+                key={key}
+                dot={i === 0 ? 'cyan' : i === 1 ? 'pink' : 'neutral'}
+                title={labelOf(key)}
+                sub={data.total > 0 ? `${Math.round((amount / data.total) * 100)}%` : undefined}
+                value={formatCurrency(amount)}
+              />
+            ))
+          )}
+        </Panel>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Field label={t('ops.ledger.from')} htmlFor="f-from">
+          <Input id="f-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        </Field>
+        <Field label={t('ops.ledger.to')} htmlFor="f-to">
+          <Input id="f-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </Field>
+        <Field label={t('ops.expenses.category')} htmlFor="f-cat">
+          <Select id="f-cat" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <option value="">{t('ops.pnl.all')}</option>
+            {(categories || []).map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label={t('ops.pnl.cage')} htmlFor="f-cage">
+          <Select id="f-cage" value={filterCage} onChange={(e) => setFilterCage(e.target.value)}>
+            <option value="">{t('ops.pnl.all')}</option>
+            {(cages || []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
+      <Table
+        title={t('ops.expenses.tableTitle')}
+        actions={
+          <span className="text-sm text-muted">
+            {data === undefined ? t('common.loading') : t('ops.expenses.inRangeCount', { count: rows.length })}
+            {data?.truncated ? ` ${t('ops.expenses.truncated')}` : ''}
+          </span>
+        }
+        rows={rows}
+        rowKey={(r) => r.id}
+        empty={data === undefined ? t('common.loading') : t('ops.expenses.emptyHint')}
+        columns={[
+          {
+            key: 'category',
+            header: t('ops.expenses.categoryCentre'),
+            render: (r) => (
+              <span>
+                {labelOf(r.category)}
+                <span className="text-muted"> · {r.cage_name || r.location_name || t('ops.expenses.company')}</span>
+              </span>
+            ),
+            sub: (r) =>
+              r.notes || Object.keys(r.custom || {}).length ? (
+                <>
+                  {r.notes}
+                  <CustomFieldValues entity="expenses" values={r.custom} className="mt-1" />
+                </>
+              ) : null,
+          },
+          {
+            key: 'type',
+            header: t('ops.expenses.type'),
+            render: (r) => (
+              <Pill tone={r.cage_id ? 'cyan' : 'neutral'}>{r.cage_id ? t('ops.expenses.directPill') : t('ops.expenses.sitePill')}</Pill>
+            ),
+          },
+          { key: 'date', header: t('ops.expenses.date'), render: (r) => <span className="tabular-nums">{r.date}</span> },
+          { key: 'supplier', header: t('ops.expenses.supplier'), render: (r) => r.supplier_name || '—' },
+          { key: 'amount', header: t('ops.sales.amount'), align: 'right', render: (r) => <span className="font-medium">{formatCurrency(r.amount)}</span> },
+          ...(isAdmin
+            ? [
+                {
+                  key: 'actions',
+                  header: <span className="sr-only">{t('ops.expenses.actions')}</span>,
+                  align: 'right',
+                  render: (r) => (
+                    <span className="inline-flex gap-2">
+                      <GhostButton size="sm" onClick={() => startEdit(r)}>
+                        {t('common.edit')}
+                      </GhostButton>
+                      <GhostButton size="sm" tone="danger" onClick={() => remove(r)}>
+                        {t('ops.common.delete')}
+                      </GhostButton>
+                    </span>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
+
       {isAdmin && (
-        <Card>
-          <CardHeader
-            title="Categories"
-            subtitle="Built-in categories cover most costs. Add your own for anything else."
-          />
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-end mb-4">
-            <Field label="New category" htmlFor="new-cat" className="flex-1">
+        <Panel title={t('ops.expenses.categories')} titleId="exp-cats" meta={t('ops.expenses.categoriesSub')}>
+          <div className="flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-end">
+            <Field label={t('ops.expenses.newCategory')} htmlFor="new-cat" className="flex-1">
               <Input
                 id="new-cat"
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="e.g. Boat fuel"
+                placeholder={t('ops.expenses.newCategoryPlaceholder')}
               />
             </Field>
-            <Button variant="secondary" onClick={addCategory} disabled={!newCategory.trim()}>
-              Add category
-            </Button>
+            <GhostButton icon={Plus} onClick={addCategory} disabled={!newCategory.trim()}>
+              {t('ops.expenses.addCategory')}
+            </GhostButton>
           </div>
           {customCategories.length === 0 ? (
-            <p className="text-sm text-muted">No custom categories yet.</p>
+            <p className="pt-4 text-sm text-muted">{t('ops.expenses.noCustom')}</p>
           ) : (
-            <ul className="flex flex-wrap gap-2">
+            <ul className="flex flex-wrap gap-2 pt-4">
               {customCategories.map((c) => (
-                <li
-                  key={c.key}
-                  className="inline-flex items-center gap-2 rounded-lg border border-foam-deep px-3 min-h-9 text-sm"
-                >
-                  <span className={c.active ? '' : 'text-muted line-through'}>{c.label}</span>
+                <li key={c.key} className="inline-flex min-h-9 items-center gap-2 rounded-pill border border-line px-3 text-sm">
+                  <span className={c.active ? 'text-text' : 'text-muted line-through'}>{c.label}</span>
                   <button
                     type="button"
-                    className="text-xs text-lake hover:underline"
+                    className="rounded-sm text-xs text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                     onClick={() => updateCategory({ id: c.id, active: !c.active })}
                   >
-                    {c.active ? 'Retire' : 'Restore'}
+                    {c.active ? t('ops.expenses.retire') : t('ops.expenses.restore')}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </Panel>
       )}
     </div>
+    </Layout>
   )
 }

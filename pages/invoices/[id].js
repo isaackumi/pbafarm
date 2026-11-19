@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { ArrowLeft, Printer } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import { GhostButton, Pill } from '../../components/ui'
 import { api } from '../../convex/_generated/api'
 import { useCurrency } from '../../hooks/useCurrency'
 import { useT } from '../../lib/i18n/context'
@@ -18,12 +21,35 @@ export default function InvoicePage() {
   )
 }
 
+/** Print on paper in the light palette, whatever theme is on screen. */
+function usePrintLightTheme() {
+  useEffect(() => {
+    const root = document.documentElement
+    let prev = null
+    const before = () => {
+      prev = root.dataset.theme
+      root.dataset.theme = 'light'
+    }
+    const after = () => {
+      if (prev) root.dataset.theme = prev
+      prev = null
+    }
+    window.addEventListener('beforeprint', before)
+    window.addEventListener('afterprint', after)
+    return () => {
+      window.removeEventListener('beforeprint', before)
+      window.removeEventListener('afterprint', after)
+    }
+  }, [])
+}
+
 function Invoice() {
   const t = useT()
   const router = useRouter()
   const { formatCurrency } = useCurrency()
   const id = typeof router.query.id === 'string' ? router.query.id : null
   const invoice = useQuery(api.invoices.getInvoice, id ? { invoiceId: id } : 'skip')
+  usePrintLightTheme()
 
   if (invoice === undefined) return <p className="text-sm text-muted">{t('common.loading')}</p>
   if (invoice === null) return <p className="text-sm text-muted">{t('sales.invoiceNotFound')}</p>
@@ -31,104 +57,120 @@ function Invoice() {
   const sale = invoice.sale
   const isUnit = sale?.unit_count != null
   const payments = invoice.payments.filter((p) => !p.voided)
+  const total = sale?.total_amount ?? invoice.amount
+  const status = invoice.voided
+    ? { tone: 'alert', label: t('ops.invoice.voided') }
+    : invoice.balance <= 0
+      ? { tone: 'good', label: t('ops.sales.pill.paid') }
+      : payments.length > 0
+        ? { tone: 'warn', label: t('ops.invoice.partPaid') }
+        : { tone: 'neutral', label: t('ops.sales.pill.unpaid') }
 
   return (
-    <div>
-      <div className="print:hidden">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[{ label: t('sales.tabSales'), href: '/sales' }, { label: invoice.number }]}
-          actions={
-            <Button type="button" onClick={() => window.print()}>
-              {t('sales.print')}
-            </Button>
-          }
-        />
-      </div>
+    <div className="flex flex-col gap-[22px]">
+      <nav aria-label={t('ops.invoice.breadcrumb')} className="flex items-center justify-between gap-3 print:hidden">
+        <Link
+          href="/sales"
+          className="inline-flex items-center gap-2 rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          <ArrowLeft size={14} aria-hidden />
+          {t('sales.tabSales')}
+        </Link>
+        <GhostButton icon={Printer} onClick={() => window.print()}>
+          {t('sales.print')}
+        </GhostButton>
+      </nav>
 
-      <article className="page-card p-8 max-w-3xl mx-auto print:shadow-none print:border-0">
+      <article className="mx-auto flex w-full max-w-3xl flex-col gap-1 rounded-lg border border-line bg-surface px-5 py-6 sm:px-[26px] print:max-w-none print:border-0">
         {invoice.voided && (
-          <p role="alert" className="mb-4 rounded-lg border border-signal/40 bg-signal/10 px-4 py-2 text-sm font-semibold">
+          <p role="alert" className="mb-3 rounded-[14px] border border-alert/40 bg-alert/10 px-4 py-2 text-sm font-semibold text-alert">
             {t('sales.invoiceVoidedBanner')}
           </p>
         )}
-        <header className="flex flex-wrap justify-between gap-6 mb-8">
-          <div>
-            <p className="font-display text-xl font-semibold text-chart-ink">{invoice.company?.name}</p>
-            {invoice.company?.address && <p className="text-sm text-muted">{invoice.company.address}</p>}
-            {invoice.company?.phone && <p className="text-sm text-muted">{invoice.company.phone}</p>}
-            {invoice.company?.email && <p className="text-sm text-muted">{invoice.company.email}</p>}
-            {invoice.site_name && <p className="text-sm text-muted">{invoice.site_name}</p>}
+        <header className="flex flex-wrap items-start justify-between gap-4 pb-[14px]">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs leading-4 text-muted">{invoice.number}</p>
+            <p className="text-[20px] font-semibold leading-6 text-text">{invoice.customer?.name || invoice.customer_name}</p>
           </div>
-          <div className="text-right">
-            <p className="font-display text-2xl font-semibold text-chart-ink">{t('sales.invoice')}</p>
-            <p className="font-data">{invoice.number}</p>
-            <p className="text-sm text-muted">
-              {t('sales.issueDate')}: <span className="font-data">{invoice.issue_date}</span>
-            </p>
-            {invoice.due_date && (
-              <p className="text-sm text-muted">
-                {t('sales.dueDate')}: <span className="font-data">{invoice.due_date}</span>
-              </p>
-            )}
-          </div>
+          <Pill tone={status.tone}>{status.label}</Pill>
         </header>
 
-        <section className="mb-6">
-          <p className="text-xs font-semibold text-muted">{t('sales.billTo')}</p>
-          <p className="font-medium">{invoice.customer?.name || invoice.customer_name}</p>
-          {invoice.customer?.contact_name && <p className="text-sm">{invoice.customer.contact_name}</p>}
-          {invoice.customer?.phone && <p className="text-sm">{invoice.customer.phone}</p>}
-          {invoice.customer?.email && <p className="text-sm">{invoice.customer.email}</p>}
-        </section>
+        <div className="grid grid-cols-1 gap-6 pb-5 text-sm sm:grid-cols-2">
+          <section aria-label={t('ops.invoice.from')}>
+            <p className="pb-1 text-xs leading-4 text-muted">{t('ops.invoice.from')}</p>
+            <p className="font-medium text-text">{invoice.company?.name}</p>
+            {[invoice.company?.address, invoice.company?.phone, invoice.company?.email, invoice.site_name]
+              .filter(Boolean)
+              .map((line) => (
+                <p key={line} className="text-muted">
+                  {line}
+                </p>
+              ))}
+          </section>
+          <section aria-label={t('sales.billTo')}>
+            <p className="pb-1 text-xs leading-4 text-muted">{t('sales.billTo')}</p>
+            <p className="font-medium text-text">{invoice.customer?.name || invoice.customer_name}</p>
+            {[invoice.customer?.contact_name, invoice.customer?.phone, invoice.customer?.email]
+              .filter(Boolean)
+              .map((line) => (
+                <p key={line} className="text-muted">
+                  {line}
+                </p>
+              ))}
+          </section>
+          <dl className="flex gap-6 sm:col-span-2">
+            <div>
+              <dt className="text-xs leading-4 text-muted">{t('sales.issueDate')}</dt>
+              <dd className="tabular-nums text-text">{invoice.issue_date}</dd>
+            </div>
+            {invoice.due_date && (
+              <div>
+                <dt className="text-xs leading-4 text-muted">{t('sales.dueDate')}</dt>
+                <dd className="tabular-nums text-text">{invoice.due_date}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
 
-        {sale && (
-          <table className="w-full text-sm mb-6">
-            <thead className="border-b border-foam-deep">
-              <tr>
-                <th className="py-2 text-left font-medium text-muted">{t('sales.saleDate')}</th>
-                <th className="py-2 text-left font-medium text-muted">{t('sales.description')}</th>
-                <th className="py-2 text-right font-medium text-muted">{t('sales.quantity')}</th>
-                <th className="py-2 text-right font-medium text-muted">{t('sales.unitPrice')}</th>
-                <th className="py-2 text-right font-medium text-muted">{t('sales.amount')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-foam-deep">
-                <td className="py-2 font-data">{sale.sale_date}</td>
-                <td className="py-2">{isUnit ? t('sales.fingerlings') : t('sales.fish')}</td>
-                <td className="py-2 text-right font-data">
-                  {isUnit ? sale.unit_count : `${Number(sale.weight_kg).toFixed(2)} kg`}
-                </td>
-                <td className="py-2 text-right font-data">
-                  {formatCurrency(isUnit ? sale.price_per_unit : sale.price_per_kg)}
-                </td>
-                <td className="py-2 text-right font-data">{formatCurrency(sale.total_amount)}</td>
-              </tr>
-            </tbody>
-          </table>
-        )}
-
-        <dl className="ml-auto max-w-xs text-sm space-y-1">
-          <div className="flex justify-between">
-            <dt>{t('sales.total')}</dt>
-            <dd className="font-data font-semibold">{formatCurrency(sale?.total_amount ?? invoice.amount)}</dd>
-          </div>
-          {payments.map((p) => (
-            <div key={p.id} className="flex justify-between text-muted">
-              <dt>
-                {t('sales.paymentOn', { date: p.paid_date })} ({t(`sales.method.${p.method}`)})
+        <dl className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-sm leading-4">
+          {sale && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">
+                {sale.sale_date} · {isUnit ? t('sales.fingerlings') : t('sales.fish')} ·{' '}
+                {isUnit ? sale.unit_count : `${Number(sale.weight_kg).toFixed(2)} kg`} ×{' '}
+                {formatCurrency(isUnit ? sale.price_per_unit : sale.price_per_kg)}
               </dt>
-              <dd className="font-data">−{formatCurrency(p.amount)}</dd>
+              <dd className="whitespace-pre tabular-nums text-text">{formatCurrency(total)}</dd>
+            </div>
+          )}
+          {!sale && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">{t('sales.total')}</dt>
+              <dd className="whitespace-pre tabular-nums text-text">{formatCurrency(total)}</dd>
+            </div>
+          )}
+          {payments.map((p) => (
+            <div key={p.id} className="flex justify-between gap-4">
+              <dt className="text-muted">
+                {t('sales.paymentOn', { date: p.paid_date })} · {t(`sales.method.${p.method}`)}
+              </dt>
+              <dd className="whitespace-pre tabular-nums text-good">− {formatCurrency(p.amount)}</dd>
             </div>
           ))}
-          <div className="flex justify-between border-t border-foam-deep pt-1">
-            <dt className="font-semibold">{t('sales.balanceDue')}</dt>
-            <dd className="font-data font-semibold">{formatCurrency(invoice.balance)}</dd>
+          <div className="h-px shrink-0 bg-line" aria-hidden />
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-[14px] leading-[18px] text-text">
+              {invoice.due_date && invoice.balance > 0
+                ? t('ops.sales.balanceDueOn', { date: invoice.due_date })
+                : t('sales.balanceDue')}
+            </dt>
+            <dd className="whitespace-pre text-[22px] font-semibold leading-[28px] tabular-nums text-text">
+              {formatCurrency(invoice.balance)}
+            </dd>
           </div>
         </dl>
 
-        {invoice.notes && <p className="mt-8 text-sm text-muted whitespace-pre-line">{invoice.notes}</p>}
+        {invoice.notes && <p className="whitespace-pre-line pt-5 text-sm text-muted">{invoice.notes}</p>}
       </article>
     </div>
   )

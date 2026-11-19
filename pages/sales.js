@@ -2,28 +2,37 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
 import {
-  PageHeader,
   Button,
   FormCard,
   FormSection,
   FormActions,
   Field,
+  GhostButton,
+  GradientButton,
   Input,
+  KpiStrip,
+  Pill,
   Select,
+  Table,
   Textarea,
-  TabBar,
 } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { Panel, ListRow } from '../components/ui/Panel'
+import { financeTabs } from '../lib/sectionTabs'
+import { formatMass, shortDate } from '../lib/feedOverview'
+import { prevMonth, salePill, summarizeSales, topCustomers } from '../lib/salesSummary'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import LocationMetaField from '../components/LocationMetaField'
-import { localToday } from '../lib/format'
+import { formatDate, localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 import { errorCode, errorMessage } from '../lib/errorMessage'
-import { useT } from '../lib/i18n/context'
+import { useLocale, useT } from '../lib/i18n/context'
 import SaleDetailPanel from '../components/sales/SaleDetailPanel'
 import ReceivablesCard from '../components/sales/ReceivablesCard'
 import CustomersPanel from '../components/sales/CustomersPanel'
@@ -31,22 +40,26 @@ import CustomersPanel from '../components/sales/CustomersPanel'
 export default function SalesPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Sales">
-        <Sales />
-      </Layout>
+      <Sales />
     </ProtectedRoute>
   )
 }
 
+const SALE_TABS = ['all', 'unpaid', 'overdue', 'walkin']
+
 function Sales() {
-  const { user, hasRole } = useAuth()
+  const { user } = useAuth()
   const isAdmin = usePermission('finance.sales.correct')
+  const canRecord = usePermission('finance.sales.record')
+  const { formatLocale } = useLocale()
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
   const { formatCurrency } = useCurrency()
   const t = useT()
   const [tab, setTab] = useState('sales')
   const [selectedId, setSelectedId] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
 
   const harvests = useQuery(
     api.harvest.list,
@@ -95,14 +108,34 @@ function Sales() {
     [harvests, form.harvestId],
   )
 
-  const totals = useMemo(() => {
-    const rows = sales || []
-    return {
-      count: rows.length,
-      kg: rows.reduce((s, r) => s + (r.weight_kg || 0), 0),
-      revenue: rows.reduce((s, r) => s + (r.total_amount || 0), 0),
-    }
-  }, [sales])
+  const today = localToday()
+  const receivables = useQuery(
+    api.invoices.listReceivables,
+    user ? { asOf: today, locationId: activeLocationId || undefined } : 'skip',
+  )
+  const summary = summarizeSales(sales, receivables, today)
+  const top = topCustomers(sales, today)
+  const monthName = (month) => new Date(`${month}-15T12:00:00Z`).toLocaleString(formatLocale, { month: 'short', timeZone: 'UTC' })
+  const monthLabel = monthName(summary.month)
+  const prevMonthLabel = monthName(prevMonth(summary.month))
+  const overdueDays = useMemo(
+    () => new Map((receivables?.sales || []).filter((r) => r.days_overdue > 0).map((r) => [r.sale_id, r.days_overdue])),
+    [receivables],
+  )
+  const dueDates = useMemo(() => new Map((receivables?.sales || []).map((r) => [r.sale_id, r.due_date])), [receivables])
+  const visibleSales = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return (sales || []).filter((sale) => {
+      const id = sale.id || sale._id
+      if (filter === 'unpaid' && !(Number(sale.balance) > 0)) return false
+      if (filter === 'overdue' && !overdueDays.has(id)) return false
+      if (filter === 'walkin' && sale.customer_id) return false
+      if (!q) return true
+      return [sale.customer_name, sale.cage_name, sale.invoice_number].some((v) => String(v || '').toLowerCase().includes(q))
+    })
+  }, [sales, filter, search, overdueDays])
+  const focusSale = selectedSale || visibleSales[0] || null
+  const focusDue = focusSale ? dueDates.get(focusSale.id || focusSale._id) : null
 
   const submitSale = async (e) => {
     e.preventDefault()
@@ -178,61 +211,63 @@ function Sales() {
   }
 
   return (
-    <div data-tour="page-sales">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Sales' },
-        ]}
-        description="Record harvest sales by buyer, weight, and price per kg. Revenue is scoped to the active farm location."
-        related={[
-          { label: 'Harvest', href: '/harvest' },
-          { label: 'Farm locations', href: '/farm-locations' },
-        ]}
-        actions={
-          <Button type="button" onClick={() => setShowForm(true)}>
-            Record sale
-          </Button>
-        }
-      />
-
-      <div className="mb-6">
-        <TabBar
-          tabs={[
-            { id: 'sales', label: t('sales.tabSales') },
-            { id: 'customers', label: t('sales.customers') },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-      </div>
-
-      {tab === 'customers' && <CustomersPanel canEdit={isAdmin} />}
-
-      {tab === 'sales' && (
+    <Layout
+      title={t('ops.sales.title')}
+      eyebrow={t('ops.sales.eyebrow')}
+      actions={
         <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="page-card p-4">
-          <p className="text-xs text-muted font-semibold">Sales</p>
-          <p className="mt-1 font-display text-2xl font-semibold font-data">
-            {totals.count}
-          </p>
-        </div>
-        <div className="page-card p-4">
-          <p className="text-xs text-muted font-semibold">Weight sold</p>
-          <p className="mt-1 font-display text-2xl font-semibold font-data">
-            {totals.kg.toFixed(1)} kg
-          </p>
-        </div>
-        <div className="page-card p-4">
-          <p className="text-xs text-muted font-semibold">Revenue</p>
-          <p className="mt-1 font-display text-2xl font-semibold font-data">
-            {formatCurrency(totals.revenue)}
-          </p>
-        </div>
-      </div>
-
+          {canRecord && (
+            <GradientButton icon={Plus} onClick={() => setShowForm(true)}>
+              {t('ops.sales.recordSale')}
+            </GradientButton>
+          )}
+          {isAdmin && (
+            <GradientButton reverse icon={UserPlus} onClick={() => setShowCustomer(true)}>
+              {t('ops.sales.newCustomer')}
+            </GradientButton>
+          )}
+        </>
+      }
+    >
+    <div data-tour="page-sales" className="flex flex-col gap-[28px]">
+      <NavTabs tabs={financeTabs(t)} label={t('ops.tabs.finance')} />
+      {tab === 'customers' ? (
+        <>
+          <div>
+            <GhostButton size="sm" icon={ArrowLeft} onClick={() => setTab('sales')}>
+              {t('ops.sales.backToSales')}
+            </GhostButton>
+          </div>
+          <CustomersPanel canEdit={isAdmin} />
+        </>
+      ) : (
+        <>
+      <KpiStrip
+        items={[
+          {
+            label: t('ops.sales.salesMonth', { month: monthLabel }),
+            value: sales === undefined ? '—' : formatCurrency(summary.total),
+            suffix: summary.changePct == null ? undefined : t('ops.sales.vsPrev', { pct: `${summary.changePct > 0 ? '+' : ''}${summary.changePct}`, month: prevMonthLabel }),
+            suffixTone: summary.changePct == null ? undefined : summary.changePct >= 0 ? 'good' : 'alert',
+          },
+          {
+            label: t('ops.sales.collected'),
+            value: sales === undefined ? '—' : formatCurrency(summary.collected),
+            suffix: summary.collectedPct == null ? undefined : `${summary.collectedPct}%`,
+          },
+          {
+            label: t('ops.sales.outstanding'),
+            value: summary.outstanding == null ? '—' : formatCurrency(summary.outstanding),
+            suffix: summary.outstanding == null ? undefined : t('ops.sales.openSales', { count: summary.outstandingCount }),
+          },
+          {
+            label: t('ops.sales.overdue'),
+            value: summary.outstanding == null ? '—' : formatCurrency(summary.overdue),
+            valueTone: summary.overdue > 0 ? 'alert' : undefined,
+            suffix: summary.overdue30Count ? t('ops.sales.over30', { count: summary.overdue30Count }) : undefined,
+          },
+        ]}
+      />
       {showForm && (
         <FormCard className="mb-6">
           <form onSubmit={submitSale}>
@@ -481,6 +516,160 @@ function Sales() {
         </FormCard>
       )}
 
+      <div className="grid grid-cols-1 items-start gap-[28px] xl:grid-cols-[700px_minmax(0,1fr)]">
+        <Table
+          title={t('ops.sales.tableTitle')}
+          tabs={SALE_TABS.map((k) => ({ value: k, label: t(`ops.sales.tab.${k}`) }))}
+          tab={filter}
+          onTabChange={setFilter}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={t('ops.sales.search')}
+          onRowClick={(sale) => setSelectedId(sale.id || sale._id)}
+          columns={[
+            { key: 'date', header: t('ops.col.date'), width: 90, render: (sale) => shortDate(sale.sale_date) },
+            {
+              key: 'customer',
+              header: t('ops.sales.customerLot'),
+              render: (sale) => (
+                <button
+                  type="button"
+                  aria-pressed={(sale.id || sale._id) === selectedId}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedId(sale.id || sale._id)
+                  }}
+                  className={`rounded-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                    (sale.id || sale._id) === selectedId ? 'text-pearl-cyan' : 'text-text'
+                  }`}
+                >
+                  {sale.customer_name || '—'}
+                </button>
+              ),
+              sub: (sale) => [sale.invoice_number, sale.cage_name].filter(Boolean).join(' · ') || undefined,
+            },
+            {
+              key: 'weight',
+              header: t('ops.sales.weight'),
+              width: 100,
+              align: 'right',
+              render: (sale) =>
+                sale.unit_count != null ? t('ops.sales.units', { count: sale.unit_count }) : formatMass(Number(sale.weight_kg || 0)),
+            },
+            { key: 'amount', header: t('ops.sales.amount'), width: 120, align: 'right', render: (sale) => formatCurrency(sale.total_amount) },
+            {
+              key: 'paid',
+              header: t('ops.sales.paid'),
+              width: 150,
+              render: (sale) => {
+                const pill = salePill(sale, overdueDays.get(sale.id || sale._id) || 0)
+                return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
+              },
+            },
+          ]}
+          rows={visibleSales}
+          empty={sales === undefined ? t('ops.common.loading') : t('ops.sales.empty')}
+        />
+
+        <div className="flex min-w-0 flex-col gap-[28px]">
+          {focusSale ? (
+            <section
+              aria-labelledby="sale-card-title"
+              className="flex flex-col gap-4 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="text-xs leading-4 text-muted">{focusSale.invoice_number || formatDate(focusSale.sale_date)}</p>
+                  <h2 id="sale-card-title" className="truncate text-[20px] font-semibold leading-6 text-text">
+                    {focusSale.customer_name || '—'}
+                  </h2>
+                </div>
+                {(() => {
+                  const pill = salePill(focusSale, overdueDays.get(focusSale.id || focusSale._id) || 0)
+                  return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
+                })()}
+              </div>
+              <div className="flex flex-col gap-2 rounded-[14px] border border-line bg-bg px-6 py-4 text-[14px] leading-[18px]">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">
+                    {[
+                      focusSale.cage_name,
+                      focusSale.unit_count != null
+                        ? t('ops.sales.units', { count: focusSale.unit_count })
+                        : `${formatMass(Number(focusSale.weight_kg || 0))} × ${formatCurrency(focusSale.price_per_kg)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                  <span className="text-text tabular-nums">{formatCurrency(focusSale.total_amount)}</span>
+                </div>
+                {Number(focusSale.amount_paid) > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted">{t('ops.sales.paidSoFar')}</span>
+                    <span className="text-good tabular-nums">− {formatCurrency(focusSale.amount_paid)}</span>
+                  </div>
+                )}
+                <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-4">
+                  <span className="text-text">
+                    {focusDue ? t('ops.sales.balanceDueOn', { date: shortDate(focusDue) }) : t('ops.sales.balanceDue')}
+                  </span>
+                  <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums text-text">
+                    {formatCurrency(Math.max(0, Number(focusSale.balance || 0)))}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-[10px]">
+                <GradientButton variant="solid" size="sm" onClick={() => setSelectedId(focusSale.id || focusSale._id)} aria-expanded={Boolean(selectedSale)}>
+                  {Number(focusSale.balance) > 0 ? t('ops.sales.recordPayment') : t('ops.sales.openSale')}
+                </GradientButton>
+                {focusSale.invoice_id && (
+                  <GhostButton size="sm" href={`/invoices/${focusSale.invoice_id}`}>
+                    {t('ops.sales.viewInvoice')}
+                  </GhostButton>
+                )}
+                {isAdmin && (
+                  <GhostButton
+                    size="sm"
+                    tone="danger"
+                    onClick={async () => {
+                      try {
+                        await removeSale({ id: focusSale.id || focusSale._id })
+                        setSelectedId(null)
+                        showToast('success', t('ops.sales.deleted'))
+                      } catch (err) {
+                        showToast('error', errorMessage(err))
+                      }
+                    }}
+                  >
+                    {t('ops.sales.delete')}
+                  </GhostButton>
+                )}
+              </div>
+            </section>
+          ) : null}
+
+          <Panel
+            title={t('ops.sales.topCustomers')}
+            action={{ label: t('ops.sales.allCustomers'), onClick: () => setTab('customers') }}
+          >
+            {top.length === 0 ? (
+              <p className="py-3 text-sm text-muted">{t('ops.sales.noCustomers')}</p>
+            ) : (
+              top.map((c) => (
+                <ListRow
+                  key={c.key}
+                  title={c.name}
+                  sub={[t('ops.sales.saleCount', { count: c.count }), c.open ? t('ops.sales.openCount', { count: c.open }) : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  value={formatCurrency(c.total)}
+                />
+              ))
+            )}
+          </Panel>
+        </div>
+      </div>
+
       {selectedSale && (
         <SaleDetailPanel
           key={`${selectedSale.id}-${selectedSale.updated_at}`}
@@ -492,115 +681,9 @@ function Sales() {
       )}
 
       <ReceivablesCard locationId={activeLocationId} onOpenSale={setSelectedId} />
-
-      <div className="page-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-foam-deep">
-          <h3 className="text-lg font-medium text-chart-ink">Recent sales</h3>
-        </div>
-        {sales === undefined ? (
-          <p className="px-6 py-8 text-sm text-muted">Loading…</p>
-        ) : sales.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-muted">
-            No sales yet. Record a sale after harvest.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Buyer
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Cage
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                    kg
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                    ₵/kg
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                    Total
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                    Pay
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                    {t('sales.balance')}
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                    {t('sales.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foam-deep">
-                {sales.map((sale) => (
-                  <tr key={sale.id || sale._id}>
-                    <td className="px-4 py-3 text-sm font-data">
-                      {sale.sale_date}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{sale.customer_name}</td>
-                    <td className="px-4 py-3 text-sm text-muted">
-                      {sale.cage_name || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-data">
-                      {Number(sale.weight_kg).toFixed(1)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-data">
-                      {formatCurrency(sale.price_per_kg)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-data font-semibold">
-                      {formatCurrency(sale.total_amount)}
-                    </td>
-                    <td className="px-4 py-3 text-sm capitalize">
-                      {sale.payment_status}
-                      {sale.invoice_number && (
-                        <span className="ml-2 text-xs text-muted font-data">
-                          {sale.invoice_number}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-data">
-                      {sale.balance > 0 ? formatCurrency(sale.balance) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        className="text-sm text-lagoon-800 hover:underline"
-                        onClick={() => setSelectedId(sale.id || sale._id)}
-                      >
-                        {t('sales.open')}
-                      </button>
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          className="text-sm text-signal hover:underline"
-                          onClick={async () => {
-                            try {
-                              await removeSale({ id: sale.id || sale._id })
-                              showToast('success', 'Sale deleted')
-                            } catch (err) {
-                              showToast('error', errorMessage(err))
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
         </>
       )}
     </div>
+    </Layout>
   )
 }

@@ -1,8 +1,14 @@
 import { useQuery } from 'convex/react'
-import { Package } from 'lucide-react'
+import { ArrowUpFromLine } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, LoadingState } from '../components/ui'
+import { GradientButton, KpiStrip, Pill, Table } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { feedTabs } from '../lib/sectionTabs'
+import { formatMass } from '../lib/feedOverview'
+import { formatNumber } from '../lib/format'
+import { useT } from '../lib/i18n/context'
+import { usePermission } from '../hooks/usePermission'
 import { api } from '../convex/_generated/api'
 import { useMoney } from '../lib/money'
 import { useLocation } from '../contexts/LocationContext'
@@ -16,7 +22,9 @@ export default function StockLevelsPage() {
 }
 
 function StockLevels() {
+  const t = useT()
   const money = useMoney()
+  const canIssue = usePermission('inventory.issue')
   // Stock at the header site (FARM-003); the tally check stays company-wide.
   const { locationArgs } = useLocation()
   const stockResult = useQuery(api.inventory.listStockLevels, locationArgs)
@@ -30,166 +38,95 @@ function StockLevels() {
     return 'good'
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'critical':
-        return 'text-signal bg-signal/10'
-      case 'low':
-        return 'text-warn bg-warn/10'
-      case 'good':
-        return 'text-kelp bg-kelp/10'
-      default:
-        return 'text-muted bg-foam-deep/40'
-    }
+  const STATUS = {
+    critical: { tone: 'red', key: 'ops.stock.critical' },
+    low: { tone: 'amber', key: 'ops.stock.low' },
+    good: { tone: 'green', key: 'ops.stock.ok' },
   }
 
   const tallyById = Object.fromEntries(
     (tally || []).map((r) => [r.feed_type_id, r]),
   )
+  const totalKg = stockLevels.reduce((sum, r) => sum + Number(r.current_stock || 0), 0)
+  const totalValue = stockLevels.reduce((sum, r) => sum + Number(r.stock_value || 0), 0)
+  const belowMin = stockLevels.filter((r) => getStockStatus(r.current_stock, r.minimum_stock) !== 'good').length
+  const mismatches = (tally || []).filter((r) => !r.ok).length
 
   return (
-    <Layout title="Stock Levels">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory', href: '/inventory/overview' },
-          { label: 'Stock levels' },
-        ]}
-        description="On-hand feed stock from the inventory ledger. Tally should match."
-        related={[
-          { label: 'Issue feed', href: '/feed-issue' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
-          { label: 'Inventory alerts', href: '/inventory-alerts' },
-          { label: 'Ledger', href: '/inventory-transactions' },
-        ]}
-        actions={
-          <>
-            <Button href="/feed-issue" variant="secondary" size="sm">
-              Issue feed
-            </Button>
-          </>
-        }
-      />
-
-
-        <div className="page-card overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">
-              On-hand stock (kg + bags)
-            </h2>
-            <p className="text-xs text-muted mt-1">
-              Stock changes only through the inventory ledger. Tally column must
-              match.
-            </p>
-          </div>
-
-          {loading ? (
-            <LoadingState />
-          ) : stockLevels.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-foam-deep">
-                <thead className="bg-foam-deep/40">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                      Feed type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                      Supplier
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      kg
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Bags
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Bag size
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Min kg
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                      Ledger tally
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted">
-                      Value
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-surface divide-y divide-foam-deep">
-                  {stockLevels.map((item) => {
-                    const status = getStockStatus(
-                      item.current_stock,
-                      item.minimum_stock,
-                    )
-                    const t = tallyById[item.feed_type_id]
-                    return (
-                      <tr key={item.feed_type_id}>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Package className="h-5 w-5 text-muted mr-2" />
-                            <span className="text-sm font-medium text-chart-ink">
-                              {item.feed_type_name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-muted">
-                          {item.supplier_name || '—'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right tabular-nums">
-                          {Number(item.current_stock).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right tabular-nums">
-                          {Number(item.current_stock_bags || 0).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right tabular-nums">
-                          {Number(item.bag_size_kg || 25).toFixed(0)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right tabular-nums">
-                          {Number(item.minimum_stock).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                              status,
-                            )}`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm tabular-nums">
-                          {t ? (
-                            <span
-                              className={
-                                t.ok ? 'text-kelp' : 'text-signal font-semibold'
-                              }
-                            >
-                              {t.ok ? 'OK' : `Δ ${t.delta}`}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right tabular-nums">
-                          {money(item.stock_value || 0)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-12 text-center">
-              <Package className="h-12 w-12 text-muted mx-auto" />
-              <p className="mt-3 text-muted">No stock levels found.</p>
-            </div>
-          )}
-        </div>
+    <Layout
+      title={t('ops.tab.stockLevels')}
+      eyebrow={t('ops.stock.eyebrow')}
+      actions={
+        canIssue ? (
+          <GradientButton href="/feed-issue" icon={ArrowUpFromLine}>
+            {t('ops.feed.issueFeed')}
+          </GradientButton>
+        ) : null
+      }
+    >
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+        <KpiStrip
+          items={[
+            { label: t('ops.feed.inStore'), value: loading ? '—' : formatMass(totalKg) },
+            { label: t('ops.stock.value'), value: loading ? '—' : money(totalValue, { decimals: 0 }) },
+            {
+              label: t('ops.stock.belowMin'),
+              value: loading ? '—' : formatNumber(belowMin),
+              valueTone: belowMin ? 'warn' : undefined,
+            },
+            {
+              label: t('ops.stock.tally'),
+              value: loading ? '—' : mismatches ? t('ops.stock.mismatches', { count: mismatches }) : t('ops.stock.tallyOk'),
+              valueTone: mismatches ? 'alert' : 'good',
+            },
+          ]}
+        />
+        <Table
+          title={t('ops.stock.onHand')}
+          columns={[
+            { key: 'name', header: t('ops.col.feedType'), render: (item) => item.feed_type_name, sub: (item) => item.supplier_name || null },
+            { key: 'kg', header: t('ops.col.kg'), width: 110, align: 'right', render: (item) => formatNumber(item.current_stock, { decimals: 1 }) },
+            {
+              key: 'bags',
+              header: t('ops.col.bags'),
+              width: 110,
+              align: 'right',
+              render: (item) => formatNumber(item.current_stock_bags || 0, { decimals: 1 }),
+              sub: (item) => t('ops.stock.bagSize', { kg: Number(item.bag_size_kg || 25) }),
+            },
+            { key: 'min', header: t('ops.col.minKg'), width: 110, align: 'right', render: (item) => formatNumber(item.minimum_stock, { decimals: 0 }) },
+            {
+              key: 'status',
+              header: t('ops.col.status'),
+              width: 120,
+              render: (item) => {
+                const st = STATUS[getStockStatus(item.current_stock, item.minimum_stock)]
+                return <Pill tone={st.tone}>{t(st.key)}</Pill>
+              },
+            },
+            {
+              key: 'tally',
+              header: t('ops.col.ledgerTally'),
+              width: 130,
+              render: (item) => {
+                const row = tallyById[item.feed_type_id]
+                if (!row) return <span className="text-muted">—</span>
+                return row.ok ? (
+                  <span className="text-good">{t('ops.stock.tallyOk')}</span>
+                ) : (
+                  <span className="font-medium text-alert tabular-nums">Δ {row.delta}</span>
+                )
+              },
+            },
+            { key: 'value', header: t('ops.col.value'), width: 140, align: 'right', render: (item) => money(item.stock_value || 0) },
+          ]}
+          rows={stockLevels}
+          rowKey={(item) => item.feed_type_id}
+          empty={loading ? t('ops.common.loading') : t('ops.stock.none')}
+        />
+        <p className="-mt-4 text-xs text-muted">{t('ops.stock.ledgerNote')}</p>
+      </div>
     </Layout>
   )
 }

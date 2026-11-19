@@ -1,20 +1,28 @@
 import React, { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
-import { formatCurrency, formatNumber } from '../../lib/currencyUtils'
+import { formatCurrency } from '../../lib/currencyUtils'
 import Layout from '../../components/Layout'
 import {
-  PageHeader,
   Button,
   Field,
   Input,
-  Select,
   Textarea,
-  StatCard,
   LoadingState,
   Modal,
+  GradientButton,
+  GhostButton,
+  KpiStrip,
+  Pill,
+  ProgressBar,
+  Table,
 } from '../../components/ui'
-import DataTable from '../../components/DataTable'
+import NavTabs from '../../components/ui/NavTabs'
+import { Panel, ListRow } from '../../components/ui/Panel'
+import { feedTabs } from '../../lib/sectionTabs'
+import { buildFeedOverview, COVER_SCALE_DAYS, formatMass, movementKind, shortDate } from '../../lib/feedOverview'
+import { useMoney } from '../../lib/money'
+import { useT } from '../../lib/i18n/context'
 import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../../lib/feedData'
 import { supplierCreateArgs } from '../../lib/supplierArgs'
 import { useFeedUsageStats } from '../../hooks/useFeedData'
@@ -23,17 +31,20 @@ import { useLocation } from '../../contexts/LocationContext'
 import { buildFeedTypeDescription } from '../../lib/feedTypeMeta'
 import { api } from '../../convex/_generated/api'
 import { useToast } from '../../components/Toast'
-import { useAuth } from '../../contexts/AuthContext'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../../components/FeedPurchaseModal'
-import { Plus, ArrowLeft, Download, Filter, Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
+import { Plus, ArrowUpFromLine, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { usePermission } from '../../hooks/usePermission'
 
 const FeedManagement = () => {
-  const { hasRole } = useAuth()
+  const t = useT()
+  const money = useMoney()
   const isAdmin = usePermission('inventory.adjust')
-  const { locationArgs } = useLocation()
+  const canIssue = usePermission('inventory.issue')
+  const canPurchase = usePermission('inventory.purchase.record')
+  const { locationArgs, activeLocation } = useLocation()
+  const movements = useQuery(api.inventory.listTransactions, { ...locationArgs, limit: 8 })
   const feedTypesResult = useQuery(api.feed.listFeedTypes, {})
   const suppliersResult = useQuery(api.feed.listSuppliers, {})
   const stockLevels = useQuery(api.inventory.listStockLevels, locationArgs)
@@ -42,11 +53,6 @@ const FeedManagement = () => {
   const suppliers = suppliersResult || []
   const loading = feedTypesResult === undefined
   const statsLoading = loading || stockLevels === undefined || usageStats === undefined
-  const totalStockKg = (stockLevels || []).reduce(
-    (sum, row) => sum + Number(row.current_stock ?? row.currentStock ?? 0),
-    0,
-  )
-  const monthlyUsageKg = Number(usageStats?.totalUsage) || 0
   const createFeedType = useMutation(api.feed.createFeedType)
   const updateFeedType = useMutation(api.feed.updateFeedType)
   const softDeleteFeedType = useMutation(api.feed.softDeleteFeedType)
@@ -264,339 +270,228 @@ const FeedManagement = () => {
     }))
   }
 
-  const activeSupplierCount = suppliers.filter(
-    (s) => s.active !== false && !s.deleted_at,
-  ).length
-  const activeFeedTypeCount = feedTypes.filter(
-    (t) => t.active !== false && !t.deleted_at,
-  ).length
+  const overview = buildFeedOverview(stockLevels, usageStats?.rows, 30)
+  const priceById = Object.fromEntries((stockLevels || []).map((r) => [r.feed_type_id, Number(r.price_per_kg || 0)]))
+  const nameById = Object.fromEntries((stockLevels || []).map((r) => [r.feed_type_id, r.feed_type_name]))
+  const coverText = (days) => (days == null ? '—' : t('ops.feed.days', { count: Math.round(days) }))
 
   return (
     <ProtectedRoute>
-      <Layout title="Feed Management">
-        <div className="max-w-7xl" data-tour="page-feed-management">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Feed' },
-              { label: 'Management' },
+      <Layout
+        title={t('ops.feed.title')}
+        eyebrow={activeLocation?.name ? t('ops.feed.eyebrowAt', { site: activeLocation.name }) : t('ops.feed.title')}
+        actions={
+          <>
+            {canIssue && (
+              <GradientButton href="/feed-issue" icon={ArrowUpFromLine}>
+                {t('ops.feed.issueFeed')}
+              </GradientButton>
+            )}
+            {canPurchase && (
+              <GradientButton reverse icon={Plus} onClick={() => setShowPurchaseModal(true)}>
+                {t('ops.feed.newPurchase')}
+              </GradientButton>
+            )}
+          </>
+        }
+      >
+        <div className="flex flex-col gap-[28px]" data-tour="page-feed-management">
+          <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+
+          <KpiStrip
+            items={[
+              {
+                label: t('ops.feed.inStore'),
+                value: statsLoading ? '—' : formatMass(overview.totalKg),
+                suffix: statsLoading || overview.coverDays == null ? undefined : t('ops.feed.daysCover', { count: Math.round(overview.coverDays) }),
+              },
+              {
+                label: t('ops.feed.used30d'),
+                value: statsLoading ? '—' : formatMass(overview.usedKg),
+                suffix: statsLoading ? undefined : t('ops.feed.perDay', { amount: formatMass(overview.dailyKg) }),
+              },
+              {
+                label: t('ops.feed.cost30d'),
+                value: statsLoading ? '—' : money(overview.costValue, { decimals: 0 }),
+                suffix: statsLoading || !overview.usedKg ? undefined : t('ops.feed.perKg', { amount: money(overview.costPerKg) }),
+              },
+              {
+                label: t('ops.feed.lowStock'),
+                value: statsLoading ? '—' : t('ops.feed.items', { count: overview.reorder.length }),
+                valueTone: overview.reorder.length ? 'alert' : undefined,
+                suffix: overview.reorder.length ? t('ops.feed.reorderNow') : undefined,
+                suffixTone: 'alert',
+              },
             ]}
-            description="Manage feed types, suppliers, and track usage across your farm."
-            related={[
-              { label: 'Stock levels', href: '/stock-levels' },
-              { label: 'Issue feed', href: '/feed-issue' },
-              { label: 'Purchases', href: '/feed-purchases' },
-              { label: 'Overview', href: '/feed-management/overview' },
-            ]}
-            actions={
-              <Button href="/feed-issue" size="sm">
-                Issue feed
-              </Button>
-            }
           />
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard
-              label="Feed types"
-              value={loading ? '—' : formatNumber(activeFeedTypeCount, { decimals: 0 })}
-            />
-            <StatCard
-              label="Active suppliers"
-              value={formatNumber(activeSupplierCount, { decimals: 0 })}
-            />
-            <StatCard
-              label="Feed in stock"
-              value={statsLoading ? '—' : formatNumber(totalStockKg, { decimals: 0 })}
-              unit={statsLoading ? '' : 'kg'}
-            />
-            <StatCard
-              label="Monthly usage"
-              value={statsLoading ? '—' : formatNumber(monthlyUsageKg, { decimals: 0 })}
-              unit={statsLoading ? '' : 'kg'}
-            />
+          <div className="flex flex-col gap-[20px] xl:flex-row">
+            <Panel
+              className="xl:grow-[1.4] xl:basis-0"
+              title={t('ops.feed.stockByFeed')}
+              titleId="fm-stock-by-feed"
+              meta={t('ops.feed.barIsCover')}
+            >
+              {statsLoading ? (
+                <LoadingState label={t('ops.common.loading')} />
+              ) : overview.rows.length === 0 ? (
+                <p className="border-t border-line py-3 text-sm text-muted">{t('ops.feed.noStock')}</p>
+              ) : (
+                overview.rows.map((row) => (
+                  <div key={row.id} className="flex items-center gap-4 border-t border-line py-3">
+                    <div className="flex w-[170px] shrink-0 flex-col gap-[2px]">
+                      <span className="truncate text-sm leading-[18px] text-text">{row.name}</span>
+                      <span className="truncate text-xs leading-4 text-muted">{row.supplier || t('ops.feed.minKg', { amount: formatMass(row.minimumKg) })}</span>
+                    </div>
+                    <ProgressBar
+                      className="grow"
+                      value={Math.min(row.coverDays ?? 0, COVER_SCALE_DAYS)}
+                      max={COVER_SCALE_DAYS}
+                      tone={row.tone === 'good' ? 'brand' : row.tone}
+                      label={t('ops.feed.coverOf', { name: row.name })}
+                    />
+                    <span className={`w-[70px] shrink-0 text-right text-sm leading-[18px] ${row.tone === 'alert' ? 'text-alert' : 'text-muted'}`}>
+                      {coverText(row.coverDays)}
+                    </span>
+                    <span className="w-[70px] shrink-0 text-right text-sm font-medium leading-[18px] tabular-nums text-text">
+                      {formatMass(row.stockKg)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </Panel>
+
+            <Panel
+              className="xl:grow xl:basis-0"
+              title={t('ops.feed.reorder')}
+              titleId="fm-reorder"
+              action={canPurchase ? { label: t('ops.feed.createPo'), href: '/procurement' } : undefined}
+            >
+              {statsLoading ? (
+                <LoadingState label={t('ops.common.loading')} />
+              ) : overview.reorder.length === 0 ? (
+                <p className="border-t border-line py-3 text-sm text-muted">{t('ops.feed.nothingToReorder')}</p>
+              ) : (
+                overview.reorder.map((row) => (
+                  <ListRow
+                    key={row.id}
+                    dot={row.tone === 'alert' ? 'alert' : 'warn'}
+                    dotLabel={t('ops.feed.lowStockShort')}
+                    title={row.name}
+                    sub={[row.supplier, t('ops.feed.minKg', { amount: formatMass(row.minimumKg) })].filter(Boolean).join(' · ')}
+                    value={formatMass(row.stockKg)}
+                    valueSub={coverText(row.coverDays)}
+                  />
+                ))
+              )}
+            </Panel>
           </div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Feed Types Card */}
-            <div className="lg:col-span-2">
-              <div className="page-card-sm">
-                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-lg font-medium text-chart-ink">Feed types</h2>
-                    <div className="flex flex-wrap gap-2">
-                      <Button onClick={handleAddFeedType}>
-                        <Plus className="h-4 w-4" aria-hidden />
-                        Add feed type
-                      </Button>
-                      <Button variant="secondary" onClick={() => setShowPurchaseModal(true)}>
-                        <ShoppingCart className="h-4 w-4" aria-hidden />
-                        Record purchase
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 sm:p-6">
-                  {/* Filters */}
-                  <div className="mb-6 flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <Input
-                        type="text"
-                        aria-label="Search feed types"
-                        placeholder="Search feed types…"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-muted" aria-hidden />
-                      </div>
-                    </div>
-                    <Select
-                      aria-label="Status"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="sm:w-44"
-                    >
-                      <option value="all">All statuses</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </Select>
-                  </div>
+          <Table
+            title={t('ops.feed.recentMovements')}
+            actions={
+              <Link href="/inventory-transactions" className="rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                {t('ops.common.viewAll')}
+              </Link>
+            }
+            columns={[
+              { key: 'date', header: t('ops.col.date'), width: 110, render: (r) => <span className="text-muted">{shortDate(r.transaction_date)}</span> },
+              {
+                key: 'type',
+                header: t('ops.col.type'),
+                width: 130,
+                render: (r) => {
+                  const kind = movementKind(r.transaction_type)
+                  return <Pill tone={kind.tone}>{t(`ops.movement.${kind.key}`)}</Pill>
+                },
+              },
+              {
+                key: 'item',
+                header: t('ops.col.item'),
+                render: (r) => [nameById[r.feed_type_id] || '—', r.notes || r.batch_number].filter(Boolean).join(' · '),
+              },
+              { key: 'qty', header: t('ops.col.qty'), width: 110, align: 'right', render: (r) => formatMass(r.quantity_kg) },
+              {
+                key: 'value',
+                header: t('ops.col.value'),
+                width: 130,
+                align: 'right',
+                render: (r) => money(Number(r.quantity_kg || 0) * (priceById[r.feed_type_id] || 0), { decimals: 0 }),
+              },
+            ]}
+            rows={movements || []}
+            empty={movements === undefined ? t('ops.common.loading') : t('ops.feed.noMovements')}
+          />
 
-                  {loading ? (
-                    <LoadingState label="Loading feed types..." />
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-foam-deep">
-                          <thead className="bg-foam-deep/40">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Name</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Protein %</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Price/kg</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-muted">Status</th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-muted">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-surface divide-y divide-foam-deep">
-                            {currentItems.map((type) => (
-                              <tr key={type.id} className="hover:bg-foam">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">{type.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
-                                  {type.protein_percentage != null && type.protein_percentage !== ''
-                                    ? `${type.protein_percentage}%`
-                                    : '—'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">{formatCurrency(type.price_per_kg)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStatusChange(type.id, !type.active)}
-                                    className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-lake ${
-                                      type.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
-                                    }`}
-                                  >
-                                    {type.active ? 'Active' : 'Inactive'}
-                                  </button>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <div className="flex justify-end gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEditFeedType(type)}
-                                      className="text-lake"
-                                    >
-                                      Edit
-                                    </Button>
-                                    {isAdmin && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setDeleteConfirm(type)}
-                                        className="text-signal"
-                                      >
-                                        Delete
-                                      </Button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Pagination */}
-                      {totalPages > 1 && (
-                        <div className="flex items-center justify-between border-t border-foam-deep bg-surface px-4 py-3 sm:px-6 mt-4">
-                          <div className="flex flex-1 justify-between sm:hidden">
-                            <Button
-                              variant="secondary"
-                              onClick={() => handlePageChange(currentPage - 1)}
-                              disabled={currentPage === 1}
-                            >
-                              Previous
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              onClick={() => handlePageChange(currentPage + 1)}
-                              disabled={currentPage === totalPages}
-                              className="ml-3"
-                            >
-                              Next
-                            </Button>
-                          </div>
-                          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm text-muted tabular-nums">
-                                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
-                                <span className="font-medium">
-                                  {Math.min(indexOfLastItem, filteredFeedTypes.length)}
-                                </span>{' '}
-                                of <span className="font-medium">{filteredFeedTypes.length}</span> results
-                              </p>
-                            </div>
-                            <div>
-                              <nav className="isolate inline-flex -space-x-px rounded-lg" aria-label="Pagination">
-                                <button
-                                  type="button"
-                                  onClick={() => handlePageChange(currentPage - 1)}
-                                  disabled={currentPage === 1}
-                                  aria-label="Previous page"
-                                  className="relative inline-flex items-center rounded-l-lg px-2 min-h-9 text-muted border border-foam-deep hover:bg-foam disabled:opacity-50 focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-                                >
-                                  <ChevronLeft className="h-4 w-4" aria-hidden />
-                                </button>
-                                {[...Array(totalPages)].map((_, index) => (
-                                  <button
-                                    key={index + 1}
-                                    type="button"
-                                    onClick={() => handlePageChange(index + 1)}
-                                    aria-current={currentPage === index + 1 ? 'page' : undefined}
-                                    className={`relative inline-flex items-center px-3.5 min-h-9 text-sm font-medium tabular-nums border focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake ${
-                                      currentPage === index + 1
-                                        ? 'z-10 border-lake bg-lake-soft text-lake'
-                                        : 'border-foam-deep text-chart-ink hover:bg-foam'
-                                    }`}
-                                  >
-                                    {index + 1}
-                                  </button>
-                                ))}
-                                <button
-                                  type="button"
-                                  onClick={() => handlePageChange(currentPage + 1)}
-                                  disabled={currentPage === totalPages}
-                                  aria-label="Next page"
-                                  className="relative inline-flex items-center rounded-r-lg px-2 min-h-9 text-muted border border-foam-deep hover:bg-foam disabled:opacity-50 focus:z-20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-                                >
-                                  <ChevronRight className="h-4 w-4" aria-hidden />
-                                </button>
-                              </nav>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Feed Suppliers Card */}
-            <div className="lg:col-span-1">
-              <div className="page-card-sm mb-6">
-                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-medium text-chart-ink">Feed suppliers</h2>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href="/feed-suppliers"
-                        className="text-sm text-lake hover:underline"
-                      >
-                        View all
-                      </Link>
-                      <Button size="sm" variant="secondary" onClick={() => setShowAddSupplierModal(true)}>
-                        <Plus className="h-4 w-4" aria-hidden />
-                        Add
-                      </Button>
-                    </div>
+          <Table
+            title={t('ops.feed.feedTypes')}
+            tabs={[
+              { value: 'all', label: t('ops.common.all') },
+              { value: 'active', label: t('ops.common.active') },
+              { value: 'inactive', label: t('ops.common.inactive') },
+            ]}
+            tab={statusFilter}
+            onTabChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}
+            search={searchTerm}
+            onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1) }}
+            searchPlaceholder={t('ops.feed.searchFeedTypes')}
+            actions={
+              <>
+                <GhostButton size="sm" icon={Plus} onClick={handleAddFeedType}>
+                  {t('ops.feed.addFeedType')}
+                </GhostButton>
+                <GhostButton size="sm" icon={Plus} onClick={handleAddSupplier}>
+                  {t('ops.feed.addSupplier')}
+                </GhostButton>
+              </>
+            }
+            columns={[
+              { key: 'name', header: t('ops.col.name'), sub: (type) => (type.protein_percentage != null && type.protein_percentage !== '' ? t('ops.feed.protein', { pct: type.protein_percentage }) : null) },
+              { key: 'price', header: t('ops.col.pricePerKg'), width: 140, align: 'right', render: (type) => formatCurrency(type.price_per_kg) },
+              {
+                key: 'status',
+                header: t('ops.col.status'),
+                width: 130,
+                render: (type) => (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange(type.id, !type.active)}
+                    aria-label={t(type.active ? 'ops.feed.deactivate' : 'ops.feed.activate', { name: type.name })}
+                    className="rounded-pill focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  >
+                    <Pill tone={type.active ? 'green' : 'neutral'}>{type.active ? t('ops.common.active') : t('ops.common.inactive')}</Pill>
+                  </button>
+                ),
+              },
+              {
+                key: 'actions',
+                header: <span className="sr-only">{t('ops.col.actions')}</span>,
+                width: 150,
+                align: 'right',
+                render: (type) => (
+                  <div className="flex justify-end gap-3 text-sm">
+                    <button type="button" onClick={() => handleEditFeedType(type)} className="rounded-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                      {t('ops.common.edit')}
+                    </button>
+                    {isAdmin && (
+                      <button type="button" onClick={() => setDeleteConfirm(type)} className="rounded-sm text-alert hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                        {t('ops.common.delete')}
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="p-4 sm:p-6">
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {suppliers.map((supplier) => (
-                      <div key={supplier.id} className="p-4 bg-foam border border-foam-deep rounded-lg">
-                        <div className="flex justify-between items-start gap-3">
-                          <div>
-                            <h3 className="text-sm font-medium text-chart-ink">{supplier.name}</h3>
-                            <p className="text-xs text-muted mt-1">{supplier.contact_person}</p>
-                            <p className="text-xs text-muted">{supplier.phone}</p>
-                          </div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            supplier.active ? 'bg-kelp/15 text-kelp' : 'bg-signal/15 text-signal'
-                          }`}>
-                            {supplier.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Recently Used Feed Card */}
-              <div className="page-card-sm">
-                <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-medium text-chart-ink">Recently used feed</h2>
-                    <Link
-                      href="/feed-types"
-                      className="text-sm text-lake hover:underline"
-                    >
-                      View all
-                    </Link>
-                  </div>
-                </div>
-                <div className="p-4 sm:p-6">
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {feedTypes
-                      .filter(type => type.active)
-                      .slice(0, 5)
-                      .map((type) => (
-                        <div key={type.id} className="p-4 bg-foam border border-foam-deep rounded-lg">
-                          <div className="flex justify-between items-start gap-3">
-                            <div>
-                              <h3 className="text-sm font-medium text-chart-ink">{type.name}</h3>
-                              <p className="text-xs text-muted mt-1 tabular-nums">
-                                {type.protein_percentage != null &&
-                                type.protein_percentage !== ''
-                                  ? `${type.protein_percentage}% protein`
-                                  : 'Protein —'}
-                                {' · '}
-                                {Number(type.bag_size_kg || type.bagSizeKg || 25)}
-                                Kg bags
-                                {' · '}
-                                {formatCurrency(type.price_per_kg)}/kg
-                              </p>
-                              <p className="text-xs text-muted mt-1">
-                                Last used 2 hours ago
-                              </p>
-                            </div>
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-kelp/15 text-kelp">
-                              Active
-                            </span>
-                          </div>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                ),
+              },
+            ]}
+            rows={loading ? [] : currentItems}
+            empty={loading ? t('ops.common.loading') : t('ops.feed.noFeedTypes')}
+          />
+          {totalPages > 1 && (
+            <nav aria-label={t('ops.common.pagination')} className="-mt-4 flex items-center justify-end gap-3 text-sm text-muted tabular-nums">
+              <span>{t('ops.common.pageOf', { page: currentPage, total: totalPages })}</span>
+              <GhostButton size="sm" icon={ChevronLeft} onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} aria-label={t('ops.common.previous')} />
+              <GhostButton size="sm" icon={ChevronRight} onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} aria-label={t('ops.common.next')} />
+            </nav>
+          )}
         </div>
 
         {/* Add/Edit Feed Type Modal */}

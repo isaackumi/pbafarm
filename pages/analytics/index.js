@@ -3,26 +3,18 @@ import dynamic from 'next/dynamic'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import {
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Field,
-  Input,
-  PageHeader,
-  Select,
-  StatCard,
-  TabBar,
-} from '../../components/ui'
+import { EmptyState, Field, GhostButton, Input, KpiStrip, Segmented, Select, Tabs } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useCurrency } from '../../hooks/useCurrency'
 import { localToday } from '../../lib/format'
 import { downloadCsv } from '../../lib/csv'
+import { useT } from '../../lib/i18n/context'
+import { reportTabs } from '../../lib/sectionTabs'
 
-const chartPlaceholder = () => <div className="h-72 w-full rounded-lg bg-foam animate-pulse" />
+const chartPlaceholder = () => <div className="h-72 w-full rounded-card bg-surface-2 animate-pulse" />
 const RankedBars = dynamic(
   () => import('../../components/charts/AnalyticsCharts').then((m) => m.RankedBars),
   { ssr: false, loading: chartPlaceholder },
@@ -39,27 +31,13 @@ const FcrTrendChart = dynamic(
 export default function AnalyticsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Analytics">
-        <Analytics />
-      </Layout>
+      <Analytics />
     </ProtectedRoute>
   )
 }
 
-const TABS = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'growth', label: 'Growth and forecast' },
-  { id: 'feed', label: 'Feed efficiency' },
-  { id: 'mortality', label: 'Mortality' },
-  { id: 'cycles', label: 'Profitability' },
-]
-
-const PERIODS = [
-  { weeks: 4, label: 'Last 4 weeks' },
-  { weeks: 8, label: 'Last 8 weeks' },
-  { weeks: 12, label: 'Last 12 weeks' },
-  { weeks: 26, label: 'Last 26 weeks' },
-]
+const TABS = ['compare', 'growth', 'feed', 'mortality', 'cycles']
+const PERIODS = [4, 8, 12, 26]
 
 const addDays = (iso, n) => {
   const d = new Date(`${iso}T12:00:00Z`)
@@ -90,48 +68,65 @@ function Analytics() {
   const today = localToday()
   const skip = !user
 
+  const t = useT()
   return (
-    <div className="space-y-6 max-w-[1400px]">
-      <PageHeader
-        title="Analytics"
-        description="Sites and units side by side, growth against target, harvest forecasts, feed efficiency, mortality and profit per cycle. Figures come from the production rollups, refreshed every few minutes."
-        related={[
-          { href: '/dashboard', label: 'Dashboard' },
-          { href: '/pnl', label: 'Cage P&L' },
-          { href: '/report', label: 'Production report' },
-        ]}
-      />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabBar tabs={TABS} active={tab} onChange={setTab} />
+    <Layout title={t('ops.analytics.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
+        <p className="max-w-3xl text-sm leading-5 text-muted">{t('ops.analytics.description')}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <Tabs
+              variant="underline"
+              label={t('ops.analytics.viewsLabel')}
+              tabs={TABS.map((id) => ({ value: id, label: t(`ops.analytics.tabs.${id}`) }))}
+              value={tab}
+              onChange={setTab}
+            />
+          </div>
+          {tab !== 'growth' && tab !== 'cycles' && (
+            <Field label={t('ops.analytics.period')} htmlFor="analytics-period" className="sm:w-48">
+              <Select id="analytics-period" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+                {PERIODS.map((w) => (
+                  <option key={w} value={w}>
+                    {t('ops.analytics.lastWeeks', { count: w })}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
-        {tab !== 'growth' && tab !== 'cycles' && (
-          <Field label="Period" htmlFor="analytics-period" className="sm:w-48">
-            <Select
-              id="analytics-period"
-              value={weeks}
-              onChange={(e) => setWeeks(Number(e.target.value))}
-            >
-              {PERIODS.map((p) => (
-                <option key={p.weeks} value={p.weeks}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        {tab === 'compare' && <Compare skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
+        {tab === 'growth' && <Growth skip={skip} today={today} locationArgs={locationArgs} />}
+        {tab === 'feed' && <FeedEfficiency skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
+        {tab === 'mortality' && <Mortality skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
+        {tab === 'cycles' && <Cycles skip={skip} locationArgs={locationArgs} />}
       </div>
-      {tab === 'compare' && <Compare skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
-      {tab === 'growth' && <Growth skip={skip} today={today} locationArgs={locationArgs} />}
-      {tab === 'feed' && <FeedEfficiency skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
-      {tab === 'mortality' && <Mortality skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
-      {tab === 'cycles' && <Cycles skip={skip} locationArgs={locationArgs} />}
+    </Layout>
+  )
+}
+
+const CARD = 'min-w-0 rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+
+/** Paper card (P-LIST / 11 Reports panels); `padding={false}` for full-bleed tables. */
+function Card({ padding = true, className = '', children }) {
+  return <section className={`${CARD} ${padding ? 'px-5 py-6 sm:px-[26px]' : 'overflow-hidden'} ${className}`}>{children}</section>
+}
+
+function CardHeader({ title, subtitle, action }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold leading-[18px] text-text">{title}</h2>
+        {subtitle && <p className="mt-1 text-sm leading-5 text-muted">{subtitle}</p>}
+      </div>
+      {action}
     </div>
   )
 }
 
 function Loading() {
-  return <div className="h-64 rounded-xl bg-foam animate-pulse" aria-busy="true" aria-label="Loading" />
+  return <div className="h-64 rounded-card bg-surface-2 animate-pulse" aria-busy="true" aria-label="Loading" />
 }
 
 function NoData({ what }) {
@@ -147,9 +142,9 @@ function NoData({ what }) {
 
 function ExportButton({ onClick }) {
   return (
-    <Button variant="secondary" size="sm" onClick={onClick}>
+    <GhostButton size="sm" onClick={onClick}>
       Export CSV
-    </Button>
+    </GhostButton>
   )
 }
 
@@ -159,9 +154,9 @@ function Table({ caption, columns, rows, rowKey }) {
       <table className="min-w-full text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr className="text-left text-xs text-muted bg-foam/60">
+          <tr className="border-y border-line text-left text-xs text-faint">
             {columns.map((c) => (
-              <th key={c.key} scope="col" className={`px-4 py-3 font-semibold whitespace-nowrap ${c.num ? 'text-right' : ''}`}>
+              <th key={c.key} scope="col" className={`px-5 py-3 font-medium whitespace-nowrap sm:px-[26px] ${c.num ? 'text-right' : ''}`}>
                 {c.label}
               </th>
             ))}
@@ -169,11 +164,11 @@ function Table({ caption, columns, rows, rowKey }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={rowKey(r)} className="border-t border-foam-deep">
+            <tr key={rowKey(r)} className="border-b border-line last:border-b-0 hover:bg-surface-2">
               {columns.map((c) => (
                 <td
                   key={c.key}
-                  className={`px-4 py-3 whitespace-nowrap ${c.num ? 'text-right tabular-nums' : ''} ${c.className?.(r) ?? ''}`}
+                  className={`px-5 py-3 whitespace-nowrap text-text sm:px-[26px] ${c.num ? 'text-right tabular-nums' : ''} ${c.className?.(r) ?? ''}`}
                 >
                   {c.render ? c.render(r) : r[c.key]}
                 </td>
@@ -243,7 +238,7 @@ function Compare({ skip, today, weeks, locationArgs }) {
             label: 'Margin',
             num: true,
             render: (r) => formatCurrency(r.net_margin),
-            className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
+            className: (r) => (r.net_margin < 0 ? 'text-alert' : ''),
           },
         ]
       : []),
@@ -258,31 +253,32 @@ function Compare({ skip, today, weeks, locationArgs }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Farm FCR" value={fmt(data.farm.fcr)} hint={`${dateLabel(from)} to ${dateLabel(to)}`} />
-        <StatCard label="Survival" value={fmt(data.farm.survival_pct, 1)} unit="%" />
-        <StatCard label="Standing biomass" value={int(data.farm.biomass_kg)} unit="kg" />
-        {money ? (
-          <StatCard
-            label="Cost per kg produced"
-            value={data.farm.cost_per_kg_produced == null ? '—' : formatCurrency(data.farm.cost_per_kg_produced)}
-          />
-        ) : (
-          <StatCard label="Feed" value={int(data.farm.feed_kg)} unit="kg" />
-        )}
-      </div>
+      <KpiStrip
+        items={[
+          { label: 'Farm FCR', value: fmt(data.farm.fcr), suffix: `${dateLabel(from)} – ${dateLabel(to)}` },
+          { label: 'Survival', value: fmt(data.farm.survival_pct, 1), suffix: '%' },
+          { label: 'Standing biomass', value: int(data.farm.biomass_kg), suffix: 'kg' },
+          money
+            ? {
+                label: 'Cost per kg produced',
+                value: data.farm.cost_per_kg_produced == null ? '—' : formatCurrency(data.farm.cost_per_kg_produced),
+              }
+            : { label: 'Feed', value: int(data.farm.feed_kg), suffix: 'kg' },
+        ]}
+      />
       <Card>
         <CardHeader
           title={`${m.label} by ${level === 'sites' ? 'site' : 'unit'}`}
           subtitle="Ranked; hover a bar for its value. The table below has every figure."
           action={
             <div className="flex flex-wrap gap-2">
-              <TabBar
-                tabs={[
-                  { id: 'units', label: 'Units' },
-                  { id: 'sites', label: 'Sites' },
+              <Segmented
+                label="Level"
+                options={[
+                  { value: 'units', label: 'Units' },
+                  { value: 'sites', label: 'Sites' },
                 ]}
-                active={level}
+                value={level}
                 onChange={setLevel}
               />
               <label htmlFor="compare-metric" className="sr-only">
@@ -305,9 +301,9 @@ function Compare({ skip, today, weeks, locationArgs }) {
         )}
       </Card>
       <Card padding={false}>
-        <div className="p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-medium text-chart-ink">
+            <h2 className="text-base font-semibold leading-[18px] text-text">
               {level === 'sites' ? 'Sites' : 'Units'} side by side
             </h2>
             <p className="text-sm text-muted mt-1">
@@ -395,10 +391,10 @@ function Growth({ skip, today, locationArgs }) {
       </Card>
 
       <Card padding={false}>
-        <div className="p-5 sm:p-6 space-y-4">
+        <div className="px-5 py-6 sm:px-[26px] space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-medium text-chart-ink">Harvest forecast</h2>
+              <h2 className="text-base font-semibold leading-[18px] text-text">Harvest forecast</h2>
               <p className="text-sm text-muted mt-1">
                 Weight projected at the growth rate between the last two samples (the cycle&apos;s rate with one sample), fish at the last 28 days&apos; death rate.
               </p>
@@ -467,9 +463,9 @@ function FeedEfficiency({ skip, today, weeks, locationArgs }) {
         <FcrTrendChart data={data.farm} />
       </Card>
       <Card padding={false}>
-        <div className="p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-medium text-chart-ink">Cycle-to-date FCR per unit</h2>
+            <h2 className="text-base font-semibold leading-[18px] text-text">Cycle-to-date FCR per unit</h2>
             <p className="text-sm text-muted mt-1">At the end of each week (Sunday).</p>
           </div>
           <ExportButton onClick={exportCsv} />
@@ -520,17 +516,17 @@ function Mortality({ skip, today, weeks, locationArgs }) {
   const short = (w) => dateLabel(w).replace(/,? \d{4}$/, '')
   return (
     <Card padding={false}>
-      <div className="p-5 sm:p-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-medium text-chart-ink">Mortality by unit and week</h2>
+          <h2 className="text-base font-semibold leading-[18px] text-text">Mortality by unit and week</h2>
           <p className="text-sm text-muted mt-1">
             Deaths in the week as a share of the fish at its end plus those deaths. Darker is worse.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowTable((s) => !s)} aria-pressed={showTable}>
+          <GhostButton size="sm" onClick={() => setShowTable((s) => !s)} aria-pressed={showTable}>
             {showTable ? 'Show heatmap' : 'Show table'}
-          </Button>
+          </GhostButton>
           <ExportButton onClick={exportCsv} />
         </div>
       </div>
@@ -572,7 +568,7 @@ function Mortality({ skip, today, weeks, locationArgs }) {
               <tbody>
                 {data.units.map((u) => (
                   <tr key={u.unit_id}>
-                    <th scope="row" className="text-left text-sm font-medium text-chart-ink pr-3 whitespace-nowrap">
+                    <th scope="row" className="text-left text-sm font-medium text-text pr-3 whitespace-nowrap">
                       {u.unit_name}
                     </th>
                     {u.series.map((c) => {
@@ -587,7 +583,7 @@ function Mortality({ skip, today, weeks, locationArgs }) {
                             role="img"
                             aria-label={label}
                             title={label}
-                            className="h-9 min-w-11 rounded focus:outline-none focus:ring-2 focus:ring-lake"
+                            className="h-9 min-w-11 rounded focus:outline-none focus:ring-2 focus:ring-cyan"
                             style={{
                               background: bin >= 0 ? `var(--seq-${bin + 1})` : 'var(--foam)',
                             }}
@@ -609,7 +605,7 @@ function Mortality({ skip, today, weeks, locationArgs }) {
               </span>
             ))}
             <span className="inline-flex items-center gap-1">
-              <span className="inline-block h-3 w-5 rounded-sm bg-foam border border-foam-deep" aria-hidden />
+              <span className="inline-block h-3 w-5 rounded-sm bg-surface-2 border border-line" aria-hidden />
               No fish
             </span>
           </div>
@@ -650,7 +646,7 @@ function Cycles({ skip, locationArgs }) {
             label: 'Margin',
             num: true,
             render: (r) => formatCurrency(r.net_margin),
-            className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
+            className: (r) => (r.net_margin < 0 ? 'text-alert' : ''),
           },
         ]
       : []),
@@ -684,9 +680,9 @@ function Cycles({ skip, locationArgs }) {
         </Card>
       )}
       <Card padding={false}>
-        <div className="p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-medium text-chart-ink">{money ? 'Profitability by cycle' : 'Cycles'}</h2>
+            <h2 className="text-base font-semibold leading-[18px] text-text">{money ? 'Profitability by cycle' : 'Cycles'}</h2>
             <p className="text-sm text-muted mt-1">
               {money
                 ? "Feed at purchase prices; expenses and sales of the unit in the cycle's dates. Open cycles count to date."

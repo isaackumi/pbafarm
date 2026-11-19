@@ -3,27 +3,34 @@ import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import {
-  PageHeader,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
   Field,
+  GhostButton,
+  GradientButton,
   Input,
+  KpiStrip,
+  Pill,
   Select,
-  TabBar,
+  Segmented,
+  Table,
 } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
+import { Panel, ListRow } from '../../components/ui/Panel'
+import InventoryActions from '../../components/inventory/InventoryActions'
+import { inventoryTabs } from '../../lib/sectionTabs'
+import { shortDate } from '../../lib/feedOverview'
+import { useT } from '../../lib/i18n/context'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
-import { localToday } from '../../lib/format'
+import { formatNumber, localToday } from '../../lib/format'
 import { usePermission } from '../../hooks/usePermission'
 
 export default function InventoryItemsPage() {
+  const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title="Stock items">
+      <Layout title={t('ops.inventory.title')} eyebrow={t('ops.items.eyebrow')} actions={<InventoryActions />}>
         <Items />
       </Layout>
     </ProtectedRoute>
@@ -39,21 +46,20 @@ const CATEGORIES = [
   ['spare', 'Spare part'],
   ['other', 'Other'],
 ]
-const categoryLabel = (k) => (CATEGORIES.find(([key]) => key === k) || [k, k])[1]
-
-const MOVE_LABEL = {
-  receipt: 'Received',
-  issue: 'Issued',
-  adjustment: 'Adjusted',
-  transfer_out: 'Transferred out',
-  transfer_in: 'Transferred in',
+const MOVE_TONE = {
+  receipt: 'green',
+  issue: 'neutral',
+  adjustment: 'amber',
+  transfer_out: 'cyan',
+  transfer_in: 'cyan',
 }
 
 const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString('en-US')
 const today = () => localToday()
 
 function Items() {
-  const { user, hasRole } = useAuth()
+  const t = useT()
+  const { user } = useAuth()
   const isAdmin = usePermission('inventory.adjust')
   const { locationArgs, activeLocationId, locations } = useLocation()
   const { showToast } = useToast()
@@ -81,6 +87,7 @@ function Items() {
   })
   const [newItem, setNewItem] = useState({ name: '', category: 'chemical', unit: 'L', minimumStock: '', supplierId: '' })
   const [busy, setBusy] = useState(false)
+  const [category, setCategory] = useState('all')
 
   const selected = useMemo(
     () => (items || []).find((i) => i.id === move.itemId) || null,
@@ -160,56 +167,118 @@ function Items() {
   }
 
   const modes = [
-    { id: 'issue', label: 'Issue' },
-    { id: 'receive', label: 'Receive' },
+    { value: 'issue', label: t('ops.items.mode.issue') },
+    { value: 'receive', label: t('ops.items.mode.receive') },
     ...(isAdmin
       ? [
-          { id: 'adjust', label: 'Adjust' },
-          { id: 'transfer', label: 'Transfer' },
+          { value: 'adjust', label: t('ops.items.mode.adjust') },
+          { value: 'transfer', label: t('ops.items.mode.transfer') },
         ]
       : []),
   ]
 
+  const categoriesPresent = CATEGORIES.filter(([k]) => (items || []).some((i) => i.category === k))
+  const shownItems = (items || []).filter((i) => category === 'all' || i.category === category)
+  const lowCount = (items || []).filter((i) => i.low).length
+  const qty = (i) => i.site_quantity ?? i.total
+  const pickItem = (i) => setMove((m) => ({ ...m, itemId: i.id }))
+
   return (
-    <div>
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: 'Inventory', href: '/inventory/overview' }, { label: 'Stock items' }]}
-        description="Chemicals, drugs, nets, equipment and other non-feed stock, held per site. Feed is managed under Feed."
-        related={[
-          { label: 'Purchase orders', href: '/procurement' },
-          { label: 'Feed stock levels', href: '/stock-levels' },
+    <div className="flex flex-col gap-[28px]">
+      <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
+      <KpiStrip
+        items={[
+          { label: t('ops.items.count'), value: items === undefined ? '—' : formatNumber(items.length), suffix: t('ops.items.nonFeed') },
+          {
+            label: t('ops.items.belowReorder'),
+            value: items === undefined ? '—' : formatNumber(lowCount),
+            valueTone: lowCount ? 'warn' : undefined,
+          },
+          { label: t('ops.items.categories'), value: items === undefined ? '—' : formatNumber(categoriesPresent.length) },
         ]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-1">
-          <CardHeader title="Move stock" subtitle="At the site selected in the header." />
+      <div className="flex flex-col gap-[20px] xl:flex-row xl:items-start">
+        <Table
+          className="min-w-0 xl:grow-[1.6] xl:basis-0"
+          title={t('ops.tab.items')}
+          tabs={[{ value: 'all', label: t('ops.common.all') }, ...categoriesPresent.map(([k]) => ({ value: k, label: t(`ops.items.cat.${k}`) }))]}
+          tab={category}
+          onTabChange={setCategory}
+          columns={[
+            {
+              key: 'name',
+              header: t('ops.items.colItem'),
+              render: (i) => <span className={i.id === move.itemId ? 'font-medium text-pearl-cyan' : ''}>{i.name}</span>,
+              sub: (i) =>
+                [t(`ops.items.cat.${i.category}`), i.minimum_stock > 0 ? t('ops.items.reorderAt', { qty: fmt(i.minimum_stock), unit: i.unit }) : null, i.supplier_name]
+                  .filter(Boolean)
+                  .join(' · '),
+            },
+            {
+              key: 'onHand',
+              header: t('ops.col.onHand'),
+              width: 140,
+              align: 'right',
+              render: (i) => `${fmt(qty(i))} ${i.unit}`,
+              sub: (i) => (i.site_quantity != null ? t('ops.items.allSites', { qty: fmt(i.total) }) : null),
+            },
+            {
+              key: 'status',
+              header: t('ops.col.status'),
+              width: 110,
+              render: (i) => <Pill tone={i.low ? 'red' : 'green'}>{i.low ? t('ops.stock.low') : t('ops.stock.ok')}</Pill>,
+            },
+          ]}
+          rows={shownItems}
+          onRowClick={pickItem}
+          empty={items === undefined ? t('ops.common.loading') : t('ops.items.empty')}
+        />
+
+        <Panel
+          className="xl:grow xl:basis-0"
+          title={selected ? selected.name : t('ops.items.moveStock')}
+          titleId="it-detail"
+          meta={selected ? t(`ops.items.cat.${selected.category}`) : t('ops.items.atSite')}
+        >
+          {selected && (
+            <div className="mb-4 flex flex-col">
+              {selected.levels.map((l) => (
+                <ListRow
+                  key={l.location_id || l.location_name}
+                  dot={selected.low ? 'warn' : 'good'}
+                  dotLabel={selected.low ? t('ops.stock.low') : t('ops.stock.ok')}
+                  title={l.location_name}
+                  value={`${fmt(l.quantity)} ${selected.unit}`}
+                />
+              ))}
+            </div>
+          )}
           <div className="mb-4 overflow-x-auto">
-            <TabBar tabs={modes} active={mode} onChange={setMode} />
+            <Segmented options={modes} value={mode} onChange={setMode} label={t('ops.items.moveStock')} />
           </div>
           <form onSubmit={submitMove} className="space-y-4">
-            <Field label="Item" htmlFor="mv-item" required>
+            <Field label={t('ops.col.item')} htmlFor="mv-item" required>
               <Select id="mv-item" value={move.itemId} onChange={setM('itemId')} required>
-                <option value="">Select…</option>
+                <option value="">{t('ops.common.select')}</option>
                 {(items || []).map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.name} ({fmt(i.site_quantity ?? i.total)} {i.unit})
+                    {i.name} ({fmt(qty(i))} {i.unit})
                   </option>
                 ))}
               </Select>
             </Field>
             <Field
-              label={`${mode === 'adjust' ? 'Change (+/−)' : 'Quantity'}${selected ? ` (${selected.unit})` : ''}`}
+              label={`${mode === 'adjust' ? t('ops.items.change') : t('ops.items.quantity')}${selected ? ` (${selected.unit})` : ''}`}
               htmlFor="mv-qty"
               required
             >
               <Input id="mv-qty" type="number" inputMode="decimal" step="any" value={move.quantity} onChange={setM('quantity')} required />
             </Field>
             {mode === 'issue' && (
-              <Field label="Cage" htmlFor="mv-cage">
+              <Field label={t('ops.items.cage')} htmlFor="mv-cage">
                 <Select id="mv-cage" value={move.cageId} onChange={setM('cageId')}>
-                  <option value="">Not for a cage</option>
+                  <option value="">{t('ops.items.notForCage')}</option>
                   {(cages || []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -219,19 +288,19 @@ function Items() {
               </Field>
             )}
             {mode === 'receive' && (
-              <Field label="Unit cost" htmlFor="mv-cost">
+              <Field label={t('ops.items.unitCost')} htmlFor="mv-cost">
                 <Input id="mv-cost" type="number" inputMode="decimal" step="any" min="0" value={move.unitCost} onChange={setM('unitCost')} />
               </Field>
             )}
             {mode === 'adjust' && (
-              <Field label="Reason" htmlFor="mv-reason" required>
-                <Input id="mv-reason" value={move.reason} onChange={setM('reason')} placeholder="Stock count, damage…" required />
+              <Field label={t('ops.items.reason')} htmlFor="mv-reason" required>
+                <Input id="mv-reason" value={move.reason} onChange={setM('reason')} placeholder={t('ops.items.reasonHint')} required />
               </Field>
             )}
             {mode === 'transfer' && (
-              <Field label="To site" htmlFor="mv-to" required>
+              <Field label={t('ops.items.toSite')} htmlFor="mv-to" required>
                 <Select id="mv-to" value={move.toLocationId} onChange={setM('toLocationId')} required>
-                  <option value="">Select…</option>
+                  <option value="">{t('ops.common.select')}</option>
                   {(locations || [])
                     .filter((l) => (l.id || l._id) !== activeLocationId)
                     .map((l) => (
@@ -243,92 +312,77 @@ function Items() {
               </Field>
             )}
             {mode !== 'adjust' && (
-              <Field label="Date" htmlFor="mv-date">
+              <Field label={t('ops.col.date')} htmlFor="mv-date">
                 <Input id="mv-date" type="date" value={move.date} onChange={setM('date')} />
               </Field>
             )}
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? 'Saving…' : 'Save'}
-            </Button>
+            <GradientButton type="submit" variant="solid" className="w-full [&>span]:w-full [&>span]:justify-center" disabled={busy}>
+              {busy ? t('ops.common.saving') : t('ops.common.save')}
+            </GradientButton>
           </form>
-        </Card>
-
-        <Card padding={false} className="lg:col-span-2">
-          <div className="px-5 py-4 border-b border-foam-deep">
-            <h2 className="font-display text-lg font-medium text-chart-ink">Items</h2>
-          </div>
-          {items === undefined ? (
-            <p className="px-5 py-8 text-sm text-muted">Loading…</p>
-          ) : items.length === 0 ? (
-            <EmptyState title="No stock items yet" description="Add chemicals, nets or equipment below." />
-          ) : (
-            <ul className="divide-y divide-foam-deep">
-              {items.map((i) => (
-                <li key={i.id} className="px-5 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-chart-ink">
-                        {i.name}
-                        {i.low && (
-                          <span className="ml-2 inline-flex items-center rounded-md bg-signal/10 text-signal px-1.5 text-xs font-medium">
-                            Low
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {categoryLabel(i.category)}
-                        {i.minimum_stock > 0 ? ` · reorder at ${fmt(i.minimum_stock)} ${i.unit}` : ''}
-                        {i.supplier_name ? ` · ${i.supplier_name}` : ''}
-                      </p>
-                      {i.levels.length > 1 && (
-                        <p className="text-xs text-muted mt-0.5">
-                          {i.levels.map((l) => `${l.location_name} ${fmt(l.quantity)}`).join(' · ')}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-data text-sm font-semibold">
-                        {fmt(i.site_quantity ?? i.total)} {i.unit}
-                      </p>
-                      {i.site_quantity != null && (
-                        <p className="text-xs text-muted">{fmt(i.total)} all sites</p>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        </Panel>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1">
-          <CardHeader title="Add item" />
-          <form onSubmit={submitItem} className="space-y-4">
-            <Field label="Name" htmlFor="it-name" required>
+      <div className="flex flex-col gap-[20px] xl:flex-row xl:items-start">
+        <Table
+          className="min-w-0 xl:grow-[1.6] xl:basis-0"
+          title={t('ops.feed.recentMovements')}
+          columns={[
+            { key: 'date', header: t('ops.col.date'), width: 110, render: (m) => <span className="text-muted">{shortDate(m.date)}</span> },
+            {
+              key: 'type',
+              header: t('ops.col.type'),
+              width: 140,
+              render: (m) => <Pill tone={MOVE_TONE[m.type] || 'neutral'}>{MOVE_TONE[m.type] ? t(`ops.items.move.${m.type}`) : m.type}</Pill>,
+            },
+            {
+              key: 'item',
+              header: t('ops.col.item'),
+              render: (m) => m.item_name,
+              sub: (m) => [m.location_name, m.cage_name ? `→ ${m.cage_name}` : null, m.notes].filter(Boolean).join(' · '),
+            },
+            {
+              key: 'qty',
+              header: t('ops.col.qty'),
+              width: 110,
+              align: 'right',
+              render: (m) => (
+                <span className={m.quantity < 0 ? 'text-alert' : 'text-good'}>
+                  {m.quantity > 0 ? '+' : ''}
+                  {fmt(m.quantity)}
+                </span>
+              ),
+            },
+          ]}
+          rows={movements || []}
+          empty={movements === undefined ? t('ops.common.loading') : t('ops.feed.noMovements')}
+        />
+
+        <Panel className="xl:grow xl:basis-0" title={t('ops.items.addItem')} titleId="it-add">
+          <form onSubmit={submitItem} className="space-y-4 border-t border-line pt-4">
+            <Field label={t('ops.col.name')} htmlFor="it-name" required>
               <Input id="it-name" value={newItem.name} onChange={setN('name')} required />
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Category" htmlFor="it-cat">
+              <Field label={t('ops.items.category')} htmlFor="it-cat">
                 <Select id="it-cat" value={newItem.category} onChange={setN('category')}>
-                  {CATEGORIES.map(([k, l]) => (
+                  {CATEGORIES.map(([k]) => (
                     <option key={k} value={k}>
-                      {l}
+                      {t(`ops.items.cat.${k}`)}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Unit" htmlFor="it-unit" required>
+              <Field label={t('ops.items.unit')} htmlFor="it-unit" required>
                 <Input id="it-unit" value={newItem.unit} onChange={setN('unit')} placeholder="L, kg, pcs" required />
               </Field>
             </div>
-            <Field label="Reorder level" htmlFor="it-min" hint="Admins get a low-stock reminder at or below this.">
+            <Field label={t('ops.items.reorderLevel')} htmlFor="it-min" hint={t('ops.items.reorderHint')}>
               <Input id="it-min" type="number" inputMode="decimal" min="0" step="any" value={newItem.minimumStock} onChange={setN('minimumStock')} />
             </Field>
-            <Field label="Supplier" htmlFor="it-sup">
+            <Field label={t('ops.col.supplier')} htmlFor="it-sup">
               <Select id="it-sup" value={newItem.supplierId} onChange={setN('supplierId')}>
-                <option value="">None</option>
+                <option value="">{t('ops.common.none')}</option>
                 {(suppliers || []).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -336,43 +390,11 @@ function Items() {
                 ))}
               </Select>
             </Field>
-            <Button type="submit" variant="secondary" className="w-full" disabled={busy}>
-              Add item
-            </Button>
+            <GhostButton type="submit" className="w-full justify-center" disabled={busy}>
+              {t('ops.items.addItem')}
+            </GhostButton>
           </form>
-        </Card>
-
-        <Card padding={false} className="lg:col-span-2">
-          <div className="px-5 py-4 border-b border-foam-deep">
-            <h2 className="font-display text-lg font-medium text-chart-ink">Recent movements</h2>
-          </div>
-          {movements === undefined ? (
-            <p className="px-5 py-8 text-sm text-muted">Loading…</p>
-          ) : movements.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-muted">No movements yet.</p>
-          ) : (
-            <ul className="divide-y divide-foam-deep">
-              {movements.map((m) => (
-                <li key={m.id} className="px-5 py-2.5 flex items-start justify-between gap-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="text-chart-ink">
-                      {MOVE_LABEL[m.type] || m.type} · {m.item_name}
-                    </p>
-                    <p className="text-xs text-muted truncate">
-                      {m.date} · {m.location_name}
-                      {m.cage_name ? ` → ${m.cage_name}` : ''}
-                      {m.notes ? ` · ${m.notes}` : ''}
-                    </p>
-                  </div>
-                  <span className={`font-data shrink-0 ${m.quantity < 0 ? 'text-signal' : 'text-kelp'}`}>
-                    {m.quantity > 0 ? '+' : ''}
-                    {fmt(m.quantity)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        </Panel>
       </div>
     </div>
   )

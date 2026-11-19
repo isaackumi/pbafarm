@@ -10,7 +10,10 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, Select, LoadingState, Modal } from '../components/ui'
+import { Button, Field, Input, Select, Modal, GradientButton, Pill, Table } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { feedTabs } from '../lib/sectionTabs'
+import { useT } from '../lib/i18n/context'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -33,6 +36,7 @@ export default function FeedTypesPage() {
 }
 
 function FeedTypes() {
+  const t = useT()
   const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
@@ -188,148 +192,68 @@ function FeedTypes() {
   }
 
   return (
-    <Layout title="Feed Types">
-      <div data-tour="page-feed-types">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Feed', href: '/feed-management/overview' },
-          { label: 'Feed types' },
-        ]}
-        description="Manage feed types used on your farm. Create, edit, or deactivate as needed."
-        related={[
-          { label: 'Feed suppliers', href: '/feed-suppliers' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
-          { label: 'Stock levels', href: '/stock-levels' },
-        ]}
-        actions={
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4" aria-hidden />
-            Add feed type
-          </Button>
-        }
-      />
-
-        {/* Feed Types Table */}
-        <div className="page-card overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Feed types</h2>
-          </div>
-
-          {loading ? (
-            <LoadingState label="Loading feed types..." />
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted"
+    <Layout
+      title={t('ops.feed.feedTypes')}
+      eyebrow={t('ops.feedTypes.eyebrow')}
+      actions={
+        <GradientButton icon={Plus} onClick={() => setShowAddModal(true)}>
+          {t('ops.feed.addFeedType')}
+        </GradientButton>
+      }
+    >
+      <div data-tour="page-feed-types" className="flex flex-col gap-[28px]">
+        <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+        <Table
+          title={t('ops.feed.feedTypes')}
+          columns={[
+            { key: 'name', header: t('ops.col.name') },
+            { key: 'price', header: t('ops.col.pricePerKg'), width: 140, align: 'right', render: (type) => fmt(type.price_per_kg || 0) },
+            {
+              key: 'supplier',
+              header: t('ops.col.supplier'),
+              render: (type) => <span className="text-muted">{suppliers.find((sp) => sp.id === type.supplier_id)?.name || '—'}</span>,
+            },
+            {
+              key: 'status',
+              header: t('ops.col.status'),
+              width: 120,
+              render: (type) => <Pill tone={type.active ? 'green' : 'neutral'}>{type.active ? t('ops.common.active') : t('ops.common.inactive')}</Pill>,
+            },
+            {
+              key: 'actions',
+              header: <span className="sr-only">{t('ops.col.actions')}</span>,
+              width: 100,
+              align: 'right',
+              render: (type) => (
+                <div className="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(type)}
+                    title={t('ops.feedTypes.edit')}
+                    aria-label={t('ops.feedTypes.edit')}
+                    className="rounded-sm p-1 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                   >
-                    Name
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted"
-                  >
-                    Price / kg
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted"
-                  >
-                    Supplier
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-muted"
-                  >
-                    Status
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-muted"
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-surface divide-y divide-foam-deep">
-                {feedTypes.length > 0 ? (
-                  feedTypes.map((type) => (
-                    <tr key={type.id} className="hover:bg-foam">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-chart-ink">
-                          {type.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
-                        {fmt(type.price_per_kg || 0)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                        {(() => {
-                          const supplier = suppliers.find(s => s.id === type.supplier_id)
-                          return supplier ? supplier.name : '-'
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            type.active
-                              ? 'bg-kelp/15 text-kelp'
-                              : 'bg-signal/15 text-signal'
-                          }`}
-                        >
-                          {type.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(type)}
-                            className="text-lake"
-                            title="Edit feed type"
-                            aria-label="Edit feed type"
-                          >
-                            <Edit className="w-4 h-4" aria-hidden />
-                          </Button>
-
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteConfirm(type)}
-                              className="text-signal"
-                              title="Delete feed type"
-                              aria-label="Delete feed type"
-                            >
-                              <Trash className="w-4 h-4" aria-hidden />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-12 text-center text-muted"
+                    <Edit className="h-4 w-4" aria-hidden />
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirm(type)}
+                      title={t('ops.feedTypes.delete')}
+                      aria-label={t('ops.feedTypes.delete')}
+                      className="rounded-sm p-1 text-alert hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                     >
-                      No feed types yet. Use Add feed type to create your
-                      first one.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </div>
+                      <Trash className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+          rows={loading ? [] : feedTypes}
+          empty={loading ? t('ops.common.loading') : t('ops.feedTypes.empty')}
+        />
+      </div>
 
       {/* Add Feed Type Modal */}
       {showAddModal && (
@@ -626,7 +550,6 @@ function FeedTypes() {
         onCancel={() => setDeleteConfirm(null)}
         onConfirm={handleDelete}
       />
-      </div>
     </Layout>
   )
 }

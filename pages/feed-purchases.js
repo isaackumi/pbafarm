@@ -24,14 +24,15 @@ import {
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
-  PageHeader,
   Button,
   Field,
+  GhostButton,
+  GradientButton,
   Input,
+  KpiStrip,
   Select,
+  Segmented,
   Textarea,
-  StatCard,
-  TabBar,
   LoadingState,
   Modal,
 } from '../components/ui'
@@ -67,6 +68,10 @@ import {
 } from 'recharts'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
+import NavTabs from '../components/ui/NavTabs'
+import { Panel, ListRow } from '../components/ui/Panel'
+import { feedTabs } from '../lib/sectionTabs'
+import { useT } from '../lib/i18n/context'
 
 export default function FeedPurchasesPage() {
   return (
@@ -77,6 +82,8 @@ export default function FeedPurchasesPage() {
 }
 
 function FeedPurchases() {
+  const t = useT()
+  const canRecord = usePermission('inventory.purchase.record')
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   // Purchase edit and void are admin-only on the backend.
@@ -901,158 +908,71 @@ function FeedPurchases() {
   const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)', 'var(--kelp-soft)']
 
   return (
-    <Layout title="Feed Purchases">
-      <div data-tour="page-feed-purchases">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Feed', href: '/feed-management/overview' },
-          { label: 'Purchases' },
-        ]}
-        description="Record and analyze feed purchases, stock alerts, and spend."
-        related={[
-          { label: 'Feed types', href: '/feed-types' },
-          { label: 'Feed suppliers', href: '/feed-suppliers' },
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Issue feed', href: '/feed-issue' },
-        ]}
-        actions={
-          <Button onClick={handleAddPurchase} data-tour="feed-purchases-record">
-            <Plus className="w-4 h-4" aria-hidden />
-            Record purchase
-          </Button>
-        }
-      />
-
-        {/* Time Range Selector */}
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted">
-            Spend &amp; usage window
-          </p>
-          <div role="group" aria-label="Time range">
-            <TabBar
-              tabs={['7d', '30d', '90d', '1y'].map((range) => ({
-                id: range,
-                label: range,
-              }))}
-              active={timeRange}
-              onChange={setTimeRange}
-            />
-          </div>
+    <Layout
+      title={t('ops.purchases.title')}
+      eyebrow={t('ops.purchases.eyebrow', { site: activeLocation?.name || '—' })}
+      actions={
+        canRecord ? (
+          <GradientButton icon={Plus} onClick={handleAddPurchase} data-tour="feed-purchases-record">
+            {t('ops.purchases.record')}
+          </GradientButton>
+        ) : null
+      }
+    >
+      <div data-tour="page-feed-purchases" className="flex flex-col gap-[28px]">
+        <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted">{t('ops.purchases.window')}</p>
+          <Segmented
+            label={t('ops.common.timeRange')}
+            options={['7d', '30d', '90d', '1y'].map((range) => ({ value: range, label: range }))}
+            value={timeRange}
+            onChange={setTimeRange}
+          />
         </div>
 
-        {/* Low Stock Alerts */}
-        {lowStockAlerts.length > 0 ? (
-          <div className="mb-6 overflow-hidden rounded-xl border border-signal/30 bg-signal/10">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-signal/20 px-5 py-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-signal" aria-hidden />
-                <div>
-                  <h3 className="text-sm font-semibold text-chart-ink">
-                    Low stock · {lowStockAlerts.length}{' '}
-                    {lowStockAlerts.length === 1 ? 'type' : 'types'}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Below configured minimum — record a purchase or raise mins on feed types.
-                  </p>
-                </div>
-              </div>
-              <Button onClick={handleAddPurchase}>
-                Record purchase
-              </Button>
-            </div>
-            <ul className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
-              {lowStockAlerts.map((feed) => (
-                <li
-                  key={feed.id || feed.name}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-foam-deep bg-surface px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-chart-ink">
-                      {feed.name}
-                    </p>
-                    <p className="font-data text-xs text-muted tabular-nums">
-                      {formatWeight(feed.current_stock)} · min{' '}
-                      {formatWeight(feed.minimum_stock)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleOrderFeed(feed.id || feed.name)}
-                    className="shrink-0"
-                  >
-                    Order
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-kelp/25 bg-kelp/10 px-4 sm:px-5 py-3.5">
-            <div className="flex items-center gap-3">
-              <Package className="h-5 w-5 shrink-0 text-kelp" aria-hidden />
-              <p className="text-sm text-chart-ink">
-                No low-stock alerts
-                <span className="text-muted">
-                  {' '}
-                  — set <span className="text-chart-ink">Minimum stock (kg)</span> on each
-                  feed type.
-                </span>
-              </p>
-            </div>
-            <Button href="/feed-types" variant="secondary" size="sm" className="shrink-0">
-              Open feed types
-            </Button>
-          </div>
-        )}
+        <div data-tour="feed-purchases-kpis">
+          <KpiStrip
+            items={[
+              { label: t('ops.purchases.totalCost'), value: formatCurrency(stats.totalCost) },
+              { label: t('ops.purchases.bought'), value: formatWeight(stats.totalQuantity) },
+              { label: t('ops.purchases.avgPerKg'), value: formatCurrency(stats.averageCostPerKg) },
+              { label: t('ops.purchases.stockValue'), value: formatCurrency(stats.stockValue) },
+              { label: t('ops.purchases.bagsOnHand'), value: formatNumber(stats.totalBags || 0, { decimals: 0 }) },
+              {
+                label: t('ops.purchases.feedAge'),
+                value: stats.avgFeedAgeDays != null ? formatNumber(stats.avgFeedAgeDays, { decimals: 0 }) : '—',
+                suffix: stats.avgFeedAgeDays != null ? t('ops.purchases.daysUnit') : undefined,
+              },
+            ]}
+          />
+        </div>
 
-        {/* Stats Cards — active location */}
-        <div
-          className="mb-2 flex items-end justify-between gap-2"
-          data-tour="feed-purchases-kpis"
+        <Panel
+          title={t('ops.feed.lowStock')}
+          meta={lowStockAlerts.length ? t('ops.feed.items', { count: lowStockAlerts.length }) : undefined}
+          action={lowStockAlerts.length ? undefined : { label: t('ops.purchases.openFeedTypes'), href: '/feed-types' }}
         >
-          <p className="text-xs text-muted">
-            KPIs for{' '}
-            <span className="font-medium text-chart-ink">
-              {activeLocation?.name || 'this location'}
-            </span>
-          </p>
-        </div>
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          {[
-            {
-              label: 'Total cost',
-              value: formatCurrency(stats.totalCost),
-            },
-            {
-              label: 'Quantity bought',
-              value: formatWeight(stats.totalQuantity),
-            },
-            {
-              label: 'Average cost per kg',
-              value: formatCurrency(stats.averageCostPerKg),
-            },
-            {
-              label: 'Stock on hand',
-              value: formatCurrency(stats.stockValue),
-            },
-            {
-              label: 'Bags on hand',
-              value: `${formatNumber(stats.totalBags || 0, { decimals: 0 })} bags`,
-            },
-            {
-              label: 'Average feed age',
-              value:
-                stats.avgFeedAgeDays != null
-                  ? `${formatNumber(stats.avgFeedAgeDays, { decimals: 0 })} days`
-                  : '—',
-            },
-          ].map((card) => (
-            <StatCard key={card.label} label={card.label} value={card.value} />
-          ))}
-        </div>
+          {lowStockAlerts.length === 0 ? (
+            <p className="py-3 text-sm text-muted">{t('ops.purchases.noLowStock')}</p>
+          ) : (
+            lowStockAlerts.map((feed) => (
+              <ListRow
+                key={feed.id || feed.name}
+                dot="alert"
+                dotLabel={t('ops.feed.lowStockShort')}
+                title={feed.name}
+                sub={`${formatWeight(feed.current_stock)} · ${t('ops.feed.minKg', { amount: formatWeight(feed.minimum_stock) })}`}
+              >
+                {canRecord && (
+                  <GhostButton size="sm" onClick={() => handleOrderFeed(feed.id || feed.name)}>
+                    {t('ops.purchases.order')}
+                  </GhostButton>
+                )}
+              </ListRow>
+            ))
+          )}
+        </Panel>
 
         {/* Cost Analysis Section */}
         <div className="page-card mb-6 p-5">
@@ -1731,7 +1651,7 @@ function FeedPurchases() {
         onCancel={() => setDeleteConfirm(null)}
         onConfirm={handleDeletePurchase}
       />
-    </div>
+      </div>
     </Layout>
   )
 } 

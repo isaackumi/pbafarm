@@ -2,13 +2,18 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input } from '../components/ui'
+import { SlidersHorizontal } from 'lucide-react'
+import { Field, GhostButton, GradientButton, Input, Pill, Table } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { inventoryTabs } from '../lib/sectionTabs'
+import { movementKind } from '../lib/feedOverview'
+import { useT } from '../lib/i18n/context'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
-import { localToday } from '../lib/format'
+import { formatNumber, localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 
 export default function InventoryTransactionsPage() {
@@ -20,6 +25,7 @@ export default function InventoryTransactionsPage() {
 }
 
 function InventoryTransactions() {
+  const t = useT()
   const { user } = useAuth()
   const canAdjust = usePermission('inventory.adjust')
   const { showToast } = useToast()
@@ -54,8 +60,8 @@ function InventoryTransactions() {
 
   const typeMap = useMemo(() => {
     const map = {}
-    for (const t of feedTypes || []) {
-      map[t.id || t._id] = t
+    for (const ft of feedTypes || []) {
+      map[ft.id || ft._id] = ft
     }
     return map
   }, [feedTypes])
@@ -86,133 +92,100 @@ function InventoryTransactions() {
   }
 
   return (
-    <Layout title="Inventory Ledger">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory', href: '/inventory/overview' },
-          { label: 'Ledger' },
-        ]}
-        description="Live inventory ledger — purchases, issues, adjustments, transfers, reversals."
-        related={[
-          { label: 'Adjust / transfer', href: '/inventory/adjust' },
-          { label: 'Lots', href: '/inventory/lots' },
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
-        ]}
+    <Layout
+      title={t('ops.inventory.title')}
+      eyebrow={t('ops.ledger.eyebrow')}
+      actions={
+        canAdjust ? (
+          <GradientButton href="/inventory/adjust" icon={SlidersHorizontal}>
+            {t('ops.lots.adjust')}
+          </GradientButton>
+        ) : null
+      }
+    >
+      <div className="flex flex-col gap-[28px]">
+      <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
+      <Table
+        title={t('ops.ledger.title')}
         actions={
-          <Button href="/inventory/adjust" size="sm">
-            Adjust / transfer
-          </Button>
-        }
-      />
-
-      <div className="mb-4 flex flex-wrap gap-4 items-end">
-        <Field label="From" htmlFor="ledger-from" className="w-full sm:w-auto">
-          <Input
-            id="ledger-from"
-            type="date"
-            value={dateRange.start}
-            onChange={(e) =>
-              setDateRange((p) => ({ ...p, start: e.target.value }))
-            }
-          />
-        </Field>
-        <Field label="To" htmlFor="ledger-to" className="w-full sm:w-auto">
-          <Input
-            id="ledger-to"
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange((p) => ({ ...p, end: e.target.value }))}
-          />
-        </Field>
-      </div>
-
-      <div className="page-card overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-muted">Loading ledger…</div>
-        ) : (transactions || []).length === 0 ? (
-          <div className="p-8 text-center text-muted">No transactions in range.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam-deep/40">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
-                    When
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
-                    Feed
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
-                    Site
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
-                    kg
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted">
-                    Notes
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foam-deep">
-                {(transactions || []).map((txn) => {
-                  const ft = typeMap[txn.feed_type_id]
-                  const canReverse = canAdjust
-                  return (
-                    <tr key={txn.id || txn._id} className="hover:bg-foam/60">
-                      <td className="px-4 py-3 text-sm font-data tabular-nums whitespace-nowrap">
-                        {new Date(txn.transaction_date).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-lake">
-                        {txn.transaction_type}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{ft?.name || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-muted">
-                        {txn.location_id ? siteName(txn.location_id) : '—'}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-sm font-data tabular-nums text-right ${
-                          txn.quantity_kg < 0 ? 'text-signal' : 'text-kelp'
-                        }`}
-                      >
-                        {txn.quantity_kg > 0 ? '+' : ''}
-                        {txn.quantity_kg}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted max-w-xs truncate">
-                        {txn.notes || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {canReverse &&
-                          txn.transaction_type !== 'reversal' &&
-                          !String(txn.transaction_type).startsWith('transfer') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setReverseReason('')
-                                setReverseTarget(txn)
-                              }}
-                              className="text-signal"
-                            >
-                              Reverse
-                            </Button>
-                          )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap items-center gap-3">
+            <Field label={t('ops.ledger.from')} htmlFor="ledger-from">
+              <Input
+                id="ledger-from"
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange((p) => ({ ...p, start: e.target.value }))}
+              />
+            </Field>
+            <Field label={t('ops.ledger.to')} htmlFor="ledger-to">
+              <Input
+                id="ledger-to"
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange((p) => ({ ...p, end: e.target.value }))}
+              />
+            </Field>
           </div>
-        )}
+        }
+        columns={[
+          {
+            key: 'when',
+            header: t('ops.col.date'),
+            width: 190,
+            render: (txn) => <span className="whitespace-nowrap">{new Date(txn.transaction_date).toLocaleString()}</span>,
+          },
+          {
+            key: 'type',
+            header: t('ops.col.type'),
+            width: 150,
+            render: (txn) => (
+              <Pill tone={movementKind(txn.transaction_type).tone}>{String(txn.transaction_type).replace(/_/g, ' ')}</Pill>
+            ),
+          },
+          {
+            key: 'feed',
+            header: t('ops.col.feedType'),
+            render: (txn) => typeMap[txn.feed_type_id]?.name || '—',
+            sub: (txn) => txn.notes || undefined,
+          },
+          { key: 'site', header: t('ops.ledger.site'), width: 150, render: (txn) => (txn.location_id ? siteName(txn.location_id) : '—') },
+          {
+            key: 'kg',
+            header: t('ops.col.kg'),
+            width: 110,
+            align: 'right',
+            render: (txn) => (
+              <span className={txn.quantity_kg < 0 ? 'text-alert' : 'text-good'}>
+                {txn.quantity_kg > 0 ? '+' : ''}
+                {formatNumber(txn.quantity_kg, { decimals: 1 })}
+              </span>
+            ),
+          },
+          {
+            key: 'actions',
+            header: <span className="sr-only">{t('ops.col.actions')}</span>,
+            width: 110,
+            align: 'right',
+            render: (txn) =>
+              canAdjust &&
+              txn.transaction_type !== 'reversal' &&
+              !String(txn.transaction_type).startsWith('transfer') ? (
+                <GhostButton
+                  size="sm"
+                  tone="danger"
+                  onClick={() => {
+                    setReverseReason('')
+                    setReverseTarget(txn)
+                  }}
+                >
+                  {t('ops.ledger.reverse')}
+                </GhostButton>
+              ) : null,
+          },
+        ]}
+        rows={loading ? [] : transactions || []}
+        empty={loading ? t('ops.common.loading') : t('ops.ledger.empty')}
+      />
       </div>
 
       <ConfirmDeleteModal

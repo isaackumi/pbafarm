@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard, Select, LoadingState } from '../../components/ui'
+import { KpiStrip, LoadingState, Select } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
+import { Panel } from '../../components/ui/Panel'
+import { inventoryTabs } from '../../lib/sectionTabs'
+import { formatMass } from '../../lib/feedOverview'
+import { formatNumber } from '../../lib/format'
+import { SERIES, axisProps, gridProps, legendProps, tooltipProps } from '../../lib/chartTheme'
+import { useT } from '../../lib/i18n/context'
 import { useMoney } from '../../lib/money'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
@@ -38,6 +45,7 @@ export default function InventoryAnalyticsPage() {
 }
 
 function InventoryAnalytics() {
+  const t = useT()
   const money = useMoney()
   const [timeRange, setTimeRange] = useState('30d')
   // Window fixed per range choice so the live query args stay stable.
@@ -129,153 +137,105 @@ function InventoryAnalytics() {
   const categoryData = processCategoryData(itemsResult)
   const trendData = processTrendData(transactionsResult)
 
-  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
+  const onHandKg = inventoryItems.reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
+  const lowCount = inventoryItems.filter((i) => i.is_low_stock).length
 
   return (
-    <Layout title="Inventory Analytics">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory', href: '/inventory/overview' },
-          { label: 'Analytics' },
-        ]}
-        description="Transaction trends and inventory insights over the selected period."
-        related={[
-          { label: 'Overview', href: '/inventory/overview' },
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Reports', href: '/report' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2">
-            <Select
-              aria-label="Time range"
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="w-auto"
-            >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="1y">Last year</option>
-            </Select>
-          </div>
-        }
-      />
-
+    <Layout
+      title={t('ops.inventory.title')}
+      eyebrow={t('ops.invAnalytics.eyebrow')}
+      actions={
+        <Select
+          aria-label={t('ops.common.timeRange')}
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="w-auto"
+        >
+          {['7d', '30d', '90d', '1y'].map((r) => (
+            <option key={r} value={r}>
+              {t(`ops.range.${r}`)}
+            </option>
+          ))}
+        </Select>
+      }
+    >
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
         {loading ? (
-          <LoadingState label="Loading analytics..." />
+          <LoadingState label={t('ops.common.loading')} />
         ) : (
-        <>
-
-        {/* Transaction Analysis */}
-        <div className="page-card p-4 sm:p-6 mb-6">
-          <h3 className="text-lg font-medium text-chart-ink mb-4">Transaction analysis</h3>
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={transactionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Area
-                  type="monotone"
-                  dataKey="in"
-                  stackId="1"
-                  stroke="var(--lake)"
-                  fill="var(--lake)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="out"
-                  stackId="1"
-                  stroke="var(--kelp)"
-                  fill="var(--kelp)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Category Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Category distribution</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ name, percent, value }) =>
-                      value > 0
-                        ? `${name} ${(percent * 100).toFixed(0)}%`
-                        : null
-                    }
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          <>
+            <KpiStrip
+              items={[
+                { label: t('ops.invAnalytics.feedTypes'), value: formatNumber(inventoryItems.length) },
+                {
+                  label: t('ops.trends.stockValue'),
+                  value: money(
+                    inventoryItems.reduce((sum, item) => sum + Number(item.stock_value || 0), 0),
+                    { decimals: 0 },
+                  ),
+                },
+                { label: t('ops.feed.lowStock'), value: formatNumber(lowCount), valueTone: lowCount ? 'warn' : undefined },
+                { label: t('ops.stock.onHand'), value: formatMass(onHandKg) },
+              ]}
+            />
+            <Panel title={t('ops.invAnalytics.transactions')} meta={t(`ops.range.${timeRange}`)}>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={transactionData}>
+                    <CartesianGrid {...gridProps} />
+                    <XAxis dataKey="date" {...axisProps} />
+                    <YAxis {...axisProps} />
+                    <Tooltip {...tooltipProps} />
+                    <Legend {...legendProps} />
+                    <Area type="monotone" dataKey="in" name={t('ops.inventory.in')} stackId="1" stroke={SERIES[0]} fill="var(--cyan-fill)" />
+                    <Area type="monotone" dataKey="out" name={t('ops.inventory.out')} stackId="1" stroke={SERIES[1]} fill="var(--pink-fill)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+            <div className="grid grid-cols-1 gap-[28px] lg:grid-cols-2">
+              <Panel title={t('ops.invAnalytics.categories')}>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={96}
+                        stroke="var(--surface)"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={SERIES[index % SERIES.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipProps} />
+                      <Legend {...legendProps} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
+              <Panel title={t('ops.inventory.stockTrend')}>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid {...gridProps} />
+                      <XAxis dataKey="date" {...axisProps} />
+                      <YAxis {...axisProps} />
+                      <Tooltip {...tooltipProps} />
+                      <Line type="monotone" dataKey="value" name={t('ops.col.kg')} stroke={SERIES[0]} strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
             </div>
-          </div>
-
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Stock trend</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--lake)"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Key Performance Indicators */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Feed types" value={inventoryItems.length} />
-          <StatCard
-            label="Stock value"
-            value={money(
-              inventoryItems.reduce((sum, item) => sum + Number(item.stock_value || 0), 0),
-              { decimals: 0 },
-            )}
-          />
-          <StatCard
-            label="Low stock"
-            value={inventoryItems.filter((i) => i.is_low_stock).length}
-            tone={inventoryItems.some((i) => i.is_low_stock) ? 'warn' : 'default'}
-          />
-          <StatCard
-            label="On hand"
-            value={inventoryItems
-              .reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
-              .toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            unit="kg"
-          />
-        </div>
-        </>
+          </>
         )}
+      </div>
     </Layout>
   )
 } 
