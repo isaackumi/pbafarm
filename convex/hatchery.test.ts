@@ -516,3 +516,48 @@ describe('grading and fingerlings out (NUR-001, HAT-004, NUR-002)', () => {
     expect(await ledger(ids.units.nursery2)).toEqual([0, 0])
   })
 })
+
+describe('site scope (PERM-004, audit A C2)', () => {
+  test('a member limited to site 1 cannot see or write site-2 broodstock', async () => {
+    const t = convexTest(schema, modules)
+    const ids = await t.run(async (ctx) => {
+      const now = Date.now()
+      const A = await ctx.db.insert('companies', { name: 'A', code: 'A', status: 'approved', createdAt: now })
+      const s1 = await ctx.db.insert('farmLocations', { companyId: A, name: 'S1', active: true, updatedAt: now })
+      const s2 = await ctx.db.insert('farmLocations', { companyId: A, name: 'S2', active: true, updatedAt: now })
+      const staff = await ctx.db.insert('users', {
+        email: 'f@a.com', role: 'user', companyId: A, locationIds: [s1], activeLocationId: s1,
+      })
+      await ctx.db.insert('memberships', {
+        userId: staff, companyId: A, roleKey: 'field_staff', allLocations: false, locationIds: [s1],
+        status: 'active', updatedAt: now,
+      })
+      const unit = (name: string, locationId: Id<'farmLocations'>) =>
+        ctx.db.insert('cages', { name, status: 'active', currentCount: 10, companyId: A, locationId, updatedAt: now })
+      const tank1 = await unit('T1', s1)
+      const tank2 = await unit('T2', s2)
+      const fish = (code: string, locationId: Id<'farmLocations'>, unitId: Id<'cages'>) =>
+        ctx.db.insert('broodstock', {
+          companyId: A, locationId, unitId, kind: 'individual', code, sex: 'female', count: 1,
+          origin: 'farm', status: 'ready', updatedAt: now,
+        })
+      const brood1 = await fish('F-S1', s1, tank1)
+      const brood2 = await fish('F-S2', s2, tank2)
+      return { staff, tank2, brood1, brood2 }
+    })
+    const as = t.withIdentity({ subject: `${ids.staff}|s` })
+    // Same rule as production units (cages.get hides other sites).
+    expect(await as.query(api.cages.get, { id: ids.tank2 })).toBeNull()
+    await expect(as.query(api.hatchery.getBroodstock, { id: ids.brood2 })).rejects.toThrow(/not found/)
+    expect((await as.query(api.hatchery.listBroodstock, {})).map((b) => b.code)).toEqual(['F-S1'])
+    await expect(
+      as.mutation(api.hatchery.recordSpawning, {
+        spawnDate: '2026-11-10', method: 'natural', femaleIds: [ids.brood2], maleIds: [],
+      }),
+    ).rejects.toThrow(/"FORBIDDEN".*site you do not have access to/)
+    await expect(as.mutation(api.hatchery.updateBroodstock, { id: ids.brood2, notes: 'x' })).rejects.toThrow(/"FORBIDDEN"/)
+    expect(await t.run((ctx) => ctx.db.query('spawningEvents').collect())).toEqual([])
+    // The member's own site still works.
+    expect((await as.query(api.hatchery.getBroodstock, { id: ids.brood1 })).code).toBe('F-S1')
+  })
+})

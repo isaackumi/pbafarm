@@ -20,7 +20,7 @@ import { logAudit } from './lib/tenancy'
 import { enforceWithdrawal } from './lib/traceability'
 import { stockingAt } from './lib/productionDualWrite'
 import * as engine from './lib/productionEngine'
-import { requireHatchery, ownDoc, type HatcheryMember } from './lib/hatcheryAccess'
+import { requireHatchery, ownDoc, ownSite, inScope, type HatcheryMember } from './lib/hatcheryAccess'
 import { biomassKg, daysBetween, flowsOf, nurserySurvivalPct, round } from './lib/kpi'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -289,7 +289,7 @@ export const listLarvalLogs = query({
       .withIndex('by_batchId_and_logDate', (q) => q.eq('batchId', batchId))
       .order('desc')
       .take(LOG_LIMIT)
-    return logs.map(logRow)
+    return inScope(m, logs).map(logRow)
   },
 })
 
@@ -370,7 +370,10 @@ export const larvalBatches = query({
     const m = await requireHatchery(ctx, 'hatchery.view')
     const today = new Date().toISOString().slice(0, 10)
     const out = []
-    for (const { batch, hatched } of (await nurseryBatches(ctx, m, args.status ?? 'active')).slice(0, 100)) {
+    const batches = (await nurseryBatches(ctx, m, args.status ?? 'active')).filter(({ batch }) =>
+      inScope(m, [{ locationId: batch.homeLocationId }]).length > 0,
+    )
+    for (const { batch, hatched } of batches.slice(0, 100)) {
       const events = await engine.eventsForBatch(ctx, batch._id)
       const f = flowsOf(events)
       const perUnit = new Map<string, number>()
@@ -433,7 +436,7 @@ export const recordLiveFeed = idempotentMutation('nursery.recordLiveFeed', {
     const m = await requireHatchery(ctx, 'hatchery.larval.record')
     assertDate(args.date, 'a date')
     if (!(Number.isFinite(args.quantity) && args.quantity > 0)) throw userError('VALIDATION', 'Quantity must be above zero')
-    if (args.locationId) ownDoc(m, await ctx.db.get(args.locationId), 'Site')
+    if (args.locationId) ownSite(m, await ctx.db.get(args.locationId))
     const id = await ctx.db.insert('liveFeedLogs', {
       companyId: m.companyId,
       locationId: args.locationId ?? m.user.activeLocationId,
@@ -508,6 +511,7 @@ export const liveFeed = query({
       })
       .order('desc')
       .take(1000)
+      .then((r) => inScope(m, r))
     const balances = new Map<string, { kind: string; unit: string; produced: number; used: number; discarded: number }>()
     for (const r of rows) {
       const k = `${r.kind}|${r.unit}`
@@ -930,7 +934,7 @@ export const listMovements = query({
           .order('desc')
           .take(200)
     const out = []
-    for (const r of rows) {
+    for (const r of inScope(m, rows)) {
       const src = await ctx.db.get(r.sourceUnitId)
       const batch = await ctx.db.get(r.batchId)
       const sale = r.saleId ? await ctx.db.get(r.saleId) : null
@@ -984,7 +988,7 @@ export const nurseryUnits = query({
       .withIndex('by_company', (q) => q.eq('companyId', m.companyId))
       .take(1000)
     const out = []
-    for (const c of cages) {
+    for (const c of inScope(m, cages)) {
       const type = c.unitType ?? 'cage'
       const batch = c.currentBatchId ? await ctx.db.get(c.currentBatchId) : null
       out.push({

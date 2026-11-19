@@ -104,16 +104,23 @@ export const updatePolicy = mutation({
       // The admin turning 2FA on keeps this session, so they can turn it off
       // again if codes do not arrive; every other session must verify.
       const sessionId = (await getAuthSessionId(ctx)) as Id<'authSessions'> | null
-      if (sessionId && !(await sessionMfaVerified(ctx, me._id))) {
-        await ctx.db.insert('mfaSessions', {
+      if (sessionId && !(await sessionMfaVerified(ctx, me))) {
+        const row = {
           userId: me._id,
           sessionId,
           companyId,
-          purpose: 'verify',
+          purpose: 'verify' as const,
           attempts: 0,
           verifiedAt: Date.now(),
-          method: 'policy_enable',
-        })
+          method: 'policy_enable' as const,
+        }
+        // One row per session: replace one verified for another organization.
+        const existing = await ctx.db
+          .query('mfaSessions')
+          .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
+          .first()
+        if (existing) await ctx.db.replace(existing._id, row)
+        else await ctx.db.insert('mfaSessions', row)
       }
     }
     await logAudit(ctx, {

@@ -31,6 +31,7 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 import type { Doc, Id } from './_generated/dataModel'
 import { isPermission, requireAccount, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
+import { assertAdminChange } from './memberships'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -97,6 +98,55 @@ export async function assertPhoneFree(
   }
 }
 
+/**
+ * The phone is an account-wide sign-in identifier (phone sign-in, 2FA codes).
+ * An admin may not change it for someone who also belongs to another
+ * organization (ORG-002): that would hand the admin a way into the other
+ * organization. People change their own number; super_admins are exempt.
+ */
+async function assertMayChangePhone(ctx: MutationCtx, me: Doc<'users'>, target: Doc<'users'>) {
+  if (me._id === target._id || (me.role ?? 'user') === 'super_admin') return
+  const rows = await ctx.db
+    .query('memberships')
+    .withIndex('by_userId', (q) => q.eq('userId', target._id))
+    .take(50)
+  if (rows.some((m) => m.companyId !== me.companyId && m.status !== 'removed')) {
+    throw userError(
+      'FORBIDDEN',
+      'This person also belongs to another organization, so only they can change their phone number.',
+    )
+  }
+}
+
+/**
+ * Codes pending for a number that is no longer the account's die with it:
+ * phone sign-in codes, phone confirmations, and unverified two-step codes
+ * (so a later code can only have gone to the current number).
+ */
+async function dropPendingPhoneCodes(ctx: MutationCtx, userId: Id<'users'>, oldPhone: string | undefined) {
+  if (oldPhone) {
+    const codes = await ctx.db
+      .query('phoneLoginCodes')
+      .withIndex('by_phone', (q) => q.eq('phone', oldPhone))
+      .collect()
+    for (const c of codes) await ctx.db.delete(c._id)
+  }
+  const confirms = await ctx.db
+    .query('phoneConfirmCodes')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .take(10)
+  for (const c of confirms) await ctx.db.delete(c._id)
+  const pending = await ctx.db
+    .query('mfaSessions')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .take(50)
+  for (const row of pending) {
+    if (row.verifiedAt === undefined && row.codeHash !== undefined) {
+      await ctx.db.patch(row._id, { codeHash: undefined, expiresAt: undefined })
+    }
+  }
+}
+
 /** E.164 form of a phone typed by an admin, using the target's company country. */
 async function normalizeForCompany(
   ctx: MutationCtx,
@@ -124,7 +174,7 @@ async function mfaState(ctx: QueryCtx, user: Doc<'users'>) {
   const company = await ctx.db.get(user.companyId)
   const policy = securityPolicy(company)
   if (!policy.require2fa && !mfaTotp) return none
-  const verified = await sessionMfaVerified(ctx, user._id)
+  const verified = await sessionMfaVerified(ctx, user)
   const mfaChannels: string[] = []
   if (!verified && policy.require2fa) {
     for (const c of ['sms', 'whatsapp'] as const) {
@@ -388,7 +438,8 @@ export const update = mutation({
     const nextRole = patch.role ?? target.role ?? 'user'
     if (nextRole === 'user') await assertKeepsAnAdmin(ctx, target)
 
-    const next = { ...patch }
+    const next: Partial<Doc<'users'>> = { ...patch }
+    let phoneChanged = false
     if (patch.phone !== undefined) {
       // Phones are E.164 and unique: phone sign-in looks accounts up by them.
       if (patch.phone.trim()) {
@@ -397,24 +448,42 @@ export const update = mutation({
       } else {
         next.phone = undefined
       }
+      phoneChanged = next.phone !== target.phone
+      if (phoneChanged) {
+        await assertMayChangePhone(ctx, me, target)
+        // A number set by someone else is unverified until its owner confirms it.
+        next.phoneVerificationTime = undefined
+      } else {
+        delete next.phone
+      }
     }
 
-    await ctx.db.patch(id, next)
     // Dual-write the role to the membership of the caller's company (M2).
     const roleCompany = ((me.role ?? 'user') === 'super_admin' ? target.companyId : me.companyId)
+    let roleWrite: { m: Doc<'memberships'> | null; roleKey: string } | null = null
     if (patch.role && patch.role !== 'super_admin' && roleCompany) {
       const m = await getMembership(ctx, id, roleCompany)
       if (m || target.companyId === roleCompany) {
         // Keep owner/admin when the legacy role is still admin; otherwise map.
         const keep = m && legacyRoleFromKey(m.roleKey) === patch.role
-        await upsertMembership(ctx, {
-          userId: id,
-          companyId: roleCompany,
-          roleKey: keep ? m.roleKey : roleKeyFromLegacy(patch.role),
-          actorId: me._id,
-          ...(m ? {} : { status: target.active === false ? ('suspended' as const) : ('active' as const) }),
-        })
+        const roleKey = keep ? m.roleKey : roleKeyFromLegacy(patch.role)
+        // Same owner rule as memberships.setRole: only an owner changes an owner.
+        if (m && roleKey !== m.roleKey) await assertAdminChange(ctx, me, roleCompany, m, { roleKey })
+        roleWrite = { m, roleKey }
       }
+    }
+
+    await ctx.db.patch(id, next)
+    if (phoneChanged) await dropPendingPhoneCodes(ctx, id, target.phone)
+    if (roleWrite && roleCompany) {
+      const { m, roleKey } = roleWrite
+      await upsertMembership(ctx, {
+        userId: id,
+        companyId: roleCompany,
+        roleKey,
+        actorId: me._id,
+        ...(m ? {} : { status: target.active === false ? ('suspended' as const) : ('active' as const) }),
+      })
     }
     await logAudit(ctx, {
       actionType: 'update',
@@ -437,6 +506,8 @@ export const update = mutation({
 /**
  * Admin: set or clear a member's mobile number (SEC-006). Stored in E.164
  * using the company's default country; unique across accounts; audited.
+ * Refused for members of other organizations too; the number stays
+ * unverified (no phone sign-in) until the member confirms it.
  */
 export const setPhone = mutation({
   args: { id: v.id('users'), phone: v.union(v.string(), v.null()) },
@@ -457,15 +528,11 @@ export const setPhone = mutation({
       await assertPhoneFree(ctx, next, id)
     }
     if (next === target.phone) return { phone: next ?? null }
+    await assertMayChangePhone(ctx, me, target)
+    // A number set by an admin is unverified: phone sign-in refuses it until
+    // its owner confirms it with a code (phoneAuth, mfa).
     await ctx.db.patch(id, { phone: next, phoneVerificationTime: undefined })
-    // Pending sign-in codes for the old number die with it.
-    if (target.phone) {
-      const codes = await ctx.db
-        .query('phoneLoginCodes')
-        .withIndex('by_phone', (q) => q.eq('phone', target.phone!))
-        .collect()
-      for (const c of codes) await ctx.db.delete(c._id)
-    }
+    await dropPendingPhoneCodes(ctx, id, target.phone)
     await logAudit(ctx, {
       actionType: next ? 'set_phone' : 'clear_phone',
       tableName: 'users',

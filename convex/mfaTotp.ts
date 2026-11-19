@@ -71,7 +71,13 @@ async function markSessionVerified(ctx: MutationCtx, user: Doc<'users'>, method:
     .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
     .first()
   if (row && row.userId === user._id) {
-    await ctx.db.patch(row._id, { verifiedAt: now, method, codeHash: undefined, expiresAt: undefined })
+    await ctx.db.patch(row._id, {
+      companyId: user.companyId,
+      verifiedAt: now,
+      method,
+      codeHash: undefined,
+      expiresAt: undefined,
+    })
   } else {
     await ctx.db.insert('mfaSessions', {
       userId: user._id,
@@ -160,7 +166,7 @@ export const storePending = internalMutation({
     const company = user.companyId ? await ctx.db.get(user.companyId) : null
     const mfaPending =
       (company?.settings?.security?.require2fa === true || user.totpEnabledAt !== undefined) &&
-      !(await sessionMfaVerified(ctx, user._id))
+      !(await sessionMfaVerified(ctx, user))
     const phoneCodesWork =
       !!user.phone &&
       !!user.companyId &&

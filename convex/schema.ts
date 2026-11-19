@@ -1575,8 +1575,26 @@ const schema = defineSchema({
   }).index('by_phone', ['phone']),
 
   /**
+   * Pending codes confirming an account's own phone number (ORG-002). An
+   * admin-set number stays unverified (users.phoneVerificationTime unset, no
+   * phone sign-in) until its owner enters a code sent to it. One row per
+   * user; the hash is bound to the sign-in session. Only hashes.
+   */
+  phoneConfirmCodes: defineTable({
+    userId: v.id('users'),
+    phone: v.string(),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    createdAt: v.number(),
+  }).index('by_user', ['userId']),
+
+  /**
    * Two-step verification state per sign-in session (SEC-007). A session is
    * verified when verifiedAt is set. Pending codes are stored hashed.
+   * `companyId` is the organization whose policy accepted the verification;
+   * after switching organization it counts only if lib/authz
+   * mfaRowCountsFor says the new one accepts it (ORG-002).
    */
   mfaSessions: defineTable({
     userId: v.id('users'),

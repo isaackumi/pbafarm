@@ -44,6 +44,8 @@ const ALLOWLIST: Record<string, string> = {
   'mfa.startChallenge': 'own two-step code; guarded by requireUser({ allowPendingMfa }) in internal.mfa',
   'mfa.startEnrolment': 'own two-step enrolment; guarded in internal.mfa',
   'mfa.verifyChallenge': 'own two-step code; guarded in internal.mfa',
+  'mfa.startPhoneConfirmation': 'own phone confirmation; guarded by requireUser({ ignoreActAs }) in internal.mfa',
+  'mfa.confirmPhone': 'own phone confirmation; guarded in internal.mfa',
   'messaging/channels.saveCredentials': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.channelForAdmin',
   'webhooks.create': 'action; guarded by requireWebhookAdmin in internal.webhooks.createEndpointRow',
   'webhooks.rotateSecret': 'action; guarded by requireWebhookAdmin in internal.webhooks.endpointOwner',

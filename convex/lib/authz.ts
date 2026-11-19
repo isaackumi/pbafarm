@@ -6,6 +6,7 @@ import { getMembership } from './memberships'
 import { actingUser, isMutationCtx, liveActAsSession, markAudited } from './actAs'
 import { insertAuditLog } from './auditChain'
 import { userError } from './errors'
+import { phoneLoginOffered, securityPolicy } from '../messaging/policy'
 
 export {
   AUTH_ERROR_CODES,
@@ -72,7 +73,7 @@ export async function requireUser(
     if (
       !opts.allowPendingMfa &&
       (company?.settings?.security?.require2fa === true || user.totpEnabledAt !== undefined) &&
-      !(await sessionMfaVerified(ctx, user._id))
+      !(await sessionMfaVerified(ctx, user))
     ) {
       throw new Error(AUTH_ERROR_MESSAGES.MFA_REQUIRED)
     }
@@ -103,15 +104,53 @@ export async function requireUser(
   return user
 }
 
-/** Whether the caller's current sign-in session passed two-step verification. */
-export async function sessionMfaVerified(ctx: Ctx, userId: Id<'users'>): Promise<boolean> {
+/**
+ * Whether a verified mfaSessions row counts for the given organization.
+ * The row is bound to the organization whose policy accepted it (ORG-002):
+ * - same organization                       → counts
+ * - totp / recovery_code / otp (a code from the
+ *   user's own app or own phone)             → counts anywhere
+ * - phone_login                              → only where that organization
+ *   also offers phone sign-in as the second step
+ * - policy_enable (or no method)             → never elsewhere
+ */
+export async function mfaRowCountsFor(
+  ctx: Ctx,
+  row: Pick<Doc<'mfaSessions'>, 'companyId' | 'method' | 'verifiedAt'>,
+  companyId: Id<'companies'> | undefined,
+): Promise<boolean> {
+  if (row.verifiedAt === undefined) return false
+  if (!companyId || row.companyId === companyId) return true
+  switch (row.method) {
+    case 'totp':
+    case 'recovery_code':
+    case 'otp':
+      return true
+    case 'phone_login': {
+      const policy = securityPolicy(await ctx.db.get(companyId))
+      return phoneLoginOffered(policy) && policy.phoneLoginSatisfies2fa
+    }
+    default:
+      return false
+  }
+}
+
+/**
+ * Whether the caller's current sign-in session passed two-step verification
+ * in a way the user's active organization accepts (see mfaRowCountsFor).
+ */
+export async function sessionMfaVerified(
+  ctx: Ctx,
+  user: Pick<Doc<'users'>, '_id' | 'companyId'>,
+): Promise<boolean> {
   const sessionId = await getAuthSessionId(ctx)
   if (!sessionId) return false
   const row = await ctx.db
     .query('mfaSessions')
     .withIndex('by_session', (q) => q.eq('sessionId', sessionId))
     .first()
-  return !!row && row.userId === userId && row.verifiedAt !== undefined
+  if (!row || row.userId !== user._id) return false
+  return await mfaRowCountsFor(ctx, row, user.companyId)
 }
 
 /** Delete every session (and its refresh tokens) of a user, signing them out everywhere. */
