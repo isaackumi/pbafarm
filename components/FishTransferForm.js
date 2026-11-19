@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import { api } from '../convex/_generated/api'
-import fishTransferService from '../lib/fishTransferService'
+import { errorMessage } from '../lib/errorMessage'
 import {
   Button,
   FormCard,
@@ -35,6 +35,7 @@ const DEFAULT_EMPTY = ['empty', 'fallow', 'harvested']
 export default function FishTransferForm({ onCreated }) {
   const router = useRouter()
   const { user } = useAuth()
+  const createTransfer = useMutation(api.fishTransfers.createFishTransfer)
   const { showToast } = useToast()
   const settingsData = useQuery(api.companies.getEffectiveSettings)
   // Company-wide (no location filter) for cross-location transfers
@@ -134,7 +135,7 @@ export default function FishTransferForm({ onCreated }) {
 
     setLoading(true)
     try {
-      const { data, error: err } = await fishTransferService.create({
+      const data = await createTransfer({
         sourceCageId: formData.sourceCageId,
         destinationCageId: formData.destinationCageId,
         transferDate: formData.transferDate,
@@ -143,12 +144,11 @@ export default function FishTransferForm({ onCreated }) {
         transferSupervisor: formData.transferSupervisor || undefined,
         notes: formData.notes || undefined,
       })
-      if (err) throw err
       showToast('success', 'Fish transfer recorded')
       clear()
       onCreated?.(data)
     } catch (err) {
-      const message = err?.message || 'Failed to create transfer'
+      const message = errorMessage(err, 'Failed to create transfer')
       setError(message)
       showToast('error', message)
     } finally {

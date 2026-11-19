@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import { useMemo } from 'react'
+import { useQuery } from 'convex/react'
 import {
   Package,
   BarChart2,
-  RefreshCw,
   ShoppingCart,
   Scale,
 } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard, Button } from '../../components/ui'
+import { PageHeader, StatCard, Button, LoadingState } from '../../components/ui'
 import { useMoney } from '../../lib/money'
-import { useToast } from '../../components/Toast'
-import { getConvexHttpClient, api } from '../../lib/convexBridge'
+import { api } from '../../convex/_generated/api'
+import { useOptionalQuery } from '../../hooks/useOptionalQuery'
 import {
   LineChart,
   Line,
@@ -40,113 +39,78 @@ export default function FeedManagementOverviewPage() {
 }
 
 function FeedManagementOverview() {
-  const router = useRouter()
-  const { showToast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [metrics, setMetrics] = useState({
-    totalStock: 0,
-    totalValue: 0,
-    lowStockItems: 0,
-    monthlyUsage: 0,
-    averageFCR: null,
-    feedCostPerKg: null,
-  })
   const money = useMoney()
   const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
-  const [feedTypes, setFeedTypes] = useState([])
-  const [usageData, setUsageData] = useState([])
-  const [costData, setCostData] = useState([])
-  const [supplierData, setSupplierData] = useState([])
 
   // Stock, usage and FCR at the header site (FARM-003).
-  const { activeLocationId } = useLocation()
+  const { activeLocationId, locationArgs } = useLocation()
+  const dateFrom = useMemo(() => {
+    const from = new Date()
+    from.setDate(from.getDate() - 30)
+    return from.toISOString().slice(0, 10)
+  }, [])
+  const asOf = useMemo(() => localToday(), [])
+  const feedTypesResult = useQuery(api.feed.listFeedTypes, {})
+  const siteLevels = useQuery(
+    api.inventory.listStockLevels,
+    activeLocationId ? locationArgs : 'skip',
+  )
+  const usageResult = useQuery(api.feed.listUsage, { dateFrom, ...locationArgs })
+  const suppliers = useOptionalQuery(api.feed.listSuppliers, {}, [])
+  const growth = useOptionalQuery(api.cages.growthAll, { asOf, ...locationArgs }, null)
 
-  useEffect(() => {
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLocationId])
+  const loading =
+    feedTypesResult === undefined ||
+    (activeLocationId && siteLevels === undefined) ||
+    usageResult === undefined ||
+    suppliers === undefined ||
+    growth === undefined
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const client = getConvexHttpClient()
-      
-      // Fetch feed types with current stock
-      const site = activeLocationId ? { locationId: activeLocationId } : {}
-      const [feedTypesData, siteLevels] = await Promise.all([
-        client.query(api.feed.listFeedTypes, {}),
-        activeLocationId ? client.query(api.inventory.listStockLevels, site) : null,
-      ])
-      // At a site, stock is that site's lots plus unassigned stock.
-      if (siteLevels) {
-        const atSite = new Map(siteLevels.map((l) => [l.feed_type_id, l.current_stock]))
-        for (const t of feedTypesData || []) {
-          t.current_stock = atSite.get(t.id || t._id) ?? 0
-        }
-      }
-      setFeedTypes(feedTypesData || [])
+  const view = useMemo(() => {
+    if (loading) return null
+    // At a site, stock is that site's lots plus unassigned stock.
+    const atSite = siteLevels
+      ? new Map(siteLevels.map((l) => [l.feed_type_id, l.current_stock]))
+      : null
+    const supplierName = new Map((suppliers || []).map((x) => [x.id || x._id, x.name]))
+    const feedTypesData = (feedTypesResult || []).map((t) => ({
+      ...t,
+      current_stock: atSite ? atSite.get(t.id || t._id) ?? 0 : t.current_stock,
+      supplier_name: supplierName.get(t.supplier_id) || 'No supplier',
+    }))
+    const feedName = new Map(feedTypesData.map((t) => [t.id || t._id, t.name]))
+    const usageData = (usageResult || []).map((u) => ({
+      ...u,
+      feed_type_name: feedName.get(u.feed_type_id) || 'Other',
+    }))
 
-      // Fetch recent feed usage (last 30 days)
-      const from = new Date()
-      from.setDate(from.getDate() - 30)
-      const dateFrom = from.toISOString().slice(0, 10)
-      const [usageData, suppliers, growth] = await Promise.all([
-        client.query(api.feed.listUsage, { dateFrom, ...site }),
-        client.query(api.feed.listSuppliers, {}).catch(() => []),
-        client
-          .query(api.cages.growthAll, { asOf: localToday(), ...site })
-          .catch(() => null),
-      ])
-      const feedName = new Map((feedTypesData || []).map((t) => [t.id || t._id, t.name]))
-      const supplierName = new Map((suppliers || []).map((x) => [x.id || x._id, x.name]))
-      usageData.forEach((u) => {
-        u.feed_type_name = feedName.get(u.feed_type_id) || 'Other'
-      })
-      feedTypesData.forEach((t) => {
-        t.supplier_name = supplierName.get(t.supplier_id) || 'No supplier'
-      })
+    const totalStock = feedTypesData.reduce((sum, type) => sum + (type.current_stock || 0), 0)
+    const totalValue = feedTypesData.reduce((sum, type) => sum + (type.current_stock * type.price_per_kg || 0), 0)
+    const lowStockItems = feedTypesData.filter(
+      (type) =>
+        (Number(type.minimum_stock) || 0) > 0 &&
+        (Number(type.current_stock) || 0) <=
+          (Number(type.minimum_stock) || 0) * 1.2,
+    ).length
+    const monthlyUsage = usageData.reduce((sum, usage) => sum + (usage.quantity || 0), 0)
 
-      // Calculate metrics
-      const totalStock = feedTypesData.reduce((sum, type) => sum + (type.current_stock || 0), 0)
-      const totalValue = feedTypesData.reduce((sum, type) => sum + (type.current_stock * type.price_per_kg || 0), 0)
-      const lowStockItems = feedTypesData.filter(
-        (type) =>
-          (Number(type.minimum_stock) || 0) > 0 &&
-          (Number(type.current_stock) || 0) <=
-            (Number(type.minimum_stock) || 0) * 1.2,
-      ).length
-      const monthlyUsage = usageData.reduce((sum, usage) => sum + (usage.quantity || 0), 0)
-
-      setMetrics({
+    return {
+      feedTypes: feedTypesData,
+      metrics: {
         totalStock,
         totalValue,
         lowStockItems,
         monthlyUsage,
         averageFCR: growth?.farm_efcr ?? null,
         feedCostPerKg: totalStock > 0 ? totalValue / totalStock : null,
-      })
-
-      // Process usage data for charts
-      const processedUsageData = processUsageData(usageData)
-      setUsageData(processedUsageData)
-
-      // Process cost data
-      const processedCostData = processCostData(feedTypesData)
-      setCostData(processedCostData)
-
-      // Process supplier data
-      const processedSupplierData = processSupplierData(feedTypesData)
-      setSupplierData(processedSupplierData)
-
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      showToast('Could not load feed data', 'error')
-    } finally {
-      setLoading(false)
+      },
+      usageData: processUsageData(usageData),
+      costData: processCostData(feedTypesData),
+      supplierData: processSupplierData(feedTypesData),
     }
-  }
+  }, [loading, siteLevels, suppliers, feedTypesResult, usageResult, growth])
 
-  const processUsageData = (data) => {
+  function processUsageData(data) {
     // Group by date and feed type
     const grouped = data.reduce((acc, item) => {
       const date = new Date(item.usage_date).toLocaleDateString()
@@ -163,14 +127,14 @@ function FeedManagementOverview() {
     }))
   }
 
-  const processCostData = (data) => {
+  function processCostData(data) {
     return data.map(type => ({
       name: type.name,
       value: type.current_stock * type.price_per_kg
     }))
   }
 
-  const processSupplierData = (data) => {
+  function processSupplierData(data) {
     const supplierMap = data.reduce((acc, type) => {
       const supplier = type.supplier_name || 'No supplier'
       if (!acc[supplier]) acc[supplier] = 0
@@ -185,6 +149,14 @@ function FeedManagementOverview() {
   }
 
   const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
+
+  const {
+    feedTypes = [],
+    metrics = {},
+    usageData = [],
+    costData = [],
+    supplierData = [],
+  } = view || {}
 
   return (
     <Layout title="Feed Management Overview">
@@ -202,12 +174,6 @@ function FeedManagementOverview() {
           { label: 'Feed suppliers', href: '/feed-suppliers' },
           { label: 'Stock levels', href: '/stock-levels' },
         ]}
-        actions={
-          <Button variant="secondary" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4" aria-hidden />
-            Refresh
-          </Button>
-        }
       />
 
         {/* Quick Actions */}
@@ -230,6 +196,10 @@ function FeedManagementOverview() {
           </Button>
         </div>
 
+        {loading ? (
+          <LoadingState label="Loading feed data..." />
+        ) : (
+        <>
         {/* Key Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <StatCard label="Feed in stock" value={kg(metrics.totalStock)} unit="kg" />
@@ -390,6 +360,8 @@ function FeedManagementOverview() {
             ))}
           </div>
         </div>
+        </>
+        )}
     </Layout>
   )
 } 

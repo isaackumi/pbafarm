@@ -1,5 +1,6 @@
 // pages/admin/companies.js
 import { useState, useEffect } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
@@ -8,7 +9,8 @@ import DataTable from '../../components/DataTable'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import DeletionRequestsPanel from '../../components/DeletionRequestsPanel'
 import { useAuth } from '../../contexts/AuthContext'
-import companyService from '../../lib/companyService'
+import { api } from '../../convex/_generated/api'
+import { errorMessage } from '../../lib/errorMessage'
 import { useToast } from '../../components/Toast'
 import { ActAsStartModal } from '../../components/ActAs'
 
@@ -25,10 +27,11 @@ function CompaniesList() {
   const { user, hasRole } = useAuth()
   const { showToast } = useToast()
 
-  const [companies, setCompanies] = useState([])
+  const companiesResult = useQuery(api.companies.list, {})
+  const removeCompany = useMutation(api.companies.remove)
+  const companies = companiesResult ?? []
+  const loading = companiesResult === undefined
   const [actAsCompany, setActAsCompany] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [companyToDelete, setCompanyToDelete] = useState(null)
 
@@ -39,28 +42,6 @@ function CompaniesList() {
     }
   }, [user, hasRole, router])
 
-  // Fetch companies
-  useEffect(() => {
-    async function fetchCompanies() {
-      setLoading(true)
-      try {
-        const { data, error } = await companyService.getAllCompanies()
-
-        if (error) throw error
-
-        setCompanies(data || [])
-      } catch (error) {
-        console.error('Error fetching companies:', error)
-        setError('Failed to load companies')
-        showToast('error', 'Failed to load companies')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCompanies()
-  }, [])
-
   const handleDeleteCompany = (company) => {
     setCompanyToDelete(company)
     setShowDeleteModal(true)
@@ -70,17 +51,14 @@ function CompaniesList() {
     if (!companyToDelete) return
 
     try {
-      const { error } = await companyService.deleteCompany(companyToDelete.id)
-
-      if (error) throw error
+      await removeCompany({ companyId: companyToDelete.id, reason: 'Removed by admin' })
 
       showToast('success', 'Company deleted successfully')
-      setCompanies(companies.filter((c) => c.id !== companyToDelete.id))
       setShowDeleteModal(false)
       setCompanyToDelete(null)
     } catch (error) {
       console.error('Error deleting company:', error)
-      showToast('error', 'Failed to delete company: ' + error.message)
+      showToast('error', 'Failed to delete company: ' + errorMessage(error))
     }
   }
 

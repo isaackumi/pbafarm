@@ -14,7 +14,7 @@ import { PageHeader, Button, Field, Input, Select, LoadingState } from '../compo
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
-import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../lib/feedService'
+import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../lib/feedData'
 import {
   buildFeedTypeDescription,
   normalizeBagSizeKg,

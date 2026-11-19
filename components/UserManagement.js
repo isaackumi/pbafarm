@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import userService from '../lib/userService'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
-import { Button, Field, Input, Select, FormCard } from './ui'
+import { Button, Field, Input, Select, FormCard, LoadingState } from './ui'
 import { errorMessage } from '../lib/errorMessage'
 
 const ROLES = [
@@ -36,7 +35,7 @@ function PhoneCell({ user, disabled, onSaved, onError }) {
     try {
       const result = await setPhone({ id, phone: value.trim() ? value : null })
       setValue(result?.phone || '')
-      await onSaved()
+      await onSaved?.()
     } catch (err) {
       onError(errorMessage(err, 'Could not save the phone number'))
     } finally {
@@ -68,8 +67,12 @@ function PhoneCell({ user, disabled, onSaved, onError }) {
 const UserManagement = () => {
   const { user: me, hasRole } = useAuth()
   const createWithPassword = useAction(api.userAccounts.createWithPassword)
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const usersResult = useQuery(api.users.list, {})
+  const users = usersResult || []
+  const loading = usersResult === undefined
+  const updateUser = useMutation(api.users.update)
+  const deactivateUser = useMutation(api.users.deactivate)
+  const reactivateUser = useMutation(api.users.reactivate)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [savingId, setSavingId] = useState(null)
@@ -108,7 +111,6 @@ const UserManagement = () => {
     try {
       if (approve) {
         await approveJoin({ inviteId: request.id })
-        await loadUsers()
         setSuccess(`${request.email} joined the company.`)
       } else {
         await declineJoin({ inviteId: request.id })
@@ -121,32 +123,11 @@ const UserManagement = () => {
     }
   }
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await userService.listUsers()
-      if (response.error) throw response.error
-      setUsers(response.data || [])
-    } catch (err) {
-      console.error('Error loading users:', err)
-      setError(err.message || 'Failed to load users')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleRoleChange = async (userId, role) => {
     try {
       setSavingId(userId)
       setError('')
-      const { error: updateError } = await userService.updateUser(userId, { role })
-      if (updateError) throw updateError
-      await loadUsers()
+      await updateUser({ id: userId, patch: { role } })
     } catch (err) {
       console.error('Error updating user:', err)
       setError(err.message || 'Failed to update role')
@@ -172,7 +153,6 @@ const UserManagement = () => {
         password: form.password,
       })
       setForm(EMPTY_CREATE)
-      await loadUsers()
       setSuccess(
         data?.message ||
           `Created ${emailForMessage}. Share the temporary password securely — they must change it on first login.`,
@@ -189,11 +169,10 @@ const UserManagement = () => {
     try {
       setSavingId(id)
       if (user.active === false) {
-        await userService.reactivateUser(id)
+        await reactivateUser({ id })
       } else {
-        await userService.deactivateUser(id)
+        await deactivateUser({ id })
       }
-      await loadUsers()
     } catch (err) {
       setError(err.message || 'Failed to update user')
     } finally {
@@ -202,7 +181,7 @@ const UserManagement = () => {
   }
 
   if (loading) {
-    return <div className="p-4 text-chart-ink">Loading users…</div>
+    return <LoadingState label="Loading users…" />
   }
 
   return (
@@ -401,7 +380,6 @@ const UserManagement = () => {
                         <PhoneCell
                           user={user}
                           disabled={locked}
-                          onSaved={loadUsers}
                           onError={setError}
                         />
                       </td>

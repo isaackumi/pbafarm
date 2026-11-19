@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useConvex, useQuery } from 'convex/react'
 import { BarChart, Download, Printer } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
@@ -11,9 +12,11 @@ import {
   Input,
   Select,
   StatCard,
+  LoadingState,
 } from '../components/ui'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
-import { cageService } from '../lib/cageService'
+import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
+import { errorMessage } from '../lib/errorMessage'
 import { useMoney } from '../lib/money'
 import { localToday } from '../lib/format'
 
@@ -39,24 +42,14 @@ function Reports() {
       .split('T')[0],
     endDate: localToday(),
   })
-  const [cages, setCages] = useState([])
   const [selectedCages, setSelectedCages] = useState([])
   const [reportData, setReportData] = useState(null)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    async function fetchCages() {
-      try {
-        const { data, error: err } = await cageService.getAllCages()
-        if (err) throw err
-        setCages(data || [])
-      } catch (err) {
-        console.error('Error fetching cages:', err.message)
-        setError(err.message)
-      }
-    }
-    fetchCages()
-  }, [])
+  const client = useConvex()
+  const { locationArgs } = useLocation()
+  const cagesResult = useQuery(api.cages.list, locationArgs)
+  const cages = cagesResult || []
 
   const handleCageToggle = (id) => {
     setSelectedCages((prev) =>
@@ -89,7 +82,6 @@ function Reports() {
         throw new Error('Please select a date range')
       }
 
-      const client = getConvexHttpClient()
       const result = await client.query(api.reports.productionReport, {
         reportType,
         startDate: dateRange.startDate,
@@ -106,7 +98,7 @@ function Reports() {
       })
     } catch (err) {
       console.error('Error generating report:', err)
-      setError(err.message || String(err))
+      setError(errorMessage(err, String(err)))
     } finally {
       setLoading(false)
     }
@@ -254,7 +246,8 @@ function Reports() {
                         </label>
                       )
                     })}
-                    {cages.length === 0 && (
+                    {cagesResult === undefined && <LoadingState label="Loading cages..." />}
+                    {cagesResult !== undefined && cages.length === 0 && (
                       <p className="px-1 py-2 text-sm text-muted">No cages found</p>
                     )}
                   </div>

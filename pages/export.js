@@ -12,7 +12,9 @@ import {
   Select,
   Input,
 } from '../components/ui'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { useConvex } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
 import { useLocation } from '../contexts/LocationContext'
 import { customCell, customColumns } from '../components/CustomFields'
@@ -60,6 +62,7 @@ async function downloadWorkbook(sheets, filename) {
 function ExportPageInner() {
   // Exports cover the header site only (FARM-003).
   const { locationArgs } = useLocation()
+  const client = useConvex()
   const [exportType, setExportType] = useState('daily_records')
   const [format, setFormat] = useState('xlsx')
   const [dateRange, setDateRange] = useState({
@@ -77,7 +80,6 @@ function ExportPageInner() {
     setError('')
 
     try {
-      const client = getConvexHttpClient()
       const bundle = await client.query(api.reports.exportBundle, {
         dateFrom: dateRange.startDate,
         dateTo: dateRange.endDate,
@@ -131,7 +133,7 @@ function ExportPageInner() {
         await downloadWorkbook(flattenCustom(sheets, defs), `${base}.xlsx`)
       }
     } catch (err) {
-      setError(err.message || String(err))
+      setError(errorMessage(err, String(err)))
     } finally {
       setLoading(false)
     }

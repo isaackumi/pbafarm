@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, FormPage } from '../components/ui'
+import { PageHeader, Button, FormPage, LoadingState } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
 import BiweeklyBatchEntry from '../components/BiweeklyBatchEntry'
-import { cageService } from '../lib/databaseService'
+import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
 import { useT } from '../lib/i18n/context'
 
 export default function BiweeklyEntryPage() {
@@ -70,27 +71,15 @@ function BiweeklyEntry() {
 
 function DetailedEntry({ cageId, onDone }) {
   const t = useT()
-  const [cage, setCage] = useState(null)
-  const [missing, setMissing] = useState(false)
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.list, locationArgs)
 
-  useEffect(() => {
-    let live = true
-    cageService.getAllCages().then(({ data }) => {
-      if (!live) return
-      const found = (data || []).find((c) => (c.id || c._id) === cageId)
-      if (found) setCage(found)
-      else setMissing(true)
-    })
-    return () => {
-      live = false
-    }
-  }, [cageId])
-
-  if (missing) {
-    return <p className="text-sm text-muted">{t('biweekly.cageNotFound')}</p>
+  if (cages === undefined) {
+    return <LoadingState />
   }
+  const cage = cages.find((c) => (c.id || c._id) === cageId)
   if (!cage) {
-    return <div className="h-64 rounded-xl bg-foam animate-pulse" />
+    return <p className="text-sm text-muted">{t('biweekly.cageNotFound')}</p>
   }
   return <BiweeklyEntryForm cage={cage} onComplete={onDone} />
 }

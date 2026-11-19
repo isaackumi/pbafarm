@@ -5,10 +5,12 @@ import BagSizeField, {
   resolveBagSizeKg,
 } from './BagSizeField'
 import LocationMetaField from './LocationMetaField'
-import { feedService } from '../lib/feedService'
+import { useMutation } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { purchaseCreateArgs } from '../lib/feedData'
+import { errorMessage } from '../lib/errorMessage'
 import { formatCurrency } from '../lib/currencyUtils'
 import { useLocation } from '../contexts/LocationContext'
-import { getActiveLocationId } from '../lib/locationScope'
 import { useToast } from './Toast'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import { localToday } from '../lib/format'
@@ -46,6 +48,7 @@ export default function FeedPurchaseModal({
 }) {
   const { showToast } = useToast()
   const { activeLocationId } = useLocation()
+  const createPurchase = useMutation(api.feed.createPurchase)
   const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [purchaseData, setPurchaseData] = useState(emptyPurchase)
@@ -140,8 +143,7 @@ export default function FeedPurchaseModal({
 
     setSaving(true)
     try {
-      const locationId =
-        activeLocationId || getActiveLocationId() || undefined
+      const locationId = activeLocationId || undefined
       const errors = []
       for (const entry of purchaseData.feed_entries) {
         const bags = Number(entry.number_of_bags)
@@ -154,21 +156,26 @@ export default function FeedPurchaseModal({
         const pricePerKg =
           bagSize > 0 ? Math.round((pricePerBag / bagSize) * 10000) / 10000 : 0
 
-        const { error } = await feedService.createPurchase({
-          feed_type_id: entry.feed_type_id,
-          quantity: quantityKg,
-          bags,
-          price_per_kg: pricePerKg,
-          purchase_date: purchaseData.purchase_date,
-          supplier_id: purchaseData.supplier_id,
-          notes: purchaseData.notes || undefined,
-          locationId,
-        })
-        if (error) {
+        try {
+          await createPurchase(
+            purchaseCreateArgs(
+              {
+                feed_type_id: entry.feed_type_id,
+                quantity: quantityKg,
+                bags,
+                price_per_kg: pricePerKg,
+                purchase_date: purchaseData.purchase_date,
+                supplier_id: purchaseData.supplier_id,
+                notes: purchaseData.notes || undefined,
+              },
+              locationId,
+            ),
+          )
+        } catch (error) {
           const name =
             feedTypes.find((t) => (t.id || t._id) === entry.feed_type_id)
               ?.name || 'entry'
-          errors.push(error.message || `Failed to save ${name}`)
+          errors.push(errorMessage(error, `Failed to save ${name}`))
         }
       }
 
@@ -181,7 +188,7 @@ export default function FeedPurchaseModal({
       onSaved?.()
       onClose?.()
     } catch (err) {
-      showToast(err.message || 'Failed to save feed purchase', 'error')
+      showToast(errorMessage(err, 'Failed to save feed purchase'), 'error')
     } finally {
       setSaving(false)
     }

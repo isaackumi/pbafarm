@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
-import companyService from '../lib/companyService'
+import { registrationArgs } from '../lib/companyRegistration'
+import { errorMessage } from '../lib/errorMessage'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Textarea } from './ui'
@@ -46,6 +47,7 @@ const CompanyRegistrationsPage = () => {
   const registration = useQuery(api.companies.myRegistration, user ? {} : 'skip')
   const invites = useQuery(api.users.myInvites, companyless ? {} : 'skip')
   const requestToJoin = useMutation(api.users.claimInvite)
+  const registerCompany = useMutation(api.companies.register)
   const human = useHumanCheck('register_company')
   const [joiningId, setJoiningId] = useState(null)
   const isSuperAdmin = user?.role === 'super_admin'
@@ -120,17 +122,17 @@ const CompanyRegistrationsPage = () => {
     try {
       setLoading(true)
       const humanTicket = await human.getTicket()
-      const response = await companyService.registerCompany({
-        humanTicket,
-        name: formData.name.trim(),
-        code,
-        contactEmail: formData.contactEmail.trim(),
-        contactPhone: formData.contactPhone.trim(),
-        address: formData.address.trim(),
-        registrationNumber: formData.registrationNumber.trim(),
-      })
-
-      if (response.error) throw response.error
+      await registerCompany(
+        registrationArgs({
+          humanTicket,
+          name: formData.name.trim(),
+          code,
+          contactEmail: formData.contactEmail.trim(),
+          contactPhone: formData.contactPhone.trim(),
+          address: formData.address.trim(),
+          registrationNumber: formData.registrationNumber.trim(),
+        }),
+      )
 
       setSuccess(true)
       setFormData({
@@ -144,7 +146,7 @@ const CompanyRegistrationsPage = () => {
       setCodeTouched(false)
     } catch (err) {
       console.error('Error registering company:', err)
-      setError(err.message || 'Error registering company')
+      setError(errorMessage(err, 'Error registering company'))
     } finally {
       setLoading(false)
     }

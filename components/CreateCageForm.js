@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
-import { cageService } from '../lib/databaseService'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { cageCreateArgs } from '../lib/cageService'
+import { errorMessage } from '../lib/errorMessage'
 import { useLocation } from '../contexts/LocationContext'
 import FarmLocationSelect from './FarmLocationSelect'
 import {
@@ -25,7 +28,6 @@ const CreateCageForm = () => {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [nameError, setNameError] = useState('')
-  const [existingCages, setExistingCages] = useState([])
   const [cageCode, setCageCode] = useState('')
   const [geometry, setGeometry] = useState({ ...EMPTY_GEOMETRY })
   const [custom, setCustom] = useState({})
@@ -42,20 +44,16 @@ const CreateCageForm = () => {
     status: 'empty',
   })
 
-  useEffect(() => {
-    async function fetchExistingCages() {
-      try {
-        const { data, error: fetchError } = await cageService.getAllCages()
-        if (fetchError) throw fetchError
-        setExistingCages(data || [])
-        generateCageCode(data || [])
-      } catch (err) {
-        console.error('Error fetching existing cages:', err)
-      }
-    }
+  const existingResult = useQuery(api.cages.list, locationArgs)
+  const existingCages = useMemo(() => existingResult || [], [existingResult])
+  const createCage = useMutation(api.cages.create)
+  const cagesLoaded = existingResult !== undefined
 
-    fetchExistingCages()
-  }, [locationArgs?.locationId])
+  // Suggest the next code once the site's cages have loaded.
+  useEffect(() => {
+    if (cagesLoaded) generateCageCode(existingResult)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cagesLoaded, locationArgs?.locationId])
 
   const generateCageCode = (cages) => {
     let maxCodeNumber = 0
@@ -141,8 +139,7 @@ const CreateCageForm = () => {
         custom: customPayload(custom),
       }
 
-      const { data, error: createError } = await cageService.createCage(cageData)
-      if (createError) throw createError
+      await createCage(cageCreateArgs(cageData, activeLocationId))
 
       setMessage(`${unitLabel(geometry.unitType)} created`)
       setGeometry({ ...EMPTY_GEOMETRY })
@@ -159,14 +156,14 @@ const CreateCageForm = () => {
         notes: '',
         status: 'empty',
       })
-      generateCageCode([...existingCages, data])
+      generateCageCode([...existingCages, { code: cageData.code }])
 
       setTimeout(() => {
         router.push('/cages')
       }, 2000)
     } catch (err) {
       console.error('Error creating cage:', err)
-      setError(err.message)
+      setError(errorMessage(err))
     } finally {
       setLoading(false)
     }

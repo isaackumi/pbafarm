@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, ErrorState, LoadingState } from '../components/ui'
-import { biweeklyRecordService, cageService } from '../lib/databaseService'
+import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, LoadingState } from '../components/ui'
+import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
+import { errorMessage } from '../lib/errorMessage'
+import { biweeklyPatchArgs } from '../lib/biweeklyArgs'
 import {
   Search,
   Eye,
   Download,
   Plus,
-  RefreshCw,
   Pencil,
   Trash2,
   AlertTriangle,
@@ -21,20 +24,33 @@ import { usePermission } from '../hooks/usePermission'
 const ICON_BTN =
   'inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake'
 
+const PAGE_SIZE = 20
+
 export default function BiweeklyRecords() {
+  return (
+    <ProtectedRoute>
+      <Layout title="Bi-weekly records">
+        <BiweeklyRecordsBody />
+      </Layout>
+    </ProtectedRoute>
+  )
+}
+
+function BiweeklyRecordsBody() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = usePermission('production.records.delete')
-  const [records, setRecords] = useState([])
-  const [cages, setCages] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { locationArgs } = useLocation()
+  const allRecords = useQuery(api.biweeklyRecords.list, locationArgs)
+  const cagesResult = useQuery(api.cages.list, locationArgs)
+  const updateRecord = useMutation(api.biweeklyRecords.update)
+  const removeRecord = useMutation(api.biweeklyRecords.remove)
+  const loading = allRecords === undefined
+  const cages = cagesResult || []
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCage, setSelectedCage] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
@@ -48,68 +64,28 @@ export default function BiweeklyRecords() {
   })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [stats, setStats] = useState({
-    totalRecords: 0,
-    totalFish: 0,
-    totalWeight: 0,
-    averageABW: 0,
-    activeCages: 0
-  })
-
-  useEffect(() => {
-    fetchData()
-  }, [currentPage, selectedCage, dateFilter])
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Fetch cages for filter
-      const { data: cagesData } = await cageService.getAllCages()
-      setCages(cagesData || [])
-
-      // Fetch biweekly records with pagination
-      const { data, error, totalCount: count, totalPages: pages } = 
-        await biweeklyRecordService.getBiweeklyRecordsPaginated(currentPage, 20)
-
-      if (error) {
-        console.error('Error fetching biweekly records:', error)
-        setError('Failed to load biweekly records')
-        return
-      }
-
-      setRecords(data || [])
-      setTotalCount(count || 0)
-      setTotalPages(pages || 1)
-
-      // Calculate stats
-      calculateStats(data || [])
-    } catch (error) {
-      console.error('Error fetching biweekly records:', error)
-      setError('Failed to load biweekly records')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculateStats = (recordsData) => {
-    const totalRecords = recordsData.length
-    const totalFish = recordsData.reduce((sum, record) => sum + (record.total_fish_count || 0), 0)
-    const totalWeight = recordsData.reduce((sum, record) => sum + (record.total_weight || 0), 0)
-    const averageABW = recordsData.length > 0 
-      ? recordsData.reduce((sum, record) => sum + (record.average_body_weight || 0), 0) / recordsData.length 
-      : 0
-    const activeCages = new Set(recordsData.map(record => record.cage_id)).size
-
-    setStats({
-      totalRecords,
+  const totalCount = (allRecords || []).length
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const records = useMemo(
+    () => (allRecords || []).slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [allRecords, currentPage],
+  )
+  const stats = useMemo(() => {
+    const totalFish = records.reduce((sum, record) => sum + (record.total_fish_count || 0), 0)
+    const totalWeight = records.reduce((sum, record) => sum + (record.total_weight || 0), 0)
+    const averageABW =
+      records.length > 0
+        ? records.reduce((sum, record) => sum + (record.average_body_weight || 0), 0) /
+          records.length
+        : 0
+    return {
+      totalRecords: records.length,
       totalFish,
       totalWeight,
       averageABW,
-      activeCages
-    })
-  }
+      activeCages: new Set(records.map((record) => record.cage_id)).size,
+    }
+  }, [records])
 
   const filteredRecords = records.filter(record => {
     const matchesSearch = searchTerm === '' || 
@@ -146,22 +122,19 @@ export default function BiweeklyRecords() {
     if (!editRecord) return
     setSaving(true)
     try {
-      const { error } = await biweeklyRecordService.updateBiweeklyRecord(
-        editRecord.id || editRecord._id,
-        {
+      await updateRecord(
+        biweeklyPatchArgs(editRecord.id || editRecord._id, {
           date: editForm.date,
           batch_code: editForm.batch_code,
           average_body_weight: Number(editForm.average_body_weight),
           total_fish_count: Number(editForm.total_fish_count),
           total_weight: Number(editForm.total_weight),
-        },
+        }),
       )
-      if (error) throw error
       showToast('Biweekly record updated', 'success')
       setEditRecord(null)
-      fetchData()
     } catch (err) {
-      showToast(err.message || 'Update failed', 'error')
+      showToast(errorMessage(err, 'Update failed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -171,15 +144,11 @@ export default function BiweeklyRecords() {
     if (!deleteRecord) return
     setDeleting(true)
     try {
-      const { error } = await biweeklyRecordService.deleteBiweeklyRecord(
-        deleteRecord.id || deleteRecord._id,
-      )
-      if (error) throw error
+      await removeRecord({ id: deleteRecord.id || deleteRecord._id })
       showToast('Biweekly record deleted', 'success')
       setDeleteRecord(null)
-      fetchData()
     } catch (err) {
-      showToast(err.message || 'Delete failed', 'error')
+      showToast(errorMessage(err, 'Delete failed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -210,19 +179,14 @@ export default function BiweeklyRecords() {
 
   if (loading) {
     return (
-      <ProtectedRoute>
-        <Layout title="Bi-weekly records">
-          <div className="page-card p-8">
-            <LoadingState label="Loading bi-weekly records…" />
-          </div>
-        </Layout>
-      </ProtectedRoute>
+      <div className="page-card p-8">
+        <LoadingState label="Loading bi-weekly records…" />
+      </div>
     )
   }
 
   return (
-    <ProtectedRoute>
-      <Layout title="Bi-weekly records">
+      <>
         <PageHeader
           showTitle={false}
           breadcrumbs={[
@@ -297,13 +261,6 @@ export default function BiweeklyRecords() {
                     <option value="month">This month</option>
                   </Select>
                 </Field>
-
-                <div className="flex items-end">
-                  <Button variant="secondary" onClick={fetchData}>
-                    <RefreshCw className="w-4 h-4" aria-hidden />
-                    Refresh
-                  </Button>
-                </div>
               </div>
             </div>
 
@@ -315,9 +272,7 @@ export default function BiweeklyRecords() {
                 </h3>
               </div>
 
-              {error ? (
-                <ErrorState message={error} onRetry={fetchData} />
-              ) : filteredRecords.length === 0 ? (
+              {filteredRecords.length === 0 ? (
                 <EmptyState
                   title="No bi-weekly records yet"
                   description="Records appear here once you enter a bi-weekly sampling."
@@ -708,7 +663,6 @@ export default function BiweeklyRecords() {
             </div>
           </div>
         )}
-      </Layout>
-    </ProtectedRoute>
+      </>
   )
 } 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import React, { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { formatCurrency, formatNumber } from '../../lib/currencyUtils'
 import Layout from '../../components/Layout'
@@ -11,14 +11,16 @@ import {
   Select,
   Textarea,
   StatCard,
+  LoadingState,
 } from '../../components/ui'
 import DataTable from '../../components/DataTable'
-import { feedTypeService } from '../../lib/feedTypeService'
-import { supplierService } from '../../lib/supplierService'
-import { feedService } from '../../lib/feedService'
+import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../../lib/feedData'
+import { supplierCreateArgs } from '../../lib/supplierArgs'
+import { useFeedUsageStats } from '../../hooks/useFeedData'
+import { errorMessage } from '../../lib/errorMessage'
+import { useLocation } from '../../contexts/LocationContext'
 import { buildFeedTypeDescription } from '../../lib/feedTypeMeta'
-import { getConvexHttpClient, api } from '../../lib/convexBridge'
-import { withActiveLocation } from '../../lib/locationScope'
+import { api } from '../../convex/_generated/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
@@ -30,10 +32,24 @@ import { usePermission } from '../../hooks/usePermission'
 const FeedManagement = () => {
   const { hasRole } = useAuth()
   const isAdmin = usePermission('inventory.adjust')
-  const [feedTypes, setFeedTypes] = useState([])
-  const [suppliers, setSuppliers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { locationArgs } = useLocation()
+  const feedTypesResult = useQuery(api.feed.listFeedTypes, {})
+  const suppliersResult = useQuery(api.feed.listSuppliers, {})
+  const stockLevels = useQuery(api.inventory.listStockLevels, locationArgs)
+  const usageStats = useFeedUsageStats('30d')
+  const feedTypes = feedTypesResult || []
+  const suppliers = suppliersResult || []
+  const loading = feedTypesResult === undefined
+  const statsLoading = loading || stockLevels === undefined || usageStats === undefined
+  const totalStockKg = (stockLevels || []).reduce(
+    (sum, row) => sum + Number(row.current_stock ?? row.currentStock ?? 0),
+    0,
+  )
+  const monthlyUsageKg = Number(usageStats?.totalUsage) || 0
+  const createFeedType = useMutation(api.feed.createFeedType)
+  const updateFeedType = useMutation(api.feed.updateFeedType)
+  const softDeleteFeedType = useMutation(api.feed.softDeleteFeedType)
+  const createSupplier = useMutation(api.feed.createSupplier)
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -54,7 +70,6 @@ const FeedManagement = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const { showToast } = useToast()
-  const router = useRouter()
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false)
   const [supplierFormData, setSupplierFormData] = useState({
     name: '',
@@ -65,73 +80,6 @@ const FeedManagement = () => {
     active: true
   })
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
-  const [totalStockKg, setTotalStockKg] = useState(0)
-  const [monthlyUsageKg, setMonthlyUsageKg] = useState(0)
-
-  useEffect(() => {
-    refreshPageData()
-  }, [])
-
-  const fetchDashboardStats = async (typesFallback = []) => {
-    try {
-      const client = getConvexHttpClient()
-      const [stockLevels, usageResult] = await Promise.all([
-        client.query(api.inventory.listStockLevels, withActiveLocation({})),
-        feedService.getFeedUsageStats('30d'),
-      ])
-      const stock = (stockLevels || []).reduce(
-        (sum, row) => sum + Number(row.current_stock ?? row.currentStock ?? 0),
-        0,
-      )
-      setTotalStockKg(stock)
-      setMonthlyUsageKg(Number(usageResult?.data?.totalUsage) || 0)
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error)
-      const fallbackStock = (typesFallback || []).reduce(
-        (sum, type) => sum + Number(type.current_stock || type.currentStock || 0),
-        0,
-      )
-      setTotalStockKg(fallbackStock)
-    }
-  }
-
-  const fetchFeedTypes = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await feedTypeService.getAllFeedTypes()
-      if (error) throw error
-      const types = data || []
-      setFeedTypes(types)
-      return types
-    } catch (error) {
-      console.error('Error fetching feed types:', error)
-      setError('Failed to load feed types')
-      showToast('Error loading feed types', 'error')
-      return []
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchSuppliers = async () => {
-    try {
-      const { data, error } = await supplierService.getAllSuppliers()
-      if (error) {
-        console.error('Error fetching suppliers:', error)
-        showToast(error.message || 'Failed to load suppliers', 'error')
-        return
-      }
-      setSuppliers(data || [])
-    } catch (error) {
-      console.error('Error in fetchSuppliers:', error)
-      showToast('An unexpected error occurred while loading suppliers', 'error')
-    }
-  }
-
-  const refreshPageData = async () => {
-    const [types] = await Promise.all([fetchFeedTypes(), fetchSuppliers()])
-    await fetchDashboardStats(types)
-  }
 
   const emptyFeedForm = () => ({
     name: '',
@@ -189,14 +137,12 @@ const FeedManagement = () => {
     const id = deleteConfirm?.id || deleteConfirm
     if (!id) return
     try {
-      const { error } = await feedTypeService.deleteFeedType(id)
-      if (error) throw error
+      await softDeleteFeedType({ id })
       showToast('Feed type deleted successfully', 'success')
       setDeleteConfirm(null)
-      refreshPageData()
     } catch (error) {
       console.error('Error deleting feed type:', error)
-      showToast(error.message || 'Failed to delete feed type', 'error')
+      showToast(errorMessage(error, 'Failed to delete feed type'), 'error')
     }
   }
 
@@ -235,22 +181,16 @@ const FeedManagement = () => {
       }
       const payload = buildFeedPayload()
       if (editingType) {
-        const { error } = await feedTypeService.updateFeedType(
-          editingType.id || editingType._id,
-          payload,
-        )
-        if (error) throw error
+        await updateFeedType(feedTypeUpdateArgs(editingType.id || editingType._id, payload))
         showToast('Feed type updated successfully', 'success')
       } else {
-        const { error } = await feedTypeService.createFeedType(payload)
-        if (error) throw error
+        await createFeedType(feedTypeCreateArgs(payload))
         showToast('Feed type created successfully', 'success')
       }
       closeFeedModal()
-      refreshPageData()
     } catch (error) {
       console.error('Error saving feed type:', error)
-      showToast(error.message || 'Failed to save feed type', 'error')
+      showToast(errorMessage(error, 'Failed to save feed type'), 'error')
     }
   }
 
@@ -283,10 +223,8 @@ const FeedManagement = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      const { error } = await feedTypeService.updateFeedType(id, { active: newStatus })
-      if (error) throw error
+      await updateFeedType({ id, patch: { active: newStatus } })
       showToast(`Feed type ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success')
-      refreshPageData()
     } catch (error) {
       console.error('Error updating feed type status:', error)
       showToast('Failed to update feed type status', 'error')
@@ -308,11 +246,9 @@ const FeedManagement = () => {
   const handleSupplierSubmit = async (e) => {
     e.preventDefault()
     try {
-      const { error } = await supplierService.createSupplier(supplierFormData)
-      if (error) throw error
+      await createSupplier(supplierCreateArgs(supplierFormData))
       showToast('Supplier added successfully', 'success')
       setShowAddSupplierModal(false)
-      fetchSuppliers()
     } catch (error) {
       console.error('Error adding supplier:', error)
       showToast('Failed to add supplier', 'error')
@@ -371,13 +307,13 @@ const FeedManagement = () => {
             />
             <StatCard
               label="Feed in stock"
-              value={loading ? '—' : formatNumber(totalStockKg, { decimals: 0 })}
-              unit={loading ? '' : 'kg'}
+              value={statsLoading ? '—' : formatNumber(totalStockKg, { decimals: 0 })}
+              unit={statsLoading ? '' : 'kg'}
             />
             <StatCard
               label="Monthly usage"
-              value={loading ? '—' : formatNumber(monthlyUsageKg, { decimals: 0 })}
-              unit={loading ? '' : 'kg'}
+              value={statsLoading ? '—' : formatNumber(monthlyUsageKg, { decimals: 0 })}
+              unit={statsLoading ? '' : 'kg'}
             />
           </div>
 
@@ -430,11 +366,7 @@ const FeedManagement = () => {
                   </div>
 
                   {loading ? (
-                    <div className="flex justify-center items-center h-32">
-                      <div className="w-8 h-8 border-4 border-lake border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-center text-signal">{error}</div>
+                    <LoadingState label="Loading feed types..." />
                   ) : (
                     <>
                       <div className="overflow-x-auto">
@@ -841,7 +773,6 @@ const FeedManagement = () => {
         <FeedPurchaseModal
           open={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
-          onSaved={refreshPageData}
           feedTypes={feedTypes}
           suppliers={suppliers}
           title="New feed purchase"
