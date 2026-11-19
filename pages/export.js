@@ -1,17 +1,9 @@
 import React, { useState } from 'react'
 import Layout from '../components/Layout'
 import ProtectedRoute from '../components/ProtectedRoute'
-import {
-  PageHeader,
-  Button,
-  FormPage,
-  FormCard,
-  FormActions,
-  FormSection,
-  Field,
-  Select,
-  Input,
-} from '../components/ui'
+import { GradientButton, Segmented } from '../components/ui'
+import { SettingsFrame, SettingsCard, SettingsRow, InlineError, FIELD } from '../components/settings'
+import { useT } from '../lib/i18n/context'
 import { useConvex } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -62,6 +54,7 @@ async function downloadWorkbook(sheets, filename) {
 function ExportPageInner() {
   // Exports cover the header site only (FARM-003).
   const { locationArgs } = useLocation()
+  const t = useT()
   const client = useConvex()
   const [exportType, setExportType] = useState('daily_records')
   const [format, setFormat] = useState('xlsx')
@@ -139,106 +132,72 @@ function ExportPageInner() {
     }
   }
 
+  const datasets = ['daily_records', 'biweekly_records', 'harvest_records', 'stocking_history', 'cages', 'all']
+  const formats = ['xlsx', 'csv', 'json']
   return (
-    <Layout title="Export">
-      <FormPage>
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Reports', href: '/report' },
-            { label: 'Export' },
-          ]}
-          description="Download farm records as Excel for offline analysis or sharing."
-          related={[
-            { label: 'Reports', href: '/report' },
-            { label: 'Audit logs', href: '/audit-logs' },
-          ]}
-        />
-
-        <FormCard
-          title="Export options"
-          subtitle="Choose what to download and the date window."
-        >
-          <form onSubmit={handleExport} className="space-y-8">
-            <FormSection title="Dataset">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Field label="Export type" htmlFor="exportType" required>
-                  <Select
-                    id="exportType"
-                    value={exportType}
-                    onChange={(e) => setExportType(e.target.value)}
-                    required
-                  >
-                    <option value="daily_records">Daily Records</option>
-                    <option value="biweekly_records">Biweekly Records</option>
-                    <option value="harvest_records">Harvest Records</option>
-                    <option value="stocking_history">Stocking History</option>
-                    <option value="cages">Cage Information</option>
-                    <option value="all">Full Bundle</option>
-                  </Select>
-                </Field>
-                <Field label="Format" htmlFor="format">
-                  <Select
-                    id="format"
-                    value={format}
-                    onChange={(e) => setFormat(e.target.value)}
-                  >
-                    <option value="xlsx">Excel (.xlsx)</option>
-                    <option value="csv">CSV</option>
-                    <option value="json">JSON</option>
-                  </Select>
-                </Field>
-              </div>
-            </FormSection>
-
-            <FormSection title="Date range">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Field label="From" htmlFor="startDate" required>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={dateRange.startDate}
-                    onChange={(e) =>
-                      setDateRange({ ...dateRange, startDate: e.target.value })
-                    }
-                    required
-                  />
-                </Field>
-                <Field label="To" htmlFor="endDate" required>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={dateRange.endDate}
-                    onChange={(e) =>
-                      setDateRange({ ...dateRange, endDate: e.target.value })
-                    }
-                    required
-                  />
-                </Field>
-              </div>
-            </FormSection>
-
-            {error && (
-              <div className="text-sm font-medium text-signal bg-signal/10 border border-signal/20 p-3 rounded-xl">
-                {error}
-              </div>
-            )}
-
-            <FormActions>
-              <Button type="submit" disabled={loading} size="lg">
-                {loading
-                  ? 'Exporting…'
-                  : format === 'xlsx'
-                    ? 'Download Excel'
-                    : format === 'csv'
-                      ? 'Download CSV'
-                      : 'Download JSON'}
-              </Button>
-            </FormActions>
+    <Layout title={t('settingsUi.export.title')} eyebrow={t('settingsUi.export.eyebrow')}>
+      <SettingsFrame active={null}>
+        <SettingsCard title={t('settingsUi.export.card')} meta={t('settingsUi.export.meta')}>
+          <form onSubmit={handleExport} className="flex flex-col">
+            <SettingsRow label={t('settingsUi.export.dataset')} helper={t('settingsUi.export.datasetHelper')} htmlFor="exportType">
+              <select
+                id="exportType"
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value)}
+                required
+                className={`${FIELD} w-auto min-w-[220px] py-[9px]`}
+              >
+                {datasets.map((d) => (
+                  <option key={d} value={d}>
+                    {t(`settingsUi.export.ds.${d}`)}
+                  </option>
+                ))}
+              </select>
+            </SettingsRow>
+            <SettingsRow label={t('settingsUi.export.format')} helper={t('settingsUi.export.formatHelper')}>
+              <Segmented
+                label={t('settingsUi.export.format')}
+                value={format}
+                onChange={setFormat}
+                options={formats.map((f) => ({ value: f, label: t(`settingsUi.export.fmt.${f}`) }))}
+              />
+            </SettingsRow>
+            <SettingsRow label={t('settingsUi.export.range')} helper={t('settingsUi.export.rangeHelper')}>
+              <label htmlFor="startDate" className="sr-only">
+                {t('settingsUi.export.from')}
+              </label>
+              <input
+                id="startDate"
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                required
+                className={`${FIELD} w-auto py-[9px]`}
+              />
+              <span className="text-[13px] text-muted" aria-hidden>
+                –
+              </span>
+              <label htmlFor="endDate" className="sr-only">
+                {t('settingsUi.export.to')}
+              </label>
+              <input
+                id="endDate"
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                required
+                className={`${FIELD} w-auto py-[9px]`}
+              />
+            </SettingsRow>
+            <SettingsRow label={t('settingsUi.export.download')} helper={t('settingsUi.export.downloadHelper')}>
+              <GradientButton type="submit" size="sm" disabled={loading}>
+                {loading ? t('settingsUi.export.exporting') : t(`settingsUi.export.downloadAs.${format}`)}
+              </GradientButton>
+            </SettingsRow>
+            <InlineError className="mt-2">{error}</InlineError>
           </form>
-        </FormCard>
-      </FormPage>
+        </SettingsCard>
+      </SettingsFrame>
     </Layout>
   )
 }

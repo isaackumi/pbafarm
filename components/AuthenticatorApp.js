@@ -3,13 +3,16 @@ import { useAction, useMutation, useQuery } from 'convex/react'
 import QRCode from 'qrcode'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
-import { Button, Field, Input } from './ui'
+import { useT } from '../lib/i18n/context'
+import { Button, Field, GhostButton, GradientButton, Input, Pill } from './ui'
+import { SettingsRow, InlineError } from './settings'
 
 /** Authenticator-app two-step verification (ENT-003). */
 
-function CodeInput({ id, value, onChange, label = 'Code from your authenticator app' }) {
+function CodeInput({ id, value, onChange, label }) {
+  const t = useT()
   return (
-    <Field label={label} htmlFor={id}>
+    <Field label={label || t('settingsUi.totp.codeLabel')} htmlFor={id}>
       <Input
         id={id}
         inputMode="numeric"
@@ -27,30 +30,28 @@ function CodeInput({ id, value, onChange, label = 'Code from your authenticator 
 
 /** Recovery codes, shown once. */
 export function RecoveryCodes({ codes, onDone }) {
+  const t = useT()
   return (
     <div className="space-y-4">
-      <p className="text-sm text-chart-ink">
-        Save these recovery codes somewhere safe. Each works once if you lose your phone. They will not be shown again.
-      </p>
-      <ul className="grid grid-cols-2 gap-2 rounded-lg bg-foam p-3 font-mono text-sm">
+      <p className="text-[13px] leading-[18px] text-text">{t('settingsUi.totp.codesIntro')}</p>
+      <ul className="grid grid-cols-2 gap-2 rounded-input border border-line bg-surface-2 p-3 font-data text-[13px] text-text">
         {codes.map((c) => (
           <li key={c}>{c}</li>
         ))}
       </ul>
-      <div className="flex gap-3">
-        <Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(codes.join('\n'))}>
-          Copy
-        </Button>
-        <Button type="button" onClick={onDone}>
-          I have saved them
-        </Button>
+      <div className="flex flex-wrap gap-3">
+        <GhostButton onClick={() => navigator.clipboard?.writeText(codes.join('\n'))}>{t('settingsUi.totp.copy')}</GhostButton>
+        <GradientButton size="sm" variant="solid" onClick={onDone}>
+          {t('settingsUi.totp.saved')}
+        </GradientButton>
       </div>
     </div>
   )
 }
 
 /** Scan a QR code, confirm one code, then show recovery codes. */
-export function AuthenticatorEnrol({ onDone }) {
+export function AuthenticatorEnrol({ onDone, autoStart = false }) {
+  const t = useT()
   const start = useAction(api.mfaTotp.startEnrolment)
   const confirm = useMutation(api.mfaTotp.confirmEnrolment)
   const [setup, setSetup] = useState(null)
@@ -66,12 +67,13 @@ export function AuthenticatorEnrol({ onDone }) {
   }, [setup])
 
   const begin = async () => {
+    if (busy) return
     setBusy(true)
     setError('')
     try {
       setSetup(await start({}))
     } catch (err) {
-      setError(errorMessage(err, 'Could not start set-up'))
+      setError(errorMessage(err, t('settingsUi.totp.startFailed')))
     } finally {
       setBusy(false)
     }
@@ -92,25 +94,28 @@ export function AuthenticatorEnrol({ onDone }) {
     }
   }
 
+  useEffect(() => {
+    if (autoStart) begin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start once on mount
+  }, [])
+
   if (codes) return <RecoveryCodes codes={codes} onDone={onDone} />
   return (
     <div className="space-y-4">
-      {error && <p role="alert" className="text-sm text-signal">{error}</p>}
+      <InlineError>{error}</InlineError>
       {!setup ? (
         <Button type="button" onClick={begin} disabled={busy}>
-          {busy ? 'Starting…' : 'Set up an authenticator app'}
+          {busy ? t('settingsUi.totp.starting') : t('settingsUi.totp.setUp')}
         </Button>
       ) : (
         <form className="space-y-4" onSubmit={submit}>
-          <p className="text-sm text-muted">
-            Scan this with Google Authenticator, Microsoft Authenticator, 1Password or similar, then enter the 6-digit code.
-          </p>
+          <p className="text-[13px] leading-[18px] text-muted">{t('settingsUi.totp.scan')}</p>
           {/* eslint-disable-next-line @next/next/no-img-element -- local data: URL */}
-          {qr && <img src={qr} alt="Authenticator set-up QR code" width={200} height={200} className="mx-auto" />}
-          <p className="break-all text-center font-mono text-xs text-muted">{setup.secret}</p>
+          {qr && <img src={qr} alt={t('settingsUi.totp.qrAlt')} width={200} height={200} className="mx-auto rounded-input" />}
+          <p className="break-all text-center font-data text-xs text-muted">{setup.secret}</p>
           <CodeInput id="totp-enrol-code" value={code} onChange={setCode} />
           <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
-            {busy ? 'Checking…' : 'Turn on'}
+            {busy ? t('common.checking') : t('settingsUi.totp.turnOn')}
           </Button>
         </form>
       )}
@@ -120,6 +125,7 @@ export function AuthenticatorEnrol({ onDone }) {
 
 /** Verify this sign-in with an app code or a recovery code. */
 export function AuthenticatorVerify() {
+  const t = useT()
   const verify = useMutation(api.mfaTotp.verify)
   const redeem = useMutation(api.mfaTotp.redeemRecoveryCode)
   const [useRecovery, setUseRecovery] = useState(false)
@@ -143,34 +149,35 @@ export function AuthenticatorVerify() {
 
   return (
     <form className="space-y-5" onSubmit={submit}>
-      {error && <p role="alert" className="text-sm text-signal">{error}</p>}
+      <InlineError>{error}</InlineError>
       {useRecovery ? (
-        <Field label="Recovery code" htmlFor="totp-recovery">
+        <Field label={t('settingsUi.totp.recoveryCode')} htmlFor="totp-recovery">
           <Input id="totp-recovery" required autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} />
         </Field>
       ) : (
         <CodeInput id="totp-code" value={code} onChange={setCode} />
       )}
       <Button type="submit" size="lg" className="w-full" disabled={busy || (!useRecovery && code.length !== 6)}>
-        {busy ? 'Checking…' : 'Verify'}
+        {busy ? t('common.checking') : t('settingsUi.totp.verify')}
       </Button>
       <button
         type="button"
-        className="w-full text-center text-sm text-lake hover:underline"
+        className="w-full rounded text-center text-sm text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         onClick={() => {
           setUseRecovery((v) => !v)
           setCode('')
           setError('')
         }}
       >
-        {useRecovery ? 'Use the authenticator app' : 'Use a recovery code'}
+        {useRecovery ? t('settingsUi.totp.useApp') : t('settingsUi.totp.useRecovery')}
       </button>
     </form>
   )
 }
 
-/** Account page card: set up, regenerate recovery codes, or remove. */
-export function AuthenticatorCard() {
+/** Paper 31 "Sign-in methods" row: status pill, then set up, new codes or remove inline. */
+export function AuthenticatorRow() {
+  const t = useT()
   const status = useQuery(api.mfaTotp.status, {})
   const regenerate = useMutation(api.mfaTotp.regenerateRecoveryCodes)
   const disable = useMutation(api.mfaTotp.disable)
@@ -204,54 +211,60 @@ export function AuthenticatorCard() {
     }
   }
 
-  let body
+  const helper = status.enrolled
+    ? t('settingsUi.totp.helperOn', { count: status.recoveryCodesLeft })
+    : status.available
+      ? t('settingsUi.totp.helperOff')
+      : t('settingsUi.totp.unavailable')
+
+  let body = null
   if (codes) body = <RecoveryCodes codes={codes} onDone={reset} />
-  else if (!status.enrolled) {
-    body = status.available ? (
-      <AuthenticatorEnrol onDone={reset} />
-    ) : (
-      <p className="text-sm text-muted">Authenticator apps are not available on this deployment yet.</p>
-    )
-  } else if (mode) {
+  else if (!status.enrolled && mode === 'enrol') body = <AuthenticatorEnrol onDone={reset} autoStart />
+  else if (status.enrolled && mode) {
     body = (
       <form className="space-y-4" onSubmit={run}>
-        {error && <p role="alert" className="text-sm text-signal">{error}</p>}
+        <InlineError>{error}</InlineError>
         <CodeInput id="totp-manage-code" value={code} onChange={setCode} />
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={reset}>
-            Cancel
-          </Button>
-          <Button type="submit" variant={mode === 'disable' ? 'danger' : 'primary'} disabled={busy || code.length !== 6}>
-            {mode === 'disable' ? 'Remove authenticator app' : 'New recovery codes'}
-          </Button>
+        <div className="flex flex-wrap justify-end gap-3">
+          <GhostButton onClick={reset}>{t('common.cancel')}</GhostButton>
+          {mode === 'disable' ? (
+            <GhostButton type="submit" tone="danger" disabled={busy || code.length !== 6}>
+              {t('settingsUi.totp.remove')}
+            </GhostButton>
+          ) : (
+            <GradientButton type="submit" size="sm" variant="solid" disabled={busy || code.length !== 6}>
+              {t('settingsUi.totp.newCodes')}
+            </GradientButton>
+          )}
         </div>
       </form>
-    )
-  } else {
-    body = (
-      <div className="space-y-3">
-        <p className="text-sm text-chart-ink">
-          On. Every new sign-in asks for a code from your app. {status.recoveryCodesLeft} recovery codes left.
-        </p>
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={() => setMode('regenerate')}>
-            New recovery codes
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => setMode('disable')}>
-            Remove
-          </Button>
-        </div>
-      </div>
     )
   }
 
   return (
-    <div className="page-card space-y-4 p-6">
-      <div>
-        <h2 className="text-base font-semibold text-chart-ink">Authenticator app</h2>
-        <p className="text-sm text-muted">Two-step verification with a 6-digit code from an app on your phone.</p>
-      </div>
-      {body}
-    </div>
+    <>
+      <SettingsRow label={t('settingsUi.totp.title')} helper={helper}>
+        {status.enrolled ? (
+          <>
+            {!mode && !codes && (
+              <>
+                <GhostButton size="sm" onClick={() => setMode('regenerate')}>
+                  {t('settingsUi.totp.newCodes')}
+                </GhostButton>
+                <GhostButton size="sm" tone="danger" onClick={() => setMode('disable')}>
+                  {t('settingsUi.totp.removeShort')}
+                </GhostButton>
+              </>
+            )}
+            <Pill tone="green">{t('settingsUi.on')}</Pill>
+          </>
+        ) : status.available && mode !== 'enrol' && !codes ? (
+          <GhostButton onClick={() => setMode('enrol')}>{t('settingsUi.totp.setUpShort')}</GhostButton>
+        ) : (
+          <Pill tone="neutral">{t('settingsUi.off')}</Pill>
+        )}
+      </SettingsRow>
+      {body && <div className="pb-3">{body}</div>}
+    </>
   )
 }

@@ -6,33 +6,31 @@ import Layout from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
-import NotificationPreferencesCard from '../components/NotificationPreferencesCard'
 import AccountDeletionCard from '../components/AccountDeletionCard'
 import ChatChannelsCard from '../components/ChatChannelsCard'
-import { AuthenticatorCard } from '../components/AuthenticatorApp'
+import { AuthenticatorRow } from '../components/AuthenticatorApp'
+import { GhostButton, GradientButton, Pill } from '../components/ui'
+import { initials } from '../components/ui/Avatar'
 import {
-  PageHeader,
-  FormPage,
-  FormCard,
-  FormSection,
-  FormActions,
-  Field,
-  Input,
-  Button,
-} from '../components/ui'
+  SettingsFrame,
+  SettingsCard,
+  SettingsRow,
+  Notice,
+  InlineError,
+  FIELD,
+  FIELD_LABEL,
+} from '../components/settings'
+import { usePermissions } from '../hooks/usePermission'
+import { routePermission } from '../lib/routePermissions'
+import { useLocale, useT } from '../lib/i18n/context'
 
+/** Account & security (Paper 31, ACU-0). */
 export default function AccountPage() {
   const router = useRouter()
+  const t = useT()
   const { user } = useAuth()
-  const { showToast } = useToast()
-  const changePassword = useAction(api.userAccounts.changePassword)
+  const { roleName } = usePermissions()
   const forced = router.query.force === '1' || user?.mustChangePassword
-
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
   // Wait until Convex clears mustChangePassword before leaving forced flow.
@@ -43,31 +41,113 @@ export default function AccountPage() {
     }
   }, [done, user?.mustChangePassword, router])
 
-  const handleChangePassword = async (e) => {
+  const locked = forced && !done
+  const isPlatformAdmin = (user?.realRole ?? user?.role) === 'super_admin'
+  const eyebrow = [t('settingsUi.account.title'), user?.name, roleName].filter(Boolean).join(' · ')
+
+  return (
+    <ProtectedRoute>
+      <Layout title={t('settingsUi.account.title')} eyebrow={eyebrow}>
+        <SettingsFrame active={null}>
+          {locked && <Notice tone="warn">{t('settingsUi.account.forced')}</Notice>}
+          {!locked && <ProfileCard user={user} />}
+          <div className="flex w-full flex-col items-start gap-5 lg:flex-row">
+            <SignInMethodsCard user={user} locked={locked} onPasswordChanged={() => setDone(true)} />
+            {!locked && <PreferencesCard />}
+          </div>
+          {!locked && !user?.actingAs && !isPlatformAdmin && (
+            <SettingsCard>
+              <ChatChannelsCard />
+            </SettingsCard>
+          )}
+          {!locked && <DataPrivacyCard showDelete={!isPlatformAdmin} />}
+        </SettingsFrame>
+      </Layout>
+    </ProtectedRoute>
+  )
+}
+
+function ProfileCard({ user }) {
+  const t = useT()
+  const { locale, supported } = useLocale()
+  const language = supported.find((l) => l.code === locale)?.label
+  const meta = [user?.email, user?.maskedPhone, language].filter(Boolean).join(' · ')
+  return (
+    <SettingsCard aria-label={t('settingsUi.account.profile')}>
+      <div className="flex flex-wrap items-center gap-[18px]">
+        <span
+          aria-hidden
+          className="flex size-16 shrink-0 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[22px] font-semibold leading-7 text-text"
+        >
+          {initials(user?.name || user?.email || '')}
+        </span>
+        <div className="flex min-w-0 grow basis-0 flex-col gap-1">
+          <div className="text-[20px] font-semibold leading-6 text-text">{user?.name || user?.email}</div>
+          {meta && <div className="truncate text-[13px] leading-4 text-muted">{meta}</div>}
+        </div>
+      </div>
+    </SettingsCard>
+  )
+}
+
+function SignInMethodsCard({ user, locked, onPasswordChanged }) {
+  const t = useT()
+  const [changing, setChanging] = useState(locked)
+  return (
+    <SettingsCard
+      title={t('settingsUi.account.signIn')}
+      meta={user?.mfaTotp ? t('settingsUi.account.strong') : t('settingsUi.account.basic')}
+      className="w-full grow basis-0"
+    >
+      {!locked && <AuthenticatorRow />}
+      {!locked && user?.hasPhone && !user?.actingAs && <PhoneRow user={user} />}
+      <SettingsRow label={t('settingsUi.account.password')} helper={changing ? user?.email : t('settingsUi.account.passwordHelper')}>
+        {!changing && (
+          <GhostButton onClick={() => setChanging(true)}>{t('settingsUi.account.change')}</GhostButton>
+        )}
+      </SettingsRow>
+      {changing && (
+        <PasswordForm
+          locked={locked}
+          onCancel={() => setChanging(false)}
+          onDone={() => {
+            setChanging(false)
+            onPasswordChanged()
+          }}
+        />
+      )}
+    </SettingsCard>
+  )
+}
+
+function PasswordForm({ locked, onCancel, onDone }) {
+  const t = useT()
+  const { showToast } = useToast()
+  const changePassword = useAction(api.userAccounts.changePassword)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (e) => {
     e.preventDefault()
     setError('')
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match')
-      return
-    }
+    if (newPassword.length < 6) return setError(t('settingsUi.account.pwTooShort'))
+    if (newPassword !== confirmPassword) return setError(t('settingsUi.account.pwMismatch'))
     setSaving(true)
     try {
       await changePassword({ currentPassword, newPassword })
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      setDone(true)
-      showToast('success', 'Password updated')
+      showToast('success', t('settingsUi.account.pwUpdated'))
+      onDone()
     } catch (err) {
       const message =
-        err?.message?.includes('InvalidSecret') ||
-        err?.message?.includes('incorrect')
-          ? 'Current password is incorrect'
-          : err.message || 'Failed to change password'
+        err?.message?.includes('InvalidSecret') || err?.message?.includes('incorrect')
+          ? t('settingsUi.account.pwWrong')
+          : err.message || t('settingsUi.account.pwFailed')
       setError(message)
       showToast('error', message)
     } finally {
@@ -75,114 +155,48 @@ export default function AccountPage() {
     }
   }
 
+  const fields = [
+    ['currentPassword', 'pwCurrent', currentPassword, setCurrentPassword, 'current-password'],
+    ['newPassword', 'pwNew', newPassword, setNewPassword, 'new-password'],
+    ['confirmPassword', 'pwConfirm', confirmPassword, setConfirmPassword, 'new-password'],
+  ]
   return (
-    <ProtectedRoute>
-      <Layout title="Account">
-        <FormPage width="md">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Account' },
-            ]}
-            description={
-              forced && !done
-                ? 'You must set a new password before continuing.'
-                : 'Manage your login credentials and notifications.'
-            }
+    <form onSubmit={submit} className="flex flex-col gap-4 pb-3">
+      {fields.map(([id, key, value, set, auto]) => (
+        <div key={id}>
+          <label htmlFor={id} className={FIELD_LABEL}>
+            {t(`settingsUi.account.${key}`)}
+          </label>
+          <input
+            id={id}
+            type="password"
+            autoComplete={auto}
+            required
+            minLength={id === 'currentPassword' ? undefined : 6}
+            aria-describedby={id === 'newPassword' ? 'newPassword-hint' : undefined}
+            value={value}
+            onChange={(e) => set(e.target.value)}
+            className={FIELD}
           />
-
-          {forced && !done && (
-            <div className="mb-5 rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn">
-              An admin created your account with a temporary password. Choose a
-              new password to continue using the app.
-            </div>
+          {id === 'newPassword' && (
+            <p id="newPassword-hint" className="mt-1.5 text-[12px] leading-4 text-muted">
+              {t('settingsUi.account.pwHint')}
+            </p>
           )}
-
-          <FormCard title="Change password" subtitle={user?.email || ''}>
-            <form onSubmit={handleChangePassword} className="space-y-6">
-              <FormSection>
-                <div className="grid grid-cols-1 gap-5">
-                  <Field label="Current password" htmlFor="currentPassword" required>
-                    <Input
-                      id="currentPassword"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                  </Field>
-                  <Field
-                    label="New password"
-                    htmlFor="newPassword"
-                    required
-                    hint="At least 6 characters"
-                  >
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      minLength={6}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Confirm new password" htmlFor="confirmPassword" required>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      minLength={6}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </Field>
-                </div>
-              </FormSection>
-
-              {error && (
-                <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <FormActions>
-                <Button type="submit" disabled={saving}>
-                  {saving ? 'Saving…' : 'Update password'}
-                </Button>
-              </FormActions>
-            </form>
-          </FormCard>
-
-          {!(forced && !done) && (
-            <div className="mt-6">
-              {user?.hasPhone && !user?.phoneVerificationTime && !user?.actingAs && (
-                <div className="mb-6">
-                  <ConfirmPhoneCard maskedPhone={user.maskedPhone} />
-                </div>
-              )}
-              <AuthenticatorCard />
-              <div className="mt-6">
-                <NotificationPreferencesCard />
-              </div>
-              {!user?.actingAs && (user?.realRole ?? user?.role) !== 'super_admin' && (
-                <div className="mt-6">
-                  <ChatChannelsCard />
-                </div>
-              )}
-              {(user?.realRole ?? user?.role) !== 'super_admin' && (
-                <div className="mt-6">
-                  <AccountDeletionCard />
-                </div>
-              )}
-            </div>
-          )}
-        </FormPage>
-      </Layout>
-    </ProtectedRoute>
+        </div>
+      ))}
+      <InlineError>{error}</InlineError>
+      <div className="flex flex-wrap justify-end gap-3">
+        {!locked && (
+          <GhostButton onClick={onCancel} disabled={saving}>
+            {t('common.cancel')}
+          </GhostButton>
+        )}
+        <GradientButton type="submit" size="sm" variant="solid" disabled={saving}>
+          {saving ? t('settingsUi.saving') : t('settingsUi.account.pwSubmit')}
+        </GradientButton>
+      </div>
+    </form>
   )
 }
 
@@ -190,7 +204,8 @@ export default function AccountPage() {
  * A number an admin entered is not used for phone sign-in until its owner
  * confirms it with a code (ORG-002).
  */
-function ConfirmPhoneCard({ maskedPhone }) {
+function PhoneRow({ user }) {
+  const t = useT()
   const { showToast } = useToast()
   const start = useAction(api.mfa.startPhoneConfirmation)
   const confirm = useAction(api.mfa.confirmPhone)
@@ -198,6 +213,7 @@ function ConfirmPhoneCard({ maskedPhone }) {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const confirmed = Boolean(user.phoneVerificationTime)
 
   const send = async () => {
     setError('')
@@ -205,9 +221,9 @@ function ConfirmPhoneCard({ maskedPhone }) {
     try {
       const res = await start({ channel: 'sms' })
       if (res.ok) setSentTo(res.sentTo)
-      else setError(res.error || 'Could not send the code')
+      else setError(res.error || t('settingsUi.account.codeSendFailed'))
     } catch (err) {
-      setError(err?.data?.message || err?.message || 'Could not send the code')
+      setError(err?.data?.message || err?.message || t('settingsUi.account.codeSendFailed'))
     } finally {
       setBusy(false)
     }
@@ -219,47 +235,90 @@ function ConfirmPhoneCard({ maskedPhone }) {
     setBusy(true)
     try {
       const res = await confirm({ code })
-      if (res.ok) showToast('success', 'Phone number confirmed')
-      else setError(res.error || 'That code is not right.')
+      if (res.ok) showToast('success', t('settingsUi.account.phoneConfirmed'))
+      else setError(res.error || t('settingsUi.account.codeWrong'))
     } catch (err) {
-      setError(err?.data?.message || err?.message || 'Could not confirm the number')
+      setError(err?.data?.message || err?.message || t('settingsUi.account.phoneConfirmFailed'))
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <FormCard
-      title="Confirm your phone number"
-      subtitle={`${maskedPhone || ''} was added by an admin. Confirm it to sign in with your phone.`}
-    >
-      <form onSubmit={submit} className="space-y-4">
-        {sentTo && (
-          <Field label={`Code sent to ${sentTo}`} htmlFor="phoneConfirmCode" required>
-            <Input
-              id="phoneConfirmCode"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-          </Field>
+    <>
+      <SettingsRow
+        label={t('settingsUi.account.phone')}
+        helper={
+          confirmed
+            ? user.maskedPhone
+            : t('settingsUi.account.phoneUnconfirmed', { phone: user.maskedPhone || '' })
+        }
+      >
+        {confirmed ? (
+          <Pill tone="green">{t('settingsUi.account.confirmed')}</Pill>
+        ) : (
+          <GhostButton onClick={send} disabled={busy}>
+            {sentTo ? t('settingsUi.account.sendAgain') : t('settingsUi.account.sendCode')}
+          </GhostButton>
         )}
-        {error && (
-          <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">{error}</div>
-        )}
-        <FormActions>
-          <Button type="button" variant={sentTo ? 'secondary' : undefined} disabled={busy} onClick={send}>
-            {sentTo ? 'Send again' : 'Send code by SMS'}
-          </Button>
+      </SettingsRow>
+      {!confirmed && (sentTo || error) && (
+        <form onSubmit={submit} className="flex flex-col gap-3 pb-3">
           {sentTo && (
-            <Button type="submit" disabled={busy || !code.trim()}>
-              Confirm
-            </Button>
+            <div>
+              <label htmlFor="phoneConfirmCode" className={FIELD_LABEL}>
+                {t('settingsUi.account.codeSentTo', { to: sentTo })}
+              </label>
+              <div className="flex gap-3">
+                <input
+                  id="phoneConfirmCode"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className={FIELD}
+                />
+                <GradientButton type="submit" size="sm" variant="solid" disabled={busy || !code.trim()}>
+                  {t('settingsUi.account.confirm')}
+                </GradientButton>
+              </div>
+            </div>
           )}
-        </FormActions>
-      </form>
-    </FormCard>
+          <InlineError>{error}</InlineError>
+        </form>
+      )}
+    </>
+  )
+}
+
+/** Links to the per-user settings that live on their own pages. */
+function PreferencesCard() {
+  const t = useT()
+  return (
+    <SettingsCard title={t('settingsUi.account.preferences')} className="w-full grow basis-0">
+      <SettingsRow label={t('settingsUi.account.notifications')} helper={t('settingsUi.account.notificationsHelper')}>
+        <GhostButton href="/notifications">{t('settingsUi.account.manage')}</GhostButton>
+      </SettingsRow>
+    </SettingsCard>
+  )
+}
+
+function DataPrivacyCard({ showDelete }) {
+  const t = useT()
+  const { can } = usePermissions()
+  const canExport = can(routePermission('/export'))
+  if (!canExport && !showDelete) return null
+  return (
+    <SettingsCard title={t('settingsUi.account.dataPrivacy')}>
+      {canExport && (
+        <SettingsRow label={t('settingsUi.account.download')} helper={t('settingsUi.account.downloadHelper')}>
+          <GradientButton href="/export" size="sm">
+            {t('settingsUi.account.downloadAction')}
+          </GradientButton>
+        </SettingsRow>
+      )}
+      {showDelete && <AccountDeletionCard />}
+    </SettingsCard>
   )
 }
