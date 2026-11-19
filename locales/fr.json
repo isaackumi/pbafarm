@@ -3434,6 +3434,36 @@
         "csv": "Télécharger CSV",
         "json": "Télécharger JSON"
       }
+    },
+    "notif": {
+      "eyebrow": {
+        "one": "Boîte de réception · {count} non lue",
+        "other": "Boîte de réception · {count} non lues"
+      },
+      "preferences": "Préférences",
+      "type": {
+        "error": "Alerte",
+        "warning": "Avertissement",
+        "success": "Terminé",
+        "info": "Info"
+      },
+      "delivery": "Diffusion",
+      "perChannel": "Par canal",
+      "deliveryIntro": "Votre administrateur décide quelles alertes existent ; vous choisissez où elles vous parviennent.",
+      "channel": {
+        "inApp": "Dans l’application",
+        "sms": "SMS",
+        "whatsapp": "WhatsApp",
+        "email": "E-mail"
+      },
+      "inAppHint": "La cloche en haut de l’écran",
+      "noPhone": "Aucun numéro de téléphone sur votre compte",
+      "noEmail": "Aucune adresse e-mail sur votre compte",
+      "saved": "Paramètres de notification enregistrés",
+      "quietHours": "Heures calmes",
+      "quietHelper": "Suspend SMS, WhatsApp et e-mail la nuit. L’application reçoit toujours ; heure de la ferme.",
+      "quietFrom": "De",
+      "quietUntil": "Jusqu’à"
     }
   },
   "country": {

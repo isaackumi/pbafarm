@@ -164,3 +164,49 @@ export function InlineSuccess({ children, className = '' }) {
 export function CardNote({ children, className = '' }) {
   return <p className={`border-t border-line py-3 text-[13px] leading-4 text-muted ${className}`}>{children}</p>
 }
+
+/**
+ * Underline tab bar (Paper 30 Notifications, 47 Audit log): 28px gap, 2px
+ * button-colour underline on the active tab, hairline under the row.
+ * tabs: [{ value, label, count }]. WAI-ARIA tablist with arrow keys.
+ */
+export function LineTabs({ tabs = [], value, onChange, label, className = '' }) {
+  const onKeyDown = (e) => {
+    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+    if (!step) return
+    e.preventDefault()
+    const i = Math.max(0, tabs.findIndex((tab) => tab.value === value))
+    const next = tabs[(i + step + tabs.length) % tabs.length]
+    onChange?.(next.value)
+    e.currentTarget.querySelector(`[data-tab="${next.value}"]`)?.focus()
+  }
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className={`flex flex-wrap gap-x-7 border-b border-line ${className}`}
+    >
+      {tabs.map((tab) => {
+        const on = tab.value === value
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            data-tab={tab.value}
+            aria-selected={on}
+            tabIndex={on ? 0 : -1}
+            onClick={() => onChange?.(tab.value)}
+            className={`-mb-px rounded-t-sm border-b-2 pb-3 text-[14px] leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+              on ? 'border-button font-medium text-text' : 'border-transparent text-muted hover:text-text'
+            }`}
+          >
+            {tab.label}
+            {tab.count != null && <span className="ml-1">{tab.count}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}

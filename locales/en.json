@@ -3434,6 +3434,36 @@
         "csv": "Download CSV",
         "json": "Download JSON"
       }
+    },
+    "notif": {
+      "eyebrow": {
+        "one": "Inbox · {count} unread",
+        "other": "Inbox · {count} unread"
+      },
+      "preferences": "Preferences",
+      "type": {
+        "error": "Alert",
+        "warning": "Warning",
+        "success": "Done",
+        "info": "Info"
+      },
+      "delivery": "Delivery",
+      "perChannel": "Per channel",
+      "deliveryIntro": "Your admin decides which alerts exist; you choose where they reach you.",
+      "channel": {
+        "inApp": "In the app",
+        "sms": "SMS",
+        "whatsapp": "WhatsApp",
+        "email": "Email"
+      },
+      "inAppHint": "The bell at the top of the screen",
+      "noPhone": "No phone number on your account yet",
+      "noEmail": "No email address on your account yet",
+      "saved": "Notification settings saved",
+      "quietHours": "Quiet hours",
+      "quietHelper": "Pause SMS, WhatsApp and email at night. In-app still arrives; farm time.",
+      "quietFrom": "From",
+      "quietUntil": "Until"
     }
   },
   "country": {
