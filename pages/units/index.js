@@ -75,7 +75,7 @@ function Board({ data, latest }) {
             type="button"
             aria-pressed={alertsOnly}
             onClick={() => setAlertsOnly((v) => !v)}
-            className={`rounded-pill border px-[14px] py-2 text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+            className={`rounded-pill border px-[14px] py-2 text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
               alertsOnly ? 'border-alert bg-surface-2 text-alert' : 'border-[var(--pill-red-border)] text-alert hover:bg-surface-2'
             }`}
           >

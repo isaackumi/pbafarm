@@ -198,7 +198,7 @@ function Composer({ chat, inputRef, compact = false }) {
         placeholder={t('assistantUi.placeholder')}
         aria-label={t('assistantUi.inputLabel')}
         disabled={chat.busy}
-        className="min-w-0 grow basis-0 bg-transparent text-[14px] text-text placeholder:text-faint focus:outline-none"
+        className="min-w-0 grow basis-0 bg-transparent text-[14px] leading-[18px] text-text placeholder:text-faint focus:outline-none"
       />
       <button
         type="submit"
@@ -376,7 +376,7 @@ export function AssistantPage() {
                     key={k}
                     type="button"
                     onClick={() => chat.send(t(`assistantUi.prompt.${k}`))}
-                    className={`rounded-pill border border-line-strong px-[14px] py-2 text-sm text-text hover:bg-surface-2 ${focusRing}`}
+                    className={`rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 ${focusRing}`}
                   >
                     {t(`assistantUi.prompt.${k}`)}
                   </button>
@@ -405,7 +405,7 @@ export function AssistantPage() {
           <div className="flex w-full flex-col gap-5 xl:basis-0 xl:grow">
             <DashboardInsights locationId={locationArgs?.locationId} aiEnabled title={t('assistantUi.insights')} />
             <section aria-labelledby="ai-try-title" className={`${card} flex flex-col gap-[10px] px-[26px] py-6`}>
-              <h2 id="ai-try-title" className="pb-[6px] text-base font-semibold text-text">
+              <h2 id="ai-try-title" className="pb-[6px] text-[15px] font-semibold leading-[18px] text-text">
                 {t('assistantUi.tryAsking')}
               </h2>
               {PROMPTS.map((k) => (
@@ -416,7 +416,7 @@ export function AssistantPage() {
                     chat.setInput(t(`assistantUi.prompt.${k}`))
                     inputRef.current?.focus()
                   }}
-                  className={`rounded-[10px] bg-surface-2 px-[14px] py-3 text-left text-sm text-text hover:bg-line ${focusRing}`}
+                  className={`rounded-[12px] bg-surface-2 px-[14px] py-3 text-left text-[13px] leading-4 text-text hover:bg-line ${focusRing}`}
                 >
                   {t(`assistantUi.prompt.${k}`)}
                 </button>

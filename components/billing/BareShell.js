@@ -6,7 +6,7 @@ import { useT } from '../../lib/i18n/context'
 import { AnowaLockup } from '../brand/AnowaLogo'
 
 const LINK =
-  'rounded-pill px-3 py-[6px] text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+  'rounded-pill px-3 py-[6px] text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
 /**
  * Minimal page frame for a suspended organization: the app shell's queries

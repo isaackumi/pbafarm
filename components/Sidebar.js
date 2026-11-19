@@ -198,10 +198,11 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
       <div className={`flex items-center ${collapsed ? 'flex-col gap-3' : 'justify-between gap-2'}`}>
         <Link
           href="/dashboard"
-          className={`flex min-w-0 items-center gap-2.5 ${collapsed ? '' : 'px-1.5'}`}
+          className={`flex min-w-0 items-center gap-2.5 ${collapsed ? '' : 'h-6 px-1.5'}`}
           title="Anowa"
         >
-          {collapsed ? <AnowaMark size={32} /> : <AnowaLockup height={26} />}
+          {/* Paper Brand row: 22px mark + 20px wordmark on a 24px line */}
+          {collapsed ? <AnowaMark size={32} /> : <AnowaLockup height={22} />}
         </Link>
         {typeof onMobileClose === 'function' && mobileOpen && (
           <button
@@ -217,7 +218,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
           <button
             type="button"
             onClick={onToggle}
-            className="hidden lg:block rounded-pill p-1.5 text-faint hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            className="hidden lg:block -my-1 rounded-pill p-1.5 text-faint hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             aria-label={collapsed ? t('nav.expand') : t('nav.collapse')}
           >
             {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}

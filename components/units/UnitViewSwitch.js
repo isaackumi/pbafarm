@@ -25,7 +25,7 @@ export default function UnitViewSwitch({ className = '' }) {
             key={v.href}
             href={v.href}
             aria-current={active ? 'page' : undefined}
-            className={`rounded-pill px-4 py-[7px] text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+            className={`rounded-pill px-4 py-[7px] text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
               active ? 'bg-button font-medium text-button-text' : 'text-muted hover:text-text'
             }`}
           >
@@ -45,7 +45,7 @@ export function FilterSelect({ label, value, onChange, children, className = '' 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="cursor-pointer appearance-none bg-transparent py-2 pl-[14px] pr-8 text-sm leading-4 text-text focus:outline-none"
+        className="cursor-pointer appearance-none bg-transparent py-2 pl-[14px] pr-8 text-[13px] leading-4 text-text focus:outline-none"
       >
         {children}
       </select>

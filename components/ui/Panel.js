@@ -16,7 +16,7 @@ export function Panel({ title, titleId, meta, action, children, className = '', 
       {(title || meta || action) && (
         <div className="flex items-center justify-between gap-3 pb-[10px]">
           {title && (
-            <h2 id={titleId} className="font-sans text-base font-semibold leading-[18px] text-text">
+            <h2 id={titleId} className="font-sans text-[15px] font-semibold leading-[18px] text-text">
               {title}
             </h2>
           )}
@@ -31,7 +31,7 @@ export function Panel({ title, titleId, meta, action, children, className = '', 
 
 function PanelAction({ label, href, onClick }) {
   const cls =
-    'inline-flex items-center gap-1 rounded-sm text-sm leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+    'inline-flex items-center gap-1 rounded-sm text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
   if (href) {
     return (
       <Link href={href} className={cls}>

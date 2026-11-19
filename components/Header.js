@@ -196,8 +196,10 @@ function NavSearch() {
   )
 }
 
+// 40px hit area; from lg the negative margin gives each icon Paper's 20px slot
+// (7Z-0: bell and avatar 20px apart).
 const ICON_BTN =
-  'relative flex items-center justify-center rounded-pill text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan h-10 w-10 transition-colors'
+  'relative flex items-center justify-center rounded-pill text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan h-10 w-10 lg:-m-2.5 transition-colors'
 const MENU =
   'absolute right-0 mt-2 rounded-[14px] border border-line bg-surface py-1 shadow-[var(--shadow-md)] z-50'
 const MENU_ITEM =

@@ -46,6 +46,8 @@
   --pill-amber-text: #fbbf24;
   --pill-red-border: #6b3a3a;
   --pill-red-text: #f87171;
+  /* Card edge for a unit with an alert (Paper 02 C-07) */
+  --unit-alert-border: #4a2a2a;
 
   /* Tinted fills for status badges and banners (Paper 62/63); derived so both themes follow */
   --alert-tint-bg: color-mix(in srgb, var(--alert) 9%, var(--surface));
@@ -163,6 +165,7 @@ html[data-theme='light'] {
   --pill-amber-text: #b45309;
   --pill-red-border: #f5c2c2;
   --pill-red-text: #dc2626;
+  --unit-alert-border: #fde2e2;
 
   --kelp-soft: #22c55e;
   --signal-soft: #fca5a5;
