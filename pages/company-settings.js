@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
+import Link from 'next/link'
 import Layout from '../components/Layout'
+import { GhostButton, GradientButton, Toggle } from '../components/ui'
 import {
-  PageHeader,
-  Button,
-  TabBar,
-  FormCard,
-  Field,
-  Input,
-  Select,
-  Textarea,
-  Card,
-} from '../components/ui'
+  FIELD,
+  LineTabs,
+  Notice,
+  SettingsCard,
+  SettingsField as Field,
+  SettingsFrame,
+  SettingsRow,
+  useSettingsEyebrow,
+  RouteGate,
+} from '../components/settings'
+import { useT } from '../lib/i18n/context'
 import { api } from '../convex/_generated/api'
 import { sha256HexOfFile } from '../lib/fileHash'
 import { useToast } from '../components/Toast'
@@ -23,14 +26,7 @@ import DataPrivacyCard from '../components/DataPrivacyCard'
 import BrandContrast from '../components/BrandContrast'
 import { checkBrandAccent } from '../convex/lib/contrast'
 
-const TABS = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'branding', label: 'Branding & theme' },
-  { id: 'farm', label: 'Farm rules' },
-  { id: 'stocking', label: 'Stocking rules' },
-  { id: 'feed', label: 'Feed & inventory' },
-  { id: 'data', label: 'Data and privacy' },
-]
+const TABS = ['profile', 'branding', 'farm', 'stocking', 'feed', 'data']
 
 function emptyDraft() {
   return {
@@ -91,14 +87,14 @@ function deepEqual(a, b) {
 export default function CompanySettingsPage() {
   return (
     <ProtectedRoute permission="org.settings.manage">
-      <Layout title="Company Settings">
-        <CompanySettings />
-      </Layout>
+      <CompanySettings />
     </ProtectedRoute>
   )
 }
 
 function CompanySettings() {
+  const t = useT()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.nav.company'))
   const { showToast } = useToast()
   const { user } = useAuth()
   const draftQuery = useQuery(
@@ -163,9 +159,9 @@ function CompanySettings() {
     setSaving(true)
     try {
       await saveDraft({ draft })
-      showToast('success', 'Draft saved')
+      showToast('success', t('settingsUi.company.toast.saved'))
     } catch (e) {
-      showToast('error', e.message || 'Failed to save draft')
+      showToast('error', e.message || t('settingsUi.company.toast.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -184,10 +180,10 @@ function CompanySettings() {
             : 'light'
           : branding.themeMode || 'light'
       applyBrandToDocument(branding, mode)
-      showToast('success', 'Settings published — now live across the farm')
+      showToast('success', t('settingsUi.company.toast.published'))
       if (result?.company?.logo_url) setLogoUrl(result.company.logo_url)
     } catch (e) {
-      showToast('error', e.message || 'Publish failed')
+      showToast('error', e.message || t('settingsUi.company.toast.publishFailed'))
     } finally {
       setPublishing(false)
     }
@@ -213,208 +209,137 @@ function CompanySettings() {
       const { logoUrl: url } = await setLogo({ storageId, uploadId })
       setDraft((d) => ({ ...d, logoStorageId: storageId }))
       setLogoUrl(url)
-      showToast('success', 'Logo uploaded (publish to keep with draft sync)')
+      showToast('success', t('settingsUi.company.toast.logoUploaded'))
     } catch (err) {
-      showToast('error', err.message || 'Logo upload failed')
+      showToast('error', err.message || t('settingsUi.company.toast.logoFailed'))
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
 
+  const patchBranding = (key, value) => patch(`branding.${key}`, value)
+
   const onClearLogo = async () => {
     try {
       await clearLogo()
       setDraft((d) => ({ ...d, logoStorageId: undefined }))
       setLogoUrl(null)
-      showToast('success', 'Logo removed')
+      showToast('success', t('settingsUi.company.toast.logoRemoved'))
     } catch (e) {
-      showToast('error', e.message || 'Failed to remove logo')
+      showToast('error', e.message || t('settingsUi.company.toast.logoRemoveFailed'))
     }
   }
 
-  if (!user?.companyId) {
-    return (
-      <div className="max-w-xl space-y-4">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Company settings' },
-          ]}
-          description="Link a company to your account before editing farm settings."
-        />
-        <Card className="space-y-3">
-          <p className="text-sm text-chart-ink font-medium">
-            No company is linked to your account.
-          </p>
-          <p className="text-sm text-muted">
-            Register a company, or ask a super admin to approve your registration
-            and attach you as admin. Platform super admins without a tenant company
-            manage registrations from Admin instead.
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button href="/register-company" size="sm">
-              Register company
-            </Button>
-            <Button href="/admin/company-registrations" variant="secondary" size="sm">
-              Company registrations
-            </Button>
-            <Button href="/dashboard" variant="ghost" size="sm">
-              Dashboard
-            </Button>
-          </div>
-        </Card>
-      </div>
+  const shell = (content, actions = null) => (
+    <Layout title={t('settingsUi.company.title')} eyebrow={eyebrow} actions={actions}>
+      <SettingsFrame active="company">{content}</SettingsFrame>
+    </Layout>
+  )
+
+  if (!user?.companyId || draftQuery?.missingCompany) {
+    return shell(
+      <SettingsCard title={t('settingsUi.company.noCompany')} className="max-w-xl">
+        <p className="text-[13px] leading-4 text-muted">{t('settingsUi.company.noCompanyHelp')}</p>
+        <div className="flex flex-wrap gap-2 pt-3">
+          <RouteGate href="/register-company"><GradientButton href="/register-company" variant="solid">{t('settingsUi.company.register')}</GradientButton></RouteGate>
+          {!user?.companyId && <RouteGate href="/admin/company-registrations"><GhostButton href="/admin/company-registrations">{t('settingsUi.company.registrations')}</GhostButton></RouteGate>}
+          {!user?.companyId && <RouteGate href="/dashboard"><GhostButton href="/dashboard">{t('nav.item.dashboard')}</GhostButton></RouteGate>}
+        </div>
+      </SettingsCard>,
     )
   }
 
   if (draftQuery === undefined) {
-    return <p className="text-muted text-sm">Loading settings…</p>
-  }
-
-  if (draftQuery.missingCompany) {
-    return (
-      <div className="max-w-xl space-y-4">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Company settings' },
-          ]}
-          description="Link a company to your account before editing farm settings."
-        />
-        <Card className="space-y-3">
-          <p className="text-sm text-chart-ink font-medium">
-            No company is linked to your account.
-          </p>
-          <p className="text-sm text-muted">
-            Register a company, or ask a super admin to approve your registration
-            and attach you as admin.
-          </p>
-          <Button href="/register-company" size="sm">
-            Register company
-          </Button>
-        </Card>
-      </div>
-    )
+    return shell(<p className="text-[13px] text-muted">{t('common.loading')}</p>)
   }
 
   const ruleSummary = [
     draft.stockingRules?.requireApprovalForStocking
-      ? 'Stocking requires approval'
-      : 'Stocking auto-approves',
+      ? t('settingsUi.company.rs.stockApproval')
+      : t('settingsUi.company.rs.stockAuto'),
     draft.stockingRules?.requireApprovalForTopup
-      ? 'Top-ups require approval'
-      : 'Top-ups auto-approve',
+      ? t('settingsUi.company.rs.topupApproval')
+      : t('settingsUi.company.rs.topupAuto'),
     draft.stockingRules?.requireApprovalForFishTransfer
-      ? 'Fish transfers require approval'
-      : 'Fish transfers auto-approve',
+      ? t('settingsUi.company.rs.transferApproval')
+      : t('settingsUi.company.rs.transferAuto'),
     draft.stockingRules?.enforceCageCapacity
-      ? 'Cage capacity enforced'
-      : 'Cage capacity not enforced',
-    `Max density ${draft.farmRules?.maxDensityFishPerM3} fish/m³`,
-    `Harvest target ${draft.farmRules?.targetHarvestAbwG}g · DOC ${draft.farmRules?.harvestDocMinDays}–${draft.farmRules?.harvestDocMaxDays}d`,
-    `Mortality alerts ${draft.farmRules?.dailyMortalityAlertPct}%/day · ${draft.farmRules?.cumulativeMortalityAlertPct}% cumulative`,
+      ? t('settingsUi.company.rs.capacityOn')
+      : t('settingsUi.company.rs.capacityOff'),
+    t('settingsUi.company.rs.density', { value: draft.farmRules?.maxDensityFishPerM3 }),
+    t('settingsUi.company.rs.harvest', { abw: draft.farmRules?.targetHarvestAbwG, min: draft.farmRules?.harvestDocMinDays, max: draft.farmRules?.harvestDocMaxDays }),
+    t('settingsUi.company.rs.mortality', { daily: draft.farmRules?.dailyMortalityAlertPct, cum: draft.farmRules?.cumulativeMortalityAlertPct }),
   ]
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Company settings' },
-        ]}
-        description="Edit farm branding and operating rules. Preview changes, save a draft, then publish to make them live."
-        related={[
-          { label: 'Messaging (SMS, WhatsApp, email)', href: '/messaging-settings' },
-          { label: 'Automations', href: '/automations' },
-        ]}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDiscard}
-              disabled={!dirty || !published}
-            >
-              Discard
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onSaveDraft}
-              disabled={saving}
-            >
-              {saving ? 'Saving…' : 'Save draft'}
-            </Button>
-            <Button size="sm" onClick={onPublish} disabled={publishing}>
-              {publishing ? 'Publishing…' : 'Publish'}
-            </Button>
-          </div>
-        }
+    shell(
+    <div className="flex flex-col gap-5">
+      <p className="text-[14px] leading-[18px] text-muted">
+        {t('settingsUi.company.description')}{' '}
+        <RouteGate href="/messaging-settings"><Link href="/messaging-settings" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.company.related.messaging')}</Link></RouteGate>
+        {' · '}
+        <RouteGate href="/automations"><Link href="/automations" className="text-pearl-cyan underline-offset-2 hover:underline">{t('settingsUi.nav.automations')}</Link></RouteGate>
+      </p>
+
+      {dirty && <Notice tone="warn" role="status">{t('settingsUi.company.unpublished')}</Notice>}
+
+      <LineTabs
+        label={t('settingsUi.company.title')}
+        tabs={TABS.map((id) => ({ value: id, label: t(`settingsUi.company.tab.${id}`) }))}
+        value={tab}
+        onChange={setTab}
       />
 
-      {dirty && (
-        <p className="mb-4 text-sm text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-2">
-          Unpublished changes — save a draft or publish to apply.
-        </p>
-      )}
-
-      <div className="mb-5">
-        <TabBar tabs={TABS} active={tab} onChange={setTab} />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_20rem] gap-6">
-        <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_20rem]">
+        <div className="flex min-w-0 flex-col gap-5">
           {tab === 'profile' && (
-            <FormCard title="Company profile">
-              <div className="space-y-4">
-                <Field label="Company name" required>
-                  <Input
+            <SettingsCard title={t('settingsUi.company.profile.title')}>
+              <div className="flex flex-col gap-4">
+                <Field label={t('settingsUi.company.f.name')} required>
+                  <input className={FIELD}
                     value={draft.name || ''}
                     onChange={(e) => patch('name', e.target.value)}
                   />
                 </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Abbreviation">
-                    <Input
+                  <Field label={t('settingsUi.company.f.abbr')}>
+                    <input className={FIELD}
                       value={draft.abbreviation || ''}
                       onChange={(e) => patch('abbreviation', e.target.value)}
                     />
                   </Field>
-                  <Field label="Phone">
-                    <Input
+                  <Field label={t('settingsUi.company.f.phone')}>
+                    <input className={FIELD}
                       value={draft.contactPhone || ''}
                       onChange={(e) => patch('contactPhone', e.target.value)}
                     />
                   </Field>
                 </div>
-                <Field label="Contact email">
-                  <Input
+                <Field label={t('settingsUi.company.f.email')}>
+                  <input className={FIELD}
                     type="email"
                     value={draft.contactEmail || ''}
                     onChange={(e) => patch('contactEmail', e.target.value)}
                   />
                 </Field>
-                <Field label="Address">
-                  <Textarea
+                <Field label={t('settingsUi.company.f.address')}>
+                  <textarea className={FIELD}
                     value={draft.address || ''}
                     onChange={(e) => patch('address', e.target.value)}
                   />
                 </Field>
-                <Field label="Logo">
+                <Field label={t('settingsUi.company.f.logo')}>
                   <div className="flex flex-wrap items-center gap-3">
                     {logoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={logoUrl}
-                        alt="Company logo"
-                        className="h-14 w-14 rounded-xl object-cover border border-foam-deep"
+                        alt={t('settingsUi.company.a.logo')}
+                        className="h-14 w-14 rounded-input border border-line object-cover"
                       />
                     ) : (
-                      <div className="h-14 w-14 rounded-xl bg-foam border border-foam-deep" />
+                      <div className="h-14 w-14 rounded-input border border-line bg-surface-2" />
                     )}
                     <input
                       ref={fileRef}
@@ -423,115 +348,92 @@ function CompanySettings() {
                       className="hidden"
                       onChange={onLogo}
                     />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={uploading}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      {uploading ? 'Uploading…' : 'Upload'}
-                    </Button>
+                    <GhostButton disabled={uploading} onClick={() => fileRef.current?.click()}>
+                      {uploading ? t('settingsUi.company.uploading') : t('settingsUi.company.upload')}
+                    </GhostButton>
                     {logoUrl && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={onClearLogo}
-                      >
-                        Remove
-                      </Button>
+                      <GhostButton tone="danger" onClick={onClearLogo}>{t('settingsUi.company.remove')}</GhostButton>
                     )}
                   </div>
                 </Field>
               </div>
-            </FormCard>
+            </SettingsCard>
           )}
           {tab === 'profile' && <OrgProfileCard />}
           {tab === 'data' && <DataPrivacyCard />}
 
           {tab === 'branding' && (
-            <FormCard title="Branding & theme">
-              <div className="space-y-4">
-                <Field label="Display name" hint="Shown in sidebar if set">
-                  <Input
+            <SettingsCard title={t('settingsUi.company.tab.branding')}>
+              <div className="flex flex-col gap-4">
+                <Field label={t('settingsUi.company.f.displayName')} hint={t('settingsUi.company.h.displayName')}>
+                  <input className={FIELD}
                     value={draft.branding?.displayName || ''}
-                    onChange={(e) => patch('branding.displayName', e.target.value)}
+                    onChange={(e) => patchBranding('displayName', e.target.value)}
                   />
                 </Field>
-                <Field label="Accent color">
+                <Field label={t('settingsUi.company.f.accent')}>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={draft.branding?.accentHex || '#18181B'}
-                      onChange={(e) => patch('branding.accentHex', e.target.value)}
-                      aria-label="Pick accent color"
-                      className="h-11 w-14 cursor-pointer rounded-lg border border-input-border bg-surface"
+                      onChange={(e) => patchBranding('accentHex', e.target.value)}
+                      aria-label={t('settingsUi.company.a.pick')}
+                      className="h-10 w-14 cursor-pointer rounded-input border border-line bg-surface-2"
                     />
-                    <Input
+                    <input
                       value={draft.branding?.accentHex || '#18181B'}
-                      onChange={(e) => patch('branding.accentHex', e.target.value)}
-                      aria-label="Accent color hex"
-                      className="font-data max-w-[10rem]"
+                      onChange={(e) => patchBranding('accentHex', e.target.value)}
+                      aria-label={t('settingsUi.company.a.hex')}
+                      className={`${FIELD} max-w-[10rem] font-data`}
                     />
                   </div>
                   <BrandContrast
                     hex={draft.branding?.accentHex || '#18181B'}
-                    onUse={(hex) => patch('branding.accentHex', hex)}
+                    onUse={(hex) => patchBranding('accentHex', hex)}
                   />
                 </Field>
-                <Field label="Theme mode">
-                  <Select
+                <Field label={t('settingsUi.company.f.theme')}>
+                  <select className={FIELD}
                     value={draft.branding?.themeMode || 'light'}
-                    onChange={(e) => patch('branding.themeMode', e.target.value)}
+                    onChange={(e) => patchBranding('themeMode', e.target.value)}
                   >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System (user can toggle)</option>
-                  </Select>
+                    <option value="light">{t('settingsUi.company.theme.light')}</option>
+                    <option value="dark">{t('settingsUi.company.theme.dark')}</option>
+                    <option value="system">{t('settingsUi.company.theme.system')}</option>
+                  </select>
                 </Field>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.aiAssistantEnabled}
-                    onChange={(e) => patch('aiAssistantEnabled', e.target.checked)}
-                  />
-                  Enable AI assistant for this company
-                </label>
+                <SettingsRow label={t('settingsUi.company.cb.ai')}>
+                  <Toggle checked={!!draft.aiAssistantEnabled} onChange={(v) => patch('aiAssistantEnabled', v)} label={t('settingsUi.company.cb.ai')} />
+                </SettingsRow>
               </div>
-            </FormCard>
+            </SettingsCard>
           )}
 
           {tab === 'farm' && (
-            <FormCard
-              title="Farm rules"
-              subtitle="Used for harvest guidance, density checks, and mortality alerts."
-            >
+            <SettingsCard title={t('settingsUi.company.tab.farm')}>
+              <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.company.farm.sub')}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  ['farmRules.targetHarvestAbwG', 'Target harvest ABW (g)'],
-                  ['farmRules.harvestDocMinDays', 'Harvest DOC min (days)'],
-                  ['farmRules.harvestDocMaxDays', 'Harvest DOC max (days)'],
-                  ['farmRules.maxDensityFishPerM3', 'Max cage density (fish/m³ of net)'],
-                  ['farmRules.maxDensityFishPerM2', 'Max pond density (fish/m² of surface)'],
-                  ['farmRules.maxDensityTankFishPerM3', 'Max tank and RAS density (fish/m³, 0 = same as cages)'],
-                  ['farmRules.densityWarnPct', 'Density warning at % of limit'],
-                  ['farmRules.dailyMortalityAlertPct', 'Daily mortality alert %'],
-                  [
-                    'farmRules.cumulativeMortalityAlertPct',
-                    'Cumulative mortality alert %',
-                  ],
-                  ['farmRules.targetFcr', 'Target FCR'],
-                  ['farmRules.maxFcrAlert', 'Max FCR alert'],
-                ].map(([path, label]) => {
+                  ['farmRules.targetHarvestAbwG'],
+                  ['farmRules.harvestDocMinDays'],
+                  ['farmRules.harvestDocMaxDays'],
+                  ['farmRules.maxDensityFishPerM3'],
+                  ['farmRules.maxDensityFishPerM2'],
+                  ['farmRules.maxDensityTankFishPerM3'],
+                  ['farmRules.densityWarnPct'],
+                  ['farmRules.dailyMortalityAlertPct'],
+                  ['farmRules.cumulativeMortalityAlertPct'],
+                  ['farmRules.targetFcr'],
+                  ['farmRules.maxFcrAlert'],
+                ].map(([path]) => {
                   const [root, key] = path.split('.')
+                  const label = t(`settingsUi.company.rule.${key}`)
                   return (
                     <Field key={path} label={label}>
-                      <Input
+                      <input
                         type="number"
                         step="any"
-                        className="font-data tabular-nums"
+                        className={`${FIELD} font-data tabular-nums`}
                         value={draft[root]?.[key] ?? ''}
                         onChange={(e) =>
                           patch(path, e.target.value === '' ? '' : Number(e.target.value))
@@ -541,110 +443,63 @@ function CompanySettings() {
                   )
                 })}
               </div>
-            </FormCard>
+            </SettingsCard>
           )}
 
           {tab === 'stocking' && (
-            <FormCard
-              title="Stocking rules"
-              subtitle="Enforced when creating stockings and top-ups."
-            >
-              <div className="space-y-4">
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.stockingRules?.requireApprovalForStocking}
-                    onChange={(e) =>
-                      patch('stockingRules.requireApprovalForStocking', e.target.checked)
-                    }
-                  />
-                  Require approval for new stockings
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.stockingRules?.requireApprovalForTopup}
-                    onChange={(e) =>
-                      patch('stockingRules.requireApprovalForTopup', e.target.checked)
-                    }
-                  />
-                  Require approval for top-ups
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={
-                      draft.stockingRules?.requireApprovalForFishTransfer !== false
-                    }
-                    onChange={(e) =>
-                      patch(
-                        'stockingRules.requireApprovalForFishTransfer',
-                        e.target.checked,
-                      )
-                    }
-                  />
-                  Require approval for fish transfers
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={draft.stockingRules?.requireDifferentApprover === true}
-                    onChange={(e) =>
-                      patch('stockingRules.requireDifferentApprover', e.target.checked)
-                    }
-                  />
-                  Approver must be someone other than the requester
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.stockingRules?.enforceCageCapacity}
-                    onChange={(e) =>
-                      patch('stockingRules.enforceCageCapacity', e.target.checked)
-                    }
-                  />
-                  Enforce cage capacity
-                </label>
+            <SettingsCard title={t('settingsUi.company.tab.stocking')}>
+              <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.company.stocking.sub')}</p>
+              <div className="flex flex-col gap-4">
+                <SettingsRow label={t('settingsUi.company.cb.stock')}>
+                  <Toggle checked={!!draft.stockingRules?.requireApprovalForStocking} onChange={(v) => patch('stockingRules.requireApprovalForStocking', v)} label={t('settingsUi.company.cb.stock')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.topup')}>
+                  <Toggle checked={!!draft.stockingRules?.requireApprovalForTopup} onChange={(v) => patch('stockingRules.requireApprovalForTopup', v)} label={t('settingsUi.company.cb.topup')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.transfer')}>
+                  <Toggle checked={draft.stockingRules?.requireApprovalForFishTransfer !== false} onChange={(v) => patch('stockingRules.requireApprovalForFishTransfer', v)} label={t('settingsUi.company.cb.transfer')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.differentApprover')}>
+                  <Toggle checked={draft.stockingRules?.requireDifferentApprover === true} onChange={(v) => patch('stockingRules.requireDifferentApprover', v)} label={t('settingsUi.company.cb.differentApprover')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.capacity')}>
+                  <Toggle checked={!!draft.stockingRules?.enforceCageCapacity} onChange={(v) => patch('stockingRules.enforceCageCapacity', v)} label={t('settingsUi.company.cb.capacity')} />
+                </SettingsRow>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Min initial ABW (g)">
-                    <Input
+                  <Field label={t('settingsUi.company.f.minInitial')}>
+                    <input
                       type="number"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.stockingRules?.minInitialAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.minInitialAbwG', Number(e.target.value))
                       }
                     />
                   </Field>
-                  <Field label="Max initial ABW (g)">
-                    <Input
+                  <Field label={t('settingsUi.company.f.maxInitial')}>
+                    <input
                       type="number"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.stockingRules?.maxInitialAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.maxInitialAbwG', Number(e.target.value))
                       }
                     />
                   </Field>
-                  <Field label="Min top-up ABW (g)">
-                    <Input
+                  <Field label={t('settingsUi.company.f.minTopup')}>
+                    <input
                       type="number"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.stockingRules?.minTopupAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.minTopupAbwG', Number(e.target.value))
                       }
                     />
                   </Field>
-                  <Field label="Max top-up ABW (g)">
-                    <Input
+                  <Field label={t('settingsUi.company.f.maxTopup')}>
+                    <input
                       type="number"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.stockingRules?.maxTopupAbwG ?? ''}
                       onChange={(e) =>
                         patch('stockingRules.maxTopupAbwG', Number(e.target.value))
@@ -653,10 +508,10 @@ function CompanySettings() {
                   </Field>
                 </div>
                 <Field
-                  label="Allowed cage statuses for stocking"
-                  hint="Comma-separated: empty, fallow, harvested"
+                  label={t('settingsUi.company.f.statuses')}
+                  hint={t('settingsUi.company.h.statuses')}
                 >
-                  <Input
+                  <input className={FIELD}
                     value={(draft.stockingRules?.allowStockOnlyEmptyStatuses || []).join(
                       ', ',
                     )}
@@ -672,21 +527,19 @@ function CompanySettings() {
                   />
                 </Field>
               </div>
-            </FormCard>
+            </SettingsCard>
           )}
 
           {tab === 'feed' && (
-            <FormCard
-              title="Feed & inventory"
-              subtitle="Defaults and rules for stock lots, purchases, and low-stock alerts."
-            >
-              <div className="space-y-4">
+            <SettingsCard title={t('settingsUi.company.tab.feed')}>
+              <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.company.feed.sub')}</p>
+              <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Default bag size (kg)">
-                    <Input
+                  <Field label={t('settingsUi.company.f.bag')}>
+                    <input
                       type="number"
                       step="any"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.feedRules?.defaultBagSizeKg ?? ''}
                       onChange={(e) =>
                         patch(
@@ -696,11 +549,11 @@ function CompanySettings() {
                       }
                     />
                   </Field>
-                  <Field label="Low-stock multiplier">
-                    <Input
+                  <Field label={t('settingsUi.company.f.lowStock')}>
+                    <input
                       type="number"
                       step="any"
-                      className="font-data tabular-nums"
+                      className={`${FIELD} font-data tabular-nums`}
                       value={draft.feedRules?.lowStockMultiplier ?? ''}
                       onChange={(e) =>
                         patch(
@@ -711,10 +564,10 @@ function CompanySettings() {
                     />
                   </Field>
                   <Field
-                    label="Default store location"
-                    hint="Used for new purchase lots"
+                    label={t('settingsUi.company.f.store')}
+                    hint={t('settingsUi.company.h.store')}
                   >
-                    <Input
+                    <input className={FIELD}
                       value={draft.feedRules?.defaultLocation ?? ''}
                       onChange={(e) =>
                         patch('feedRules.defaultLocation', e.target.value)
@@ -722,49 +575,24 @@ function CompanySettings() {
                     />
                   </Field>
                 </div>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={draft.feedRules?.trackLots !== false}
-                    onChange={(e) =>
-                      patch('feedRules.trackLots', e.target.checked)
-                    }
-                  />
-                  Track batch / location lots
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.feedRules?.requireBatchOnPurchase}
-                    onChange={(e) =>
-                      patch('feedRules.requireBatchOnPurchase', e.target.checked)
-                    }
-                  />
-                  Require batch number on purchases
-                </label>
-                <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded accent-lake"
-                    checked={!!draft.feedRules?.allowNegativeStock}
-                    onChange={(e) =>
-                      patch('feedRules.allowNegativeStock', e.target.checked)
-                    }
-                  />
-                  Allow negative stock (admin override still logged)
-                </label>
+                <SettingsRow label={t('settingsUi.company.cb.trackLots')}>
+                  <Toggle checked={draft.feedRules?.trackLots !== false} onChange={(v) => patch('feedRules.trackLots', v)} label={t('settingsUi.company.cb.trackLots')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.batch')}>
+                  <Toggle checked={!!draft.feedRules?.requireBatchOnPurchase} onChange={(v) => patch('feedRules.requireBatchOnPurchase', v)} label={t('settingsUi.company.cb.batch')} />
+                </SettingsRow>
+                <SettingsRow label={t('settingsUi.company.cb.negative')}>
+                  <Toggle checked={!!draft.feedRules?.allowNegativeStock} onChange={(v) => patch('feedRules.allowNegativeStock', v)} label={t('settingsUi.company.cb.negative')} />
+                </SettingsRow>
               </div>
-            </FormCard>
+            </SettingsCard>
           )}
         </div>
 
-        <Card className="h-fit xl:sticky xl:top-24">
-          <p className="text-sm font-semibold text-muted mb-3">Preview</p>
+        <SettingsCard title={t('settingsUi.company.preview')} className="h-fit xl:sticky xl:top-24">
           <div
             ref={previewRef}
-            className="rounded-xl border border-foam-deep overflow-hidden"
+            className="overflow-hidden rounded-input border border-line"
             data-preview-theme="light"
           >
             <div
@@ -778,7 +606,7 @@ function CompanySettings() {
                 <span className="h-7 w-7 rounded-lg bg-white/20 inline-block" />
               )}
               <span className="truncate">
-                {draft.branding?.displayName || draft.name || 'Farm name'}
+                {draft.branding?.displayName || draft.name || t('settingsUi.company.farmName')}
               </span>
             </div>
             <div
@@ -793,14 +621,14 @@ function CompanySettings() {
                 className="w-full rounded-lg py-2.5 text-sm font-semibold text-white"
                 style={{ background: 'var(--preview-accent, #18181B)' }}
               >
-                Primary action
+                {t('settingsUi.company.primaryAction')}
               </button>
               <p className="text-xs opacity-70">
-                Mode: {draft.branding?.themeMode || 'light'}
+                {t('settingsUi.company.mode', { mode: t(`settingsUi.company.theme.${draft.branding?.themeMode || 'light'}`) })}
               </p>
             </div>
           </div>
-          <ul className="mt-4 space-y-1.5 text-sm text-muted">
+          <ul className="mt-4 space-y-1.5 text-[13px] leading-4 text-muted">
             {ruleSummary.map((line) => (
               <li key={line} className="flex gap-2">
                 <span className="text-muted" aria-hidden>•</span>
@@ -808,8 +636,20 @@ function CompanySettings() {
               </li>
             ))}
           </ul>
-        </Card>
+        </SettingsCard>
       </div>
-    </div>
+    </div>,
+    <>
+      <GhostButton onClick={onDiscard} disabled={!dirty || !published}>
+        {t('settingsUi.company.discard')}
+      </GhostButton>
+      <GhostButton onClick={onSaveDraft} disabled={saving}>
+        {saving ? t('settingsUi.saving') : t('settingsUi.company.saveDraft')}
+      </GhostButton>
+      <GradientButton variant="solid" onClick={onPublish} disabled={publishing}>
+        {publishing ? t('settingsUi.company.publishing') : t('settingsUi.company.publish')}
+      </GradientButton>
+    </>,
+    )
   )
 }

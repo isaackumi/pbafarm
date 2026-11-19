@@ -3,20 +3,24 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
-import { Button, Field, FormActions, FormCard, Input, Skeleton } from './ui'
+import { useT } from '../lib/i18n/context'
+import { Skeleton, Toggle } from './ui'
+import { SettingsCard, SettingsRow, FIELD } from './settings'
 
 const CHANNELS = [
-  { key: 'inApp', label: 'In the app', hint: 'The bell at the top of the screen.' },
-  { key: 'sms', label: 'SMS', needs: 'hasPhone' },
-  { key: 'whatsapp', label: 'WhatsApp', needs: 'hasPhone' },
-  { key: 'email', label: 'Email', needs: 'hasEmail' },
+  { key: 'inApp' },
+  { key: 'sms', needs: 'hasPhone' },
+  { key: 'whatsapp', needs: 'hasPhone' },
+  { key: 'email', needs: 'hasEmail' },
 ]
 
 /**
- * Per-user notification channels and quiet hours (AUTO-003). Automation rules
- * pick the channels; this lets each person opt out of some of them.
+ * Per-user notification channels and quiet hours (AUTO-003), Paper 30
+ * "Delivery" and "Quiet hours" cards. Automation rules pick the channels;
+ * this lets each person opt out of some of them. Each change saves at once.
  */
 export default function NotificationPreferencesCard() {
+  const t = useT()
   const prefs = useQuery(api.notificationPreferences.mine)
   const update = useMutation(api.notificationPreferences.update)
   const { showToast } = useToast()
@@ -38,105 +42,97 @@ export default function NotificationPreferencesCard() {
 
   if (!prefs || !form) {
     return (
-      <FormCard title="Notifications">
+      <SettingsCard id="delivery" title={t('settingsUi.notif.delivery')}>
         <Skeleton className="h-40" />
-      </FormCard>
+      </SettingsCard>
     )
   }
 
-  const save = async (e) => {
-    e.preventDefault()
+  const save = async (next) => {
+    const previous = form
+    setForm(next)
     setSaving(true)
     try {
       await update({
-        inApp: form.inApp,
-        sms: form.sms,
-        whatsapp: form.whatsapp,
-        email: form.email,
-        quietHours: form.quiet ? { start: form.start, end: form.end } : null,
+        inApp: next.inApp,
+        sms: next.sms,
+        whatsapp: next.whatsapp,
+        email: next.email,
+        quietHours: next.quiet ? { start: next.start, end: next.end } : null,
       })
-      showToast('success', 'Notification settings saved')
+      showToast('success', t('settingsUi.notif.saved'))
     } catch (err) {
+      setForm(previous)
       showToast('error', errorMessage(err))
     } finally {
       setSaving(false)
     }
   }
 
+  const range = `${form.start} – ${form.end}`
   return (
-    <FormCard
-      title="Notifications"
-      subtitle="Where alerts and reminders reach you. Your admin decides which alerts exist; you choose the channels."
-    >
-      <form onSubmit={save} className="space-y-6">
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-chart-ink mb-2">Channels</legend>
-          {CHANNELS.map((c) => {
-            const missing = c.needs && !prefs[c.needs]
-            return (
-              <label key={c.key} className="flex items-start gap-3 text-sm text-chart-ink min-h-11">
+    <>
+      <SettingsCard id="delivery" title={t('settingsUi.notif.delivery')} meta={t('settingsUi.notif.perChannel')}>
+        <p className="pb-3 text-[12px] leading-4 text-muted">{t('settingsUi.notif.deliveryIntro')}</p>
+        {CHANNELS.map((c) => {
+          const missing = c.needs && !prefs[c.needs]
+          const label = t(`settingsUi.notif.channel.${c.key}`)
+          return (
+            <SettingsRow
+              key={c.key}
+              label={label}
+              helper={
+                missing
+                  ? t(c.needs === 'hasPhone' ? 'settingsUi.notif.noPhone' : 'settingsUi.notif.noEmail')
+                  : c.key === 'inApp'
+                    ? t('settingsUi.notif.inAppHint')
+                    : undefined
+              }
+            >
+              <Toggle
+                label={label}
+                checked={form[c.key]}
+                disabled={saving}
+                onChange={(on) => save({ ...form, [c.key]: on })}
+              />
+            </SettingsRow>
+          )
+        })}
+      </SettingsCard>
+      <SettingsCard title={t('settingsUi.notif.quietHours')}>
+        <SettingsRow label={form.quiet ? range : t('settingsUi.off')} helper={t('settingsUi.notif.quietHelper')}>
+          <Toggle
+            label={t('settingsUi.notif.quietHours')}
+            checked={form.quiet}
+            disabled={saving}
+            onChange={(on) => save({ ...form, quiet: on })}
+          />
+        </SettingsRow>
+        {form.quiet && (
+          <div className="flex flex-wrap items-end gap-3 border-t border-line py-3">
+            {[
+              ['start', 'quietFrom'],
+              ['end', 'quietUntil'],
+            ].map(([key, labelKey]) => (
+              <div key={key} className="min-w-[120px] flex-1">
+                <label htmlFor={`quiet-${key}`} className="mb-1.5 block text-[12px] leading-4 text-muted">
+                  {t(`settingsUi.notif.${labelKey}`)}
+                </label>
                 <input
-                  type="checkbox"
-                  className="mt-1 h-5 w-5"
-                  checked={form[c.key]}
-                  onChange={(e) => setForm({ ...form, [c.key]: e.target.checked })}
-                />
-                <span>
-                  {c.label}
-                  {c.hint && <span className="block text-muted">{c.hint}</span>}
-                  {missing && (
-                    <span className="block text-muted">
-                      No {c.needs === 'hasPhone' ? 'phone number' : 'email address'} on your account yet.
-                    </span>
-                  )}
-                </span>
-              </label>
-            )
-          })}
-        </fieldset>
-
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-chart-ink mb-2">Quiet hours</legend>
-          <label className="flex items-start gap-3 text-sm text-chart-ink min-h-11">
-            <input
-              type="checkbox"
-              className="mt-1 h-5 w-5"
-              checked={form.quiet}
-              onChange={(e) => setForm({ ...form, quiet: e.target.checked })}
-            />
-            <span>
-              Pause SMS, WhatsApp and email at night
-              <span className="block text-muted">In-app notifications still arrive. Times are in farm time.</span>
-            </span>
-          </label>
-          {form.quiet && (
-            <div className="grid grid-cols-2 gap-4 max-w-sm">
-              <Field label="From" htmlFor="quiet-start">
-                <Input
-                  id="quiet-start"
+                  id={`quiet-${key}`}
                   type="time"
-                  value={form.start}
-                  onChange={(e) => setForm({ ...form, start: e.target.value })}
+                  value={form[key]}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== (prefs.quietHours?.[key] || '')) save({ ...form, [key]: e.target.value })
+                  }}
+                  className={FIELD}
                 />
-              </Field>
-              <Field label="Until" htmlFor="quiet-end">
-                <Input
-                  id="quiet-end"
-                  type="time"
-                  value={form.end}
-                  onChange={(e) => setForm({ ...form, end: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-        </fieldset>
-
-        <FormActions>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save notification settings'}
-          </Button>
-        </FormActions>
-      </form>
-    </FormCard>
+              </div>
+            ))}
+          </div>
+        )}
+      </SettingsCard>
+    </>
   )
 }

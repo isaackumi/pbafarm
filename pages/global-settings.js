@@ -2,17 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import {
-  PageHeader,
-  FormPage,
-  FormCard,
-  FormSection,
-  FormActions,
-  Field,
-  Select,
-  Button,
-  LoadingState,
-} from '../components/ui'
+import Link from 'next/link'
+import { GhostButton, GradientButton, Skeleton } from '../components/ui'
+import { FIELD, SettingsCard, SettingsField, useSettingsEyebrow } from '../components/settings'
 import { api } from '../convex/_generated/api'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,9 +21,7 @@ import MobileShortcutsCard from '../components/MobileShortcutsCard'
 export default function GlobalSettingsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Global Settings">
-        <GlobalSettings />
-      </Layout>
+      <GlobalSettings />
     </ProtectedRoute>
   )
 }
@@ -40,6 +30,7 @@ function GlobalSettings() {
   const { showToast } = useToast()
   const { user } = useAuth()
   const t = useT()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.global.crumb'))
   const isAdmin = usePermission('org.settings.manage')
   const { settings: localSettings, updateSettings } = useSettings()
   const { formatCurrency: fmt, symbol, shortLabel } = useCurrency()
@@ -112,90 +103,83 @@ function GlobalSettings() {
   }
 
   return (
-    <FormPage width="md">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: t.or(navKey('/dashboard'), 'Dashboard'), href: '/dashboard' },
-          { label: t.or(navKey('/global-settings'), 'Global settings') },
-        ]}
-        description={t('settings.description')}
-        related={
-          isAdmin
-            ? [{ label: t.or(navKey('/company-settings'), 'Company settings'), href: '/company-settings' }]
-            : undefined
-        }
-      />
+    <Layout title={t.or(navKey('/global-settings'), 'Global settings')} eyebrow={eyebrow}>
+      <div className="flex max-w-3xl flex-col gap-5">
+        <p className="text-[14px] leading-[18px] text-muted">
+          {t('settings.description')}
+          {isAdmin && (
+            <>
+              {' '}
+              <Link
+                href="/company-settings"
+                className="rounded text-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              >
+                {t.or(navKey('/company-settings'), 'Company settings')}
+              </Link>
+            </>
+          )}
+        </p>
 
-      <div className="space-y-6">
-        <FormCard
+        <SettingsCard
+          id="gs-currency"
           title={t('settings.currency.title')}
-          subtitle={t('settings.currency.active', { currency: shortLabel, symbol, example: fmt(1250.5) })}
+          meta={t('settings.currency.active', { currency: shortLabel, symbol, example: fmt(1250.5) })}
         >
           {draftLoading ? (
-            <LoadingState label={t('settings.loading')} />
+            <Skeleton className="h-20" />
           ) : (
-          <FormSection>
-            <Field
-              label={t('settings.currency.farm')}
-              hint={t('settings.currency.hint')}
-            >
-              <Select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                disabled={!isAdmin}
-              >
-                {Object.values(CURRENCIES).map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label} ({c.symbol})
-                    {c.code === 'GHS' ? ` — ${t('settings.currency.default')}` : ''}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <p className="text-sm text-muted">{t('settings.currency.preview', { value: preview })}</p>
-          </FormSection>
+            <div className="flex flex-col gap-3">
+              <SettingsField label={t('settings.currency.farm')} htmlFor="gs-currency-select" hint={t('settings.currency.hint')}>
+                <select
+                  id="gs-currency-select"
+                  className={FIELD}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  {Object.values(CURRENCIES).map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label} ({c.symbol})
+                      {c.code === 'GHS' ? ` — ${t('settings.currency.default')}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </SettingsField>
+              <p className="text-[13px] leading-4 text-muted">
+                {t('settings.currency.preview', { value: preview })}
+              </p>
+            </div>
           )}
           {isAdmin ? (
-            <FormActions>
-              <Button type="button" disabled={saving || draftLoading} onClick={handleSaveFarmCurrency}>
+            <div className="mt-4 flex justify-end border-t border-line pt-4">
+              <GradientButton size="sm" disabled={saving || draftLoading} onClick={handleSaveFarmCurrency}>
                 {saving ? t('settings.saving') : t('settings.currency.save')}
-              </Button>
-            </FormActions>
+              </GradientButton>
+            </div>
           ) : (
-            <p className="text-sm text-muted pt-2">
-              {t('settings.currency.adminOnly')}
-            </p>
+            <p className="mt-4 border-t border-line pt-4 text-[13px] leading-4 text-muted">{t('settings.currency.adminOnly')}</p>
           )}
-        </FormCard>
+        </SettingsCard>
 
-        <FormCard
-          title={t('settings.display.title')}
-          subtitle={t('settings.display.subtitle')}
-        >
-          <FormSection>
-            <Field label={t('settings.display.dateFormat')}>
-              <Select
-                value={dateFormat}
-                onChange={(e) => setDateFormat(e.target.value)}
-              >
-                {DATE_FORMATS.map((format) => (
-                  <option key={format} value={format}>
-                    {format}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </FormSection>
-          <FormActions>
-            <Button type="button" variant="secondary" disabled={savingPersonal} onClick={handleSavePersonal}>
+        <SettingsCard id="gs-display" title={t('settings.display.title')} meta={t('settings.display.subtitle')}>
+          <SettingsField label={t('settings.display.dateFormat')} htmlFor="gs-date-format" className="sm:max-w-xs">
+            <select id="gs-date-format" className={FIELD} value={dateFormat} onChange={(e) => setDateFormat(e.target.value)}>
+              {DATE_FORMATS.map((format) => (
+                <option key={format} value={format}>
+                  {format}
+                </option>
+              ))}
+            </select>
+          </SettingsField>
+          <div className="mt-4 flex justify-end border-t border-line pt-4">
+            <GhostButton size="sm" disabled={savingPersonal} onClick={handleSavePersonal}>
               {savingPersonal ? t('settings.saving') : t('settings.display.save')}
-            </Button>
-          </FormActions>
-        </FormCard>
+            </GhostButton>
+          </div>
+        </SettingsCard>
 
         <MobileShortcutsCard />
       </div>
-    </FormPage>
+    </Layout>
   )
 }

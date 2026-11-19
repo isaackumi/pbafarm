@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
-import { Button, Card, CardHeader, Field, Input, Select } from '../ui'
+import { GhostButton, GradientButton } from '../ui'
 import { useToast } from '../Toast'
 import { api } from '../../convex/_generated/api'
 import { errorMessage } from '../../lib/errorMessage'
@@ -15,6 +15,7 @@ import {
   layoutProblems,
   resolveLayout,
 } from '../../convex/lib/formLayouts'
+import { FIELD, SettingsCard, SettingsField } from '../settings'
 
 const NO_DEFS = []
 const lite = (defs) => (defs ?? []).map((d) => ({ key: d.key, required: d.required, archived: d.archived }))
@@ -58,18 +59,18 @@ export default function FormLayoutEditor() {
   const [formKey, setFormKey] = useState(FORM_KEYS[0])
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader title={t('formLayout.title')} subtitle={t('formLayout.intro')} />
-        <Field label={t('formLayout.form')} htmlFor="fl-form">
-          <Select id="fl-form" value={formKey} onChange={(e) => setFormKey(e.target.value)}>
+      <SettingsCard title={t('formLayout.title')}>
+        <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('formLayout.intro')}</p>
+        <SettingsField label={t('formLayout.form')} htmlFor="fl-form">
+          <select className={FIELD} id="fl-form" value={formKey} onChange={(e) => setFormKey(e.target.value)}>
             {FORM_KEYS.map((k) => (
               <option key={k} value={k}>
                 {t.or(`formLayout.formName.${k.replace('.', '_')}`, k)}
               </option>
             ))}
-          </Select>
-        </Field>
-      </Card>
+          </select>
+        </SettingsField>
+      </SettingsCard>
       <FormEditor key={formKey} formKey={formKey} />
     </div>
   )
@@ -159,52 +160,52 @@ function FormEditor({ formKey }) {
   return (
     <div className="space-y-4">
       {draft.map((section, si) => (
-        <Card key={section.key} className="space-y-3">
+        <SettingsCard key={section.key} className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
-            <Field label={t('formLayout.sectionTitle')} htmlFor={`fl-s-${section.key}`} className="flex-1 min-w-48">
-              <Input
+            <SettingsField label={t('formLayout.sectionTitle')} htmlFor={`fl-s-${section.key}`} className="flex-1 min-w-48">
+              <input
+                className={FIELD}
                 id={`fl-s-${section.key}`}
                 value={section.title ?? ''}
                 placeholder={sectionTitle({ key: section.key })}
                 maxLength={LAYOUT_LIMITS.titleLength}
                 onChange={(e) => setSection(si, { title: e.target.value })}
               />
-            </Field>
-            <Button variant="ghost" size="sm" aria-label={t('formLayout.moveUp')} disabled={si === 0} onClick={() => setDraft((d) => move(d, si, -1))}>
+            </SettingsField>
+            <GhostButton size="sm" aria-label={t('formLayout.moveUp')} disabled={si === 0} onClick={() => setDraft((d) => move(d, si, -1))}>
               <ArrowUp className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              variant="ghost"
+            </GhostButton>
+            <GhostButton
               size="sm"
               aria-label={t('formLayout.moveDown')}
               disabled={si === draft.length - 1}
               onClick={() => setDraft((d) => move(d, si, 1))}
             >
               <ArrowDown className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button variant="ghost" size="sm" aria-label={t('formLayout.removeSection')} disabled={draft.length === 1} onClick={() => removeSection(si)}>
+            </GhostButton>
+            <GhostButton size="sm" aria-label={t('formLayout.removeSection')} disabled={draft.length === 1} onClick={() => removeSection(si)}>
               <Trash2 className="h-4 w-4" aria-hidden />
-            </Button>
+            </GhostButton>
           </div>
           {section.fields.length === 0 ? (
             <p className="text-sm text-muted">{t('formLayout.emptySection')}</p>
           ) : (
-            <ul className="divide-y divide-foam-deep">
+            <ul className="divide-y divide-line">
               {section.fields.map((f, fi) => {
                 const controllers = allFields.filter((o) => o.ref !== f.ref && !o.showWhen)
                 const w = f.showWhen
                 return (
                   <li key={f.ref} className="py-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-chart-ink">
+                      <p className="text-sm font-medium text-text">
                         {label(f.ref)}
                         {required(f.ref) && <span className="ml-2 text-xs text-muted">{t('formLayout.required')}</span>}
                         {f.ref.startsWith('custom:') && <span className="ml-2 text-xs text-muted">{t('formLayout.custom')}</span>}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <Select
+                        <select
                           aria-label={t('formLayout.moveToSection')}
-                          className="w-auto"
+                          className={`${FIELD} w-auto`}
                           value={si}
                           onChange={(e) => moveToSection(si, fi, Number(e.target.value))}
                         >
@@ -213,21 +214,21 @@ function FormEditor({ formKey }) {
                               {sectionTitle(s)}
                             </option>
                           ))}
-                        </Select>
-                        <Select
+                        </select>
+                        <select
                           aria-label={t('formLayout.width')}
-                          className="w-auto"
+                          className={`${FIELD} w-auto`}
                           value={f.width ?? ''}
                           onChange={(e) => setField(si, fi, { width: e.target.value || undefined })}
                         >
                           <option value="">{t('formLayout.widthAuto')}</option>
                           <option value="half">{t('formLayout.widthHalf')}</option>
                           <option value="full">{t('formLayout.widthFull')}</option>
-                        </Select>
+                        </select>
                         {!required(f.ref) && (
-                          <Select
+                          <select
                             aria-label={t('formLayout.showWhen')}
-                            className="w-auto"
+                            className={`${FIELD} w-auto`}
                             value={w?.ref ?? ''}
                             onChange={(e) =>
                               setField(si, fi, {
@@ -241,24 +242,24 @@ function FormEditor({ formKey }) {
                                 {t('formLayout.whenField', { field: label(o.ref) })}
                               </option>
                             ))}
-                          </Select>
+                          </select>
                         )}
                         {w?.ref && (
                           <>
-                            <Select
+                            <select
                               aria-label={t('formLayout.condition')}
-                              className="w-auto"
+                              className={`${FIELD} w-auto`}
                               value={w.op}
                               onChange={(e) => setField(si, fi, { showWhen: { ...w, op: e.target.value } })}
                             >
                               <option value="is_set">{t('formLayout.opIsSet')}</option>
                               <option value="eq">{t('formLayout.opEq')}</option>
                               <option value="neq">{t('formLayout.opNeq')}</option>
-                            </Select>
+                            </select>
                             {w.op !== 'is_set' && (
-                              <Input
+                              <input
                                 aria-label={t('formLayout.conditionValue')}
-                                className="w-40"
+                                className={`${FIELD} w-40`}
                                 value={w.value ?? ''}
                                 onChange={(e) => setField(si, fi, { showWhen: { ...w, value: e.target.value } })}
                               />
@@ -268,52 +269,50 @@ function FormEditor({ formKey }) {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
+                      <GhostButton
                         size="sm"
                         aria-label={t('formLayout.moveUp')}
                         disabled={fi === 0}
                         onClick={() => setSection(si, { fields: move(section.fields, fi, -1) })}
                       >
                         <ArrowUp className="h-4 w-4" aria-hidden />
-                      </Button>
-                      <Button
-                        variant="ghost"
+                      </GhostButton>
+                      <GhostButton
                         size="sm"
                         aria-label={t('formLayout.moveDown')}
                         disabled={fi === section.fields.length - 1}
                         onClick={() => setSection(si, { fields: move(section.fields, fi, 1) })}
                       >
                         <ArrowDown className="h-4 w-4" aria-hidden />
-                      </Button>
+                      </GhostButton>
                     </div>
                   </li>
                 )
               })}
             </ul>
           )}
-        </Card>
+        </SettingsCard>
       ))}
       {problems.length > 0 && (
-        <div role="alert" className="text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3 space-y-1">
+        <div role="alert" className="text-sm text-alert border border-signal/20 bg-signal/10 rounded-xl p-3 space-y-1">
           {problems.map((p) => (
             <p key={p}>{p}</p>
           ))}
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={addSection} disabled={draft.length >= LAYOUT_LIMITS.sections}>
+        <GhostButton size="lg" onClick={addSection} disabled={draft.length >= LAYOUT_LIMITS.sections}>
           <Plus className="h-4 w-4" aria-hidden />
           {t('formLayout.addSection')}
-        </Button>
-        <Button onClick={submit} disabled={busy || problems.length > 0}>
+        </GhostButton>
+        <GradientButton onClick={submit} disabled={busy || problems.length > 0}>
           <Save className="h-4 w-4" aria-hidden />
           {t('formLayout.save')}
-        </Button>
-        <Button variant="ghost" onClick={restore} disabled={busy || !saved}>
+        </GradientButton>
+        <GhostButton onClick={restore} disabled={busy || !saved}>
           <RotateCcw className="h-4 w-4" aria-hidden />
           {t('formLayout.reset')}
-        </Button>
+        </GhostButton>
       </div>
     </div>
   )

@@ -5,7 +5,8 @@ import { errorMessage } from '../lib/errorMessage'
 import { useLocale, useT } from '../lib/i18n/context'
 import { COUNTRY_PRESETS, countryPreset } from '../convex/lib/countries'
 import { COUNTRY_CALLING_CODES } from '../convex/lib/phone'
-import { Button, Field, FormCard, Input, Select } from './ui'
+import { GhostButton, GradientButton } from './ui'
+import { FIELD, InlineError, InlineSuccess, SettingsCard, SettingsField as Field } from './settings'
 
 const COMMON_ZONES = [
   'Africa/Accra',
@@ -79,9 +80,9 @@ export default function OrgProfileCard() {
 
   if (!form) {
     return (
-      <FormCard title={t('country.profileTitle')}>
-        <p className="text-sm text-muted">{t('common.loading')}</p>
-      </FormCard>
+      <SettingsCard title={t('country.profileTitle')}>
+        <p className="text-[13px] text-muted">{t('common.loading')}</p>
+      </SettingsCard>
     )
   }
 
@@ -130,11 +131,13 @@ export default function OrgProfileCard() {
     }, t('country.applyFailed'))
 
   return (
-    <FormCard title={t('country.profileTitle')} subtitle={t('country.profileSubtitle')}>
-      <form className="space-y-4" onSubmit={save}>
+    <SettingsCard title={t('country.profileTitle')}>
+      <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('country.profileSubtitle')}</p>
+      <form className="flex flex-col gap-4" onSubmit={save}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t('country.country')} htmlFor="org-country" hint={otherCountry ? t('country.countryHint') : undefined}>
-            <Select
+            <select
+              className={FIELD}
               id="org-country"
               value={otherCountry ? OTHER : form.country}
               onChange={(e) => {
@@ -149,10 +152,10 @@ export default function OrgProfileCard() {
                 </option>
               ))}
               <option value={OTHER}>{t('country.other')}</option>
-            </Select>
+            </select>
             {otherCountry && (
-              <Input
-                className="mt-2"
+              <input
+                className={`${FIELD} mt-2`}
                 aria-label={t('country.countryCode')}
                 value={form.country}
                 maxLength={2}
@@ -161,7 +164,8 @@ export default function OrgProfileCard() {
             )}
           </Field>
           <Field label={t('country.timezone')} htmlFor="org-timezone">
-            <Select
+            <select
+              className={FIELD}
               id="org-timezone"
               value={form.timezone}
               onChange={(e) => setForm({ ...form, timezone: e.target.value })}
@@ -171,20 +175,22 @@ export default function OrgProfileCard() {
                   {z}
                 </option>
               ))}
-            </Select>
+            </select>
           </Field>
           <Field label={t('country.units')} htmlFor="org-units">
-            <Select
+            <select
+              className={FIELD}
               id="org-units"
               value={form.unitSystem}
               onChange={(e) => setForm({ ...form, unitSystem: e.target.value })}
             >
               <option value="metric">{t('country.metric')}</option>
               <option value="imperial">{t('country.imperial')}</option>
-            </Select>
+            </select>
           </Field>
           <Field label={t('country.locale')} htmlFor="org-locale" hint={t('country.localeHint')}>
-            <Input
+            <input
+              className={FIELD}
               id="org-locale"
               value={form.defaultLocale}
               onChange={(e) => setForm({ ...form, defaultLocale: e.target.value })}
@@ -193,16 +199,17 @@ export default function OrgProfileCard() {
         </div>
 
         {preset && (
-          <fieldset className="rounded-lg border border-foam-deep p-4 space-y-3">
-            <legend className="px-1 text-sm font-semibold text-chart-ink">
+          <fieldset className="flex flex-col gap-3 rounded-input border border-line bg-surface-2 p-4">
+            <legend className="px-1 text-[13px] font-semibold text-text">
               {t('country.suggestedTitle', { country: regionName(locale, preset.code) })}
             </legend>
-            <p className="text-sm text-muted">{t('country.suggestedHint')}</p>
+            <p className="text-[12px] leading-4 text-muted">{t('country.suggestedHint')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {suggestions.map((s) => (
-                <label key={s.key} className="inline-flex items-center gap-2 text-sm min-h-11 sm:min-h-0">
+                <label key={s.key} className="inline-flex min-h-11 items-center gap-2 text-[13px] text-text sm:min-h-0">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 accent-[var(--cyan)]"
                     checked={!!pick[s.key]}
                     onChange={(e) => setPick({ ...pick, [s.key]: e.target.checked })}
                   />
@@ -210,19 +217,23 @@ export default function OrgProfileCard() {
                 </label>
               ))}
             </div>
-            {pick.currency && <p className="text-sm text-signal">{t('country.currencyWarning')}</p>}
-            <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={apply}>
-              {t('country.apply')}
-            </Button>
+            {pick.currency && <p className="text-[12px] text-warn">{t('country.currencyWarning')}</p>}
+            <div>
+              <GhostButton disabled={saving} onClick={apply}>
+                {t('country.apply')}
+              </GhostButton>
+            </div>
           </fieldset>
         )}
 
-        {error && <p className="text-sm text-signal">{error}</p>}
-        {message && <p className="text-sm text-kelp">{message}</p>}
-        <Button type="submit" size="sm" disabled={saving}>
-          {saving ? t('country.saving') : t('country.save')}
-        </Button>
+        {error && <InlineError>{error}</InlineError>}
+        {message && <InlineSuccess>{message}</InlineSuccess>}
+        <div className="flex justify-end border-t border-line pt-4">
+          <GradientButton type="submit" variant="solid" disabled={saving}>
+            {saving ? t('country.saving') : t('country.save')}
+          </GradientButton>
+        </div>
       </form>
-    </FormCard>
+    </SettingsCard>
   )
 }

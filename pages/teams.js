@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, FormPage, Input, PageHeader, Select, Textarea } from '../components/ui'
+import { GhostButton, GradientButton, Pill } from '../components/ui'
+import { CardNote, FIELD, SettingsCard, SettingsField as Field, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
@@ -38,10 +39,9 @@ function NewTeamForm({ teams }) {
   const [form, setForm] = useState({ name: '', kind: 'team', parentId: '', locationId: '' })
   const departments = teams.filter((x) => x.kind === 'department' && x.active)
   return (
-    <Card>
-      <CardHeader title={t('ent.teams.newTitle')} />
+    <SettingsCard title={t('ent.teams.newTitle')}>
       <form
-        className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end"
+        className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
         onSubmit={(e) => {
           e.preventDefault()
           run(async () => {
@@ -56,33 +56,33 @@ function NewTeamForm({ teams }) {
         }}
       >
         <Field label={t('ent.common.name')} htmlFor="team-name" required>
-          <Input id="team-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input className={FIELD} id="team-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         </Field>
         <Field label={t('ent.common.kind')} htmlFor="team-kind">
-          <Select id="team-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+          <select className={FIELD} id="team-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
             <option value="team">{t('ent.teams.kindTeam')}</option>
             <option value="department">{t('ent.teams.kindDepartment')}</option>
-          </Select>
+          </select>
         </Field>
         <Field label={t('ent.teams.department')} htmlFor="team-parent">
-          <Select id="team-parent" value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
+          <select className={FIELD} id="team-parent" value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
             <option value="">{t('ent.common.none')}</option>
             {departments.map((d) => (
               <option key={d._id} value={d._id}>{d.name}</option>
             ))}
-          </Select>
+          </select>
         </Field>
         <Field label={t('ent.common.site')} htmlFor="team-site">
-          <Select id="team-site" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+          <select className={FIELD} id="team-site" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
             <option value="">{t('ent.common.allSites')}</option>
             {(locations || []).map((l) => (
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
-          </Select>
+          </select>
         </Field>
-        <Button type="submit" disabled={busy || !form.name.trim()}>{t('ent.teams.add')}</Button>
+        <GradientButton type="submit" disabled={busy || !form.name.trim()}>{t('ent.teams.add')}</GradientButton>
       </form>
-    </Card>
+    </SettingsCard>
   )
 }
 
@@ -100,10 +100,9 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
   const memberIds = new Set(team.members.map((m) => m.userId))
 
   return (
-    <Card>
-      <CardHeader
+    <SettingsCard
         title={team.name}
-        subtitle={[
+        meta={[
           team.kind === 'department' ? t('ent.teams.kindDepartment') : t('ent.teams.kindTeam'),
           parentName,
           siteName,
@@ -113,57 +112,55 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
           .join(' · ')}
         action={
           canManage && (
-            <span className="flex gap-2">
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => update({ id: team._id, patch: { active: !team.active } }))}>
+            <>
+              <GhostButton size="sm" disabled={busy} onClick={() => run(() => update({ id: team._id, patch: { active: !team.active } }))}>
                 {team.active ? t('ent.common.deactivate') : t('ent.common.reactivate')}
-              </Button>
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => remove({ id: team._id }), t('ent.common.removed'))}>
+              </GhostButton>
+              <GhostButton size="sm" tone="danger" disabled={busy} onClick={() => run(() => remove({ id: team._id }), t('ent.common.removed'))}>
                 {t('ent.common.remove')}
-              </Button>
-            </span>
+              </GhostButton>
+            </>
           )
         }
-      />
+      >
       {team.members.length === 0 ? (
-        <p className="text-sm text-muted">{t('ent.teams.noMembers')}</p>
+        <CardNote>{t('ent.teams.noMembers')}</CardNote>
       ) : (
-        <ul className="divide-y divide-foam-deep text-sm">
+        <ul className="flex flex-col">
           {team.members.map((m) => (
-            <li key={m.userId} className="py-2 flex flex-wrap items-center justify-between gap-2">
-              <span>
-                <span className="font-medium">{m.name}</span>
-                {m.role === 'lead' && <span className="text-muted"> · {t('ent.teams.lead')}</span>}
-              </span>
+            <li key={m.userId}>
+              <SettingsRow label={m.name}>
+                {m.role === 'lead' && <Pill tone="cyan">{t('ent.teams.lead')}</Pill>}
               {canManage && (
-                <span className="flex gap-2">
-                  <Button
+                <>
+                  <GhostButton
                     size="sm"
-                    variant="ghost"
                     disabled={busy}
                     onClick={() => run(() => setMember({ teamId: team._id, userId: m.userId, role: m.role === 'lead' ? 'member' : 'lead' }))}
                   >
                     {m.role === 'lead' ? t('ent.teams.makeMember') : t('ent.teams.makeLead')}
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => setMember({ teamId: team._id, userId: m.userId, role: null }))}>
+                  </GhostButton>
+                  <GhostButton size="sm" tone="danger" disabled={busy} onClick={() => run(() => setMember({ teamId: team._id, userId: m.userId, role: null }))}>
                     {t('ent.common.remove')}
-                  </Button>
-                </span>
+                  </GhostButton>
+                </>
               )}
+              </SettingsRow>
             </li>
           ))}
         </ul>
       )}
       {canManage && people && (
-        <div className="mt-3 flex flex-wrap items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2 border-t border-line pt-4">
           <Field label={t('ent.teams.addMember')} htmlFor={`add-${team._id}`}>
-            <Select id={`add-${team._id}`} value={addUser} onChange={(e) => setAddUser(e.target.value)}>
+            <select className={FIELD} id={`add-${team._id}`} value={addUser} onChange={(e) => setAddUser(e.target.value)}>
               <option value="">{t('ent.teams.choosePerson')}</option>
               {people.filter((p) => !memberIds.has(p.id)).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
-            </Select>
+            </select>
           </Field>
-          <Button
+          <GradientButton
             size="sm"
             disabled={busy || !addUser}
             onClick={() => run(async () => {
@@ -172,12 +169,12 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
             })}
           >
             {t('ent.teams.add')}
-          </Button>
+          </GradientButton>
         </div>
       )}
       {(canManage || isLead) && team.active && team.members.length > 0 && (
         <form
-          className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
+          className="mt-1 grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-3"
           onSubmit={(e) => {
             e.preventDefault()
             run(async () => {
@@ -188,19 +185,19 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
           }}
         >
           <Field label={t('ent.teams.messageTitle')} htmlFor={`msg-t-${team._id}`}>
-            <Input id={`msg-t-${team._id}`} value={msg.title} onChange={(e) => setMsg({ ...msg, title: e.target.value })} />
+            <input className={FIELD} id={`msg-t-${team._id}`} value={msg.title} onChange={(e) => setMsg({ ...msg, title: e.target.value })} />
           </Field>
           <Field label={t('ent.teams.message')} htmlFor={`msg-m-${team._id}`}>
-            <Textarea id={`msg-m-${team._id}`} rows={1} value={msg.message} onChange={(e) => setMsg({ ...msg, message: e.target.value })} />
+            <textarea className={FIELD} id={`msg-m-${team._id}`} rows={1} value={msg.message} onChange={(e) => setMsg({ ...msg, message: e.target.value })} />
           </Field>
-          <Button type="submit" size="sm" variant="secondary" disabled={busy || !msg.title.trim() || !msg.message.trim()}>
+          <GhostButton type="submit" size="lg" disabled={busy || !msg.title.trim() || !msg.message.trim()}>
             {t('ent.teams.send')}
-          </Button>
+          </GhostButton>
         </form>
       )}
       {canAssign && team.active && (
         <form
-          className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
+          className="mt-1 grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-3"
           onSubmit={(e) => {
             e.preventDefault()
             run(async () => {
@@ -210,17 +207,17 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
           }}
         >
           <Field label={t('ent.teams.taskTitle')} htmlFor={`task-t-${team._id}`}>
-            <Input id={`task-t-${team._id}`} value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} />
+            <input className={FIELD} id={`task-t-${team._id}`} value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} />
           </Field>
           <Field label={t('ent.teams.due')} htmlFor={`task-d-${team._id}`}>
-            <Input id={`task-d-${team._id}`} type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} />
+            <input className={FIELD} id={`task-d-${team._id}`} type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} />
           </Field>
-          <Button type="submit" size="sm" variant="secondary" disabled={busy || !task.title.trim()}>
+          <GhostButton type="submit" size="lg" disabled={busy || !task.title.trim()}>
             {t('ent.teams.assignTask')}
-          </Button>
+          </GhostButton>
         </form>
       )}
-    </Card>
+    </SettingsCard>
   )
 }
 
@@ -237,22 +234,13 @@ function Teams() {
   const siteOf = (id) => (id ? (locations || []).find((l) => l.id === id)?.name : null)
 
   return (
-    <FormPage width="full">
-      <PageHeader
-        title={t('ent.teams.title')}
-        breadcrumbs={[{ label: t('nav.item.dashboard'), href: '/dashboard' }, { label: t('ent.teams.title') }]}
-        description={t('ent.teams.description')}
-        related={[
-          { label: t('nav.item.workforce'), href: '/workforce' },
-          { label: t('nav.item.tasks'), href: '/tasks' },
-        ]}
-      />
-      <div className="space-y-6">
+    <SettingsFrame active="members">
+        <p className="text-[14px] leading-[18px] text-muted">{t('ent.teams.description')}</p>
         {canManage && teams && <NewTeamForm teams={teams} />}
         {!teams ? (
-          <p className="text-sm text-muted">{t('common.loading')}</p>
+          <SettingsCard><CardNote>{t('common.loading')}</CardNote></SettingsCard>
         ) : teams.length === 0 ? (
-          <EmptyState title={t('ent.teams.empty')} description={t('ent.teams.emptyHint')} />
+          <SettingsCard title={t('ent.teams.empty')}><CardNote>{t('ent.teams.emptyHint')}</CardNote></SettingsCard>
         ) : (
           teams.map((team) => (
             <TeamCard
@@ -267,15 +255,16 @@ function Teams() {
             />
           ))
         )}
-      </div>
-    </FormPage>
+    </SettingsFrame>
   )
 }
 
 export default function TeamsPage() {
+  const t = useT()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.nav.members'))
   return (
     <ProtectedRoute permission="workforce.view">
-      <Layout title="Teams">
+      <Layout title={t('ent.teams.title')} eyebrow={eyebrow}>
         <Teams />
       </Layout>
     </ProtectedRoute>

@@ -4,24 +4,11 @@ import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import { formatDate, formatDateTime } from '../lib/format'
 import { usePermissions } from '../hooks/usePermission'
-import { Button, Field, FormCard, Textarea } from './ui'
+import { GhostButton, Pill } from './ui'
+import { DangerRow, FIELD, InlineError, SettingsCard, SettingsField, SettingsRow } from './settings'
+import { useT } from '../lib/i18n/context'
 
-const EXPORT_STATUS = {
-  queued: 'Queued',
-  running: 'Preparing',
-  ready: 'Ready',
-  failed: 'Failed',
-  expired: 'Expired',
-}
-
-const REQUEST_STATUS = {
-  requested: 'Waiting for platform review',
-  approved: 'Approved',
-  in_progress: 'Deleting',
-  completed: 'Deleted',
-  rejected: 'Declined',
-  cancelled: 'Cancelled',
-}
+const EXPORT_TONE = { queued: 'neutral', running: 'cyan', ready: 'green', failed: 'red', expired: 'neutral' }
 
 function formatBytes(n) {
   if (n == null) return ''
@@ -38,7 +25,12 @@ function dayOf(ms) {
  * Data and privacy for an organization (ENT-005): full export (zip of JSON
  * and CSV per table, kept 7 days) and the organization deletion request.
  */
+/**
+ * Data and privacy for an organization (ENT-005): full export (zip of JSON
+ * and CSV per table, kept 7 days) and the organization deletion request.
+ */
 export default function DataPrivacyCard() {
+  const t = useT()
   const { can } = usePermissions()
   const canExport = can('org.data.export')
   const canDelete = can('org.data.delete')
@@ -78,106 +70,92 @@ export default function DataPrivacyCard() {
   )
 
   return (
-    <FormCard
-      title="Data and privacy"
-      subtitle="Download everything this organization has recorded, or ask for it to be deleted."
-    >
-      <div className="space-y-8">
-        {canExport && (
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h4 className="font-medium text-chart-ink">Export all data</h4>
-                <p className="text-sm text-muted">
-                  A zip with a JSON and a CSV file per table. Passwords, keys and tokens are left out. Links work for 7 days.
-                </p>
-              </div>
-              <Button size="sm" variant="secondary" disabled={busy} onClick={() => run(() => requestExport({}))}>
-                Prepare export
-              </Button>
-            </div>
-            {exports && exports.length > 0 && (
-              <ul className="divide-y divide-foam-deep border border-foam-deep rounded-lg">
-                {exports.map((e) => (
-                  <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                    <span>
-                      {formatDateTime(e.createdAt)}
-                      <span className="text-muted"> · {EXPORT_STATUS[e.status] || e.status}</span>
-                      {e.sizeBytes != null && <span className="text-muted"> · {formatBytes(e.sizeBytes)}</span>}
-                      {e.truncatedTables?.length > 0 && (
-                        <span className="text-signal"> · cut short: {e.truncatedTables.join(', ')}</span>
-                      )}
-                      {e.error && <span className="text-signal"> · {e.error}</span>}
-                    </span>
-                    {e.status === 'ready' && (
-                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => download(e.id)}>
-                        Download
-                      </Button>
+    <SettingsCard title={t('settingsUi.privacy.title')}>
+      <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.privacy.subtitle')}</p>
+      {canExport && (
+        <>
+          <SettingsRow label={t('settingsUi.privacy.exportTitle')} helper={t('settingsUi.privacy.exportHelper')}>
+            <GhostButton disabled={busy} onClick={() => run(() => requestExport({}))}>
+              {t('settingsUi.privacy.prepare')}
+            </GhostButton>
+          </SettingsRow>
+          {exports && exports.length > 0 && (
+            <ul className="mb-2 flex flex-col rounded-input border border-line" aria-label={t('settingsUi.privacy.exportsList')}>
+              {exports.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 first:border-t-0">
+                  <span className="flex flex-wrap items-center gap-2 text-[13px] leading-4 text-text">
+                    <span className="font-data">{formatDateTime(e.createdAt)}</span>
+                    <Pill tone={EXPORT_TONE[e.status] || 'neutral'}>{t.or(`settingsUi.privacy.exportStatus.${e.status}`, e.status)}</Pill>
+                    {e.sizeBytes != null && <span className="font-data text-muted">{formatBytes(e.sizeBytes)}</span>}
+                    {e.truncatedTables?.length > 0 && (
+                      <span className="text-alert">{t('settingsUi.privacy.truncated', { tables: e.truncatedTables.join(', ') })}</span>
                     )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+                    {e.error && <span className="text-alert">{e.error}</span>}
+                  </span>
+                  {e.status === 'ready' && (
+                    <GhostButton size="sm" disabled={busy} onClick={() => download(e.id)}>
+                      {t('settingsUi.privacy.download')}
+                    </GhostButton>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
 
-        {canDelete && (
-          <section className="space-y-3 border-t border-foam-deep pt-6">
-            <h4 className="font-medium text-chart-ink">Delete this organization</h4>
-            {orgRequest ? (
-              <div className="space-y-2 text-sm">
-                <p>
-                  {REQUEST_STATUS[orgRequest.status]}
-                  {orgRequest.graceEndsAt && ` · data will be deleted after ${dayOf(orgRequest.graceEndsAt)}`}
-                </p>
-                {orgRequest.status === 'requested' && (
-                  <Button size="sm" variant="secondary" disabled={busy} onClick={() => run(() => cancel({ requestId: orgRequest.id }))}>
-                    Withdraw request
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted">
-                  The platform team reviews the request. Once approved, nobody can sign in to this organization, and after 30 days
-                  its farm records are deleted. The audit log is kept for one more year, then deleted too. Export your data first.
-                </p>
-                {confirming ? (
-                  <div className="space-y-3">
-                    <Field label="Reason (optional)" htmlFor="org-delete-reason">
-                      <Textarea id="org-delete-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-                    </Field>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={busy}
-                        onClick={() =>
-                          run(async () => {
-                            await requestDeletion({ reason: reason || undefined })
-                            setConfirming(false)
-                          })
-                        }
-                      >
-                        Request deletion
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-                        Keep the organization
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
-                    Ask to delete the organization
-                  </Button>
-                )}
-              </div>
-            )}
-          </section>
-        )}
+      {canDelete &&
+        (orgRequest ? (
+          <SettingsRow
+            label={t('settingsUi.privacy.deleteTitle')}
+            helper={
+              orgRequest.graceEndsAt
+                ? t('settingsUi.privacy.graceEnds', { date: dayOf(orgRequest.graceEndsAt) })
+                : null
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Pill tone={orgRequest.status === 'requested' ? 'amber' : 'red'}>
+                {t(`settingsUi.privacy.requestStatus.${orgRequest.status}`)}
+              </Pill>
+              {orgRequest.status === 'requested' && (
+                <GhostButton disabled={busy} onClick={() => run(() => cancel({ requestId: orgRequest.id }))}>
+                  {t('settingsUi.privacy.withdraw')}
+                </GhostButton>
+              )}
+            </div>
+          </SettingsRow>
+        ) : confirming ? (
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
+            <SettingsField label={t('settingsUi.privacy.reason')} htmlFor="org-delete-reason">
+              <textarea id="org-delete-reason" className={FIELD} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </SettingsField>
+            <div className="flex flex-wrap gap-2">
+              <GhostButton
+                tone="danger"
+                style={{ borderColor: 'var(--pill-red-border)' }}
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await requestDeletion({ reason: reason || undefined })
+                    setConfirming(false)
+                  })
+                }
+              >
+                {t('settingsUi.privacy.requestDeletion')}
+              </GhostButton>
+              <GhostButton onClick={() => setConfirming(false)}>{t('settingsUi.privacy.keep')}</GhostButton>
+            </div>
+          </div>
+        ) : (
+          <DangerRow label={t('settingsUi.privacy.deleteTitle')} helper={t('settingsUi.privacy.deleteHelper')}>
+            <GhostButton tone="danger" style={{ borderColor: 'var(--pill-red-border)' }} onClick={() => setConfirming(true)}>
+              {t('settingsUi.privacy.ask')}
+            </GhostButton>
+          </DangerRow>
+        ))}
 
-        {error && <p className="text-sm text-signal">{error}</p>}
-      </div>
-    </FormCard>
+      {error && <InlineError className="mt-2">{error}</InlineError>}
+    </SettingsCard>
   )
 }

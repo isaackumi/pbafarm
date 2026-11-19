@@ -1,13 +1,28 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { ChevronDown, ChevronRight, MapPin, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, FormPage, Input, PageHeader, Select } from '../components/ui'
+import { GhostButton, GradientButton, Pill } from '../components/ui'
+import { initials } from '../components/ui/Avatar'
+import {
+  CardNote,
+  DetailList,
+  FIELD,
+  SettingsCard,
+  SettingsField as Field,
+  SettingsFrame,
+  RouteGate,
+  SettingsRow,
+  useSettingsEyebrow,
+} from '../components/settings'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
+
+const GROUP = 'border-t border-line pb-2 pt-[14px] text-[13px] font-semibold uppercase leading-4 tracking-[0.04em] text-muted'
 
 /** Units in tree order with their depth (parents before children). */
 function treeOrder(units) {
@@ -27,18 +42,9 @@ function treeOrder(units) {
   return out
 }
 
-function UnitsPanel({ units, sites }) {
-  const t = useT()
+function useRun() {
   const { showToast } = useToast()
-  const create = useMutation(api.businessUnits.create)
-  const update = useMutation(api.businessUnits.update)
-  const remove = useMutation(api.businessUnits.remove)
-  const assign = useMutation(api.businessUnits.assignSites)
-  const [form, setForm] = useState({ name: '', code: '', kind: 'region', parentId: '' })
   const [busy, setBusy] = useState(false)
-  const ordered = useMemo(() => treeOrder(units || []), [units])
-  const kindLabel = { region: t('ent.structure.kindRegion'), business_unit: t('ent.structure.kindUnit') }
-
   const run = async (fn, ok) => {
     setBusy(true)
     try {
@@ -50,6 +56,75 @@ function UnitsPanel({ units, sites }) {
       setBusy(false)
     }
   }
+  return { busy, run }
+}
+
+function TreeButton({ selected, onSelect, depth = 0, open, onToggle, icon, title, helper, count, muted }) {
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-input px-3 py-[10px] ${selected ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
+      style={{ marginLeft: depth ? `${depth * 1.5}rem` : undefined }}
+    >
+      {onToggle ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={title}
+          className="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+        </button>
+      ) : (
+        <span className="w-4 shrink-0" aria-hidden />
+      )}
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={selected ? 'true' : undefined}
+        className="flex min-w-0 grow basis-0 items-center gap-3 rounded text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      >
+        {icon}
+        <span className="flex min-w-0 grow basis-0 flex-col gap-[2px]">
+          <span className={`truncate text-[15px] font-medium leading-[18px] ${muted ? 'text-muted line-through' : 'text-text'}`}>{title}</span>
+          {helper && <span className="truncate text-[13px] leading-4 text-muted">{helper}</span>}
+        </span>
+        <span className="shrink-0 text-[14px] leading-[18px] text-muted">{count}</span>
+      </button>
+    </div>
+  )
+}
+
+/**
+ * Paper 50 Organization structure (H9N-0): business units with their sites
+ * as a tree, and the selected unit or site on the right.
+ */
+function StructurePanel({ units, sites }) {
+  const t = useT()
+  const create = useMutation(api.businessUnits.create)
+  const update = useMutation(api.businessUnits.update)
+  const remove = useMutation(api.businessUnits.remove)
+  const assign = useMutation(api.businessUnits.assignSites)
+  const { busy, run } = useRun()
+  const [form, setForm] = useState(null)
+  const [closed, setClosed] = useState({})
+  const [selected, setSelected] = useState(null)
+  const ordered = useMemo(() => treeOrder(units || []), [units])
+  const unitById = useMemo(() => new Map(ordered.map((u) => [u._id, u])), [ordered])
+  const kindLabel = { region: t('ent.structure.kindRegion'), business_unit: t('ent.structure.kindUnit') }
+  const siteType = (s) => (s.siteType ? t.or(`settingsUi.org.siteType.${s.siteType}`, s.siteType) : null)
+  const sitesOf = (unitId) => (sites || []).filter((s) => (s.businessUnitId || null) === unitId)
+  const unassigned = sitesOf(null)
+
+  // Hide units under a collapsed ancestor.
+  const visible = ordered.filter((u) => {
+    let p = u.parentId
+    while (p) {
+      if (closed[p]) return false
+      p = unitById.get(p)?.parentId
+    }
+    return true
+  })
 
   const submit = (e) => {
     e.preventDefault()
@@ -60,96 +135,195 @@ function UnitsPanel({ units, sites }) {
         kind: form.kind,
         parentId: form.parentId || undefined,
       })
-      setForm({ name: '', code: '', kind: form.kind, parentId: form.parentId })
+      setForm(null)
     }, t('ent.structure.unitAdded', { name: form.name.trim() }))
   }
 
-  return (
-    <>
-      <Card>
-        <CardHeader title={t('ent.structure.unitsTitle')} subtitle={t('ent.structure.unitsHint')} />
-        <form onSubmit={submit} className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
-          <Field label={t('ent.common.name')} htmlFor="bu-name" required>
-            <Input id="bu-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          </Field>
-          <Field label={t('common.code')} htmlFor="bu-code">
-            <Input id="bu-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-          </Field>
-          <Field label={t('ent.common.kind')} htmlFor="bu-kind">
-            <Select id="bu-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-              <option value="region">{kindLabel.region}</option>
-              <option value="business_unit">{kindLabel.business_unit}</option>
-            </Select>
-          </Field>
-          <Field label={t('ent.common.parent')} htmlFor="bu-parent">
-            <Select id="bu-parent" value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
-              <option value="">{t('ent.common.none')}</option>
-              {ordered.filter((u) => u.active).map((u) => (
-                <option key={u._id} value={u._id}>{'— '.repeat(u.depth)}{u.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Button type="submit" disabled={busy || !form.name.trim()}>{t('ent.structure.addUnit')}</Button>
-        </form>
-        {units && units.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">{t('ent.structure.noUnits')}</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-foam-deep text-sm">
-            {ordered.map((u) => (
-              <li key={u._id} className="py-2 flex flex-wrap items-center justify-between gap-2">
-                <span style={{ paddingLeft: `${u.depth * 1.25}rem` }} className={u.active ? '' : 'text-muted line-through'}>
-                  <span className="font-medium">{u.name}</span>
-                  {u.code && <span className="text-muted"> ({u.code})</span>}
-                  <span className="text-muted"> · {kindLabel[u.kind]} · {t('ent.structure.siteCount', { count: u.siteCount })}</span>
-                </span>
-                <span className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => run(() => update({ id: u._id, patch: { active: !u.active } }))}
-                  >
-                    {u.active ? t('ent.common.deactivate') : t('ent.common.reactivate')}
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => remove({ id: u._id }), t('ent.common.removed'))}>
-                    {t('ent.common.remove')}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+  const pickedUnit = selected?.type === 'unit' ? unitById.get(selected.id) : null
+  const pickedSite = selected?.type === 'site' ? (sites || []).find((s) => s.id === selected.id) : null
 
-      <Card>
-        <CardHeader title={t('ent.structure.sitesTitle')} subtitle={t('ent.structure.sitesHint')} />
-        {!sites || sites.length === 0 ? (
-          <p className="text-sm text-muted">{t('ent.structure.noSites')}</p>
-        ) : (
-          <ul className="divide-y divide-foam-deep text-sm">
-            {sites.map((s) => (
-              <li key={s.id} className="py-2 flex flex-wrap items-center justify-between gap-2">
-                <label htmlFor={`site-unit-${s.id}`} className="font-medium">{s.name}</label>
-                <Select
-                  id={`site-unit-${s.id}`}
-                  className="max-w-xs"
-                  value={s.businessUnitId || ''}
-                  disabled={busy}
-                  onChange={(e) =>
-                    run(() => assign({ businessUnitId: e.target.value || null, siteIds: [s.id] }), t('ent.structure.siteMoved'))
-                  }
-                >
-                  <option value="">{t('ent.common.none')}</option>
-                  {ordered.filter((u) => u.active || u._id === s.businessUnitId).map((u) => (
-                    <option key={u._id} value={u._id}>{'— '.repeat(u.depth)}{u.name}</option>
-                  ))}
-                </Select>
-              </li>
-            ))}
-          </ul>
+  const siteRow = (s, depth) => (
+    <TreeButton
+      key={s.id}
+      depth={depth}
+      selected={pickedSite?.id === s.id}
+      onSelect={() => setSelected({ type: 'site', id: s.id })}
+      icon={<MapPin size={18} aria-hidden className="shrink-0 text-pearl-cyan" />}
+      title={s.name}
+      helper={[s.waterBody, siteType(s)].filter(Boolean).join(' · ')}
+      muted={!s.active}
+    />
+  )
+
+  const counts = t('settingsUi.org.counts', {
+    units: ordered.length,
+    sites: (sites || []).length,
+  })
+
+  return (
+    <div className="flex flex-col items-start gap-5 xl:flex-row">
+      <SettingsCard
+        title={t('settingsUi.org.structure')}
+        className="w-full min-w-0 grow basis-0"
+        action={
+          !form && (
+            <GhostButton size="lg" onClick={() => setForm({ name: '', code: '', kind: 'business_unit', parentId: '' })}>
+              {t('settingsUi.org.addUnit')}
+            </GhostButton>
+          )
+        }
+      >
+        <p className="-mt-2 pb-3 text-[13px] leading-4 text-muted">{counts}</p>
+        {form && (
+          <form onSubmit={submit} className="grid grid-cols-1 items-end gap-3 border-t border-line py-4 sm:grid-cols-2">
+            <Field label={t('ent.common.name')} htmlFor="bu-name" required>
+              <input className={FIELD} id="bu-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus />
+            </Field>
+            <Field label={t('common.code')} htmlFor="bu-code">
+              <input className={FIELD} id="bu-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+            </Field>
+            <Field label={t('ent.common.kind')} htmlFor="bu-kind" hint={t('ent.structure.unitsHint')}>
+              <select className={FIELD} id="bu-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+                <option value="region">{kindLabel.region}</option>
+                <option value="business_unit">{kindLabel.business_unit}</option>
+              </select>
+            </Field>
+            <Field label={t('ent.common.parent')} htmlFor="bu-parent">
+              <select className={FIELD} id="bu-parent" value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
+                <option value="">{t('ent.common.none')}</option>
+                {ordered.filter((u) => u.active).map((u) => (
+                  <option key={u._id} value={u._id}>{'— '.repeat(u.depth)}{u.name}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex justify-end gap-2 sm:col-span-2">
+              <GhostButton size="lg" onClick={() => setForm(null)}>{t('common.cancel')}</GhostButton>
+              <GradientButton type="submit" disabled={busy || !form.name.trim()}>{t('settingsUi.org.addUnit')}</GradientButton>
+            </div>
+          </form>
         )}
-      </Card>
-    </>
+        {ordered.length === 0 && (sites || []).length === 0 ? (
+          <CardNote>{t('ent.structure.noUnits')}</CardNote>
+        ) : (
+          <div className="flex flex-col gap-1 border-t border-line pt-3">
+            {visible.map((u) => {
+              const own = sitesOf(u._id)
+              const hasKids = own.length > 0 || ordered.some((x) => x.parentId === u._id)
+              return (
+                <div key={u._id} className="flex flex-col gap-1">
+                  <TreeButton
+                    depth={u.depth}
+                    selected={pickedUnit?._id === u._id}
+                    onSelect={() => setSelected({ type: 'unit', id: u._id })}
+                    open={!closed[u._id]}
+                    onToggle={hasKids ? () => setClosed((c) => ({ ...c, [u._id]: !c[u._id] })) : undefined}
+                    icon={
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-line-strong bg-surface-2 text-[11px] font-semibold text-pearl-pink" aria-hidden>
+                        {initials(u.name)}
+                      </span>
+                    }
+                    title={u.name}
+                    helper={[kindLabel[u.kind], u.code].filter(Boolean).join(' · ')}
+                    count={t('ent.structure.siteCount', { count: u.siteCount })}
+                    muted={!u.active}
+                  />
+                  {!closed[u._id] && own.map((s) => siteRow(s, u.depth + 1))}
+                </div>
+              )
+            })}
+            {unassigned.length > 0 && (
+              <>
+                {ordered.length > 0 && <h3 className={`${GROUP} mt-2`}>{t('settingsUi.org.unassigned')}</h3>}
+                {unassigned.map((s) => siteRow(s, 0))}
+              </>
+            )}
+          </div>
+        )}
+      </SettingsCard>
+
+      <SettingsCard className="w-full shrink-0 xl:w-[380px]" aria-live="polite">
+        {pickedSite ? (
+          <>
+            <div className="flex items-start justify-between gap-3 pb-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-[12px] leading-4 text-muted">
+                  {[unitById.get(pickedSite.businessUnitId)?.name, t('ent.common.site')].filter(Boolean).join(' · ')}
+                </span>
+                <h2 className="truncate text-[22px] font-semibold leading-7 tracking-tight text-text">{pickedSite.name}</h2>
+              </div>
+              <RouteGate href="/farm-locations"><GhostButton size="lg" href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton></RouteGate>
+            </div>
+            <DetailList
+              className="border-t border-line"
+              items={[
+                { label: t('settingsUi.org.location'), value: pickedSite.address || pickedSite.waterBody },
+                {
+                  label: t('settingsUi.org.gps'),
+                  value: pickedSite.latitude != null && pickedSite.longitude != null ? `${pickedSite.latitude}, ${pickedSite.longitude}` : null,
+                  mono: true,
+                },
+                { label: t('settingsUi.org.type'), value: siteType(pickedSite) },
+                { label: t('common.code'), value: pickedSite.code },
+                { label: t('settingsUi.org.timezone'), value: pickedSite.timezone },
+              ]}
+            />
+            <SettingsRow label={t('ent.structure.sitesHint')} htmlFor={`site-unit-${pickedSite.id}`}>
+              <select
+                id={`site-unit-${pickedSite.id}`}
+                className={`${FIELD} w-48 py-2`}
+                value={pickedSite.businessUnitId || ''}
+                disabled={busy}
+                onChange={(e) =>
+                  run(() => assign({ businessUnitId: e.target.value || null, siteIds: [pickedSite.id] }), t('ent.structure.siteMoved'))
+                }
+              >
+                <option value="">{t('ent.common.none')}</option>
+                {ordered.filter((u) => u.active || u._id === pickedSite.businessUnitId).map((u) => (
+                  <option key={u._id} value={u._id}>{'— '.repeat(u.depth)}{u.name}</option>
+                ))}
+              </select>
+            </SettingsRow>
+          </>
+        ) : pickedUnit ? (
+          <>
+            <div className="flex flex-col gap-1 pb-3">
+              <span className="text-[12px] leading-4 text-muted">{kindLabel[pickedUnit.kind]}</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="truncate text-[22px] font-semibold leading-7 tracking-tight text-text">{pickedUnit.name}</h2>
+                {!pickedUnit.active && <Pill>{t('ent.common.inactive')}</Pill>}
+              </div>
+            </div>
+            <DetailList
+              className="border-t border-line"
+              items={[
+                { label: t('common.code'), value: pickedUnit.code, mono: true },
+                { label: t('ent.common.parent'), value: unitById.get(pickedUnit.parentId)?.name },
+                { label: t('settingsUi.org.sites'), value: t('ent.structure.siteCount', { count: pickedUnit.siteCount }) },
+              ]}
+            />
+            <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+              <GhostButton disabled={busy} onClick={() => run(() => update({ id: pickedUnit._id, patch: { active: !pickedUnit.active } }))}>
+                {pickedUnit.active ? t('ent.common.deactivate') : t('ent.common.reactivate')}
+              </GhostButton>
+              <GhostButton
+                tone="danger"
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await remove({ id: pickedUnit._id })
+                    setSelected(null)
+                  }, t('ent.common.removed'))
+                }
+              >
+                {t('ent.common.remove')}
+              </GhostButton>
+            </div>
+          </>
+        ) : (
+          <p className="text-[13px] leading-4 text-muted">{t('settingsUi.org.pick')}</p>
+        )}
+      </SettingsCard>
+    </div>
   )
 }
 
@@ -179,22 +353,19 @@ function LinksPanel() {
     }
   }
 
-  const label = (l) => (
-    <span>
-      <span className="font-medium">{l.name}</span>
-      {l.code && <span className="text-muted"> ({l.code})</span>}
-      <span className="text-muted"> · {t(STATUS_KEYS[l.status])}</span>
-      {l.status === 'active' && (
-        <span className="text-muted"> · {l.shareReports ? t('ent.structure.sharing') : t('ent.structure.notSharing')}</span>
-      )}
-    </span>
+  const helper = (l) =>
+    [l.code, l.status === 'active' ? (l.shareReports ? t('ent.structure.sharing') : t('ent.structure.notSharing')) : null]
+      .filter(Boolean)
+      .join(' · ')
+  const status = (l) => (
+    <Pill tone={l.status === 'active' ? 'green' : 'amber'}>{t(STATUS_KEYS[l.status])}</Pill>
   )
 
   return (
-    <Card>
-      <CardHeader title={t('ent.structure.linksTitle')} subtitle={t('ent.structure.linksHint')} />
+    <SettingsCard title={t('ent.structure.linksTitle')}>
+      <p className="pb-3 text-[12px] leading-4 text-muted">{t('ent.structure.linksHint')}</p>
       <form
-        className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
+        className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
         onSubmit={(e) => {
           e.preventDefault()
           run(async () => {
@@ -205,101 +376,91 @@ function LinksPanel() {
         }}
       >
         <Field label={t('ent.structure.childCode')} htmlFor="link-code" required>
-          <Input id="link-code" value={code} onChange={(e) => setCode(e.target.value)} required />
+          <input className={FIELD} id="link-code" value={code} onChange={(e) => setCode(e.target.value)} required />
         </Field>
         <Field label={t('common.notes')} htmlFor="link-note">
-          <Input id="link-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          <input className={FIELD} id="link-note" value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        <Button type="submit" disabled={busy || !code.trim()}>{t('ent.structure.request')}</Button>
+        <GradientButton type="submit" disabled={busy || !code.trim()}>{t('ent.structure.request')}</GradientButton>
       </form>
 
-      <h3 className="mt-6 font-medium">{t('ent.structure.subsidiaries')}</h3>
+      <h3 className={GROUP}>{t('ent.structure.subsidiaries')}</h3>
       {!data ? (
-        <p className="text-sm text-muted">{t('common.loading')}</p>
+        <CardNote>{t('common.loading')}</CardNote>
       ) : data.subsidiaries.length === 0 ? (
-        <p className="text-sm text-muted">{t('ent.structure.noSubsidiaries')}</p>
+        <CardNote>{t('ent.structure.noSubsidiaries')}</CardNote>
       ) : (
-        <ul className="divide-y divide-foam-deep text-sm">
-          {data.subsidiaries.map((l) => (
-            <li key={l._id} className="py-2 flex flex-wrap items-center justify-between gap-2">
-              {label(l)}
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => end({ linkId: l._id }), t('ent.structure.ended'))}>
-                {l.status === 'pending' ? t('ent.structure.withdraw') : t('ent.structure.endLink')}
-              </Button>
-            </li>
-          ))}
-        </ul>
+        data.subsidiaries.map((l) => (
+          <SettingsRow key={l._id} label={l.name} helper={helper(l)}>
+            {status(l)}
+            <GhostButton size="sm" disabled={busy} onClick={() => run(() => end({ linkId: l._id }), t('ent.structure.ended'))}>
+              {l.status === 'pending' ? t('ent.structure.withdraw') : t('ent.structure.endLink')}
+            </GhostButton>
+          </SettingsRow>
+        ))
       )}
 
-      <h3 className="mt-6 font-medium">{t('ent.structure.parents')}</h3>
+      <h3 className={GROUP}>{t('ent.structure.parents')}</h3>
       {data && data.parents.length === 0 ? (
-        <p className="text-sm text-muted">{t('ent.structure.noParents')}</p>
+        <CardNote>{t('ent.structure.noParents')}</CardNote>
       ) : (
-        <ul className="divide-y divide-foam-deep text-sm">
-          {(data?.parents || []).map((l) => (
-            <li key={l._id} className="py-2 flex flex-wrap items-center justify-between gap-2">
-              {label(l)}
-              <span className="flex flex-wrap gap-2">
+          (data?.parents || []).map((l) => (
+            <SettingsRow key={l._id} label={l.name} helper={helper(l)}>
+              {status(l)}
                 {l.status === 'pending' ? (
                   <>
-                    <Button size="sm" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: true, shareReports: true }), t('ent.structure.accepted'))}>
+                    <GradientButton size="sm" variant="solid" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: true, shareReports: true }), t('ent.structure.accepted'))}>
                       {t('ent.structure.acceptShare')}
-                    </Button>
-                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: true, shareReports: false }), t('ent.structure.accepted'))}>
+                    </GradientButton>
+                    <GhostButton size="sm" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: true, shareReports: false }), t('ent.structure.accepted'))}>
                       {t('ent.structure.acceptOnly')}
-                    </Button>
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: false }))}>
+                    </GhostButton>
+                    <GhostButton size="sm" disabled={busy} onClick={() => run(() => respond({ linkId: l._id, accept: false }))}>
                       {t('ent.structure.decline')}
-                    </Button>
+                    </GhostButton>
                   </>
                 ) : (
                   <>
-                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => run(() => setShare({ linkId: l._id, shareReports: !l.shareReports }))}>
+                    <GhostButton size="sm" disabled={busy} onClick={() => run(() => setShare({ linkId: l._id, shareReports: !l.shareReports }))}>
                       {l.shareReports ? t('ent.structure.stopSharing') : t('ent.structure.startSharing')}
-                    </Button>
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => run(() => end({ linkId: l._id }), t('ent.structure.ended'))}>
+                    </GhostButton>
+                    <GhostButton size="sm" disabled={busy} onClick={() => run(() => end({ linkId: l._id }), t('ent.structure.ended'))}>
                       {t('ent.structure.endLink')}
-                    </Button>
+                    </GhostButton>
                   </>
                 )}
-              </span>
-            </li>
-          ))}
-        </ul>
+            </SettingsRow>
+          ))
       )}
-    </Card>
-  )
-}
-
-function OrganizationStructure() {
-  const t = useT()
-  const units = useQuery(api.businessUnits.list, { includeInactive: true })
-  const { locations } = useLocation()
-  return (
-    <FormPage width="full">
-      <PageHeader
-        title={t('ent.structure.title')}
-        breadcrumbs={[{ label: t('nav.item.dashboard'), href: '/dashboard' }, { label: t('ent.structure.title') }]}
-        description={t('ent.structure.description')}
-        related={[
-          { label: t('nav.item.farmLocations'), href: '/farm-locations' },
-          { label: t('nav.item.reportsRegions'), href: '/reports/regions' },
-          { label: t('nav.item.groupReports'), href: '/group-reports' },
-        ]}
-      />
-      <div className="space-y-6">
-        {units === undefined ? <EmptyState title={t('common.loading')} /> : <UnitsPanel units={units} sites={locations} />}
-        <LinksPanel />
-      </div>
-    </FormPage>
+    </SettingsCard>
   )
 }
 
 export default function OrganizationStructurePage() {
+  const t = useT()
+  const units = useQuery(api.businessUnits.list, { includeInactive: true })
+  const { locations } = useLocation()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.org.eyebrow'))
   return (
     <ProtectedRoute permission="org.structure.manage">
-      <Layout title="Organization structure">
-        <OrganizationStructure />
+      <Layout
+        title={t('settingsUi.org.title')}
+        eyebrow={eyebrow}
+        actions={
+          <RouteGate href="/farm-locations"><GradientButton icon={Plus} href="/farm-locations?new=1">
+            {t('settingsUi.org.addSite')}
+          </GradientButton></RouteGate>
+        }
+      >
+        <SettingsFrame active="sites">
+          <p className="text-[14px] leading-[18px] text-muted">{t('ent.structure.description')}</p>
+          {units === undefined ? (
+            <SettingsCard><CardNote>{t('common.loading')}</CardNote></SettingsCard>
+          ) : (
+            <StructurePanel units={units} sites={locations} />
+          )}
+          <LinksPanel />
+        </SettingsFrame>
       </Layout>
     </ProtectedRoute>
   )

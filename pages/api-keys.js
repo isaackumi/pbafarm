@@ -1,28 +1,22 @@
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useAction, useMutation, useQuery } from 'convex/react'
+import { ArrowRight, CodeXml, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, FormPage, Input, PageHeader, Select, Skeleton } from '../components/ui'
+import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
+import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
+import { CheckTile, IntegrationsShell, SecretOnce, formatTime, scopeTone, useRelativeTime } from '../components/integrations/kit'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
 
-const STATUS = {
-  active: { label: 'Active', className: 'bg-kelp/15 text-kelp' },
-  revoked: { label: 'Revoked', className: 'bg-signal/10 text-signal' },
-  expired: { label: 'Expired', className: 'bg-foam text-chart-ink' },
-}
-
-function formatTime(ms) {
-  if (!ms) return 'Never'
-  try {
-    return new Date(ms).toLocaleString()
-  } catch {
-    return '—'
-  }
-}
+const DAY = 86_400_000
+const STALE_DAYS = 30
+const STATUS_TONE = { active: 'green', revoked: 'red', expired: 'neutral' }
 
 function NewKeyCard({ scopes, sites, onCreated }) {
+  const t = useT()
   const { showToast } = useToast()
   const create = useAction(api.apiKeys.create)
   const [name, setName] = useState('')
@@ -31,8 +25,7 @@ function NewKeyCard({ scopes, sites, onCreated }) {
   const [expiry, setExpiry] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const toggle = (list, setList, id) =>
-    setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
+  const toggle = (list, setList, id) => setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -54,162 +47,287 @@ function NewKeyCard({ scopes, sites, onCreated }) {
   }
 
   return (
-    <Card>
-      <CardHeader title="New API key" subtitle="Give a partner system or script its own key with only the permissions it needs." />
-      <form onSubmit={submit} className="space-y-5">
-        <Field label="Name" htmlFor="key-name" hint="Who or what uses it, e.g. Feed supplier portal" required>
-          <Input id="key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
-        </Field>
+    <SettingsCard id="new-key" title={t('settingsUi.integ.keys.newTitle')} meta={t('settingsUi.integ.keys.newHint')}>
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <SettingsField label={t('settingsUi.integ.keys.name')} htmlFor="key-name" hint={t('settingsUi.integ.keys.nameHint')} required>
+          <input id="key-name" className={FIELD} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
+        </SettingsField>
         <fieldset>
-          <legend className="text-sm font-medium text-chart-ink mb-2">Permissions</legend>
+          <legend className="mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.integ.keys.permissions')}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {scopes.map((s) => (
-              <label key={s.id} className="flex items-center gap-3 rounded-lg border border-foam-deep px-3 min-h-12 sm:min-h-10 text-sm">
-                <input type="checkbox" checked={chosen.includes(s.id)} onChange={() => toggle(chosen, setChosen, s.id)} />
-                <span>
-                  {s.label}
-                  <span className="block text-xs text-muted font-mono">{s.id}</span>
-                </span>
-              </label>
+              <CheckTile
+                key={s.id}
+                id={`scope-${s.id}`}
+                checked={chosen.includes(s.id)}
+                onChange={() => toggle(chosen, setChosen, s.id)}
+                label={s.label}
+                sub={s.id}
+              />
             ))}
           </div>
         </fieldset>
         {sites.length > 1 && (
           <fieldset>
-            <legend className="text-sm font-medium text-chart-ink mb-1">Sites</legend>
-            <p className="text-sm text-muted mb-2">Leave all unticked to allow every site.</p>
-            <div className="flex flex-wrap gap-2">
+            <legend className="mb-1 text-[12px] leading-4 text-muted">{t('settingsUi.integ.keys.sites')}</legend>
+            <p className="mb-2 text-[13px] leading-4 text-faint">{t('settingsUi.integ.keys.sitesHint')}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
               {sites.map((s) => (
-                <label key={s.id} className="flex items-center gap-2 rounded-lg border border-foam-deep px-3 min-h-12 sm:min-h-10 text-sm">
-                  <input type="checkbox" checked={siteIds.includes(s.id)} onChange={() => toggle(siteIds, setSiteIds, s.id)} />
-                  {s.name}
-                </label>
+                <CheckTile key={s.id} id={`site-${s.id}`} checked={siteIds.includes(s.id)} onChange={() => toggle(siteIds, setSiteIds, s.id)} label={s.name} />
               ))}
             </div>
           </fieldset>
         )}
-        <Field label="Expires" htmlFor="key-expiry">
-          <Select id="key-expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)}>
-            <option value="">Never</option>
-            <option value="30">In 30 days</option>
-            <option value="90">In 90 days</option>
-            <option value="365">In a year</option>
-          </Select>
-        </Field>
-        <Button type="submit" disabled={busy || !name.trim() || !chosen.length}>
-          {busy ? 'Creating…' : 'Create key'}
-        </Button>
+        <SettingsField label={t('settingsUi.integ.keys.expires')} htmlFor="key-expiry" className="sm:max-w-xs">
+          <select id="key-expiry" className={FIELD} value={expiry} onChange={(e) => setExpiry(e.target.value)}>
+            <option value="">{t('settingsUi.integ.keys.never')}</option>
+            <option value="30">{t('settingsUi.integ.keys.in30')}</option>
+            <option value="90">{t('settingsUi.integ.keys.in90')}</option>
+            <option value="365">{t('settingsUi.integ.keys.inYear')}</option>
+          </select>
+        </SettingsField>
+        <div>
+          <GradientButton type="submit" size="sm" disabled={busy || !name.trim() || !chosen.length}>
+            {busy ? t('settingsUi.integ.keys.creating') : t('settingsUi.integ.keys.create')}
+          </GradientButton>
+        </div>
       </form>
-    </Card>
+    </SettingsCard>
   )
 }
 
-function CreatedKey({ created, onDone }) {
-  const { showToast } = useToast()
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(created.key)
-      showToast('success', 'Key copied')
-    } catch {
-      showToast('error', 'Copy failed; select the key and copy it')
-    }
-  }
-  return (
-    <Card className="border-lake">
-      <CardHeader title="Copy your new key now" subtitle="This is the only time it is shown. Store it in the other system's secret settings." />
-      <code className="block break-all rounded-lg bg-foam px-3 py-3 font-mono text-sm text-chart-ink select-all">{created.key}</code>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={copy}>Copy key</Button>
-        <Button variant="secondary" onClick={onDone}>I have stored it</Button>
-      </div>
-    </Card>
-  )
-}
-
-function KeyRow({ k, sitesById }) {
+function KeyRow({ k, sitesById, now }) {
+  const t = useT()
+  const ago = useRelativeTime()
   const { showToast } = useToast()
   const revoke = useMutation(api.apiKeys.revoke)
-  const s = STATUS[k.status] || STATUS.active
   const onRevoke = async () => {
-    if (!window.confirm(`Revoke "${k.name}"? Systems using it stop working immediately.`)) return
+    if (!window.confirm(t('settingsUi.integ.keys.revokeConfirm', { name: k.name }))) return
     try {
       await revoke({ keyId: k.id })
-      showToast('success', 'Key revoked')
+      showToast('success', t('settingsUi.integ.keys.revoked'))
     } catch (err) {
       showToast('error', errorMessage(err))
     }
   }
+  const active = k.status === 'active'
+  const idleDays = Math.floor((now - (k.lastUsedAt || k.createdAt || now)) / DAY)
+  const stale = active && idleDays >= STALE_DAYS
+  const sites = k.locationIds.length
+    ? k.locationIds.map((id) => sitesById[id] || t('settingsUi.integ.keys.removedSite')).join(', ')
+    : t('settingsUi.integ.keys.allSites')
   return (
-    <li className="py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <li className="grid gap-3 border-t border-line py-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_auto_auto] md:items-center md:gap-5">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-chart-ink">{k.name}</span>
-          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
+          <span className="text-[15px] leading-5 text-text">{k.name}</span>
+          {!active && <Pill tone={STATUS_TONE[k.status] || 'neutral'}>{t(`settingsUi.integ.keys.status.${k.status}`)}</Pill>}
         </div>
-        <p className="mt-1 font-mono text-xs text-muted">{k.prefix}</p>
-        <p className="mt-1 text-sm text-muted">{k.scopes.join(', ')}</p>
-        <p className="mt-1 text-sm text-muted">
-          {k.locationIds.length ? `Sites: ${k.locationIds.map((id) => sitesById[id] || 'removed site').join(', ')}` : 'All sites'}
-          {' · '}Last used {formatTime(k.lastUsedAt)}
-          {k.expiresAt ? ` · Expires ${formatTime(k.expiresAt)}` : ''}
+        <p className="mt-1 truncate font-mono text-[13px] leading-4 text-muted">{k.prefix}…</p>
+        <p className="mt-1 text-[12px] leading-4 text-faint">
+          {sites}
+          {k.expiresAt ? ` · ${t('settingsUi.integ.keys.expiresOn', { time: formatTime(k.expiresAt) })}` : ''}
+          {' · '}
+          {k.createdBy
+            ? t('settingsUi.integ.keys.createdBy', { time: formatTime(k.createdAt), name: k.createdBy })
+            : t('settingsUi.integ.keys.created', { time: formatTime(k.createdAt) })}
         </p>
-        <p className="mt-1 text-xs text-muted">Created {formatTime(k.createdAt)}{k.createdBy ? ` by ${k.createdBy}` : ''}</p>
       </div>
-      {k.status === 'active' && (
-        <Button variant="secondary" size="sm" onClick={onRevoke}>Revoke</Button>
-      )}
+      <ul className="flex flex-wrap gap-2" aria-label={t('settingsUi.integ.keys.permissions')}>
+        {k.scopes.map((s) => (
+          <li key={s}>
+            <Pill tone={scopeTone(s)}>{s}</Pill>
+          </li>
+        ))}
+      </ul>
+      <span className={`whitespace-nowrap text-[14px] leading-[18px] ${stale ? 'text-warn' : 'text-muted'}`}>
+        {stale
+          ? t('settingsUi.integ.keys.unusedDays', { count: idleDays })
+          : k.lastUsedAt
+            ? t('settingsUi.integ.keys.used', { time: ago(k.lastUsedAt, now) })
+            : t('settingsUi.integ.keys.neverUsed')}
+      </span>
+      <div className="md:justify-self-end">
+        {active && (
+          <GhostButton size="lg" onClick={onRevoke}>
+            {t('settingsUi.integ.keys.revoke')}
+          </GhostButton>
+        )}
+      </div>
     </li>
   )
 }
 
-export default function ApiKeysPage() {
+function OutboundSummary({ now }) {
+  const t = useT()
+  const ago = useRelativeTime()
+  const data = useQuery(api.webhooks.overview)
+  return (
+    <SettingsCard
+      title={t('settingsUi.integ.nav.outbound')}
+      action={
+        <Link href="/webhooks" className="flex items-center gap-1 rounded text-[14px] leading-[18px] text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+          <Plus size={14} aria-hidden />
+          {t('settingsUi.integ.addEndpoint')}
+        </Link>
+      }
+    >
+      {!data ? (
+        <Skeleton className="h-24" />
+      ) : data.endpoints.length === 0 ? (
+        <p className="border-t border-line py-4 text-[13px] leading-4 text-muted">{t('settingsUi.integ.hooks.emptyHint')}</p>
+      ) : (
+        <ul>
+          {data.endpoints.map((ep) => {
+            const failing = ep.consecutiveFailures > 0
+            const tone = ep.status !== 'active' ? 'neutral' : failing ? 'red' : 'green'
+            const label =
+              ep.status !== 'active'
+                ? t('integ.common.off')
+                : failing
+                  ? t('settingsUi.integ.hooks.failing', { count: ep.consecutiveFailures })
+                  : ep.lastSuccessAt
+                    ? t('settingsUi.integ.hooks.deliveredAgo', { time: ago(ep.lastSuccessAt, now) })
+                    : t('integ.common.on')
+            return (
+              <li key={ep.id} className="flex flex-col gap-2 border-t border-line py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate font-mono text-[14px] leading-[18px] text-text">{ep.url}</span>
+                  <Pill tone={tone}>{label}</Pill>
+                </div>
+                <p className="truncate text-[13px] leading-4 text-muted">{ep.eventTypes.join(' · ')}</p>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </SettingsCard>
+  )
+}
+
+function InboundSummary({ now }) {
+  const t = useT()
+  const ago = useRelativeTime()
+  const data = useQuery(api.inboundWebhooks.overview, {})
+  return (
+    <SettingsCard title={t('settingsUi.integ.nav.inbound')} meta={data ? data.webhooks.length : undefined}>
+      {!data ? (
+        <Skeleton className="h-24" />
+      ) : data.webhooks.length === 0 ? (
+        <p className="border-t border-line py-4 text-[13px] leading-4 text-muted">{t('integ.inbound.emptyHint')}</p>
+      ) : (
+        <ul>
+          {data.webhooks.map((h) => (
+            <li key={h.id} className="flex items-center justify-between gap-3 border-t border-line py-4">
+              <div className="min-w-0">
+                <Link
+                  href="/inbound-webhooks"
+                  className="rounded text-[15px] leading-5 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                >
+                  {h.name}
+                </Link>
+                <p className="mt-1 truncate text-[13px] leading-4 text-muted">
+                  {h.lastReceivedAt ? t('settingsUi.integ.hooks.receivedAgo', { time: ago(h.lastReceivedAt, now) }) : t('integ.inbound.noEvents')}
+                  {h.secretHint ? ` · ${t('settingsUi.integ.hooks.secretEnding', { hint: h.secretHint })}` : ''}
+                </p>
+              </div>
+              {h.status !== 'active' && <Pill tone="neutral">{t('integ.common.off')}</Pill>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </SettingsCard>
+  )
+}
+
+function DocsLink() {
+  const t = useT()
+  return (
+    <Link
+      href="/api-docs"
+      className="flex items-center gap-5 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:px-[26px]"
+    >
+      <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-full border border-line-strong text-cyan">
+        <CodeXml size={20} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-medium leading-[22px] text-text">{t('settingsUi.integ.docsTitle')}</span>
+        <span className="mt-1 block text-[14px] leading-[18px] text-muted">{t('settingsUi.integ.docsHint')}</span>
+      </span>
+      <ArrowRight size={18} aria-hidden className="shrink-0 text-muted" />
+    </Link>
+  )
+}
+
+function ApiKeysScreen() {
+  const t = useT()
   const [now] = useState(() => Date.now())
   const data = useQuery(api.apiKeys.overview, { now })
   const [created, setCreated] = useState(null)
-  const sitesById = useMemo(
-    () => Object.fromEntries((data?.sites || []).map((s) => [s.id, s.name])),
-    [data],
-  )
+  const { showToast } = useToast()
+  const sitesById = useMemo(() => Object.fromEntries((data?.sites || []).map((s) => [s.id, s.name])), [data])
+  const activeCount = data ? data.keys.filter((k) => k.status === 'active').length : 0
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(created.key)
+      showToast('success', t('settingsUi.integ.keys.copied'))
+    } catch {
+      showToast('error', t('integ.common.copyFailed'))
+    }
+  }
 
   return (
-    <ProtectedRoute permission="integrations.manage">
-      <Layout title="API keys">
-        <FormPage width="lg">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Company settings', href: '/company-settings' },
-              { label: 'API keys' },
-            ]}
-            description="Keys let other systems read your farm data and record daily entries and sampling through the API. Each key only sees your company."
-            related={[
-              { label: 'API documentation', href: '/api-docs' },
-              { label: 'Webhooks', href: '/webhooks' },
-            ]}
-          />
-          {!data ? (
-            <Skeleton className="h-64" />
-          ) : (
-            <div className="space-y-6">
-              {created && <CreatedKey created={created} onDone={() => setCreated(null)} />}
-              <Card>
-                <CardHeader title="Keys" subtitle="Revoke a key you no longer use. Revoked keys stay listed for the record." />
-                {data.keys.length === 0 ? (
-                  <EmptyState title="No API keys yet" description="Create one below when a partner or script needs access." />
-                ) : (
-                  <ul className="divide-y divide-foam-deep">
-                    {data.keys.map((k) => (
-                      <KeyRow key={k.id} k={k} sitesById={sitesById} />
-                    ))}
-                  </ul>
-                )}
-              </Card>
-              <NewKeyCard scopes={data.scopes} sites={data.sites} onCreated={setCreated} />
-            </div>
+    <IntegrationsShell
+      title={t('settingsUi.integ.title')}
+      actions={
+        <GradientButton href="#new-key" icon={Plus}>
+          {t('settingsUi.integ.keys.newTitle')}
+        </GradientButton>
+      }
+    >
+      <p className="max-w-3xl text-[14px] leading-[18px] text-muted">{t('settingsUi.integ.keys.description')}</p>
+      {!data ? (
+        <Skeleton className="h-64" />
+      ) : (
+        <>
+          {created && (
+            <SecretOnce
+              title={t('settingsUi.integ.keys.copyNowTitle')}
+              hint={t('settingsUi.integ.keys.copyNowHint')}
+              secret={created.key}
+              copyLabel={t('settingsUi.integ.keys.copyKey')}
+              onCopy={copy}
+              onDone={() => setCreated(null)}
+            />
           )}
-        </FormPage>
-      </Layout>
+          <SettingsCard title={t('settingsUi.integ.keys.title')} meta={t('settingsUi.integ.keys.meta', { count: activeCount })}>
+            {data.keys.length === 0 ? (
+              <Notice tone="cyan">{t('settingsUi.integ.keys.empty')}</Notice>
+            ) : (
+              <ul>
+                {data.keys.map((k) => (
+                  <KeyRow key={k.id} k={k} sitesById={sitesById} now={now} />
+                ))}
+              </ul>
+            )}
+          </SettingsCard>
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <OutboundSummary now={now} />
+            <InboundSummary now={now} />
+          </div>
+          <DocsLink />
+          <NewKeyCard scopes={data.scopes} sites={data.sites} onCreated={setCreated} />
+        </>
+      )}
+    </IntegrationsShell>
+  )
+}
+
+export default function ApiKeysPage() {
+  return (
+    <ProtectedRoute permission="integrations.manage">
+      <ApiKeysScreen />
     </ProtectedRoute>
   )
 }

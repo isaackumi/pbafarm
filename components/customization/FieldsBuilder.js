@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
-import { Button, Card, CardHeader, EmptyState, Field, Input, Select, Textarea } from '../ui'
+import { EmptyState, GhostButton, GradientButton } from '../ui'
 import { useToast } from '../Toast'
 import { errorMessage } from '../../lib/errorMessage'
 import {
@@ -12,6 +12,7 @@ import {
   CUSTOM_FIELD_TYPE_LABELS,
 } from '../../convex/lib/customFieldRules'
 import CustomFields from '../CustomFields'
+import { FIELD, SettingsCard, SettingsField } from '../settings'
 
 /** Built-in fields a condition can look at, per entity ('core:<name>'). */
 const CORE_FIELDS = {
@@ -190,96 +191,96 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Label" htmlFor="cf-label" required>
-          <Input id="cf-label" value={f.label} onChange={set('label')} placeholder="Net mesh size" maxLength={80} />
-        </Field>
-        <Field label="Key" htmlFor="cf-key" hint={editing ? 'Fixed once the field exists' : 'Used in exports and the API'}>
-          <Input id="cf-key" value={f.key} onChange={set('key')} disabled={editing} maxLength={40} className="font-data" />
-        </Field>
-        <Field label="Type" htmlFor="cf-type" hint={editing ? 'Fixed once the field exists' : undefined}>
-          <Select id="cf-type" value={f.type} onChange={set('type')} disabled={editing}>
+        <SettingsField label="Label" htmlFor="cf-label" required>
+          <input className={FIELD} id="cf-label" value={f.label} onChange={set('label')} placeholder="Net mesh size" maxLength={80} />
+        </SettingsField>
+        <SettingsField label="Key" htmlFor="cf-key" hint={editing ? 'Fixed once the field exists' : 'Used in exports and the API'}>
+          <input id="cf-key" value={f.key} onChange={set('key')} disabled={editing} maxLength={40} className={`${FIELD} font-data`} />
+        </SettingsField>
+        <SettingsField label="Type" htmlFor="cf-type" hint={editing ? 'Fixed once the field exists' : undefined}>
+          <select className={FIELD} id="cf-type" value={f.type} onChange={set('type')} disabled={editing}>
             {CUSTOM_FIELD_TYPES.map((t) => (
               <option key={t} value={t}>{CUSTOM_FIELD_TYPE_LABELS[t]}</option>
             ))}
-          </Select>
-        </Field>
+          </select>
+        </SettingsField>
         {f.type === 'number' && (
-          <Field label="Unit" htmlFor="cf-unit" hint="Shown next to the value, e.g. mm or kg">
-            <Input id="cf-unit" value={f.unit} onChange={set('unit')} maxLength={20} />
-          </Field>
+          <SettingsField label="Unit" htmlFor="cf-unit" hint="Shown next to the value, e.g. mm or kg">
+            <input className={FIELD} id="cf-unit" value={f.unit} onChange={set('unit')} maxLength={20} />
+          </SettingsField>
         )}
-        <Field label="Help text" htmlFor="cf-help" className="sm:col-span-2">
-          <Input id="cf-help" value={f.helpText} onChange={set('helpText')} maxLength={300} />
-        </Field>
+        <SettingsField label="Help text" htmlFor="cf-help" className="sm:col-span-2">
+          <input className={FIELD} id="cf-help" value={f.helpText} onChange={set('helpText')} maxLength={300} />
+        </SettingsField>
         {choice && (
-          <Field
+          <SettingsField
             label="Choices"
             htmlFor="cf-options"
             className="sm:col-span-2"
             hint='One per line. Add "(archived)" to stop offering a choice while keeping it on old records.'
           >
-            <Textarea id="cf-options" rows={4} value={f.optionsText} onChange={set('optionsText')} placeholder={'Good\nTorn\nNeeds repair'} />
-          </Field>
+            <textarea className={FIELD} id="cf-options" rows={4} value={f.optionsText} onChange={set('optionsText')} placeholder={'Good\nTorn\nNeeds repair'} />
+          </SettingsField>
         )}
         {f.type === 'number' && (
           <>
-            <Field label="Minimum" htmlFor="cf-min">
-              <Input id="cf-min" type="number" step="any" value={f.min} onChange={set('min')} />
-            </Field>
-            <Field label="Maximum" htmlFor="cf-max">
-              <Input id="cf-max" type="number" step="any" value={f.max} onChange={set('max')} />
-            </Field>
-            <label className="flex items-center gap-2 text-sm text-chart-ink min-h-12">
-              <input type="checkbox" checked={f.integer} onChange={set('integer')} className="h-5 w-5 rounded border-input-border" />
+            <SettingsField label="Minimum" htmlFor="cf-min">
+              <input className={FIELD} id="cf-min" type="number" step="any" value={f.min} onChange={set('min')} />
+            </SettingsField>
+            <SettingsField label="Maximum" htmlFor="cf-max">
+              <input className={FIELD} id="cf-max" type="number" step="any" value={f.max} onChange={set('max')} />
+            </SettingsField>
+            <label className="flex items-center gap-2 text-sm text-text min-h-12">
+              <input type="checkbox" checked={f.integer} onChange={set('integer')} className="h-5 w-5 rounded border-line-strong" />
               Whole numbers only
             </label>
           </>
         )}
         {(f.type === 'text' || f.type === 'long_text') && (
           <>
-            <Field label="Format (pattern)" htmlFor="cf-pattern" hint="Optional regular expression the whole value must match">
-              <Input id="cf-pattern" value={f.pattern} onChange={set('pattern')} className="font-data" maxLength={200} />
-            </Field>
-            <Field label="Maximum length" htmlFor="cf-maxlen">
-              <Input id="cf-maxlen" type="number" min="1" value={f.maxLength} onChange={set('maxLength')} />
-            </Field>
+            <SettingsField label="Format (pattern)" htmlFor="cf-pattern" hint="Optional regular expression the whole value must match">
+              <input id="cf-pattern" value={f.pattern} onChange={set('pattern')} className={`${FIELD} font-data`} maxLength={200} />
+            </SettingsField>
+            <SettingsField label="Maximum length" htmlFor="cf-maxlen">
+              <input className={FIELD} id="cf-maxlen" type="number" min="1" value={f.maxLength} onChange={set('maxLength')} />
+            </SettingsField>
           </>
         )}
         {f.type !== 'photo' && (
-          <Field
+          <SettingsField
             label="Default value"
             htmlFor="cf-default"
             hint={f.type === 'multiselect' ? 'Comma-separated choice values' : 'Filled in on new records'}
           >
             {f.type === 'boolean' ? (
-              <Select id="cf-default" value={f.defaultValue === true ? 'yes' : f.defaultValue === false ? 'no' : f.defaultValue} onChange={set('defaultValue')}>
+              <select className={FIELD} id="cf-default" value={f.defaultValue === true ? 'yes' : f.defaultValue === false ? 'no' : f.defaultValue} onChange={set('defaultValue')}>
                 <option value="">None</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
-              </Select>
+              </select>
             ) : f.type === 'select' ? (
-              <Select id="cf-default" value={f.defaultValue} onChange={set('defaultValue')}>
+              <select className={FIELD} id="cf-default" value={f.defaultValue} onChange={set('defaultValue')}>
                 <option value="">None</option>
                 {parseOptions(f.optionsText).filter((o) => !o.archived).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
-              </Select>
+              </select>
             ) : (
-              <Input id="cf-default" type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} step="any" value={f.defaultValue} onChange={set('defaultValue')} />
+              <input className={FIELD} id="cf-default" type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} step="any" value={f.defaultValue} onChange={set('defaultValue')} />
             )}
-          </Field>
+          </SettingsField>
         )}
-        <label className="flex items-center gap-2 text-sm text-chart-ink min-h-12 sm:col-span-2">
-          <input type="checkbox" checked={f.required} onChange={set('required')} className="h-5 w-5 rounded border-input-border" />
+        <label className="flex items-center gap-2 text-sm text-text min-h-12 sm:col-span-2">
+          <input type="checkbox" checked={f.required} onChange={set('required')} className="h-5 w-5 rounded border-line-strong" />
           Required when shown (checked on the server for every form, import and API call that creates the record)
         </label>
       </div>
 
-      <fieldset className="rounded-lg border border-foam-deep p-4 space-y-3">
-        <legend className="px-1 text-sm font-semibold text-chart-ink">Show only when</legend>
+      <fieldset className="rounded-lg border border-line p-4 space-y-3">
+        <legend className="px-1 text-sm font-semibold text-text">Show only when</legend>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Field" htmlFor="cf-cond-field">
-            <Select id="cf-cond-field" value={f.condField} onChange={set('condField')}>
+          <SettingsField label="Field" htmlFor="cf-cond-field">
+            <select className={FIELD} id="cf-cond-field" value={f.condField} onChange={set('condField')}>
               <option value="">Always show</option>
               <optgroup label="Built-in">
                 {(CORE_FIELDS[entity] || []).map(([k, l]) => (
@@ -293,28 +294,28 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
                   ))}
                 </optgroup>
               )}
-            </Select>
-          </Field>
+            </select>
+          </SettingsField>
           {f.condField && (
             <>
-              <Field label="Condition" htmlFor="cf-cond-op">
-                <Select id="cf-cond-op" value={f.condOp} onChange={set('condOp')}>
+              <SettingsField label="Condition" htmlFor="cf-cond-op">
+                <select className={FIELD} id="cf-cond-op" value={f.condOp} onChange={set('condOp')}>
                   {OPS.map(([v, l]) => (
                     <option key={v} value={v}>{l}</option>
                   ))}
-                </Select>
-              </Field>
+                </select>
+              </SettingsField>
               {!['is_set', 'is_not_set'].includes(f.condOp) && (
-                <Field label="Value" htmlFor="cf-cond-value">
-                  <Input id="cf-cond-value" value={f.condValue} onChange={set('condValue')} />
-                </Field>
+                <SettingsField label="Value" htmlFor="cf-cond-value">
+                  <input className={FIELD} id="cf-cond-value" value={f.condValue} onChange={set('condValue')} />
+                </SettingsField>
               )}
             </>
           )}
         </div>
         {sites?.length > 1 && (
           <div>
-            <p className="text-sm font-semibold text-chart-ink mb-2">Sites</p>
+            <p className="text-sm font-semibold text-text mb-2">Sites</p>
             <div className="flex flex-wrap gap-2">
               {sites.map((s) => {
                 const id = s.id || s._id
@@ -325,7 +326,7 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
                     type="button"
                     aria-pressed={on}
                     onClick={() => setF((p) => ({ ...p, locationIds: on ? p.locationIds.filter((x) => x !== id) : [...p.locationIds, id] }))}
-                    className={`min-h-10 rounded-lg border px-3 text-sm ${on ? 'border-lake bg-lake-soft text-chart-ink' : 'border-foam-deep text-muted hover:border-lake'}`}
+                    className={`min-h-10 rounded-lg border px-3 text-sm ${on ? 'border-lake bg-lake-soft text-text' : 'border-line text-muted hover:border-lake'}`}
                   >
                     {s.name}
                   </button>
@@ -338,10 +339,10 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
       </fieldset>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={saving || !f.label.trim() || !f.key}>
+        <GradientButton type="submit" disabled={saving || !f.label.trim() || !f.key}>
           {saving ? 'Saving…' : editing ? 'Save field' : 'Add field'}
-        </Button>
-        <Button variant="ghost" onClick={onDone} disabled={saving}>Cancel</Button>
+        </GradientButton>
+        <GhostButton onClick={onDone} disabled={saving}>Cancel</GhostButton>
       </div>
     </form>
   )
@@ -383,21 +384,18 @@ export default function FieldsBuilder() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
-        <Card>
-          <CardHeader
-            title="Custom fields"
-            subtitle="Extra fields your team fills in on forms. Values are checked on the server and included in exports and the API."
-            action={
+        <SettingsCard title="Custom fields" action={
               !editing && (
-                <Button size="sm" onClick={() => setEditing(blank())}>
+                <GradientButton size="sm" onClick={() => setEditing(blank())}>
                   <Plus className="h-4 w-4" aria-hidden />
                   Add field
-                </Button>
+                </GradientButton>
               )
-            }
-          />
-          <Field label="Record type" htmlFor="cf-entity" className="max-w-xs mb-4">
-            <Select
+            }>
+          <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">Extra fields your team fills in on forms. Values are checked on the server and included in exports and the API.</p>
+          <SettingsField label="Record type" htmlFor="cf-entity" className="max-w-xs mb-4">
+            <select
+              className={FIELD}
               id="cf-entity"
               value={entity}
               onChange={(e) => {
@@ -409,8 +407,8 @@ export default function FieldsBuilder() {
               {CUSTOM_ENTITIES.map((e) => (
                 <option key={e} value={e}>{CUSTOM_ENTITY_LABELS[e]}</option>
               ))}
-            </Select>
-          </Field>
+            </select>
+          </SettingsField>
 
           {editing ? (
             <FieldEditor
@@ -429,13 +427,13 @@ export default function FieldsBuilder() {
               description="Add one when your team needs to record something the built-in form does not ask for."
             />
           ) : (
-            <ul className="divide-y divide-foam-deep border border-foam-deep rounded-lg">
+            <ul className="divide-y divide-line border border-line rounded-lg">
               {active.map((d, i) => (
                 <li key={d._id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-chart-ink truncate">
+                    <p className="text-sm font-medium text-text truncate">
                       {d.label}
-                      {d.required && <span className="text-signal ml-0.5">*</span>}
+                      {d.required && <span className="text-alert ml-0.5">*</span>}
                     </p>
                     <p className="text-xs text-muted truncate">
                       {CUSTOM_FIELD_TYPE_LABELS[d.type]}
@@ -446,46 +444,46 @@ export default function FieldsBuilder() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" aria-label={`Move ${d.label} up`} onClick={() => move(i, -1)} disabled={i === 0}>
+                    <GhostButton size="sm" aria-label={`Move ${d.label} up`} onClick={() => move(i, -1)} disabled={i === 0}>
                       <ArrowUp className="h-4 w-4" aria-hidden />
-                    </Button>
-                    <Button variant="ghost" size="sm" aria-label={`Move ${d.label} down`} onClick={() => move(i, 1)} disabled={i === active.length - 1}>
+                    </GhostButton>
+                    <GhostButton size="sm" aria-label={`Move ${d.label} down`} onClick={() => move(i, 1)} disabled={i === active.length - 1}>
                       <ArrowDown className="h-4 w-4" aria-hidden />
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => setEditing(fromDef(d))}>Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => toggle(d)}>Archive</Button>
+                    </GhostButton>
+                    <GhostButton onClick={() => setEditing(fromDef(d))}>Edit</GhostButton>
+                    <GhostButton size="sm" onClick={() => toggle(d)}>Archive</GhostButton>
                   </div>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </SettingsCard>
 
         {archived.length > 0 && !editing && (
-          <Card>
-            <CardHeader title="Archived" subtitle="Not shown on forms. Values already recorded stay on records and in exports." />
-            <ul className="divide-y divide-foam-deep">
+          <SettingsCard title="Archived">
+            <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">Not shown on forms. Values already recorded stay on records and in exports.</p>
+            <ul className="divide-y divide-line">
               {archived.map((d) => (
                 <li key={d._id} className="flex items-center justify-between gap-3 py-2">
                   <span className="text-sm text-muted truncate">
                     {d.label} <span className="font-data">· {d.key}</span>
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => toggle(d)}>Restore</Button>
+                  <GhostButton size="sm" onClick={() => toggle(d)}>Restore</GhostButton>
                 </li>
               ))}
             </ul>
-          </Card>
+          </SettingsCard>
         )}
       </div>
 
-      <Card>
-        <CardHeader title="Preview" subtitle="How the fields look on a form. Try the conditions." />
+      <SettingsCard title="Preview">
+        <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">How the fields look on a form. Try the conditions.</p>
         {active.length ? (
           <CustomFields entity={entity} value={preview} onChange={setPreview} columns={1} idPrefix="cf-preview" />
         ) : (
           <p className="text-sm text-muted">Nothing to preview yet.</p>
         )}
-      </Card>
+      </SettingsCard>
     </div>
   )
 }
