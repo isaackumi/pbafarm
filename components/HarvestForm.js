@@ -22,6 +22,7 @@ import {
   Textarea,
 } from './ui'
 import { localToday } from '../lib/format'
+import { deriveHarvestTotals } from '../lib/harvestTotals'
 import { getActiveLocationId } from '../lib/locationScope'
 import { readReferenceList, saveReferenceData } from '../lib/referenceCache'
 import { usePermission } from '../hooks/usePermission'
@@ -174,41 +175,22 @@ const HarvestForm = ({ onComplete }) => {
     }, 0)
   }
 
-  const num = (v) => (v === '' || v == null ? null : Number(v))
-
   // Size grades are optional: blanks count as 0. Missing totals are filled in
   // where they can be worked out, and every problem is named in one message.
   const validateForm = () => {
     const problems = []
-    const next = {}
     if (!formData.cageId || !cages.some((c) => (c.id || c._id) === formData.cageId)) {
       problems.push(t('harvest.problem.pickCage'))
     }
     if (!formData.harvestDate) problems.push(t('harvest.problem.setDate'))
 
-    const badGrade = (formData.sizeBreakdown || []).find((s) => {
-      const n = num(s.weight)
-      return n != null && (!Number.isFinite(n) || n < 0)
-    })
+    const { badGrade, gradeSum, total, abw, count, next, mismatch } = deriveHarvestTotals(formData)
     if (badGrade) problems.push(t('harvest.problem.fixGrade', { grade: badGrade.category }))
-    const gradeSum = calculateTotalWeight()
-
-    let total = num(formData.totalWeight)
-    if (total == null && gradeSum > 0) {
-      total = Math.round(gradeSum * 100) / 100
-      next.totalWeight = String(total)
-    }
-    const abw = num(formData.averageBodyWeight)
-    let count = num(formData.estimatedCount)
-    if (count == null && total > 0 && abw > 0) {
-      count = Math.round((total * 1000) / abw)
-      next.estimatedCount = String(count)
-    }
 
     if (!(total > 0)) problems.push(t('harvest.problem.totalWeight'))
     if (!(abw > 0)) problems.push(t('harvest.problem.abw'))
     if (!(count > 0)) problems.push(t('harvest.problem.count'))
-    if (total > 0 && gradeSum > 0 && Math.abs(gradeSum - total) > 0.5) {
+    if (mismatch) {
       problems.push(
         t('harvest.problem.gradeMismatch', { sum: gradeSum, total }),
       )

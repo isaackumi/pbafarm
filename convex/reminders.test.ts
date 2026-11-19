@@ -95,3 +95,43 @@ test('only admins can trigger reminders by hand', async () => {
     t.withIdentity({ subject: `${staffId}|s` }).mutation(api.reminders.runForMyCompanyNow, {}),
   ).rejects.toThrow(/Insufficient permissions/)
 })
+
+test("each company's reminders are right however busy the other tenants are", async () => {
+  const { t, staffId, adminId, b2 } = await setup()
+  const late = await t.run(async (ctx) => {
+    // A big tenant: 600 active cages, 2,500 entries on the same day.
+    const bigId = await ctx.db.insert('companies', { name: 'Big', code: 'BIG', status: 'approved', createdAt: Date.now() } as any)
+    const bigCages = []
+    for (let i = 0; i < 600; i++) {
+      bigCages.push(await ctx.db.insert('cages', { name: `Z${i}`, status: 'active', companyId: bigId, updatedAt: Date.now() } as any))
+    }
+    for (let i = 0; i < 2500; i++) {
+      await ctx.db.insert('dailyRecords', {
+        cageId: bigCages[i % 600], date: i < 600 ? DATE : `2026-10-${String((i % 28) + 1).padStart(2, '0')}`,
+        feedAmount: 1, feedPrice: 1, feedCost: 1, mortality: 0, companyId: bigId,
+      } as any)
+    }
+    // More approved companies than one digest page, so ours spans pages.
+    for (let i = 0; i < 60; i++) {
+      await ctx.db.insert('companies', { name: `Filler ${i}`, code: `F${i}`, status: 'approved', createdAt: Date.now() } as any)
+    }
+    const lateId = await ctx.db.insert('companies', { name: 'Late', code: 'LATE', status: 'approved', createdAt: Date.now() } as any)
+    const userId = await ctx.db.insert('users', { email: 'l@x.com', role: 'user', companyId: lateId })
+    await ctx.db.insert('cages', { name: 'L1', status: 'active', companyId: lateId, updatedAt: Date.now() } as any)
+    return { userId }
+  })
+  await runDigest(t)
+
+  const staff = await notesFor(t, staffId)
+  expect(staff.map((n: any) => n.title)).toEqual(['Daily entry missing for 1 cage'])
+  expect(staff[0].message).toContain('(1 of 2 done)')
+  expect(staff[0].link).toBe(`/daily-entry?cages=${b2}`)
+  expect((await notesFor(t, adminId)).map((n: any) => n.title).sort()).toEqual([
+    'Daily entry missing for 1 cage',
+    'Low feed stock: 1 feed type',
+  ])
+  // A company on the second page of the fan-out still gets its reminder.
+  const lateNotes = await notesFor(t, late.userId)
+  expect(lateNotes).toHaveLength(1)
+  expect(lateNotes[0].message).toContain('L1')
+})

@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api } from './_generated/api'
 import { adg, biomassKg, fcr, sgr } from './lib/growth'
+import * as kpi from './lib/kpi'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -134,5 +135,28 @@ describe('cage cycle growth', () => {
     expect(all.cages).toHaveLength(1)
     expect(all.farm_efcr).toBe(2)
     expect(all.farm_biomass_kg).toBe(3800)
+  })
+
+  test('ANLY-901: the cage figures are the KPI service definitions, on every screen', async () => {
+    const { as, cageId } = await setup()
+    await as.mutation(api.biweeklyRecords.create, {
+      cageId, date: '2026-08-02', batchCode: 'BW-1', averageBodyWeight: 400, totalFishCount: 30, totalWeight: 12,
+    })
+    const g = (await as.query(api.cages.growth, { id: cageId, asOf: '2026-08-10' }))!
+    const days = kpi.daysBetween('2026-05-01', '2026-08-02')
+    const biomass = kpi.biomassKg(9500, 400)
+    expect(g.current_biomass_kg).toBe(kpi.round(biomass, 1))
+    expect(g.efcr).toBe(kpi.round(kpi.efcr(7500, biomass - 50), 2))
+    expect(g.sgr_pct_day).toBe(kpi.round(kpi.sgr(5, 400, days), 2))
+    expect(g.adg_g_day).toBe(kpi.round(kpi.adg(5, 400, days), 2))
+    expect(g.survival_pct).toBe(kpi.round((9500 / 10000) * 100, 1))
+    expect(g.days_of_culture).toBe(kpi.daysBetween('2026-05-01', '2026-08-10'))
+
+    // The farm view shows the same cage figures.
+    const all = await as.query(api.cages.growthAll, { asOf: '2026-08-10' })
+    const row: any = all.cages.find((c: any) => c.cage_id === cageId)
+    for (const k of ['efcr', 'sgr_pct_day', 'adg_g_day', 'survival_pct', 'current_biomass_kg', 'current_abw_g'] as const) {
+      expect(row[k]).toBe((g as any)[k])
+    }
   })
 })

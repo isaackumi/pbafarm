@@ -214,3 +214,98 @@ describe('S8: editing daily records from an earlier cycle', () => {
     expect((await getDoc(t, cageId)).currentCount).toBe(8000)
   })
 })
+
+describe('S8 (PROD-000c): daily records on a harvested or empty cage', () => {
+  test('mortality edits and deletes change only the record and say why', async () => {
+    const { t, as, cageId, companyId } = await setup()
+    const rec: any = await t.run((ctx: any) =>
+      ctx.db.insert('dailyRecords', {
+        cageId, date: '2026-09-01', feedAmount: 0, feedPrice: 0, feedCost: 0, mortality: 40, companyId,
+      }),
+    )
+    await as.mutation(api.harvest.create, harvest(cageId, { estimatedCount: 9960 }))
+    expect((await getDoc(t, cageId)).status).toBe('harvested')
+
+    const edit = await as.mutation(api.dailyRecords.update, { id: rec, patch: { mortality: 90 } })
+    expect(edit.warnings).toEqual([expect.stringMatching(/earlier cycle/)])
+    expect((await getDoc(t, cageId)).currentCount).toBe(0)
+
+    await t.run((ctx: any) => ctx.db.patch(cageId, { status: 'empty' }))
+    const del = await as.mutation(api.dailyRecords.remove, { id: rec })
+    expect(del.warnings).toEqual([expect.stringMatching(/earlier cycle/)])
+    expect((await getDoc(t, cageId)).currentCount).toBe(0)
+  })
+})
+
+describe('PROD-901: daily records view, edit and delete', () => {
+  async function withFeed(t: any, companyId: any) {
+    return await t.run((ctx: any) =>
+      ctx.db.insert('feedTypes', {
+        name: 'Grower', currentStock: 1000, minimumStock: 0, pricePerKg: 10, active: true, bagSizeKg: 20,
+        companyId, updatedAt: Date.now(),
+      }),
+    )
+  }
+  const entry = (cageId: any, feedTypeId: any, date: string, over: Record<string, unknown> = {}) => ({
+    cageId, date, feedAmount: 50, feedTypeId, feedPrice: 10, feedCost: 500, mortality: 20, ...over,
+  })
+
+  test('deleting a current-cycle record gives back its feed and its fish', async () => {
+    const { t, as, cageId, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    const id = await as.mutation(api.dailyRecords.create, entry(cageId, feedTypeId, '2026-11-01'))
+    expect((await getDoc(t, cageId)).currentCount).toBe(9980)
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(950)
+
+    const res = await as.mutation(api.dailyRecords.remove, { id })
+    expect(res.warnings).toEqual([])
+    expect((await getDoc(t, cageId)).currentCount).toBe(10000)
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(1000)
+    const rows: any[] = await t.run((ctx: any) =>
+      ctx.db.query('feedInventoryTransactions').withIndex('by_reference', (q: any) => q.eq('referenceId', String(id))).collect(),
+    )
+    expect(rows.reduce((s, r) => s + r.quantityKg, 0)).toBe(0)
+    expect(await t.run((ctx: any) => ctx.db.query('feedUsage').collect())).toEqual([])
+  })
+
+  test('editing feed and deaths re-posts only the difference', async () => {
+    const { t, as, cageId, companyId } = await setup()
+    const feedTypeId = await withFeed(t, companyId)
+    const id = await as.mutation(api.dailyRecords.create, entry(cageId, feedTypeId, '2026-11-01'))
+    await as.mutation(api.dailyRecords.update, { id, patch: { feedAmount: 80, mortality: 5 } })
+    expect((await getDoc(t, cageId)).currentCount).toBe(9995)
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(920)
+    expect((await getDoc(t, id)).feedCost).toBe(800)
+  })
+
+  test('the list reads only the requested window, newest first', async () => {
+    const { t, as, cageId, companyId } = await setup()
+    await t.run(async (ctx: any) => {
+      for (const date of ['2026-08-01', '2026-10-20', '2026-11-01', '2026-11-10']) {
+        await ctx.db.insert('dailyRecords', {
+          cageId, date, feedAmount: 0, feedPrice: 0, feedCost: 0, mortality: 0, companyId,
+        })
+      }
+    })
+    const last30 = await as.query(api.dailyRecords.list, { dateFrom: '2026-10-12', dateTo: '2026-11-11' })
+    expect(last30.map((r: any) => r.date)).toEqual(['2026-11-10', '2026-11-01', '2026-10-20'])
+    const capped = await as.query(api.dailyRecords.list, { cageId, limit: 2 })
+    expect(capped.map((r: any) => r.date)).toEqual(['2026-11-10', '2026-11-01'])
+  })
+
+  test('only roles allowed to delete records can delete them', async () => {
+    const { t, cageId, companyId } = await setup()
+    const staff = await t.run((ctx: any) =>
+      ctx.db.insert('users', { email: 'staff@example.com', role: 'user', companyId }),
+    )
+    const rec: any = await t.run((ctx: any) =>
+      ctx.db.insert('dailyRecords', {
+        cageId, date: '2026-11-01', feedAmount: 0, feedPrice: 0, feedCost: 0, mortality: 0, companyId,
+      }),
+    )
+    await expect(
+      t.withIdentity({ subject: `${staff}|s` }).mutation(api.dailyRecords.remove, { id: rec }),
+    ).rejects.toThrow(/permission/i)
+    expect(await getDoc(t, rec)).not.toBeNull()
+  })
+})

@@ -129,4 +129,27 @@ describe('harvest and the cage', () => {
     )
     expect((await t.run((ctx) => ctx.db.get(otherCageId)))?.currentCount).toBe(5000)
   })
+
+  test('PROD-903: a harvest saves with blank size grades', async () => {
+    const { t, as, cageId } = await setup()
+    const blank = [
+      { category: 'small', range: '<300 g', weight: 0 },
+      { category: 'large', range: '>500 g', weight: 0 },
+    ]
+    const { id } = await as.mutation(api.harvest.create, harvestArgs(cageId, { sizeBreakdown: blank }))
+    const row = await as.query(api.harvest.get, { id })
+    expect(row?.size_breakdown).toEqual(blank)
+    expect(row?.total_weight).toBe(4410)
+    expect((await t.run((ctx) => ctx.db.get(cageId)))?.status).toBe('harvested')
+
+    // No grades at all is fine too.
+    const fresh = await setup()
+    const partial = await fresh.as.mutation(
+      api.harvest.create,
+      harvestArgs(fresh.cageId, { harvestType: 'partial', status: 'in_progress', estimatedCount: 1000 }),
+    )
+    expect((await fresh.as.query(api.harvest.get, { id: partial.id }))?.size_breakdown).toBeUndefined()
+    expect((await fresh.t.run((ctx) => ctx.db.get(fresh.cageId)))?.currentCount).toBe(9000)
+  })
 })
+
