@@ -58,10 +58,10 @@ function profileRows(unit, type) {
 }
 
 const LEVEL_TONE = {
-  ok: 'bg-kelp',
+  ok: 'bg-good',
   warn: 'bg-warn',
-  over: 'bg-signal',
-  unknown: 'bg-foam-deep',
+  over: 'bg-alert',
+  unknown: 'bg-line-strong',
 }
 
 const LEVEL_TEXT = {
@@ -86,7 +86,7 @@ export function DensityMeter({ density, noun = 'unit', densityNote }) {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-        <span className="text-chart-ink tabular-nums font-medium">
+        <span className="text-text tabular-nums font-medium">
           {num(density.density, ` ${density.unit}`, 2)}
         </span>
         <span className="text-muted tabular-nums">
@@ -94,7 +94,7 @@ export function DensityMeter({ density, noun = 'unit', densityNote }) {
         </span>
       </div>
       <div
-        className="mt-1.5 h-2 rounded-full overflow-hidden bg-foam-deep"
+        className="mt-1.5 h-2 rounded-full overflow-hidden bg-line-strong"
         role="meter"
         aria-valuenow={pct}
         aria-valuemin={0}
@@ -103,7 +103,7 @@ export function DensityMeter({ density, noun = 'unit', densityNote }) {
       >
         <div className={`h-full rounded-full ${LEVEL_TONE[density.level]}`} style={{ width: `${pct}%` }} />
       </div>
-      <p className={`mt-1.5 text-xs ${density.level === 'over' ? 'text-signal' : 'text-muted'}`}>
+      <p className={`mt-1.5 text-xs ${density.level === 'over' ? 'text-alert' : 'text-muted'}`}>
         {LEVEL_TEXT[density.level]}
         {density.pctOfMax != null ? ` (${density.pctOfMax}% of limit)` : ''}
         {densityNote ? ` · measured ${densityNote}` : ''}
@@ -154,7 +154,7 @@ function StatusControl({ ws }) {
         {saving ? 'Saving…' : 'Set status'}
       </Button>
     </div>
-      {chosen && !chosen.allowed && <p className="mt-1.5 text-xs text-signal">{chosen.reason}</p>}
+      {chosen && !chosen.allowed && <p className="mt-1.5 text-xs text-alert">{chosen.reason}</p>}
     </div>
   )
 }
@@ -165,9 +165,9 @@ export default function UnitProfile({ ws, isAdmin }) {
   const { unit, profile, unitType } = ws
   const rows = profileRows(unit, unitType)
   return (
-    <section className="page-card p-5 sm:p-6 space-y-5" aria-labelledby="unit-profile-title">
+    <section className="rounded-card border border-line bg-surface shadow-[var(--shadow-card)] p-5 sm:p-6 space-y-5" aria-labelledby="unit-profile-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="unit-profile-title" className="font-display text-lg font-medium">
+        <h2 id="unit-profile-title" className="text-lg font-medium">
           {profile.noun} profile
         </h2>
         <p className="text-sm text-muted">
@@ -181,13 +181,13 @@ export default function UnitProfile({ ws, isAdmin }) {
       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
         <div>
           <dt className="text-muted">Site</dt>
-          <dd className="mt-0.5 text-chart-ink">{ws.site?.name || unit.location || '—'}</dd>
+          <dd className="mt-0.5 text-text">{ws.site?.name || unit.location || '—'}</dd>
         </div>
         <div>
           <dt className="text-muted">{profile.groupNoun}</dt>
-          <dd className="mt-0.5 text-chart-ink">
+          <dd className="mt-0.5 text-text">
             {ws.group ? (
-              <Link href={`/units?group=${ws.group._id}`} className="text-lake hover:underline">
+              <Link href={`/units?group=${ws.group._id}`} className="text-cyan hover:underline">
                 {ws.group.name}
               </Link>
             ) : (
@@ -198,13 +198,13 @@ export default function UnitProfile({ ws, isAdmin }) {
         {(unitType === 'cage' || ws.waterBody) && (
           <div>
             <dt className="text-muted">Water body</dt>
-            <dd className="mt-0.5 text-chart-ink">{ws.waterBody?.name || '—'}</dd>
+            <dd className="mt-0.5 text-text">{ws.waterBody?.name || '—'}</dd>
           </div>
         )}
         {rows.map(([label, value]) => (
           <div key={label}>
             <dt className="text-muted">{label}</dt>
-            <dd className="mt-0.5 text-chart-ink tabular-nums">{value}</dd>
+            <dd className="mt-0.5 text-text tabular-nums">{value}</dd>
           </div>
         ))}
         {unit.latitude != null && unit.longitude != null && (
@@ -212,7 +212,7 @@ export default function UnitProfile({ ws, isAdmin }) {
             <dt className="text-muted">Position</dt>
             <dd className="mt-0.5 tabular-nums">
               <a
-                className="text-lake hover:underline"
+                className="text-cyan hover:underline"
                 href={`https://www.openstreetmap.org/?mlat=${unit.latitude}&mlon=${unit.longitude}#map=17/${unit.latitude}/${unit.longitude}`}
                 target="_blank"
                 rel="noreferrer"
@@ -225,13 +225,13 @@ export default function UnitProfile({ ws, isAdmin }) {
       </dl>
 
       <div>
-        <h3 className="text-sm font-semibold text-chart-ink mb-2">Stocking density</h3>
+        <h3 className="text-sm font-semibold text-text mb-2">Stocking density</h3>
         <DensityMeter density={ws.density} noun={profile.noun} densityNote={profile.densityNote} />
       </div>
 
       {isAdmin && !ws.archived && <StatusControl ws={ws} />}
       {ws.archived && (
-        <p className="text-sm text-signal">This unit is archived. Restore it from the unit list to use it again.</p>
+        <p className="text-sm text-alert">This unit is archived. Restore it from the unit list to use it again.</p>
       )}
     </section>
   )

@@ -1,6 +1,7 @@
 /**
  * Home charts, split out so recharts loads after the page renders
  * (MOBILE-008). Imported only through next/dynamic in Dashboard.js.
+ * Styling: Paper 01 Home (gradient area, pink → cyan stroke).
  */
 import {
   ResponsiveContainer,
@@ -14,44 +15,26 @@ import {
   Tooltip,
   Cell,
 } from 'recharts'
+import { AXIS_TICK, GRID, TOOLTIP, BrandGradients } from './chartTheme'
 
-export function FeedTrendChart({ feedTrend }) {
+export function FeedTrendChart({ feedTrend, dataKey = 'cumulative', name = 'Cumulative kg' }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={feedTrend}>
-        <defs>
-          <linearGradient id="feedFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#18181b" stopOpacity={0.28} />
-            <stop offset="100%" stopColor="#18181b" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-        <XAxis
-          dataKey="label"
-          tick={{ fill: '#71717a', fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          tick={{ fill: '#71717a', fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-          width={48}
-        />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 12,
-            border: '1px solid #e4e4e7',
-            fontWeight: 600,
-          }}
-        />
+      <AreaChart data={feedTrend} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+        <BrandGradients id="feedTrend" />
+        <CartesianGrid {...GRID} />
+        <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={24} />
+        <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={44} />
+        <Tooltip {...TOOLTIP} />
         <Area
           type="monotone"
-          dataKey="cumulative"
-          name="Cumulative kg"
-          stroke="#18181b"
-          strokeWidth={3}
-          fill="url(#feedFill)"
+          dataKey={dataKey}
+          name={name}
+          stroke="url(#feedTrend-stroke)"
+          strokeWidth={2}
+          fill="url(#feedTrend-fill)"
+          dot={false}
+          activeDot={{ r: 4, fill: 'var(--cyan)', stroke: 'var(--surface)' }}
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -61,34 +44,14 @@ export function FeedTrendChart({ feedTrend }) {
 export function MortalityBarsChart({ mortalityBars }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={mortalityBars}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-        <XAxis
-          dataKey="label"
-          tick={{ fill: '#71717a', fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          allowDecimals={false}
-          tick={{ fill: '#71717a', fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-          width={36}
-        />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 12,
-            border: '1px solid #e4e4e7',
-            fontWeight: 600,
-          }}
-        />
-        <Bar dataKey="mortality" name="Fish" radius={[6, 6, 0, 0]}>
+      <BarChart data={mortalityBars} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+        <CartesianGrid {...GRID} />
+        <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+        <YAxis allowDecimals={false} tick={AXIS_TICK} axisLine={false} tickLine={false} width={36} />
+        <Tooltip {...TOOLTIP} cursor={{ fill: 'var(--surface-2)' }} />
+        <Bar dataKey="mortality" name="Fish" radius={[4, 4, 0, 0]} maxBarSize={18}>
           {mortalityBars.map((row, i) => (
-            <Cell
-              key={i}
-              fill={row.mortality > 0 ? '#dc2626' : '#e4e4e7'}
-            />
+            <Cell key={i} fill={row.mortality > 0 ? 'var(--alert)' : 'var(--line-strong)'} />
           ))}
         </Bar>
       </BarChart>

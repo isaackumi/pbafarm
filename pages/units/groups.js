@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Textarea } from '../../components/ui'
+import Link from 'next/link'
+import { Plus, Waves } from 'lucide-react'
+import { Button, Card, EmptyState, Field, GradientButton, Input, LoadingState, Select, Textarea } from '../../components/ui'
+import UnitViewSwitch from '../../components/units/UnitViewSwitch'
+import { useT } from '../../lib/i18n/context'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
@@ -222,7 +226,8 @@ function AssignUnits({ group, units }) {
 }
 
 function Groups() {
-  const { user, hasRole } = useAuth()
+  const t = useT()
+  const { user } = useAuth()
   const isAdmin = usePermission('org.sites.manage')
   const { locations } = useLocation()
   const groups = useQuery(api.units.listGroups, user ? {} : 'skip')
@@ -230,102 +235,116 @@ function Groups() {
   const units = useQuery(api.cages.list, user ? {} : 'skip')
   const [adding, setAdding] = useState(null)
 
+  const sectionHead = 'flex items-center justify-between gap-3 border-b border-line px-6 py-5'
+  const sectionTitle = 'text-[17px] font-semibold leading-[22px] text-text'
+
   return (
-    <div className="max-w-5xl space-y-6">
-      <PageHeader
-        title="Groups and water bodies"
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Units', href: '/units' },
-          { label: 'Groups' },
-        ]}
-        description="Cage groups, pond blocks and RAS systems are managed together; water bodies hold cages or feed ponds."
-        actions={
-          isAdmin && (
-            <>
-              <Button size="sm" onClick={() => setAdding('group')}>Add group</Button>
-              <Button size="sm" variant="secondary" onClick={() => setAdding('water')}>Add water body</Button>
-            </>
-          )
-        }
-        related={[{ label: 'Unit board', href: '/units' }, { label: 'Site map', href: '/units/map' }]}
-      />
+    <Layout
+      title={t('groupsUi.title')}
+      eyebrow={t('groupsUi.eyebrow')}
+      actions={
+        isAdmin && (
+          <>
+            <GradientButton icon={Plus} onClick={() => setAdding('group')}>
+              {t('groupsUi.addGroup')}
+            </GradientButton>
+            <GradientButton reverse icon={Waves} onClick={() => setAdding('water')}>
+              {t('groupsUi.addWaterBody')}
+            </GradientButton>
+          </>
+        )
+      }
+    >
+      <div className="flex max-w-5xl flex-col gap-7">
+        <UnitViewSwitch className="self-start" />
 
-      {adding && (
-        <Card>
-          <CardHeader title={adding === 'group' ? 'New group' : 'New water body'} />
-          {adding === 'group' ? (
-            <GroupForm waterBodies={waterBodies} locations={locations} onDone={() => setAdding(null)} />
+        {adding && (
+          <Card>
+            <h2 className={`${sectionTitle} mb-5`}>
+              {adding === 'group' ? t('groupsUi.newGroup') : t('groupsUi.newWaterBody')}
+            </h2>
+            {adding === 'group' ? (
+              <GroupForm waterBodies={waterBodies} locations={locations} onDone={() => setAdding(null)} />
+            ) : (
+              <WaterBodyForm locations={locations} onDone={() => setAdding(null)} />
+            )}
+          </Card>
+        )}
+
+        <section aria-labelledby="groups-title" className="rounded-card border border-line bg-surface shadow-[var(--shadow-card)]">
+          <div className={sectionHead}>
+            <h2 id="groups-title" className={sectionTitle}>
+              {t('groupsUi.groups')}
+            </h2>
+            {groups?.length > 0 && <span className="text-[13px] text-muted tabular-nums">{groups.length}</span>}
+          </div>
+          {groups === undefined ? (
+            <LoadingState />
+          ) : groups.length === 0 ? (
+            <EmptyState title={t('groupsUi.noGroups')} description={t('groupsUi.noGroupsBody')} />
           ) : (
-            <WaterBodyForm locations={locations} onDone={() => setAdding(null)} />
+            <ul>
+              {groups.map((g) => (
+                <li key={g._id} className="border-t border-line px-6 py-[14px] first:border-t-0">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-[2px]">
+                      <Link
+                        href={`/units?group=${g._id}`}
+                        className="rounded-sm text-[14px] font-medium leading-[18px] text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                      >
+                        {g.name}
+                      </Link>
+                      <span className="text-xs leading-4 text-muted">
+                        {kindLabel(GROUP_KINDS, g.kind)}
+                        {g.waterBodyName ? ` · ${g.waterBodyName}` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-6 text-[14px] tabular-nums">
+                      <span className="text-muted">{t('groupsUi.units', { count: g.unitCount })}</span>
+                      <span className="text-muted">{t('groupsUi.stocked', { count: g.stockedCount })}</span>
+                      <span className="w-28 text-right text-text">{t('groupsUi.fish', { count: g.fishCount })}</span>
+                    </div>
+                  </div>
+                  {isAdmin && <AssignUnits group={g} units={units} />}
+                </li>
+              ))}
+            </ul>
           )}
-        </Card>
-      )}
+        </section>
 
-      <Card padding={false}>
-        <div className="px-5 py-4 border-b border-foam-deep">
-          <h2 className="font-display text-lg font-medium">Groups</h2>
-        </div>
-        {groups === undefined ? (
-          <p className="p-5 text-sm text-muted">Loading…</p>
-        ) : groups.length === 0 ? (
-          <EmptyState
-            title="No groups yet"
-            description="Group cages on a mooring line, ponds in a block or tanks on one filter loop to see and manage them together."
-          />
-        ) : (
-          <ul className="divide-y divide-foam-deep">
-            {groups.map((g) => (
-              <li key={g._id} className="px-5 py-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-medium text-chart-ink">
-                    {g.name}{' '}
-                    <span className="text-sm font-normal text-muted">{kindLabel(GROUP_KINDS, g.kind)}</span>
-                  </p>
-                  <p className="text-sm text-muted tabular-nums">
-                    {g.unitCount} units · {g.stockedCount} stocked · {g.fishCount.toLocaleString()} fish
-                    {g.waterBodyName ? ` · ${g.waterBodyName}` : ''}
-                  </p>
-                </div>
-                {isAdmin && <AssignUnits group={g} units={units} />}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      <Card padding={false}>
-        <div className="px-5 py-4 border-b border-foam-deep">
-          <h2 className="font-display text-lg font-medium">Water bodies</h2>
-        </div>
-        {waterBodies === undefined ? (
-          <p className="p-5 text-sm text-muted">Loading…</p>
-        ) : waterBodies.length === 0 ? (
-          <EmptyState title="No water bodies yet" description="Add the lake or reservoir your cages sit in, or the source that feeds your ponds." />
-        ) : (
-          <ul className="divide-y divide-foam-deep">
-            {waterBodies.map((w) => (
-              <li key={w._id} className="px-5 py-3 flex flex-wrap justify-between gap-2 text-sm">
-                <span className="font-medium text-chart-ink">{w.name}</span>
-                <span className="text-muted tabular-nums">
-                  {kindLabel(WATER_BODY_KINDS, w.kind)}
-                  {w.latitude != null ? ` · ${w.latitude.toFixed(4)}, ${w.longitude.toFixed(4)}` : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-    </div>
+        <section aria-labelledby="water-title" className="rounded-card border border-line bg-surface shadow-[var(--shadow-card)]">
+          <div className={sectionHead}>
+            <h2 id="water-title" className={sectionTitle}>
+              {t('groupsUi.waterBodies')}
+            </h2>
+          </div>
+          {waterBodies === undefined ? (
+            <LoadingState />
+          ) : waterBodies.length === 0 ? (
+            <EmptyState title={t('groupsUi.noWater')} description={t('groupsUi.noWaterBody')} />
+          ) : (
+            <ul>
+              {waterBodies.map((w) => (
+                <li key={w._id} className="flex flex-wrap justify-between gap-2 border-t border-line px-6 py-[14px] text-[14px] first:border-t-0">
+                  <span className="font-medium text-text">{w.name}</span>
+                  <span className="text-muted tabular-nums">
+                    {kindLabel(WATER_BODY_KINDS, w.kind)}
+                    {w.latitude != null ? ` · ${w.latitude.toFixed(4)}, ${w.longitude.toFixed(4)}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </Layout>
   )
 }
 
 export default function GroupsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Groups and water bodies">
-        <Groups />
-      </Layout>
+      <Groups />
     </ProtectedRoute>
   )
 }

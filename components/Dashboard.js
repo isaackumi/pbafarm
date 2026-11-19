@@ -1,19 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
-import {
-  ArrowRight,
-  LayoutGrid,
-  RotateCcw,
-  Save,
-  Calendar,
-  Fish,
-  Package,
-  Plus,
-  Scale,
-  TrendingUp,
-  TriangleAlert,
-} from 'lucide-react'
+import { LayoutGrid, RotateCcw, Save, ClipboardPen, Wheat } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
@@ -23,14 +10,19 @@ import {
   Button,
   Card,
   CardHeader,
-  StatCard,
-  HealthMeter,
   EmptyState,
-  TabBar,
   DashboardSkeleton,
+  GhostButton,
+  GradientButton,
+  KpiStrip,
+  PageTitle,
+  Pill,
+  Segmented,
+  StatusDot,
+  Table,
 } from './ui'
 import { errorMessage } from '../lib/errorMessage'
-import { localToday } from '../lib/format'
+import { formatDate, localToday } from '../lib/format'
 import { useMutation, useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
 import FarmAlerts from './FarmAlerts'
@@ -42,6 +34,7 @@ import WidgetGrid, { visibleWidgets } from './dashboard/WidgetGrid'
 import WidgetListEditor from './dashboard/WidgetListEditor'
 import FeedingPlanWidget from './FeedingPlanWidget'
 import { DEFAULT_DASHBOARD } from '../convex/lib/dashboardLayout'
+import { routePermission } from '../lib/routePermissions'
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -52,26 +45,6 @@ const MortalityBarsChart = dynamic(
   () => import('./charts/DashboardCharts').then((m) => m.MortalityBarsChart),
   { ssr: false, loading: chartPlaceholder },
 )
-
-function formatDate(value) {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-function daysOfCulture(value) {
-  const start = value ? new Date(value) : null
-  if (!start || Number.isNaN(start.getTime())) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  start.setHours(0, 0, 0, 0)
-  return Math.floor((today - start) / (1000 * 60 * 60 * 24))
-}
 
 function farmHealthScore(metrics) {
   let score = 70
@@ -101,7 +74,6 @@ export default function Dashboard() {
 }
 
 function DashboardView() {
-  const router = useRouter()
   const { user } = useAuth()
   const canManageSites = usePermission('org.sites.manage')
   const { activeLocationId, locationArgs } = useLocation()
@@ -113,7 +85,7 @@ function DashboardView() {
   const layout = useQuery(api.dashboardLayouts.get, user && canReports ? { key: 'home' } : 'skip')
   const [customizing, setCustomizing] = useState(false)
   const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
-  const [tableTab, setTableTab] = useState('stockings')
+  const [feedRange, setFeedRange] = useState('30')
 
   // asOf: the period ends on the client's today (queries should not
   // read the server clock: their cache does not expire at midnight).
@@ -199,91 +171,131 @@ function DashboardView() {
       String(a.date).localeCompare(String(b.date)),
     )
     let cumulative = 0
-    return rows.slice(-30).map((row) => {
+    return rows.slice(-Number(feedRange)).map((row) => {
       cumulative += row.feed
       const d = new Date(row.date)
       return {
         ...row,
         label: Number.isNaN(d.getTime())
           ? row.date
-          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         cumulative: Math.round(cumulative * 10) / 10,
       }
     })
-  }, [dailyRecords])
+  }, [dailyRecords, feedRange])
 
   const mortalityBars = useMemo(() => feedTrend.slice(-14), [feedTrend])
 
   const health = farmHealthScore(metrics)
-  const mortTone =
-    parseFloat(metrics.mortalityRate) > 3
-      ? 'warn'
-      : parseFloat(metrics.mortalityRate) <= 1.5
-        ? 'good'
-        : 'default'
+  const mortalityPct = parseFloat(metrics.mortalityRate)
+  const biomassKg = metrics.totalBiomass
+  const biomassInT = biomassKg >= 1000
+  const feedTotal = feedTrend.length ? feedTrend[feedTrend.length - 1].cumulative : 0
+
+  const kpiItems = {
+    'stat.activeUnits': {
+      label: t('home.kpi.activeCages'),
+      value: metrics.totalActiveCages,
+      suffix: t('home.kpi.ofTotal', { count: metrics.totalCages ?? cages.length }),
+    },
+    'stat.biomass': {
+      label: t('home.kpi.biomass'),
+      value: biomassInT ? (biomassKg / 1000).toFixed(1) : biomassKg.toLocaleString(),
+      suffix: biomassInT ? 't' : 'kg',
+    },
+    'stat.fcr': {
+      label: t('home.kpi.fcr'),
+      value: metrics.averageFCR === 'N/A' ? '—' : metrics.averageFCR,
+      suffix: t('home.kpi.fcrHint'),
+    },
+    'stat.mortality': {
+      label: t('home.kpi.mortality'),
+      value: `${metrics.mortalityRate}%`,
+      valueTone: mortalityPct > 3 ? 'warn' : undefined,
+    },
+    'stat.adg': {
+      label: t('home.kpi.adg'),
+      value: metrics.avgDailyGrowth === 'N/A' ? '—' : metrics.avgDailyGrowth,
+      suffix: metrics.avgDailyGrowth === 'N/A' ? undefined : 'g/day',
+    },
+    'stat.feed30d': {
+      label: t('home.kpi.feed30d'),
+      value:
+        summary?.recent_feed_usage_kg != null
+          ? Number(summary.recent_feed_usage_kg).toLocaleString(undefined, { maximumFractionDigits: 0 })
+          : '—',
+      suffix: summary?.recent_feed_usage_kg != null ? 'kg' : undefined,
+    },
+    'stat.health': {
+      label: t('home.kpi.health'),
+      value: health.toFixed(0),
+      valueTone: health >= 75 ? 'good' : health >= 50 ? 'warn' : 'alert',
+      suffix: '/ 100',
+    },
+  }
+
+  // The stat widgets render as one Paper KPI strip at the first stat's place.
+  const gridWidgets = []
+  const kpiCells = []
+  for (const w of shownWidgets) {
+    if (kpiItems[w.widget]) {
+      if (!kpiCells.length) gridWidgets.push({ widget: '__kpis', size: 'full' })
+      kpiCells.push({ key: w.widget, ...kpiItems[w.widget] })
+    } else gridWidgets.push(w)
+  }
+
+  const statusTone = { approved: 'good', pending_approval: 'warn', rejected: 'alert' }
+  const activityColumns = [
+    {
+      key: 'date',
+      header: t('home.activity.date'),
+      width: 120,
+      render: (r) => <span className="text-muted tabular-nums">{formatDate(r.stocking_date || r.stockingDate)}</span>,
+    },
+    { key: 'type', header: t('home.activity.type'), width: 150, render: () => <Pill tone="cyan">{t('home.activity.stocking')}</Pill> },
+    { key: 'unit', header: t('home.activity.unit'), render: (r) => r.cage?.name || '—' },
+    {
+      key: 'batch',
+      header: t('home.activity.batch'),
+      width: 150,
+      render: (r) => <span className="text-muted">{r.batch_number || r.batchNumber || '—'}</span>,
+    },
+    {
+      key: 'fish',
+      header: t('home.activity.fish'),
+      width: 130,
+      align: 'right',
+      render: (r) => (r.fish_count != null ? Number(r.fish_count).toLocaleString() : '—'),
+    },
+    {
+      key: 'abw',
+      header: t('home.activity.abw'),
+      width: 150,
+      align: 'right',
+      render: (r) => (r.initial_abw != null ? `${Number(r.initial_abw).toFixed(1)} g` : '—'),
+    },
+    {
+      key: 'status',
+      header: t('home.activity.status'),
+      width: 190,
+      render: (r) =>
+        r.status ? (
+          <span className="inline-flex items-center gap-2">
+            <StatusDot tone={statusTone[r.status] || 'neutral'} />
+            <span className="text-muted">{t.or(`home.stockingStatus.${r.status}`, r.status)}</span>
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+  ]
+
+  const cardTitle = 'text-base font-semibold leading-5 text-text'
 
   const widgetNodes = {
-    'stat.health': (
-      <HealthMeter score={health} label="Farm health" />
-    ),
-    'stat.activeUnits': (
-      <StatCard
-        label="Active cages"
-        value={metrics.totalActiveCages}
-        icon={Fish}
-        hint={`${metrics.totalCages ?? summary?.cages?.total ?? cages.length} total at this location`}
-      />
-    ),
-    'stat.biomass': (
-      <StatCard
-        label="Standing biomass"
-        value={metrics.totalBiomass.toLocaleString()}
-        unit="kg"
-        icon={Package}
-        tone="accent"
-      />
-    ),
-    'stat.fcr': (
-      <StatCard
-        label="Avg FCR"
-        value={metrics.averageFCR}
-        icon={Scale}
-        hint="From harvest records (30d)"
-      />
-    ),
-    'stat.mortality': (
-      <StatCard
-        label="Mortality"
-        value={metrics.mortalityRate}
-        unit="%"
-        icon={TriangleAlert}
-        tone={mortTone}
-        hint="Last 30 days"
-      />
-    ),
-    'stat.adg': (
-      <StatCard
-        label="Avg daily growth"
-        value={metrics.avgDailyGrowth}
-        unit={metrics.avgDailyGrowth === 'N/A' ? '' : 'g/day'}
-        icon={TrendingUp}
-        tone="accent"
-      />
-    ),
-    'stat.feed30d': (
-      <StatCard
-        label="Feed (30d)"
-        value={
-          summary?.recent_feed_usage_kg != null
-            ? Number(summary.recent_feed_usage_kg).toFixed(0)
-            : '—'
-        }
-        unit="kg"
-        icon={Package}
-      />
-    ),
-    'insights': (
-      <div className="space-y-4">
+    __kpis: <KpiStrip items={kpiCells} className="py-1" />,
+    insights: (
+      <div className="flex flex-col gap-5">
         <FarmAlerts locationId={locationArgs?.locationId} />
         <DashboardInsights
           locationId={locationArgs?.locationId}
@@ -292,182 +304,80 @@ function DashboardView() {
       </div>
     ),
     'chart.feedTrend': (
-      <Card className="min-h-[22rem]">
-        <CardHeader
-          title="Cumulative feed"
-          subtitle="Daily feed logged over the last 30 days"
-        />
+      <section
+        aria-labelledby="home-feed-title"
+        className="flex min-h-[340px] flex-col gap-[18px] rounded-card border border-line bg-surface px-[26px] pb-[22px] pt-[26px] shadow-[var(--shadow-card)]"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-2">
+            <h2 id="home-feed-title" className="text-sm leading-[18px] text-muted">
+              {t('home.feed.title')}
+            </h2>
+            <p className="text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-text tabular-nums sm:text-[48px] sm:leading-[52px]">
+              {feedTotal >= 1000 ? (feedTotal / 1000).toFixed(1) : Math.round(feedTotal).toLocaleString()}
+              <span className="text-[24px] font-normal tracking-normal text-muted">
+                {feedTotal >= 1000 ? ' t' : ' kg'}
+              </span>
+            </p>
+            <p className="text-[13px] leading-4 text-muted">
+              {t('home.feed.cumulative', { count: feedTrend.length })}
+            </p>
+          </div>
+          <Segmented
+            label={t('home.feed.range')}
+            value={feedRange}
+            onChange={setFeedRange}
+            options={[
+              { value: '30', label: '30d' },
+              { value: '90', label: '90d' },
+            ]}
+          />
+        </div>
         {feedTrend.length === 0 ? (
           <EmptyState
-            title="No feed data yet"
-            description="Log daily entries to see cumulative feed usage."
+            title={t('home.feed.emptyTitle')}
+            description={t('home.feed.emptyBody')}
             action={
               <Button href="/daily-entry" size="md">
-                Log daily entry
+                {t('home.logDaily')}
               </Button>
             }
           />
         ) : (
-          <div className="h-64 sm:h-72">
-            <FeedTrendChart feedTrend={feedTrend} />
+          <div className="h-[190px] grow">
+            <FeedTrendChart feedTrend={feedTrend} name={t('home.feed.series')} />
           </div>
         )}
-      </Card>
+      </section>
     ),
     'chart.mortality': (
-      <Card className="min-h-[22rem]">
-        <CardHeader
-          title="Daily mortality"
-          subtitle="Last 14 logging days"
-        />
+      <Card className="min-h-[340px]">
+        <h2 className={cardTitle}>{t('home.mortality.title')}</h2>
+        <p className="mb-4 mt-1 text-xs leading-4 text-muted">{t('home.mortality.subtitle')}</p>
         {mortalityBars.length === 0 ? (
-          <EmptyState
-            title="No mortality logged"
-            description="Daily mortality will appear here once records exist."
-          />
+          <EmptyState title={t('home.mortality.emptyTitle')} description={t('home.mortality.emptyBody')} />
         ) : (
-          <div className="h-64 sm:h-72">
+          <div className="h-64">
             <MortalityBarsChart mortalityBars={mortalityBars} />
           </div>
         )}
       </Card>
     ),
-    'siteConditions': (
-      <SiteConditions
-        locationId={activeLocationId || undefined}
-        isAdmin={canManageSites}
-      />
+    siteConditions: (
+      <SiteConditions locationId={activeLocationId || undefined} isAdmin={canManageSites} />
     ),
-    'recentActivity': (
-      <Card padding={false}>
-        <div className="p-5 sm:p-6 border-b border-foam-deep flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display text-lg font-semibold text-chart-ink">
-              Recent activity
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Stockings and growth signals
-            </p>
-          </div>
-          <TabBar
-            tabs={[
-              { id: 'stockings', label: 'Recent stockings' },
-              { id: 'growth', label: 'Growth' },
-            ]}
-            active={tableTab}
-            onChange={setTableTab}
-          />
-        </div>
-
-        {tableTab === 'stockings' && (
-          <div className="overflow-x-auto">
-            {recentStockings.length === 0 ? (
-              <EmptyState
-                title="No stockings yet"
-                description="Create a stocking batch to track DOC and biomass."
-                action={
-                  <Button href="/stocking" size="md">
-                    New stocking
-                  </Button>
-                }
-              />
-            ) : (
-              <table className="min-w-full">
-                <thead>
-                  <tr className="text-left text-xs text-muted bg-foam/60">
-                    <th className="px-5 py-3.5 font-semibold">Batch</th>
-                    <th className="px-5 py-3.5 font-semibold">Date</th>
-                    <th className="px-5 py-3.5 font-semibold">DOC</th>
-                    <th className="px-5 py-3.5 font-semibold">Count</th>
-                    <th className="px-5 py-3.5 font-semibold">ABW</th>
-                    <th className="px-5 py-3.5 font-semibold" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentStockings.slice(0, 8).map((row) => {
-                    const id = row.id || row._id
-                    const doc = daysOfCulture(row.stocking_date || row.stockingDate)
-                    return (
-                      <tr
-                        key={id}
-                        className="border-t border-foam-deep hover:bg-foam/40"
-                      >
-                        <td className="px-5 py-4 font-semibold text-lagoon-950">
-                          {row.batch_number || row.batchNumber || '—'}
-                        </td>
-                        <td className="px-5 py-4 text-sm font-data text-chart-ink">
-                          {formatDate(row.stocking_date || row.stockingDate)}
-                        </td>
-                        <td className="px-5 py-4 text-sm font-data">
-                          {doc == null ? '—' : `${doc}d`}
-                        </td>
-                        <td className="px-5 py-4 text-sm font-data">
-                          {row.fish_count != null
-                            ? Number(row.fish_count).toLocaleString()
-                            : '—'}
-                        </td>
-                        <td className="px-5 py-4 text-sm font-data">
-                          {row.initial_abw != null
-                            ? `${Number(row.initial_abw).toFixed(1)} g`
-                            : '—'}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push('/stocking-management')}
-                          >
-                            Open
-                            <ArrowRight size={16} />
-                          </Button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-
-        {tableTab === 'growth' && (
-          <div className="p-5 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard
-                label="Avg daily growth"
-                value={metrics.avgDailyGrowth}
-                unit={metrics.avgDailyGrowth === 'N/A' ? '' : 'g/day'}
-                icon={TrendingUp}
-                tone="accent"
-              />
-              <StatCard
-                label="Feed cost / harvest kg"
-                value={metrics.feedCostPerKg}
-                unit={metrics.feedCostPerKg === 'N/A' ? '' : ''}
-                icon={Scale}
-              />
-              <StatCard
-                label="Feed (30d)"
-                value={
-                  summary?.recent_feed_usage_kg != null
-                    ? Number(summary.recent_feed_usage_kg).toFixed(0)
-                    : '—'
-                }
-                unit="kg"
-                icon={Package}
-              />
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button href="/biweekly-entry" size="md">
-                Record biweekly ABW
-              </Button>
-              <Button href="/report" variant="secondary" size="md">
-                Production report
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
+    recentActivity: (
+      <Table
+        title={t('home.activity.title')}
+        columns={activityColumns}
+        rows={recentStockings.slice(0, 8)}
+        empty={t('home.activity.empty')}
+        actions={
+          <Button href="/stocking-management" variant="ghost" size="sm" className="!min-h-0 text-[13px] text-muted">
+            {t('home.activity.open')}
+          </Button>
+        }
+      />
     ),
     feedingPlan: <FeedingPlanWidget locationId={locationArgs?.locationId} />,
   }
@@ -476,42 +386,37 @@ function DashboardView() {
     return <DashboardSkeleton />
   }
 
-  return (
-    <div className="space-y-6 max-w-[1400px]">
+  const hour = new Date().getHours()
+  const firstName = (user?.name || '').trim().split(/\s+/)[0]
+  const greeting = firstName
+    ? t(`home.greeting.${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}`, { name: firstName })
+    : t('home.greeting.anon')
 
-      {/* Hero row */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted">Farm overview</p>
-          <h1 className="font-display text-[28px] sm:text-4xl font-medium text-chart-ink mt-1">
-            {new Date().toLocaleDateString(undefined, {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
-          </h1>
-          <p className="text-muted mt-2 text-base tabular-nums">
-            {metrics.totalActiveCages} active cages ·{' '}
-            {Number(metrics.activeFish).toLocaleString()} fish on farm
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button href="/daily-entry" size="lg">
-            <Calendar size={22} />
-            Log daily entry
-          </Button>
-          <Button href="/stocking" variant="secondary" size="lg">
-            <Plus size={22} />
-            New stocking
-          </Button>
-          {canReports && !customizing && (
-            <Button variant="ghost" size="lg" onClick={() => setCustomizing(true)}>
-              <LayoutGrid size={22} />
-              {t('dashboardLayout.customize')}
-            </Button>
-          )}
-        </div>
-      </div>
+  return (
+    <div className="flex max-w-[1400px] flex-col gap-7">
+      <PageTitle
+        eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+        title={greeting}
+        actions={
+          <>
+            {canReports && !customizing && (
+              <GhostButton size="lg" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
+                {t('dashboardLayout.customize')}
+              </GhostButton>
+            )}
+            {can(routePermission('/daily-entry')) && (
+              <GradientButton href="/daily-entry" icon={ClipboardPen}>
+                {t('home.logDaily')}
+              </GradientButton>
+            )}
+            {can(routePermission('/feed-issue')) && (
+              <GradientButton href="/feed-issue" reverse icon={Wheat}>
+                {t('home.issueFeed')}
+              </GradientButton>
+            )}
+          </>
+        }
+      />
 
       {customizing && (
         <DashboardCustomizer
@@ -522,7 +427,7 @@ function DashboardView() {
         />
       )}
 
-      <WidgetGrid widgets={shownWidgets} nodes={widgetNodes} />
+      <WidgetGrid widgets={gridWidgets} nodes={widgetNodes} />
     </div>
   )
 }

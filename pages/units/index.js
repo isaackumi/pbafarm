@@ -1,167 +1,135 @@
-import { useMemo } from 'react'
-import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { Button, EmptyState, PageHeader, StatCard } from '../../components/ui'
+import { Button, EmptyState, LoadingState } from '../../components/ui'
+import { UnitsHeaderActions, useUnitsEyebrow } from '../../components/units/UnitsHeader'
+import UnitViewSwitch, { FilterSelect } from '../../components/units/UnitViewSwitch'
+import UnitCard, { unitSignal } from '../../components/units/UnitCard'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
-import { localToday, unitLabel } from '../../lib/format'
-import { usePermission } from '../../hooks/usePermission'
+import { localToday } from '../../lib/format'
+import { useTerm } from '../../hooks/useTerm'
+import { useT } from '../../lib/i18n/context'
 
-const STATUS_TONE = {
-  active: 'bg-kelp/10 text-kelp border-kelp/30',
-  harvesting: 'bg-lake/10 text-lake border-lake/30',
-  maintenance: 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300',
-  fallow: 'bg-foam text-muted border-foam-deep',
-  harvested: 'bg-foam text-muted border-foam-deep',
-  empty: 'bg-surface text-muted border-foam-deep',
-}
+function Board({ data, latest }) {
+  const t = useT()
+  const router = useRouter()
+  const wqByUnit = useMemo(() => new Map((latest || []).map((r) => [r.unitId, r])), [latest])
+  const today = localToday()
+  const queryGroup = typeof router.query.group === 'string' ? router.query.group : ''
+  const [group, setGroup] = useState(null)
+  const [species, setSpecies] = useState('')
+  const [alertsOnly, setAlertsOnly] = useState(false)
+  const groupValue = group ?? queryGroup
 
-const DENSITY_TEXT = { over: 'text-signal', warn: 'text-amber-700 dark:text-amber-300' }
+  const allUnits = useMemo(
+    () => (data ? data.sections.flatMap((s) => s.units.map((u) => ({ ...u, groupKey: s.groupId || 'none' }))) : []),
+    [data],
+  )
+  const speciesOptions = useMemo(
+    () => [...new Set(allUnits.map((u) => u.species).filter(Boolean))].sort(),
+    [allUnits],
+  )
+  const alerting = useMemo(
+    () => new Set(allUnits.filter((u) => unitSignal(u, wqByUnit.get(u._id), today, t).alert).map((u) => u._id)),
+    [allUnits, wqByUnit, today, t],
+  )
+  const units = allUnits.filter(
+    (u) =>
+      (!groupValue || u.groupKey === groupValue) &&
+      (!species || u.species === species) &&
+      (!alertsOnly || alerting.has(u._id)),
+  )
 
-function UnitTile({ u, wq, today }) {
-  const overdue = u.nextMaintenanceDate && u.nextMaintenanceDate < today
+  if (data === undefined) return <LoadingState label={t('unitsUi.loading')} />
+
   return (
-    <Link
-      href={`/cages/${u._id}`}
-      className="block rounded-lg border border-foam-deep bg-surface p-3 hover:border-lake focus:outline-none focus-visible:ring-2 focus-visible:ring-lake min-h-[6.5rem]"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="font-medium text-chart-ink truncate">{u.name}</span>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${STATUS_TONE[u.status] || STATUS_TONE.empty}`}>
-          {u.statusLabel}
-        </span>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <UnitViewSwitch />
+        <div className="flex flex-wrap gap-2">
+          {data.sections.length > 1 && (
+            <FilterSelect label={t('unitsUi.filterGroup')} value={groupValue} onChange={setGroup}>
+              <option value="">{t('unitsUi.allGroups')}</option>
+              {data.sections.map((s) => (
+                <option key={s.groupId || 'none'} value={s.groupId || 'none'}>
+                  {s.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+          {speciesOptions.length > 0 && (
+            <FilterSelect label={t('unitsUi.filterSpecies')} value={species} onChange={setSpecies}>
+              <option value="">{t('unitsUi.anySpecies')}</option>
+              {speciesOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+          <button
+            type="button"
+            aria-pressed={alertsOnly}
+            onClick={() => setAlertsOnly((v) => !v)}
+            className={`rounded-pill border px-[14px] py-2 text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+              alertsOnly ? 'border-alert bg-surface-2 text-alert' : 'border-[var(--pill-red-border)] text-alert hover:bg-surface-2'
+            }`}
+          >
+            {t('unitsUi.alertsOnly', { count: alerting.size })}
+          </button>
+        </div>
       </div>
-      <p className="mt-1 text-xs text-muted">{unitLabel(u.unitType)}</p>
-      <p className="mt-2 text-sm tabular-nums text-chart-ink">
-        {u.fish > 0 ? `${u.fish.toLocaleString()} fish` : 'No fish'}
-        {u.abwG ? <span className="text-muted"> · {Math.round(u.abwG)} g</span> : null}
-      </p>
-      {u.density != null && u.fish > 0 && (
-        <p className={`text-xs tabular-nums ${DENSITY_TEXT[u.densityLevel] || 'text-muted'}`}>
-          {u.density} {u.densityUnit}
-          {u.densityPct != null ? ` · ${Math.round(u.densityPct)}% of limit` : ''}
-        </p>
+
+      {allUnits.length === 0 ? (
+        <EmptyState
+          title={t('unitsUi.emptyTitle')}
+          description={t('unitsUi.emptyBody')}
+          action={<Button href="/create-cage">{t('unitsUi.newCage')}</Button>}
+        />
+      ) : units.length === 0 ? (
+        <p className="text-sm text-muted">{t('unitsUi.noMatch')}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-4" aria-label={t('unitsUi.view.board')}>
+          {units.map((u) => (
+            <li key={u._id} className="w-full sm:w-auto">
+              <UnitCard u={u} wq={wqByUnit.get(u._id)} today={today} />
+            </li>
+          ))}
+        </ul>
       )}
-      {wq && (
-        <p className={`text-xs tabular-nums ${wq.breachCount ? 'text-signal' : 'text-muted'}`}>
-          {wq.values.dissolvedOxygen != null ? `DO ${wq.values.dissolvedOxygen} mg/L` : 'Water logged'} · {wq.date}
-          {wq.breachCount ? ' · out of range' : ''}
-        </p>
-      )}
-      {overdue && <p className="text-xs text-signal">Maintenance overdue</p>}
-    </Link>
+    </>
   )
 }
 
-function Board() {
-  const { user, hasRole } = useAuth()
-  const isAdmin = usePermission('org.sites.manage')
-  const router = useRouter()
+function UnitsBoardPage() {
+  const t = useT()
+  const term = useTerm()
+  const { user } = useAuth()
   const { locationArgs } = useLocation()
   const data = useQuery(api.units.board, user ? locationArgs : 'skip')
   const latest = useQuery(api.waterQuality.latestByUnit, user ? locationArgs : 'skip')
-  const wqByUnit = useMemo(() => new Map((latest || []).map((r) => [r.unitId, r])), [latest])
-  const today = localToday()
-  const focus = typeof router.query.group === 'string' ? router.query.group : null
-
-  const sections = useMemo(() => {
-    if (!data) return []
-    return focus ? data.sections.filter((s) => s.groupId === focus) : data.sections
-  }, [data, focus])
-
+  const eyebrow = useUnitsEyebrow(data)
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Unit board"
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Units' }]}
-        description="Every cage, pond and tank by group, with live status, fish and stocking density."
-        actions={
-          <>
-            {isAdmin && (
-              <Button size="sm" variant="secondary" href="/units/groups">
-                Groups
-              </Button>
-            )}
-            <Button size="sm" href="/create-cage">
-              Add unit
-            </Button>
-          </>
-        }
-        related={[
-          { label: 'Site map', href: '/units/map' },
-          { label: 'Water entry', href: '/water-entry' },
-          { label: 'Inspection entry', href: '/inspection-entry' },
-          { label: 'All units (table)', href: '/cages' },
-          { label: 'Water quality', href: '/water-quality' },
-          { label: 'Maintenance', href: '/maintenance' },
-        ]}
-      />
-
-      {data && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Units" value={data.totals.units} />
-          <StatCard label="Stocked" value={data.totals.stocked} />
-          <StatCard label="Fish" value={data.totals.fish.toLocaleString()} />
-          <StatCard
-            label="Density alerts"
-            value={data.totals.overDensity + data.totals.nearDensity}
-            hint={`${data.totals.overDensity} over, ${data.totals.nearDensity} near the limit`}
-            tone={data.totals.overDensity ? 'warn' : 'default'}
-          />
-        </div>
-      )}
-
-      {focus && (
-        <Link href="/units" className="text-sm text-lake hover:underline">
-          Show all groups
-        </Link>
-      )}
-
-      {data === undefined ? (
-        <p className="text-sm text-muted">Loading units…</p>
-      ) : sections.length === 0 ? (
-        <EmptyState
-          title="No units yet"
-          description="Add your cages, ponds or tanks to see them here."
-          action={<Button href="/create-cage">Add unit</Button>}
-        />
-      ) : (
-        sections.map((s) => (
-          <section key={s.groupId || 'none'} aria-labelledby={`grp-${s.groupId || 'none'}`}>
-            <div className="flex items-baseline justify-between gap-2 mb-2">
-              <h2 id={`grp-${s.groupId || 'none'}`} className="font-display text-lg font-medium">
-                {s.name}
-              </h2>
-              <span className="text-sm text-muted tabular-nums">
-                {s.units.length} {s.units.length === 1 ? 'unit' : 'units'}
-              </span>
-            </div>
-            {s.units.length === 0 ? (
-              <p className="text-sm text-muted">No units in this group yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                {s.units.map((u) => (
-                  <UnitTile key={u._id} u={u} wq={wqByUnit.get(u._id)} today={today} />
-                ))}
-              </div>
-            )}
-          </section>
-        ))
-      )}
-    </div>
+    <Layout
+      title={term.text(t('unitsUi.title'))}
+      eyebrow={eyebrow}
+      actions={<UnitsHeaderActions />}
+    >
+      <div className="flex flex-col gap-7">
+        <Board data={data} latest={latest} />
+      </div>
+    </Layout>
   )
 }
 
 export default function UnitsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Units">
-        <Board />
-      </Layout>
+      <UnitsBoardPage />
     </ProtectedRoute>
   )
 }

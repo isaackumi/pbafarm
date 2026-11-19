@@ -24,7 +24,7 @@ export function visibleWidgets(widgets, can) {
 /** Props: widgets ([{ widget, size }]), nodes ({ widgetKey: node }). */
 export default function WidgetGrid({ widgets, nodes }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-5">
       {widgets.map((w) =>
         nodes[w.widget] ? (
           <div key={w.widget} className={`${SPAN[w.size] ?? SPAN.md} min-w-0 [&>*]:h-full`}>

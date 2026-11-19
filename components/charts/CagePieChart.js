@@ -3,6 +3,7 @@
  * the page's first load (MOBILE-008).
  */
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { TOOLTIP } from './chartTheme'
 
 export default function CagePieChart({ data }) {
   return (
@@ -15,6 +16,9 @@ export default function CagePieChart({ data }) {
           cx="50%"
           cy="50%"
           outerRadius={80}
+          innerRadius={52}
+          stroke="var(--surface)"
+          strokeWidth={2}
           label={({ name, percent, value }) =>
             value > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : null
           }
@@ -23,8 +27,8 @@ export default function CagePieChart({ data }) {
             <Cell key={`cell-${index}`} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip />
-        <Legend />
+        <Tooltip {...TOOLTIP} />
+        <Legend wrapperStyle={{ fontSize: 12, color: 'var(--muted)' }} />
       </PieChart>
     </ResponsiveContainer>
   )

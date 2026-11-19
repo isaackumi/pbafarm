@@ -4,13 +4,18 @@ import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
-import { PageHeader, Button, Card, CardHeader, StatCard, EmptyState } from '../../components/ui'
+import { FileText } from 'lucide-react'
+import { Button, EmptyState, GradientButton, KpiStrip, LoadingState } from '../../components/ui'
 import { EventRow } from '../../components/BatchHistory'
 import BatchTrace from '../../components/BatchTrace'
 import HatcheryOrigin from '../../components/hatchery/HatcheryOrigin'
 import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
-import { localToday } from '../../lib/format'
+import { formatDate, localToday } from '../../lib/format'
+
+const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+const head = 'flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5'
+const h2 = 'text-[17px] font-semibold leading-[22px] text-text'
 import { CustomFieldsCard } from '../../components/CustomFields'
 
 const fmt = (v, dp = 1) =>
@@ -29,7 +34,7 @@ const ORIGIN = {
 function BatchLinks({ title, items, empty }) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-chart-ink mb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-text mb-2">{title}</h3>
       {items.length === 0 ? (
         <p className="text-sm text-muted">{empty}</p>
       ) : (
@@ -38,7 +43,7 @@ function BatchLinks({ title, items, empty }) {
             <li key={b.id}>
               <Link
                 href={`/batches/${b.id}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-foam-deep px-3 py-1.5 text-sm hover:border-lake"
+                className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm hover:border-line-strong"
               >
                 <span className="font-medium">{b.batch_number}</span>
                 {b.depth > 1 && <span className="text-xs text-muted">{b.depth} steps</span>}
@@ -57,7 +62,7 @@ function Occupancy({ o }) {
   return (
     <li className="px-4 sm:px-6 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <Link href={`/cages/${o.cage_id}`} className="font-medium text-lake hover:underline">
+        <Link href={`/cages/${o.cage_id}`} className="font-medium text-cyan hover:underline">
           {o.cage_name}
         </Link>
         <p className="text-sm text-muted tabular-nums">
@@ -116,23 +121,16 @@ function BatchDetails() {
     user && id ? { id, asOf: localToday() } : 'skip',
   )
 
-  const crumbs = (label) => [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Cages', href: '/cages' },
-    { label },
-  ]
-
   if (batch === undefined || !id) {
     return (
       <Layout title="Batch">
-        <div className="flex justify-center items-center h-64 text-muted">Loading batch…</div>
+        <LoadingState label="Loading batch…" />
       </Layout>
     )
   }
   if (batch === null) {
     return (
       <Layout title="Batch">
-        <PageHeader showTitle={false} breadcrumbs={crumbs('Not found')} />
         <EmptyState
           title="Batch not found"
           description="It may belong to another company, or the link is wrong."
@@ -143,35 +141,56 @@ function BatchDetails() {
   }
 
   const t = batch.totals
+  const openCages = batch.occupancies.filter((o) => !o.closed_on).length
   return (
-    <Layout title={`Batch ${batch.batch_number}`}>
-      <div className="max-w-5xl space-y-6">
-        <PageHeader
-          title={`Batch ${batch.batch_number}`}
-          breadcrumbs={crumbs(batch.batch_number)}
-          description={[
-            ORIGIN[batch.origin] || batch.origin,
-            batch.species?.replace(/_/g, ' '),
-            batch.closed_on ? `${batch.opened_on} – ${batch.closed_on}` : `since ${batch.opened_on}`,
-            batch.status === 'closed' ? 'closed' : 'active',
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-          actions={
-            batch.stocking_id ? (
-              <Button href={`/stocking/${batch.stocking_id}/details`} variant="secondary" size="sm">
-                Stocking record
-              </Button>
-            ) : null
-          }
+    <Layout
+      title={`Batch ${batch.batch_number}`}
+      eyebrow={[
+        ORIGIN[batch.origin] || batch.origin,
+        batch.species?.replace(/_/g, ' '),
+        batch.closed_on ? `${formatDate(batch.opened_on)} – ${formatDate(batch.closed_on)}` : `since ${formatDate(batch.opened_on)}`,
+        batch.status === 'closed' ? 'closed' : 'active',
+      ]
+        .filter(Boolean)
+        .join(' · ')}
+      actions={
+        batch.stocking_id ? (
+          <GradientButton href={`/stocking/${batch.stocking_id}/details`} icon={FileText}>
+            Stocking record
+          </GradientButton>
+        ) : null
+      }
+    >
+      <div className="flex flex-col gap-7">
+        <KpiStrip
+          items={[
+            { key: 'fish', label: 'Fish now', value: fmt(t.count, 0), suffix: `${openCages} cage${openCages === 1 ? '' : 's'}` },
+            { key: 'harvested', label: 'Harvested', value: fmt(t.harvested, 0), suffix: t.harvested_kg ? `${fmt(t.harvested_kg)} kg` : 'fish' },
+            {
+              key: 'survival',
+              label: 'Survival',
+              value: pct(t.survival_pct),
+              valueTone: t.survival_pct != null && t.survival_pct < 80 ? 'warn' : undefined,
+            },
+            { key: 'mortality', label: 'Mortality', value: pct(t.mortality_pct), suffix: `${fmt(t.mortality, 0)} deaths` },
+          ]}
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Fish now" value={fmt(t.count, 0)} hint={`${batch.occupancies.filter((o) => !o.closed_on).length} cage(s)`} />
-          <StatCard label="Harvested" value={fmt(t.harvested, 0)} unit="fish" hint={t.harvested_kg ? `${fmt(t.harvested_kg)} kg` : undefined} />
-          <StatCard label="Survival" value={pct(t.survival_pct)} hint="Harvests and transfers are not losses" tone={t.survival_pct != null && t.survival_pct < 80 ? 'warn' : 'default'} />
-          <StatCard label="Mortality" value={pct(t.mortality_pct)} hint={`${fmt(t.mortality, 0)} deaths`} />
-        </div>
+        <section aria-labelledby="events-title" className={card}>
+          <div className={head}>
+            <h2 id="events-title" className={h2}>Stock history</h2>
+            <span className="text-[13px] text-muted">{batch.batch_number}</span>
+          </div>
+          {batch.events.length === 0 ? (
+            <EmptyState title="No stock events yet" />
+          ) : (
+            <ul className="px-6 py-6">
+              {batch.events.map((e) => (
+                <EventRow key={e.id} e={e} showCage />
+              ))}
+            </ul>
+          )}
+        </section>
 
         <CustomFieldsCard
           entity="batches"
@@ -182,47 +201,31 @@ function BatchDetails() {
           editPermission="production.units.manage"
         />
 
-        <Card>
-          <CardHeader title="Lineage" subtitle="Where these fish came from and where they went." />
+        <section aria-labelledby="lineage-title" className={`${card} p-6`}>
+          <h2 id="lineage-title" className={h2}>Lineage</h2>
+          <p className="mb-5 mt-1 text-xs text-muted">Where these fish came from and where they went.</p>
           <div className="grid gap-5 sm:grid-cols-2">
             <BatchLinks title="Came from" items={batch.ancestors} empty="Stocked directly; no parent batch." />
             <BatchLinks title="Went on to" items={batch.descendants} empty="No child batches." />
           </div>
-        </Card>
+        </section>
 
         <HatcheryOrigin batchId={batch.id} />
         <BatchTrace batchId={batch.id} />
 
-        <section className="page-card overflow-hidden" aria-labelledby="occupancies-title">
-          <div className="px-4 sm:px-6 pt-5 pb-3 border-b border-foam-deep">
-            <h2 id="occupancies-title" className="font-display text-lg font-medium">
-              Cages
-            </h2>
-            <p className="text-sm text-muted mt-1">Each cage this batch has lived in, with its figures there.</p>
+        <section className={`${card} overflow-hidden`} aria-labelledby="occupancies-title">
+          <div className={head}>
+            <div className="flex flex-col gap-1">
+              <h2 id="occupancies-title" className={h2}>Cages</h2>
+              <p className="text-xs text-muted">Each cage this batch has lived in, with its figures there.</p>
+            </div>
           </div>
           {batch.occupancies.length === 0 ? (
             <EmptyState title="No stock events yet" />
           ) : (
-            <ul className="divide-y divide-foam-deep">
+            <ul className="divide-y divide-line">
               {batch.occupancies.map((o) => (
                 <Occupancy key={o.cage_id} o={o} />
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="page-card overflow-hidden" aria-labelledby="events-title">
-          <div className="px-4 sm:px-6 pt-5 pb-3 border-b border-foam-deep">
-            <h2 id="events-title" className="font-display text-lg font-medium">
-              Stock events
-            </h2>
-          </div>
-          {batch.events.length === 0 ? (
-            <EmptyState title="No stock events yet" />
-          ) : (
-            <ul className="divide-y divide-foam-deep">
-              {batch.events.map((e) => (
-                <EventRow key={e.id} e={e} showCage />
               ))}
             </ul>
           )}

@@ -5,15 +5,15 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
   Button,
-  Card,
-  CardHeader,
   EmptyState,
   Field,
   FormActions,
-  FormPage,
+  GhostButton,
+  GradientButton,
   Input,
-  PageHeader,
+  Pill,
 } from '../components/ui'
+import FarmSetupNav from '../components/units/FarmSetupNav'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -106,7 +106,7 @@ function SpeciesEditor({ initial, onDone }) {
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-chart-ink">{t('species.grades')}</p>
+        <p className="text-sm font-medium text-text">{t('species.grades')}</p>
         <p className="text-xs text-muted">{t('species.gradesHint')}</p>
         {form.harvestGrades.map((g, i) => (
           <div key={i} className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-end">
@@ -177,100 +177,101 @@ function SpeciesSettings() {
     }
   }
 
+  const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+  const h2 = 'text-[17px] font-semibold leading-[22px] text-text'
+
   return (
-    <FormPage width="lg">
-      <PageHeader
-        title={t('species.title')}
-        description={t('species.description')}
-        actions={
-          <>
-            <Button variant="secondary" size="sm" onClick={seed}>
-              {t('species.addStandard')}
-            </Button>
-            <Button size="sm" onClick={() => setEditing('new')}>
-              <Plus size={14} aria-hidden />
-              {t('species.add')}
-            </Button>
-          </>
-        }
-      />
-      <div className="space-y-4">
-        {editing === 'new' && (
-          <Card>
-            <CardHeader title={t('species.new')} />
-            <SpeciesEditor initial={null} onDone={() => setEditing(null)} />
-          </Card>
-        )}
-        {list === undefined ? (
-          <div className="h-40 rounded-xl bg-foam animate-pulse" />
-        ) : list.length === 0 ? (
-          <Card>
-            <EmptyState
-              title={t('species.emptyTitle')}
-              description={t('species.emptyDescription')}
-              action={<Button onClick={seed}>{t('species.addStandard')}</Button>}
-            />
-          </Card>
-        ) : (
-          list.map((s) => (
-            <Card key={s.id} className={s.active ? '' : 'opacity-70'}>
-              <CardHeader
-                title={s.name}
-                subtitle={[s.scientificName, s.key, s.active ? null : t('species.archived')].filter(Boolean).join(' · ')}
-                action={
-                  <div className="flex gap-2">
+    <Layout
+      title={t('species.title')}
+      eyebrow={t('species.description')}
+      actions={
+        <>
+          <GradientButton onClick={seed}>{t('species.addStandard')}</GradientButton>
+          <GradientButton reverse icon={Plus} onClick={() => setEditing('new')}>
+            {t('species.add')}
+          </GradientButton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-8 md:flex-row">
+        <FarmSetupNav />
+        <div className="flex min-w-0 max-w-3xl grow flex-col gap-5">
+          {editing === 'new' && (
+            <section className={`${card} p-6`} aria-labelledby="species-new-title">
+              <h2 id="species-new-title" className={`${h2} mb-5`}>{t('species.new')}</h2>
+              <SpeciesEditor initial={null} onDone={() => setEditing(null)} />
+            </section>
+          )}
+          {list === undefined ? (
+            <div className="h-40 animate-pulse rounded-input bg-surface-2" />
+          ) : list.length === 0 ? (
+            <section className={card}>
+              <EmptyState
+                title={t('species.emptyTitle')}
+                description={t('species.emptyDescription')}
+                action={<GradientButton onClick={seed}>{t('species.addStandard')}</GradientButton>}
+              />
+            </section>
+          ) : (
+            list.map((s) => (
+              <section key={s.id} aria-label={s.name} className={`${card} ${s.active ? '' : 'opacity-70'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <h2 className={h2}>{s.name}</h2>
+                    <p className="text-xs text-muted">
+                      {[s.scientificName, s.key].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!s.active && <Pill tone="neutral">{t('species.archived')}</Pill>}
                     {editing !== s.id && (
-                      <Button variant="secondary" size="sm" onClick={() => setEditing(s.id)}>
+                      <GhostButton size="sm" onClick={() => setEditing(s.id)}>
                         {t('common.edit')}
-                      </Button>
+                      </GhostButton>
                     )}
-                    <Button
-                      variant="ghost"
+                    <GhostButton
                       size="sm"
+                      tone={s.active ? 'danger' : 'default'}
                       onClick={() => archive({ id: s.id, archived: s.active }).catch((err) => showToast(errorMessage(err), 'error'))}
                     >
                       {s.active ? t('species.archive') : t('species.restore')}
-                    </Button>
+                    </GhostButton>
                   </div>
-                }
-              />
-              {editing === s.id ? (
-                <SpeciesEditor initial={s} onDone={() => setEditing(null)} />
-              ) : (
-                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <dt className="text-muted">{t('species.targetAbw')}</dt>
-                    <dd className="tabular-nums text-chart-ink">{s.targetHarvestAbwG ?? '—'}</dd>
+                </div>
+                {editing === s.id ? (
+                  <div className="p-6">
+                    <SpeciesEditor initial={s} onDone={() => setEditing(null)} />
                   </div>
-                  <div>
-                    <dt className="text-muted">{t('species.targetFcr')}</dt>
-                    <dd className="tabular-nums text-chart-ink">{s.targetFcr ?? '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">{t('species.grades')}</dt>
-                    <dd className="text-chart-ink">
-                      {s.harvestGrades.length
-                        ? s.harvestGrades.map((g) => `${g.label} (${g.range})`).join(', ')
-                        : t('species.noGrades')}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-            </Card>
-          ))
-        )}
+                ) : (
+                  <dl>
+                    {[
+                      [t('species.targetAbw'), s.targetHarvestAbwG ?? '—'],
+                      [t('species.targetFcr'), s.targetFcr ?? '—'],
+                      [
+                        t('species.grades'),
+                        s.harvestGrades.length ? s.harvestGrades.map((g) => `${g.label} (${g.range})`).join(', ') : t('species.noGrades'),
+                      ],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between gap-6 border-t border-line px-6 py-[14px] text-[14px] first:border-t-0">
+                        <dt className="text-muted">{k}</dt>
+                        <dd className="text-right tabular-nums text-text">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </section>
+            ))
+          )}
+        </div>
       </div>
-    </FormPage>
+    </Layout>
   )
 }
 
 export default function SpeciesPage() {
-  const t = useT()
   return (
     <ProtectedRoute permission="org.settings.manage">
-      <Layout title={t('species.title')}>
-        <SpeciesSettings />
-      </Layout>
+      <SpeciesSettings />
     </ProtectedRoute>
   )
 }

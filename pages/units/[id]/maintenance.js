@@ -6,18 +6,26 @@ import Layout from '../../../components/Layout'
 import UnitTabs from '../../../components/UnitTabs'
 import InspectionForm from '../../../components/InspectionForm'
 import InspectionHistory from '../../../components/InspectionHistory'
-import EquipmentForm, { EQUIPMENT_KINDS, EQUIPMENT_STATUS } from '../../../components/EquipmentForm'
-import { Button, Card, CardHeader, EmptyState, PageHeader } from '../../../components/ui'
+import Link from 'next/link'
+import { ClipboardCheck, Plus } from 'lucide-react'
+import EquipmentForm from '../../../components/EquipmentForm'
+import { Button, Card, EmptyState, GradientButton, LoadingState, StatusDot, Table } from '../../../components/ui'
+import { useEquipmentColumns } from '../../../components/units/equipmentColumns'
+import { useT } from '../../../lib/i18n/context'
 import { useToast } from '../../../components/Toast'
 import { useAuth } from '../../../contexts/AuthContext'
 import { api } from '../../../convex/_generated/api'
 import { errorMessage } from '../../../lib/errorMessage'
-import { localToday, unitLabel } from '../../../lib/format'
+import { formatDate, localToday, unitLabel } from '../../../lib/format'
+
+const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
 import { usePermission } from '../../../hooks/usePermission'
 
 function MaintenancePage() {
+  const t = useT()
   const router = useRouter()
-  const { user, hasRole } = useAuth()
+  const { user } = useAuth()
+  const canLog = usePermission('production.daily.record')
   const isAdmin = usePermission('org.sites.manage')
   const { showToast } = useToast()
   const id = typeof router.query.id === 'string' ? router.query.id : null
@@ -27,12 +35,13 @@ function MaintenancePage() {
   const items = useQuery(api.inventoryItems.listItems, user ? {} : 'skip')
   const log = useMutation(api.equipment.logInspection)
   const [adding, setAdding] = useState(false)
+  const columns = useEquipmentColumns({ asOf: localToday(), showUnit: false })
 
   if (ws === undefined || !id) {
-    return <Layout title="Maintenance"><p className="text-muted p-6">Loading…</p></Layout>
+    return <Layout title={t('equipmentUi.title')}><LoadingState /></Layout>
   }
   if (ws === null) {
-    return <Layout title="Maintenance"><EmptyState title="Unit not found" action={<Button href="/units">All units</Button>} /></Layout>
+    return <Layout title={t('equipmentUi.title')}><EmptyState title={t('cageDetail.notFound')} action={<Button href="/units">{t('cageDetail.back')}</Button>} /></Layout>
   }
   const unit = ws.unit
   const today = localToday()
@@ -49,76 +58,86 @@ function MaintenancePage() {
     }
   }
 
+  const isCage = ws.unitType === 'cage'
+  const head = 'flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5'
+  const h2 = 'text-[17px] font-semibold leading-[22px] text-text'
+
   return (
-    <Layout title={`${unit.name} maintenance`}>
-      <div className="max-w-5xl space-y-6">
-        <PageHeader
-          title={unit.name}
-          breadcrumbs={[
-            { label: 'Units', href: '/units' },
-            { label: unit.name, href: `/cages/${id}` },
-            { label: ws.unitType === 'cage' ? 'Nets and equipment' : 'Equipment' },
-          ]}
-          description={`${unitLabel(ws.unitType)} · last maintained ${unit.lastMaintenanceDate || 'never'}${
-            unit.nextMaintenanceDate ? ` · next due ${unit.nextMaintenanceDate}` : ''
-          }`}
-        />
+    <Layout
+      title={unit.name}
+      eyebrow={
+        <>
+          <Link href="/cages" className="hover:text-text hover:underline">{unitLabel(ws.unitType, { plural: true })}</Link>
+          {' · '}
+          {t('equipmentUi.lastMaintained', { date: unit.lastMaintenanceDate ? formatDate(unit.lastMaintenanceDate) : t('equipmentUi.never') })}
+          {unit.nextMaintenanceDate ? ` · ${t('equipmentUi.nextDue', { date: formatDate(unit.nextMaintenanceDate) })}` : ''}
+        </>
+      }
+      actions={
+        <>
+          {canLog && (
+            <GradientButton href="#log-job" icon={ClipboardCheck}>
+              {t('equipmentUi.logInspection')}
+            </GradientButton>
+          )}
+          {isAdmin && (
+            <GradientButton reverse icon={Plus} onClick={() => setAdding(true)}>
+              {t('equipmentUi.add')}
+            </GradientButton>
+          )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-7">
         <UnitTabs unitId={id} active="maintenance" unitType={ws.unitType} />
 
         {unit.nextMaintenanceDate && unit.nextMaintenanceDate < today && (
-          <p className="rounded-lg border border-signal/30 bg-signal/10 px-4 py-3 text-sm text-signal">
-            {ws.unitType === 'cage' ? 'Net inspection' : 'Maintenance'} overdue since {unit.nextMaintenanceDate}.
+          <p
+            role="status"
+            className="flex items-center gap-3 rounded-input border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] px-4 py-3 text-sm text-alert"
+          >
+            <StatusDot tone="alert" size={7} />
+            {isCage
+              ? t('equipmentUi.netOverdue', { date: formatDate(unit.nextMaintenanceDate) })
+              : t('equipmentUi.maintOverdue', { date: formatDate(unit.nextMaintenanceDate) })}
           </p>
         )}
 
-        <Card>
-          <CardHeader title={ws.unitType === 'cage' ? 'Log a net inspection or job' : 'Log maintenance'} />
-          <InspectionForm unitType={ws.unitType} equipment={gear || []} spares={spares} onSave={save} />
-        </Card>
+        {adding && (
+          <Card>
+            <h2 className={`${h2} mb-5`}>{t('equipmentUi.add')}</h2>
+            <EquipmentForm unitId={id} onDone={() => setAdding(false)} />
+          </Card>
+        )}
 
-        <Card padding={false}>
-          <div className="px-5 py-4 border-b border-foam-deep flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-medium">Equipment</h2>
-            {isAdmin && !adding && <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>Add equipment</Button>}
-          </div>
-          {adding && (
-            <div className="p-5 border-b border-foam-deep">
-              <EquipmentForm unitId={id} onDone={() => setAdding(false)} />
-            </div>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+          <Table
+            className="min-w-0 xl:grow-[1.6] xl:basis-0"
+            title={isCage ? t('unitTabs.netsEquipment') : t('unitTabs.equipment')}
+            columns={columns}
+            rows={gear || []}
+            empty={gear === undefined ? t('equipmentUi.loading') : t('equipmentUi.noneOnUnit')}
+          />
+          {canLog && (
+            <section id="log-job" aria-labelledby="log-job-title" className={`${card} min-w-0 scroll-mt-24 xl:grow xl:basis-0`}>
+              <div className={head}>
+                <h2 id="log-job-title" className={h2}>
+                  {isCage ? t('equipmentUi.logNet') : t('equipmentUi.logMaint')}
+                </h2>
+              </div>
+              <div className="p-6">
+                <InspectionForm unitType={ws.unitType} equipment={gear || []} spares={spares} onSave={save} />
+              </div>
+            </section>
           )}
-          {!gear ? (
-            <p className="p-5 text-sm text-muted">Loading…</p>
-          ) : gear.length === 0 ? (
-            <p className="p-5 text-sm text-muted">No equipment attached to this unit.</p>
-          ) : (
-            <ul className="divide-y divide-foam-deep text-sm">
-              {gear.map((e) => (
-                <li key={e._id} className="px-5 py-3 flex flex-wrap items-baseline justify-between gap-2">
-                  <span>
-                    <span className="font-medium">{e.name}</span>{' '}
-                    <span className="text-muted">
-                      {EQUIPMENT_KINDS.find((k) => k.value === e.kind)?.label}
-                      {e.rating ? ` · ${e.rating}` : ''}
-                    </span>
-                  </span>
-                  <span className={`tabular-nums ${e.status === 'faulty' ? 'text-signal' : 'text-muted'}`}>
-                    {EQUIPMENT_STATUS[e.status]}
-                    {e.nextMaintenanceDue
-                      ? ` · ${e.nextMaintenanceDue < today ? 'overdue' : 'due'} ${e.nextMaintenanceDue}`
-                      : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        </div>
 
-        <Card padding={false}>
-          <div className="px-5 py-4 border-b border-foam-deep">
-            <h2 className="font-display text-lg font-medium">History</h2>
+        <section aria-labelledby="history-title" className={card}>
+          <div className={head}>
+            <h2 id="history-title" className={h2}>{t('equipmentUi.history')}</h2>
           </div>
           <InspectionHistory rows={history} />
-        </Card>
+        </section>
       </div>
     </Layout>
   )

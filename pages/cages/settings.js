@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Archive, Pencil, Plus } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button } from '../../components/ui'
+import { EmptyState, GhostButton, GradientButton, LoadingState, Pill } from '../../components/ui'
+import FarmSetupNav from '../../components/units/FarmSetupNav'
+import { useTerm } from '../../hooks/useTerm'
+import { useT } from '../../lib/i18n/context'
 import CageManageModals from '../../components/CageManageModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
@@ -14,15 +16,15 @@ import { usePermission } from '../../hooks/usePermission'
 export default function CageSettingsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Cage Settings">
-        <CageSettings />
-      </Layout>
+      <CageSettings />
     </ProtectedRoute>
   )
 }
 
 function CageSettings() {
-  const { user, hasRole } = useAuth()
+  const t = useT()
+  const term = useTerm()
+  const { user } = useAuth()
   const isAdmin = usePermission('production.stock.adjust')
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
@@ -30,76 +32,68 @@ function CageSettings() {
   const [deleteCage, setDeleteCage] = useState(null)
 
   return (
-    <div className="max-w-4xl">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Cages', href: '/cages' },
-          { label: 'Settings' },
-        ]}
-        description="Edit cage details or remove cages. Changes sync live."
-        related={[
-          { label: 'All cages', href: '/cages' },
-          { label: 'Create cage', href: '/create-cage' },
-        ]}
-        actions={
-          <Button href="/cages" variant="secondary" size="sm">
-            Back to cages
-          </Button>
-        }
-      />
-
-      <div className="page-card overflow-hidden">
-        {cages === undefined ? (
-          <div className="p-8 text-center text-muted">Loading cages…</div>
-        ) : cages.length === 0 ? (
-          <div className="p-8 text-center text-muted">
-            No cages yet.{' '}
-            <Link href="/create-cage" className="text-lake hover:underline">
-              Create one
-            </Link>
+    <Layout
+      title={term.text(t('cageSettings.title'))}
+      eyebrow={t('cageSettings.eyebrow')}
+      actions={
+        <GradientButton href="/create-cage" icon={Plus}>
+          {t('unitsUi.newCage')}
+        </GradientButton>
+      }
+    >
+      <div className="flex flex-col gap-8 md:flex-row">
+        <FarmSetupNav />
+        <section
+          aria-labelledby="cage-settings-title"
+          className="min-w-0 max-w-3xl grow rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
+        >
+          <div className="flex flex-col gap-1 border-b border-line px-6 py-5">
+            <h2 id="cage-settings-title" className="text-[17px] font-semibold leading-[22px] text-text">
+              {t('cageSettings.units')}
+            </h2>
+            <p className="text-xs text-muted">{t('cageSettings.helper')}</p>
           </div>
-        ) : (
-          <ul className="divide-y divide-foam-deep">
-            {cages.map((cage) => (
-              <li
-                key={cage.id || cage._id}
-                className="px-5 py-4 flex items-center justify-between gap-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-chart-ink truncate">{cage.name}</p>
-                  <p className="text-sm text-muted truncate">
-                    {cage.location || 'No location'} · {cage.status || '—'}
-                    {cage.size != null ? ` · ${cage.size} m³` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    title="Edit"
-                    onClick={() => setEditCage(cage)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-lagoon-800 bg-foam-deep hover:bg-foam"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit
-                  </button>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      title="Delete"
-                      onClick={() => setDeleteCage(cage)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-signal bg-signal/10 hover:bg-signal/20"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          {cages === undefined ? (
+            <LoadingState />
+          ) : cages.length === 0 ? (
+            <EmptyState
+              title={t('cageSettings.empty')}
+              action={<GradientButton href="/create-cage" icon={Plus}>{t('unitsUi.newCage')}</GradientButton>}
+            />
+          ) : (
+            <ul>
+              {cages.map((cage) => (
+                <li
+                  key={cage.id || cage._id}
+                  className="flex items-center justify-between gap-4 border-t border-line px-6 py-4 first:border-t-0"
+                >
+                  <div className="flex min-w-0 flex-col gap-[2px]">
+                    <span className="truncate text-[14px] font-medium leading-[18px] text-text">{cage.name}</span>
+                    <span className="truncate text-xs leading-4 text-muted">
+                      {cage.location || t('cageSettings.noLocation')}
+                      {cage.size != null ? ` · ${cage.size} m³` : ''}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {cage.status && (
+                      <Pill tone={cage.status === 'active' ? 'green' : cage.status === 'maintenance' ? 'amber' : 'neutral'}>
+                        {t.or(`unitsUi.status.${cage.status}`, cage.status)}
+                      </Pill>
+                    )}
+                    <GhostButton size="sm" icon={Pencil} onClick={() => setEditCage(cage)}>
+                      {t('cagesTable.edit')}
+                    </GhostButton>
+                    {isAdmin && (
+                      <GhostButton size="sm" tone="danger" icon={Archive} onClick={() => setDeleteCage(cage)}>
+                        {t('cagesTable.archive')}
+                      </GhostButton>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
 
       <CageManageModals
@@ -108,6 +102,6 @@ function CageSettings() {
         onCloseEdit={() => setEditCage(null)}
         onCloseDelete={() => setDeleteCage(null)}
       />
-    </div>
+    </Layout>
   )
 }
