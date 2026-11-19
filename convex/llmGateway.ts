@@ -51,6 +51,7 @@ const MAX_SUMMARY_ROWS = 5000
 const MAX_CREDENTIALS = Object.keys(PROVIDERS).length
 
 const feature = v.union(v.literal('chat'), v.literal('insights'))
+const usageFeature = v.union(v.literal('chat'), v.literal('insights'), v.literal('report'))
 const message = v.object({
   role: v.union(v.literal('system'), v.literal('user'), v.literal('assistant')),
   content: v.string(),
@@ -185,10 +186,12 @@ export const overview = query({
       m.outputTokens += r.outputTokens ?? 0
       m.costUsd += r.costUsd ?? 0
       byModel.set(k, m)
-      const u = byUser.get(r.userId) ?? { userId: r.userId, calls: 0, costUsd: 0 }
-      u.calls += 1
-      u.costUsd += r.costUsd ?? 0
-      byUser.set(r.userId, u)
+      if (r.userId) {
+        const u = byUser.get(r.userId) ?? { userId: r.userId, calls: 0, costUsd: 0 }
+        u.calls += 1
+        u.costUsd += r.costUsd ?? 0
+        byUser.set(r.userId, u)
+      }
     }
     const users = []
     for (const u of [...byUser.values()].sort((a, b) => b.calls - a.calls).slice(0, 10)) {
@@ -220,7 +223,7 @@ export const usage = query({
       providerId: v.string(),
       model: v.string(),
       source: v.union(v.literal('org_key'), v.literal('server_key')),
-      feature: v.union(v.literal('chat'), v.literal('insights')),
+      feature: usageFeature,
       ok: v.boolean(),
       error: v.union(v.string(), v.null()),
       inputTokens: v.union(v.number(), v.null()),
@@ -240,13 +243,14 @@ export const usage = query({
     const names = new Map<string, string>()
     const page = []
     for (const r of res.page) {
-      if (!names.has(r.userId)) {
+      if (r.userId && !names.has(r.userId)) {
         const doc = await ctx.db.get(r.userId)
         names.set(r.userId, doc && doc.companyId === companyId ? doc.name || doc.email || '—' : '—')
       }
       page.push({
         id: r._id,
-        user: names.get(r.userId)!,
+        // Scheduled calls (weekly report) have no user.
+        user: r.userId ? names.get(r.userId)! : 'Scheduled',
         providerId: r.providerId,
         model: r.model,
         source: r.source,
@@ -520,15 +524,15 @@ const usageFields = {
   durationMs: v.optional(v.number()),
 }
 
-async function insertUsage(
+export async function insertUsage(
   ctx: MutationCtx,
   row: {
     companyId: Id<'companies'>
-    userId: Id<'users'>
+    userId?: Id<'users'>
     source: 'org_key' | 'server_key'
     providerId: string
     model: string
-    feature: 'chat' | 'insights'
+    feature: 'chat' | 'insights' | 'report'
     ok: boolean
     error?: string
     inputTokens?: number
@@ -570,6 +574,105 @@ export const recordServerUsage = mutation({
     const verdict = await rateLimiter.limit(ctx, 'llmUsageReportPerUser', { key: user._id })
     if (!verdict.ok) return null
     await insertUsage(ctx, { ...args, companyId: user.companyId, userId: user._id, source: 'server_key' })
+    return null
+  },
+})
+
+export type ReportBegin =
+  | { mode: 'none'; reason: 'disabled' | 'no_key' | 'rate_limited' }
+  | {
+      mode: 'org_key'
+      credentialId: Id<'llmCredentials'>
+      providerId: string
+      model: string
+      baseUrl: string | null
+      ciphertext: string
+      iv: string
+    }
+  | { mode: 'server_key'; providerId: string; model: string }
+
+/**
+ * Internal: quota and key for a weekly report (AI-003). Same switches as
+ * `begin` (the company's assistant setting, the shared rate limiter; the
+ * per-user limits too when a member asked for it) but no session: the cron
+ * runs it. `serverProviderId` is a provider whose key is set in the Convex
+ * environment (the action checks), used when the organization has none.
+ * Quota is only spent when a key will be used.
+ */
+export const beginReport = internalMutation({
+  args: {
+    companyId: v.id('companies'),
+    userId: v.optional(v.id('users')),
+    serverProviderId: v.optional(v.string()),
+  },
+  returns: v.union(
+    v.object({
+      mode: v.literal('none'),
+      reason: v.union(v.literal('disabled'), v.literal('no_key'), v.literal('rate_limited')),
+    }),
+    v.object({
+      mode: v.literal('org_key'),
+      credentialId: v.id('llmCredentials'),
+      providerId: v.string(),
+      model: v.string(),
+      baseUrl: v.union(v.string(), v.null()),
+      ciphertext: v.string(),
+      iv: v.string(),
+    }),
+    v.object({ mode: v.literal('server_key'), providerId: v.string(), model: v.string() }),
+  ),
+  handler: async (ctx, { companyId, userId, serverProviderId }): Promise<ReportBegin> => {
+    const company = await ctx.db.get(companyId)
+    if (company?.settings?.aiAssistantEnabled !== true) return { mode: 'none', reason: 'disabled' }
+    const cred = pickCredential(await companyCredentials(ctx, companyId))
+    const secret = cred
+      ? await ctx.db
+          .query('integrationSecrets')
+          .withIndex('by_llmCredentialId', (q) => q.eq('llmCredentialId', cred._id))
+          .unique()
+      : null
+    const server = serverProviderId && PROVIDERS[serverProviderId] ? PROVIDERS[serverProviderId] : null
+    if (!(cred && secret) && !server) return { mode: 'none', reason: 'no_key' }
+    const limits: Array<readonly ['llmPerUserMinute' | 'llmPerUserHour' | 'llmPerCompanyHour', string]> = [
+      ['llmPerCompanyHour', companyId],
+      ...(userId ? ([['llmPerUserMinute', userId], ['llmPerUserHour', userId]] as const) : []),
+    ]
+    for (const [name, key] of limits) {
+      if (!(await rateLimiter.check(ctx, name, { key })).ok) return { mode: 'none', reason: 'rate_limited' }
+    }
+    for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
+    if (cred && secret) {
+      return {
+        mode: 'org_key',
+        credentialId: cred._id,
+        providerId: cred.providerId,
+        model: gatewayModel(cred.providerId, cred.model),
+        baseUrl: cred.baseUrl ?? null,
+        ciphertext: secret.ciphertext,
+        iv: secret.iv,
+      }
+    }
+    return { mode: 'server_key', providerId: server!.id, model: server!.defaultModel }
+  },
+})
+
+/** Internal: log a report call (no user for scheduled runs). */
+export const recordReportUsage = internalMutation({
+  args: {
+    companyId: v.id('companies'),
+    userId: v.optional(v.id('users')),
+    source: v.union(v.literal('org_key'), v.literal('server_key')),
+    providerId: v.string(),
+    model: v.string(),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await insertUsage(ctx, { ...args, feature: 'report' })
     return null
   },
 })

@@ -33,6 +33,7 @@ import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
 import { useMutation, useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
+import FarmAlerts from './FarmAlerts'
 import SiteConditions from './SiteConditions'
 import { usePermission, usePermissions } from '../hooks/usePermission'
 import { useToast } from './Toast'
@@ -282,10 +283,13 @@ function DashboardView() {
       />
     ),
     'insights': (
-      <DashboardInsights
-        locationId={locationArgs?.locationId}
-        aiEnabled={aiStatus?.enabled === true && aiStatus.canUse === true}
-      />
+      <div className="space-y-4">
+        <FarmAlerts locationId={locationArgs?.locationId} />
+        <DashboardInsights
+          locationId={locationArgs?.locationId}
+          aiEnabled={aiStatus?.enabled === true && aiStatus.canUse === true}
+        />
+      </div>
     ),
     'chart.feedTrend': (
       <Card className="min-h-[22rem]">

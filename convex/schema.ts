@@ -204,6 +204,17 @@ export const dashboardWidget = v.object({
   size: v.union(v.literal('sm'), v.literal('md'), v.literal('half'), v.literal('lg'), v.literal('full')),
 })
 /** Feeding plans (PROD-015): lib/ration. */
+/** lib/earlyWarning ALERT_RULES. */
+export const farmAlertRule = v.union(
+  v.literal('mortality_spike'),
+  v.literal('feed_drop'),
+  v.literal('missing_entries'),
+  v.literal('low_oxygen'),
+  v.literal('temperature_out_of_range'),
+  v.literal('fcr_deterioration'),
+  v.literal('growth_stall'),
+)
+
 export const feedBand = v.object({
   minAbwG: v.number(),
   bodyWeightPct: v.number(),
@@ -2764,6 +2775,62 @@ const schema = defineSchema({
     updatedBy: v.id('users'),
     updatedAt: v.number(),
   }).index('by_companyId_and_speciesKey', ['companyId', 'speciesKey']),
+
+  /**
+   * Early-warning alerts (AI-001, lib/earlyWarning): one live row per unit and
+   * rule; the daily evaluation refreshes it (idempotent per unit/day/rule).
+   * Text is rendered from `rule` + `evidence` in the reader's language.
+   */
+  farmAlerts: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    batchId: v.optional(v.id('batches')),
+    unitName: v.string(),
+    rule: farmAlertRule,
+    severity: v.union(v.literal('info'), v.literal('warning'), v.literal('critical')),
+    status: v.union(v.literal('open'), v.literal('acknowledged'), v.literal('resolved')),
+    /** Business day the alert was raised for. */
+    date: v.string(),
+    /** Last evaluated day the condition still held. */
+    lastSeenDate: v.string(),
+    evidence: v.record(v.string(), v.union(v.string(), v.number(), v.null())),
+    notifiedAt: v.optional(v.number()),
+    acknowledgedBy: v.optional(v.id('users')),
+    acknowledgedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id('users')),
+    resolvedAt: v.optional(v.number()),
+    /** Closed by the evaluation when the condition cleared. */
+    autoResolved: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_status', ['companyId', 'status'])
+    .index('by_unitId_and_rule', ['unitId', 'rule'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
+  /** Weekly natural-language report (AI-003, lib/weeklyReport), per site or company-wide. */
+  weeklyReports: defineTable({
+    companyId: v.id('companies'),
+    /** Absent: company-wide (visible to all-sites members only). */
+    locationId: v.optional(v.id('farmLocations')),
+    /** Sunday the week ends on. */
+    weekEnd: v.string(),
+    lang: v.union(v.literal('en'), v.literal('fr')),
+    text: v.string(),
+    /** Costs, rendered by code; shown only with finance.view. */
+    financeText: v.optional(v.string()),
+    source: v.union(v.literal('llm'), v.literal('template')),
+    providerId: v.optional(v.string()),
+    model: v.optional(v.string()),
+    /** The data pack the text was written from (JSON, no costs). */
+    packJson: v.string(),
+    requestedBy: v.optional(v.id('users')),
+    deliveredAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_weekEnd', ['companyId', 'weekEnd'])
+    .index('by_companyId_and_locationId_and_weekEnd_and_lang', ['companyId', 'locationId', 'weekEnd', 'lang']),
 
   complianceRecords: defineTable({
     companyId: v.id('companies'),

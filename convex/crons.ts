@@ -80,4 +80,12 @@ crons.cron('billing lifecycle', '0 5 * * *', internal.billing.lifecycle.runDaily
 // 00:40 UTC: yesterday's per-organization usage for the platform console (PLAT-110).
 crons.cron('platform usage rollup', '40 0 * * *', internal.platform.usage.rollupYesterday, {})
 
+// 05:00 UTC: early-warning alerts (AI-001) on yesterday, in each company's
+// time zone; a few units per job, idempotent per unit/day/rule.
+crons.cron('farm early-warning alerts', '0 5 * * *', internal.farmAlerts.tick, {})
+
+// Monday 06:30 UTC: weekly report (AI-003) per site and company-wide for the
+// week that ended on Sunday, delivered in-app and by email.
+crons.cron('weekly farm reports', '30 6 * * 1', internal.aiReports.weeklyTick, {})
+
 export default crons

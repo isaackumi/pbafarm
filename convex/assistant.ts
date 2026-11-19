@@ -14,7 +14,8 @@ import {
   type UnitForecast,
 } from './lib/insights'
 import { farmTarget, names, occupanciesSince } from './analytics'
-import { requireMember } from './lib/permissions'
+import { can, memberContextIn, requireMember } from './lib/permissions'
+import { SEVERITY_RANK, alertText, langOf } from './lib/earlyWarning'
 
 /**
  * Grounded insights and the assistant's context (Phase 13, ANLY-005), both
@@ -136,6 +137,26 @@ async function assertAiEnabled(ctx: QueryCtx, user: Doc<'users'>) {
  * and deaths, weekly FCR and mortality, the current insights and feed
  * stock. Read by pages/api/llm/chat.js with the user's own token.
  */
+/** Open early-warning alerts (AI-001) the user may see, as assistant facts. */
+async function earlyWarningsFor(ctx: QueryCtx, user: Doc<'users'>) {
+  if (!user.companyId) return []
+  const m = await memberContextIn(ctx, user, user.companyId)
+  if (!m || !can(m, 'production.view')) return []
+  const lang = langOf(user.locale)
+  const rows = await ctx.db
+    .query('farmAlerts')
+    .withIndex('by_companyId_and_status', (q) => q.eq('companyId', user.companyId!).eq('status', 'open'))
+    .take(200)
+  return rows
+    .filter((a) => m.siteScope === 'all' || (!!a.locationId && m.siteScope.has(a.locationId)))
+    .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
+    .slice(0, 10)
+    .map((a) => {
+      const t = alertText(a, lang)
+      return { title: `${a.severity === 'critical' ? '[critical] ' : ''}${t.title}`, detail: t.detail }
+    })
+}
+
 export const context = query({
   args: {
     asOf: v.string(),
@@ -264,6 +285,8 @@ export const context = query({
           })),
       })),
       insights: rankInsights(a.insights, 10).map((i) => ({ title: i.title, detail: i.detail })),
+      // Early-warning alerts (AI-001) open in the caller's sites.
+      early_warnings: await earlyWarningsFor(ctx, user),
       feed_stock: feedTypes
         .filter((f) => f.active && !f.deletedAt)
         .map((f) => ({

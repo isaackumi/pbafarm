@@ -129,6 +129,8 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'inboundWebhookEvents', index: 'by_companyId_and_receivedAt' },
   { table: 'llmCredentials', index: 'by_companyId' },
   { table: 'llmUsage', index: 'by_companyId_and_createdAt' },
+  { table: 'farmAlerts', index: 'by_companyId_and_date' },
+  { table: 'weeklyReports', index: 'by_companyId_and_weekEnd' },
   // Governance bookkeeping: purged, not exported.
   { table: 'dataExports', index: 'by_companyId', export: false },
   { table: 'auditChainVerifications', index: 'by_companyId', export: false, purge: 'keep' },

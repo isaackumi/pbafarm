@@ -77,7 +77,8 @@
       "sensors": "Sensors",
       "accountingExport": "Accounting export",
       "inboundWebhooks": "Inbound webhooks",
-      "aiSettings": "AI settings"
+      "aiSettings": "AI settings",
+      "weeklyReport": "Weekly report"
     },
     "section": {
       "production": "Daily work",
@@ -1081,7 +1082,10 @@
     "widgetSubtitle": "Suggested from fish count, weight and the feed tables",
     "open": "Open",
     "kgPerDay": "kg/day",
-    "coverage": "{planned} of {total} units have a ration"
+    "coverage": "{planned} of {total} units have a ration",
+    "why": "Why",
+    "countFrom": "Fish count: {stocked} stocked + {transferredIn} in − {transferredOut} out − {harvested} harvested − {mortality} dead − {unaccounted} unaccounted = {count}.",
+    "neverApplied": "A suggestion only: it is never entered for you. Adjust to appetite and water quality."
   },
   "customizePage": {
     "tab": {
@@ -1550,5 +1554,40 @@
         "other": "{count} checklists added"
       }
     }
+  },
+  "farmAlerts": {
+    "title": "Early warnings",
+    "subtitle": "Raised each morning from your records and sensors",
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Note"
+    },
+    "status": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
+    },
+    "since": "since {date}",
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve",
+    "acknowledged": "Alert acknowledged.",
+    "resolved": "Alert resolved.",
+    "failed": "Could not update the alert"
+  },
+  "weeklyReport": {
+    "title": "Weekly report",
+    "intro": "Every Monday, a short summary of last week per site and for the whole farm: survival, FCR, feed used against the suggested ration, biomass gain and alerts. The figures come from your records; the assistant only phrases them.",
+    "generateSite": "Write last week's report for {site}",
+    "generateCompany": "Write last week's company report",
+    "doneAi": "Report written by the assistant.",
+    "doneTemplate": "Report written from the standard template.",
+    "failed": "Could not write the report",
+    "emptyTitle": "No weekly report yet",
+    "emptyBody": "Reports are written every Monday for the week before, or now with the buttons above.",
+    "weekOf": "Week ending {date} · {scope}",
+    "wholeCompany": "Whole company",
+    "sourceAi": "Phrased by the assistant from your figures",
+    "sourceTemplate": "Standard template"
   }
 }

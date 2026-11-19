@@ -58,6 +58,7 @@ const ALLOWLIST: Record<string, string> = {
   'llmGateway.chat': 'action; guarded by requireMember(ai.use) in internal.llmGateway.begin',
   'files.attachR2': 'action; guarded by requireMember(files.upload) + upload binding in internal.files.r2UploadForAttach / attachR2Object',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
+  'aiReports.generateNow': 'action; guarded by requireMember(reports.view) and the site scope in internal.aiReports.access',
   'actAs.start': 'super_admin only, checked on the real account (requireUser({ ignoreActAs })): support access is not a company permission',
   'actAs.stop': 'own act-as session; any signed-in account, ends only its own',
   'actAs.status': 'own act-as session for the banner; null for everyone but a super_admin',

@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { usePermission } from '../../hooks/usePermission'
 import { CustomFieldsCard } from '../../components/CustomFields'
 import RationSuggestion from '../../components/RationSuggestion'
+import FarmAlerts from '../../components/FarmAlerts'
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -237,7 +238,8 @@ function CageDetails() {
           )}
         </div>
 
-        <RationSuggestion cageId={cageId} />
+        <RationSuggestion cageId={cageId} detailed />
+        <FarmAlerts unitId={cageId} compact />
 
         <GrowthPanel growth={growth} cage={cage} />
 
