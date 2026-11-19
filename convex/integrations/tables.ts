@@ -227,12 +227,13 @@ export const integrationTables = {
   /** One row per assistant model call (INT-009): who, which model, tokens, cost estimate. */
   llmUsage: defineTable({
     companyId: v.id('companies'),
-    userId: v.id('users'),
+    /** Absent for scheduled calls (the weekly report, AI-003). */
+    userId: v.optional(v.id('users')),
     providerId: v.string(),
     model: v.string(),
     /** Whose key paid: the organization's or the platform's. */
     source: v.union(v.literal('org_key'), v.literal('server_key')),
-    feature: v.union(v.literal('chat'), v.literal('insights')),
+    feature: v.union(v.literal('chat'), v.literal('insights'), v.literal('report')),
     ok: v.boolean(),
     error: v.optional(v.string()),
     inputTokens: v.optional(v.number()),

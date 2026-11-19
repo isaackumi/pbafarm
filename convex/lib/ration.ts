@@ -131,3 +131,140 @@ export function rationFor(args: { count: number | null | undefined; abwG: number
     bandMaxAbwG: hit.maxAbwG,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Feeding recommendation (AI-002): biomass × feed rate by size and water
+// temperature, with the reasons spelled out. A suggestion only: nothing here
+// writes feed records, and the UI never fills the feed input with it.
+// ---------------------------------------------------------------------------
+
+/** A temperature band: from `minC` (inclusive) up to the next band; factor × the table's %BW. */
+export type TempBand = { minC: number; factor: number }
+
+/**
+ * Appetite by water temperature for warm-water species: 1 in the optimal
+ * range, lower when colder or hotter (tilapia stop eating below ~15 °C).
+ * Typical extension-service charts; farms adjust the %BW tables themselves.
+ */
+export const TEMPERATURE_FACTORS: Record<'tilapia' | 'catfish', TempBand[]> = {
+  tilapia: [
+    { minC: -Infinity, factor: 0 },
+    { minC: 15, factor: 0.3 },
+    { minC: 20, factor: 0.5 },
+    { minC: 22, factor: 0.7 },
+    { minC: 24, factor: 0.85 },
+    { minC: 26, factor: 1 },
+    { minC: 30, factor: 0.9 },
+    { minC: 32, factor: 0.7 },
+    { minC: 34, factor: 0.4 },
+  ],
+  catfish: [
+    { minC: -Infinity, factor: 0.2 },
+    { minC: 18, factor: 0.5 },
+    { minC: 22, factor: 0.8 },
+    { minC: 25, factor: 1 },
+    { minC: 32, factor: 0.8 },
+    { minC: 34, factor: 0.5 },
+  ],
+}
+
+export function temperatureGroup(speciesKey: string | null | undefined): 'tilapia' | 'catfish' {
+  return /catfish|clarias|heterobranchus/i.test(speciesKey ?? '') ? 'catfish' : 'tilapia'
+}
+
+/** Appetite factor at `tempC` (1 when unknown). */
+export function temperatureFactor(speciesKey: string | null | undefined, tempC: number | null | undefined): number {
+  if (tempC == null || !Number.isFinite(tempC)) return 1
+  const bands = TEMPERATURE_FACTORS[temperatureGroup(speciesKey)]
+  let f = bands[0].factor
+  for (const b of bands) if (tempC >= b.minC) f = b.factor
+  return f
+}
+
+/** Ledger fish flows of an occupancy (batchStats kpis). */
+export type CountFlows = {
+  stocked: number
+  transferredIn: number
+  transferredOut: number
+  harvested: number
+  mortality: number
+  unaccounted: number
+}
+
+/** Estimated live fish: stocked + transfers in − transfers out − harvested − deaths − unaccounted. */
+export function liveCount(f: CountFlows): number {
+  return Math.max(0, f.stocked + f.transferredIn - f.transferredOut - f.harvested - f.mortality - f.unaccounted)
+}
+
+export type Recommendation =
+  | (Extract<Ration, { ok: true }> & {
+      /** %BW from the feed table before the temperature factor. */
+      tablePct: number
+      tempFactor: number
+      tempC: number | null
+    })
+  | Extract<Ration, { ok: false }>
+
+/** Daily ration from count, ABW, the species' table and water temperature. */
+export function recommendRation(args: {
+  count: number | null | undefined
+  abwG: number | null | undefined
+  bands: FeedBand[] | null | undefined
+  speciesKey?: string | null
+  tempC?: number | null
+}): Recommendation {
+  const base = rationFor(args)
+  if (!base.ok) return base
+  const tempC = args.tempC != null && Number.isFinite(args.tempC) ? args.tempC : null
+  const tempFactor = temperatureFactor(args.speciesKey, tempC)
+  const pct = round(base.bodyWeightPct * tempFactor, 2)
+  const biomassKg = ((args.count as number) * (args.abwG as number)) / 1000
+  const kgPerDay = (biomassKg * pct) / 100
+  return {
+    ...base,
+    bodyWeightPct: pct,
+    kgPerDay: round(kgPerDay, 1),
+    kgPerFeeding: round(kgPerDay / base.feedingsPerDay, 2),
+    tablePct: base.bodyWeightPct,
+    tempFactor,
+    tempC,
+  }
+}
+
+const fmt = (x: number, lang: 'en' | 'fr', dp = 1) =>
+  Number(x).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', { maximumFractionDigits: dp })
+
+/**
+ * The reasons behind a recommendation, one sentence, in EN or FR, e.g.
+ * "ABW 180 g (sampled 2026-11-02), 9,420 fish, 28 °C → 2.5% BW → 42.4 kg/day,
+ * split in 3 meals of 14.13 kg."
+ */
+export function rationReasons(
+  r: Recommendation,
+  ctx: { count: number; abwG: number; abwMeasuredOn?: string | null; tempSource?: 'sensor' | 'manual' | null },
+  lang: 'en' | 'fr' = 'en',
+): string {
+  if (!r.ok) return ''
+  const fr = lang === 'fr'
+  const abw = `${fr ? 'PMI' : 'ABW'} ${fmt(ctx.abwG, lang)} g` +
+    (ctx.abwMeasuredOn ? (fr ? ` (échantillon du ${ctx.abwMeasuredOn})` : ` (sampled ${ctx.abwMeasuredOn})`) : '')
+  const fish = `${fmt(ctx.count, lang, 0)} ${fr ? 'poissons' : 'fish'}`
+  const temp =
+    r.tempC == null
+      ? fr
+        ? 'température inconnue'
+        : 'no water temperature'
+      : `${fmt(r.tempC, lang)} °C${ctx.tempSource === 'sensor' ? (fr ? ' (capteur)' : ' (sensor)') : ''}`
+  const p = (x: number) => (fr ? `${fmt(x, lang, 2)} %` : `${fmt(x, lang, 2)}%`)
+  const pct =
+    r.tempFactor === 1
+      ? `${p(r.bodyWeightPct)} ${fr ? 'PV' : 'BW'}`
+      : `${p(r.tablePct)} × ${fmt(r.tempFactor, lang, 2)} = ${p(r.bodyWeightPct)} ${fr ? 'PV' : 'BW'}`
+  const split = fr
+    ? `en ${r.feedingsPerDay} repas de ${fmt(r.kgPerFeeding, lang, 2)} kg`
+    : `split in ${r.feedingsPerDay} meals of ${fmt(r.kgPerFeeding, lang, 2)} kg`
+  const line = `${abw}, ${fish}, ${temp} → ${pct} → ${fmt(r.kgPerDay, lang)} kg/${fr ? 'jour' : 'day'}, ${split}.`
+  return r.kgPerDay === 0 && r.tempC != null
+    ? `${line} ${fr ? "Trop froid pour nourrir : attendre que l'eau se réchauffe." : 'Too cold to feed: wait for the water to warm up.'}`
+    : line
+}

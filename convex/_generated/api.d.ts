@@ -10,6 +10,7 @@
 
 import type * as accountingExport from "../accountingExport.js";
 import type * as actAs from "../actAs.js";
+import type * as aiReports from "../aiReports.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as approvalAlerts from "../approvalAlerts.js";
@@ -47,6 +48,7 @@ import type * as emailVerification from "../emailVerification.js";
 import type * as emails from "../emails.js";
 import type * as equipment from "../equipment.js";
 import type * as expenses from "../expenses.js";
+import type * as farmAlerts from "../farmAlerts.js";
 import type * as farmLocations from "../farmLocations.js";
 import type * as feed from "../feed.js";
 import type * as feedingPlans from "../feedingPlans.js";
@@ -96,6 +98,7 @@ import type * as lib_cycles from "../lib/cycles.js";
 import type * as lib_dashboardLayout from "../lib/dashboardLayout.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_docValidators from "../lib/docValidators.js";
+import type * as lib_earlyWarning from "../lib/earlyWarning.js";
 import type * as lib_effect from "../lib/effect.js";
 import type * as lib_effectHttp from "../lib/effectHttp.js";
 import type * as lib_email from "../lib/email.js";
@@ -150,6 +153,7 @@ import type * as lib_unitStatus from "../lib/unitStatus.js";
 import type * as lib_uploadBinding from "../lib/uploadBinding.js";
 import type * as lib_userPreferences from "../lib/userPreferences.js";
 import type * as lib_waterQuality from "../lib/waterQuality.js";
+import type * as lib_weeklyReport from "../lib/weeklyReport.js";
 import type * as lib_zip from "../lib/zip.js";
 import type * as llmGateway from "../llmGateway.js";
 import type * as llmQuota from "../llmQuota.js";
@@ -222,6 +226,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountingExport: typeof accountingExport;
   actAs: typeof actAs;
+  aiReports: typeof aiReports;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   approvalAlerts: typeof approvalAlerts;
@@ -259,6 +264,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   equipment: typeof equipment;
   expenses: typeof expenses;
+  farmAlerts: typeof farmAlerts;
   farmLocations: typeof farmLocations;
   feed: typeof feed;
   feedingPlans: typeof feedingPlans;
@@ -308,6 +314,7 @@ declare const fullApi: ApiFromModules<{
   "lib/dashboardLayout": typeof lib_dashboardLayout;
   "lib/dates": typeof lib_dates;
   "lib/docValidators": typeof lib_docValidators;
+  "lib/earlyWarning": typeof lib_earlyWarning;
   "lib/effect": typeof lib_effect;
   "lib/effectHttp": typeof lib_effectHttp;
   "lib/email": typeof lib_email;
@@ -362,6 +369,7 @@ declare const fullApi: ApiFromModules<{
   "lib/uploadBinding": typeof lib_uploadBinding;
   "lib/userPreferences": typeof lib_userPreferences;
   "lib/waterQuality": typeof lib_waterQuality;
+  "lib/weeklyReport": typeof lib_weeklyReport;
   "lib/zip": typeof lib_zip;
   llmGateway: typeof llmGateway;
   llmQuota: typeof llmQuota;

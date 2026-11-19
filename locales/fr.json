@@ -77,7 +77,8 @@
       "sensors": "Capteurs",
       "accountingExport": "Export comptable",
       "inboundWebhooks": "Webhooks entrants",
-      "aiSettings": "Paramètres IA"
+      "aiSettings": "Paramètres IA",
+      "weeklyReport": "Rapport hebdomadaire"
     },
     "section": {
       "production": "Travail quotidien",
@@ -1081,7 +1082,10 @@
     "widgetSubtitle": "Suggéré à partir du nombre de poissons, du poids et des tables d'alimentation",
     "open": "Ouvrir",
     "kgPerDay": "kg/jour",
-    "coverage": "{planned} unités sur {total} ont une ration"
+    "coverage": "{planned} unités sur {total} ont une ration",
+    "why": "Pourquoi",
+    "countFrom": "Effectif : {stocked} empoissonnés + {transferredIn} entrés − {transferredOut} sortis − {harvested} récoltés − {mortality} morts − {unaccounted} non comptés = {count}.",
+    "neverApplied": "Simple suggestion : elle n'est jamais saisie à votre place. Ajustez selon l'appétit et la qualité de l'eau."
   },
   "customizePage": {
     "tab": {
@@ -1550,5 +1554,40 @@
         "other": "{count} listes de contrôle ajoutées"
       }
     }
+  },
+  "farmAlerts": {
+    "title": "Alertes précoces",
+    "subtitle": "Calculées chaque matin à partir de vos saisies et capteurs",
+    "severity": {
+      "critical": "Critique",
+      "warning": "Avertissement",
+      "info": "Note"
+    },
+    "status": {
+      "open": "Ouverte",
+      "acknowledged": "Prise en compte",
+      "resolved": "Résolue"
+    },
+    "since": "depuis le {date}",
+    "acknowledge": "Prendre en compte",
+    "resolve": "Résoudre",
+    "acknowledged": "Alerte prise en compte.",
+    "resolved": "Alerte résolue.",
+    "failed": "Impossible de mettre à jour l'alerte"
+  },
+  "weeklyReport": {
+    "title": "Rapport hebdomadaire",
+    "intro": "Chaque lundi, un court résumé de la semaine passée par site et pour toute la ferme : survie, ICA, aliment distribué face à la ration suggérée, gain de biomasse et alertes. Les chiffres viennent de vos saisies ; l'assistant ne fait que les formuler.",
+    "generateSite": "Rédiger le rapport de la semaine passée pour {site}",
+    "generateCompany": "Rédiger le rapport de la semaine passée pour l'entreprise",
+    "doneAi": "Rapport rédigé par l'assistant.",
+    "doneTemplate": "Rapport rédigé à partir du modèle standard.",
+    "failed": "Impossible de rédiger le rapport",
+    "emptyTitle": "Aucun rapport hebdomadaire",
+    "emptyBody": "Les rapports sont rédigés chaque lundi pour la semaine précédente, ou maintenant avec les boutons ci-dessus.",
+    "weekOf": "Semaine se terminant le {date} · {scope}",
+    "wholeCompany": "Toute l'entreprise",
+    "sourceAi": "Formulé par l'assistant à partir de vos chiffres",
+    "sourceTemplate": "Modèle standard"
   }
 }

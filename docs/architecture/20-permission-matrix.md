@@ -11,6 +11,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `actAs.start` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.status` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.stop` | `allowlisted` | see test | see test | see test | see test | see test |
+| `aiReports.generateNow` | `allowlisted` | see test | see test | see test | see test | see test |
+| `aiReports.list` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.comparison` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.cycles` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.growth` | `reports.view` | yes | yes | yes | yes | yes |
@@ -140,6 +142,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `expenses.remove` | `finance.expenses.manage` | yes | yes | no | no | no |
 | `expenses.update` | `finance.expenses.manage` | yes | yes | no | no | no |
 | `expenses.updateCategory` | `finance.expenses.manage` | yes | yes | no | no | no |
+| `farmAlerts.acknowledge` | `production.daily.record` | yes | yes | yes | yes | no |
+| `farmAlerts.list` | `production.view` | yes | yes | yes | yes | yes |
+| `farmAlerts.resolve` | `production.daily.record` | yes | yes | yes | yes | no |
 | `farmLocations.create` | `org.sites.manage` | yes | yes | no | no | no |
 | `farmLocations.ensureDefault` | `org.view` | yes | yes | yes | yes | yes |
 | `farmLocations.getActive` | `org.view` | yes | yes | yes | yes | yes |
@@ -172,6 +177,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `files.list` | `org.view` | yes | yes | yes | yes | yes |
 | `files.remove` | `files.upload` | yes | yes | yes | yes | no |
 | `files.requestDownload` | `org.view` | yes | yes | yes | yes | yes |
+| `files.requestThumbnails` | `org.view` | yes | yes | yes | yes | yes |
 | `fishTransfers.approveFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
 | `fishTransfers.createFishTransfer` | `production.transfer.request` | yes | yes | yes | yes | no |
 | `fishTransfers.getFishTransfer` | `production.view` | yes | yes | yes | yes | yes |

@@ -18,9 +18,12 @@ import {
   RATION_LIMITS,
   SPECIES_KEY_PATTERN,
   bandProblems,
-  rationFor,
+  liveCount,
+  recommendRation,
+  type CountFlows,
   type FeedBand,
 } from './lib/ration'
+import { addDays } from './lib/dates'
 import { feedBand } from './schema'
 
 const MAX_PLANS = 60
@@ -40,7 +43,7 @@ async function savedPlan(ctx: QueryCtx, companyId: Id<'companies'>, speciesKey: 
 }
 
 /** speciesKey → bands: saved tables first, then the built-in defaults. */
-async function tablesFor(ctx: QueryCtx, companyId: Id<'companies'>) {
+export async function tablesFor(ctx: QueryCtx, companyId: Id<'companies'>) {
   const out = new Map<string, FeedBand[]>()
   for (const [k, t] of Object.entries(DEFAULT_FEED_TABLES)) out.set(k, t.bands)
   for (const p of await savedPlans(ctx, companyId)) out.set(p.speciesKey, p.bands)
@@ -160,20 +163,72 @@ export const reset = mutation({
   },
 })
 
-type CageRation = ReturnType<typeof rationFor> | { ok: false; reason: 'no_species' }
+type CageRation = ReturnType<typeof recommendRation> | { ok: false; reason: 'no_species' }
+
+/** Readings older than this (days before the unit's latest data) are not used for the ration. */
+const TEMP_MAX_AGE_DAYS = 2
+
+/**
+ * Latest water temperature for a unit: the newest sensor reading or manual
+ * entry (daily record / sample), if it is at most TEMP_MAX_AGE_DAYS older
+ * than `refDate`. No wall clock: queries stay deterministic.
+ */
+async function latestTemperature(ctx: QueryCtx, cageId: Id<'cages'>, refDate: string | null) {
+  const sensor = await ctx.db
+    .query('sensorReadings')
+    .withIndex('by_cageId_and_parameter_and_measuredAt', (q) => q.eq('cageId', cageId).eq('parameter', 'temperature_c'))
+    .order('desc')
+    .first()
+  const manual = (
+    await ctx.db
+      .query('unitDailyStats')
+      .withIndex('by_unitId_and_date', (q) => q.eq('unitId', cageId))
+      .order('desc')
+      .take(7)
+  ).find((r) => r.temperatureC != null)
+  const candidates = [
+    sensor ? { tempC: sensor.value, on: new Date(sensor.measuredAt).toISOString().slice(0, 10), source: 'sensor' as const } : null,
+    manual ? { tempC: manual.temperatureC!, on: manual.date, source: 'manual' as const } : null,
+  ].filter((c): c is NonNullable<typeof c> => c != null)
+  const ref = [refDate, ...candidates.map((c) => c.on)].filter((d): d is string => !!d).sort().pop()
+  const fresh = candidates
+    .filter((c) => !ref || c.on >= addDays(ref, -TEMP_MAX_AGE_DAYS))
+    .sort((a, b) => b.on.localeCompare(a.on) || (a.source === 'sensor' ? -1 : 1))
+  return fresh[0] ?? null
+}
 
 async function cageRation(ctx: QueryCtx, cage: Doc<'cages'>, tables: Map<string, FeedBand[]>) {
   let speciesKey = cage.species ?? null
-  if (!speciesKey && cage.currentBatchId) {
-    const batch = await ctx.db.get(cage.currentBatchId)
-    speciesKey = batch?.speciesCode ?? null
-  }
-  const abwG = cage.currentWeight ?? cage.initialAbw ?? null
-  const count = cage.currentCount ?? 0
+  const batch = cage.currentBatchId ? await ctx.db.get(cage.currentBatchId) : null
+  if (!speciesKey) speciesKey = batch?.speciesCode ?? null
+  // The open occupancy's ledger (rollups): live count from stocking − deaths −
+  // harvests ± transfers, and the latest sampled ABW. Falls back to the unit's
+  // cached fields when the rollup is not there yet.
+  const stats = cage.currentBatchId
+    ? await ctx.db
+        .query('batchStats')
+        .withIndex('by_unitId_and_batchId', (q) => q.eq('unitId', cage._id).eq('batchId', cage.currentBatchId!))
+        .unique()
+    : null
+  const k = stats?.open ? stats.kpis : null
+  const flows: CountFlows | null = k
+    ? {
+        stocked: k.stocked_count,
+        transferredIn: k.in_count,
+        transferredOut: k.out_count,
+        harvested: k.harvested_count,
+        mortality: k.mortality,
+        unaccounted: k.unaccounted,
+      }
+    : null
+  const count = flows ? liveCount(flows) : cage.currentCount ?? 0
+  const abwG = k?.current_abw_g ?? cage.currentWeight ?? cage.initialAbw ?? null
+  const abwMeasuredOn = k?.current_abw_g != null ? k.abw_measured_on : null
+  const temp = await latestTemperature(ctx, cage._id, stats?.asOf ?? null)
   const ration: CageRation =
     count > 0 && abwG && !speciesKey
       ? { ok: false, reason: 'no_species' }
-      : rationFor({ count, abwG, bands: speciesKey ? tables.get(speciesKey) : null })
+      : recommendRation({ count, abwG, bands: speciesKey ? tables.get(speciesKey) : null, speciesKey, tempC: temp?.tempC ?? null })
   return {
     cageId: cage._id,
     cageName: cage.name,
@@ -181,6 +236,12 @@ async function cageRation(ctx: QueryCtx, cage: Doc<'cages'>, tables: Map<string,
     speciesKey,
     count,
     abwG,
+    abwMeasuredOn,
+    countSource: flows ? ('ledger' as const) : ('unit' as const),
+    countFlows: flows,
+    tempC: temp?.tempC ?? null,
+    tempSource: temp?.source ?? null,
+    tempOn: temp?.on ?? null,
     ration,
   }
 }
@@ -196,9 +257,28 @@ const row2 = v.object({
   speciesKey: v.union(v.string(), v.null()),
   count: v.number(),
   abwG: v.union(v.number(), v.null()),
+  abwMeasuredOn: v.union(v.string(), v.null()),
+  countSource: v.union(v.literal('ledger'), v.literal('unit')),
+  countFlows: v.union(
+    v.object({
+      stocked: v.number(),
+      transferredIn: v.number(),
+      transferredOut: v.number(),
+      harvested: v.number(),
+      mortality: v.number(),
+      unaccounted: v.number(),
+    }),
+    v.null(),
+  ),
+  tempC: v.union(v.number(), v.null()),
+  tempSource: v.union(v.literal('sensor'), v.literal('manual'), v.null()),
+  tempOn: v.union(v.string(), v.null()),
   ration: v.union(
     v.object({
       ok: v.literal(true),
+      tablePct: v.number(),
+      tempFactor: v.number(),
+      tempC: v.union(v.number(), v.null()),
       biomassKg: v.number(),
       kgPerDay: v.number(),
       kgPerFeeding: v.number(),
