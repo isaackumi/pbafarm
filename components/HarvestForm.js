@@ -79,7 +79,6 @@ const HarvestForm = ({ onComplete }) => {
   const [cagesReady, setCagesReady] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [fcrCalc, setFcrCalc] = useState(null)
-  const [fcrTouched, setFcrTouched] = useState(false)
   const { showToast } = useToast()
   const { user, hasRole } = useAuth()
   const online = useOnline()
@@ -131,9 +130,10 @@ const HarvestForm = ({ onComplete }) => {
     fetchCages()
   }, [showToast, t, user?.id])
 
-  // Work out FCR from the feed logged since stocking once cage, date and weight are known.
+  // FCR is computed from the records (PROD-009), never typed: show it with its inputs.
   useEffect(() => {
     const weight = parseFloat(formData.totalWeight)
+    const count = parseInt(formData.estimatedCount, 10)
     if (!formData.cageId || !formData.harvestDate || !(weight > 0)) {
       setFcrCalc(null)
       return
@@ -145,12 +145,12 @@ const HarvestForm = ({ onComplete }) => {
           cageId: formData.cageId,
           harvestDate: formData.harvestDate,
           totalWeight: weight,
+          ...(count > 0 ? { estimatedCount: count } : {}),
+          harvestType: formData.harvestType === 'partial' ? 'partial' : 'complete',
         })
         if (cancelled) return
         setFcrCalc(res)
-        if (res?.fcr != null && !fcrTouched) {
-          setFormData((prev) => ({ ...prev, fcr: String(res.fcr) }))
-        }
+        setFormData((prev) => ({ ...prev, fcr: res?.fcr != null ? String(res.fcr) : '' }))
       } catch {
         if (!cancelled) setFcrCalc(null)
       }
@@ -160,7 +160,7 @@ const HarvestForm = ({ onComplete }) => {
       clearTimeout(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.cageId, formData.harvestDate, formData.totalWeight])
+  }, [formData.cageId, formData.harvestDate, formData.totalWeight, formData.estimatedCount, formData.harvestType])
 
   const handleSizeBreakdownChange = (index, value) => {
     const newSizeBreakdown = [...(formData.sizeBreakdown || [])]
@@ -204,22 +204,10 @@ const HarvestForm = ({ onComplete }) => {
       count = Math.round((total * 1000) / abw)
       next.estimatedCount = String(count)
     }
-    let fcrVal = num(formData.fcr)
-    if (fcrVal == null && fcrCalc?.fcr != null) {
-      fcrVal = fcrCalc.fcr
-      next.fcr = String(fcrVal)
-    }
 
     if (!(total > 0)) problems.push(t('harvest.problem.totalWeight'))
     if (!(abw > 0)) problems.push(t('harvest.problem.abw'))
     if (!(count > 0)) problems.push(t('harvest.problem.count'))
-    if (!(fcrVal > 0)) {
-      problems.push(
-        fcrCalc && fcrCalc.fcr == null
-          ? t('harvest.problem.fcrNoFeed')
-          : t('harvest.problem.fcr'),
-      )
-    }
     if (total > 0 && gradeSum > 0 && Math.abs(gradeSum - total) > 0.5) {
       problems.push(
         t('harvest.problem.gradeMismatch', { sum: gradeSum, total }),
@@ -260,7 +248,9 @@ const HarvestForm = ({ onComplete }) => {
         total_weight: parseFloat(formData.totalWeight),
         average_body_weight: parseFloat(formData.averageBodyWeight),
         estimated_count: parseInt(formData.estimatedCount, 10),
-        fcr: parseFloat(formData.fcr),
+        // Server recomputes from the ledger; this is only the fallback for
+        // cages with no stocking on record.
+        ...(fcrCalc?.fcr != null ? { fcr: fcrCalc.fcr } : {}),
         size_breakdown: (formData.sizeBreakdown || []).map((size) => ({
           category: size.category,
           range: size.range,
@@ -517,47 +507,33 @@ const HarvestForm = ({ onComplete }) => {
                 />
               </Field>
 
-              <Field label={t('harvest.fcrLong')} htmlFor="harvest-fcr" required>
-                <Input
+              <Field label={t('harvest.fcrLong')} htmlFor="harvest-fcr">
+                <output
                   id="harvest-fcr"
-                  type="number"
-                  name="fcr"
-                  value={formData.fcr}
-                  onChange={(e) => {
-                    setFcrTouched(true)
-                    handleChange(e)
-                  }}
-                  step="0.01"
-                  className="tabular-nums"
-                  required
-                />
-                {fcrCalc && (
-                  <p className="text-xs text-muted tabular-nums">
-                    {fcrCalc.fcr != null
-                      ? t('harvest.fcrCalculated', {
-                          fcr: fcrCalc.fcr.toFixed(2),
-                          feed: Number(fcrCalc.feed_kg),
-                          since: fcrCalc.stocking_date,
-                          stocked: Number(fcrCalc.stocked_biomass_kg || 0),
-                        })
-                      : t('harvest.fcrNotEnough')}
-                    {fcrCalc.fcr != null && fcrTouched && Number(formData.fcr) !== fcrCalc.fcr && (
-                      <>
-                        {' '}
-                        <button
-                          type="button"
-                          className="text-lake underline underline-offset-2"
-                          onClick={() => {
-                            setFcrTouched(false)
-                            setFormData((prev) => ({ ...prev, fcr: String(fcrCalc.fcr) }))
-                          }}
-                        >
-                          {t('harvest.useCalculated')}
-                        </button>
-                      </>
-                    )}
-                  </p>
-                )}
+                  aria-live="polite"
+                  className="block rounded-lg border border-foam-deep bg-foam px-3 py-2 text-sm font-semibold tabular-nums text-chart-ink"
+                >
+                  {fcrCalc?.fcr != null ? fcrCalc.fcr.toFixed(2) : '—'}
+                </output>
+                <p className="text-xs text-muted tabular-nums">
+                  {!fcrCalc
+                    ? t('harvest.fcrPending')
+                    : fcrCalc.fcr == null
+                      ? t('harvest.fcrNotEnough')
+                      : fcrCalc.gain_kg != null
+                        ? t('harvest.fcrComputed', {
+                            feed: Number(fcrCalc.feed_kg),
+                            gain: Number(fcrCalc.gain_kg),
+                            since: fcrCalc.stocking_date,
+                          })
+                        : t('harvest.fcrCalculated', {
+                            fcr: fcrCalc.fcr.toFixed(2),
+                            feed: Number(fcrCalc.feed_kg),
+                            since: fcrCalc.stocking_date,
+                            stocked: Number(fcrCalc.stocked_biomass_kg || 0),
+                          })}
+                  {fcrCalc?.fcr != null && fcrCalc.method === 'interim' && <> {t('harvest.fcrInterim')}</>}
+                </p>
               </Field>
             </div>
           </FormSection>
@@ -641,7 +617,7 @@ const HarvestForm = ({ onComplete }) => {
             {previewRow(t('harvest.totalWeight'), `${formData.totalWeight} kg`)}
             {previewRow(t('harvest.abw'), `${formData.averageBodyWeight} g`)}
             {previewRow(t('harvest.estimatedCount'), formData.estimatedCount)}
-            {previewRow('FCR', formData.fcr)}
+            {previewRow('FCR', fcrCalc?.fcr != null ? fcrCalc.fcr.toFixed(2) : '—')}
           </dl>
 
           <p className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink tabular-nums">

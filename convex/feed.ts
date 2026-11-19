@@ -7,7 +7,7 @@ import {
   applyStockChange,
   bagsFromKg,
   kgFromBags,
-  assertFeedNotAlreadyRecorded,
+  changeBin,
 } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 import { assertUserCan, requireMember } from './lib/permissions'
@@ -687,6 +687,15 @@ async function recordOutboundUsage(
     updatedAt: now,
   })
 
+  // An issue to a cage moves the feed to the cage-side bin (PROD-000h): it is
+  // consumed (and deducted for good) by the daily entry, not here.
+  if (args.source === 'issue' && args.cageId) {
+    const companyId = (await writeCompanyId(user)) ?? feedType.companyId
+    if (companyId) {
+      await changeBin(ctx, { cageId: args.cageId, feedTypeId: args.feedTypeId, deltaKg: quantityKg, companyId, locationId })
+    }
+  }
+
   await applyStockChange(ctx, {
     user,
     feedTypeId: args.feedTypeId,
@@ -731,7 +740,12 @@ export const createUsage = mutation({
   },
 })
 
-/** Explicit store take-out by feeders (may link to a cage). */
+/**
+ * Explicit store take-out by feeders. With a cage, the feed moves from the
+ * store to the cage's bin (PROD-000h, Q-003 assumed answer): the daily entry
+ * then feeds from that bin, so the same feed is never deducted twice and the
+ * issue itself is not consumption (no FCR effect).
+ */
 /** Accepts `clientMutationId` so outbox retries never write twice (MOBILE-002). */
 export const createIssue = idempotentMutation('feed.createIssue', {
   args: {
@@ -744,20 +758,11 @@ export const createIssue = idempotentMutation('feed.createIssue', {
     allowNegative: v.optional(v.boolean()),
     overrideReason: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
-    /** Admin only: issue even though the daily entry already has feed for this cage and date. */
+    /** Accepted from older clients and ignored: issue and daily feed no longer overlap. */
     feedOverlapReason: v.optional(v.string()),
   },
-  handler: async (ctx, { feedOverlapReason, ...args }) => {
-    if (args.cageId) {
-      const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
-      await assertFeedNotAlreadyRecorded(ctx, {
-        user,
-        cageId: args.cageId,
-        date: args.usageDate,
-        writing: 'issue',
-        overrideReason: feedOverlapReason,
-      })
-    }
+  handler: async (ctx, { feedOverlapReason: _ignored, ...args }) => {
+    void _ignored
     return await recordOutboundUsage(ctx, {
       ...args,
       source: 'issue',

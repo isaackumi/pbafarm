@@ -5,7 +5,7 @@ import { mergeSettings, unitTypeOf } from './lib/farmRules'
 import { assertTransition, type UnitStatus } from './lib/unitStatus'
 import { customValues, unitTypeValidator } from './schema'
 import { validateCustom } from './lib/customFields'
-import { shadowCountEdit } from './lib/productionDualWrite'
+import { beginStockWrite, shadowCountEdit } from './lib/productionDualWrite'
 import { assertOwns, listForCompany, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
 import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { QueryCtx } from './_generated/server'
@@ -455,16 +455,22 @@ export const update = mutation({
       if (loc && patch.location === undefined) next.location = loc.name
     }
 
+    const countEdited = patch.currentCount !== undefined && patch.currentCount !== (existing.currentCount ?? 0)
+    const write = countEdited ? await beginStockWrite(ctx, [existing], user._id) : null
     await ctx.db.patch(id, next)
-    // A hand-corrected count becomes a labelled ledger adjustment (dual-write).
-    if (patch.currentCount !== undefined && patch.currentCount !== (existing.currentCount ?? 0)) {
-      await shadowCountEdit(
-        ctx,
-        existing,
-        existing.currentCount ?? 0,
-        patch.currentCount,
-        user._id,
-        new Date().toISOString().slice(0, 10),
+    // A hand-corrected count becomes a labelled ledger adjustment, which sets
+    // the count once the engine owns the cage (PROD-004).
+    if (write) {
+      await write.post((o) =>
+        shadowCountEdit(
+          ctx,
+          existing,
+          existing.currentCount ?? 0,
+          patch.currentCount!,
+          user._id,
+          new Date().toISOString().slice(0, 10),
+          o,
+        ),
       )
     }
     await logAudit(ctx, {

@@ -579,7 +579,7 @@ describe('INV-003: reversals linked to their source records', () => {
   })
 })
 
-describe('S12: the sampling page no longer records a harvest (interim)', () => {
+describe('S12: the sampling page records a pre-harvest sample, not a harvest', () => {
   const today = new Date().toISOString().split('T')[0]
   const harvestRows = (t: any) => t.run((ctx: any) => ctx.db.query('harvestRecords').collect())
 
@@ -598,6 +598,8 @@ describe('S12: the sampling page no longer records a harvest (interim)', () => {
     expect(sample.harvestId).toBeUndefined()
     expect(sample.cageId).toBe(b.cageId)
     expect(sample.weight).toBe(45)
+    // ABW in grams, like every other weight in the app (not 0.45 kg).
+    expect(sample.abw).toBe(450)
     expect((await getDoc(t, b.cageId)).currentCount).toBe(5000)
     expect(await as.query(api.harvest.listSampling, { cageId: b.cageId })).toHaveLength(1)
   })
@@ -624,6 +626,7 @@ describe('S12: the sampling page no longer records a harvest (interim)', () => {
         date: today,
         weight: 45,
         fishCount: 100,
+        abw: 0.45,
         samples: {},
         companyId,
       })
@@ -647,10 +650,14 @@ describe('S12: the sampling page no longer records a harvest (interim)', () => {
     const dry = await t.mutation(internal.migrations.tagSamplingPageHarvests, {})
     expect(dry.dryRun).toBe(true)
     expect(dry.changes.map((c: any) => c.harvestId)).toEqual([legacyId])
+    expect(dry.samplingAbwFixed).toBe(1)
     expect((await getDoc(t, legacyId)).source).toBeUndefined()
 
     await t.mutation(internal.migrations.tagSamplingPageHarvests, { dryRun: false })
     expect((await getDoc(t, legacyId)).source).toBe('sampling_page')
+    expect((await getDoc(t, legacyId)).averageBodyWeight).toBe(450)
+    const fixed: any = await t.run((ctx: any) => ctx.db.query('harvestSampling').first())
+    expect(fixed.abw).toBe(450)
     expect((await as.query(api.reports.dashboardKpis, {})).harvest_weight_kg).toBe(2000)
     const summary = await as.query(api.reports.dashboardSummary, {})
     expect(summary.recent_harvest_weight_kg).toBe(2000)
@@ -662,12 +669,17 @@ describe('S12: the sampling page no longer records a harvest (interim)', () => {
       cageIds: [b.cageId],
     })
     expect(report.summary.harvest_weight_kg).toBe(2000)
-    // A second run has nothing left to tag.
-    expect((await t.mutation(internal.migrations.tagSamplingPageHarvests, {})).count).toBe(0)
+    const bundle: any = await as.query(api.reports.exportBundle, { dateFrom: today, dateTo: today })
+    expect(bundle.totals.harvest_records_count).toBe(1)
+    expect(bundle.totals.total_harvest_weight).toBe(2000)
+    // A second run fixes nothing more has nothing left to tag.
+    const again = await t.mutation(internal.migrations.tagSamplingPageHarvests, {})
+    expect(again.count).toBe(0)
+    expect(again.samplingAbwFixed).toBe(0)
   })
 })
 
-describe('S14: feed issued to a cage and also logged in the daily entry (interim)', () => {
+describe('S14: feed issued to a cage is moved to its bin; the daily entry is what was eaten', () => {
   const issue = (feedTypeId: any, cageId: any, extra: Record<string, unknown> = {}) => ({
     feedTypeId,
     cageId,
@@ -685,79 +697,65 @@ describe('S14: feed issued to a cage and also logged in the daily entry (interim
     mortality: 0,
     ...extra,
   })
+  const bin = (t: any, cageId: any, feedTypeId: any) =>
+    t.run(async (ctx: any) => {
+      const row = await ctx.db
+        .query('cageFeedBins')
+        .withIndex('by_cage_and_feedTypeId', (q: any) => q.eq('cageId', cageId).eq('feedTypeId', feedTypeId))
+        .unique()
+      return row?.quantityKg ?? 0
+    })
 
-  test('a daily entry after a feed issue for the same cage and date is refused', async () => {
+  test('an issue then the daily entry takes the feed off the store once', async () => {
     const { t, as, asStaff, a, companyId } = await setup()
     const feedTypeId = await withFeed(t, companyId)
     await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId))
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(40)
 
-    await expect(asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId))).rejects.toThrow(
-      /already issued from the store/,
-    )
-    await expect(
-      asStaff.mutation(api.dailyRecords.createBatch, {
-        date: '2026-11-10',
-        records: [{ cageId: a.cageId, feedAmount: 40, feedTypeId, mortality: 0 }],
-      }),
-    ).rejects.toThrow(/already issued from the store/)
+    await asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId))
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(0)
 
-    // Mortality-only entries are fine.
-    await asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId, { feedAmount: 0, feedCost: 0 }))
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
-
-    // Staff cannot override; an admin can, with a reason.
+    // Eating more than the bin holds takes the rest from the store.
     const rec: any = await t.run((ctx: any) =>
       ctx.db.query('dailyRecords').withIndex('by_cage_date', (q: any) => q.eq('cageId', a.cageId)).first(),
     )
-    await expect(
-      asStaff.mutation(api.dailyRecords.update, {
-        id: rec._id,
-        patch: { feedAmount: 40, feedTypeId },
-        feedOverlapReason: 'Second feeding',
-      }),
-    ).rejects.toThrow()
-    await as.mutation(api.dailyRecords.update, {
-      id: rec._id,
-      patch: { feedAmount: 40, feedTypeId },
-      feedOverlapReason: 'Second feeding from a new bag',
-    })
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(920)
-    // Once both exist, editing the daily record's feed again does not need the override.
-    await asStaff.mutation(api.dailyRecords.update, { id: rec._id, patch: { feedAmount: 30 } })
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(930)
+    await asStaff.mutation(api.dailyRecords.update, { id: rec._id, patch: { feedAmount: 60 } })
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(940)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(0)
+
+    // Deleting the entry puts the feed back where it came from.
+    await as.mutation(api.dailyRecords.remove, { id: rec._id })
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(40)
   })
 
-  test('a feed issue after a daily entry for the same cage and date is refused', async () => {
-    const { t, as, asStaff, a, b, companyId } = await setup()
+  test('a daily entry with an empty bin draws from the store, as before', async () => {
+    const { t, asStaff, a, companyId } = await setup()
     const feedTypeId = await withFeed(t, companyId)
     await asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId))
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
-
-    await expect(asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId))).rejects.toThrow(
-      /already recorded in the daily entry/,
-    )
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
-
-    // Other cages, other days and issues without a cage are unaffected.
-    await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, b.cageId))
-    await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId, { usageDate: '2026-11-11' }))
-    await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, undefined))
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(840)
-
-    await as.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId, { feedOverlapReason: 'Extra ration' }))
-    expect((await getDoc(t, feedTypeId)).currentStock).toBe(800)
+    // A later issue for the same cage and date is allowed: it fills the bin.
+    await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId))
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(920)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(40)
   })
 
-  test('a reversed issue no longer blocks the daily entry', async () => {
+  test('an issue can be reversed while its feed is still in the bin, not after it was eaten', async () => {
     const { t, as, asStaff, a, companyId } = await setup()
     const feedTypeId = await withFeed(t, companyId)
     await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId))
-    const txn = (await ledger(t, feedTypeId)).find((r: any) => r.transactionType === 'issue')
-    await as.mutation(api.inventory.reverseTransaction, { transactionId: txn._id, reason: 'Entered by mistake' })
+    await asStaff.mutation(api.feed.createIssue, issue(feedTypeId, a.cageId, { usageDate: '2026-11-11' }))
+    const [first, second] = (await ledger(t, feedTypeId)).filter((r: any) => r.transactionType === 'issue')
+    await as.mutation(api.inventory.reverseTransaction, { transactionId: first._id, reason: 'Entered by mistake' })
+    expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
+    expect(await bin(t, a.cageId, feedTypeId)).toBe(40)
 
-    await asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId))
+    await asStaff.mutation(api.dailyRecords.create, dailyEntry(feedTypeId, a.cageId, { feedAmount: 30, feedCost: 300 }))
+    await expect(
+      as.mutation(api.inventory.reverseTransaction, { transactionId: second._id, reason: 'Entered by mistake' }),
+    ).rejects.toThrow(/bin/)
     expect((await getDoc(t, feedTypeId)).currentStock).toBe(960)
   })
 })

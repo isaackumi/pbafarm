@@ -12,7 +12,7 @@ import {
 } from './lib/farmRules'
 import { assertNoOtherOpenStocking } from './lib/cycles'
 import { allocateBatchNumber } from './lib/batchNumbers'
-import { shadowStocking, shadowTopup } from './lib/productionDualWrite'
+import { beginStockWrite, restateStocking, shadowStocking, shadowTopup } from './lib/productionDualWrite'
 import { assertDifferentApprover, assertUserCan, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 import { validateCustom } from './lib/customFields'
@@ -356,6 +356,7 @@ export const createStocking = mutation({
     })
 
     if (status === 'approved') {
+      const write = await beginStockWrite(ctx, [cage], user._id)
       await ctx.db.patch(args.cageId, {
         stockingDate: args.stockingDate,
         initialCount: args.fishCount,
@@ -367,7 +368,8 @@ export const createStocking = mutation({
         species: species || cage.species,
         updatedAt: Date.now(),
       })
-      await shadowStocking(ctx, (await ctx.db.get(id))!, user._id)
+      const row = (await ctx.db.get(id))!
+      await write.post((o) => shadowStocking(ctx, row, user._id, o))
     }
 
     await logAudit(ctx, {
@@ -437,6 +439,7 @@ export const updateStocking = mutation({
     }
 
     await ctx.db.patch(id, patch)
+    await restateStocking(ctx, stocking, (await ctx.db.get(id))!, user._id)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'stockingHistory',
@@ -522,6 +525,7 @@ export const approveStocking = mutation({
     })
 
     // Update cage with stocking information
+    const write = await beginStockWrite(ctx, [cage], user._id)
     await ctx.db.patch(stocking.cageId, {
       stockingDate: stocking.stockingDate,
       initialCount: stocking.fishCount,
@@ -533,7 +537,8 @@ export const approveStocking = mutation({
       species: stocking.species,
       updatedAt: now,
     })
-    await shadowStocking(ctx, (await ctx.db.get(id))!, user._id)
+    const approved = (await ctx.db.get(id))!
+    await write.post((o) => shadowStocking(ctx, approved, user._id, o))
 
     await logAudit(ctx, {
       actionType: 'approve',
@@ -655,11 +660,13 @@ export const createTopup = mutation({
     })
 
     if (status === 'approved' && cage) {
+      const write = await beginStockWrite(ctx, [cage], user._id)
       await ctx.db.patch(stocking.cageId, {
         currentCount: (cage.currentCount || 0) + args.fishCount,
         updatedAt: Date.now(),
       })
-      await shadowTopup(ctx, (await ctx.db.get(id))!, user._id)
+      const row = (await ctx.db.get(id))!
+      await write.post((o) => shadowTopup(ctx, row, user._id, o))
     }
 
     await logAudit(ctx, {
@@ -704,13 +711,15 @@ export const approveTopup = mutation({
 
     // Update cage current count
     const cage = await ctx.db.get(stocking.cageId)
+    const write = await beginStockWrite(ctx, [cage], user._id)
     if (cage) {
       await ctx.db.patch(stocking.cageId, {
         currentCount: (cage.currentCount || 0) + topup.fishCount,
         updatedAt: now,
       })
     }
-    await shadowTopup(ctx, (await ctx.db.get(id))!, user._id)
+    const approved = (await ctx.db.get(id))!
+    await write.post((o) => shadowTopup(ctx, approved, user._id, o))
 
     await logAudit(ctx, {
       actionType: 'approve',

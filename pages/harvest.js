@@ -34,7 +34,6 @@ const HarvestPage = () => {
     total_weight: '',
     average_body_weight: '',
     estimated_count: '',
-    fcr: '',
     notes: '',
     status: 'completed',
   })
@@ -76,7 +75,6 @@ const HarvestPage = () => {
       average_body_weight:
         record.average_body_weight ?? record.averageBodyWeight ?? '',
       estimated_count: record.estimated_count ?? record.estimatedCount ?? '',
-      fcr: record.fcr ?? '',
       notes: record.notes || '',
       status: record.status || 'completed',
     })
@@ -98,7 +96,6 @@ const HarvestPage = () => {
             editForm.estimated_count === ''
               ? undefined
               : Number(editForm.estimated_count),
-          fcr: editForm.fcr === '' ? undefined : Number(editForm.fcr),
           notes: editForm.notes,
           status: editForm.status,
         },

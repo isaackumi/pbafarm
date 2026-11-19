@@ -8,7 +8,7 @@ import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, 
 import { mergeSettings, harvestWarnings } from './lib/farmRules'
 import { harvestFcr, daysBetween } from './lib/growth'
 import { harvestIsCurrent } from './lib/cycles'
-import { shadowHarvest } from './lib/productionDualWrite'
+import { beginStockWrite, previewHarvestFcr, shadowHarvest, storeHarvestFcr } from './lib/productionDualWrite'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 import { assertUserCan, requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
@@ -235,21 +235,56 @@ async function undoHarvestOnCage(
   await ctx.db.patch(cageId, patch as any)
 }
 
-/** FCR for a planned harvest, from feed logged since stocking. */
+/**
+ * FCR a harvest would be saved with (PROD-009): from the stock ledger when the
+ * cage has one, else from feed logged since stocking. Read-only in the form.
+ */
 export const suggestFcr = query({
   args: {
     cageId: v.id('cages'),
     harvestDate: v.string(),
     totalWeight: v.number(),
+    estimatedCount: v.optional(v.number()),
+    harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
   },
-  returns: v.union(v.object({ fcr: v.union(v.number(), v.null()), feed_kg: v.number(), stocked_biomass_kg: v.union(v.number(), v.null()), stocking_date: v.string() }), v.null()),
+  returns: v.union(
+    v.object({
+      fcr: v.union(v.number(), v.null()),
+      feed_kg: v.number(),
+      gain_kg: v.optional(v.number()),
+      method: v.optional(v.union(v.literal('complete'), v.literal('interim'))),
+      source: v.optional(v.union(v.literal('ledger'), v.literal('legacy'))),
+      stocked_biomass_kg: v.union(v.number(), v.null()),
+      stocking_date: v.string(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.cageId)
     if (!cage) return null
     const allowed = await listForCompany(user, [cage])
     if (!allowed.length) return null
-    return await harvestFcr(ctx, cage, args.harvestDate, args.totalWeight)
+    const ledger = await previewHarvestFcr(ctx, {
+      cageId: args.cageId,
+      harvestDate: args.harvestDate,
+      totalWeight: args.totalWeight,
+      estimatedCount: args.estimatedCount ?? 0,
+      harvestType: args.harvestType ?? 'complete',
+    })
+    if (ledger) {
+      return {
+        fcr: ledger.fcr,
+        feed_kg: ledger.feedKg,
+        gain_kg: ledger.gainKg,
+        method: ledger.method,
+        source: 'ledger' as const,
+        stocked_biomass_kg: ledger.stockedBiomassKg,
+        stocking_date: ledger.openedOn ?? cage.stockingDate ?? '',
+      }
+    }
+    const legacy = await harvestFcr(ctx, cage, args.harvestDate, args.totalWeight)
+    return legacy ? { ...legacy, source: 'legacy' as const } : null
   },
 })
 
@@ -261,7 +296,11 @@ export const create = idempotentMutation('harvest.create', {
     averageBodyWeight: v.number(),
     totalWeight: v.number(),
     estimatedCount: v.number(),
-    fcr: v.number(),
+    /**
+     * Ignored when the ledger can compute the FCR (PROD-009); kept optional
+     * for older clients and cages with no stocking on record.
+     */
+    fcr: v.optional(v.number()),
     sizeBreakdown: v.optional(v.any()),
     notes: v.optional(v.string()),
     harvestType: v.optional(v.union(v.literal('complete'), v.literal('partial'))),
@@ -298,14 +337,15 @@ export const create = idempotentMutation('harvest.create', {
     const warnings = harvestWarnings({
       docDays,
       abw: args.averageBodyWeight,
-      fcr: args.fcr,
       farmRules: rules.farmRules,
     })
 
+    const write = await beginStockWrite(ctx, [cage], user._id)
     const cageEffect = await applyHarvestToCage(ctx, args.cageId, args, warnings)
 
     const id = await ctx.db.insert('harvestRecords', {
       ...args,
+      fcr: args.fcr ?? 0,
       custom,
       cageEffect,
       withdrawalOverride,
@@ -313,8 +353,11 @@ export const create = idempotentMutation('harvest.create', {
       companyId,
       createdBy: user._id,
     })
-    // Ledger (shadow) warnings go to reconciliation, not to the person saving.
-    await shadowHarvest(ctx, (await ctx.db.get(id))!, user._id, 'create')
+    // Ledger warnings go to reconciliation, not to the person saving.
+    const inserted = (await ctx.db.get(id))!
+    await write.post((o) => shadowHarvest(ctx, inserted, user._id, 'create', o))
+    const fcr = (await ctx.db.get(id))!.fcr
+    warnings.push(...harvestWarnings({ fcr: fcr || null, farmRules: rules.farmRules }))
 
     await logAudit(ctx, {
       actionType: 'create',
@@ -393,6 +436,10 @@ export const update = mutation({
         'The cage has been restocked or harvested again since this harvest, so its current fish count was not changed',
       )
     }
+    const ledgerTouched = (['harvestDate', 'estimatedCount', 'harvestType', 'totalWeight', 'averageBodyWeight'] as const).some(
+      (k) => patch[k] !== undefined && patch[k] !== existing[k],
+    )
+    const write = ledgerTouched ? await beginStockWrite(ctx, [await ctx.db.get(existing.cageId)], user._id) : null
     if (cageTouched && current) {
       await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
       cageEffect = await applyHarvestToCage(
@@ -408,12 +455,12 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, { ...patch, cageEffect, withdrawalOverride })
-    const ledgerTouched = (['harvestDate', 'estimatedCount', 'harvestType', 'totalWeight', 'averageBodyWeight'] as const).some(
-      (k) => patch[k] !== undefined && patch[k] !== existing[k],
-    )
-    if (ledgerTouched) {
-      await shadowHarvest(ctx, (await ctx.db.get(id))!, user._id, 'update')
+    if (write) {
+      const updated = (await ctx.db.get(id))!
+      await write.post((o) => shadowHarvest(ctx, updated, user._id, 'update', o))
     }
+    // The stored FCR is the computed one, whatever an older client typed.
+    await storeHarvestFcr(ctx, id)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'harvestRecords',
@@ -446,6 +493,7 @@ export const remove = mutation({
     // the cage has since moved on to a new cycle.
     const current = await harvestIsCurrent(ctx, existing, existing.cageEffect?.closedStockingId)
     const warnings: string[] = []
+    const write = await beginStockWrite(ctx, [await ctx.db.get(existing.cageId)], user._id)
     if (current) {
       await undoHarvestOnCage(ctx, existing.cageId, existing.cageEffect)
     } else if (existing.cageEffect) {
@@ -453,7 +501,7 @@ export const remove = mutation({
         'The cage has been restocked or harvested again since this harvest, so its current fish count was not changed',
       )
     }
-    await shadowHarvest(ctx, existing, user._id, 'remove')
+    await write.post((o) => shadowHarvest(ctx, existing, user._id, 'remove', o))
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',
@@ -521,11 +569,13 @@ export const createFromSampling = mutation({
     notes: v.optional(v.string()),
   },
   /**
-   * Interim (doc 09 S12, OPEN-QUESTIONS Q-005): this used to insert a complete
-   * harvest with a made-up FCR of 1.5 and no effect on the cage, which
-   * double-counted harvest kg once the real harvest was recorded. Until the
-   * owner says whether the page records harvests or pre-harvest samples, it
-   * only stores a sampling row. `harvestType` and `notes` are accepted for
+   * A pre-harvest sample, not a harvest (doc 09 S12, PROD-000g; Q-005 assumed
+   * answer 2026-11-18). It used to insert a complete harvest with a made-up
+   * FCR of 1.5 and no effect on the cage, which double-counted harvest kg once
+   * the real harvest was recorded. It now stores only a sampling row; the
+   * fish count and FCR are untouched. ABW is in grams like every other ABW in
+   * the app, worked out from weight (kg) and count; a client `abw` is only
+   * used when there is no count. `harvestType` and `notes` are accepted for
    * older clients and ignored.
    */
   returns: v.object({ harvestId: v.null(), samplingId: v.id('harvestSampling') }),
@@ -536,8 +586,9 @@ export const createFromSampling = mutation({
 
     const companyId = (await writeCompanyId(user)) ?? cage.companyId
     const abw =
-      args.abw ??
-      (args.fishCount > 0 ? args.weight / args.fishCount : 0)
+      args.fishCount > 0 && args.weight > 0
+        ? Math.round(((args.weight * 1000) / args.fishCount) * 100) / 100
+        : (args.abw ?? 0)
 
     const samplingId = await ctx.db.insert('harvestSampling', {
       cageId: args.cageId,

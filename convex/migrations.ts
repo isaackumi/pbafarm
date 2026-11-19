@@ -346,6 +346,12 @@ export const repairStaleCageWeight = internalMutation({
  * same date, total weight and fish count. Review the dry-run list before
  * writing: an old real harvest that happens to match all of these would be
  * tagged too.
+ *
+ * The page also stored ABW in kg (weight ÷ count) where the rest of the app
+ * uses grams (PROD-000g). The same pass converts those values: on the tagged
+ * harvests and on any `harvestSampling` row whose ABW is exactly its kg
+ * weight ÷ count. Idempotent: converted rows no longer match. Not run by
+ * this change; run with `dryRun: true` first and review the counts.
  */
 export const tagSamplingPageHarvests = internalMutation({
   args: { dryRun: v.optional(v.boolean()) },
@@ -382,21 +388,48 @@ export const tagSamplingPageHarvests = internalMutation({
       })
       if (dryRun) continue
 
-      await ctx.db.patch(h._id, { source: 'sampling_page' })
+      const abwG = kgAbwToGrams(h.averageBodyWeight, h.totalWeight, h.estimatedCount)
+      await ctx.db.patch(h._id, { source: 'sampling_page', ...(abwG != null ? { averageBodyWeight: abwG } : {}) })
       await insertAuditLog(ctx, {
         actionType: 'migration',
         tableName: 'harvestRecords',
         recordId: h._id,
-        previousValues: { source: null },
-        newValues: { source: 'sampling_page', migration: 'M0-c' },
+        previousValues: { source: null, averageBodyWeight: h.averageBodyWeight },
+        newValues: { source: 'sampling_page', migration: 'M0-c', ...(abwG != null ? { averageBodyWeight: abwG } : {}) },
         locationId: h.locationId,
         companyId: h.companyId,
       })
     }
 
-    return { dryRun, count: changes.length, changes }
+    let samplingAbwFixed = 0
+    for await (const s of ctx.db.query('harvestSampling')) {
+      const abwG = kgAbwToGrams(s.abw, s.weight, s.fishCount)
+      if (abwG == null) continue
+      samplingAbwFixed++
+      if (dryRun) continue
+      await ctx.db.patch(s._id, { abw: abwG })
+      await insertAuditLog(ctx, {
+        actionType: 'migration',
+        tableName: 'harvestSampling',
+        recordId: s._id,
+        previousValues: { abw: s.abw },
+        newValues: { abw: abwG, migration: 'M0-c' },
+        locationId: s.locationId,
+        companyId: s.companyId,
+      })
+    }
+
+    return { dryRun, count: changes.length, samplingAbwFixed, changes }
   },
 })
+
+/** Grams for an ABW that was stored as kg (exactly weight kg ÷ count); else null. */
+function kgAbwToGrams(abw: number | undefined, weightKg: number | undefined, count: number | undefined) {
+  if (!abw || !weightKg || !count || count <= 0) return null
+  const kg = weightKg / count
+  if (Math.abs(abw - kg) > 1e-9) return null
+  return Math.round(kg * 1000 * 100) / 100
+}
 
 /**
  * M2 — one membership per user with a companyId (ORG-001, D-002).

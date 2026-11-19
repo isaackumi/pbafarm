@@ -63,7 +63,8 @@ function HarvestSamplingPage() {
     }
     const w = parseFloat(form.weight)
     const n = parseInt(form.fishCount, 10)
-    if (w > 0 && n > 0) setAbw((w / n).toFixed(2))
+    // Grams, like every other ABW in the app (weight is in kg).
+    if (w > 0 && n > 0) setAbw(((w * 1000) / n).toFixed(1))
     else setAbw('')
   }, [form.cageId, form.date, form.weight, form.fishCount, cages])
 
@@ -216,7 +217,7 @@ function HarvestSamplingPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted">ABW (kg)</span>{' '}
+                      <span className="text-muted">ABW (g)</span>{' '}
                       <span className="font-semibold text-lagoon-800">
                         {abw || '—'}
                       </span>

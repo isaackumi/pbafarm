@@ -1023,6 +1023,11 @@ const schema = defineSchema({
     ),
     /** The daily record this row came from (source 'daily'; INV-003). */
     dailyRecordId: v.optional(v.id('dailyRecords')),
+    /**
+     * Daily rows (PROD-000h): kg of `quantity` fed from the cage-side bin
+     * (feed issued earlier); the rest was deducted from the store.
+     */
+    fromBinKg: v.optional(v.number()),
     notes: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
     companyId: v.optional(v.id('companies')),
@@ -1034,6 +1039,22 @@ const schema = defineSchema({
     .index('by_company', ['companyId'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
+
+  /**
+   * Feed issued to a cage and not fed yet (PROD-000h, Q-003 assumed answer):
+   * an issue moves stock from the store to the cage's bin, a daily entry's
+   * feed is consumption and is taken from the bin first, then the store.
+   */
+  cageFeedBins: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    cageId: v.id('cages'),
+    feedTypeId: v.id('feedTypes'),
+    quantityKg: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_cage_and_feedTypeId', ['cageId', 'feedTypeId'])
+    .index('by_company', ['companyId']),
 
   dailyRecords: defineTable({
     /** Custom field values (D-007, CUSTOM-001), validated by lib/customFields. */

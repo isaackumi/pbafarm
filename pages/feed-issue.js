@@ -58,8 +58,6 @@ function FeedIssue() {
     notes: '',
     allowNegative: false,
     overrideReason: '',
-    alsoInDaily: false,
-    feedOverlapReason: '',
   })
 
   const loadLookups = async () => {
@@ -122,8 +120,6 @@ function FeedIssue() {
         notes: form.notes || undefined,
         allowNegative: form.allowNegative || undefined,
         overrideReason: form.overrideReason || undefined,
-        feedOverlapReason:
-          (form.alsoInDaily && form.feedOverlapReason) || undefined,
         locationId:
           activeLocationId || getActiveLocationId() || undefined,
       }
@@ -151,8 +147,6 @@ function FeedIssue() {
         notes: '',
         allowNegative: false,
         overrideReason: '',
-        alsoInDaily: false,
-        feedOverlapReason: '',
       }))
     } catch (err) {
       showToast('error', cleanError(err) || 'Failed to issue feed')
@@ -222,12 +216,11 @@ function FeedIssue() {
                   ))}
                 </Select>
                 {form.cageId && (
-                  <p className="mt-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    Feed issued to a cage is taken off stock now. Don&apos;t
-                    also enter it in that cage&apos;s daily entry for the same
-                    day, or the stock is deducted twice. If the daily entry
-                    already has feed for this cage and date, this issue will be
-                    refused.
+                  <p className="mt-2 text-sm text-sky-900 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
+                    Issuing to a cage moves the feed from the store to that
+                    cage&apos;s feed bin. It is not counted as eaten: the daily
+                    entry records what the fish ate, takes it from the bin
+                    first, and only counts towards FCR.
                   </p>
                 )}
                 {lookupsReady && cages.length === 0 && (
@@ -320,30 +313,6 @@ function FeedIssue() {
                     onChange={onChange}
                     required
                     placeholder="Why is this override needed?"
-                  />
-                </Field>
-              )}
-              {form.cageId && (
-                <label className="flex items-center gap-2 text-sm font-medium text-chart-ink">
-                  <input
-                    type="checkbox"
-                    name="alsoInDaily"
-                    checked={form.alsoInDaily}
-                    onChange={onChange}
-                    className="rounded border-zinc-300"
-                  />
-                  Admin override (issue even if the daily entry already has feed for this cage and date)
-                </label>
-              )}
-              {form.cageId && form.alsoInDaily && (
-                <Field label="Reason for the extra feed" htmlFor="feedOverlapReason" required>
-                  <Input
-                    id="feedOverlapReason"
-                    name="feedOverlapReason"
-                    value={form.feedOverlapReason}
-                    onChange={onChange}
-                    required
-                    placeholder="e.g. extra ration on top of the daily feed"
                   />
                 </Field>
               )}
