@@ -1,21 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import {
-  MapPin,
-  Plus,
-} from 'lucide-react'
+import { useRouter } from 'next/router'
+import { MapPin, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
+import { GhostButton, GradientButton, Pill, Toggle } from '../components/ui'
 import {
-  PageHeader,
-  FormCard,
-  FormActions,
-  Field,
-  Input,
-  Textarea,
-  Select,
-  Button,
-} from '../components/ui'
+  CardNote,
+  FIELD,
+  SettingsCard,
+  SettingsField as Field,
+  SettingsFrame,
+  SettingsRow,
+  useSettingsEyebrow,
+} from '../components/settings'
+import { useT } from '../lib/i18n/context'
 import { api } from '../convex/_generated/api'
 import { SITE_TYPES } from '../lib/format'
 
@@ -41,7 +40,6 @@ function siteMeta(form) {
   }
 }
 import { useToast } from '../components/Toast'
-import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { usePermission } from '../hooks/usePermission'
 import { CustomFieldValues, customPayload } from '../components/CustomFields'
@@ -50,16 +48,16 @@ import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLay
 export default function FarmLocationsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Farm Locations">
-        <FarmLocations />
-      </Layout>
+      <FarmLocations />
     </ProtectedRoute>
   )
 }
 
 function FarmLocations() {
+  const t = useT()
+  const router = useRouter()
+  const eyebrow = useSettingsEyebrow(t('settingsUi.nav.sites'))
   const { showToast } = useToast()
-  const { hasRole } = useAuth()
   const isAdmin = usePermission('org.sites.manage')
   const { setActiveLocation } = useLocation()
 
@@ -95,6 +93,16 @@ function FarmLocations() {
     setShowForm(true)
   }, [editing])
 
+  const openNew = useCallback(() => {
+    setEditing(null)
+    setForm({ name: '', code: '', address: '', notes: '', active: true, ...EMPTY_SITE })
+    setShowForm(true)
+  }, [])
+
+  useEffect(() => {
+    if (router.query.new && isAdmin) openNew()
+  }, [router.query.new, isAdmin, openNew])
+
   const reset = () => {
     setEditing(null)
     setForm({ name: '', code: '', address: '', notes: '', active: true, ...EMPTY_SITE })
@@ -124,7 +132,7 @@ function FarmLocations() {
             custom: form.custom || {},
           },
         })
-        showToast('success', 'Location updated')
+        showToast('success', t('settingsUi.sites.updated'))
       } else {
         const id = await createLocation({
           name: values.name,
@@ -139,60 +147,45 @@ function FarmLocations() {
           waterBody: values.waterBody || undefined,
           custom: customPayload(form.custom),
         })
-        showToast('success', 'Location created')
+        showToast('success', t('settingsUi.sites.created'))
         if (id) await setActiveLocation(id)
       }
       reset()
     } catch (err) {
-      showToast('error', err.message || 'Failed to save location')
+      showToast('error', err.message || t('settingsUi.sites.saveFailed'))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div data-tour="page-farm-locations">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Farm Locations' },
-        ]}
-        description="Sites under your company. Ops data (cages, feed stock, daily records) is scoped to the active location in the header."
-        actions={
-          isAdmin ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                onClick={() => {
-                  setEditing(null)
-                  setForm({ name: '', code: '', address: '', notes: '', active: true, ...EMPTY_SITE })
-                  setShowForm(true)
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add location
-              </Button>
-            </div>
-          ) : null
-        }
-      />
-
+    <Layout
+      title={t('settingsUi.nav.sites')}
+      eyebrow={eyebrow}
+      actions={
+        isAdmin ? (
+          <GradientButton icon={Plus} onClick={openNew}>
+            {t('settingsUi.sites.add')}
+          </GradientButton>
+        ) : null
+      }
+    >
+    <SettingsFrame active="sites">
+    <div data-tour="page-farm-locations" className="flex flex-col gap-5">
+      <p className="text-[14px] leading-[18px] text-muted">{t('settingsUi.sites.description')}</p>
       {showForm && isAdmin && (
-        <FormCard className="mb-6">
-          <form onSubmit={submit}>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-chart-ink">{editing ? 'Edit location' : 'New location'}</h3>
-              <p className="text-sm text-muted">Name is required. Code is optional (e.g. VOLTA).</p>
-            </div>
+        <SettingsCard title={editing ? t('settingsUi.sites.editTitle') : t('settingsUi.sites.newTitle')}>
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            <p className="-mt-2 text-[12px] leading-4 text-muted">{t('settingsUi.sites.formHint')}</p>
             <FormLayout
               key={editing ? editing.id || editing._id : 'new'}
               formKey="setup.farmLocation"
               layout={layout}
               fields={{
                 name: (
-                  <Field label="Name" htmlFor="loc-name" required>
-                  <Input
+                  <Field label={t('settingsUi.sites.name')} htmlFor="loc-name" required>
+                  <input
+                    className={FIELD}
                     id="loc-name"
                     value={form.name}
                     onChange={(e) =>
@@ -203,8 +196,9 @@ function FarmLocations() {
                 </Field>
                 ),
                 code: (
-                  <Field label="Code" htmlFor="loc-code">
-                  <Input
+                  <Field label={t('common.code')} htmlFor="loc-code">
+                  <input
+                    className={FIELD}
                     id="loc-code"
                     value={form.code}
                     onChange={(e) =>
@@ -215,8 +209,9 @@ function FarmLocations() {
                 </Field>
                 ),
                 address: (
-                  <Field label="Address" htmlFor="loc-address">
-                <Input
+                  <Field label={t('settingsUi.sites.address')} htmlFor="loc-address">
+                <input
+                  className={FIELD}
                   id="loc-address"
                   value={form.address}
                   onChange={(e) =>
@@ -226,28 +221,30 @@ function FarmLocations() {
               </Field>
                 ),
                 siteType: (
-                  <Field label="Site type" htmlFor="loc-type">
-                  <Select
+                  <Field label={t('settingsUi.org.type')} htmlFor="loc-type">
+                  <select
+                    className={FIELD}
                     id="loc-type"
                     value={form.siteType}
                     onChange={(e) => setForm((p) => ({ ...p, siteType: e.target.value }))}
                   >
-                    <option value="">Not set</option>
-                    {SITE_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
+                    <option value="">{t('settingsUi.sites.notSet')}</option>
+                    {SITE_TYPES.map((st) => (
+                      <option key={st.value} value={st.value}>
+                        {t.or(`settingsUi.org.siteType.${st.value}`, st.label)}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </Field>
                 ),
                 timezone: (
                   <Field
-                  label="Time zone"
+                  label={t('settingsUi.org.timezone')}
                   htmlFor="loc-tz"
-                  hint="Sets the date for entries and reminders at this site. Blank uses the organization's."
+                  hint={t('settingsUi.sites.tzHint')}
                 >
-                  <Input
+                  <input
+                    className={FIELD}
                     id="loc-tz"
                     list="loc-tz-options"
                     value={form.timezone}
@@ -262,8 +259,9 @@ function FarmLocations() {
                 </Field>
                 ),
                 latitude: (
-                  <Field label="Latitude" htmlFor="loc-lat" hint="Decimal degrees, e.g. 6.2">
-                  <Input
+                  <Field label={t('settingsUi.sites.lat')} htmlFor="loc-lat" hint={t('settingsUi.sites.latHint')}>
+                  <input
+                    className={FIELD}
                     id="loc-lat"
                     inputMode="decimal"
                     value={form.latitude}
@@ -272,8 +270,9 @@ function FarmLocations() {
                 </Field>
                 ),
                 longitude: (
-                  <Field label="Longitude" htmlFor="loc-lng" hint="Decimal degrees, e.g. 0.05">
-                  <Input
+                  <Field label={t('settingsUi.sites.lng')} htmlFor="loc-lng" hint={t('settingsUi.sites.lngHint')}>
+                  <input
+                    className={FIELD}
                     id="loc-lng"
                     inputMode="decimal"
                     value={form.longitude}
@@ -282,8 +281,9 @@ function FarmLocations() {
                 </Field>
                 ),
                 waterBody: (
-                  <Field label="Water body" htmlFor="loc-water" hint="Lake, reservoir or river">
-                <Input
+                  <Field label={t('settingsUi.sites.water')} htmlFor="loc-water" hint={t('settingsUi.sites.waterHint')}>
+                <input
+                  className={FIELD}
                   id="loc-water"
                   value={form.waterBody}
                   onChange={(e) => setForm((p) => ({ ...p, waterBody: e.target.value }))}
@@ -291,8 +291,9 @@ function FarmLocations() {
               </Field>
                 ),
                 notes: (
-                  <Field label="Notes" htmlFor="loc-notes">
-                <Textarea
+                  <Field label={t('common.notes')} htmlFor="loc-notes">
+                <textarea
+                  className={FIELD}
                   id="loc-notes"
                   rows={2}
                   value={form.notes}
@@ -304,16 +305,13 @@ function FarmLocations() {
                 ),
                 active: editing ? (
                   
-                <label className="flex items-center gap-2 text-sm text-chart-ink">
-                  <input
-                    type="checkbox"
+                <SettingsRow label={t('settingsUi.team.status.active')} helper={t('settingsUi.sites.activeHelper')}>
+                  <Toggle
                     checked={form.active}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, active: e.target.checked }))
-                    }
+                    onChange={(v) => setForm((p) => ({ ...p, active: v }))}
+                    label={t('settingsUi.team.status.active')}
                   />
-                  Active
-                </label>
+                </SettingsRow>
                 ) : null,
               }}
               coreValues={form}
@@ -323,93 +321,70 @@ function FarmLocations() {
               core={{ siteType: form.siteType }}
               idPrefix="loc-cf"
             />
-            <FormActions>
-              <Button type="button" variant="secondary" onClick={reset}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Saving…' : editing ? 'Update' : 'Create'}
-              </Button>
-            </FormActions>
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
+              <GhostButton size="lg" onClick={reset}>
+                {t('common.cancel')}
+              </GhostButton>
+              <GradientButton type="submit" variant="solid" disabled={saving}>
+                {saving ? t('settingsUi.saving') : editing ? t('settingsUi.sites.update') : t('settingsUi.sites.create')}
+              </GradientButton>
+            </div>
           </form>
-        </FormCard>
+        </SettingsCard>
       )}
 
-      <div className="page-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-foam-deep flex items-center gap-2">
-          <MapPin size={20} className="text-lagoon-800" />
-          <h3 className="text-lg font-medium text-chart-ink">Locations</h3>
-        </div>
+      <SettingsCard
+        title={
+          <span className="flex items-center gap-2">
+            <MapPin size={18} aria-hidden className="text-pearl-cyan" />
+            {t('settingsUi.sites.list')}
+          </span>
+        }
+        meta={locations ? t('ent.structure.siteCount', { count: locations.length }) : null}
+      >
         {locations === undefined ? (
-          <p className="px-6 py-8 text-sm text-muted">Loading…</p>
+          <CardNote>{t('common.loading')}</CardNote>
         ) : locations.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-muted">
-            No locations yet. Create one to get started.
-          </p>
+          <CardNote>{t('settingsUi.sites.empty')}</CardNote>
         ) : (
-          <ul className="divide-y divide-foam-deep">
-            {locations.map((loc) => (
-              <li
-                key={loc.id || loc._id}
-                className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              >
-                <div>
-                  <p className="font-medium text-chart-ink">
-                    {loc.name}
-                    {loc.code ? (
-                      <span className="ml-2 text-xs font-data text-muted">
-                        {loc.code}
-                      </span>
-                    ) : null}
-                    {loc.active === false && (
-                      <span className="ml-2 text-xs text-signal">Inactive</span>
-                    )}
-                  </p>
-                  {loc.address && (
-                    <p className="text-sm text-muted">{loc.address}</p>
-                  )}
-                  {(loc.siteType || loc.timezone || loc.waterBody || loc.latitude != null) && (
-                    <p className="text-xs text-muted mt-0.5">
-                      {[
-                        SITE_TYPES.find((t) => t.value === loc.siteType)?.label,
-                        loc.waterBody,
-                        loc.timezone,
-                        loc.latitude != null && loc.longitude != null
-                          ? `${loc.latitude}, ${loc.longitude}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  )}
-                  {loc.notes && (
-                    <p className="text-xs text-muted mt-1">{loc.notes}</p>
-                  )}
-                  <CustomFieldValues entity="farmLocations" values={loc.custom} className="mt-2" />
+          locations.map((loc) => (
+            <div key={loc.id || loc._id} className="flex flex-col gap-3 border-t border-line py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-[2px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[15px] font-medium leading-[18px] text-text">{loc.name}</span>
+                  {loc.code ? <span className="font-data text-[12px] text-muted">{loc.code}</span> : null}
+                  {loc.active === false && <Pill tone="red">{t('ent.common.inactive')}</Pill>}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setActiveLocation(loc.id || loc._id)}
-                  >
-                    Use in header
-                  </Button>
-                  {isAdmin && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setEditing(loc)}
-                    >
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+                {loc.address && <span className="text-[13px] leading-4 text-muted">{loc.address}</span>}
+                {(loc.siteType || loc.timezone || loc.waterBody || loc.latitude != null) && (
+                  <span className="text-[12px] leading-4 text-muted">
+                    {[
+                      loc.siteType ? t.or(`settingsUi.org.siteType.${loc.siteType}`, loc.siteType) : null,
+                      loc.waterBody,
+                      loc.timezone,
+                      loc.latitude != null && loc.longitude != null ? `${loc.latitude}, ${loc.longitude}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                )}
+                {loc.notes && <span className="text-[12px] leading-4 text-faint">{loc.notes}</span>}
+                <CustomFieldValues entity="farmLocations" values={loc.custom} className="mt-2" />
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <GhostButton onClick={() => setActiveLocation(loc.id || loc._id)}>
+                  {t('settingsUi.sites.useInHeader')}
+                </GhostButton>
+                {isAdmin && (
+                  <GhostButton onClick={() => setEditing(loc)}>{t('settingsUi.org.edit')}</GhostButton>
+                )}
+              </div>
+            </div>
+          ))
         )}
-      </div>
+      </SettingsCard>
     </div>
+    </SettingsFrame>
+    </Layout>
   )
 }
