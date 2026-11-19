@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../contexts/AuthContext'
 import { useT } from '../../lib/i18n/context'
+import { AnowaLockup } from '../brand/AnowaLogo'
 
 const LINK =
   'rounded-pill px-3 py-[6px] text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
@@ -28,11 +29,11 @@ export default function BareShell({ title, children, centered = false }) {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text">
       <Head>
-        <title>{`${title} · PBA Farm`}</title>
+        <title>{`${title} · Anowa`}</title>
       </Head>
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
-          <span className="mr-4 text-[18px] font-extrabold leading-6 tracking-[-0.03em] text-text">PBA FARM</span>
+          <AnowaLockup height={22} className="mr-4" />
           {link('/suspended', t('suspended.navStatus'))}
           {link('/billing', t('suspended.navBilling'))}
           <button type="button" className={`${LINK} ml-auto text-muted hover:text-text`} onClick={() => signOut()}>

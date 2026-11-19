@@ -81,7 +81,7 @@
       "weeklyReport": "Weekly report",
       "alerts": "Alerts & insights",
       "calendar": "Calendar",
-      "assistant": "Ask PBA"
+      "assistant": "Anowa"
     },
     "section": {
       "production": "Production",
@@ -144,7 +144,7 @@
     "sendAgainIn": "Send again in {seconds}s",
     "changeNumber": "Change number",
     "mobileNumber": "Mobile number",
-    "appName": "PBA Farm",
+    "appName": "Anowa",
     "offlineSession": "No connection. Using the account saved on this phone. Entries are kept on this device and sent when you are back online.",
     "queuedOffline": "No connection. Saved on this device and will send when you are back online",
     "noCagesSelected": "No cages selected yet",
@@ -1829,7 +1829,7 @@
     "openCage": "Open cage"
   },
   "pwa": {
-    "updateReady": "A new version of PBA Farm is ready.",
+    "updateReady": "A new version of Anowa is ready.",
     "reload": "Reload",
     "later": "Later"
   },
@@ -2756,7 +2756,7 @@
     "calendarLink": "calendar"
   },
   "assistantUi": {
-    "title": "Ask PBA",
+    "title": "Ask Anowa",
     "eyebrow": "Grounded in your farm data",
     "dialog": "Farm assistant",
     "welcome": "Ask about your units, feed, deaths, growth or harvest timing. Answers use your farm’s recorded data.",
@@ -3144,7 +3144,7 @@
     },
     "inbound": {
       "title": "Inbound webhooks",
-      "description": "Let partner systems send events to PBA Farm. Each webhook has its own signing secret; unsigned, late or repeated deliveries are rejected.",
+      "description": "Let partner systems send events to Anowa. Each webhook has its own signing secret; unsigned, late or repeated deliveries are rejected.",
       "secretTitle": "Signing secret",
       "secretHint": "Copy it now: it is shown only once. Give it to the sending system.",
       "noEvents": "Nothing received yet.",
@@ -4625,7 +4625,7 @@
     "whatsappUnavailable": "WhatsApp is not available on this deployment yet.",
     "whatsappVerifyPhone": "WhatsApp connects only from your verified phone number. Add and confirm your phone first.",
     "whatsappHow": "From {phone}, send the one-time code to {bot}. Then log feed and mortality by text and get alerts and reminders.",
-    "whatsappBotFallback": "the PBA Farm WhatsApp number",
+    "whatsappBotFallback": "the Anowa WhatsApp number",
     "telegramHow": "Open the one-time link on your phone and tap Start. Then log feed and mortality by text and get alerts and reminders.",
     "telegramUnavailable": "Telegram is not available on this deployment yet.",
     "minutesLeft": {
@@ -5007,7 +5007,7 @@
       "sharedPhoneBody": "Sign out when you finish so the next person can't see your farm.",
       "useEmail": "Use email instead",
       "ssoHint": "Sign in with your company account through {name}.",
-      "newHere": "New to PBA Farm?",
+      "newHere": "New to Anowa?",
       "createWorkspace": "Create a farm workspace"
     },
     "signup": {
@@ -5083,7 +5083,7 @@
     "newBadge": "New",
     "newText": "Offline daily logging for field teams",
     "heroTitle": "Run every cage like it's your only cage.",
-    "heroBody": "PBA Farm is the operating system for fish farms: stocking to harvest, feed to finance, across every site and every team.",
+    "heroBody": "Anowa is the operating system for fish farms: stocking to harvest, feed to finance, across every site and every team.",
     "heroNote": "Daily logging keeps working offline on phones",
     "product": {
       "eyebrow": "Product",
@@ -5123,7 +5123,7 @@
       "runBody": "Log, approve, harvest and sell. Reports and P&L build themselves."
     },
     "cta": {
-      "title": "Your next cycle starts on PBA Farm.",
+      "title": "Your next cycle starts on Anowa.",
       "body": "Set up your workspace in an afternoon.",
       "start": "Create a workspace"
     },
@@ -5148,7 +5148,7 @@
       "company": "Company",
       "companyHint": "Name, code and contacts",
       "approval": "Approval",
-      "approvalHint": "A PBA Farm admin reviews it",
+      "approvalHint": "An Anowa admin reviews it",
       "units": "First units",
       "unitsHint": "Cages, ponds, tanks"
     },
@@ -5182,7 +5182,7 @@
     "askToJoin": "Ask to join",
     "rejected": "Your registration of {name} was not approved. You can submit a new one.",
     "pendingTitle": "Awaiting approval",
-    "pendingSubtitle": "Your registration is with a PBA Farm admin.",
+    "pendingSubtitle": "Your registration is with an Anowa admin.",
     "pendingBody": "You get access as its owner once it is approved. This page updates on its own.",
     "submitted": "Registration submitted",
     "nameRequired": "Company name is required",

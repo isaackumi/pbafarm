@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../contexts/AuthContext'
 import { useT } from '../../lib/i18n/context'
+import { AnowaLockup } from '../brand/AnowaLogo'
 import QueryBoundary from '../QueryBoundary'
 import { AppShellSkeleton, Badge, GhostButton, SolidButton } from '../ui'
 
@@ -142,7 +143,7 @@ export function ConsoleHeader({ eyebrow, title, actions }) {
 function Brand() {
   return (
     <span className="flex flex-col gap-[6px]">
-      <span className="text-base font-semibold leading-[18px] tracking-[0.08em] text-text">HEITECH</span>
+      <AnowaLockup height={22} />
       <span className="text-[11px] leading-[14px] tracking-[0.12em] text-pearl-cyan">PLATFORM CONSOLE</span>
     </span>
   )
