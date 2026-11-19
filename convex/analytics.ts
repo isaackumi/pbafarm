@@ -26,7 +26,7 @@ import {
   type Stats,
 } from './lib/analytics'
 import { userError } from './lib/errors'
-import { requireMember } from './lib/permissions'
+import { can, requireMember } from './lib/permissions'
 
 /**
  * Analytics pages (ANLY-002..004, Phase 13): farm comparison, growth curves
@@ -37,6 +37,58 @@ import { requireMember } from './lib/permissions'
  */
 
 const MAX_OCCUPANCIES = 2000
+
+/**
+ * KPI columns of a group (lib/analytics groupKpis). The money columns are
+ * present only for callers with finance.view (as reports.listCyclePnL).
+ */
+const kpiFields = {
+  occupancies: v.number(),
+  fish_end: v.number(),
+  biomass_kg: v.number(),
+  feed_kg: v.number(),
+  gain_kg: v.number(),
+  harvested_kg: v.number(),
+  mortality: v.number(),
+  fcr: v.union(v.number(), v.null()),
+  survival_pct: v.union(v.number(), v.null()),
+  mortality_pct: v.union(v.number(), v.null()),
+  sgr_pct_day: v.union(v.number(), v.null()),
+  feed_cost: v.optional(v.number()),
+  fingerling_cost: v.optional(v.number()),
+  other_cost: v.optional(v.number()),
+  revenue: v.optional(v.number()),
+  total_cost: v.optional(v.number()),
+  cost_per_kg: v.optional(v.union(v.number(), v.null())),
+  cost_per_kg_produced: v.optional(v.union(v.number(), v.null())),
+  net_margin: v.optional(v.number()),
+  net_margin_pct: v.optional(v.union(v.number(), v.null())),
+}
+
+const MONEY_FIELDS = [
+  'feed_cost',
+  'fingerling_cost',
+  'other_cost',
+  'revenue',
+  'total_cost',
+  'cost_per_kg',
+  'cost_per_kg_produced',
+  'net_margin',
+  'net_margin_pct',
+] as const
+
+type MoneyField = (typeof MONEY_FIELDS)[number]
+
+/** The row without its money columns unless the caller may see finance. */
+function moneyFor<T extends Record<MoneyField, unknown>>(
+  row: T,
+  financeView: boolean,
+): Omit<T, MoneyField> & Partial<Pick<T, MoneyField>> {
+  if (financeView) return row
+  const out: Record<string, unknown> = { ...row }
+  for (const f of MONEY_FIELDS) delete out[f]
+  return out as Omit<T, MoneyField>
+}
 
 function assertDate(value: string, label: string) {
   if (!isBusinessDate(value)) throw userError('VALIDATION', `${label} must be a date (YYYY-MM-DD)`)
@@ -110,50 +162,10 @@ export const comparison = query({
   returns: v.object({
     from: v.string(),
     to: v.string(),
-    farm: v.object({
-      occupancies: v.number(),
-      fish_end: v.number(),
-      biomass_kg: v.number(),
-      feed_kg: v.number(),
-      gain_kg: v.number(),
-      harvested_kg: v.number(),
-      mortality: v.number(),
-      fcr: v.union(v.number(), v.null()),
-      survival_pct: v.union(v.number(), v.null()),
-      mortality_pct: v.union(v.number(), v.null()),
-      sgr_pct_day: v.union(v.number(), v.null()),
-      feed_cost: v.number(),
-      fingerling_cost: v.number(),
-      other_cost: v.number(),
-      revenue: v.number(),
-      total_cost: v.number(),
-      cost_per_kg: v.union(v.number(), v.null()),
-      cost_per_kg_produced: v.union(v.number(), v.null()),
-      net_margin: v.number(),
-      net_margin_pct: v.union(v.number(), v.null()),
-    }),
+    farm: v.object(kpiFields),
     sites: v.array(
       v.object({
-        occupancies: v.number(),
-        fish_end: v.number(),
-        biomass_kg: v.number(),
-        feed_kg: v.number(),
-        gain_kg: v.number(),
-        harvested_kg: v.number(),
-        mortality: v.number(),
-        fcr: v.union(v.number(), v.null()),
-        survival_pct: v.union(v.number(), v.null()),
-        mortality_pct: v.union(v.number(), v.null()),
-        sgr_pct_day: v.union(v.number(), v.null()),
-        feed_cost: v.number(),
-        fingerling_cost: v.number(),
-        other_cost: v.number(),
-        revenue: v.number(),
-        total_cost: v.number(),
-        cost_per_kg: v.union(v.number(), v.null()),
-        cost_per_kg_produced: v.union(v.number(), v.null()),
-        net_margin: v.number(),
-        net_margin_pct: v.union(v.number(), v.null()),
+        ...kpiFields,
         id: v.union(v.string(), v.null()),
         name: v.string(),
         units: v.number(),
@@ -161,26 +173,7 @@ export const comparison = query({
     ),
     units: v.array(
       v.object({
-        occupancies: v.number(),
-        fish_end: v.number(),
-        biomass_kg: v.number(),
-        feed_kg: v.number(),
-        gain_kg: v.number(),
-        harvested_kg: v.number(),
-        mortality: v.number(),
-        fcr: v.union(v.number(), v.null()),
-        survival_pct: v.union(v.number(), v.null()),
-        mortality_pct: v.union(v.number(), v.null()),
-        sgr_pct_day: v.union(v.number(), v.null()),
-        feed_cost: v.number(),
-        fingerling_cost: v.number(),
-        other_cost: v.number(),
-        revenue: v.number(),
-        total_cost: v.number(),
-        cost_per_kg: v.union(v.number(), v.null()),
-        cost_per_kg_produced: v.union(v.number(), v.null()),
-        net_margin: v.number(),
-        net_margin_pct: v.union(v.number(), v.null()),
+        ...kpiFields,
         id: v.string(),
         name: v.string(),
         unit_type: v.union(
@@ -203,10 +196,16 @@ export const comparison = query({
     assertDate(args.from, 'From')
     assertDate(args.to, 'To')
     if (args.from > args.to) throw userError('VALIDATION', 'From must be on or before To')
-    const { user } = await requireMember(ctx, { permission: 'reports.view' })
+    const member = await requireMember(ctx, { permission: 'reports.view' })
+    const { user } = member
+    const financeView = can(member, 'finance.view')
     const scope = tenantScope(user)
     const stats = await occupanciesSince(ctx, user, args.from, args.locationId)
     const n = await names(ctx, user)
+    // A row tagged only with a unit is in scope when that unit is (names()
+    // holds the caller's units); rowInSiteScope alone lets it through.
+    const siteScoped = siteScopeOf(user) !== null
+    const costInScope = (r: CostRow) => !siteScoped || !!r.locationId || !r.cageId || n.unit.has(String(r.cageId))
 
     const expenses =
       scope.kind === 'company'
@@ -219,13 +218,15 @@ export const comparison = query({
               .take(10_000)
           ).filter((e) => !e.deletedAt && (!args.locationId || e.locationId === args.locationId))
         : []
-    const scopedExpenses = inSiteScope(user, expenses)
-    const sales = await scopedRowsInRange(ctx, user, 'sales', {
-      from: args.from,
-      to: args.to,
-      locationId: args.locationId,
-      limit: 10_000,
-    })
+    const scopedExpenses = inSiteScope(user, expenses).filter(costInScope)
+    const sales = (
+      await scopedRowsInRange(ctx, user, 'sales', {
+        from: args.from,
+        to: args.to,
+        locationId: args.locationId,
+        limit: 10_000,
+      })
+    ).filter(costInScope)
 
     const byUnit = new Map<string, CostInputs>()
     const bySite = new Map<string, CostInputs>()
@@ -280,7 +281,7 @@ export const comparison = query({
           site_id: cage.locationId ?? null,
           site_name: site?.name ?? null,
           batches: (unitPeriods.get(id) ?? []).map((p) => p.stats.batchNumber),
-          ...groupKpis(unitPeriods.get(id) ?? [], byUnit.get(id)),
+          ...moneyFor(groupKpis(unitPeriods.get(id) ?? [], byUnit.get(id)), financeView),
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
@@ -292,14 +293,14 @@ export const comparison = query({
         id: id || null,
         name: id ? (n.site.get(id)?.name ?? 'Unknown site') : 'No site',
         units: units.filter((u) => String(u.site_id ?? '') === id).length,
-        ...groupKpis(sitePeriods.get(id) ?? [], bySite.get(id)),
+        ...moneyFor(groupKpis(sitePeriods.get(id) ?? [], bySite.get(id)), financeView),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
 
     return {
       from: args.from,
       to: args.to,
-      farm: groupKpis(periods, farm),
+      farm: moneyFor(groupKpis(periods, farm), financeView),
       sites,
       units,
       updated_at: stats.reduce((m, s) => Math.max(m, s.updatedAt), 0) || null,
@@ -478,26 +479,7 @@ export const cycles = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
   returns: v.array(
     v.object({
-      occupancies: v.number(),
-      fish_end: v.number(),
-      biomass_kg: v.number(),
-      feed_kg: v.number(),
-      gain_kg: v.number(),
-      harvested_kg: v.number(),
-      mortality: v.number(),
-      fcr: v.union(v.number(), v.null()),
-      survival_pct: v.union(v.number(), v.null()),
-      mortality_pct: v.union(v.number(), v.null()),
-      sgr_pct_day: v.union(v.number(), v.null()),
-      feed_cost: v.number(),
-      fingerling_cost: v.number(),
-      other_cost: v.number(),
-      revenue: v.number(),
-      total_cost: v.number(),
-      cost_per_kg: v.union(v.number(), v.null()),
-      cost_per_kg_produced: v.union(v.number(), v.null()),
-      net_margin: v.number(),
-      net_margin_pct: v.union(v.number(), v.null()),
+      ...kpiFields,
       unit_id: v.id('cages'),
       unit_name: v.string(),
       site_name: v.union(v.string(), v.null()),
@@ -509,7 +491,9 @@ export const cycles = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const { user } = await requireMember(ctx, { permission: 'reports.view' })
+    const member = await requireMember(ctx, { permission: 'reports.view' })
+    const { user } = member
+    const financeView = can(member, 'finance.view')
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
     assertSiteFilterInScope(user, args.locationId)
@@ -581,12 +565,15 @@ export const cycles = query({
         start_date: from,
         end_date: to,
         days_of_culture: s.kpis.days_of_culture,
-        ...groupKpis([period], {
-          fingerlingCost: split.fingerlings,
-          otherExpenses: split.other,
-          revenue: sales.reduce((t, x) => t + x.totalAmount, 0),
-          soldKg: sales.reduce((t, x) => t + x.weightKg, 0),
-        }),
+        ...moneyFor(
+          groupKpis([period], {
+            fingerlingCost: split.fingerlings,
+            otherExpenses: split.other,
+            revenue: sales.reduce((t, x) => t + x.totalAmount, 0),
+            soldKg: sales.reduce((t, x) => t + x.weightKg, 0),
+          }),
+          financeView,
+        ),
       })
     }
     return out

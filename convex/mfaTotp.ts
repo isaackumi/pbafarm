@@ -17,7 +17,7 @@ import { action, internalMutation, mutation, query } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireUser, sessionMfaVerified } from './lib/authz'
+import { mfaPolicyApplies, requireUser, sessionMfaVerified } from './lib/authz'
 import { insertAuditLog } from './lib/auditChain'
 import { decryptJson, encryptJson, encryptionConfigured, MISSING_KEY_MESSAGE } from './lib/crypto'
 import { userError } from './lib/errors'
@@ -61,10 +61,10 @@ async function issueRecoveryCodes(ctx: MutationCtx, userId: Id<'users'>): Promis
   return codes
 }
 
-/** Mark this sign-in session as verified (only meaningful with a company). */
+/** Mark this sign-in session as verified (no company: platform scope). */
 async function markSessionVerified(ctx: MutationCtx, user: Doc<'users'>, method: 'totp' | 'recovery_code') {
   const sessionId = (await getAuthSessionId(ctx)) as Id<'authSessions'> | null
-  if (!sessionId || !user.companyId) return
+  if (!sessionId) return
   const now = Date.now()
   const row = await ctx.db
     .query('mfaSessions')
@@ -162,14 +162,15 @@ export const storePending = internalMutation({
       throw userError('CONFLICT', 'An authenticator app is already set up. Remove it first to set up another.')
     }
     // Before this session is verified, only an account with no second factor
-    // yet may enrol (same rule as enrolling a phone at /verify).
+    // yet may enrol (same rule as enrolling a phone at /verify). Phone codes
+    // are only sent when the company requires 2FA (mfa.issueChallenge), so a
+    // super_admin outside such a company enrols an app here.
     const company = user.companyId ? await ctx.db.get(user.companyId) : null
-    const mfaPending =
-      (company?.settings?.security?.require2fa === true || user.totpEnabledAt !== undefined) &&
-      !(await sessionMfaVerified(ctx, user))
+    const mfaPending = mfaPolicyApplies(user, company) && !(await sessionMfaVerified(ctx, user))
     const phoneCodesWork =
       !!user.phone &&
       !!user.companyId &&
+      company?.settings?.security?.require2fa === true &&
       ((await channelAvailable(ctx, user.companyId, 'sms')) ||
         (await channelAvailable(ctx, user.companyId, 'whatsapp')))
     if (mfaPending && phoneCodesWork) {

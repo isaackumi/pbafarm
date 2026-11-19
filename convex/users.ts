@@ -2,7 +2,7 @@ import { insertAuditLog } from './lib/auditChain'
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { query, mutation, internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
-import { requireUser, revokeUserSessions, sessionMfaVerified } from './lib/authz'
+import { mfaPolicyApplies, requireUser, revokeUserSessions, sessionMfaVerified } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import { actingUser, liveActAsSession } from './lib/actAs'
@@ -170,19 +170,20 @@ async function mfaState(ctx: QueryCtx, user: Doc<'users'>) {
     mfaDefaultChannel: null as string | null,
     mfaTotp,
   }
-  if (!user.companyId) return none
-  const company = await ctx.db.get(user.companyId)
+  const company = user.companyId ? await ctx.db.get(user.companyId) : null
+  // Same rule as requireUser: super_admins always verify (app or phone code).
+  if (!mfaPolicyApplies(user, company)) return none
   const policy = securityPolicy(company)
-  if (!policy.require2fa && !mfaTotp) return none
   const verified = await sessionMfaVerified(ctx, user)
   const mfaChannels: string[] = []
-  if (!verified && policy.require2fa) {
+  if (!verified && policy.require2fa && user.companyId) {
     for (const c of ['sms', 'whatsapp'] as const) {
       if (await channelAvailable(ctx, user.companyId, c)) mfaChannels.push(c)
     }
   }
   return {
-    mfaPolicy: policy.require2fa,
+    // Every session of this account must verify (offline restore checks it too).
+    mfaPolicy: true,
     mfaRequired: !verified,
     mfaChannels,
     mfaDefaultChannel: policy.require2fa ? (policy.twoFactorChannel as string | null) : null,

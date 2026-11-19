@@ -59,7 +59,8 @@ describe('M1 assignUnscopedToCompany', () => {
       .filter(([name, def]: [string, any]) => {
         const field = def.validator?.fields?.companyId
         // dataRequests: an account deletion of a company-less user has no company by design.
-        return name !== 'users' && name !== 'dataRequests' && field && field.isOptional === 'optional'
+        // mfaSessions: a company-less account (super_admin) verifies in platform scope.
+        return name !== 'users' && name !== 'dataRequests' && name !== 'mfaSessions' && field && field.isOptional === 'optional'
       })
       .map(([name]) => name)
       .sort()
