@@ -3301,6 +3301,23 @@
     },
     "loading": "Loading settings…"
   },
+  "settingsUi": {
+    "nav": {
+      "label": "Settings",
+      "company": "Company",
+      "sites": "Farm sites",
+      "members": "Members",
+      "roles": "Roles & permissions",
+      "policies": "Access policies",
+      "audit": "Audit log",
+      "automations": "Automations",
+      "api-keys": "API keys",
+      "messaging": "Messaging",
+      "ai": "AI assistant",
+      "billing": "Billing"
+    },
+    "eyebrow": "Settings · {company}"
+  },
   "country": {
     "profileTitle": "Organization profile",
     "profileSubtitle": "Time zone sets what 'today' means for entries and reminders. Sites can override it.",
