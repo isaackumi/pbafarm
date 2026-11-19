@@ -251,3 +251,102 @@ describe('trends and cycles', () => {
     expect(n1.net_margin).toBe(-100)
   })
 })
+
+describe('audit B: site scope and finance gating', () => {
+  async function scoped() {
+    const s = await scenario()
+    const { t, ids } = s
+    const member = async (email: string, roleKey: 'field_staff' | 'viewer') => {
+      const userId = await t.run(async (ctx) => {
+        const userId = await ctx.db.insert('users', {
+          email,
+          role: 'user',
+          companyId: ids.companyId,
+          locationIds: [ids.north],
+        })
+        await ctx.db.insert('memberships', {
+          userId,
+          companyId: ids.companyId,
+          roleKey,
+          allLocations: false,
+          locationIds: [ids.north],
+          status: 'active',
+          updatedAt: Date.now(),
+        } as any)
+        return userId
+      })
+      return t.withIdentity({ subject: `${userId}|s` })
+    }
+    await t.run(async (ctx) => {
+      const now = Date.now()
+      await ctx.db.insert('sales', {
+        companyId: ids.companyId, locationId: ids.south, cageId: ids.S1, saleDate: '2026-05-20',
+        weightKg: 10, pricePerKg: 777.7, totalAmount: 7777, paymentStatus: 'paid', updatedAt: now,
+      } as any)
+      // Tagged with the South unit only: no locationId on the row.
+      await ctx.db.insert('expenses', {
+        companyId: ids.companyId, cageId: ids.S1, category: 'labour', amount: 4444, currency: 'GHS',
+        date: '2026-05-16', updatedAt: now,
+      })
+      await ctx.db.insert('sales', {
+        companyId: ids.companyId, cageId: ids.S1, saleDate: '2026-05-21',
+        weightKg: 5, pricePerKg: 100, totalAmount: 500, paymentStatus: 'paid', updatedAt: now,
+      } as any)
+    })
+    return { ...s, staff: await member('field@x.com', 'field_staff'), viewer: await member('viewer@x.com', 'viewer') }
+  }
+
+  const MONEY = ['feed_cost', 'fingerling_cost', 'other_cost', 'revenue', 'total_cost', 'cost_per_kg', 'cost_per_kg_produced', 'net_margin', 'net_margin_pct']
+
+  test('a North-only member sees no South rows, and farm totals use in-scope rows only', async () => {
+    const { ids, viewer, as } = await scoped()
+    const range = { from: '2026-05-01', to: '2026-05-31' }
+
+    const cmp = await viewer.query(api.analytics.comparison, range)
+    expect(cmp.sites.map((x) => x.id)).toEqual([ids.north])
+    expect(cmp.units.map((u) => u.id)).toEqual([ids.N1])
+    expect(cmp.farm.occupancies).toBe(1)
+    // Only North's labour expense (40); the South sale and unit-only cost and sale are out.
+    expect(cmp.farm.other_cost).toBe(40)
+    expect(cmp.farm.revenue).toBe(0)
+    // The admin sees both.
+    const all = await as.query(api.analytics.comparison, range)
+    expect(all.farm.revenue).toBe(7777 + 500)
+    expect(all.farm.other_cost).toBe(40 + 4444)
+
+    const cycles = await viewer.query(api.analytics.cycles, {})
+    expect(cycles.map((c) => c.unit_id)).toEqual([ids.N1])
+
+    const growth = await viewer.query(api.analytics.growth, { asOf: '2026-05-31' })
+    expect(growth.occupancies.map((o) => o.unit_id)).toEqual([ids.N1])
+
+    const trends = await viewer.query(api.analytics.trends, { asOf: '2026-05-31', weeks: 6 })
+    expect(trends.units.map((u) => u.unit_id)).toEqual([ids.N1])
+    const allTrends = await as.query(api.analytics.trends, { asOf: '2026-05-31', weeks: 6 })
+    const feed = (r: typeof trends) => r.farm.reduce((sum, w) => sum + w.feed_kg, 0)
+    expect(feed(trends)).toBe(60)
+    expect(feed(allTrends)).toBe(120)
+
+    await expect(viewer.query(api.analytics.cycles, { locationId: ids.south })).rejects.toThrow(/access to this site/)
+  })
+
+  test('without finance.view, cycles and comparison carry no money fields', async () => {
+    const { staff, viewer } = await scoped()
+    const range = { from: '2026-05-01', to: '2026-05-31' }
+    const noMoney = (row: object) => expect(Object.keys(row).filter((k) => MONEY.includes(k))).toEqual([])
+
+    const cycles = await staff.query(api.analytics.cycles, {})
+    expect(cycles).toHaveLength(1)
+    cycles.forEach(noMoney)
+    expect(cycles[0].fcr).not.toBeUndefined()
+    const cmp = await staff.query(api.analytics.comparison, range)
+    noMoney(cmp.farm)
+    cmp.sites.forEach(noMoney)
+    cmp.units.forEach(noMoney)
+    expect(cmp.farm.feed_kg).toBe(60)
+
+    // finance.view keeps them.
+    const withMoney = await viewer.query(api.analytics.cycles, {})
+    expect(withMoney[0]).toMatchObject({ other_cost: 40, revenue: 0 })
+  })
+})

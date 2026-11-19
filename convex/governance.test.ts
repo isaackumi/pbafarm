@@ -59,15 +59,19 @@ async function setup() {
     const field = await member('field@a.com', 'field_staff')
     const riverOwner = await member('owner@b.com', 'owner', other)
     const platform = await ctx.db.insert('users', { email: 'root@p.com', role: 'super_admin' })
+    // Super_admins always verify a second factor (audit B).
+    const platformSession = await ctx.db.insert('authSessions', { userId: platform, expirationTime: Date.now() + 86_400_000 })
+    await ctx.db.insert('mfaSessions', { userId: platform, sessionId: platformSession, purpose: 'verify', attempts: 0, verifiedAt: Date.now(), method: 'totp' })
     await ctx.db.insert('cages', { name: 'A1', status: 'active', companyId, locationId: site, updatedAt: now })
     await ctx.db.insert('cages', { name: 'A2', status: 'empty', companyId, locationId: site, updatedAt: now })
     await ctx.db.insert('cages', { name: 'R1', status: 'active', companyId: other, locationId: otherSite, updatedAt: now })
     await ctx.db.insert('userInvites', {
       email: 'new@a.com', role: 'user', companyId, createdAt: now, status: 'pending', tokenHash: 'secret-hash',
     })
-    return { companyId, other, site, owner, viewer, field, riverOwner, platform }
+    return { companyId, other, site, owner, viewer, field, riverOwner, platform, platformSession }
   })
-  const as = (userId: string) => t.withIdentity({ subject: `${userId}|s` })
+  const as = (userId: string) =>
+    t.withIdentity({ subject: `${userId}|${userId === ids.platform ? ids.platformSession : 's'}` })
   const drain = () => t.finishAllScheduledFunctions(vi.runAllTimers)
   return { t, as, drain, ...ids }
 }

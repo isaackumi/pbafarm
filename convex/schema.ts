@@ -1599,7 +1599,8 @@ const schema = defineSchema({
   mfaSessions: defineTable({
     userId: v.id('users'),
     sessionId: v.id('authSessions'),
-    companyId: v.id('companies'),
+    /** Absent: platform scope (a company-less account, e.g. a super_admin). */
+    companyId: v.optional(v.id('companies')),
     purpose: v.union(v.literal('verify'), v.literal('enrol')),
     channel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
     codeHash: v.optional(v.string()),

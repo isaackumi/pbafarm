@@ -428,10 +428,14 @@ describe('SEC-002 (d) V6 user management', () => {
     expect(await messageOf(as(staffA).mutation(api.users.update, {
       id: staffA, patch: { role: 'user' },
     }))).toBe('The company must keep at least one active admin')
-    const platform = await t.run((ctx) =>
-      ctx.db.insert('users', { email: 'p@x.com', role: 'super_admin' }),
-    )
-    expect(await messageOf(as(platform).mutation(api.users.deactivate, { id: staffA })))
+    // Super_admins always verify a second factor (audit B).
+    const asPlatform = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert('users', { email: 'p@x.com', role: 'super_admin' })
+      const sessionId = await ctx.db.insert('authSessions', { userId, expirationTime: Date.now() + 86_400_000 })
+      await ctx.db.insert('mfaSessions', { userId, sessionId, purpose: 'verify', attempts: 0, verifiedAt: Date.now(), method: 'totp' })
+      return `${userId}|${sessionId}`
+    })
+    expect(await messageOf(t.withIdentity({ subject: asPlatform }).mutation(api.users.deactivate, { id: staffA })))
       .toBe('The company must keep at least one active admin')
   })
 

@@ -137,4 +137,45 @@ describe('mfaTotp', () => {
     expect((await a1.mutation(api.mfaTotp.confirmEnrolment, { code: await codeAt(secret) })).ok).toBe(true)
     expect(await a1.query(api.users.listDirectory, {})).toBeTruthy()
   })
+
+  test('audit B: a company-less super_admin must verify before platform access (act-as included)', async () => {
+    const s = await setup()
+    const ids = await s.t.run(async (ctx) => {
+      const now = Date.now()
+      const target = await ctx.db.insert('companies', {
+        name: 'Strict', code: 'STRICT', status: 'approved', createdAt: now,
+        settings: { aiAssistantEnabled: false, security: { require2fa: true } },
+      } as any)
+      const root = await ctx.db.insert('users', { email: 'root@platform.com', role: 'super_admin' })
+      const session = () => ctx.db.insert('authSessions', { userId: root, expirationTime: now + 86_400_000 })
+      return { target, root, r1: await session(), r2: await session() }
+    })
+    const r1 = s.as(ids.root, ids.r1)
+    const startActAs = (as: typeof r1) =>
+      as.mutation(api.actAs.start, { companyId: ids.target, reason: 'ticket 12345 support', allowWrites: true })
+
+    // Password only, no factor yet: refused, and /verify offers the authenticator app.
+    await expect(startActAs(r1)).rejects.toThrow(/MFA_REQUIRED/)
+    await expect(r1.query(api.governance.platformListRequests, {})).rejects.toThrow(/MFA_REQUIRED/)
+    expect(await r1.query(api.users.current, {})).toMatchObject({
+      mfaPolicy: true, mfaRequired: true, mfaTotp: false, mfaChannels: [],
+    })
+
+    // Enrolment is reachable before verification and verifies this session (platform scope).
+    const { secret } = await r1.action(api.mfaTotp.startEnrolment, {})
+    expect((await r1.mutation(api.mfaTotp.confirmEnrolment, { code: await codeAt(secret) })).ok).toBe(true)
+    const row = await s.t.run((ctx) =>
+      ctx.db.query('mfaSessions').withIndex('by_session', (q) => q.eq('sessionId', ids.r1)).first(),
+    )
+    expect(row).toMatchObject({ method: 'totp' })
+    expect(row?.companyId).toBeUndefined()
+    expect((await startActAs(r1)).sessionId).toBeTruthy()
+
+    // Another sign-in of the now-enrolled account must verify again (the audit PoC).
+    const r2 = s.as(ids.root, ids.r2)
+    await expect(startActAs(r2)).rejects.toThrow(/MFA_REQUIRED/)
+    await expect(r2.action(api.mfaTotp.startEnrolment, {})).rejects.toThrow(/already set up/)
+    expect(await r2.mutation(api.mfaTotp.verify, { code: await codeAt(secret, Date.now(), 1) })).toEqual({ ok: true, error: null })
+    expect((await startActAs(r2)).sessionId).toBeTruthy()
+  })
 })

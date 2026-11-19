@@ -56,7 +56,9 @@ export default function VerifyPage() {
   if (!user) return null
   const enrolling = !user.hasPhone
   const smsPossible = channels.length > 0
-  const mode = method ?? (user.mfaTotp ? 'app' : 'sms')
+  // No phone channel (e.g. a super_admin outside a 2FA company): the
+  // authenticator app is the only way, so open it straight away.
+  const mode = method ?? (user.mfaTotp || !smsPossible ? 'app' : 'sms')
   const switchTo = (m) => {
     setMethod(m)
     setError('')
@@ -210,7 +212,7 @@ export default function VerifyPage() {
             </form>
           )}
 
-          {mode === 'app' && (smsPossible || !user.mfaTotp) && (
+          {mode === 'app' && smsPossible && (
             <button
               type="button"
               className="w-full text-center text-sm text-lake hover:underline"
@@ -219,7 +221,7 @@ export default function VerifyPage() {
               {t('auth.verify.useText')}
             </button>
           )}
-          {mode === 'sms' && (user.mfaTotp || enrolling) && (
+          {mode === 'sms' && (user.mfaTotp || enrolling || !smsPossible) && (
             <button
               type="button"
               className="w-full text-center text-sm text-lake hover:underline"

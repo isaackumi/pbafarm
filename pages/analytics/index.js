@@ -204,8 +204,8 @@ function Compare({ skip, today, weeks, locationArgs }) {
       sgr_pct_day: { label: 'SGR (% per day)', format: (v) => fmt(v) },
       survival_pct: { label: 'Survival (%)', format: (v) => fmt(v, 1) },
       biomass_kg: { label: 'Biomass (kg)', format: (v) => int(v) },
-      cost_per_kg_produced: { label: 'Cost per kg produced', format: (v) => (v == null ? '—' : formatCurrency(v)) },
-      net_margin: { label: 'Net margin', format: (v) => formatCurrency(v ?? 0), signed: true },
+      cost_per_kg_produced: { label: 'Cost per kg produced', format: (v) => (v == null ? '—' : formatCurrency(v)), money: true },
+      net_margin: { label: 'Net margin', format: (v) => formatCurrency(v ?? 0), signed: true, money: true },
     }),
     [formatCurrency],
   )
@@ -214,7 +214,10 @@ function Compare({ skip, today, weeks, locationArgs }) {
   const rows = level === 'sites' ? data.sites : data.units
   if (!data.units.length && !data.sites.length) return <NoData what="production in this period" />
 
-  const m = METRICS[metric]
+  // Costs and revenue come back only with permission to see finance.
+  const money = 'total_cost' in data.farm
+  const metrics = Object.fromEntries(Object.entries(METRICS).filter(([, v]) => money || !v.money))
+  const m = metrics[metric] ?? metrics.fcr
   const chart = rows
     .filter((r) => r[metric] != null)
     .map((r) => ({ name: r.name, value: r[metric] }))
@@ -230,16 +233,20 @@ function Compare({ skip, today, weeks, locationArgs }) {
     { key: 'biomass_kg', label: 'Biomass kg', num: true, render: (r) => int(r.biomass_kg) },
     { key: 'feed_kg', label: 'Feed kg', num: true, render: (r) => int(r.feed_kg) },
     { key: 'gain_kg', label: 'Gain kg', num: true, render: (r) => int(r.gain_kg) },
-    { key: 'total_cost', label: 'Cost', num: true, render: (r) => formatCurrency(r.total_cost) },
-    { key: 'cost_per_kg_produced', label: 'Cost/kg produced', num: true, render: (r) => (r.cost_per_kg_produced == null ? '—' : formatCurrency(r.cost_per_kg_produced)) },
-    { key: 'revenue', label: 'Revenue', num: true, render: (r) => formatCurrency(r.revenue) },
-    {
-      key: 'net_margin',
-      label: 'Margin',
-      num: true,
-      render: (r) => formatCurrency(r.net_margin),
-      className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
-    },
+    ...(money
+      ? [
+          { key: 'total_cost', label: 'Cost', num: true, render: (r) => formatCurrency(r.total_cost) },
+          { key: 'cost_per_kg_produced', label: 'Cost/kg produced', num: true, render: (r) => (r.cost_per_kg_produced == null ? '—' : formatCurrency(r.cost_per_kg_produced)) },
+          { key: 'revenue', label: 'Revenue', num: true, render: (r) => formatCurrency(r.revenue) },
+          {
+            key: 'net_margin',
+            label: 'Margin',
+            num: true,
+            render: (r) => formatCurrency(r.net_margin),
+            className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
+          },
+        ]
+      : []),
   ]
 
   const exportCsv = () =>
@@ -255,10 +262,14 @@ function Compare({ skip, today, weeks, locationArgs }) {
         <StatCard label="Farm FCR" value={fmt(data.farm.fcr)} hint={`${dateLabel(from)} to ${dateLabel(to)}`} />
         <StatCard label="Survival" value={fmt(data.farm.survival_pct, 1)} unit="%" />
         <StatCard label="Standing biomass" value={int(data.farm.biomass_kg)} unit="kg" />
-        <StatCard
-          label="Cost per kg produced"
-          value={data.farm.cost_per_kg_produced == null ? '—' : formatCurrency(data.farm.cost_per_kg_produced)}
-        />
+        {money ? (
+          <StatCard
+            label="Cost per kg produced"
+            value={data.farm.cost_per_kg_produced == null ? '—' : formatCurrency(data.farm.cost_per_kg_produced)}
+          />
+        ) : (
+          <StatCard label="Feed" value={int(data.farm.feed_kg)} unit="kg" />
+        )}
       </div>
       <Card>
         <CardHeader
@@ -277,8 +288,8 @@ function Compare({ skip, today, weeks, locationArgs }) {
               <label htmlFor="compare-metric" className="sr-only">
                 Measure
               </label>
-              <Select id="compare-metric" value={metric} onChange={(e) => setMetric(e.target.value)} className="sm:w-56">
-                {Object.entries(METRICS).map(([k, v]) => (
+              <Select id="compare-metric" value={metrics[metric] ? metric : 'fcr'} onChange={(e) => setMetric(e.target.value)} className="sm:w-56">
+                {Object.entries(metrics).map(([k, v]) => (
                   <option key={k} value={k}>
                     {v.label}
                   </option>
@@ -300,7 +311,10 @@ function Compare({ skip, today, weeks, locationArgs }) {
               {level === 'sites' ? 'Sites' : 'Units'} side by side
             </h2>
             <p className="text-sm text-muted mt-1">
-              Weeks run Monday to Sunday. Cost per kg produced is total cost over weight gained.
+              Weeks run Monday to Sunday.
+              {money
+                ? ' Cost per kg produced is total cost over weight gained.'
+                : ' Costs and revenue need permission to see finance.'}
             </p>
           </div>
           <ExportButton onClick={exportCsv} />
@@ -614,6 +628,8 @@ function Cycles({ skip, locationArgs }) {
   const rows = useQuery(api.analytics.cycles, skip ? 'skip' : { ...locationArgs })
   if (rows === undefined) return <Loading />
   if (!rows.length) return <NoData what="cycles" />
+  // Costs and revenue come back only with permission to see finance.
+  const money = rows.some((r) => 'total_cost' in r)
 
   const columns = [
     { key: 'unit_name', label: 'Unit' },
@@ -622,21 +638,25 @@ function Cycles({ skip, locationArgs }) {
     { key: 'fcr', label: 'FCR', num: true, render: (r) => fmt(r.fcr) },
     { key: 'survival_pct', label: 'Survival %', num: true, render: (r) => fmt(r.survival_pct, 1) },
     { key: 'harvested_kg', label: 'Harvested kg', num: true, render: (r) => int(r.harvested_kg) },
-    { key: 'feed_cost', label: 'Feed', num: true, render: (r) => formatCurrency(r.feed_cost) },
-    { key: 'fingerling_cost', label: 'Fingerlings', num: true, render: (r) => formatCurrency(r.fingerling_cost) },
-    { key: 'other_cost', label: 'Other', num: true, render: (r) => formatCurrency(r.other_cost) },
-    { key: 'revenue', label: 'Revenue', num: true, render: (r) => formatCurrency(r.revenue) },
-    { key: 'cost_per_kg', label: 'Cost/kg harvested', num: true, render: (r) => (r.cost_per_kg == null ? '—' : formatCurrency(r.cost_per_kg)) },
-    {
-      key: 'net_margin',
-      label: 'Margin',
-      num: true,
-      render: (r) => formatCurrency(r.net_margin),
-      className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
-    },
+    ...(money
+      ? [
+          { key: 'feed_cost', label: 'Feed', num: true, render: (r) => formatCurrency(r.feed_cost) },
+          { key: 'fingerling_cost', label: 'Fingerlings', num: true, render: (r) => formatCurrency(r.fingerling_cost) },
+          { key: 'other_cost', label: 'Other', num: true, render: (r) => formatCurrency(r.other_cost) },
+          { key: 'revenue', label: 'Revenue', num: true, render: (r) => formatCurrency(r.revenue) },
+          { key: 'cost_per_kg', label: 'Cost/kg harvested', num: true, render: (r) => (r.cost_per_kg == null ? '—' : formatCurrency(r.cost_per_kg)) },
+          {
+            key: 'net_margin',
+            label: 'Margin',
+            num: true,
+            render: (r) => formatCurrency(r.net_margin),
+            className: (r) => (r.net_margin < 0 ? 'text-signal' : ''),
+          },
+        ]
+      : []),
   ]
   const chart = rows
-    .filter((r) => !r.open)
+    .filter((r) => money && !r.open)
     .slice(0, 15)
     .map((r) => ({ name: `${r.unit_name} ${r.batch_number}`.slice(0, 18), value: r.net_margin }))
     .sort((a, b) => b.value - a.value)
@@ -644,11 +664,14 @@ function Cycles({ skip, locationArgs }) {
   const exportCsv = () =>
     downloadCsv(
       'profitability-by-cycle.csv',
-      ['Unit', 'Site', 'Batch', 'Start', 'End', 'Open', 'FCR', 'Survival %', 'Harvested kg', 'Feed cost', 'Fingerling cost', 'Other cost', 'Revenue', 'Total cost', 'Cost per kg harvested', 'Net margin'],
+      [
+        'Unit', 'Site', 'Batch', 'Start', 'End', 'Open', 'FCR', 'Survival %', 'Harvested kg',
+        ...(money ? ['Feed cost', 'Fingerling cost', 'Other cost', 'Revenue', 'Total cost', 'Cost per kg harvested', 'Net margin'] : []),
+      ],
       rows.map((r) => [
         r.unit_name, r.site_name ?? '', r.batch_number, r.start_date, r.end_date, r.open ? 'yes' : 'no',
-        r.fcr, r.survival_pct, r.harvested_kg, r.feed_cost, r.fingerling_cost, r.other_cost, r.revenue,
-        r.total_cost, r.cost_per_kg, r.net_margin,
+        r.fcr, r.survival_pct, r.harvested_kg,
+        ...(money ? [r.feed_cost, r.fingerling_cost, r.other_cost, r.revenue, r.total_cost, r.cost_per_kg, r.net_margin] : []),
       ]),
     )
 
@@ -663,9 +686,11 @@ function Cycles({ skip, locationArgs }) {
       <Card padding={false}>
         <div className="p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-medium text-chart-ink">Profitability by cycle</h2>
+            <h2 className="font-display text-lg font-medium text-chart-ink">{money ? 'Profitability by cycle' : 'Cycles'}</h2>
             <p className="text-sm text-muted mt-1">
-              Feed at purchase prices; expenses and sales of the unit in the cycle&apos;s dates. Open cycles count to date.
+              {money
+                ? "Feed at purchase prices; expenses and sales of the unit in the cycle's dates. Open cycles count to date."
+                : 'Open cycles count to date. Costs and revenue need permission to see finance.'}
             </p>
           </div>
           <ExportButton onClick={exportCsv} />

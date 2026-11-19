@@ -26,9 +26,10 @@ type Ctx = QueryCtx | MutationCtx
  *   (pending, rejected, removed or missing); super_admin excepted
  *                                                     → COMPANY_NOT_APPROVED
  * - membership row for the active company not active   → NOT_A_MEMBER
- * - company requires two-step verification, or the user
- *   turned on an authenticator app (ENT-003), and this
- *   session is not verified (super_admins included)   → MFA_REQUIRED
+ * - company requires two-step verification, the user
+ *   turned on an authenticator app (ENT-003), or the
+ *   user is a super_admin (with or without a company),
+ *   and this session is not verified                   → MFA_REQUIRED
  *   (users.current, the mfa.* functions and sign-out pass `allowPendingMfa`)
  * Company-less users pass here; the tenancy helpers give them no data.
  *
@@ -57,8 +58,9 @@ export async function requireUser(
   if (user.mustChangePassword === true) {
     throw new Error(AUTH_ERROR_MESSAGES.PASSWORD_CHANGE_REQUIRED)
   }
+  let company: Doc<'companies'> | null = null
   if (user.companyId) {
-    const company = await ctx.db.get(user.companyId)
+    company = await ctx.db.get(user.companyId)
     if ((user.role ?? 'user') !== 'super_admin' && (!company || company.status !== 'approved')) {
       throw new Error(AUTH_ERROR_MESSAGES.COMPANY_NOT_APPROVED)
     }
@@ -70,13 +72,9 @@ export async function requireUser(
         throw new Error(AUTH_ERROR_MESSAGES.NOT_A_MEMBER)
       }
     }
-    if (
-      !opts.allowPendingMfa &&
-      (company?.settings?.security?.require2fa === true || user.totpEnabledAt !== undefined) &&
-      !(await sessionMfaVerified(ctx, user))
-    ) {
-      throw new Error(AUTH_ERROR_MESSAGES.MFA_REQUIRED)
-    }
+  }
+  if (!opts.allowPendingMfa && mfaPolicyApplies(user, company) && !(await sessionMfaVerified(ctx, user))) {
+    throw new Error(AUTH_ERROR_MESSAGES.MFA_REQUIRED)
   }
   if ((user.role ?? 'user') === 'super_admin' && !opts.ignoreActAs) {
     const session = await liveActAsSession(ctx, user._id, Date.now())
@@ -105,13 +103,31 @@ export async function requireUser(
 }
 
 /**
+ * Whether every sign-in session of this user must pass two-step verification:
+ * the active company requires it, the user turned on an authenticator app, or
+ * the user is a super_admin (platform access always needs a second factor; a
+ * super_admin without one is sent to /verify to set up an authenticator app).
+ */
+export function mfaPolicyApplies(
+  user: Pick<Doc<'users'>, 'role' | 'totpEnabledAt'>,
+  company: Pick<Doc<'companies'>, 'settings'> | null,
+): boolean {
+  return (
+    (user.role ?? 'user') === 'super_admin' ||
+    user.totpEnabledAt !== undefined ||
+    company?.settings?.security?.require2fa === true
+  )
+}
+
+/**
  * Whether a verified mfaSessions row counts for the given organization.
  * The row is bound to the organization whose policy accepted it (ORG-002):
- * - same organization                       → counts
+ * - same organization (or both platform scope:
+ *   no organization)                         → counts
  * - totp / recovery_code / otp (a code from the
  *   user's own app or own phone)             → counts anywhere
  * - phone_login                              → only where that organization
- *   also offers phone sign-in as the second step
+ *   also offers phone sign-in as the second step (never for platform scope)
  * - policy_enable (or no method)             → never elsewhere
  */
 export async function mfaRowCountsFor(
@@ -120,13 +136,14 @@ export async function mfaRowCountsFor(
   companyId: Id<'companies'> | undefined,
 ): Promise<boolean> {
   if (row.verifiedAt === undefined) return false
-  if (!companyId || row.companyId === companyId) return true
+  if (row.companyId === companyId) return true
   switch (row.method) {
     case 'totp':
     case 'recovery_code':
     case 'otp':
       return true
     case 'phone_login': {
+      if (!companyId) return false
       const policy = securityPolicy(await ctx.db.get(companyId))
       return phoneLoginOffered(policy) && policy.phoneLoginSatisfies2fa
     }

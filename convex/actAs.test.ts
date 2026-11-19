@@ -21,7 +21,10 @@ async function setup() {
     await ctx.db.insert('users', { email: 'staff@a.com', role: 'user', companyId: companyA })
     await ctx.db.insert('users', { email: 'staff@b.com', role: 'user', companyId: companyB })
     const session = (userId: Id<'users'>) => ctx.db.insert('authSessions', { userId, expirationTime: now + 86_400_000 })
-    return { companyA, companyB, siteA, root, adminA, sRoot: await session(root), sAdminA: await session(adminA) }
+    const sRoot = await session(root)
+    // Super_admins always verify a second factor (audit B).
+    await ctx.db.insert('mfaSessions', { userId: root, sessionId: sRoot, purpose: 'verify', attempts: 0, verifiedAt: now, method: 'totp' })
+    return { companyA, companyB, siteA, root, adminA, sRoot, sAdminA: await session(adminA) }
   })
   return {
     t,

@@ -13,6 +13,7 @@ Questions marked **Blocking now** gate Phase 0 work.
 | Q-012 | Vendor and budget preferences for error monitoring (e.g. Sentry) and for platform email. | OPS-001 monitoring and SEC-005/ORG-003 emails need a provider. | OPS-001, INT-002 | roadmap |
 | Q-021 | Data-protection requirements: can staging hold an unmasked copy of production? Any regulation for staff/customer personal data in the target markets? | Staging rehearsals use a prod copy (R06 §2). | OPS-001 staging, R-40 | roadmap |
 | Q-039 | Current document counts for `dailyRecords`, `cages`, `feedTypes`, `users`, `feedInventoryTransactions`, `auditLogs` on the live deployment. | Sizes the full-scan failure timeline and migration run times. | PLAT-001 ordering, M7 | d12 Q1; d04 header |
+| Q-043 | **Production security headers:** do the deployed Vercel responses carry the headers from `next.config.mjs` (enforced CSP, `Content-Security-Policy-Report-Only`, `X-Frame-Options: DENY`, HSTS)? Check with `curl -sI https://<prod-url>/login`. Has the report-only CSP been observed long enough with no legitimate violations to enforce it? | Security audit B (2026-11-19) could only review the config, not the live responses. Enforcing the full CSP closes script-injection paths the narrow enforced policy leaves open. | Enforcing the full CSP | `docs/security/audits/2026-11-19-full-b` |
 
 ## Data and tenancy
 
@@ -56,6 +57,7 @@ Questions marked **Blocking now** gate Phase 0 work.
 |---|---|---|---|---|
 | Q-010 | **Permission matrix:** should `user`-role staff edit prices, payment status, purchases and harvest counts? Should existing `user` members map to "field staff" or "manager"? Is segregation of duties (approver ≠ submitter) required? | Today any member can do several financially sensitive writes; Phase 0 gates them to admin as an interim. | PERM-001, M9, PERM-005; SEC-002 (confirmation) | d07 Q4 |
 | Q-040 | **Role grants can exceed grantor rights:** a custom role with member management can assign admin; a holder of role management can add any permission to their own role. Should grants be limited to the grantor's own permissions? Policy decision needed. | Lets a delegated manager escalate to admin or to permissions they were not given. Raised as needs_validation by security audit A (2026-11-19); not changed until decided. | PERM-002, PERM-003 | `docs/security/audits/2026-11-19-full-a` |
+| Q-041 | **OIDC SSO account linking by email:** sign-in through an SSO connection links to an existing account when the IdP asserts `email_verified` (`convex/lib/sso.ts`, @convex-dev/auth account linking). Can a tenant admin register any IdP/issuer? Is each connection bound to email domains the organization has proven it owns? | If any tenant can register an IdP it controls, it could assert a verified email of a user in another organization (or a super_admin) and take over that account. Raised as needs_validation by security audit B (2026-11-19); not changed until decided. | ENT-003 (SSO) | `docs/security/audits/2026-11-19-full-b` |
 
 ## Markets and globalization
 
@@ -73,6 +75,7 @@ Questions marked **Blocking now** gate Phase 0 work.
 | Q-029 | Which LLM provider/model is used in production, what is the monthly spend, and should the assistant be limited to admins? | Model IDs are dated; no cost controls. | SEC-004, ANLY-005 | d12 Q5; d13 Q1 |
 | Q-019 | Are cage QR labels already printed and in use on site? | Changing URL format or host would invalidate them; MOBILE-006 must keep old URLs working. | MOBILE-006 | d13 Q4 |
 | Q-037 | Are spreadsheets imported regularly (format, size)? | CSV importer must accept them. | MOBILE-009 | d13 Q5 |
+| Q-042 | **Outbound webhook SSRF through DNS rebinding:** public hostnames that resolve to private or metadata IPs are not blocked (`convex/integrations/webhookLogic.ts`, `convex/webhooks.ts`); this is a documented accepted risk. Can Convex action egress reach internal networks or cloud metadata addresses (169.254.169.254, RFC 1918)? Ask Convex support or test from a dev deployment. | If egress can reach them, a tenant webhook URL could probe internal services (only the status code is reflected). If not, the accepted risk stands. Raised as needs_validation by security audit B (2026-11-19). | INT-005 | `docs/security/audits/2026-11-19-full-b` |
 
 ## Field usage
 

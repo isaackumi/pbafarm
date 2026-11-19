@@ -36,16 +36,20 @@ async function setup() {
     const loner1 = await user('loner1@x.com')
     const loner2 = await user('loner2@x.com')
     const platform = await user('owner@platform.com', { role: 'super_admin' })
+    // Super_admins always verify a second factor (audit B).
+    const platformSession = await ctx.db.insert('authSessions', { userId: platform, expirationTime: Date.now() + 86_400_000 })
+    await ctx.db.insert('mfaSessions', { userId: platform, sessionId: platformSession, purpose: 'verify', attempts: 0, verifiedAt: Date.now(), method: 'totp' })
     const cageA = await ctx.db.insert('cages', {
       name: 'A1', status: 'active', companyId: companyA, locationId: siteA, updatedAt: now,
     })
     const legacyCage = await ctx.db.insert('cages', { name: 'Legacy', status: 'active', updatedAt: now })
     return {
       companyA, companyB, siteA, adminA, staffA, inactiveA, tempA, adminB,
-      loner1, loner2, platform, cageA, legacyCage,
+      loner1, loner2, platform, platformSession, cageA, legacyCage,
     }
   })
-  const as = (userId: string) => t.withIdentity({ subject: `${userId}|session` })
+  const as = (userId: string) =>
+    t.withIdentity({ subject: `${userId}|${userId === ids.platform ? ids.platformSession : 'session'}` })
   return { t, as, ...ids }
 }
 
