@@ -54,6 +54,7 @@ const ALLOWLIST: Record<string, string> = {
   'inboundWebhooks.rotateSecret': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.owner',
   'llmGateway.saveCredential': 'action; guarded by requireLlmAdmin in internal.llmGateway.upsertCredentialRow',
   'llmGateway.chat': 'action; guarded by requireMember(ai.use) in internal.llmGateway.begin',
+  'files.attachR2': 'action; guarded by requireMember(files.upload) + upload binding in internal.files.r2UploadForAttach / attachR2Object',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
   'actAs.start': 'super_admin only, checked on the real account (requireUser({ ignoreActAs })): support access is not a company permission',
   'actAs.stop': 'own act-as session; any signed-in account, ends only its own',

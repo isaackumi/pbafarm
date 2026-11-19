@@ -1,26 +1,54 @@
-# R2 storage provider (CF-005, CF-006) — implemented, not wired
+# R2 storage provider (CF-005, CF-006) — wired, env-gated
 
-> Code only. No bucket, token or env var exists; nothing calls these
-> functions. With the `R2_*` env vars unset every entry point is a no-op
-> (`configured: false`). D-016: Convex storage first, R2 when a doc 14 §2.1
-> trigger fires and is logged.
+> With the `R2_*` env vars unset (today, and in dev/CI) nothing changes:
+> uploads, attach and downloads use Convex storage exactly as before. Set all
+> four on a Convex deployment and **new** attachments go to R2. Existing
+> files stay on Convex until the manual backfill moves them. D-016: Convex
+> storage first, R2 when a doc 14 §2.1 trigger fires and is logged.
 
 ## What exists
 
 | File | What |
 |---|---|
-| `convex/lib/r2.ts` | `R2Storage` Effect service (`Context.Service`) + `r2Layer(config)` / `r2Live()`. S3 SigV4 presigned URLs on Web Crypto (no SDK): `put`, `get`, `head`, `presign(GET\|PUT, key, expiresIn ≤ 7 d)`. All network through the `Fetch` service; per-attempt timeout; retries only network/timeout/5xx, never 4xx; 404 → `null`. Typed errors `R2NotConfigured`, `R2Error{operation,key,status,retryable}`. |
-| `convex/r2Sync.ts` | `copyToR2` (internal action; `dryRun` default true; ≤ 100 storage ids per call) copies Convex blobs to `files/<storageId>` with the Convex SHA-256 as metadata, skipping objects already there (idempotent). `reconcileR2` compares each Convex blob with its R2 object: `ok`, `missing_in_r2`, `size_mismatch`, `hash_mismatch`, `missing_in_convex`. |
-| `convex/lib/r2.test.ts` | AWS SigV4 test vector, fake S3 (5xx retry, 403 no retry, timeout, network), copy/reconcile, no-op without env. |
+| `convex/lib/r2.ts` | `R2Storage` Effect service (`Context.Service`) + `r2Layer(config)` / `r2Live()`. S3 SigV4 presigned URLs on Web Crypto (no SDK): `put`, `get`, `head`, `remove`, `presign(GET\|PUT, key, expiresIn ≤ 7 d)` (PUT can sign Content-Type, `x-amz-meta-sha256` and `If-None-Match: *`; GET can sign `response-content-type` / `response-content-disposition`). All network through the `Fetch` service; per-attempt timeout; retries only network/timeout/5xx, never 4xx; 404 → `null`. Typed errors `R2NotConfigured`, `R2Error{operation,key,status,retryable}`. |
+| `convex/lib/r2Files.ts` | The programs `convex/files.ts` runs on R2: `filesProvider()`, `presignUpload`, `inspectUpload`, `presignDownload`, `r2UploadKey`. |
+| `convex/files.ts` | `generateUploadUrl` returns `{ provider, method, uploadUrl, headers, uploadId }`; `attach` (Convex) / `attachR2` (R2 action); download redirect; `deleteR2Object`. |
+| `convex/r2Sync.ts` | Manual jobs: `copyToR2`, `reconcileR2` (by storage id), `backfillFilesToR2` (pages `files`). Nothing schedules them. |
+| `lib/uploadFile.js` | Browser flow used by `components/Attachments.js` and `components/CustomFields.js`: POST to Convex or PUT to R2 depending on `provider`. |
+| Tests | `convex/lib/r2.test.ts` (SigV4 vector, fake S3, copy/reconcile), `convex/r2Files.test.ts` (fake-fetch R2: presign, inspect, create-only PUT, attach/download, wrong user/company, wrong bytes, expiry cleanup, backfill). |
 
-Env (Convex deployment only, never Vercel): `R2_ACCOUNT_ID`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, optional
-`R2_ENDPOINT` (EU jurisdiction: `https://<account>.eu.r2.cloudflarestorage.com`).
+## Env (Convex deployment only, never Vercel)
 
-Implemented on a small hand-written signer instead of `@convex-dev/r2`
-(doc 17 Stage 4) so it fits the Effect service/Fetch/fake-test conventions
-(D-019) and adds no dependency; swapping to the component later only changes
-the Layer.
+| Var | |
+|---|---|
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | All four set = R2 configured. |
+| `R2_ENDPOINT` | Optional origin override (EU jurisdiction: `https://<account>.eu.r2.cloudflarestorage.com`). |
+| `FILES_PROVIDER` | Optional. `convex` keeps new uploads on Convex storage even when R2 is configured (rollback switch). R2 rows already attached keep downloading from R2. |
+
+## Flows
+
+- **Upload.** `files.generateUploadUrl({ entityType, entityId, sha256, contentType, name })`
+  creates the upload binding (CF-004: caller, company, record, 1 h window,
+  declared SHA-256). On R2 the type must be on the allow-list, and the
+  binding records `provider: 'r2'`, the key `files/<companyId>/<uploadId>`
+  and the type; the browser gets a presigned **PUT** (15 min) with
+  `Content-Type`, `x-amz-meta-sha256` and `If-None-Match: *` signed in, so the
+  URL can only create that one object, never overwrite it after attach.
+- **Attach.** `files.attachR2({ entityType, entityId, uploadId, name })`
+  (action): re-checks the binding (same user, same company, same record,
+  unexpired, unused), HEADs the object (≤ 10 MB), downloads it and hashes the
+  bytes against the declared SHA-256, then inserts the `files` row
+  (`provider: 'r2'`, `r2Key`, no `storageId`) with the same type, size and
+  per-record checks as `attach`. A refused object is deleted.
+- **Download.** `files.requestDownload` (unchanged token, company check) →
+  `GET /files/download?token=…` → for `provider: 'r2'` a **302** to a
+  presigned GET valid 5 minutes that forces `Content-Disposition: attachment`
+  and the recorded type (`Cache-Control: private, no-store`,
+  `Referrer-Policy: no-referrer`). Convex rows still stream as before.
+- **Delete.** `files.remove` and the company purge (`governance.ts`) delete
+  the Convex blob and schedule `files.deleteR2Object` for an `r2Key`.
+  `files.pruneDownloadTokens` (existing cron) deletes R2 objects of expired,
+  never-attached uploads.
 
 ## Owner setup (when the trigger fires)
 
@@ -28,41 +56,44 @@ the Layer.
    in the jurisdiction matching the Convex deployment.
 2. R2 → Manage API tokens → **Object Read & Write**, scoped to one bucket
    each. Store in the password manager.
-3. Bucket → Settings → CORS: allow `PUT`, `GET` from the app origins, header
-   `Content-Type` (needed only once browsers upload directly, step 3 below).
+3. Bucket → Settings → CORS: allow `PUT` and `GET` from the app origins,
+   headers `Content-Type`, `x-amz-meta-sha256`, `If-None-Match`.
 4. Lifecycle rule: delete `exports/` after 7 days (backstop).
-5. `npx convex env set --deployment <name> R2_ACCOUNT_ID …` (and the other
-   three) on staging first.
+5. `npx convex env set --deployment <staging> R2_ACCOUNT_ID …` (and the
+   other three). Upload, attach and download a file on staging; then prod.
 6. Key rotation: create the new token, `convex env set` both keys, verify
    `reconcileR2` on a few ids, delete the old token.
+7. Rollback: `npx convex env set FILES_PROVIDER convex` (new uploads back to
+   Convex; R2 files stay readable). Unsetting the `R2_*` vars makes R2 rows
+   undownloadable (503), so only do that after moving them back.
 
-## Wiring follow-up (separate PR, after CF-004 `files` is Verified)
+## Backfill existing files (CF-006, manual, not scheduled)
 
-1. **Schema (additive):** `files.provider: v.union(v.literal('convex'), v.literal('r2'))`,
-   `files.r2Key: v.optional(v.string())`; keep `storageId` (optional for
-   r2-only rows) for the grace period.
-2. **Downloads** (`convex/files.ts` / `GET /files/download` in `convex/http.ts`):
-   for `provider: 'r2'`, after the existing company/token checks, redirect
-   to `R2Storage.presign('GET', file.r2Key, 900)` (≤ 15 min) instead of
-   streaming `ctx.storage.get`.
-3. **Uploads:** a provider setting (`FILES_PROVIDER=r2` env) makes
-   `requestUpload` return a presigned PUT for a server-computed key
-   `{env}/{companyId}/{fileId}`; `attach` checks the object with `head`
-   (size/type) instead of `ctx.db.system.get`.
-4. **Backfill (CF-006):** an internal action pages `files` where
-   `provider = 'convex'`, calls `copyToR2` logic with `dryRun:false`, then
-   `reconcileR2`; only rows reporting `ok` are patched to `provider: 'r2'`,
-   `r2Key`. Rerunnable; pages of ≤ 100.
-5. **Reconciliation cron:** weekly `reconcileR2` over a page of r2 rows;
-   anything not `ok` raises a platform notification.
-6. **Grace period:** delete the Convex blob only after a later reconcile run
-   is `ok` and one backup cycle has passed.
-7. Tests: cross-tenant download refused with provider `r2`; presign expiry.
-
-## Manual run (staging, once env vars exist)
+Pages through `files` rows still on Convex, copies each blob to
+`files/<storageId>` with its SHA-256, reconciles, and switches only rows that
+reconcile `ok` to `provider: 'r2'` + `r2Key`. The Convex blob is kept
+(`storageId` stays on the row). Rerunnable and idempotent; `dryRun`
+defaults to true.
 
 ```bash
+npx convex run --deployment <staging> r2Sync:backfillFilesToR2 '{"dryRun":true}'
+npx convex run --deployment <staging> r2Sync:backfillFilesToR2 '{"dryRun":false,"numItems":100}'
+# repeat with "cursor": "<continueCursor>" until "isDone": true
 npx convex run --deployment <staging> r2Sync:copyToR2 '{"storageIds":["<id>"],"dryRun":true}'
-npx convex run --deployment <staging> r2Sync:copyToR2 '{"storageIds":["<id>"],"dryRun":false}'
 npx convex run --deployment <staging> r2Sync:reconcileR2 '{"storageIds":["<id>"]}'
 ```
+
+**Grace period:** delete the Convex blobs of backfilled rows only after a
+later `reconcileR2` run is `ok` and one backup cycle has passed (not
+automated).
+
+## Not done
+
+- Reconciliation cron (weekly `reconcileR2` + platform notification): left
+  manual on purpose.
+- Logos (`companies.setLogo`) and data exports stay on Convex storage.
+
+Implemented on a small hand-written signer instead of `@convex-dev/r2`
+(doc 17 Stage 4) so it fits the Effect service/Fetch/fake-test conventions
+(D-019) and adds no dependency; swapping to the component later only changes
+the Layer.

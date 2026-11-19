@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { Paperclip } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,7 +8,7 @@ import { Button } from './ui'
 import { convexSiteUrl } from '../lib/apiBase'
 import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
-import { sha256HexOfFile } from '../lib/fileHash'
+import { uploadAndAttach } from '../lib/uploadFile'
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.txt,.xls,.xlsx,.doc,.docx'
 const MAX_BYTES = 10 * 1024 * 1024
@@ -27,6 +27,7 @@ export default function Attachments({ entityType, entityId, compact = false }) {
   const files = useQuery(api.files.list, user && entityId ? { entityType, entityId } : 'skip')
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const attach = useMutation(api.files.attach)
+  const attachR2 = useAction(api.files.attachR2)
   const requestDownload = useMutation(api.files.requestDownload)
   const remove = useMutation(api.files.remove)
   const input = useRef(null)
@@ -42,19 +43,15 @@ export default function Attachments({ entityType, entityId, compact = false }) {
     }
     setBusy(true)
     try {
-      const { uploadUrl, uploadId } = await generateUploadUrl({
+      const out = await uploadAndAttach({
+        file,
         entityType,
         entityId,
-        sha256: await sha256HexOfFile(file),
+        fallbackType: 'application/octet-stream',
+        generateUploadUrl,
+        attach,
+        attachR2,
       })
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
-      })
-      if (!res.ok) throw new Error('Upload failed. Try again.')
-      const { storageId } = await res.json()
-      const out = await attach({ entityType, entityId, uploadId, storageId, name: file.name })
       if (!out.ok) throw new Error(out.message)
       showToast('success', `${file.name} attached`)
     } catch (err) {

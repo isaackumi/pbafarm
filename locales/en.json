@@ -155,6 +155,7 @@
       "tabPhone": "Phone",
       "signedOut": "You have been signed out.",
       "wrongCredentials": "No account for that email, or the password is wrong. Check the address carefully — or create an account on Sign up.",
+      "humanCheck": "Several sign-in attempts failed. Complete the human check below, then sign in again.",
       "failed": "Sign in failed",
       "serverUnreachable": "Could not reach the server. Check your connection and try again.",
       "codeInvalid": "That code is not valid or has expired. Check it, or ask for a new one.",

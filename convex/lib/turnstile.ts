@@ -22,7 +22,16 @@ export const TURNSTILE_HOSTNAMES_ENV = 'TURNSTILE_ALLOWED_HOSTNAMES'
 /** A ticket must be used within this window (Turnstile tokens live 300 s). */
 export const HUMAN_TICKET_TTL_MS = 5 * 60 * 1000
 
-export const HUMAN_PURPOSES = ['signup', 'register_company', 'password_reset', 'invite_accept'] as const
+/**
+ * After a used sign-up ticket's sign-up fails (weak password, typo), the same
+ * ticket is accepted again for the same email for this long, at most
+ * HUMAN_GRANT_MAX_USES times, so the person is not sent back to the widget.
+ */
+export const HUMAN_GRANT_TTL_MS = 5 * 60 * 1000
+export const HUMAN_GRANT_MAX_USES = 5
+
+/** `signin`: required after repeated password failures (convex/authGuard.ts). */
+export const HUMAN_PURPOSES = ['signup', 'register_company', 'password_reset', 'invite_accept', 'signin'] as const
 export type HumanPurpose = (typeof HUMAN_PURPOSES)[number]
 
 export function isHumanPurpose(value: unknown): value is HumanPurpose {

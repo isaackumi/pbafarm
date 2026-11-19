@@ -12,8 +12,9 @@
  * no-op. R2_ENDPOINT optionally overrides the endpoint origin (EU
  * jurisdiction: https://<account>.eu.r2.cloudflarestorage.com).
  *
- * Not wired into convex/files.ts yet (CF-004 owns that module); see
- * docs/architecture/16-storage-cost-and-scaling-assessment.md §"R2 wiring".
+ * Wired behind the `files` table (convex/files.ts, CF-005): with the env set,
+ * new uploads are presigned PUTs and downloads redirect to presigned GETs.
+ * See docs/ops/r2-storage.md.
  *
  * Network goes through the `Fetch` service (tests inject `fetchLayer(fake)`).
  * Each attempt has a timeout; network errors, timeouts and 5xx are retried
@@ -60,7 +61,7 @@ export class R2NotConfigured extends Data.TaggedError('R2NotConfigured')<{
 }> {}
 
 export class R2Error extends Data.TaggedError('R2Error')<{
-  readonly operation: 'put' | 'get' | 'head' | 'presign'
+  readonly operation: 'put' | 'get' | 'head' | 'delete' | 'presign'
   readonly key: string
   /** HTTP status, absent for network errors and timeouts. */
   readonly status?: number
@@ -97,7 +98,7 @@ function amzDates(now: Date) {
 }
 
 export type PresignInput = {
-  readonly method: 'GET' | 'PUT' | 'HEAD'
+  readonly method: 'GET' | 'PUT' | 'HEAD' | 'DELETE'
   /** Origin, e.g. https://acct.r2.cloudflarestorage.com */
   readonly origin: string
   /** Already split path segments are encoded here; pass the raw path ("/bucket/key"). */
@@ -110,6 +111,8 @@ export type PresignInput = {
   readonly now: Date
   /** Extra headers the request will send and that are part of the signature. */
   readonly headers?: Record<string, string>
+  /** Extra signed query parameters (e.g. response-content-disposition on GET). */
+  readonly query?: Record<string, string>
 }
 
 export async function presignS3Url(o: PresignInput): Promise<string> {
@@ -130,6 +133,7 @@ export async function presignS3Url(o: PresignInput): Promise<string> {
   const canonicalHeaders = headerNames.map((h) => `${h}:${headers[h]}\n`).join('')
 
   const query: Record<string, string> = {
+    ...(o.query ?? {}),
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': `${o.accessKeyId}/${scope}`,
     'X-Amz-Date': amzDate,
@@ -170,6 +174,14 @@ export type R2PutOptions = {
   readonly sha256?: string
 }
 
+export type R2PresignOptions = R2PutOptions & {
+  /** GET only: headers R2 sets on the response (signed query parameters). */
+  readonly responseContentType?: string
+  readonly responseContentDisposition?: string
+  /** PUT only: sign `If-None-Match: *` so the URL can create the object but never overwrite it. */
+  readonly createOnly?: boolean
+}
+
 type R2Failure = R2Error | R2NotConfigured
 
 export interface R2StorageApi {
@@ -179,8 +191,14 @@ export interface R2StorageApi {
   readonly get: (key: string) => Effect.Effect<Blob | null, R2Failure>
   /** Size/etag/sha256 of the object, or null when it does not exist. */
   readonly head: (key: string) => Effect.Effect<R2ObjectInfo | null, R2Failure>
-  /** A presigned URL a client can GET or PUT directly (default 5 minutes). */
-  readonly presign: (method: 'GET' | 'PUT', key: string, ttlSec?: number, opts?: R2PutOptions) => Effect.Effect<string, R2Failure>
+  /** Delete the object (a missing object is not an error). */
+  readonly remove: (key: string) => Effect.Effect<void, R2Failure>
+  /**
+   * A presigned URL a client can GET or PUT directly (default 5 minutes). For
+   * PUT, `contentType` and `sha256` are signed: the client must send exactly
+   * `Content-Type` and `x-amz-meta-sha256` with those values.
+   */
+  readonly presign: (method: 'GET' | 'PUT', key: string, ttlSec?: number, opts?: R2PresignOptions) => Effect.Effect<string, R2Failure>
 }
 
 export class R2Storage extends Context.Service<R2Storage, R2StorageApi>()('pbafarm/R2Storage') {}
@@ -219,10 +237,11 @@ export function makeR2Storage(
   )
 
   const presign = (
-    method: 'GET' | 'PUT' | 'HEAD',
+    method: 'GET' | 'PUT' | 'HEAD' | 'DELETE',
     key: string,
     ttlSec: number,
     headers: Record<string, string>,
+    query?: Record<string, string>,
   ): Effect.Effect<string, R2Failure> => {
     if (!config) return notConfigured
     const { origin, path } = objectUrlParts(config, key)
@@ -238,6 +257,7 @@ export function makeR2Storage(
           expiresSec: ttlSec,
           now: now(),
           headers,
+          query,
         }),
       catch: (cause) =>
         new R2Error({ operation: 'presign', key, retryable: false, message: `Could not sign R2 URL: ${String(cause)}` }),
@@ -246,9 +266,9 @@ export function makeR2Storage(
 
   /** One request with timeout + retry of transient failures. 404 is returned, not failed. */
   const send = (
-    operation: 'put' | 'get' | 'head',
+    operation: 'put' | 'get' | 'head' | 'delete',
     key: string,
-    method: 'GET' | 'PUT' | 'HEAD',
+    method: 'GET' | 'PUT' | 'HEAD' | 'DELETE',
     init: { body?: BodyInit; headers?: Record<string, string> },
   ): Effect.Effect<Response, R2Failure> =>
     Effect.gen(function* () {
@@ -318,7 +338,21 @@ export function makeR2Storage(
           contentType: res.headers.get('content-type') ?? undefined,
         }
       }),
-    presign: (method, key, ttlSec = DEFAULT_PRESIGN_TTL_SEC, opts) => presign(method, key, ttlSec, metaHeaders(opts)),
+    remove: (key) =>
+      Effect.gen(function* () {
+        yield* send('delete', key, 'DELETE', {})
+      }),
+    presign: (method, key, ttlSec = DEFAULT_PRESIGN_TTL_SEC, opts) => {
+      const headers = metaHeaders(opts)
+      if (method === 'PUT' && opts?.contentType) headers['content-type'] = opts.contentType
+      if (method === 'PUT' && opts?.createOnly) headers['if-none-match'] = '*'
+      const query: Record<string, string> = {}
+      if (method === 'GET' && opts?.responseContentType) query['response-content-type'] = opts.responseContentType
+      if (method === 'GET' && opts?.responseContentDisposition) {
+        query['response-content-disposition'] = opts.responseContentDisposition
+      }
+      return presign(method, key, ttlSec, headers, query)
+    },
   }
 }
 

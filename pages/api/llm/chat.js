@@ -119,7 +119,14 @@ export default async function handler(req, res) {
     const resolved = resolveProvider(body.value.provider, body.value.model)
     if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
 
-    const text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat')
+    let text
+    try {
+      text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat')
+    } catch (err) {
+      if (!err?.data) throw err
+      const failed = gatewayError(err)
+      return res.status(failed.status).json({ error: failed.error })
+    }
     return res.status(200).json({ text, provider: resolved.providerId, keySource: 'server' })
   } catch (err) {
     console.error('[api/llm/chat]', err?.message)

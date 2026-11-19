@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
+import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
@@ -11,6 +12,7 @@ const modules = import.meta.glob('./**/*.ts')
 /** CF-003: Turnstile tickets on the public forms. */
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiterTest.register(t)
   const ids = await t.run(async (ctx) => {
     const userId = await ctx.db.insert('users', { email: 'new@x.com', role: 'user' })
     const sessionId = await ctx.db.insert('authSessions', { userId, expirationTime: Date.now() + 1e7 })
@@ -103,6 +105,117 @@ describe('human checks', () => {
         s.t.mutation(internal.humanVerification.consumeTicket, { ticket: ticket!, purpose: 'password_reset' }),
       ).rejects.toThrow(/human check/)
     })
+  })
+})
+
+type Authorize = (p: Record<string, unknown>, ctx: unknown) => Promise<unknown>
+const authorizeOf = () => (PasswordProvider as unknown as { options: { authorize: Authorize } }).options.authorize
+const ctxOf = (s: Awaited<ReturnType<typeof setup>>) => ({ runMutation: (ref: never, args: never) => s.t.mutation(ref, args) })
+const failures = (s: Awaited<ReturnType<typeof setup>>, email: string) =>
+  s.t.run(async (ctx) => (await ctx.db.query('signInFailures').withIndex('by_email', (q) => q.eq('email', email)).unique())?.count ?? 0)
+
+describe('password sign-in hardening (CF-003)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+  const wrong = (email = 'Who@X.com', humanTicket?: string) => ({ flow: 'signIn', email, password: 'nope', humanTicket })
+
+  test('Turnstile off: failures are counted per email but no human check is asked for', async () => {
+    const s = await setup()
+    const authorize = authorizeOf()
+    for (let i = 0; i < 5; i++) {
+      await expect(authorize(wrong(), ctxOf(s))).rejects.not.toThrow(/human check/)
+    }
+    expect(await failures(s, 'who@x.com')).toBe(5)
+  })
+
+  test('Turnstile on: after 3 failures the next attempt needs a signin ticket; success resets', async () => {
+    vi.stubEnv('TURNSTILE_SECRET_KEY', 'sk')
+    const s = await setup()
+    const authorize = authorizeOf()
+    for (let i = 0; i < 3; i++) {
+      await expect(authorize(wrong(), ctxOf(s))).rejects.not.toThrow(/human check/)
+    }
+    await expect(authorize(wrong(), ctxOf(s))).rejects.toThrow(/human check/)
+    // Refused before the password was checked: not counted again.
+    expect(await failures(s, 'who@x.com')).toBe(3)
+    // Another email is unaffected.
+    await expect(authorize(wrong('other@x.com'), ctxOf(s))).rejects.not.toThrow(/human check/)
+
+    mockSiteverify({ success: true, action: 'signin' })
+    const { ticket } = await s.t.action(api.humanVerification.verify, { token: 't', purpose: 'signin' })
+    await expect(authorize(wrong('who@x.com', ticket!), ctxOf(s))).rejects.not.toThrow(/human check/)
+    expect(await failures(s, 'who@x.com')).toBe(4)
+
+    await s.t.mutation(internal.authGuard.recordPasswordSignIn, { email: 'who@x.com', ok: true })
+    expect(await failures(s, 'who@x.com')).toBe(0)
+    await expect(
+      s.t.mutation(internal.authGuard.beforePasswordSignIn, { email: 'who@x.com' }),
+    ).resolves.toBeNull()
+  })
+
+  test('too many failures for one email are refused outright', async () => {
+    const s = await setup()
+    for (let i = 0; i < 20; i++) {
+      await s.t.mutation(internal.authGuard.recordPasswordSignIn, { email: 'who@x.com', ok: false })
+    }
+    await expect(authorizeOf()(wrong(), ctxOf(s))).rejects.toThrow(/Too many failed sign-in attempts/)
+    await expect(authorizeOf()(wrong('other@x.com'), ctxOf(s))).rejects.not.toThrow(/Too many/)
+  })
+})
+
+describe('sign-up ticket grant (CF-003)', () => {
+  beforeEach(() => vi.stubEnv('TURNSTILE_SECRET_KEY', 'sk'))
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  async function signupTicket(s: Awaited<ReturnType<typeof setup>>) {
+    mockSiteverify({ success: true, action: 'signup' })
+    return (await s.t.action(api.humanVerification.verify, { token: 't', purpose: 'signup' })).ticket!
+  }
+  const consume = (s: Awaited<ReturnType<typeof setup>>, ticket: string, email?: string) =>
+    s.t.mutation(internal.humanVerification.consumeTicket, { ticket, purpose: 'signup', email })
+
+  test('a failed sign-up can resend the same ticket for the same email', async () => {
+    const s = await setup()
+    const ticket = await signupTicket(s)
+    // Too short a password: the sign-up fails after the ticket was used…
+    await expect(
+      authorizeOf()({ flow: 'signUp', email: 'New@X.com', password: '123', humanTicket: ticket }, ctxOf(s)),
+    ).rejects.toThrow(/at least 6 characters/)
+    // …and the same ticket still passes the human check for that email.
+    await expect(consume(s, ticket, 'new@x.com')).resolves.toBeNull()
+    // Not for another email, nor without one.
+    await expect(consume(s, ticket, 'else@x.com')).rejects.toThrow(/human check/)
+    await expect(consume(s, ticket)).rejects.toThrow(/human check/)
+  })
+
+  test('the grant expires after a few minutes and is limited in uses', async () => {
+    const s = await setup()
+    const ticket = await signupTicket(s)
+    await consume(s, ticket, 'new@x.com')
+    for (let i = 0; i < 5; i++) await consume(s, ticket, 'new@x.com')
+    await expect(consume(s, ticket, 'new@x.com')).rejects.toThrow(/human check/)
+
+    const other = await signupTicket(s)
+    await consume(s, other, 'b@x.com')
+    await s.t.run(async (ctx) => {
+      for (const r of await ctx.db.query('humanTickets').collect()) await ctx.db.patch(r._id, { grantExpiresAt: Date.now() - 1 })
+    })
+    await expect(consume(s, other, 'b@x.com')).rejects.toThrow(/human check/)
+  })
+
+  test('tickets for other purposes get no grant', async () => {
+    const s = await setup()
+    mockSiteverify({ success: true, action: 'password_reset' })
+    const { ticket } = await s.t.action(api.humanVerification.verify, { token: 't', purpose: 'password_reset' })
+    await s.t.mutation(internal.humanVerification.consumeTicket, { ticket: ticket!, purpose: 'password_reset', email: 'a@x.com' })
+    await expect(
+      s.t.mutation(internal.humanVerification.consumeTicket, { ticket: ticket!, purpose: 'password_reset', email: 'a@x.com' }),
+    ).rejects.toThrow(/human check/)
   })
 })
 

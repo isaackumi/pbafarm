@@ -14,6 +14,7 @@ import {
   Card,
 } from '../components/ui'
 import { api } from '../convex/_generated/api'
+import { sha256HexOfFile } from '../lib/fileHash'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { applyBrandToDocument } from '../contexts/CompanySettingsContext'
@@ -201,7 +202,7 @@ function CompanySettings() {
     if (!file) return
     setUploading(true)
     try {
-      const uploadUrl = await generateUploadUrl()
+      const { uploadUrl, uploadId } = await generateUploadUrl({ sha256: await sha256HexOfFile(file) })
       const res = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'Content-Type': file.type },
@@ -209,7 +210,7 @@ function CompanySettings() {
       })
       const { storageId } = await res.json()
       if (!storageId) throw new Error('Upload failed')
-      const { logoUrl: url } = await setLogo({ storageId })
+      const { logoUrl: url } = await setLogo({ storageId, uploadId })
       setDraft((d) => ({ ...d, logoStorageId: storageId }))
       setLogoUrl(url)
       showToast('success', 'Logo uploaded (publish to keep with draft sync)')

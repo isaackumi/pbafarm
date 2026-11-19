@@ -12,6 +12,20 @@ import { Button, Field, Input } from '../components/ui'
 import { useT } from '../lib/i18n/context'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { useHumanCheck } from '../components/HumanCheck'
+
+/** `{ code, message, details }` of a ConvexError thrown by sign-in, if any. */
+function errorData(err) {
+  let data = err?.data
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      data = null
+    }
+  }
+  return data && typeof data === 'object' ? data : null
+}
 
 /** Enterprise SSO (ENT-003): shown when the deployment has an OIDC provider. */
 const SSO_NAME = process.env.NEXT_PUBLIC_AUTH_OIDC_NAME || ''
@@ -147,6 +161,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [method, setMethod] = useState('email')
+  // CF-003: after repeated failures the server asks for the human check.
+  const [needsHuman, setNeedsHuman] = useState(false)
+  const human = useHumanCheck('signin')
   const { signInWithEmail, user } = useAuth()
   const { signIn } = useAuthActions()
   const t = useT()
@@ -168,14 +185,34 @@ export default function Login() {
     setLoading(true)
     setError('')
 
-    const { error: signInError } = await signInWithEmail(email, password)
+    let humanTicket = null
+    if (needsHuman) {
+      try {
+        humanTicket = await human.getTicket()
+      } catch (err) {
+        setError(errorData(err)?.message || err.message || t('auth.login.failed'))
+        setLoading(false)
+        return
+      }
+    }
+
+    const { error: signInError } = await signInWithEmail(email, password, humanTicket)
 
     if (signInError) {
+      const data = errorData(signInError)
       const raw = signInError.message || ''
-      const friendly =
-        raw.includes('InvalidAccountId') || raw.includes('InvalidSecret')
-          ? t('auth.login.wrongCredentials')
-          : raw || t('auth.login.failed')
+      let friendly
+      if (data?.details?.reason === 'HUMAN_CHECK_REQUIRED') {
+        setNeedsHuman(true)
+        friendly = t('auth.login.humanCheck')
+      } else if (data?.message) {
+        friendly = data.message
+      } else {
+        friendly =
+          raw.includes('InvalidAccountId') || raw.includes('InvalidSecret')
+            ? t('auth.login.wrongCredentials')
+            : raw || t('auth.login.failed')
+      }
       setError(friendly)
       setLoading(false)
       return
@@ -267,7 +304,9 @@ export default function Login() {
               />
             </Field>
 
-            <Button type="submit" disabled={loading} size="lg" className="w-full">
+            {needsHuman && human.widget}
+
+            <Button type="submit" disabled={loading || (needsHuman && !human.ready)} size="lg" className="w-full">
               {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
             </Button>
           </form>

@@ -16,6 +16,15 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   loginCodePerCompany: { kind: 'fixed window', rate: 100, period: HOUR },
   /** Phone sign-in codes across the platform (no key). */
   loginCodeGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
+  /** Failed password sign-ins (CF-003), key = normalized email; refused when used up. */
+  signInFailPerEmail: { kind: 'fixed window', rate: 20, period: HOUR },
+  /**
+   * Failed password sign-ins across the platform (no key). Convex does not
+   * expose the caller's IP to auth actions, so this stands in for a per-IP
+   * limit: when used up, every password sign-in needs the human check
+   * (never a hard block, which would lock everyone out).
+   */
+  signInFailGlobal: { kind: 'fixed window', rate: 300, period: 10 * MINUTE },
   /** Two-step and enrolment codes, key = userId. */
   mfaCodePerUser: { kind: 'fixed window', rate: 5, period: 15 * MINUTE },
   /** Public API requests (INT-004), key = apiKeyId. Bursts up to 60. */

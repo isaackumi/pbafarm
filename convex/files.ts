@@ -12,9 +12,27 @@
  * type, size and freshness of the stored file and registers it. Download: `requestDownload` issues a token valid for a few
  * minutes to a member of the owning company; GET /files/download?token=…
  * streams the bytes. Storage URLs are never handed out.
+ *
+ * R2 (CF-005, docs/ops/r2-storage.md): when the R2_* env vars are set (and
+ * FILES_PROVIDER is not `convex`), `generateUploadUrl` returns a presigned R2
+ * PUT for the key `files/<companyId>/<uploadId>` instead, and the client
+ * calls the `attachR2` action, which checks the same binding, downloads the
+ * object and checks its SHA-256 before registering it. Downloads of
+ * `provider: 'r2'` rows redirect, after the same token check, to a presigned
+ * GET valid five minutes. With the env unset nothing changes.
  */
 import { v } from 'convex/values'
-import { httpAction, internalMutation, internalQuery, mutation, query } from './_generated/server'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
+import {
+  action,
+  httpAction,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
@@ -23,6 +41,21 @@ import { userError } from './lib/errors'
 import { randomToken, sha256Hex } from './lib/tokens'
 import { fileEntityType } from './schema'
 import { assertUserCan, requireMember } from './lib/permissions'
+import { bindingUsableBy, blobMatchesBinding, isSha256Hex } from './lib/uploadBinding'
+import { runEffect } from './lib/effect'
+import { fetchLayer } from './lib/effectHttp'
+import { R2Storage, r2ConfigFromEnv, r2Layer, r2Live } from './lib/r2'
+import {
+  R2UploadRejected,
+  contentDisposition,
+  filesProvider,
+  inspectUpload,
+  presignDownload,
+  presignUpload,
+  r2UploadKey,
+} from './lib/r2Files'
+
+export { sha256ToHex } from './lib/uploadBinding'
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 /** An upload must be attached within this window (it was uploaded for this record). */
@@ -99,17 +132,34 @@ function fileRow(f: Doc<'files'>) {
   }
 }
 
-/** _storage.sha256 is base64 in the runtime (hex in some docs): compare as hex. */
-export function sha256ToHex(value: string): string {
-  const v = value.trim()
-  if (/^[0-9a-f]{64}$/i.test(v)) return v.toLowerCase()
-  try {
-    const bin = atob(v)
-    return Array.from(bin, (c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
-  } catch {
-    return ''
-  }
+/**
+ * R2 signing only, for mutations (no network): presigning is local Web Crypto.
+ * Undefined when R2 is not configured.
+ */
+function r2SignerLayer() {
+  const config = r2ConfigFromEnv()
+  if (!config) return undefined
+  return r2Layer(config).pipe(
+    Layer.provide(fetchLayer(() => Promise.reject(new Error('R2 network calls are not allowed here')))),
+  )
 }
+
+const r2Unavailable = () => userError('RATE_LIMITED', 'File storage is unavailable right now. Try again shortly.')
+
+const uploadResult = v.object({
+  uploadUrl: v.string(),
+  uploadId: v.id('fileUploads'),
+  /** 'convex': POST the bytes, read { storageId }, call attach. 'r2': PUT, then attachR2. */
+  provider: v.union(v.literal('convex'), v.literal('r2')),
+  method: v.union(v.literal('POST'), v.literal('PUT')),
+  /** Headers the upload request must send (signed into the R2 URL). */
+  headers: v.record(v.string(), v.string()),
+})
+
+const attachResult = v.union(
+  v.object({ ok: v.literal(false), code: v.literal('VALIDATION'), message: v.string() }),
+  v.object({ ok: v.literal(true), id: v.id('files') }),
+)
 
 export const generateUploadUrl = mutation({
   args: {
@@ -117,12 +167,23 @@ export const generateUploadUrl = mutation({
     entityId: v.string(),
     /** SHA-256 (hex) of the file about to be uploaded (lib/fileHash.js). */
     sha256: v.string(),
+    /** The file's type and name; R2 uploads sign the type in (falls back to the name's extension). */
+    contentType: v.optional(v.string()),
+    name: v.optional(v.string()),
   },
-  returns: v.object({ uploadUrl: v.string(), uploadId: v.id('fileUploads') }),
-  handler: async (ctx, { entityType, entityId, sha256 }) => {
+  returns: uploadResult,
+  handler: async (ctx, { entityType, entityId, sha256, contentType, name }) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, entityType, entityId)
-    if (!/^[0-9a-f]{64}$/i.test(sha256)) throw userError('VALIDATION', 'Invalid file checksum')
+    if (!isSha256Hex(sha256)) throw userError('VALIDATION', 'Invalid file checksum')
+    const signer = filesProvider() === 'r2' ? r2SignerLayer() : undefined
+    let mime: string | undefined
+    if (signer) {
+      mime = (contentType ?? '').split(';')[0].trim().toLowerCase() || mimeFromName(name ?? '')
+      if (!ALLOWED_MIME.has(mime)) {
+        throw userError('VALIDATION', 'Only PDF, images, CSV, text, Excel and Word files can be attached')
+      }
+    }
     const now = Date.now()
     const uploadId = await ctx.db.insert('fileUploads', {
       companyId: owner.companyId,
@@ -134,7 +195,16 @@ export const generateUploadUrl = mutation({
       createdAt: now,
       expiresAt: now + CLAIM_WINDOW_MS,
     })
-    return { uploadUrl: await ctx.storage.generateUploadUrl(), uploadId }
+    if (!signer || !mime) {
+      return { uploadUrl: await ctx.storage.generateUploadUrl(), uploadId, provider: 'convex' as const, method: 'POST' as const, headers: {} }
+    }
+    const r2Key = r2UploadKey(owner.companyId, uploadId)
+    await ctx.db.patch(uploadId, { provider: 'r2', r2Key, contentType: mime })
+    const signed = await runEffect(
+      presignUpload({ key: r2Key, contentType: mime, sha256: sha256.toLowerCase() }).pipe(Effect.provide(signer)),
+      { toUserError: r2Unavailable },
+    )
+    return { uploadUrl: signed.url, uploadId, provider: 'r2' as const, method: 'PUT' as const, headers: signed.headers }
   },
 })
 
@@ -147,7 +217,7 @@ export const attach = mutation({
     storageId: v.id('_storage'),
     name: v.string(),
   },
-  returns: v.union(v.object({ ok: v.literal(false), code: v.literal('VALIDATION'), message: v.string() }), v.object({ ok: v.literal(true), id: v.id('files') })),
+  returns: attachResult,
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, args.entityType, args.entityId)
@@ -156,13 +226,10 @@ export const attach = mutation({
     // unused and unexpired (CF-004): another company's upload cannot be claimed.
     const upload = await ctx.db.get(args.uploadId)
     if (
-      !upload ||
-      upload.status !== 'pending' ||
-      upload.uploadedBy !== user._id ||
-      upload.companyId !== owner.companyId ||
+      !bindingUsableBy(upload, { userId: user._id, companyId: owner.companyId }, Date.now()) ||
       upload.entityType !== args.entityType ||
       upload.entityId !== args.entityId ||
-      upload.expiresAt < Date.now()
+      upload.provider === 'r2'
     ) {
       throw notFound()
     }
@@ -179,14 +246,7 @@ export const attach = mutation({
     const meta = await ctx.db.system.get(args.storageId)
     // Uploaded after the binding was made, within its window, with the bytes
     // the binding was made for (a leaked storage id alone is not enough).
-    if (
-      !meta ||
-      meta._creationTime < upload._creationTime ||
-      meta._creationTime > upload.expiresAt ||
-      sha256ToHex(meta.sha256) !== upload.sha256
-    ) {
-      throw notFound()
-    }
+    if (!meta || !blobMatchesBinding(meta, upload)) throw notFound()
     // The type the upload was sent with; older clients may not set one.
     const mime =
       (meta.contentType ?? '').split(';')[0].trim().toLowerCase() || mimeFromName(args.name)
@@ -196,48 +256,215 @@ export const attach = mutation({
       await ctx.storage.delete(args.storageId)
       return { ok: false as const, code: 'VALIDATION' as const, message }
     }
-    if (!ALLOWED_MIME.has(mime)) {
-      return await reject('Only PDF, images, CSV, text, Excel and Word files can be attached')
-    }
-    if (meta.size > MAX_FILE_BYTES) return await reject('Files can be at most 10 MB')
-    const existing = await ctx.db
-      .query('files')
-      .withIndex('by_companyId_and_entityType_and_entityId', (q) =>
-        q.eq('companyId', owner.companyId).eq('entityType', args.entityType).eq('entityId', args.entityId),
-      )
-      .take(FILES_PER_RECORD)
-    // Photos of a custom photo field all hang off its definition: no per-record cap.
-    if (args.entityType !== 'customFieldDefs' && existing.length >= FILES_PER_RECORD) {
-      return await reject(`A record can have at most ${FILES_PER_RECORD} files`)
-    }
-    const name = args.name.trim().slice(0, 200) || 'file'
-    const id = await ctx.db.insert('files', {
-      companyId: owner.companyId,
-      locationId: owner.locationId,
+    const refusal = await refusalFor(ctx, owner.companyId, args.entityType, args.entityId, mime, meta.size)
+    if (refusal) return await reject(refusal)
+    const id = await registerFile(ctx, user, owner, upload, {
       entityType: args.entityType,
       entityId: args.entityId,
-      provider: 'convex',
-      storageId: args.storageId,
-      name,
+      name: args.name,
       mime,
       size: meta.size,
-      uploadedBy: user._id,
-      createdAt: Date.now(),
-    })
-    await ctx.db.patch(upload._id, { status: 'attached', storageId: args.storageId, fileId: id })
-    await logAudit(ctx, {
-      actionType: 'file_attached',
-      tableName: 'files',
-      recordId: id,
-      newValues: { entityType: args.entityType, entityId: args.entityId, name, mime, size: meta.size },
-      locationId: owner.locationId,
+      storageId: args.storageId,
     })
     return { ok: true as const, id }
   },
 })
 
+/** Why an upload cannot be attached (type, size, per-record cap), or null. */
+async function refusalFor(
+  ctx: MutationCtx,
+  companyId: Id<'companies'>,
+  entityType: EntityType,
+  entityId: string,
+  mime: string,
+  size: number,
+): Promise<string | null> {
+  if (!ALLOWED_MIME.has(mime)) return 'Only PDF, images, CSV, text, Excel and Word files can be attached'
+  if (size > MAX_FILE_BYTES) return 'Files can be at most 10 MB'
+  const existing = await ctx.db
+    .query('files')
+    .withIndex('by_companyId_and_entityType_and_entityId', (q) =>
+      q.eq('companyId', companyId).eq('entityType', entityType).eq('entityId', entityId),
+    )
+    .take(FILES_PER_RECORD)
+  // Photos of a custom photo field all hang off its definition: no per-record cap.
+  if (entityType !== 'customFieldDefs' && existing.length >= FILES_PER_RECORD) {
+    return `A record can have at most ${FILES_PER_RECORD} files`
+  }
+  return null
+}
+
+/** Insert the files row, close the binding, audit. */
+async function registerFile(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  owner: { companyId: Id<'companies'>; locationId?: Id<'farmLocations'> },
+  upload: Doc<'fileUploads'>,
+  f: {
+    entityType: EntityType
+    entityId: string
+    name: string
+    mime: string
+    size: number
+    storageId?: Id<'_storage'>
+    r2Key?: string
+  },
+): Promise<Id<'files'>> {
+  const name = f.name.trim().slice(0, 200) || 'file'
+  const id = await ctx.db.insert('files', {
+    companyId: owner.companyId,
+    locationId: owner.locationId,
+    entityType: f.entityType,
+    entityId: f.entityId,
+    provider: f.r2Key ? 'r2' : 'convex',
+    storageId: f.storageId,
+    r2Key: f.r2Key,
+    name,
+    mime: f.mime,
+    size: f.size,
+    uploadedBy: user._id,
+    createdAt: Date.now(),
+  })
+  await ctx.db.patch(upload._id, { status: 'attached', storageId: f.storageId, fileId: id })
+  await logAudit(ctx, {
+    actionType: 'file_attached',
+    tableName: 'files',
+    recordId: id,
+    newValues: { entityType: f.entityType, entityId: f.entityId, name, mime: f.mime, size: f.size },
+    locationId: owner.locationId,
+  })
+  return id
+}
+
+const removeObject = (key: string) =>
+  Effect.gen(function* () {
+    const r2 = yield* R2Storage
+    yield* r2.remove(key)
+  })
+
+const r2AttachArgs = {
+  entityType: fileEntityType,
+  entityId: v.string(),
+  uploadId: v.id('fileUploads'),
+}
+
+/** The caller's pending R2 binding for this record, or NOT_FOUND. */
+async function r2Binding(
+  ctx: Ctx,
+  args: { entityType: EntityType; entityId: string; uploadId: Id<'fileUploads'> },
+) {
+  const { user } = await requireMember(ctx, { permission: 'files.upload' })
+  const owner = await ownedEntity(ctx, user, args.entityType, args.entityId)
+  const upload = await ctx.db.get(args.uploadId)
+  if (
+    !bindingUsableBy(upload, { userId: user._id, companyId: owner.companyId }, Date.now()) ||
+    upload.entityType !== args.entityType ||
+    upload.entityId !== args.entityId ||
+    upload.provider !== 'r2' ||
+    !upload.r2Key ||
+    !upload.contentType
+  ) {
+    throw userError('NOT_FOUND', 'File not found. Upload it again.')
+  }
+  return { user, owner, upload, r2Key: upload.r2Key, contentType: upload.contentType }
+}
+
+export const r2UploadForAttach = internalQuery({
+  args: r2AttachArgs,
+  returns: v.object({ r2Key: v.string(), sha256: v.string(), contentType: v.string() }),
+  handler: async (ctx, args) => {
+    const b = await r2Binding(ctx, args)
+    return { r2Key: b.r2Key, sha256: b.upload.sha256, contentType: b.contentType }
+  },
+})
+
+export const attachR2Object = internalMutation({
+  args: { ...r2AttachArgs, name: v.string(), size: v.number() },
+  returns: attachResult,
+  handler: async (ctx, args) => {
+    const b = await r2Binding(ctx, args)
+    const refusal = await refusalFor(ctx, b.owner.companyId, args.entityType, args.entityId, b.contentType, args.size)
+    if (refusal) return { ok: false as const, code: 'VALIDATION' as const, message: refusal }
+    const id = await registerFile(ctx, b.user, b.owner, b.upload, {
+      entityType: args.entityType,
+      entityId: args.entityId,
+      name: args.name,
+      mime: b.contentType,
+      size: args.size,
+      r2Key: b.r2Key,
+    })
+    return { ok: true as const, id }
+  },
+})
+
+/**
+ * Attach an upload that went to R2 (generateUploadUrl returned provider
+ * 'r2'). Same binding check as `attach`; the object must exist, be at most
+ * 10 MB and hash to the declared SHA-256. A refused object is deleted.
+ */
+export const attachR2 = action({
+  args: { ...r2AttachArgs, name: v.string() },
+  returns: attachResult,
+  handler: async (ctx, args): Promise<{ ok: false; code: 'VALIDATION'; message: string } | { ok: true; id: Id<'files'> }> => {
+    const binding: { r2Key: string; sha256: string; contentType: string } = await ctx.runQuery(
+      internal.files.r2UploadForAttach,
+      { entityType: args.entityType, entityId: args.entityId, uploadId: args.uploadId },
+    )
+    const layer = r2Live()
+    const drop = () => runEffect(removeObject(binding.r2Key).pipe(Effect.provide(layer), Effect.ignore))
+    const inspected = await runEffect(
+      inspectUpload({ key: binding.r2Key, sha256: binding.sha256, maxBytes: MAX_FILE_BYTES }).pipe(
+        Effect.map((info) => ({ ok: true as const, size: info.size })),
+        Effect.catchTag('R2UploadRejected', (e: R2UploadRejected) =>
+          Effect.succeed({ ok: false as const, reason: e.reason, message: e.message }),
+        ),
+        Effect.provide(layer),
+      ),
+      { toUserError: r2Unavailable },
+    )
+    if (!inspected.ok) {
+      if (inspected.reason !== 'missing') await drop()
+      if (inspected.reason === 'too_large') return { ok: false, code: 'VALIDATION', message: inspected.message }
+      throw userError('NOT_FOUND', 'File not found. Upload it again.')
+    }
+    const result: { ok: false; code: 'VALIDATION'; message: string } | { ok: true; id: Id<'files'> } =
+      await ctx.runMutation(internal.files.attachR2Object, {
+        entityType: args.entityType,
+        entityId: args.entityId,
+        uploadId: args.uploadId,
+        name: args.name,
+        size: inspected.size,
+      })
+    if (!result.ok) await drop()
+    return result
+  },
+})
+
+/** Delete an R2 object (file removed, upload refused or abandoned). No-op without R2. */
+export const deleteR2Object = internalAction({
+  args: { key: v.string() },
+  returns: v.null(),
+  handler: async (_ctx, { key }) => {
+    if (!r2ConfigFromEnv()) return null
+    await runEffect(removeObject(key).pipe(Effect.provide(r2Live())))
+    return null
+  },
+})
+
+const fileRowValidator = v.object({
+  id: v.id('files'),
+  name: v.string(),
+  mime: v.string(),
+  size: v.number(),
+  entity_type: fileEntityType,
+  entity_id: v.string(),
+  uploaded_by: v.id('users'),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: { entityType: fileEntityType, entityId: v.string() },
+  returns: v.array(fileRowValidator),
   handler: async (ctx, { entityType, entityId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     const doc = await loadEntity(ctx, entityType, entityId)
@@ -286,7 +513,7 @@ export const remove = mutation({
     assertOwns(user, file, 'File')
     // Your own attachment, or anyone's with production.records.delete.
     if (file.uploadedBy !== user._id) await assertUserCan(ctx, user, 'production.records.delete')
-    await ctx.storage.delete(file.storageId)
+    await deleteFileBlobs(ctx, file)
     await ctx.db.delete(fileId)
     await logAudit(ctx, {
       actionType: 'file_removed',
@@ -299,10 +526,34 @@ export const remove = mutation({
   },
 })
 
+/** Delete a file's bytes wherever they are (Convex blob now, R2 object via an action). */
+export async function deleteFileBlobs(
+  ctx: MutationCtx,
+  file: { storageId?: Id<'_storage'>; r2Key?: string },
+): Promise<void> {
+  if (file.storageId) {
+    try {
+      await ctx.storage.delete(file.storageId)
+    } catch {
+      /* already gone */
+    }
+  }
+  if (file.r2Key) await ctx.scheduler.runAfter(0, internal.files.deleteR2Object, { key: file.r2Key })
+}
+
 /** The file a download token grants, if the token is live and the file still exists. */
 export const resolveDownload = internalQuery({
   args: { tokenHash: v.string(), now: v.number() },
-  returns: v.union(v.object({ storageId: v.id('_storage'), name: v.string(), mime: v.string() }), v.null()),
+  returns: v.union(
+    v.object({
+      provider: v.union(v.literal('convex'), v.literal('r2')),
+      storageId: v.optional(v.id('_storage')),
+      r2Key: v.optional(v.string()),
+      name: v.string(),
+      mime: v.string(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { tokenHash, now }) => {
     const grant = await ctx.db
       .query('fileDownloadTokens')
@@ -311,7 +562,7 @@ export const resolveDownload = internalQuery({
     if (!grant || grant.expiresAt < now) return null
     const file = await ctx.db.get(grant.fileId)
     if (!file || file.companyId !== grant.companyId) return null
-    return { storageId: file.storageId, name: file.name, mime: file.mime }
+    return { provider: file.provider, storageId: file.storageId, r2Key: file.r2Key, name: file.name, mime: file.mime }
   },
 })
 
@@ -334,8 +585,19 @@ export const pruneDownloadTokens = internalMutation({
       .query('fileUploads')
       .withIndex('by_expiresAt', (q) => q.lt('expiresAt', now))
       .take(1000)
-    for (const u of uploads) await ctx.db.delete(u._id)
-    return { deleted: expired.length + uploads.length }
+    for (const u of uploads) {
+      // An R2 upload never attached leaves an object behind: delete it.
+      if (u.status === 'pending' && u.provider === 'r2' && u.r2Key) {
+        await ctx.scheduler.runAfter(0, internal.files.deleteR2Object, { key: u.r2Key })
+      }
+      await ctx.db.delete(u._id)
+    }
+    const logoUploads = await ctx.db
+      .query('logoUploadRequests')
+      .withIndex('by_expiresAt', (q) => q.lt('expiresAt', now))
+      .take(1000)
+    for (const u of logoUploads) await ctx.db.delete(u._id)
+    return { deleted: expired.length + uploads.length + logoUploads.length }
   },
 })
 
@@ -348,14 +610,24 @@ export const download = httpAction(async (ctx, req) => {
     now: Date.now(),
   })
   if (!file) return new Response('Link expired or not found', { status: 404 })
+  if (file.provider === 'r2' && file.r2Key) {
+    if (!r2ConfigFromEnv()) return new Response('File storage is unavailable', { status: 503 })
+    const url = await runEffect(
+      presignDownload({ key: file.r2Key, name: file.name, mime: file.mime }).pipe(Effect.provide(r2Live())),
+    )
+    return new Response(null, {
+      status: 302,
+      headers: { Location: url, 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' },
+    })
+  }
+  if (!file.storageId) return new Response('Not found', { status: 404 })
   const blob = await ctx.storage.get(file.storageId)
   if (!blob) return new Response('Not found', { status: 404 })
-  const safeName = file.name.replace(/["\\\r\n]/g, '_')
   return new Response(blob, {
     status: 200,
     headers: {
       'Content-Type': file.mime,
-      'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+      'Content-Disposition': contentDisposition(file.name),
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     },
