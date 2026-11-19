@@ -28,7 +28,7 @@ async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
   })
 }
 
-function toClientHarvestRecord(r: any) {
+function toClientHarvestRecord(r: Doc<'harvestRecords'>) {
   return {
     custom: r.custom ?? {},
     id: r._id,
@@ -50,7 +50,7 @@ function toClientHarvestRecord(r: any) {
   }
 }
 
-function toClientHarvestSampling(s: any) {
+function toClientHarvestSampling(s: Doc<'harvestSampling'>) {
   return {
     id: s._id,
     _id: s._id,

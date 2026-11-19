@@ -100,7 +100,7 @@ async function collectAudit(
   return out
 }
 
-function toClient(a: any, userLabel?: string | null) {
+function toClient(a: Doc<'auditLogs'>, userLabel?: string | null) {
   return {
     id: a._id,
     _id: a._id,

@@ -114,7 +114,7 @@ const cageStatus = v.union(
   v.literal('empty'),
 )
 
-function toClient(cage: any) {
+function toClient(cage: Doc<'cages'>) {
   return {
     custom: cage.custom ?? {},
     id: cage._id,

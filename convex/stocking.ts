@@ -72,7 +72,7 @@ const stockingStatus = v.union(
   v.literal('rejected'),
 )
 
-function toClientStocking(s: any) {
+function toClientStocking(s: Doc<'stockingHistory'>) {
   return {
     custom: s.custom ?? {},
     id: s._id,
@@ -100,7 +100,7 @@ function toClientStocking(s: any) {
   }
 }
 
-function toClientTopup(t: any) {
+function toClientTopup(t: Doc<'topupHistory'>) {
   return {
     id: t._id,
     _id: t._id,

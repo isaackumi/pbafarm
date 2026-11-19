@@ -140,7 +140,7 @@ async function mfaState(ctx: QueryCtx, user: Doc<'users'>) {
   }
 }
 
-function toClient(u: any) {
+function toClient(u: Doc<'users'>) {
   return {
     id: u._id,
     _id: u._id,

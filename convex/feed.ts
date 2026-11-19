@@ -1,5 +1,7 @@
+import type { Doc, Id } from './_generated/dataModel'
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import { scopedRows } from './lib/scope'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, writeLocationId, ensureDefaultLocation, logAudit } from './lib/tenancy'
@@ -12,7 +14,7 @@ import {
 import { mergeSettings } from './lib/farmRules'
 import { assertUserCan, requireMember } from './lib/permissions'
 
-function toClientSupplier(s: any) {
+function toClientSupplier(s: Doc<'feedSuppliers'>) {
   return {
     id: s._id,
     _id: s._id,
@@ -54,7 +56,7 @@ function parseFeedDescriptionMeta(description?: string) {
   return { protein_percentage, bag_size_kg, pellet_size }
 }
 
-function toClientFeedType(f: any) {
+function toClientFeedType(f: Doc<'feedTypes'>) {
   const meta = parseFeedDescriptionMeta(f.description)
   const bagSize =
     f.bagSizeKg && f.bagSizeKg > 0
@@ -84,7 +86,7 @@ function toClientFeedType(f: any) {
   }
 }
 
-function toClientPurchase(p: any) {
+function toClientPurchase(p: Doc<'feedPurchases'>) {
   return {
     id: p._id,
     _id: p._id,
@@ -104,7 +106,7 @@ function toClientPurchase(p: any) {
   }
 }
 
-function toClientUsage(u: any) {
+function toClientUsage(u: Doc<'feedUsage'>) {
   return {
     id: u._id,
     _id: u._id,
@@ -632,10 +634,10 @@ export const listUsage = query({
 })
 
 async function recordOutboundUsage(
-  ctx: any,
+  ctx: MutationCtx,
   args: {
-    feedTypeId: any
-    cageId?: any
+    feedTypeId: Id<'feedTypes'>
+    cageId?: Id<'cages'>
     quantity?: number
     bags?: number
     usageDate: string
@@ -645,7 +647,7 @@ async function recordOutboundUsage(
     overrideReason?: string
     transactionType: 'issue' | 'daily_usage' | 'usage'
     referenceId?: string
-    locationId?: any
+    locationId?: Id<'farmLocations'>
   },
 ) {
   // Feed leaving stock (issue, usage): the createIssue/createUsage guard.

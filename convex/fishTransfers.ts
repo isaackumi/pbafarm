@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
@@ -28,15 +28,15 @@ async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) 
   return mergeSettings(company?.settings)
 }
 
-async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
+async function findApprovedStockingForCage(ctx: QueryCtx, user: Doc<'users'>, cageId: Id<'cages'>) {
   let rows = await ctx.db
     .query('stockingHistory')
-    .withIndex('by_cage', (q: any) => q.eq('cageId', cageId))
+    .withIndex('by_cage', (q) => q.eq('cageId', cageId))
     .collect()
   rows = (await listForCompany(user, rows)).filter(
-    (s: any) => !s.deletedAt && s.status === 'approved',
+    (s) => !s.deletedAt && s.status === 'approved',
   )
-  rows.sort((a: any, b: any) => (b.stockingDate || '').localeCompare(a.stockingDate || ''))
+  rows.sort((a, b) => (b.stockingDate || '').localeCompare(a.stockingDate || ''))
   return rows[0] || null
 }
 
@@ -51,8 +51,8 @@ async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
  * row means the transfer can no longer be approved.
  */
 async function applyFishTransfer(
-  ctx: any,
-  transfer: any,
+  ctx: MutationCtx,
+  transfer: Doc<'fishTransfers'>,
   opts: { linkedJustCreated?: boolean } = {},
 ) {
   const source = await ctx.db.get(transfer.sourceCageId)
@@ -78,13 +78,13 @@ async function applyFishTransfer(
     [stocking, 'stocking'],
     [topup, 'top-up'],
   ] as const) {
-    if (row?.status === 'rejected' || row?.deletedAt) {
+    if (row?.status === 'rejected' || (row && 'deletedAt' in row && row.deletedAt)) {
       throw new Error(
         `The ${label} linked to this transfer was rejected, so the transfer cannot be approved. Reject the transfer instead.`,
       )
     }
   }
-  const applies = (row: any) =>
+  const applies = (row: Doc<'stockingHistory'> | Doc<'topupHistory'>) =>
     opts.linkedJustCreated || row.status === 'pending_approval'
 
   // At approval time, re-check the destination as it is now: it may have been

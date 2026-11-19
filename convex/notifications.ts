@@ -1,3 +1,4 @@
+import type { Doc } from './_generated/dataModel'
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
@@ -5,7 +6,7 @@ import { query, mutation, internalMutation } from './_generated/server'
 import { writeCompanyId, logAudit } from './lib/tenancy'
 import { requireAccount } from './lib/permissions'
 
-function toClient(n: any) {
+function toClient(n: Doc<'notifications'>) {
   return {
     id: n._id,
     _id: n._id,

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { scopedRows } from './lib/scope'
 import {
   assertOwns,
@@ -13,7 +13,7 @@ import { applyStockChange, bagsFromKg, binKg, changeBin, siteStock, transferFeed
 import { mergeSettings } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
 
-function toClientTransaction(t: any) {
+function toClientTransaction(t: Doc<'feedInventoryTransactions'>) {
   return {
     id: t._id,
     _id: t._id,
@@ -34,7 +34,21 @@ function toClientTransaction(t: any) {
   }
 }
 
-function toClientStockLevel(s: any) {
+interface StockLevel {
+  feedTypeId: Id<'feedTypes'>
+  feedTypeName: string
+  currentStock: number
+  currentStockBags: number
+  bagSizeKg: number
+  minimumStock: number
+  pricePerKg: number
+  supplierName: string | null
+  active: boolean
+  stockValue: number
+  isLowStock: boolean
+}
+
+function toClientStockLevel(s: StockLevel) {
   return {
     feed_type_id: s.feedTypeId,
     feed_type_name: s.feedTypeName,
@@ -50,7 +64,16 @@ function toClientStockLevel(s: any) {
   }
 }
 
-function toClientAlert(a: any) {
+interface StockAlert {
+  feedTypeId: Id<'feedTypes'>
+  feedTypeName: string
+  currentStock: number
+  minimumStock: number
+  shortage: number
+  supplierName: string | null
+}
+
+function toClientAlert(a: StockAlert) {
   return {
     feed_type_id: a.feedTypeId,
     feed_type_name: a.feedTypeName,
@@ -61,7 +84,7 @@ function toClientAlert(a: any) {
   }
 }
 
-function toClientLot(lot: any, feedTypeName?: string) {
+function toClientLot(lot: Doc<'feedInventory'>, feedTypeName?: string) {
   return {
     id: lot._id,
     _id: lot._id,

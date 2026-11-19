@@ -40,7 +40,7 @@ async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>
   return rules.some((r) => r.enabled)
 }
 
-function toClient(r: any) {
+function toClient(r: Doc<'dailyRecords'>) {
   return {
     custom: r.custom ?? {},
     id: r._id,
@@ -65,12 +65,12 @@ function toClient(r: any) {
 }
 
 async function deductDailyFeed(
-  ctx: any,
-  user: any,
+  ctx: MutationCtx,
+  user: Doc<'users'>,
   args: {
     dailyRecordId: Id<'dailyRecords'>
-    feedTypeId: any
-    cageId: any
+    feedTypeId: Id<'feedTypes'> | undefined
+    cageId: Id<'cages'>
     feedAmount: number
     date: string
     allowNegative?: boolean
@@ -94,7 +94,8 @@ async function deductDailyFeed(
       cageId: args.cageId,
       feedTypeId: args.feedTypeId,
       deltaKg: -fromBinKg,
-      companyId,
+      // Only reached when the cage already has a bin, which is always company-scoped.
+      companyId: companyId!,
       locationId: cage?.locationId,
     })
   }
@@ -134,18 +135,18 @@ async function deductDailyFeed(
  * movement per feed type from the ledger (usage is negative, reversals
  * positive), so it stays correct after any number of edits.
  */
-async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
+async function reverseDailyFeed(ctx: MutationCtx, user: Doc<'users'>, dailyRecord: Doc<'dailyRecords'>) {
   const ref = String(dailyRecord._id)
   const prior = await ctx.db
     .query('feedInventoryTransactions')
-    .withIndex('by_reference', (q: any) => q.eq('referenceId', ref))
+    .withIndex('by_reference', (q) => q.eq('referenceId', ref))
     .collect()
 
   // The usage rows that drive feed reports. Rows written since INV-003 carry
   // the record id; older rows are matched by cage, date and source.
   const usage = await ctx.db
     .query('feedUsage')
-    .withIndex('by_cage', (q: any) => q.eq('cageId', dailyRecord.cageId))
+    .withIndex('by_cage', (q) => q.eq('cageId', dailyRecord.cageId))
     .collect()
   let linked = false
   for (const u of usage) {
@@ -186,7 +187,7 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
     return
   }
 
-  const net = new Map<string, { feedTypeId: any; kg: number; bags: number }>()
+  const net = new Map<string, { feedTypeId: Id<'feedTypes'>; kg: number; bags: number }>()
   for (const t of prior) {
     const k = String(t.feedTypeId)
     const cur = net.get(k) ?? { feedTypeId: t.feedTypeId, kg: 0, bags: 0 }

@@ -18,7 +18,7 @@ import { assertUserCan, requireMember } from './lib/permissions'
 import { userError } from './lib/errors'
 import { amountPaidOf, statusFor } from './invoices'
 
-function toClientCustomer(c: any) {
+function toClientCustomer(c: Doc<'customers'>) {
   return {
     id: c._id,
     _id: c._id,
@@ -34,7 +34,7 @@ function toClientCustomer(c: any) {
   }
 }
 
-function toClientSale(s: any, extras: Record<string, unknown> = {}) {
+function toClientSale<E extends Record<string, unknown> = Record<never, never>>(s: Doc<'sales'>, extras: E = {} as E) {
   return {
     id: s._id,
     _id: s._id,

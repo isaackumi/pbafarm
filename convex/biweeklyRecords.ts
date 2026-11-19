@@ -16,7 +16,7 @@ import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
 import { emitDomainEvent } from './lib/events'
 
-function toClient(r: any) {
+function toClient(r: Doc<'biweeklyRecords'>) {
   return {
     custom: r.custom ?? {},
     id: r._id,

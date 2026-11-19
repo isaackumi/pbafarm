@@ -1,3 +1,4 @@
+import type { Doc } from './_generated/dataModel'
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { asOfDate, scopedRowsInRange, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
@@ -15,7 +16,7 @@ function addDays(isoDate: string, days: number) {
   return d.toISOString().split('T')[0]
 }
 
-function toClient(t: any, cageName?: string | null) {
+function toClient(t: Doc<'healthTreatments'>, cageName?: string | null) {
   return {
     id: t._id,
     _id: t._id,

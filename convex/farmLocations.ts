@@ -9,7 +9,7 @@ import {
   ensureDefaultLocation,
   assertLocationAccess,
 } from './lib/tenancy'
-import { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { siteTypeValidator } from './schema'
 import { isValidTimezone } from './lib/orgProfile'
 import { requireMember } from './lib/permissions'
@@ -57,7 +57,7 @@ function siteFields(args: {
   return out
 }
 
-function toClient(loc: any) {
+function toClient(loc: Doc<'farmLocations'>) {
   return {
     custom: loc.custom ?? {},
     id: loc._id,
