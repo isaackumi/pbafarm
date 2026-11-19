@@ -1,4 +1,7 @@
-# Anowa — logo concepts (v1)
+# Anowa — logo concepts
+
+> **Chosen: concept 12, Pulse.** The final assets and rules are in [GUIDELINES.md](GUIDELINES.md) and `logo/`.
+
 
 Named after the founder's mother. The product brand is **Anowa**; PBA is one client farm. The concepts were made with the `svg-logo-designer` skill (`.agents/skills/svg-logo-designer`). The Paper page "Brand — Anowa" (artboard DOM-0) shows each concept on light and dark, as a horizontal lockup, an app icon, in one colour and at favicon sizes.
 

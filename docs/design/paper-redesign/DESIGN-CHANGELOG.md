@@ -6,6 +6,13 @@ Format: `date · artboard (node id) · change · status`
 
 ## 2026-11-19
 
+- BRAND · **Anowa logo, final (Pulse)**: Paper "Brand — Anowa" page, board EMT-0. The assets are in `docs/brand/anowa/logo/` and the rules are in `docs/brand/anowa/GUIDELINES.md`.
+  - Replace `public/favicon.ico`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `icon-maskable.svg`, `apple-touch-icon.png` (180) and `logo.svg` with the matching Anowa files:
+    - `favicon.svg` becomes `icon.svg`.
+    - Generate the ICO from `png/favicon-32.png` and `png/favicon-16.png`.
+  - In `manifest.webmanifest`, set `name` to "Anowa", `short_name` to "Anowa", and `theme_color` and `background_color` to `#06121C`.
+  - The app shell and sign-in still show the "pba farm" brand. The Paper screens get rebranded next, in their own changelog entry. Until then, swap only the icon and favicon files. · pending
+
 - ALL · **The AI is now named "Anowa"** (named after the founder's mother) · replaces "Ask PBA", "AI assistant" and "Farm Assistant" everywhere:
   - Paper: 17 (3UX-0) title and eyebrow are "Anowa"; the composer placeholder reads "Ask Anowa about cages, feed, costs…". Permission rows in 22 (57B-0) and light 22 (7BH-0) read "Use Anowa AI" and "Use Anowa (own unit data)". On the landing page (B9Q-0), the chip reads "Meet Anowa — your farm’s AI co-pilot", and the cards, footer and pricing say "Anowa". The WhatsApp bot (CJH-0) is named "Anowa" with an "A" avatar.
   - Code to update: `components/AiAssistant.js` (header label and the `sr-only` "Assistant:" prefix become "Anowa"), `pages/company-settings.js` ("Enable Anowa (AI assistant) for this company"), nav labels and tour copy in `locales/en.json` and `fr.json` (keep the name "Anowa" untranslated), the `X-Title` header in `convex/lib/llmProviders.ts` ("PBA Farm · Anowa"), the WhatsApp bot display name, and the server-built system prompt (it should introduce itself as "Anowa, PBA Farm's assistant"). Keep the route `/ai` unchanged. · pending
