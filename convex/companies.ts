@@ -7,7 +7,9 @@ import { requireUser, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { retimeScheduleRules } from './automation/engine'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
-import { isCurrencyCode } from './lib/currencies'
+import { DEFAULT_CURRENCY_CODE, isCurrencyCode } from './lib/currencies'
+import { countryPreset } from './lib/countries'
+import { DEFAULT_COUNTRY, isSupportedCountry } from './lib/phone'
 import { activateMembership, upsertMembership } from './lib/memberships'
 import {
   isValidCountry,
@@ -813,6 +815,13 @@ export const updateSettings = mutation({
   },
 })
 
+const profileValidator = v.object({
+  country: v.string(),
+  timezone: v.string(),
+  unitSystem: v.union(v.literal('metric'), v.literal('imperial')),
+  defaultLocale: v.string(),
+})
+
 /**
  * Company admin: organization profile (ORG-005, M3): country, timezone,
  * unit system, locale. Values are validated; omitted fields keep their value.
@@ -824,7 +833,7 @@ export const updateProfile = mutation({
     unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
     defaultLocale: v.optional(v.string()),
   },
-  returns: v.object({ country: v.string(), timezone: v.string(), unitSystem: v.union(v.literal('metric'), v.literal('imperial')), defaultLocale: v.string() }),
+  returns: profileValidator,
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
@@ -860,6 +869,110 @@ export const updateProfile = mutation({
       newValues: patch,
     })
     return orgProfile({ ...company, ...patch })
+  },
+})
+
+const countryDefaultField = v.union(
+  v.literal('timezone'),
+  v.literal('locale'),
+  v.literal('units'),
+  v.literal('phone'),
+  v.literal('currency'),
+)
+
+/**
+ * Company admin: set the organization's country and, for the fields asked
+ * for, the defaults its preset suggests (I18N-004, lib/countries): time zone,
+ * number/date locale, units, phone country code and currency. Profile and
+ * phone code are saved straight away like updateProfile; the currency is
+ * written to the published settings and to any open settings draft so a
+ * later publish keeps it. Amounts are not converted.
+ */
+export const applyCountryDefaults = mutation({
+  args: { country: v.string(), fields: v.array(countryDefaultField) },
+  returns: v.object({
+    profile: profileValidator,
+    currency: v.string(),
+    defaultCountryCode: v.string(),
+    applied: v.array(countryDefaultField),
+  }),
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
+    if (!user.companyId) throw new Error('No company linked')
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+    const country = args.country.trim().toUpperCase()
+    if (!isValidCountry(country)) throw new Error('Country must be a two-letter code, e.g. GH')
+    const fields = new Set(args.fields)
+    const preset = countryPreset(country)
+    if (!preset && fields.size) throw new Error(`No suggested defaults for ${country} yet. Set them by hand.`)
+
+    const patch: Partial<Doc<'companies'>> = { country }
+    const applied: Array<'timezone' | 'locale' | 'units' | 'phone' | 'currency'> = []
+    const settings = { ...(company.settings ?? { aiAssistantEnabled: false }) }
+    let settingsChanged = false
+    if (preset) {
+      if (fields.has('timezone')) {
+        patch.timezone = preset.timezone
+        applied.push('timezone')
+      }
+      if (fields.has('locale')) {
+        patch.defaultLocale = preset.locale
+        applied.push('locale')
+      }
+      if (fields.has('units')) {
+        patch.unitSystem = preset.unitSystem
+        applied.push('units')
+      }
+      if (fields.has('phone') && isSupportedCountry(country)) {
+        settings.defaultCountryCode = country
+        settingsChanged = true
+        applied.push('phone')
+      }
+      if (fields.has('currency') && isCurrencyCode(preset.currency)) {
+        settings.locale = { ...(settings.locale ?? {}), currency: preset.currency }
+        settingsChanged = true
+        applied.push('currency')
+      }
+    }
+    if (settingsChanged) patch.settings = settings
+    await ctx.db.patch(company._id, patch)
+
+    if (applied.includes('currency')) {
+      const draft = await ctx.db
+        .query('companySettingsDrafts')
+        .withIndex('by_company', (q) => q.eq('companyId', company._id))
+        .first()
+      if (draft?.draft && typeof draft.draft === 'object') {
+        await ctx.db.patch(draft._id, {
+          draft: { ...draft.draft, locale: { ...(draft.draft.locale ?? {}), currency: preset!.currency } },
+          updatedAt: Date.now(),
+          updatedBy: user._id,
+        })
+      }
+    }
+    if (patch.timezone !== undefined && patch.timezone !== company.timezone) {
+      await retimeScheduleRules(ctx, company._id)
+    }
+    await logAudit(ctx, {
+      actionType: 'apply_country_defaults',
+      tableName: 'companies',
+      recordId: company._id,
+      previousValues: {
+        ...orgProfile(company),
+        currency: company.settings?.locale?.currency,
+        defaultCountryCode: company.settings?.defaultCountryCode,
+      },
+      newValues: { country, applied },
+    })
+    const next = { ...company, ...patch }
+    const currency = next.settings?.locale?.currency
+    return {
+      profile: orgProfile(next),
+      currency: isCurrencyCode(currency) ? currency : DEFAULT_CURRENCY_CODE,
+      defaultCountryCode: next.settings?.defaultCountryCode ?? DEFAULT_COUNTRY,
+      applied,
+    }
   },
 })
 

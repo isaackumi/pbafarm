@@ -9,7 +9,18 @@ import type { Doc, Id } from './_generated/dataModel'
 import { assertLocationAccess, assertOwns, logAudit, writeCompanyId } from './lib/tenancy'
 import { userError } from './lib/errors'
 import { complianceFrequency } from './schema'
-import { MAX_TEMPLATE_ITEMS, periodOf, seedTemplatesFor, templateItems } from './lib/compliance'
+import {
+  MAX_TEMPLATE_ITEMS,
+  TEMPLATE_PACKS,
+  installTemplatesFor,
+  libraryTemplate,
+  periodOf,
+  recommendedPack,
+  seedTemplatesFor,
+  templateItems,
+  templatePack,
+} from './lib/compliance'
+import { orgProfile } from './lib/orgProfile'
 import { requireMember } from './lib/permissions'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -236,6 +247,78 @@ export const seedDefaultTemplates = mutation({
     const added = await seedTemplatesFor(ctx, companyId, { userId: user._id })
     if (added.length) {
       await logAudit(ctx, { actionType: 'create', tableName: 'complianceTemplates', newValues: { seeded: added } })
+    }
+    return { added }
+  },
+})
+
+const packValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  description: v.string(),
+  language: v.union(v.literal('en'), v.literal('fr')),
+  recommended: v.boolean(),
+  templates: v.array(
+    v.object({
+      key: v.string(),
+      name: v.string(),
+      frequency: complianceFrequency,
+      installed: v.boolean(),
+    }),
+  ),
+  installed_count: v.number(),
+})
+
+/**
+ * Country and language template packs (I18N-004), the one recommended for the
+ * organization's country first, with which templates the company already has.
+ */
+export const templatePacks = query({
+  args: {},
+  returns: v.object({ country: v.string(), packs: v.array(packValidator) }),
+  handler: async (ctx) => {
+    const { user } = await requireMember(ctx, { permission: 'production.view' })
+    if (!user.companyId) return { country: orgProfile(null).country, packs: [] }
+    const company = await ctx.db.get(user.companyId)
+    const { country } = orgProfile(company)
+    const have = new Set((await companyTemplates(ctx, user.companyId)).map((t) => t.key).filter(Boolean))
+    const recommended = recommendedPack(country).id
+    const packs = TEMPLATE_PACKS.map((p) => {
+      const templates = p.templateKeys.flatMap((key) => {
+        const t = libraryTemplate(key)
+        return t ? [{ key, name: t.name, frequency: t.frequency, installed: have.has(key) }] : []
+      })
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        language: p.language,
+        recommended: p.id === recommended,
+        templates,
+        installed_count: templates.filter((t) => t.installed).length,
+      }
+    })
+    packs.sort((a, b) => Number(b.recommended) - Number(a.recommended))
+    return { country, packs }
+  },
+})
+
+/** Install a template pack into the caller's company (idempotent, by template key). */
+export const installTemplatePack = mutation({
+  args: { pack: v.string() },
+  returns: v.object({ added: v.array(v.string()) }),
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
+    const companyId = await writeCompanyId(user)
+    const pack = templatePack(args.pack)
+    if (!pack) throw userError('VALIDATION', `Unknown template pack: ${args.pack}`)
+    const added = await installTemplatesFor(ctx, companyId, pack.templateKeys, { userId: user._id })
+    if (added.length) {
+      await logAudit(ctx, {
+        actionType: 'create',
+        tableName: 'complianceTemplates',
+        newValues: { pack: pack.id, installed: added },
+      })
     }
     return { added }
   },

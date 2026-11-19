@@ -68,6 +68,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `cages.restore` | `production.units.delete` | yes | yes | no | no | no |
 | `cages.update` | `production.units.manage` | yes | yes | yes | no | no |
 | `companies.aiAssistantStatus` | `account` | self | self | self | self | self |
+| `companies.applyCountryDefaults` | `org.settings.manage` | yes | yes | no | no | no |
 | `companies.approve` | `platform` | no | no | no | no | no |
 | `companies.clearLogo` | `org.settings.manage` | yes | yes | no | no | no |
 | `companies.generateLogoUploadUrl` | `org.settings.manage` | yes | yes | no | no | no |
@@ -94,6 +95,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `compliance.complete` | `production.health.record` | yes | yes | yes | yes | no |
 | `compliance.createTemplate` | `org.settings.manage` | yes | yes | no | no | no |
 | `compliance.due` | `production.view` | yes | yes | yes | yes | yes |
+| `compliance.installTemplatePack` | `org.settings.manage` | yes | yes | no | no | no |
 | `compliance.listBiosecurity` | `production.view` | yes | yes | yes | yes | yes |
 | `compliance.listRecords` | `production.view` | yes | yes | yes | yes | yes |
 | `compliance.listTemplates` | `production.view` | yes | yes | yes | yes | yes |
@@ -101,6 +103,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `compliance.removeBiosecurity` | `production.records.delete` | yes | yes | no | no | no |
 | `compliance.seedDefaultTemplates` | `org.settings.manage` | yes | yes | no | no | no |
 | `compliance.setTemplateActive` | `org.settings.manage` | yes | yes | no | no | no |
+| `compliance.templatePacks` | `production.view` | yes | yes | yes | yes | yes |
 | `customFields.allDefs` | `org.view` | yes | yes | yes | yes | yes |
 | `customFields.defs` | `org.view` | yes | yes | yes | yes | yes |
 | `customFields.reorder` | `customization.manage` | yes | yes | no | no | no |

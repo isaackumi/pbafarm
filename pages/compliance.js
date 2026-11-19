@@ -23,6 +23,7 @@ import { useToast } from '../components/Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
 
 const FREQ = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
 const KIND = { visitor: 'Visitor', vehicle: 'Vehicle', disinfection: 'Disinfection', other: 'Other' }
@@ -82,26 +83,29 @@ function Checklists({ locationId }) {
 
   if (templates.length === 0) {
     return (
-      <EmptyState
-        title="No checklists yet"
-        description="Start with the standard ones: daily biosecurity, weekly net inspection and monthly water quality review."
-        action={
-          isAdmin ? (
-            <Button
-              onClick={async () => {
-                try {
-                  const { added } = await seed({})
-                  showToast('success', `${added.length} checklists added`)
-                } catch (err) {
-                  showToast('error', errorMessage(err))
-                }
-              }}
-            >
-              Add standard checklists
-            </Button>
-          ) : null
-        }
-      />
+      <div className="space-y-4">
+        <EmptyState
+          title="No checklists yet"
+          description="Start with the standard ones: daily biosecurity, weekly net inspection and monthly water quality review."
+          action={
+            isAdmin ? (
+              <Button
+                onClick={async () => {
+                  try {
+                    const { added } = await seed({})
+                    showToast('success', `${added.length} checklists added`)
+                  } catch (err) {
+                    showToast('error', errorMessage(err))
+                  }
+                }}
+              >
+                Add standard checklists
+              </Button>
+            ) : null
+          }
+        />
+        {isAdmin && <TemplatePacks />}
+      </div>
     )
   }
 
@@ -138,7 +142,72 @@ function Checklists({ locationId }) {
           )}
         </Card>
       ))}
+      {isAdmin && <TemplatePacks />}
     </div>
+  )
+}
+
+/** Country and language checklist packs (I18N-004); admins install one in a click. */
+function TemplatePacks() {
+  const t = useT()
+  const { showToast } = useToast()
+  const data = useQuery(api.compliance.templatePacks, {})
+  const install = useMutation(api.compliance.installTemplatePack)
+  const [busy, setBusy] = useState(null)
+  if (!data) return null
+  return (
+    <Card>
+      <CardHeader title={t('country.packs.title')} subtitle={t('country.packs.subtitle', { country: data.country })} />
+      <ul className="space-y-4">
+        {data.packs.map((p) => {
+          const complete = p.installed_count === p.templates.length
+          return (
+            <li key={p.id} className="rounded-lg border border-foam-deep p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-chart-ink">
+                    {p.name}
+                    {p.recommended && (
+                      <span className="ml-2 text-xs font-semibold text-kelp">{t('country.packs.recommended')}</span>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted">{p.description}</p>
+                  <p className="text-xs text-muted mt-1">
+                    {t('country.packs.language', { language: p.language.toUpperCase() })} ·{' '}
+                    {t('country.packs.installed', { installed: p.installed_count, total: p.templates.length })}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={p.recommended ? 'primary' : 'secondary'}
+                  disabled={complete || busy === p.id}
+                  onClick={async () => {
+                    setBusy(p.id)
+                    try {
+                      const { added } = await install({ pack: p.id })
+                      showToast('success', t('country.packs.added', { count: added.length }))
+                    } catch (err) {
+                      showToast('error', errorMessage(err))
+                    } finally {
+                      setBusy(null)
+                    }
+                  }}
+                >
+                  {complete ? t('country.packs.done') : t('country.packs.install')}
+                </Button>
+              </div>
+              <ul className="mt-2 text-sm text-chart-ink list-disc pl-5">
+                {p.templates.map((tpl) => (
+                  <li key={tpl.key} className={tpl.installed ? 'text-muted' : ''}>
+                    {tpl.name} ({FREQ[tpl.frequency]}){tpl.installed ? ` · ${t('country.packs.have')}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
   )
 }
 

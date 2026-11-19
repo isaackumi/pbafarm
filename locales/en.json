@@ -1507,5 +1507,48 @@
       "saved": "Tab bar saved"
     },
     "loading": "Loading settings…"
+  },
+  "country": {
+    "profileTitle": "Organization profile",
+    "profileSubtitle": "Time zone sets what 'today' means for entries and reminders. Sites can override it.",
+    "country": "Country",
+    "countryCode": "Two-letter country code",
+    "countryHint": "Two-letter code, e.g. GH",
+    "other": "Other country…",
+    "timezone": "Time zone",
+    "units": "Units",
+    "metric": "Metric (kg, m³)",
+    "imperial": "Imperial (lb, ft³)",
+    "locale": "Number and date format",
+    "localeHint": "Locale, e.g. en-GH",
+    "phone": "Phone country code",
+    "currency": "Currency",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "saveFailed": "Could not save the profile",
+    "suggestedTitle": "Suggested for {country}",
+    "suggestedHint": "Tick the defaults to use. The country is saved either way.",
+    "currencyWarning": "Changing the currency does not convert amounts already entered: they will be shown in the new currency.",
+    "apply": "Apply country and defaults",
+    "applied": {
+      "one": "Country saved; {count} default applied.",
+      "other": "Country saved; {count} defaults applied."
+    },
+    "applyFailed": "Could not apply the country defaults",
+    "packs": {
+      "title": "Country checklist templates",
+      "subtitle": "Ready-made checklists for your country and language ({country}). Installing adds only the ones you do not have; switch off any you do not need.",
+      "recommended": "Recommended",
+      "language": "Language: {language}",
+      "installed": "{installed} of {total} installed",
+      "install": "Install",
+      "done": "Installed",
+      "have": "installed",
+      "added": {
+        "one": "{count} checklist added",
+        "other": "{count} checklists added"
+      }
+    }
   }
 }

@@ -1507,5 +1507,48 @@
       "saved": "Barre d’onglets enregistrée"
     },
     "loading": "Chargement des paramètres…"
+  },
+  "country": {
+    "profileTitle": "Profil de l’organisation",
+    "profileSubtitle": "Le fuseau horaire définit « aujourd’hui » pour les saisies et les rappels. Chaque site peut le modifier.",
+    "country": "Pays",
+    "countryCode": "Code pays à deux lettres",
+    "countryHint": "Code à deux lettres, p. ex. CI",
+    "other": "Autre pays…",
+    "timezone": "Fuseau horaire",
+    "units": "Unités",
+    "metric": "Métrique (kg, m³)",
+    "imperial": "Impérial (lb, ft³)",
+    "locale": "Format des nombres et des dates",
+    "localeHint": "Paramètre régional, p. ex. fr-CI",
+    "phone": "Indicatif téléphonique",
+    "currency": "Devise",
+    "save": "Enregistrer le profil",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré.",
+    "saveFailed": "Impossible d’enregistrer le profil",
+    "suggestedTitle": "Suggestions pour {country}",
+    "suggestedHint": "Cochez les valeurs par défaut à utiliser. Le pays est enregistré dans tous les cas.",
+    "currencyWarning": "Changer de devise ne convertit pas les montants déjà saisis : ils seront affichés dans la nouvelle devise.",
+    "apply": "Appliquer le pays et les valeurs par défaut",
+    "applied": {
+      "one": "Pays enregistré ; {count} valeur par défaut appliquée.",
+      "other": "Pays enregistré ; {count} valeurs par défaut appliquées."
+    },
+    "applyFailed": "Impossible d’appliquer les valeurs par défaut du pays",
+    "packs": {
+      "title": "Modèles de listes de contrôle par pays",
+      "subtitle": "Des listes de contrôle prêtes à l’emploi pour votre pays et votre langue ({country}). L’installation n’ajoute que celles que vous n’avez pas ; désactivez celles dont vous n’avez pas besoin.",
+      "recommended": "Recommandé",
+      "language": "Langue : {language}",
+      "installed": "{installed} sur {total} installées",
+      "install": "Installer",
+      "done": "Installé",
+      "have": "installée",
+      "added": {
+        "one": "{count} liste de contrôle ajoutée",
+        "other": "{count} listes de contrôle ajoutées"
+      }
+    }
   }
 }

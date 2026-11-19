@@ -252,7 +252,7 @@ Evidence references use `docNN §section` for `docs/discovery/NN-*.md`.
 | Measurement systems | Missing | Unit system per org; conversions in helpers | I18N-001 | P2 | E | — |
 | Species configuration | Partial | 5 hard-coded species → per-org species with parameters | PROD-010 | P2 | F | doc08 §1 "Species" |
 | Harvest size grades | Partial | Free-form `v.any()` → per-org grade master | PROD-010 | P2 | E | doc08 §8 |
-| Country-specific settings, regional compliance | Missing | Templates per country | I18N-004 | P3 | E | — |
+| Country-specific settings, regional compliance | Complete (I18N-004) | Country presets for profile defaults; country/language checklist packs | I18N-004 | P3 | E | — |
 | International organizations | Missing | Subsidiaries in other countries | ENT-001, I18N-003 | P3 | E | — |
 
 ---
