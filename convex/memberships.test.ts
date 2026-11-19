@@ -254,6 +254,27 @@ describe('admin membership management', () => {
     expect(await t.run((ctx) => ctx.db.get(staffA))).toMatchObject({ role: 'user' })
   })
 
+  test('a non-owner admin cannot demote the owner through users.update (audit A C4)', async () => {
+    const { t, as, adminA, staffA, companyA } = await setup()
+    await t.run(async (ctx) => {
+      const now = Date.now()
+      await ctx.db.patch(staffA, { role: 'admin' })
+      await ctx.db.insert('memberships', { userId: adminA, companyId: companyA, roleKey: 'owner', allLocations: true, status: 'active', updatedAt: now })
+      await ctx.db.insert('memberships', { userId: staffA, companyId: companyA, roleKey: 'admin', allLocations: true, status: 'active', updatedAt: now })
+    })
+    await expect(as(staffA).mutation(api.memberships.setRole, { userId: adminA, roleKey: 'manager' })).rejects.toThrow(/owner/i)
+    await expect(as(staffA).mutation(api.users.update, { id: adminA, patch: { role: 'user' } })).rejects.toThrow(/owner/i)
+    const owner = await t.run(async (ctx) => ({
+      user: await ctx.db.get(adminA),
+      membership: await ctx.db.query('memberships').withIndex('by_userId', (q) => q.eq('userId', adminA)).first(),
+    }))
+    expect(owner.membership?.roleKey).toBe('owner')
+    expect(owner.user?.role).toBe('admin')
+    // An owner may still change another admin's role through users.update.
+    await as(adminA).mutation(api.users.update, { id: staffA, patch: { role: 'user' } })
+    expect((await t.run((ctx) => ctx.db.get(staffA)))?.role).toBe('user')
+  })
+
   test("an admin cannot manage another company's member, and members cannot switch into orgs they are not in", async () => {
     const { as, adminA, adminB, companyB, staffA } = await setup()
     await expect(as(adminA).mutation(api.memberships.suspend, { userId: adminB })).rejects.toThrow(/not found/)

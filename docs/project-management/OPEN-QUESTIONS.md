@@ -1,6 +1,6 @@
 # Open Questions for the Owner
 
-Last updated: 2026-11-18. Consolidated and de-duplicated from the "Outstanding questions" sections of discovery docs 01–14 and from roadmap planning. Each question says why it matters and what it blocks. Tracker IDs refer to `MASTER-TRACKER.md`.
+Last updated: 2026-11-19. Consolidated and de-duplicated from the "Outstanding questions" sections of discovery docs 01–14 and from roadmap planning. Each question says why it matters and what it blocks. Tracker IDs refer to `MASTER-TRACKER.md`.
 
 Questions marked **Blocking now** gate Phase 0 work.
 
@@ -55,6 +55,7 @@ Questions marked **Blocking now** gate Phase 0 work.
 | ID | Question | Why it matters | Blocks | Source |
 |---|---|---|---|---|
 | Q-010 | **Permission matrix:** should `user`-role staff edit prices, payment status, purchases and harvest counts? Should existing `user` members map to "field staff" or "manager"? Is segregation of duties (approver ≠ submitter) required? | Today any member can do several financially sensitive writes; Phase 0 gates them to admin as an interim. | PERM-001, M9, PERM-005; SEC-002 (confirmation) | d07 Q4 |
+| Q-040 | **Role grants can exceed grantor rights:** a custom role with member management can assign admin; a holder of role management can add any permission to their own role. Should grants be limited to the grantor's own permissions? Policy decision needed. | Lets a delegated manager escalate to admin or to permissions they were not given. Raised as needs_validation by security audit A (2026-11-19); not changed until decided. | PERM-002, PERM-003 | `docs/security/audits/2026-11-19-full-a` |
 
 ## Markets and globalization
 

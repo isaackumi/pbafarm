@@ -158,6 +158,11 @@ export default function AccountPage() {
 
           {!(forced && !done) && (
             <div className="mt-6">
+              {user?.hasPhone && !user?.phoneVerificationTime && !user?.actingAs && (
+                <div className="mb-6">
+                  <ConfirmPhoneCard maskedPhone={user.maskedPhone} />
+                </div>
+              )}
               <AuthenticatorCard />
               <div className="mt-6">
                 <NotificationPreferencesCard />
@@ -172,5 +177,83 @@ export default function AccountPage() {
         </FormPage>
       </Layout>
     </ProtectedRoute>
+  )
+}
+
+/**
+ * A number an admin entered is not used for phone sign-in until its owner
+ * confirms it with a code (ORG-002).
+ */
+function ConfirmPhoneCard({ maskedPhone }) {
+  const { showToast } = useToast()
+  const start = useAction(api.mfa.startPhoneConfirmation)
+  const confirm = useAction(api.mfa.confirmPhone)
+  const [sentTo, setSentTo] = useState('')
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const send = async () => {
+    setError('')
+    setBusy(true)
+    try {
+      const res = await start({ channel: 'sms' })
+      if (res.ok) setSentTo(res.sentTo)
+      else setError(res.error || 'Could not send the code')
+    } catch (err) {
+      setError(err?.data?.message || err?.message || 'Could not send the code')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setBusy(true)
+    try {
+      const res = await confirm({ code })
+      if (res.ok) showToast('success', 'Phone number confirmed')
+      else setError(res.error || 'That code is not right.')
+    } catch (err) {
+      setError(err?.data?.message || err?.message || 'Could not confirm the number')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <FormCard
+      title="Confirm your phone number"
+      subtitle={`${maskedPhone || ''} was added by an admin. Confirm it to sign in with your phone.`}
+    >
+      <form onSubmit={submit} className="space-y-4">
+        {sentTo && (
+          <Field label={`Code sent to ${sentTo}`} htmlFor="phoneConfirmCode" required>
+            <Input
+              id="phoneConfirmCode"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </Field>
+        )}
+        {error && (
+          <div className="rounded-xl bg-signal/10 text-signal px-4 py-3 text-sm">{error}</div>
+        )}
+        <FormActions>
+          <Button type="button" variant={sentTo ? 'secondary' : undefined} disabled={busy} onClick={send}>
+            {sentTo ? 'Send again' : 'Send code by SMS'}
+          </Button>
+          {sentTo && (
+            <Button type="submit" disabled={busy || !code.trim()}>
+              Confirm
+            </Button>
+          )}
+        </FormActions>
+      </form>
+    </FormCard>
   )
 }

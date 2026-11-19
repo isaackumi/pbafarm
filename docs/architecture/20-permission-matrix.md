@@ -282,8 +282,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `messaging/channels.saveCredentials` | `allowlisted` | see test | see test | see test | see test | see test |
 | `messaging/channels.sendTest` | `allowlisted` | see test | see test | see test | see test | see test |
 | `messaging/channels.updatePreferences` | `integrations.manage` | yes | yes | no | no | no |
+| `mfa.confirmPhone` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfa.startPhoneConfirmation` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.verifyChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfaTotp.confirmEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfaTotp.disable` | `allowlisted` | see test | see test | see test | see test | see test |

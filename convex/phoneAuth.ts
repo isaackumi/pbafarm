@@ -19,8 +19,11 @@ import { phoneLoginOffered, securityPolicy } from './messaging/policy'
  *
  * The send step answers identically whether or not a code was sent, and the
  * message itself is scheduled, so a caller cannot learn which numbers exist.
- * Sign-in only ever resolves to an existing user whose phone matches; this
- * module never creates users or auth accounts.
+ * Sign-in only ever resolves to an existing user whose phone matches and
+ * who confirmed that number themselves (users.phoneVerificationTime, set by
+ * a code entered in their own session: mfa enrol/verify/confirmPhone). A
+ * number an admin typed in is not a sign-in identifier until then (ORG-002).
+ * This module never creates users or auth accounts.
  */
 
 /** Same session length as Convex Auth (AUTH_SESSION_TOTAL_DURATION_MS, default 30 days). */
@@ -36,6 +39,7 @@ function loginCodeHash(phone: string, code: string) {
 /** The user may sign in by phone right now, or null. */
 async function eligibleCompany(ctx: MutationCtx, user: Doc<'users'>) {
   if (user.active === false || !user.companyId) return null
+  if (user.phoneVerificationTime === undefined) return null
   const company = await ctx.db.get(user.companyId)
   if (!company || company.status !== 'approved') return null
   const policy = securityPolicy(company)
@@ -173,7 +177,6 @@ export const verifyLoginCode = internalMutation({
         method: 'phone_login',
       })
     }
-    await ctx.db.patch(user._id, { phoneVerificationTime: now })
     await insertAuditLog(ctx, {
       userId: user._id,
       companyId: row.companyId,

@@ -5,7 +5,7 @@ import { action, internalMutation } from './_generated/server'
 import type { ActionCtx, MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
-import { requireUser } from './lib/authz'
+import { mfaRowCountsFor, requireUser } from './lib/authz'
 import { randomDigits, sha256Hex } from './lib/crypto'
 import { maskPhone, normalizePhone } from './lib/phone'
 import {
@@ -91,7 +91,10 @@ export const issueChallenge = internalMutation({
 
     const existing = await sessionRow(ctx, sessionId)
     const now = Date.now()
-    if (existing?.verifiedAt) throw new Error('This sign-in is already verified.')
+    // A row verified under another organization's policy is replaced (ORG-002).
+    if (existing?.verifiedAt && (await mfaRowCountsFor(ctx, existing, user.companyId))) {
+      throw new Error('This sign-in is already verified.')
+    }
     if (existing?.lastSentAt && now - existing.lastSentAt < OTP_RESEND_COOLDOWN_MS) {
       throw new Error(`Wait a moment before asking for another code. ${retryAfterText(OTP_RESEND_COOLDOWN_MS - (now - existing.lastSentAt))}`)
     }
@@ -179,7 +182,7 @@ export const checkChallenge = internalMutation({
     if (!sessionId) throw new Error('Not authenticated')
     const row = await sessionRow(ctx, sessionId)
     if (!row || row.userId !== user._id) return { ok: false, error: 'Ask for a code first.' }
-    if (row.verifiedAt) return { ok: true, error: null }
+    if (row.verifiedAt && (await mfaRowCountsFor(ctx, row, user.companyId))) return { ok: true, error: null }
     if (!row.codeHash || !row.expiresAt || row.expiresAt < Date.now()) {
       return { ok: false, error: 'This code has expired. Ask for a new one.' }
     }
@@ -199,6 +202,7 @@ export const checkChallenge = internalMutation({
     }
     const now = Date.now()
     await ctx.db.patch(row._id, {
+      companyId: user.companyId ?? row.companyId,
       verifiedAt: now,
       method: 'otp',
       codeHash: undefined,
@@ -216,6 +220,10 @@ export const checkChallenge = internalMutation({
         previousValues: { phone: null },
         newValues: { phone: maskPhone(row.pendingPhone) },
       })
+    } else if (row.purpose === 'verify' && user.phone && user.phoneVerificationTime === undefined) {
+      // The code went to the account's current number (pending codes are
+      // dropped when the number changes), so its owner has now confirmed it.
+      await ctx.db.patch(user._id, { phoneVerificationTime: now })
     }
     await insertAuditLog(ctx, {
       userId: user._id,
@@ -239,6 +247,131 @@ export const verifyChallenge = action({
     const clean = code.replace(/\s/g, '')
     return await ctx.runMutation(internal.mfa.checkChallenge, {
       codeHash: /^\d{6}$/.test(clean) ? await challengeHash(sessionId, clean) : undefined,
+    })
+  },
+})
+
+function confirmHash(sessionId: string, code: string) {
+  return sha256Hex(`confirm:${sessionId}:${code}`)
+}
+
+/**
+ * Confirming a phone number someone else set (ORG-002). An admin-set number
+ * stays unverified, and phone sign-in refuses it, until its owner signs in
+ * another way and enters a code sent to it here.
+ */
+const SELF = { ignoreActAs: true } as const
+
+async function confirmRow(ctx: MutationCtx, userId: Id<'users'>) {
+  return await ctx.db
+    .query('phoneConfirmCodes')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .first()
+}
+
+/** Internal: store a pending confirmation code and say where to send it. */
+export const issuePhoneConfirmation = internalMutation({
+  args: { channel: phoneChannel, codeHash: v.string() },
+  returns: v.object({ to: v.string(), companyId: v.id('companies') }),
+  handler: async (ctx, args): Promise<{ to: string; companyId: Id<'companies'> }> => {
+    const user = await requireUser(ctx, SELF)
+    if (!user.companyId) throw new Error('No company linked')
+    if (!user.phone) throw new Error('Add your phone number first.')
+    if (user.phoneVerificationTime !== undefined) throw new Error('Your phone number is already confirmed.')
+    if (!(await channelAvailable(ctx, user.companyId, args.channel))) {
+      throw new Error(`Codes cannot be sent by ${args.channel === 'sms' ? 'SMS' : 'WhatsApp'} right now. Try the other option or ask your admin.`)
+    }
+    const existing = await confirmRow(ctx, user._id)
+    const now = Date.now()
+    if (existing && now - existing.createdAt < OTP_RESEND_COOLDOWN_MS) {
+      throw new Error(`Wait a moment before asking for another code. ${retryAfterText(OTP_RESEND_COOLDOWN_MS - (now - existing.createdAt))}`)
+    }
+    const limit = await rateLimiter.limit(ctx, 'mfaCodePerUser', { key: user._id })
+    if (!limit.ok) throw new Error(`Too many codes requested. ${retryAfterText(limit.retryAfter)}`)
+    if (existing) await ctx.db.delete(existing._id)
+    await ctx.db.insert('phoneConfirmCodes', {
+      userId: user._id,
+      phone: user.phone,
+      codeHash: args.codeHash,
+      expiresAt: now + OTP_TTL_MS,
+      attempts: 0,
+      createdAt: now,
+    })
+    return { to: user.phone, companyId: user.companyId }
+  },
+})
+
+/** Internal: check a confirmation code; marks the phone verified on success. */
+export const checkPhoneConfirmation = internalMutation({
+  args: { codeHash: v.optional(v.string()) },
+  returns: v.object({ ok: v.boolean(), error: v.union(v.string(), v.null()) }),
+  handler: async (ctx, { codeHash }): Promise<{ ok: boolean; error: string | null }> => {
+    const user = await requireUser(ctx, SELF)
+    const row = await confirmRow(ctx, user._id)
+    if (!row) return { ok: false, error: 'Ask for a code first.' }
+    if (row.phone !== user.phone || row.expiresAt < Date.now() || row.attempts >= OTP_MAX_ATTEMPTS) {
+      await ctx.db.delete(row._id)
+      return { ok: false, error: 'This code has expired. Ask for a new one.' }
+    }
+    if (!codeHash || codeHash !== row.codeHash) {
+      const attempts = row.attempts + 1
+      if (attempts >= OTP_MAX_ATTEMPTS) await ctx.db.delete(row._id)
+      else await ctx.db.patch(row._id, { attempts })
+      return {
+        ok: false,
+        error: attempts >= OTP_MAX_ATTEMPTS ? 'Too many wrong codes. Ask for a new one.' : 'That code is not right.',
+      }
+    }
+    await ctx.db.delete(row._id)
+    await ctx.db.patch(user._id, { phoneVerificationTime: Date.now() })
+    await insertAuditLog(ctx, {
+      userId: user._id,
+      companyId: user.companyId,
+      actionType: 'phone_verify',
+      tableName: 'users',
+      recordId: user._id,
+      newValues: { phone: maskPhone(row.phone) },
+    })
+    return { ok: true, error: null }
+  },
+})
+
+/** Send a code to confirm the phone number on this account. */
+export const startPhoneConfirmation = action({
+  args: { channel: phoneChannel },
+  returns: startChallengeItem,
+  handler: async (ctx, { channel }): Promise<{ ok: boolean; sentTo: string; error: string | null }> => {
+    const sessionId = await getAuthSessionId(ctx)
+    if (!sessionId) throw new Error('Not authenticated')
+    const code = randomDigits(6)
+    const target: { to: string; companyId: Id<'companies'> } = await ctx.runMutation(
+      internal.mfa.issuePhoneConfirmation,
+      { channel, codeHash: await confirmHash(sessionId, code) },
+    )
+    const result = await deliverMessage(ctx, target.companyId, {
+      to: target.to,
+      channel,
+      body: `Your PBA Farm code to confirm this number is ${code}. It expires in 10 minutes. Do not share it.`,
+      otpCode: code,
+    })
+    if (!result.ok) {
+      console.warn(`Phone confirmation code not sent (${channel}, ${result.route}): ${result.error}`)
+      return { ok: false, sentTo: maskPhone(target.to), error: 'Could not send the code. Try the other option, or ask your admin.' }
+    }
+    return { ok: true, sentTo: maskPhone(target.to), error: null }
+  },
+})
+
+/** Enter the code sent by startPhoneConfirmation. */
+export const confirmPhone = action({
+  args: { code: v.string() },
+  returns: v.object({ ok: v.boolean(), error: v.union(v.string(), v.null()) }),
+  handler: async (ctx, { code }): Promise<{ ok: boolean; error: string | null }> => {
+    const sessionId = await getAuthSessionId(ctx)
+    if (!sessionId) throw new Error('Not authenticated')
+    const clean = code.replace(/\s/g, '')
+    return await ctx.runMutation(internal.mfa.checkPhoneConfirmation, {
+      codeHash: /^\d{6}$/.test(clean) ? await confirmHash(sessionId, clean) : undefined,
     })
   },
 })

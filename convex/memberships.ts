@@ -228,8 +228,11 @@ async function loadTarget(ctx: MutationCtx, companyId: Id<'companies'>, userId: 
   return { user, membership }
 }
 
-/** Refuse a change that leaves the company with no active owner/admin, or touches an owner as a non-owner. */
-async function assertAdminChange(
+/**
+ * Refuse a change that leaves the company with no active owner/admin, or
+ * touches an owner as a non-owner. Also used by users.update (legacy role).
+ */
+export async function assertAdminChange(
   ctx: MutationCtx,
   me: Doc<'users'>,
   companyId: Id<'companies'>,

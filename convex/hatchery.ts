@@ -22,7 +22,7 @@ import { idempotentMutation } from './lib/idempotency'
 import { logAudit } from './lib/tenancy'
 import { emitDomainEvent } from './lib/events'
 import * as engine from './lib/productionEngine'
-import { requireHatchery, ownDoc, type HatcheryMember } from './lib/hatcheryAccess'
+import { requireHatchery, ownDoc, inScope, type HatcheryMember } from './lib/hatcheryAccess'
 import {
   eggsPerKgFemale,
   fertilizationPct,
@@ -242,6 +242,7 @@ export const listBroodstock = query({
         .withIndex('by_companyId_and_code', (q) => q.eq('companyId', m.companyId))
         .take(LIST_LIMIT)
     }
+    rows = inScope(m, rows)
     const name = await unitNames(ctx, rows.map((r) => r.unitId))
     return rows.map((b) => broodstockRow(b, name(b.unitId)))
   },
@@ -279,12 +280,13 @@ export const getBroodstock = query({
     const m = await requireHatchery(ctx, 'hatchery.view')
     const b = ownDoc(m, await ctx.db.get(id), 'Broodstock')
     const name = await unitNames(ctx, [b.unitId])
-    const spawns = (
+    const spawns = inScope(
+      m,
       await ctx.db
         .query('spawningEvents')
         .withIndex('by_companyId_and_spawnDate', (q) => q.eq('companyId', m.companyId))
         .order('desc')
-        .take(LIST_LIMIT)
+        .take(LIST_LIMIT),
     ).filter((s) => s.femaleIds.includes(id) || s.maleIds.includes(id))
     const spawnings = []
     for (const s of spawns) spawnings.push(await spawningSummary(ctx, s))
@@ -532,7 +534,7 @@ export const listSpawnings = query({
       .order('desc')
       .take(limit)
     const out = []
-    for (const s of rows) out.push(await spawningSummary(ctx, s))
+    for (const s of inScope(m, rows)) out.push(await spawningSummary(ctx, s))
     return out
   },
 })
@@ -972,7 +974,11 @@ export const incubationBoard = query({
         .withIndex('by_companyId_and_status', (q) => q.eq('companyId', m.companyId).eq('status', status))
         .order('desc')
         .take(n)
-    const lots = [...(await byStatus('incubating', 200)), ...(await byStatus('hatched', 30)), ...(await byStatus('failed', 10))]
+    const lots = inScope(m, [
+      ...(await byStatus('incubating', 200)),
+      ...(await byStatus('hatched', 30)),
+      ...(await byStatus('failed', 10)),
+    ])
     const name = await unitNames(ctx, lots.map((l) => l.unitId))
     const out = []
     for (const l of lots) {
@@ -1010,17 +1016,20 @@ export const kpis = query({
   }),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
-    const spawns = await ctx.db
-      .query('spawningEvents')
-      .withIndex('by_companyId_and_spawnDate', (q) => {
-        const base = q.eq('companyId', m.companyId)
-        if (args.from && args.to) return base.gte('spawnDate', args.from).lte('spawnDate', args.to)
-        if (args.from) return base.gte('spawnDate', args.from)
-        if (args.to) return base.lte('spawnDate', args.to)
-        return base
-      })
-      .order('desc')
-      .take(LIST_LIMIT)
+    const spawns = inScope(
+      m,
+      await ctx.db
+        .query('spawningEvents')
+        .withIndex('by_companyId_and_spawnDate', (q) => {
+          const base = q.eq('companyId', m.companyId)
+          if (args.from && args.to) return base.gte('spawnDate', args.from).lte('spawnDate', args.to)
+          if (args.from) return base.gte('spawnDate', args.from)
+          if (args.to) return base.lte('spawnDate', args.to)
+          return base
+        })
+        .order('desc')
+        .take(LIST_LIMIT),
+    )
     let eggs = 0
     let fertileEggs = 0
     let eggsWithFert = 0
@@ -1054,16 +1063,22 @@ export const kpis = query({
       stocked += f.stockedCount + f.inCount
       accounted += f.count + f.harvestedCount + f.outCount
     }
-    const broodstock = await ctx.db
-      .query('broodstock')
-      .withIndex('by_companyId_and_code', (q) => q.eq('companyId', m.companyId))
-      .take(LIST_LIMIT)
+    const broodstock = inScope(
+      m,
+      await ctx.db
+        .query('broodstock')
+        .withIndex('by_companyId_and_code', (q) => q.eq('companyId', m.companyId))
+        .take(LIST_LIMIT),
+    )
     const byStatus: Record<string, number> = {}
     for (const b of broodstock) byStatus[b.status] = (byStatus[b.status] ?? 0) + b.count
-    const incubating = await ctx.db
-      .query('incubationLots')
-      .withIndex('by_companyId_and_status', (q) => q.eq('companyId', m.companyId).eq('status', 'incubating'))
-      .take(200)
+    const incubating = inScope(
+      m,
+      await ctx.db
+        .query('incubationLots')
+        .withIndex('by_companyId_and_status', (q) => q.eq('companyId', m.companyId).eq('status', 'incubating'))
+        .take(200),
+    )
     return {
       spawnings: spawns.length,
       eggs_collected: eggs,
@@ -1106,7 +1121,7 @@ export const batchOrigin = query({
         if (!b || b.companyId !== m.companyId) continue
         if (b.origin === 'hatchery' && b.spawningEventId) {
           const s = await ctx.db.get(b.spawningEventId)
-          if (!s || s.companyId !== m.companyId) continue
+          if (!s || s.companyId !== m.companyId || !inScope(m, [s]).length) continue
           return {
             hatched_batch_id: b._id,
             hatched_batch_number: b.batchNumber,

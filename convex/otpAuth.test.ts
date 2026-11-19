@@ -31,10 +31,15 @@ async function setup(security: Record<string, unknown> = { allowPhoneLogin: true
       name: 'River Farm', code: 'RIVER', status: 'approved', createdAt: now,
     })
     const adminA = await ctx.db.insert('users', { email: 'admin@a.com', role: 'admin', companyId: companyA, phone: '+233244000001' })
-    const staffA = await ctx.db.insert('users', { email: 'staff@a.com', role: 'user', companyId: companyA, phone: PHONE_A })
+    // Phones the users confirmed themselves: only those sign in (ORG-002).
+    const staffA = await ctx.db.insert('users', {
+      email: 'staff@a.com', role: 'user', companyId: companyA, phone: PHONE_A, phoneVerificationTime: now,
+    })
     const nophoneA = await ctx.db.insert('users', { email: 'new@a.com', role: 'user', companyId: companyA })
     const adminB = await ctx.db.insert('users', { email: 'admin@b.com', role: 'admin', companyId: companyB })
-    const staffB = await ctx.db.insert('users', { email: 'staff@b.com', role: 'user', companyId: companyB, phone: PHONE_B })
+    const staffB = await ctx.db.insert('users', {
+      email: 'staff@b.com', role: 'user', companyId: companyB, phone: PHONE_B, phoneVerificationTime: now,
+    })
     const session = (userId: Id<'users'>) =>
       ctx.db.insert('authSessions', { userId, expirationTime: now + 86_400_000 })
     return {
@@ -410,5 +415,127 @@ describe('two-step verification gate (SEC-007)', () => {
     expect(await messageOf(s.as(s.adminB, s.sAdminB).action(api.mfa.startChallenge, { channel: 'sms' })))
       .toContain('does not require')
     expect(await messageOf(s.t.action(api.mfa.verifyChallenge, { code: '123456' }))).toContain('Not authenticated')
+  })
+})
+
+describe('cross-organization phone takeover (ORG-002, audit A C1)', () => {
+  const ATTACKER_PHONE = '+233200000099'
+
+  /** Company A offers phone sign-in as the second step; B requires 2FA. The victim belongs to both. */
+  async function multiOrg(securityB: Record<string, unknown> = { require2fa: true }) {
+    const t = convexTest(schema, modules)
+    rateLimiterTest.register(t)
+    const ids = await t.run(async (ctx) => {
+      const now = Date.now()
+      const A = await ctx.db.insert('companies', {
+        name: 'A', code: 'A', status: 'approved', createdAt: now,
+        settings: { aiAssistantEnabled: false, security: { allowPhoneLogin: true, phoneLoginSatisfies2fa: true } },
+      })
+      const B = await ctx.db.insert('companies', {
+        name: 'B', code: 'B', status: 'approved', createdAt: now,
+        settings: { aiAssistantEnabled: false, security: securityB },
+      })
+      const adminA = await ctx.db.insert('users', { email: 'admin@a.com', role: 'admin', companyId: A })
+      const victim = await ctx.db.insert('users', { email: 'v@b.com', role: 'user', companyId: A, emailVerificationTime: now })
+      const member = (userId: Id<'users'>, companyId: Id<'companies'>, roleKey: string) =>
+        ctx.db.insert('memberships', { userId, companyId, roleKey, allLocations: true, status: 'active', updatedAt: now })
+      await member(adminA, A, 'admin')
+      await member(victim, A, 'viewer')
+      await member(victim, B, 'owner')
+      const sAdminA = await ctx.db.insert('authSessions', { userId: adminA, expirationTime: now + 86_400_000 })
+      return { A, B, adminA, victim, sAdminA }
+    })
+    const as = (userId: Id<'users'>, sessionId: Id<'authSessions'>) =>
+      t.withIdentity({ subject: `${userId}|${sessionId}` })
+    const authorize = (params: Record<string, unknown>) =>
+      authorizePhoneOtp(params, { runMutation: (ref: any, args: any) => t.mutation(ref, args) } as any)
+    return { t, as, authorize, ...ids }
+  }
+
+  async function phoneSignIn(s: Awaited<ReturnType<typeof multiOrg>>, phone: string) {
+    await s.authorize({ flow: 'send', phone })
+    const jobs = await scheduledSends(s.t)
+    if (jobs.length === 0) return null
+    const code = (jobs[jobs.length - 1].args[0] as { code: string }).code
+    return await s.authorize({ flow: 'verify', phone, code })
+  }
+
+  test("an admin cannot set the phone of someone who belongs to another organization", async () => {
+    const s = await multiOrg()
+    const admin = s.as(s.adminA, s.sAdminA)
+    expect(await messageOf(admin.mutation(api.users.setPhone, { id: s.victim, phone: ATTACKER_PHONE })))
+      .toContain('belongs to another organization')
+    expect(await messageOf(admin.mutation(api.users.update, { id: s.victim, patch: { phone: ATTACKER_PHONE } })))
+      .toContain('belongs to another organization')
+    expect((await s.t.run((ctx) => ctx.db.get(s.victim)))?.phone).toBeUndefined()
+    // Nothing to sign in with.
+    expect(await phoneSignIn(s, ATTACKER_PHONE)).toBeNull()
+  })
+
+  test('an admin-set phone is unverified: no sign-in until its owner confirms it', async () => {
+    const s = await multiOrg()
+    // Single-organization member: the admin may set the number, unverified.
+    const single = await s.t.run(async (ctx) => {
+      const id = await ctx.db.insert('users', { email: 's@a.com', role: 'user', companyId: s.A })
+      await ctx.db.insert('memberships', {
+        userId: id, companyId: s.A, roleKey: 'viewer', allLocations: true, status: 'active', updatedAt: Date.now(),
+      })
+      const session = await ctx.db.insert('authSessions', { userId: id, expirationTime: Date.now() + 86_400_000 })
+      return { id, session }
+    })
+    await s.as(s.adminA, s.sAdminA).mutation(api.users.setPhone, { id: single.id, phone: ATTACKER_PHONE })
+    expect((await s.t.run((ctx) => ctx.db.get(single.id)))?.phoneVerificationTime).toBeUndefined()
+    expect(await phoneSignIn(s, ATTACKER_PHONE)).toBeNull()
+    // Legacy data: a phone written straight onto a multi-org account is refused too.
+    await s.t.run((ctx) => ctx.db.patch(s.victim, { phone: '+233200000098' }))
+    expect(await phoneSignIn(s, '+233200000098')).toBeNull()
+
+    // The owner, signed in another way, confirms the number; then it signs in.
+    const user = s.as(single.id, single.session)
+    const sent = mockSms()
+    expect(await user.action(api.mfa.startPhoneConfirmation, { channel: 'sms' })).toMatchObject({ ok: true })
+    expect(await user.action(api.mfa.confirmPhone, { code: '000000' })).toEqual({ ok: false, error: 'That code is not right.' })
+    expect(await user.action(api.mfa.confirmPhone, { code: sent[0].code })).toEqual({ ok: true, error: null })
+    expect((await s.t.run((ctx) => ctx.db.get(single.id)))?.phoneVerificationTime).toBeDefined()
+    expect((await phoneSignIn(s, ATTACKER_PHONE))?.userId).toBe(single.id)
+  })
+
+  test("a session verified by A's phone sign-in must verify again after switching to B", async () => {
+    const s = await multiOrg()
+    // The victim's own, confirmed number (the attacker path is closed above).
+    await s.t.run((ctx) => ctx.db.patch(s.victim, { phone: PHONE_A, phoneVerificationTime: Date.now() }))
+    const res = await phoneSignIn(s, PHONE_A)
+    expect(res?.userId).toBe(s.victim)
+    const victim = s.as(s.victim, res!.sessionId)
+    expect(await victim.query(api.users.listDirectory, {})).toBeTruthy()
+    await victim.mutation(api.memberships.switchActive, { companyId: s.B })
+    expect(await messageOf(victim.query(api.memberships.listMembers, {}))).toContain('MFA_REQUIRED')
+    expect((await victim.query(api.users.current, {}))?.mfaRequired).toBe(true)
+
+    // B's own two-step code verifies the session for B.
+    const sent = mockSms()
+    expect(await victim.action(api.mfa.startChallenge, { channel: 'sms' })).toMatchObject({ ok: true })
+    expect(await victim.action(api.mfa.verifyChallenge, { code: sent[0].code })).toEqual({ ok: true, error: null })
+    expect((await victim.query(api.memberships.listMembers, {})).length).toBeGreaterThan(0)
+  })
+
+  test('phone sign-in still counts in B when B also accepts it as the second step', async () => {
+    const s = await multiOrg({ require2fa: true, allowPhoneLogin: true, phoneLoginSatisfies2fa: true })
+    await s.t.run((ctx) => ctx.db.patch(s.victim, { phone: PHONE_A, phoneVerificationTime: Date.now() }))
+    const res = await phoneSignIn(s, PHONE_A)
+    const victim = s.as(s.victim, res!.sessionId)
+    await victim.mutation(api.memberships.switchActive, { companyId: s.B })
+    expect((await victim.query(api.memberships.listMembers, {})).length).toBeGreaterThan(0)
+  })
+
+  test('an admin in several organizations may still change their own phone', async () => {
+    const s = await multiOrg({})
+    await s.t.run((ctx) =>
+      ctx.db.insert('memberships', {
+        userId: s.adminA, companyId: s.B, roleKey: 'viewer', allLocations: true, status: 'active', updatedAt: Date.now(),
+      }),
+    )
+    await s.as(s.adminA, s.sAdminA).mutation(api.users.setPhone, { id: s.adminA, phone: '0245550177' })
+    expect((await s.t.run((ctx) => ctx.db.get(s.adminA)))?.phone).toBe('+233245550177')
   })
 })
