@@ -140,14 +140,14 @@ function ScheduleForm({ reports, schedule, onDone }) {
         </Select>
       </Field>
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-chart-ink">{t('reportBuilder.schedules.recipients')}</legend>
+        <legend className="mb-2 text-[13px] leading-5 font-medium text-chart-ink">{t('reportBuilder.schedules.recipients')}</legend>
         {options === undefined ? (
           <LoadingState />
         ) : (
           <ul className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-foam-deep p-2">
             {options.map((o) => (
               <li key={o.userId}>
-                <label className={`flex items-start gap-2 text-sm ${o.reason ? 'text-muted' : 'cursor-pointer'}`}>
+                <label className={`flex items-start gap-2 text-[13px] leading-5 ${o.reason ? 'text-muted' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     className="mt-0.5 h-4 w-4"
@@ -167,7 +167,7 @@ function ScheduleForm({ reports, schedule, onDone }) {
         )}
         <p className="mt-1 text-xs text-muted">{t('reportBuilder.schedules.recipientsHint')}</p>
       </fieldset>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-[13px] leading-5">
         <input type="checkbox" className="h-4 w-4" checked={form.enabled} onChange={(e) => set({ enabled: e.target.checked })} />
         {t('reportBuilder.schedules.enabled')}
       </label>
@@ -248,7 +248,7 @@ export default function SchedulesPanel() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="font-medium text-chart-ink">{s.reportName}</p>
-                    <p className="text-sm text-muted">
+                    <p className="text-[13px] leading-5 text-muted">
                       {describeSchedule(t, s)} ({s.timezone}) · {t('reportBuilder.schedules.recipientCount', { count: s.recipients.length })}
                     </p>
                     <p className="text-xs text-muted">

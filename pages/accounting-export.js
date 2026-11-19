@@ -85,7 +85,7 @@ function AccountingExportPage() {
     >
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={financeTabs(t)} label={t('ops.tabs.finance')} />
-        <p className="max-w-[720px] text-sm leading-5 text-muted">{t('integ.acct.description')}</p>
+        <p className="max-w-[720px] text-[13px] leading-5 text-muted">{t('integ.acct.description')}</p>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={t('integ.acct.from')} htmlFor="acct-from">
@@ -115,7 +115,7 @@ function AccountingExportPage() {
           </Field>
         </div>
         {!valid && (
-          <p role="alert" className="-mt-4 text-sm text-alert">
+          <p role="alert" className="-mt-4 text-[13px] leading-5 text-alert">
             {t('integ.acct.badRange')}
           </p>
         )}
@@ -135,14 +135,14 @@ function AccountingExportPage() {
             <Panel title={t('integ.acct.summaryTitle', { count: totals.count })} titleId="acct-summary">
               <ListRow dot="cyan" title={t('ops.acct.debit')} value={money(totals.debit, data.currency)} />
               <ListRow dot="pink" title={t('ops.acct.credit')} value={money(totals.credit, data.currency)} />
-              <p className="border-t border-line py-[11px] text-sm text-muted">
+              <p className="border-t border-line py-[11px] text-[13px] leading-5 text-muted">
                 {t('integ.acct.balanced', {
                   debit: money(totals.debit, data.currency),
                   credit: money(totals.credit, data.currency),
                 })}
               </p>
               {data.truncated.length > 0 && (
-                <p role="alert" className="border-t border-line py-[11px] text-sm text-alert">
+                <p role="alert" className="border-t border-line py-[11px] text-[13px] leading-5 text-alert">
                   {t('integ.acct.truncated', { sources: truncatedSources })}
                 </p>
               )}

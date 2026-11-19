@@ -267,13 +267,13 @@ function FeedSuppliers() {
           }
         >
           {error && (
-            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-[13px] leading-5">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-[13px] leading-5">
               {success}
             </div>
           )}
@@ -325,13 +325,13 @@ function FeedSuppliers() {
           }
         >
           {error && (
-            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-[13px] leading-5">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-[13px] leading-5">
               {success}
             </div>
           )}

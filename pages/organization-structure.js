@@ -59,11 +59,12 @@ function useRun() {
   return { busy, run }
 }
 
-function TreeButton({ selected, onSelect, depth = 0, open, onToggle, icon, title, helper, count, muted }) {
+/** Paper 50 tree row: 14px chevron, icon, 14px title over a 12px helper, 72px count lane. */
+function TreeButton({ selected, onSelect, depth = 0, open, onToggle, icon, title, helper, count, muted, strong = false, className = '' }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-input px-3 py-[10px] ${selected ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
-      style={{ marginLeft: depth ? `${depth * 1.5}rem` : undefined }}
+      className={`flex items-center gap-[10px] py-3 pr-[10px] ${selected ? 'rounded-[14px] bg-surface-2' : 'rounded-[14px] hover:bg-surface-2'} ${className}`}
+      style={{ paddingLeft: `${10 + depth * 24}px` }}
     >
       {onToggle ? (
         <button
@@ -73,23 +74,25 @@ function TreeButton({ selected, onSelect, depth = 0, open, onToggle, icon, title
           aria-label={title}
           className="rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
-          {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+          {open ? <ChevronDown size={14} strokeWidth={2} aria-hidden /> : <ChevronRight size={14} strokeWidth={2} aria-hidden />}
         </button>
       ) : (
-        <span className="w-4 shrink-0" aria-hidden />
+        <span className="w-[14px] shrink-0" aria-hidden />
       )}
       <button
         type="button"
         onClick={onSelect}
         aria-current={selected ? 'true' : undefined}
-        className="flex min-w-0 grow basis-0 items-center gap-3 rounded text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        className="flex min-w-0 grow basis-0 items-center gap-[10px] rounded text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
       >
         {icon}
         <span className="flex min-w-0 grow basis-0 flex-col gap-[2px]">
-          <span className={`truncate text-[15px] font-medium leading-[18px] ${muted ? 'text-muted line-through' : 'text-text'}`}>{title}</span>
-          {helper && <span className="truncate text-[13px] leading-4 text-muted">{helper}</span>}
+          <span className={`truncate text-[14px] leading-[18px] ${strong ? 'font-semibold' : ''} ${muted ? 'text-muted line-through' : 'text-text'}`}>{title}</span>
+          {helper && <span className="truncate text-xs leading-4 text-muted">{helper}</span>}
         </span>
-        <span className="shrink-0 text-[14px] leading-[18px] text-muted">{count}</span>
+        {count != null && (
+          <span className={`w-[72px] shrink-0 text-right text-[13px] leading-4 ${selected ? 'text-text' : 'text-muted'}`}>{count}</span>
+        )}
       </button>
     </div>
   )
@@ -148,7 +151,7 @@ function StructurePanel({ units, sites }) {
       depth={depth}
       selected={pickedSite?.id === s.id}
       onSelect={() => setSelected({ type: 'site', id: s.id })}
-      icon={<MapPin size={18} aria-hidden className="shrink-0 text-pearl-cyan" />}
+      icon={<MapPin size={16} strokeWidth={2} aria-hidden className={`shrink-0 ${pickedSite?.id === s.id ? 'text-pearl-cyan' : 'text-muted'}`} />}
       title={s.name}
       helper={[s.waterBody, siteType(s)].filter(Boolean).join(' · ')}
       muted={!s.active}
@@ -162,18 +165,20 @@ function StructurePanel({ units, sites }) {
 
   return (
     <div className="flex flex-col items-start gap-5 xl:flex-row">
-      <SettingsCard
-        title={t('settingsUi.org.structure')}
-        className="w-full min-w-0 grow basis-0"
-        action={
-          !form && (
-            <GhostButton size="lg" onClick={() => setForm({ name: '', code: '', kind: 'business_unit', parentId: '' })}>
+      <SettingsCard className="w-full min-w-0 grow basis-0 !gap-0 !pb-[14px]" aria-labelledby="org-structure-title">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-[14px]">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 id="org-structure-title" className="text-[15px] font-semibold leading-[18px] text-text">
+              {t('settingsUi.org.structure')}
+            </h2>
+            <p className="text-xs leading-4 text-muted">{counts}</p>
+          </div>
+          {!form && (
+            <GhostButton onClick={() => setForm({ name: '', code: '', kind: 'business_unit', parentId: '' })}>
               {t('settingsUi.org.addUnit')}
             </GhostButton>
-          )
-        }
-      >
-        <p className="-mt-2 pb-3 text-[13px] leading-4 text-muted">{counts}</p>
+          )}
+        </div>
         {form && (
           <form onSubmit={submit} className="grid grid-cols-1 items-end gap-3 border-t border-line py-4 sm:grid-cols-2">
             <Field label={t('ent.common.name')} htmlFor="bu-name" required>
@@ -205,20 +210,21 @@ function StructurePanel({ units, sites }) {
         {ordered.length === 0 && (sites || []).length === 0 ? (
           <CardNote>{t('ent.structure.noUnits')}</CardNote>
         ) : (
-          <div className="flex flex-col gap-1 border-t border-line pt-3">
-            {visible.map((u) => {
+          <div className="flex flex-col">
+            {visible.map((u, i) => {
               const own = sitesOf(u._id)
               const hasKids = own.length > 0 || ordered.some((x) => x.parentId === u._id)
               return (
-                <div key={u._id} className="flex flex-col gap-1">
+                <div key={u._id} className={`flex flex-col border-t border-line ${i > 0 ? 'mt-[6px]' : ''}`}>
                   <TreeButton
+                    strong
                     depth={u.depth}
                     selected={pickedUnit?._id === u._id}
                     onSelect={() => setSelected({ type: 'unit', id: u._id })}
                     open={!closed[u._id]}
                     onToggle={hasKids ? () => setClosed((c) => ({ ...c, [u._id]: !c[u._id] })) : undefined}
                     icon={
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-line-strong bg-surface-2 text-[11px] font-semibold text-pearl-pink" aria-hidden>
+                      <span className="flex size-[28px] shrink-0 items-center justify-center rounded-sm border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-pearl-pink" aria-hidden>
                         {initials(u.name)}
                       </span>
                     }
@@ -233,7 +239,11 @@ function StructurePanel({ units, sites }) {
             })}
             {unassigned.length > 0 && (
               <>
-                {ordered.length > 0 && <h3 className={`${GROUP} mt-2`}>{t('settingsUi.org.unassigned')}</h3>}
+                {ordered.length > 0 ? (
+                  <h3 className={`${GROUP} mt-2`}>{t('settingsUi.org.unassigned')}</h3>
+                ) : (
+                  <div aria-hidden className="border-t border-line" />
+                )}
                 {unassigned.map((s) => siteRow(s, 0))}
               </>
             )}
@@ -244,14 +254,14 @@ function StructurePanel({ units, sites }) {
       <SettingsCard className="w-full shrink-0 xl:w-[380px]" aria-live="polite">
         {pickedSite ? (
           <>
-            <div className="flex items-start justify-between gap-3 pb-3">
+            <div className="flex items-start justify-between gap-3 pb-[14px]">
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-[12px] leading-4 text-muted">
                   {[unitById.get(pickedSite.businessUnitId)?.name, t('ent.common.site')].filter(Boolean).join(' · ')}
                 </span>
-                <h2 className="truncate text-[22px] font-semibold leading-7 tracking-tight text-text">{pickedSite.name}</h2>
+                <h2 className="truncate text-[20px] font-semibold leading-6 text-text">{pickedSite.name}</h2>
               </div>
-              <RouteGate href="/farm-locations"><GhostButton size="lg" href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton></RouteGate>
+              <RouteGate href="/farm-locations"><GhostButton href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton></RouteGate>
             </div>
             <DetailList
               className="border-t border-line"
@@ -289,7 +299,7 @@ function StructurePanel({ units, sites }) {
             <div className="flex flex-col gap-1 pb-3">
               <span className="text-[12px] leading-4 text-muted">{kindLabel[pickedUnit.kind]}</span>
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="truncate text-[22px] font-semibold leading-7 tracking-tight text-text">{pickedUnit.name}</h2>
+                <h2 className="truncate text-[20px] font-semibold leading-6 text-text">{pickedUnit.name}</h2>
                 {!pickedUnit.active && <Pill>{t('ent.common.inactive')}</Pill>}
               </div>
             </div>

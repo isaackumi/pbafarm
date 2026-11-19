@@ -230,7 +230,7 @@ function Reports() {
 
                 <fieldset className="flex flex-col gap-2">
                   <legend className="mb-2 text-xs leading-4 text-muted">{t('ops.report.dateRange')}</legend>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
                     <Field label={t('ops.ledger.from')} htmlFor="report-start">
                       <Input id="report-start" type="date" name="startDate" value={dateRange.startDate} onChange={handleDateRangeChange} />
                     </Field>
@@ -243,7 +243,7 @@ function Reports() {
                 <fieldset>
                   <legend className="mb-2 text-xs leading-4 text-muted">{t('ops.report.cages')}</legend>
                   <div className="max-h-60 overflow-y-auto rounded-[14px] border border-line bg-bg px-3 py-1">
-                    <label htmlFor="select-all" className="flex min-h-10 cursor-pointer items-center gap-3 text-sm font-medium text-text">
+                    <label htmlFor="select-all" className="flex min-h-10 cursor-pointer items-center gap-3 text-[13px] leading-5 font-medium text-text">
                       <input
                         type="checkbox"
                         id="select-all"
@@ -257,7 +257,7 @@ function Reports() {
                       {cages.map((cage) => {
                         const id = cageKey(cage)
                         return (
-                          <label key={id} htmlFor={`cage-${id}`} className="flex min-h-10 cursor-pointer items-center gap-3 text-sm text-text">
+                          <label key={id} htmlFor={`cage-${id}`} className="flex min-h-10 cursor-pointer items-center gap-3 text-[13px] leading-5 text-text">
                             <input
                               type="checkbox"
                               id={`cage-${id}`}
@@ -274,18 +274,18 @@ function Reports() {
                       })}
                       {cagesResult === undefined && <LoadingState label={t('ops.report.loadingCages')} />}
                       {cagesResult !== undefined && cages.length === 0 && (
-                        <p className="py-2 text-sm text-muted">{t('ops.report.noCages')}</p>
+                        <p className="py-2 text-[13px] leading-5 text-muted">{t('ops.report.noCages')}</p>
                       )}
                     </div>
                   </div>
                 </fieldset>
 
-                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} className="w-full justify-center">
+                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} className="w-full [&>span]:grow [&>span]:justify-center">
                   {loading ? t('ops.report.generating') : t('ops.report.generate')}
                 </GradientButton>
 
                 {error && (
-                  <p role="alert" className="rounded-[14px] border border-alert/40 bg-alert/10 p-3 text-sm text-alert">
+                  <p role="alert" className="rounded-[14px] border border-alert/40 bg-alert/10 p-3 text-[13px] leading-5 text-alert">
                     {error}
                   </p>
                 )}
@@ -296,14 +296,14 @@ function Reports() {
           <div className="flex min-w-0 flex-col gap-[20px] lg:col-span-3 print:col-span-4">
             {!reportData ? (
               <section className="flex min-h-[18rem] flex-col items-center justify-center gap-1 rounded-card border border-line bg-surface px-6 py-10 text-center shadow-[var(--shadow-card)]">
-                <h2 className="text-base font-semibold leading-[18px] text-text">{t('ops.report.emptyTitle')}</h2>
-                <p className="max-w-md text-sm text-muted">{t('ops.report.emptyBody')}</p>
+                <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('ops.report.emptyTitle')}</h2>
+                <p className="max-w-md text-[13px] leading-5 text-muted">{t('ops.report.emptyBody')}</p>
               </section>
             ) : (
               <div id="report-content" className="flex flex-col gap-[20px]">
                 <header className="flex flex-col gap-1">
                   <h2 className="text-[20px] font-semibold leading-6 text-text">{t(`ops.report.heading.${shownType}`)}</h2>
-                  <p className="text-sm leading-4 text-muted tabular-nums">
+                  <p className="text-[13px] leading-4 text-muted tabular-nums">
                     {t('ops.report.range', { from: fmtDate(reportData.dateRange.startDate), to: fmtDate(reportData.dateRange.endDate) })} ·{' '}
                     {t('ops.report.generated', { at: new Date(reportData.generatedAt).toLocaleString(formatLocale) })}
                   </p>

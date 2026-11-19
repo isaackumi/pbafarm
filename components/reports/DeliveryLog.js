@@ -25,7 +25,7 @@ export default function DeliveryLog() {
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-lg border border-foam-deep">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-[13px] leading-5">
           <thead className="bg-foam text-left">
             <tr>
               <th scope="col" className="px-3 py-2 font-medium">{t('reportBuilder.log.when')}</th>

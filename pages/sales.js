@@ -337,7 +337,7 @@ function Sales() {
                   {isAdmin && (
                     <button
                       type="button"
-                      className="mt-2 text-sm font-semibold text-lagoon-800 underline-offset-2 hover:underline"
+                      className="mt-2 text-[13px] leading-5 font-semibold text-lagoon-800 underline-offset-2 hover:underline"
                       onClick={() => setShowCustomer(true)}
                     >
                       Add customer
@@ -406,7 +406,7 @@ function Sales() {
                 {withdrawalBlock && (
                   <div
                     role="alert"
-                    className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
+                    className="md:col-span-2 rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-[13px] leading-5 text-chart-ink space-y-3"
                   >
                     <p>{withdrawalBlock}</p>
                     {isAdmin ? (
@@ -436,7 +436,7 @@ function Sales() {
                 </Field>
               </div>
               {form.weightKg && form.pricePerKg && (
-                <p className="mt-3 text-sm text-muted">
+                <p className="mt-3 text-[13px] leading-5 text-muted">
                   Total:{' '}
                   <span className="font-data font-semibold text-chart-ink">
                     {formatCurrency(
@@ -516,7 +516,7 @@ function Sales() {
         </FormCard>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-[28px] xl:grid-cols-[700px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-[20px] xl:grid-cols-[700px_minmax(0,1fr)]">
         <Table
           title={t('ops.sales.tableTitle')}
           tabs={SALE_TABS.map((k) => ({ value: k, label: t(`ops.sales.tab.${k}`) }))}
@@ -571,13 +571,13 @@ function Sales() {
           empty={sales === undefined ? t('ops.common.loading') : t('ops.sales.empty')}
         />
 
-        <div className="flex min-w-0 flex-col gap-[28px]">
+        <div className="flex min-w-0 flex-col gap-[20px]">
           {focusSale ? (
             <section
               aria-labelledby="sale-card-title"
-              className="flex flex-col gap-4 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
+              className="flex flex-col gap-1 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 pb-[14px]">
                 <div className="flex min-w-0 flex-col gap-1">
                   <p className="text-xs leading-4 text-muted">{focusSale.invoice_number || formatDate(focusSale.sale_date)}</p>
                   <h2 id="sale-card-title" className="truncate text-[20px] font-semibold leading-6 text-text">
@@ -589,7 +589,7 @@ function Sales() {
                   return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
                 })()}
               </div>
-              <div className="flex flex-col gap-2 rounded-[14px] border border-line bg-bg px-6 py-4 text-[14px] leading-[18px]">
+              <div className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-[13px] leading-4">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">
                     {[
@@ -609,16 +609,17 @@ function Sales() {
                     <span className="text-good tabular-nums">− {formatCurrency(focusSale.amount_paid)}</span>
                   </div>
                 )}
-                <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-4">
-                  <span className="text-text">
+                <div aria-hidden className="h-px shrink-0 bg-line" />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[14px] leading-[18px] text-text">
                     {focusDue ? t('ops.sales.balanceDueOn', { date: shortDate(focusDue) }) : t('ops.sales.balanceDue')}
                   </span>
-                  <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums text-text">
+                  <span className="text-[22px] font-semibold leading-[28px] tabular-nums text-text">
                     {formatCurrency(Math.max(0, Number(focusSale.balance || 0)))}
                   </span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-[10px]">
+              <div className="flex flex-wrap gap-[10px] pt-[14px]">
                 <GradientButton variant="solid" size="sm" onClick={() => setSelectedId(focusSale.id || focusSale._id)} aria-expanded={Boolean(selectedSale)}>
                   {Number(focusSale.balance) > 0 ? t('ops.sales.recordPayment') : t('ops.sales.openSale')}
                 </GradientButton>
@@ -653,7 +654,7 @@ function Sales() {
             action={{ label: t('ops.sales.allCustomers'), onClick: () => setTab('customers') }}
           >
             {top.length === 0 ? (
-              <p className="py-3 text-sm text-muted">{t('ops.sales.noCustomers')}</p>
+              <p className="py-3 text-[13px] leading-5 text-muted">{t('ops.sales.noCustomers')}</p>
             ) : (
               top.map((c) => (
                 <ListRow

@@ -174,6 +174,7 @@ function HarvestLots() {
         </IfPermitted>
       }
     >
+      <div className="flex flex-col gap-[28px]">
       <KpiStrip
         items={[
           { key: 'lots', label: t('tracePage.kpi.lots'), value: formatNumber(all.length, { locale }), suffix: t('tracePage.openCount', { count: openCount }) },
@@ -229,6 +230,7 @@ function HarvestLots() {
           },
         ]}
       />
+      </div>
 
       {showForm && <NewLotModal open={open} onClose={() => setShowForm(false)} />}
     </Layout>

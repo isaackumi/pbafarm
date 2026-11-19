@@ -274,6 +274,7 @@ function LotReport() {
         </div>
       }
     >
+      <div className="flex flex-col gap-[28px]">
       <KpiStrip
         items={[
           { key: 'weight', label: t('tracePage.kpi.weight'), value: kg(r.lot.weight_kg), suffix: r.lot.grade ? t('tracePage.grade', { grade: r.lot.grade }) : undefined },
@@ -356,6 +357,7 @@ function LotReport() {
             <Attachments entityType="harvestLots" entityId={r.lot.id} />
           </section>
         </div>
+      </div>
       </div>
 
       {dispatching && <DispatchModal lot={r.lot} onClose={() => setDispatching(false)} />}

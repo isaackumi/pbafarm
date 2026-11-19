@@ -377,13 +377,13 @@ function Expenses() {
           className="flex min-w-0 grow-[1.4] basis-0 flex-col gap-4 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
         >
           <div className="flex justify-between gap-3">
-            <h2 id="exp-buildup" className="text-base font-semibold leading-[18px] text-text">
+            <h2 id="exp-buildup" className="text-[15px] font-semibold leading-[18px] text-text">
               {t('ops.expenses.buildUp')}
             </h2>
             <span className="text-xs leading-4 text-muted">{t('ops.expenses.perKgUnit', { symbol })}</span>
           </div>
           {buildUp.lines.length === 0 ? (
-            <p className="text-sm text-muted">{pnlRows === undefined ? t('common.loading') : t('ops.expenses.noHarvest')}</p>
+            <p className="text-[13px] text-muted">{pnlRows === undefined ? t('common.loading') : t('ops.expenses.noHarvest')}</p>
           ) : (
             <ul className="flex items-end gap-[14px] overflow-x-auto">
               {[...buildUp.lines.map((l) => ({ ...l, label: labelOf(l.key) })), { key: '__total', label: t('ops.expenses.totalBar'), perKg: buildUp.total }].map(
@@ -409,7 +409,7 @@ function Expenses() {
 
         <Panel title={t('ops.expenses.byCategory')} titleId="exp-by-cat" meta={t('ops.expenses.inRange')} className="grow basis-0">
           {byCategory.length === 0 ? (
-            <p className="border-t border-line py-[11px] text-sm text-muted">{data === undefined ? t('common.loading') : t('ops.expenses.empty')}</p>
+            <p className="border-t border-line py-[11px] text-[13px] text-muted">{data === undefined ? t('common.loading') : t('ops.expenses.empty')}</p>
           ) : (
             byCategory.map(([key, amount], i) => (
               <ListRow
@@ -456,7 +456,7 @@ function Expenses() {
       <Table
         title={t('ops.expenses.tableTitle')}
         actions={
-          <span className="text-sm text-muted">
+          <span className="text-[13px] leading-5 text-muted">
             {data === undefined ? t('common.loading') : t('ops.expenses.inRangeCount', { count: rows.length })}
             {data?.truncated ? ` ${t('ops.expenses.truncated')}` : ''}
           </span>
@@ -530,11 +530,11 @@ function Expenses() {
             </GhostButton>
           </div>
           {customCategories.length === 0 ? (
-            <p className="pt-4 text-sm text-muted">{t('ops.expenses.noCustom')}</p>
+            <p className="pt-4 text-[13px] leading-5 text-muted">{t('ops.expenses.noCustom')}</p>
           ) : (
             <ul className="flex flex-wrap gap-2 pt-4">
               {customCategories.map((c) => (
-                <li key={c.key} className="inline-flex min-h-9 items-center gap-2 rounded-pill border border-line px-3 text-sm">
+                <li key={c.key} className="inline-flex min-h-9 items-center gap-2 rounded-pill border border-line px-3 text-[13px] leading-5">
                   <span className={c.active ? 'text-text' : 'text-muted line-through'}>{c.label}</span>
                   <button
                     type="button"

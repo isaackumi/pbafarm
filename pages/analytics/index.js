@@ -73,7 +73,7 @@ function Analytics() {
     <Layout title={t('ops.analytics.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
-        <p className="max-w-3xl text-sm leading-5 text-muted">{t('ops.analytics.description')}</p>
+        <p className="max-w-3xl text-[13px] leading-5 text-muted">{t('ops.analytics.description')}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <Tabs
@@ -117,8 +117,8 @@ function CardHeader({ title, subtitle, action }) {
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-base font-semibold leading-[18px] text-text">{title}</h2>
-        {subtitle && <p className="mt-1 text-sm leading-5 text-muted">{subtitle}</p>}
+        <h2 className="text-[15px] font-semibold leading-[18px] text-text">{title}</h2>
+        {subtitle && <p className="mt-1 text-[13px] leading-5 text-muted">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -151,7 +151,7 @@ function ExportButton({ onClick }) {
 function Table({ caption, columns, rows, rowKey }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
+      <table className="min-w-full text-[13px] leading-5">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-y border-line text-left text-xs text-faint">
@@ -303,10 +303,10 @@ function Compare({ skip, today, weeks, locationArgs }) {
       <Card padding={false}>
         <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold leading-[18px] text-text">
+            <h2 className="text-[15px] font-semibold leading-[18px] text-text">
               {level === 'sites' ? 'Sites' : 'Units'} side by side
             </h2>
-            <p className="text-sm text-muted mt-1">
+            <p className="text-[13px] leading-5 text-muted mt-1">
               Weeks run Monday to Sunday.
               {money
                 ? ' Cost per kg produced is total cost over weight gained.'
@@ -394,8 +394,8 @@ function Growth({ skip, today, locationArgs }) {
         <div className="px-5 py-6 sm:px-[26px] space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold leading-[18px] text-text">Harvest forecast</h2>
-              <p className="text-sm text-muted mt-1">
+              <h2 className="text-[15px] font-semibold leading-[18px] text-text">Harvest forecast</h2>
+              <p className="text-[13px] leading-5 text-muted mt-1">
                 Weight projected at the growth rate between the last two samples (the cycle&apos;s rate with one sample), fish at the last 28 days&apos; death rate.
               </p>
             </div>
@@ -465,8 +465,8 @@ function FeedEfficiency({ skip, today, weeks, locationArgs }) {
       <Card padding={false}>
         <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold leading-[18px] text-text">Cycle-to-date FCR per unit</h2>
-            <p className="text-sm text-muted mt-1">At the end of each week (Sunday).</p>
+            <h2 className="text-[15px] font-semibold leading-[18px] text-text">Cycle-to-date FCR per unit</h2>
+            <p className="text-[13px] leading-5 text-muted mt-1">At the end of each week (Sunday).</p>
           </div>
           <ExportButton onClick={exportCsv} />
         </div>
@@ -518,8 +518,8 @@ function Mortality({ skip, today, weeks, locationArgs }) {
     <Card padding={false}>
       <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold leading-[18px] text-text">Mortality by unit and week</h2>
-          <p className="text-sm text-muted mt-1">
+          <h2 className="text-[15px] font-semibold leading-[18px] text-text">Mortality by unit and week</h2>
+          <p className="text-[13px] leading-5 text-muted mt-1">
             Deaths in the week as a share of the fish at its end plus those deaths. Darker is worse.
           </p>
         </div>
@@ -568,7 +568,7 @@ function Mortality({ skip, today, weeks, locationArgs }) {
               <tbody>
                 {data.units.map((u) => (
                   <tr key={u.unit_id}>
-                    <th scope="row" className="text-left text-sm font-medium text-text pr-3 whitespace-nowrap">
+                    <th scope="row" className="text-left text-[13px] leading-5 font-medium text-text pr-3 whitespace-nowrap">
                       {u.unit_name}
                     </th>
                     {u.series.map((c) => {
@@ -682,8 +682,8 @@ function Cycles({ skip, locationArgs }) {
       <Card padding={false}>
         <div className="px-5 py-6 sm:px-[26px] flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold leading-[18px] text-text">{money ? 'Profitability by cycle' : 'Cycles'}</h2>
-            <p className="text-sm text-muted mt-1">
+            <h2 className="text-[15px] font-semibold leading-[18px] text-text">{money ? 'Profitability by cycle' : 'Cycles'}</h2>
+            <p className="text-[13px] leading-5 text-muted mt-1">
               {money
                 ? "Feed at purchase prices; expenses and sales of the unit in the cycle's dates. Open cycles count to date."
                 : 'Open cycles count to date. Costs and revenue need permission to see finance.'}

@@ -49,7 +49,7 @@ function InboxItem({ row, selected, onSelect, now }) {
           selected ? 'border-line-strong bg-surface-2' : 'border-line bg-surface hover:bg-surface-2'
         }`}
       >
-        <span className="flex items-center justify-between">
+        <span className="flex w-full items-center justify-between gap-3">
           <Pill tone={TYPE_TONE[row.type]}>{typeLabel(t, row.type)}</Pill>
           <span className="text-xs leading-4 text-faint tabular-nums">
             {ageText(t, row.createdAt, now)}
@@ -197,7 +197,7 @@ function Detail({ row, now, onDone }) {
         <p className="text-xs leading-4 text-faint">{t('approvalsPage.auditHint')}</p>
         <div className="flex flex-wrap gap-[10px]">
           <GhostButton href={detailsHref}>{t('approvalsPage.details')}</GhostButton>
-          <GhostButton tone="danger" onClick={reject} disabled={Boolean(busy)}>
+          <GhostButton onClick={reject} disabled={Boolean(busy)}>
             {busy === 'reject' ? t('approvalsPage.processing') : t('approvalsPage.reject')}
           </GhostButton>
           <GradientButton variant="solid" size="sm" onClick={approve} disabled={Boolean(busy)}>
@@ -225,16 +225,14 @@ function PendingApprovals() {
       title={t('approvalsPage.title')}
       eyebrow={approvals === undefined ? t('approvalsPage.eyebrowLoading') : t('approvalsPage.eyebrow', { count: counts.all })}
     >
-      <div className="border-b border-line">
-        <Tabs
-          variant="underline"
-          label={t('approvalsPage.filter')}
-          value={tab}
-          onChange={setTab}
-          className="gap-[28px] overflow-x-auto"
-          tabs={APPROVAL_TABS.map((k) => ({ value: k, label: `${t.or(`approvalsPage.tab.${k}`, k)} ${counts[k]}` }))}
-        />
-      </div>
+      <div className="flex flex-col gap-[28px]">
+      <Tabs
+        variant="page"
+        label={t('approvalsPage.filter')}
+        value={tab}
+        onChange={setTab}
+        tabs={APPROVAL_TABS.map((k) => ({ value: k, label: `${t.or(`approvalsPage.tab.${k}`, k)} ${counts[k]}` }))}
+      />
       {approvals === undefined ? (
         <p className="text-[14px] leading-[18px] text-muted">{t('approvalsPage.loading')}</p>
       ) : list.length === 0 ? (
@@ -252,6 +250,7 @@ function PendingApprovals() {
           {selected && <Detail key={rowKey(selected)} row={selected} now={now} onDone={() => setSelectedKey(null)} />}
         </div>
       )}
+      </div>
     </Layout>
   )
 }

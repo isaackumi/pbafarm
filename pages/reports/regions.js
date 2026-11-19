@@ -34,7 +34,7 @@ function RegionalReport() {
     <Layout title={t('ent.regions.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
-        <p className="max-w-[720px] text-sm leading-5 text-muted">{t('ent.regions.description')}</p>
+        <p className="max-w-[720px] text-[13px] leading-5 text-muted">{t('ent.regions.description')}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-[720px]">
           <Field label={t('ent.common.from')} htmlFor="rr-from">
             <Input id="rr-from" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
@@ -74,9 +74,9 @@ function RegionalReport() {
             </h2>
           </div>
           {!data ? (
-            <p className="px-6 py-[14px] text-sm text-muted">{t('common.loading')}</p>
+            <p className="px-6 py-[14px] text-[13px] leading-5 text-muted">{t('common.loading')}</p>
           ) : rows.length === 0 ? (
-            <p className="px-6 py-[14px] text-sm text-muted">{t('ent.regions.empty')}</p>
+            <p className="px-6 py-[14px] text-[13px] leading-5 text-muted">{t('ent.regions.empty')}</p>
           ) : (
             <SiteKpiTable
               rows={hasUnassigned ? [...rows, { ...data.unassigned, key: 'none', name: t('ent.regions.noSite') }] : rows}
@@ -84,7 +84,7 @@ function RegionalReport() {
               footer={{ ...data.totals, key: 'total', name: t('ent.common.total') }}
             />
           )}
-          {data?.truncated && <p className="border-t border-line px-6 py-3 text-sm text-muted">{t('ent.common.truncated')}</p>}
+          {data?.truncated && <p className="border-t border-line px-6 py-3 text-[13px] leading-5 text-muted">{t('ent.common.truncated')}</p>}
         </section>
       </div>
     </Layout>

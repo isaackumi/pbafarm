@@ -922,7 +922,7 @@ function FeedPurchases() {
       <div data-tour="page-feed-purchases" className="flex flex-col gap-[28px]">
         <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted">{t('ops.purchases.window')}</p>
+          <p className="text-[13px] leading-5 text-muted">{t('ops.purchases.window')}</p>
           <Segmented
             label={t('ops.common.timeRange')}
             options={['7d', '30d', '90d', '1y'].map((range) => ({ value: range, label: range }))}
@@ -954,7 +954,7 @@ function FeedPurchases() {
           action={lowStockAlerts.length ? undefined : { label: t('ops.purchases.openFeedTypes'), href: '/feed-types' }}
         >
           {lowStockAlerts.length === 0 ? (
-            <p className="py-3 text-sm text-muted">{t('ops.purchases.noLowStock')}</p>
+            <p className="py-3 text-[13px] leading-5 text-muted">{t('ops.purchases.noLowStock')}</p>
           ) : (
             lowStockAlerts.map((feed) => (
               <ListRow
@@ -976,7 +976,7 @@ function FeedPurchases() {
 
         {/* Cost Analysis Section */}
         <div className="page-card mb-6 p-5">
-          <h2 className="mb-4 text-base font-semibold text-chart-ink">Cost analysis</h2>
+          <h2 className="mb-4 text-[15px] leading-6 font-semibold text-chart-ink">Cost analysis</h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Cost Trends Chart */}
             <div className="rounded-xl border border-foam-deep bg-surface p-4">
@@ -1019,7 +1019,7 @@ function FeedPurchases() {
         >
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-foam-deep px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold text-chart-ink">
+              <h2 className="text-[15px] leading-6 font-semibold text-chart-ink">
                 Inventory
               </h2>
               <p className="mt-0.5 text-xs text-muted">
@@ -1050,7 +1050,7 @@ function FeedPurchases() {
                 Current stock
               </h3>
               {inventoryMetrics.stockLevels.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted">
+                <p className="py-8 text-center text-[13px] leading-5 text-muted">
                   No feed types yet.
                 </p>
               ) : (
@@ -1072,7 +1072,7 @@ function FeedPurchases() {
                         <div className="mb-1.5 flex items-baseline justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              <span className="text-sm font-medium text-chart-ink">
+                              <span className="text-[13px] leading-5 font-medium text-chart-ink">
                                 {stock.name}
                               </span>
                               {stock.location ? (
@@ -1090,7 +1090,7 @@ function FeedPurchases() {
                                 : ''}
                             </span>
                           </div>
-                          <span className="shrink-0 font-data text-sm font-semibold text-chart-ink tabular-nums">
+                          <span className="shrink-0 font-data text-[13px] leading-5 font-semibold text-chart-ink tabular-nums">
                             {formatWeight(stock.currentStock)}
                           </span>
                         </div>
@@ -1127,7 +1127,7 @@ function FeedPurchases() {
               {inventoryMetrics.reorderRecommendations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-foam-deep px-4 py-10 text-center">
                   <Package className="mb-2 h-8 w-8 text-muted/60" aria-hidden />
-                  <p className="text-sm font-medium text-chart-ink">
+                  <p className="text-[13px] leading-5 font-medium text-chart-ink">
                     Nothing to reorder
                   </p>
                   <p className="mt-1 max-w-[16rem] text-xs text-muted">
@@ -1143,7 +1143,7 @@ function FeedPurchases() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-chart-ink">
+                          <p className="truncate text-[13px] leading-5 font-semibold text-chart-ink">
                             {rec.name}
                           </p>
                           <p className="mt-0.5 text-xs text-muted tabular-nums">
@@ -1182,7 +1182,7 @@ function FeedPurchases() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cage Usage Chart */}
             <div className="bg-surface rounded-lg p-4">
-              <h3 className="text-sm font-medium text-chart-ink mb-4">Feed usage by cage</h3>
+              <h3 className="text-[13px] leading-5 font-medium text-chart-ink mb-4">Feed usage by cage</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={usageAnalytics.cageUsage}>
@@ -1199,15 +1199,15 @@ function FeedPurchases() {
             {/* eFCR by cage: real figures from the growth calculation */}
             <div className="bg-surface rounded-lg p-4">
               <div className="flex items-baseline justify-between gap-2 mb-4">
-                <h3 className="text-sm font-medium text-chart-ink">eFCR by cage, current cycle</h3>
+                <h3 className="text-[13px] leading-5 font-medium text-chart-ink">eFCR by cage, current cycle</h3>
                 {usageAnalytics.farmEfcr != null && (
-                  <span className="text-sm text-muted tabular-nums">
+                  <span className="text-[13px] leading-5 text-muted tabular-nums">
                     Farm {usageAnalytics.farmEfcr.toFixed(2)}
                   </span>
                 )}
               </div>
               {(usageAnalytics.fcrByCage || []).length === 0 ? (
-                <p className="h-64 flex items-center justify-center text-center text-sm text-muted px-6">
+                <p className="h-64 flex items-center justify-center text-center text-[13px] leading-5 text-muted px-6">
                   eFCR appears once a cage has a stocking, logged feed and a bi-weekly sample.
                 </p>
               ) : (
@@ -1230,7 +1230,7 @@ function FeedPurchases() {
         {/* Supplier Performance Section */}
         <div className="page-card mb-6 overflow-hidden">
           <div className="border-b border-foam-deep px-5 py-4">
-            <h2 className="text-base font-semibold text-chart-ink">
+            <h2 className="text-[15px] leading-6 font-semibold text-chart-ink">
               Supplier performance
             </h2>
             <p className="mt-0.5 text-xs text-muted">
@@ -1251,7 +1251,7 @@ function FeedPurchases() {
                       className="flex items-center justify-between gap-3 rounded-lg border border-foam-deep bg-surface px-3 py-2.5"
                     >
                       <div className="min-w-0 flex-1">
-                        <span className="text-sm font-medium text-chart-ink">
+                        <span className="text-[13px] leading-5 font-medium text-chart-ink">
                           {metric.supplier}
                         </span>
                         <p className="text-xs text-muted tabular-nums">
@@ -1277,7 +1277,7 @@ function FeedPurchases() {
                     </div>
                   ))
                 ) : (
-                  <p className="py-6 text-center text-sm text-muted">
+                  <p className="py-6 text-center text-[13px] leading-5 text-muted">
                     No supplier data yet — record purchases with a supplier selected.
                   </p>
                 )}
@@ -1285,7 +1285,7 @@ function FeedPurchases() {
                   <div className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-chart-ink">
+                        <p className="text-[13px] leading-5 font-medium text-chart-ink">
                           Unassigned supplier
                         </p>
                         <p className="text-xs text-muted">
@@ -1323,7 +1323,7 @@ function FeedPurchases() {
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-muted">
+                  <div className="h-full flex items-center justify-center text-[13px] leading-5 text-muted">
                     No price comparison data available
                   </div>
                 )}
@@ -1377,35 +1377,35 @@ function FeedPurchases() {
                 <tbody className="bg-surface divide-y divide-foam-deep">
                   {purchases.map((purchase) => (
                     <tr key={purchase.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-chart-ink">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 font-medium text-chart-ink">
                         {purchase.feed_types?.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data tabular-nums">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted font-data tabular-nums">
                         {purchase.quantity} kg
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted font-data tabular-nums">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted font-data tabular-nums">
                         {purchase.bags != null
                           ? `${purchase.bags} bags`
                           : '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted tabular-nums">
                         {formatCurrency(purchase.price_per_kg)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted tabular-nums">
                         {formatCurrency(purchase.quantity * purchase.price_per_kg)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted tabular-nums">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted tabular-nums">
                         {new Date(purchase.purchase_date).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted">
                         {purchase.suppliers?.name ||
                           purchase.supplier?.name ||
                           '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted">
                         {purchase.batch_number || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                      <td className="px-6 py-4 whitespace-nowrap text-[13px] leading-5 text-muted">
                         {isAdmin ? (
                           <div className="flex gap-1">
                             <Button
@@ -1484,13 +1484,13 @@ function FeedPurchases() {
           }
         >
           {error && (
-            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-[13px] leading-5">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-[13px] leading-5">
               {success}
             </div>
           )}
