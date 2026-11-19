@@ -572,6 +572,64 @@
     "listEmptyHint": "Enregistrez une récolte quand les poissons quittent une cage.",
     "listAdd": "Enregistrer une récolte"
   },
+  "approvalsPage": {
+    "title": "Approbations",
+    "eyebrow": {
+      "one": "Boîte de réception · {count} en attente de vous",
+      "other": "Boîte de réception · {count} en attente de vous"
+    },
+    "eyebrowLoading": "Boîte de réception",
+    "filter": "Type de demande",
+    "listLabel": "Demandes en attente",
+    "loading": "Chargement des approbations en attente…",
+    "emptyTitle": "Aucune approbation en attente",
+    "emptyHint": "Toutes les demandes d'empoissonnement, de transfert et de complément ont été traitées.",
+    "tab": {
+      "all": "Toutes",
+      "stocking": "Empoissonnement",
+      "fish_transfer": "Transferts",
+      "topup": "Compléments"
+    },
+    "type": {
+      "stocking": "Empoissonnement",
+      "fish_transfer": "Transfert",
+      "topup": "Complément"
+    },
+    "age": {
+      "m": "{n} min",
+      "h": "{n} h",
+      "d": "{n} j"
+    },
+    "summary": {
+      "transfer": "{route} · {n} poissons",
+      "stocking": "{cage} · {n} poissons",
+      "topup": "{cage} · +{n} poissons"
+    },
+    "request": "Demande de {type}",
+    "requestedAgo": "demandé il y a {age}",
+    "from": "De · {cage}",
+    "to": "Vers · {cage}",
+    "unit": "Unité",
+    "quantity": "Quantité",
+    "fish": "poissons",
+    "date": "Date",
+    "abw": "Poids moyen individuel",
+    "biomass": "Biomasse",
+    "noteLabel": "Motif (obligatoire pour refuser)",
+    "notePlaceholder": "Indiquez un motif en cas de refus…",
+    "reasonRequired": "Indiquez un motif avant de refuser cette demande.",
+    "auditHint": "Votre décision est enregistrée dans le journal d'audit.",
+    "details": "Voir le détail",
+    "reject": "Refuser",
+    "approve": "Approuver ({type})",
+    "processing": "Traitement…",
+    "toast": {
+      "approved": "{type} approuvé",
+      "approveFailed": "Impossible d'approuver la demande",
+      "rejected": "{type} refusé",
+      "rejectFailed": "Impossible de refuser la demande"
+    }
+  },
   "gradingPage": {
     "title": "Calibrage",
     "eyebrow": "Production · Trier par taille, répartir en cages",

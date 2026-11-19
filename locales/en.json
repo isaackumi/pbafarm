@@ -572,6 +572,64 @@
     "listEmptyHint": "Record a harvest when fish leave a cage.",
     "listAdd": "Record harvest"
   },
+  "approvalsPage": {
+    "title": "Approvals",
+    "eyebrow": {
+      "one": "Inbox · {count} waiting on you",
+      "other": "Inbox · {count} waiting on you"
+    },
+    "eyebrowLoading": "Inbox",
+    "filter": "Request type",
+    "listLabel": "Pending requests",
+    "loading": "Loading pending approvals…",
+    "emptyTitle": "No pending approvals",
+    "emptyHint": "Every stocking, transfer and top-up request has been processed.",
+    "tab": {
+      "all": "All",
+      "stocking": "Stocking",
+      "fish_transfer": "Transfers",
+      "topup": "Top-ups"
+    },
+    "type": {
+      "stocking": "Stocking",
+      "fish_transfer": "Transfer",
+      "topup": "Top-up"
+    },
+    "age": {
+      "m": "{n}m",
+      "h": "{n}h",
+      "d": "{n}d"
+    },
+    "summary": {
+      "transfer": "{route} · {n} fish",
+      "stocking": "{cage} · {n} fish",
+      "topup": "{cage} · +{n} fish"
+    },
+    "request": "{type} request",
+    "requestedAgo": "requested {age} ago",
+    "from": "From · {cage}",
+    "to": "To · {cage}",
+    "unit": "Unit",
+    "quantity": "Quantity",
+    "fish": "fish",
+    "date": "Date",
+    "abw": "Average body weight",
+    "biomass": "Biomass",
+    "noteLabel": "Reason (required to reject)",
+    "notePlaceholder": "Add a reason if rejecting…",
+    "reasonRequired": "Add a reason before rejecting this request.",
+    "auditHint": "Your decision is recorded in the audit trail.",
+    "details": "View details",
+    "reject": "Reject",
+    "approve": "Approve {type}",
+    "processing": "Processing…",
+    "toast": {
+      "approved": "{type} approved",
+      "approveFailed": "Could not approve the request",
+      "rejected": "{type} rejected",
+      "rejectFailed": "Could not reject the request"
+    }
+  },
   "gradingPage": {
     "title": "Grading",
     "eyebrow": "Production · Sort by size, split into cages",
