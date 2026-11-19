@@ -1388,6 +1388,83 @@
       "saveFailed": "Impossible d’enregistrer le seuil"
     }
   },
+  "sensorsPage": {
+    "eyebrow": "En direct · {readings} sur {units} · mis à jour {updated}",
+    "eyebrowSite": "Capteurs · {site}",
+    "readingsN": {
+      "one": "{count} mesure",
+      "other": "{count} mesures"
+    },
+    "unitsOn": {
+      "one": "{count} unité",
+      "other": "{count} unités"
+    },
+    "alertRules": "Règles d'alerte",
+    "editThresholds": "Modifier les seuils",
+    "kpi": {
+      "reporting": "Actifs",
+      "quietN": {
+        "one": "{count} silencieux",
+        "other": "{count} silencieux"
+      },
+      "unitsN": {
+        "one": "sur {count} unité",
+        "other": "sur {count} unités"
+      },
+      "breaches": "Dépassements · {period}",
+      "lowDo": {
+        "one": "{count} O₂ bas",
+        "other": "{count} O₂ bas"
+      },
+      "waterTemp": "Temp. de l'eau",
+      "unitsAvg": {
+        "one": "moy. {count} unité",
+        "other": "moy. {count} unités"
+      }
+    },
+    "status": {
+      "alert": "Alerte",
+      "warn": "Dépassé",
+      "good": "En ligne",
+      "offline": "Silencieux"
+    },
+    "minAvgMax": "Min {min} · moy. {avg} · max {max}",
+    "minMax": "{min} – {max}",
+    "below": "Sous {value}",
+    "above": "Au-dessus de {value}",
+    "within": "Entre {min} et {max}",
+    "atLeast": "Au moins {value}",
+    "atMost": "Au plus {value}",
+    "noRange": "Pas de plage d'alerte",
+    "quietSince": "Aucune mesure depuis {ago}",
+    "breachedN": {
+      "one": "Revenu dans la plage · {count} dépassement",
+      "other": "Revenu dans la plage · {count} dépassements"
+    },
+    "readings": "Mesures",
+    "filter": "Filtrer les mesures",
+    "tab": {
+      "all": "Toutes",
+      "alerts": "Alertes",
+      "quiet": "Silencieuses"
+    },
+    "search": "Rechercher une unité ou un paramètre",
+    "noMatch": "Aucune mesure ne correspond.",
+    "col": {
+      "reading": "Mesure",
+      "lastSeen": "Dernière",
+      "status": "Statut"
+    },
+    "rulesN": {
+      "one": "{count} active",
+      "other": "{count} actives"
+    },
+    "noRules": "Aucune plage d'alerte ne s'applique à ces mesures.",
+    "ruleOutside": "{label} hors {min}–{max} {unit}",
+    "ruleBelow": "{label} sous {value} {unit}",
+    "ruleAbove": "{label} au-dessus de {value} {unit}",
+    "ruleNotify": "Prévient l'équipe du site en cas de dépassement"
+  },
   "tracePage": {
     "lotsTitle": "Lots de récolte",
     "eyebrowLots": "Traçabilité",

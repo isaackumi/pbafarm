@@ -1388,6 +1388,83 @@
       "saveFailed": "Could not save the threshold"
     }
   },
+  "sensorsPage": {
+    "eyebrow": "Live · {readings} on {units} · updated {updated}",
+    "eyebrowSite": "Sensors · {site}",
+    "readingsN": {
+      "one": "{count} reading",
+      "other": "{count} readings"
+    },
+    "unitsOn": {
+      "one": "{count} unit",
+      "other": "{count} units"
+    },
+    "alertRules": "Alert rules",
+    "editThresholds": "Edit thresholds",
+    "kpi": {
+      "reporting": "Reporting",
+      "quietN": {
+        "one": "{count} quiet",
+        "other": "{count} quiet"
+      },
+      "unitsN": {
+        "one": "on {count} unit",
+        "other": "on {count} units"
+      },
+      "breaches": "Breaches · {period}",
+      "lowDo": {
+        "one": "{count} low DO",
+        "other": "{count} low DO"
+      },
+      "waterTemp": "Water temp",
+      "unitsAvg": {
+        "one": "{count} unit avg",
+        "other": "{count} units avg"
+      }
+    },
+    "status": {
+      "alert": "Alert",
+      "warn": "Breached",
+      "good": "Online",
+      "offline": "Quiet"
+    },
+    "minAvgMax": "Min {min} · avg {avg} · max {max}",
+    "minMax": "{min} – {max}",
+    "below": "Below {value}",
+    "above": "Above {value}",
+    "within": "Within {min}–{max}",
+    "atLeast": "At least {value}",
+    "atMost": "At most {value}",
+    "noRange": "No alert range",
+    "quietSince": "No reading since {ago}",
+    "breachedN": {
+      "one": "Back in range · {count} breach",
+      "other": "Back in range · {count} breaches"
+    },
+    "readings": "Readings",
+    "filter": "Filter readings",
+    "tab": {
+      "all": "All",
+      "alerts": "Alerts",
+      "quiet": "Quiet"
+    },
+    "search": "Search units or parameters",
+    "noMatch": "No readings match.",
+    "col": {
+      "reading": "Reading",
+      "lastSeen": "Last seen",
+      "status": "Status"
+    },
+    "rulesN": {
+      "one": "{count} active",
+      "other": "{count} active"
+    },
+    "noRules": "No alert ranges apply to these readings.",
+    "ruleOutside": "{label} outside {min}–{max} {unit}",
+    "ruleBelow": "{label} below {value} {unit}",
+    "ruleAbove": "{label} above {value} {unit}",
+    "ruleNotify": "Notifies the site team on breach"
+  },
   "tracePage": {
     "lotsTitle": "Harvest lots",
     "eyebrowLots": "Traceability",
