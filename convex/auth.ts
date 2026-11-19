@@ -9,7 +9,7 @@ import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
 import { authorizePhoneOtp } from './phoneAuth'
 import { internal } from './_generated/api'
 import { oidcProviderFromEnv } from './lib/sso'
-import { normalizeEmail } from './authGuard'
+import { canonicalEmail } from './authGuard'
 
 /**
  * Password reset by emailed code (SEC-005): signIn('password', { email, flow: 'reset' })
@@ -33,9 +33,7 @@ const PasswordReset = Email({
 
 const BasePasswordProvider = Password<DataModel>({
   profile(params) {
-    const email = String(params.email || '')
-      .trim()
-      .toLowerCase()
+    const email = canonicalEmail(params.email)
     return {
       email,
       name: (params.name as string) || undefined,
@@ -74,7 +72,7 @@ export const PasswordProvider = {
     authorize: async (params: Record<string, unknown>, ctx: Parameters<CredentialsOptions['authorize']>[1]) => {
       const actionCtx = ctx as unknown as GenericActionCtx<DataModel>
       const ticket = typeof params.humanTicket === 'string' ? params.humanTicket : undefined
-      const email = normalizeEmail(params.email)
+      const email = canonicalEmail(params.email)
       if (params.flow === 'signIn') {
         await actionCtx.runMutation(internal.authGuard.beforePasswordSignIn, { email, humanTicket: ticket })
         let result: unknown

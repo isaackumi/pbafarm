@@ -43,6 +43,7 @@ import { fileEntityType } from './schema'
 import { assertUserCan, requireMember } from './lib/permissions'
 import { bindingUsableBy, blobMatchesBinding, isSha256Hex } from './lib/uploadBinding'
 import { runEffect } from './lib/effect'
+import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { fetchLayer } from './lib/effectHttp'
 import { R2Storage, r2ConfigFromEnv, r2Layer, r2Live } from './lib/r2'
 import {
@@ -51,6 +52,7 @@ import {
   filesProvider,
   inspectUpload,
   presignDownload,
+  R2_UPLOAD_TTL_SEC,
   presignUpload,
   r2UploadKey,
 } from './lib/r2Files'
@@ -184,6 +186,13 @@ export const generateUploadUrl = mutation({
         throw userError('VALIDATION', 'Only PDF, images, CSV, text, Excel and Word files can be attached')
       }
     }
+    for (const [name, key] of [
+      ['uploadUrlPerUser', user._id],
+      ['uploadUrlPerCompany', owner.companyId],
+    ] as const) {
+      const limit = await rateLimiter.limit(ctx, name, { key })
+      if (!limit.ok) throw userError('RATE_LIMITED', `Too many uploads. ${retryAfterText(limit.retryAfter)}`)
+    }
     const now = Date.now()
     const uploadId = await ctx.db.insert('fileUploads', {
       companyId: owner.companyId,
@@ -200,6 +209,9 @@ export const generateUploadUrl = mutation({
     }
     const r2Key = r2UploadKey(owner.companyId, uploadId)
     await ctx.db.patch(uploadId, { provider: 'r2', r2Key, contentType: mime })
+    // The PUT URL does not bound the body size, so an unclaimed object is deleted
+    // as soon as the claim window ends rather than at the next daily prune.
+    await ctx.scheduler.runAfter(CLAIM_WINDOW_MS, internal.files.discardUnclaimedUpload, { uploadId })
     const signed = await runEffect(
       presignUpload({ key: r2Key, contentType: mime, sha256: sha256.toLowerCase() }).pipe(Effect.provide(signer)),
       { toUserError: r2Unavailable },
@@ -441,6 +453,19 @@ export const attachR2 = action({
 })
 
 /** Delete an R2 object (file removed, upload refused or abandoned). No-op without R2. */
+/** Delete the R2 object of an upload that was never attached. */
+export const discardUnclaimedUpload = internalMutation({
+  args: { uploadId: v.id('fileUploads') },
+  returns: v.null(),
+  handler: async (ctx, { uploadId }) => {
+    const u = await ctx.db.get(uploadId)
+    if (u && u.status === 'pending' && u.provider === 'r2' && u.r2Key) {
+      await ctx.scheduler.runAfter(0, internal.files.deleteR2Object, { key: u.r2Key })
+    }
+    return null
+  },
+})
+
 export const deleteR2Object = internalAction({
   args: { key: v.string() },
   returns: v.null(),
@@ -538,7 +563,13 @@ export async function deleteFileBlobs(
       /* already gone */
     }
   }
-  if (file.r2Key) await ctx.scheduler.runAfter(0, internal.files.deleteR2Object, { key: file.r2Key })
+  if (file.r2Key) {
+    await ctx.scheduler.runAfter(0, internal.files.deleteR2Object, { key: file.r2Key })
+    // The upload's presigned PUT may still be live and could recreate the key
+    // once it is gone (If-None-Match only blocks an existing object): delete
+    // again after any such URL has expired.
+    await ctx.scheduler.runAfter(R2_UPLOAD_TTL_SEC * 1000 + 60_000, internal.files.deleteR2Object, { key: file.r2Key })
+  }
 }
 
 /** The file a download token grants, if the token is live and the file still exists. */

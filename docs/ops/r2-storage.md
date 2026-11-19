@@ -49,6 +49,13 @@
   the Convex blob and schedule `files.deleteR2Object` for an `r2Key`.
   `files.pruneDownloadTokens` (existing cron) deletes R2 objects of expired,
   never-attached uploads.
+- **Abuse bounds (audit 2026-11-19).** The presigned PUT does not sign the
+  body length, so an oversized object can land in the bucket until it is
+  refused at attach. `generateUploadUrl` is rate limited (`uploadUrlPerUser`,
+  `uploadUrlPerCompany`); each R2 upload schedules
+  `files.discardUnclaimedUpload` at the end of its claim window; a removed
+  file's key is deleted again once any upload URL for it has expired, since
+  `If-None-Match: *` cannot stop a re-PUT after the object is gone.
 
 ## Owner setup (when the trigger fires)
 

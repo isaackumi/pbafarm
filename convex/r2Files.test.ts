@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
+import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
@@ -117,6 +118,7 @@ describe('R2 file programs', () => {
 
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiterTest.register(t)
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert('companies', { name: 'Lake Farm', code: 'LAKE', status: 'approved', createdAt: Date.now() })
     const otherCompanyId = await ctx.db.insert('companies', { name: 'Other', code: 'OTH', status: 'approved', createdAt: Date.now() })
@@ -263,6 +265,53 @@ describe('files on R2 (CF-005)', () => {
       vi.useRealTimers()
     }
     expect(r2.objects.size).toBe(0)
+  })
+
+  test('unclaimed objects are deleted when the claim window ends; removal deletes again after the PUT URL expires', async () => {
+    const r2 = useR2()
+    const { t, ref, asStaff } = await setup()
+    const b = bytesOf(300)
+    vi.useFakeTimers()
+    try {
+      const put = async () => {
+        const target = await asStaff.mutation(api.files.generateUploadUrl, {
+          ...ref,
+          sha256: await hexSha(b),
+          contentType: 'image/png',
+          name: 'p.png',
+        })
+        await r2.fetchFn(target.uploadUrl, { method: 'PUT', headers: target.headers, body: b as BodyInit })
+        return target
+      }
+      await put()
+      const kept = await put()
+      const attached = await asStaff.action(api.files.attachR2, { ...ref, uploadId: kept.uploadId, name: 'p.png' })
+      if (!attached.ok) throw new Error(attached.message)
+      expect(r2.objects.size).toBe(2)
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      // The unclaimed one is gone; the attached one stays.
+      expect(r2.objects.size).toBe(1)
+
+      await asStaff.mutation(api.files.remove, { fileId: attached.id })
+      vi.advanceTimersByTime(1)
+      await t.finishInProgressScheduledFunctions()
+      expect(r2.objects.size).toBe(0)
+      // Re-upload on the still-valid URL after the first delete…
+      await r2.fetchFn(kept.uploadUrl, { method: 'PUT', headers: kept.headers, body: b as BodyInit })
+      expect(r2.objects.size).toBe(1)
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      // …is removed by the delayed second delete.
+      expect(r2.objects.size).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test('upload URLs are rate limited per user', async () => {
+    const { asStaff, ref } = await setup()
+    const sha256 = await hexSha(bytesOf(10))
+    for (let i = 0; i < 40; i++) await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256 })
+    expect(await codeOf(asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256 }))).toBe('RATE_LIMITED')
   })
 
   test('types outside the allow-list are refused before any URL is signed', async () => {

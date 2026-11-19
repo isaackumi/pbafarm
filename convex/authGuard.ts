@@ -26,11 +26,27 @@ export const SIGNIN_HUMAN_CHECK_AFTER = 3
 /** Failures older than this no longer count as consecutive. */
 const FAILURE_MEMORY_MS = 24 * 60 * 60 * 1000
 
+/** RFC 5321 path limit; longer addresses cannot receive mail. */
+export const MAX_EMAIL_LENGTH = 254
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export function normalizeEmail(value: unknown): string {
   return String(value ?? '')
     .trim()
     .toLowerCase()
-    .slice(0, 320)
+}
+
+/**
+ * The one email value password flows key on: the account (`profile`), the
+ * sign-up/reset ticket grant and sign-in failure counts. Never truncated, so
+ * distinct addresses can never share a key; overlong or malformed input is refused.
+ */
+export function canonicalEmail(value: unknown): string {
+  const email = normalizeEmail(value)
+  if (email.length > MAX_EMAIL_LENGTH || !EMAIL_SHAPE.test(email)) {
+    throw userError('VALIDATION', 'Enter a valid email address.', { reason: 'INVALID_EMAIL' })
+  }
+  return email
 }
 
 /** Refuse a rate-limited attempt; demand a human ticket after repeated failures. */

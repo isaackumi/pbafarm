@@ -208,6 +208,22 @@ describe('sign-up ticket grant (CF-003)', () => {
     await expect(consume(s, other, 'b@x.com')).rejects.toThrow(/human check/)
   })
 
+  test('overlong emails are refused, so long addresses cannot share one grant', async () => {
+    const s = await setup()
+    const ticket = await signupTicket(s)
+    const long = (tail: string) => `${'a'.repeat(330)}${tail}@x.com`
+    for (const email of [long('1'), long('2')]) {
+      await expect(
+        authorizeOf()({ flow: 'signUp', email, password: 'secret123', humanTicket: ticket }, ctxOf(s)),
+      ).rejects.toThrow(/valid email/)
+    }
+    await expect(
+      authorizeOf()({ flow: 'signUp', email: 'not-an-email', password: 'secret123', humanTicket: ticket }, ctxOf(s)),
+    ).rejects.toThrow(/valid email/)
+    // Refused before the ticket was touched: it still works once for a real address.
+    await expect(consume(s, ticket, 'real@x.com')).resolves.toBeNull()
+  })
+
   test('tickets for other purposes get no grant', async () => {
     const s = await setup()
     mockSiteverify({ success: true, action: 'password_reset' })

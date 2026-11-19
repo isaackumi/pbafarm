@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
+import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
@@ -10,6 +11,7 @@ const modules = import.meta.glob('./**/*.ts')
 /** Biosecurity log, compliance checklists and the document register (TRACE-005, TRACE-006). */
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiterTest.register(t)
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert('companies', { name: 'Lake Farm', code: 'LAKE', status: 'approved', createdAt: Date.now() })
     const otherCompanyId = await ctx.db.insert('companies', { name: 'Other', code: 'OTH', status: 'approved', createdAt: Date.now() })
