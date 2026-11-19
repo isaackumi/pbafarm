@@ -8,6 +8,7 @@ Format: `date · artboard (node id) · change · status`
 
 - Website · Landing v2 — Sky (B9Q-0) · ELEVATED (same artboard, supersedes the v2 entry below):
   - Editorial type: every section headline pairs Inter Tight with an **Instrument Serif italic** accent ("data, not *guesswork*", "*and traceable*", "*in one calm place*", "*without the spreadsheets*", "*not per seat*", "*answered*", "*finally in one place*"). Load Instrument Serif (400 + italic) on marketing pages only.
+  - Hero polish: the nine cards now fan out in an arc using `rotate()` (−14°, −10°, −6°, −3°, 0, 3°, 6°, 10°, 14°, with the outer cards dropping up to 34px) instead of `skewY`. A blurred white haze softens the horizon line. A soft white glow (blur 90px, 14% opacity) sits behind the headline. Lake shimmer lines are kept clear of the rating.
   - Glass nav: links sit in a translucent pill (`#FFFFFF1F`, 1px `#FFFFFF38`); the active link is a white pill.
   - NEW Live ticker (C5L-0) under the logos: an ink pill with a lime "Live · 320 farms" badge and a horizontally scrolling marquee of farm events (CSS marquee animation, pause on hover, respect `prefers-reduced-motion`).
   - NEW Showcase — underwater (C70-0) after About: sky top → wavy waterline → deep-water gradient with blurred light rays, bubbles and fish silhouettes. Inside sits a framed dark app window (Home dashboard: sidebar, KPI strip, biomass vs plan chart, "Cages needing you") with four floating chips (live DO sensor, Ask PBA, offline queue, lot QR trace). Animate: rays drift slowly, bubbles rise, chips float ±6px.
