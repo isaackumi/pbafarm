@@ -13,9 +13,9 @@ const PROVIDERS = {
 }
 
 const OUTLINE =
-  'rounded-pill border border-line-strong px-[14px] py-2 text-sm leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
+  'rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
 const DANGER_TEXT =
-  'rounded-pill px-[14px] py-2 text-sm leading-4 text-alert hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
+  'rounded-pill px-[14px] py-2 text-[13px] leading-4 text-alert hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
 
 function browserTimezone() {
   try {
@@ -97,10 +97,10 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
     <div className="flex flex-col gap-[14px] rounded-[12px] border border-line bg-surface p-5">
       <div className="flex items-center gap-3">
         <div className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] ${meta.color}`} aria-hidden>
-          <span className="text-base font-bold leading-[18px] text-white">{meta.mark}</span>
+          <span className="text-[15px] font-bold leading-[18px] text-white">{meta.mark}</span>
         </div>
         <div className="flex flex-col gap-[2px]">
-          <h3 className="text-base font-semibold leading-[18px] text-text">{meta.name}</h3>
+          <h3 className="text-[15px] font-semibold leading-[18px] text-text">{meta.name}</h3>
           <p className={`text-xs leading-4 ${connected ? 'text-good' : 'text-muted'}`}>{status}</p>
         </div>
       </div>

@@ -113,7 +113,7 @@ function AlertsAndInsights({ args, rations }) {
       <section aria-labelledby="alerts-list-title" className="flex flex-col rounded-[12px] border border-line bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div className="flex flex-wrap items-center gap-5">
-            <h2 id="alerts-list-title" className="text-base font-semibold leading-[18px] text-text">
+            <h2 id="alerts-list-title" className="text-[15px] font-semibold leading-[18px] text-text">
               {t(`alertsPage.list.${status}`)}
             </h2>
             <Tabs

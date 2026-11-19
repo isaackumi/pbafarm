@@ -118,7 +118,7 @@ export default function TenantBilling() {
 
       {open.length > 0 && b.paymentInstructions ? (
         <section aria-labelledby="billing-pay" className="rounded-[12px] border border-line bg-surface p-5">
-          <h2 id="billing-pay" className="text-base font-semibold leading-[18px] text-text">
+          <h2 id="billing-pay" className="text-[15px] font-semibold leading-[18px] text-text">
             {t('billing.howToPay')}
           </h2>
           <p className="mt-3 whitespace-pre-wrap rounded-[10px] bg-surface-2 p-3 text-sm leading-5 text-text">{b.paymentInstructions}</p>

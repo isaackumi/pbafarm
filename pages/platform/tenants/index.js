@@ -238,17 +238,17 @@ function RenewalsAndMix() {
     <div className="flex flex-col gap-10 lg:flex-row lg:gap-14">
       <section aria-labelledby="renewals-title" className="flex min-w-0 flex-col gap-[14px] lg:grow-[1.4] lg:basis-0">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="renewals-title" className="text-base font-semibold leading-[18px] text-text">
+          <h2 id="renewals-title" className="text-[15px] font-semibold leading-[18px] text-text">
             {t('platform.tenants.renewals')}
           </h2>
-          <span className="text-sm leading-4 text-muted">{t('platform.tenants.renewalsNote')}</span>
+          <span className="text-[13px] leading-4 text-muted">{t('platform.tenants.renewalsNote')}</span>
         </div>
         {renewals.length === 0 ? (
           <p className="text-sm text-muted">{t('platform.tenants.noRenewals')}</p>
         ) : (
           <ul>
             {renewals.map((r) => (
-              <li key={r.id} className="flex flex-wrap justify-between gap-2 border-b border-line py-[10px] text-sm leading-4">
+              <li key={r.id} className="flex flex-wrap justify-between gap-2 border-b border-line py-[10px] text-[13px] leading-4">
                 <Link className="text-text hover:text-pearl-cyan" href={`/platform/tenants/${r.companyId}`}>
                   {r.companyName} · {r.planName}
                 </Link>
@@ -259,7 +259,7 @@ function RenewalsAndMix() {
         )}
       </section>
       <section aria-labelledby="mix-title" className="flex min-w-0 flex-col gap-[14px] lg:grow lg:basis-0">
-        <h2 id="mix-title" className="text-base font-semibold leading-[18px] text-text">
+        <h2 id="mix-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {t('platform.tenants.planMix')}
         </h2>
         {total === 0 ? (
