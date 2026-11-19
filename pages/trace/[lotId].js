@@ -260,15 +260,15 @@ function LotReport() {
         <div className="flex flex-wrap gap-3 print:hidden">
           {r.lot.remaining_kg > 0 && (
             <IfPermitted permission="production.harvest.record">
-              <GradientButton icon={<Plus size={16} aria-hidden />} onClick={() => setDispatching(true)}>
+              <GradientButton icon={Plus} onClick={() => setDispatching(true)}>
                 {t('tracePage.addDispatch')}
               </GradientButton>
             </IfPermitted>
           )}
-          <GradientButton reverse icon={<Download size={16} aria-hidden />} onClick={downloadCsv}>
+          <GradientButton reverse icon={Download} onClick={downloadCsv}>
             {t('tracePage.exportRecall')}
           </GradientButton>
-          <GhostButton icon={<Printer size={16} aria-hidden />} onClick={() => window.print()}>
+          <GhostButton icon={Printer} onClick={() => window.print()}>
             {t('tracePage.print')}
           </GhostButton>
         </div>

@@ -1,8 +1,21 @@
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Card, CardHeader } from '../ui'
-import { fmt } from './common'
+import { formatDate } from '../../lib/format'
+import { useLocale, useT } from '../../lib/i18n/context'
+import { PaperCard, fmt, label } from './common'
+
+function Codes({ ids, codes }) {
+  if (!ids.length) return '—'
+  return ids.map((id, i) => (
+    <span key={id}>
+      {i > 0 && ', '}
+      <Link href={`/hatchery/broodstock/${id}`} className="text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+        {codes[i]}
+      </Link>
+    </span>
+  ))
+}
 
 /**
  * The spawning and broodstock behind a batch, found through its parents
@@ -10,73 +23,39 @@ import { fmt } from './common'
  * here. Renders nothing for batches from outside the hatchery.
  */
 export default function HatcheryOrigin({ batchId }) {
+  const t = useT()
+  const { locale } = useLocale()
   const origin = useQuery(api.hatchery.batchOrigin, batchId ? { batchId } : 'skip')
   if (!origin) return null
   const s = origin.spawning
+  const pct = (v) => (v != null ? `${fmt(v, 1)} %` : '—')
+  const items = [
+    ['spawned', formatDate(s.spawn_date, { locale })],
+    ['females', <Codes key="f" ids={s.female_ids} codes={s.female_codes} />, true],
+    ['males', <Codes key="m" ids={s.male_ids} codes={s.male_codes} />, true],
+    ['method', s.hormone ? t('hatcheryPage.origin.induced', { hormone: s.hormone }) : label(t, 'method', s.method)],
+    ['eggs', fmt(s.eggs_collected)],
+    ['fertilization', pct(s.fertilization_pct)],
+    ['hatchRate', pct(s.hatch_pct)],
+    ['fryPerKg', fmt(s.fry_per_kg_female)],
+  ]
   return (
-    <Card>
-      <CardHeader
-        title="Hatchery origin"
-        subtitle={
-          origin.generations === 0
-            ? 'Hatched on this farm.'
-            : `Hatched on this farm as ${origin.hatched_batch_number}, ${origin.generations} generation(s) back.`
-        }
-      />
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-        <div>
-          <dt className="text-muted">Spawned</dt>
-          <dd className="text-chart-ink">{s.spawn_date}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Females</dt>
-          <dd className="text-chart-ink font-data">
-            {s.female_ids.map((id, i) => (
-              <span key={id}>
-                {i > 0 && ', '}
-                <Link href={`/hatchery/broodstock/${id}`} className="text-lake hover:underline">
-                  {s.female_codes[i]}
-                </Link>
-              </span>
-            ))}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted">Males</dt>
-          <dd className="text-chart-ink font-data">
-            {s.male_ids.length
-              ? s.male_ids.map((id, i) => (
-                  <span key={id}>
-                    {i > 0 && ', '}
-                    <Link href={`/hatchery/broodstock/${id}`} className="text-lake hover:underline">
-                      {s.male_codes[i]}
-                    </Link>
-                  </span>
-                ))
-              : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted">Method</dt>
-          <dd className="text-chart-ink">{s.hormone ? `Induced, ${s.hormone}` : s.method}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Eggs</dt>
-          <dd className="text-chart-ink tabular-nums">{fmt(s.eggs_collected)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Fertilization</dt>
-          <dd className="text-chart-ink tabular-nums">{s.fertilization_pct != null ? `${fmt(s.fertilization_pct, 1)} %` : '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Hatch rate</dt>
-          <dd className="text-chart-ink tabular-nums">{s.hatch_pct != null ? `${fmt(s.hatch_pct, 1)} %` : '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Fry per kg female</dt>
-          <dd className="text-chart-ink tabular-nums">{fmt(s.fry_per_kg_female)}</dd>
-        </div>
+    <PaperCard
+      title={t('hatcheryPage.origin.title')}
+      meta={
+        origin.generations === 0
+          ? t('hatcheryPage.origin.here')
+          : t('hatcheryPage.origin.back', { batch: origin.hatched_batch_number, count: origin.generations })
+      }
+    >
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-line pt-4 sm:grid-cols-4">
+        {items.map(([k, v, mono]) => (
+          <div key={k} className="flex flex-col gap-1">
+            <dt className="text-xs leading-4 text-muted">{t(`hatcheryPage.origin.${k}`)}</dt>
+            <dd className={`text-[14px] leading-[18px] text-text tabular-nums ${mono ? 'font-mono text-[13px]' : ''}`}>{v}</dd>
+          </div>
+        ))}
       </dl>
-    </Card>
+    </PaperCard>
   )
 }

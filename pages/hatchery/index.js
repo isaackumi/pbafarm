@@ -1,248 +1,298 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useMutation, useQuery } from 'convex/react'
+import { ArrowLeftRight, Plus } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, StatCard } from '../../components/ui'
+import { Field, GhostButton, GradientButton, IfPermitted, Input, KpiStrip, Modal, Select } from '../../components/ui'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
-import { HatcheryNav, Pill, fmt, num, statusTone, today } from '../../components/hatchery/common'
+import { daysBetween, formatDate } from '../../lib/format'
+import { useLocale, useT } from '../../lib/i18n/context'
+import { HatcheryNav, PaperCard, Pill, fmt, label, num, statusTone, today } from '../../components/hatchery/common'
 
 export default function HatcheryPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Hatchery">
-        <HatcheryOverview />
-      </Layout>
+      <HatcheryOverview />
     </ProtectedRoute>
   )
 }
 
+const ITEM = 'flex flex-col gap-[6px] rounded-[14px] border border-line bg-surface-2 px-4 py-[14px]'
+const pct = (v) => (v == null ? '—' : `${fmt(v, 1)}%`)
+
+function Column({ title, items, empty, children }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-[18px] shadow-[var(--shadow-card)]" aria-label={title}>
+      <div className="flex justify-between">
+        <h2 className="text-[14px] font-semibold leading-[18px] text-text">{title}</h2>
+        <span className="text-[13px] leading-4 text-muted tabular-nums">{items === undefined ? '…' : items.length}</span>
+      </div>
+      {items === undefined ? null : items.length === 0 ? <p className="text-xs leading-4 text-faint">{empty}</p> : <ul className="flex flex-col gap-3">{children}</ul>}
+    </section>
+  )
+}
+
+function Item({ title, sub, meta, children }) {
+  return (
+    <li className={ITEM}>
+      <span className="text-[14px] font-medium leading-[18px] text-text">{title}</span>
+      {sub && <span className="text-xs leading-4 text-muted">{sub}</span>}
+      {meta && <span className="text-xs leading-4 text-pearl-cyan">{meta}</span>}
+      {children}
+    </li>
+  )
+}
+
 function HatcheryOverview() {
+  const t = useT()
+  const { locale } = useLocale()
   const { user } = useAuth()
   const kpis = useQuery(api.hatchery.kpis, user ? {} : 'skip')
   const board = useQuery(api.hatchery.incubationBoard, user ? {} : 'skip')
-  const spawnings = useQuery(api.hatchery.listSpawnings, user ? { limit: 10 } : 'skip')
+  const spawnings = useQuery(api.hatchery.listSpawnings, user ? { limit: 20 } : 'skip')
+  const larval = useQuery(api.nursery.larvalBatches, user ? { status: 'active' } : 'skip')
   const k = kpis || {}
-  const incubating = (board || []).filter((l) => l.status === 'incubating')
+  const d = (iso) => (iso === today() ? t('hatcheryPage.today') : formatDate(iso, { locale }))
+  const waiting = spawnings?.filter((s) => s.status === 'spawned')
+  const incubating = board?.filter((l) => l.status === 'incubating')
   const recent = (board || []).filter((l) => l.status !== 'incubating').slice(0, 8)
+  const larvae = larval?.filter((b) => b.stage === 'larvae')
+  const nursery = larval?.filter((b) => b.stage !== 'larvae')
+  const sum = (rows) => (rows || []).reduce((s, b) => s + b.count, 0)
+  const units = (b) => b.units.map((u) => u.name).join(', ')
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader
-        title="Hatchery"
-        description="Broodstock, spawnings, incubation and larvae. A hatch opens a batch whose lineage follows the fish to harvest."
-        actions={<Button href="/hatchery/spawning">Record a spawning</Button>}
-      />
+    <Layout
+      title={t('hatcheryPage.title')}
+      eyebrow={t('hatcheryPage.eyebrow')}
+      actions={
+        <>
+          <IfPermitted permission="hatchery.spawning.record">
+            <GradientButton icon={Plus} href="/hatchery/spawning">
+              {t('hatcheryPage.newSpawning')}
+            </GradientButton>
+          </IfPermitted>
+          <IfPermitted permission="hatchery.dispatch">
+            <GradientButton reverse icon={ArrowLeftRight} href="/hatchery/larval">
+              {t('hatcheryPage.moveToNursery')}
+            </GradientButton>
+          </IfPermitted>
+        </>
+      }
+    >
       <HatcheryNav />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Eggs incubating" value={fmt(k.eggs_incubating)} hint={`${fmt(k.lots_incubating)} lots`} />
-        <StatCard label="Fertilization" value={fmt(k.fertilization_pct, 1)} unit="%" />
-        <StatCard label="Hatch rate" value={fmt(k.hatch_rate_pct, 1)} unit="%" tone="accent" />
-        <StatCard label="Larval survival" value={fmt(k.larval_survival_pct, 1)} unit="%" />
-        <StatCard label="Larvae hatched" value={fmt(k.larvae_hatched)} hint={`${fmt(k.spawnings)} spawnings`} />
-        <StatCard label="Fry per kg female" value={fmt(k.fry_per_kg_female)} />
-        <StatCard label="Eggs collected" value={fmt(k.eggs_collected)} />
-        <StatCard
-          label="Broodstock"
-          value={fmt(k.broodstock_total)}
-          hint={k.broodstock_by_status ? `${fmt(k.broodstock_by_status.ready || 0)} ready` : undefined}
-        />
+      <KpiStrip
+        items={[
+          {
+            key: 'brood',
+            label: t('hatcheryPage.kpi.broodstock'),
+            value: fmt(k.broodstock_total),
+            suffix: k.broodstock_by_status ? t('hatcheryPage.readyN', { n: fmt(k.broodstock_by_status.ready || 0) }) : undefined,
+          },
+          { key: 'eggs', label: t('hatcheryPage.kpi.eggs'), value: fmt(k.eggs_incubating), suffix: t('hatcheryPage.lotsN', { count: k.lots_incubating || 0 }) },
+          {
+            key: 'larvae',
+            label: t('hatcheryPage.kpi.larvae'),
+            value: fmt(sum(larvae)),
+            suffix: k.larval_survival_pct != null ? t('hatcheryPage.survival', { pct: pct(k.larval_survival_pct) }) : undefined,
+          },
+          { key: 'fingerlings', label: t('hatcheryPage.kpi.fingerlings'), value: fmt(sum(nursery)), suffix: t('hatcheryPage.batchesN', { count: nursery?.length || 0 }) },
+        ]}
+      />
+
+      <div className="grid w-full items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Column title={t('hatcheryPage.col.spawning')} items={waiting} empty={t('hatcheryPage.emptySpawning')}>
+          {waiting?.map((s) => (
+            <Item
+              key={s.id}
+              title={[s.female_codes.join(', '), s.male_codes.length ? s.male_codes.join(', ') : null].filter(Boolean).join(' × ')}
+              sub={[s.unit_name, s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : t('hatcheryPage.eggsNotCounted')].filter(Boolean).join(' · ')}
+              meta={d(s.spawn_date)}
+            />
+          ))}
+        </Column>
+        <Column title={t('hatcheryPage.col.incubation')} items={incubating} empty={t('hatcheryPage.emptyIncubation')}>
+          {incubating?.map((l) => (
+            <IncubationItem key={l.id} lot={l} />
+          ))}
+        </Column>
+        <Column title={t('hatcheryPage.col.larvae')} items={larvae} empty={t('hatcheryPage.emptyLarvae')}>
+          {larvae?.map((b) => (
+            <Item
+              key={b.id}
+              title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+              sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+              meta={[t('hatcheryPage.dayN', { n: b.days_since_hatch }), b.survival_pct != null ? pct(b.survival_pct) : null].filter(Boolean).join(' · ')}
+            />
+          ))}
+        </Column>
+        <Column title={t('hatcheryPage.col.nursery')} items={nursery} empty={t('hatcheryPage.emptyNursery')}>
+          {nursery?.map((b) => (
+            <Item
+              key={b.id}
+              title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+              sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+              meta={b.abw_g != null ? `${fmt(b.abw_g, 2)} g` : t('hatcheryPage.dayN', { n: b.days_since_hatch })}
+            />
+          ))}
+        </Column>
       </div>
 
-      <Card padding={false} className="mb-6">
-        <div className="p-5 sm:p-6 pb-0 sm:pb-0">
-          <CardHeader title="Incubation board" subtitle="Lots in incubators now. Record the hatch to stock the larvae." />
-        </div>
-        {board === undefined ? (
-          <p className="p-6 text-sm text-muted">Loading…</p>
-        ) : incubating.length === 0 ? (
-          <EmptyState
-            title="Nothing incubating"
-            description="Record a spawning and put its eggs in an incubator to see them here."
-            action={<Button href="/hatchery/spawning" variant="secondary">Record a spawning</Button>}
-          />
-        ) : (
-          <ul className="grid gap-4 p-5 sm:p-6 sm:grid-cols-2 lg:grid-cols-3">
-            {incubating.map((l) => (
-              <IncubationCard key={l.id} lot={l} />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <PaperCard title={t('hatcheryPage.performance')} meta={t('hatcheryPage.spawningsN', { count: k.spawnings || 0 })}>
+          <dl className="flex flex-col">
+            {[
+              [t('hatcheryPage.kpi.eggsCollected'), fmt(k.eggs_collected)],
+              [t('hatcheryPage.kpi.fertilization'), pct(k.fertilization_pct)],
+              [t('hatcheryPage.kpi.hatchRate'), pct(k.hatch_rate_pct)],
+              [t('hatcheryPage.kpi.larvaeHatched'), fmt(k.larvae_hatched)],
+              [t('hatcheryPage.kpi.fryPerKg'), fmt(k.fry_per_kg_female)],
+            ].map(([key, v]) => (
+              <div key={key} className="flex justify-between gap-3 border-t border-line py-[11px]">
+                <dt className="text-[14px] leading-[18px] text-muted">{key}</dt>
+                <dd className="text-[14px] leading-[18px] text-text tabular-nums">{v}</dd>
+              </div>
             ))}
-          </ul>
-        )}
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Recent spawnings" action={<Link href="/hatchery/spawning" className="text-sm text-lake hover:underline">New</Link>} />
-          {spawnings === undefined ? (
-            <p className="text-sm text-muted">Loading…</p>
-          ) : spawnings.length === 0 ? (
-            <p className="text-sm text-muted">No spawnings recorded yet.</p>
-          ) : (
-            <ul className="divide-y divide-foam-deep -my-2">
-              {spawnings.map((s) => (
-                <li key={s.id} className="py-3 flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-chart-ink">
-                      {s.spawn_date} · {s.female_codes.join(', ')}
-                      {s.male_codes.length ? ` × ${s.male_codes.join(', ')}` : ''}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {[
-                        s.method === 'induced' ? `Induced, ${s.hormone}` : s.method === 'stripped' ? 'Stripped' : 'Natural',
-                        s.eggs_collected != null ? `${fmt(s.eggs_collected)} eggs` : 'eggs not counted',
-                        s.fertilization_pct != null ? `${fmt(s.fertilization_pct, 1)} % fertilized` : null,
-                        s.hatch_pct != null ? `${fmt(s.hatch_pct, 1)} % hatched` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  <Pill tone={statusTone(s.status)}>{s.status}</Pill>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card>
-          <CardHeader title="Latest hatches" />
+          </dl>
+        </PaperCard>
+        <PaperCard title={t('hatcheryPage.latestHatches')}>
           {recent.length === 0 ? (
-            <p className="text-sm text-muted">No hatches yet.</p>
+            <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('hatcheryPage.noHatches')}</p>
           ) : (
-            <ul className="divide-y divide-foam-deep -my-2">
+            <ul className="flex flex-col">
               {recent.map((l) => (
-                <li key={l.id} className="py-3 flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-chart-ink">
+                <li key={l.id} className="flex items-center justify-between gap-3 border-t border-line py-[11px]">
+                  <div className="flex min-w-0 flex-col gap-[2px]">
+                    <span className="text-[14px] leading-[18px] text-text">
                       {l.batch_id ? (
-                        <Link href={`/batches/${l.batch_id}`} className="text-lake hover:underline font-data">
+                        <Link href={`/batches/${l.batch_id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
                           {l.batch_number}
                         </Link>
                       ) : (
                         l.unit_name
                       )}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {l.hatched_on} · {fmt(l.larvae_count)} larvae from {fmt(l.eggs)} eggs
-                    </p>
+                    </span>
+                    <span className="text-xs leading-4 text-muted">
+                      {t('hatcheryPage.hatchLine', { date: formatDate(l.hatched_on, { locale }), larvae: fmt(l.larvae_count), eggs: fmt(l.eggs) })}
+                    </span>
                   </div>
-                  <span className="text-sm tabular-nums">
-                    {l.status === 'failed' ? <Pill tone="warn">failed</Pill> : `${fmt(l.hatch_pct, 1)} %`}
-                  </span>
+                  {l.status === 'failed' ? (
+                    <Pill tone={statusTone(l.status)}>{label(t, 'status', l.status)}</Pill>
+                  ) : (
+                    <span className="text-[14px] leading-[18px] text-text tabular-nums">{pct(l.hatch_pct)}</span>
+                  )}
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </PaperCard>
       </div>
-    </div>
+    </Layout>
   )
 }
 
-function IncubationCard({ lot }) {
+function IncubationItem({ lot }) {
+  const t = useT()
+  const { locale } = useLocale()
+  const [mode, setMode] = useState(null)
+  const days = daysBetween(lot.started_on, today())
+  return (
+    <Item
+      title={lot.unit_name}
+      sub={[t('hatcheryPage.eggsN', { n: fmt(lot.eggs) }), lot.spawn_date ? t('hatcheryPage.spawnedOn', { date: formatDate(lot.spawn_date, { locale }) }) : null, lot.fertilization_pct != null ? t('hatcheryPage.fertilized', { pct: pct(lot.fertilization_pct) }) : null]
+        .filter(Boolean)
+        .join(' · ')}
+      meta={t('hatcheryPage.dayN', { n: days })}
+    >
+      <IfPermitted permission="hatchery.spawning.record">
+        <div className="flex flex-wrap gap-2 pt-1">
+          <GhostButton size="sm" onClick={() => setMode('hatch')}>{t('hatcheryPage.recordHatch')}</GhostButton>
+          <GhostButton size="sm" tone="danger" onClick={() => setMode('fail')}>{t('hatcheryPage.failed')}</GhostButton>
+        </div>
+      </IfPermitted>
+      {mode && <HatchModal lot={lot} mode={mode} onClose={() => setMode(null)} />}
+    </Item>
+  )
+}
+
+function HatchModal({ lot, mode, onClose }) {
+  const t = useT()
   const { showToast } = useToast()
   const { user } = useAuth()
   const units = useQuery(api.nursery.nurseryUnits, user ? {} : 'skip')
   const recordHatch = useMutation(api.hatchery.recordHatch)
   const markFailed = useMutation(api.hatchery.markLotFailed)
-  const [mode, setMode] = useState(null)
   const [form, setForm] = useState({ date: today(), larvae: '', unitId: '', reason: '' })
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
-  const days = Math.max(0, Math.round((Date.parse(today()) - Date.parse(lot.started_on)) / 86_400_000))
-  const emptyUnits = (units || []).filter((u) => u.nursery && (u.count <= 0 || u.id === lot.unit_id))
+  const emptyUnits = (units || []).filter((u) => u.nursery && u.count <= 0 && u.id !== lot.unit_id)
 
   const submit = async (e) => {
     e.preventDefault()
     setSaving(true)
     try {
       if (mode === 'hatch') {
-        const r = await recordHatch({
-          lotId: lot.id,
-          hatchedOn: form.date,
-          larvaeCount: num(form.larvae),
-          larvalUnitId: form.unitId || undefined,
-        })
-        showToast('success', `Batch ${r.batchNumber} opened with ${fmt(num(form.larvae))} larvae`)
+        const r = await recordHatch({ lotId: lot.id, hatchedOn: form.date, larvaeCount: num(form.larvae), larvalUnitId: form.unitId || undefined })
+        showToast('success', t('hatcheryPage.hatchSaved', { batch: r.batchNumber, n: fmt(num(form.larvae)) }))
       } else {
         await markFailed({ lotId: lot.id, date: form.date, reason: form.reason })
-        showToast('success', 'Lot marked failed')
+        showToast('success', t('hatcheryPage.failSaved'))
       }
-      setMode(null)
+      onClose()
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not save'))
+      showToast('error', errorMessage(err, t('hatcheryPage.saveFailed')))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <li className="rounded-lg border border-foam-deep p-4 space-y-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="font-medium text-chart-ink">{lot.unit_name}</p>
-        <span className="text-sm text-muted tabular-nums">day {days}</span>
-      </div>
-      <p className="text-sm text-muted">
-        {fmt(lot.eggs)} eggs · spawned {lot.spawn_date}
-        {lot.fertilization_pct != null ? ` · ${fmt(lot.fertilization_pct, 1)} % fertilized` : ''}
-      </p>
-      {mode == null ? (
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => setMode('hatch')}>
-            Record hatch
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setMode('fail')}>
-            Failed
-          </Button>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-3" noValidate>
-          <Field label="Date" htmlFor={`d-${lot.id}`}>
-            <Input id={`d-${lot.id}`} type="date" value={form.date} onChange={set('date')} />
-          </Field>
-          {mode === 'hatch' ? (
-            <>
-              <Field label="Larvae hatched" htmlFor={`n-${lot.id}`} required>
-                <Input
-                  id={`n-${lot.id}`}
-                  type="number"
-                  inputMode="numeric"
-                  value={form.larvae}
-                  onChange={set('larvae')}
-                  className="tabular-nums"
-                />
-              </Field>
-              <Field label="Stock larvae in" htmlFor={`u-${lot.id}`} hint="Empty larval tanks; default is this incubator">
-                <Select id={`u-${lot.id}`} value={form.unitId} onChange={set('unitId')}>
-                  <option value="">{lot.unit_name}</option>
-                  {emptyUnits
-                    .filter((u) => u.id !== lot.unit_id)
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                </Select>
-              </Field>
-            </>
-          ) : (
-            <Field label="Reason" htmlFor={`r-${lot.id}`} required>
-              <Input id={`r-${lot.id}`} value={form.reason} onChange={set('reason')} placeholder="Fungus, temperature…" />
+    <Modal
+      as="form"
+      onSubmit={submit}
+      noValidate
+      onClose={onClose}
+      showClose
+      size="sm"
+      title={mode === 'hatch' ? t('hatcheryPage.hatchTitle', { unit: lot.unit_name || '—' }) : t('hatcheryPage.failTitle', { unit: lot.unit_name || '—' })}
+      footer={
+        <>
+          <GhostButton type="button" onClick={onClose}>{t('common.cancel')}</GhostButton>
+          <GradientButton type="submit" variant="solid" size="sm" disabled={saving}>
+            {saving ? t('common.saving') : t('common.save')}
+          </GradientButton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Field label={t('hatcheryPage.date')} htmlFor={`d-${lot.id}`}>
+          <Input id={`d-${lot.id}`} type="date" value={form.date} onChange={set('date')} />
+        </Field>
+        {mode === 'hatch' ? (
+          <>
+            <Field label={t('hatcheryPage.larvaeHatched')} htmlFor={`n-${lot.id}`} required>
+              <Input id={`n-${lot.id}`} type="number" inputMode="numeric" value={form.larvae} onChange={set('larvae')} className="tabular-nums" />
             </Field>
-          )}
-          <div className="flex gap-2">
-            <Button size="sm" type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setMode(null)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      )}
-    </li>
+            <Field label={t('hatcheryPage.stockIn')} htmlFor={`u-${lot.id}`} hint={t('hatcheryPage.stockInHint')}>
+              <Select id={`u-${lot.id}`} value={form.unitId} onChange={set('unitId')}>
+                <option value="">{lot.unit_name}</option>
+                {emptyUnits.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </Select>
+            </Field>
+          </>
+        ) : (
+          <Field label={t('hatcheryPage.reason')} htmlFor={`r-${lot.id}`} required>
+            <Input id={`r-${lot.id}`} value={form.reason} onChange={set('reason')} placeholder={t('hatcheryPage.reasonPlaceholder')} />
+          </Field>
+        )}
+      </div>
+    </Modal>
   )
 }

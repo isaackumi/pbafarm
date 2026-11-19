@@ -168,7 +168,7 @@ function HarvestLots() {
       eyebrow={t('tracePage.eyebrowLots')}
       actions={
         <IfPermitted permission="production.harvest.record">
-          <GradientButton icon={<Plus size={16} aria-hidden />} onClick={() => setShowForm(true)} disabled={!open.length}>
+          <GradientButton icon={Plus} onClick={() => setShowForm(true)} disabled={!open.length}>
             {t('tracePage.newLot.action')}
           </GradientButton>
         </IfPermitted>
