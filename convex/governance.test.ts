@@ -264,9 +264,21 @@ describe('deletion requests and retention (ENT-005)', () => {
     await drain()
     expect(await t.run((ctx) => ctx.db.query('cages').collect())).toHaveLength(3)
 
+    // A photo with its thumbnail (CF-004): the purge deletes both blobs.
+    const photo = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob(['photo']))
+      const thumbStorageId = await ctx.storage.store(new Blob(['thumb']))
+      await ctx.db.insert('files', {
+        companyId, entityType: 'healthTreatments', entityId: 'h', provider: 'convex', storageId, thumbStorageId,
+        name: 'p.jpg', mime: 'image/jpeg', size: 5, uploadedBy: owner, createdAt: Date.now(),
+      })
+      return { storageId, thumbStorageId }
+    })
     await t.run((ctx) => ctx.db.patch(requestId, { graceEndsAt: Date.now() - 1 }))
     await t.mutation(internal.governance.processDueRequests, {})
     await drain()
+    expect(await t.run((ctx) => ctx.db.system.get(photo.storageId))).toBeNull()
+    expect(await t.run((ctx) => ctx.db.system.get(photo.thumbStorageId))).toBeNull()
     const after = await t.run(async (ctx) => ({
       cages: await ctx.db.query('cages').collect(),
       request: await ctx.db.get(requestId),

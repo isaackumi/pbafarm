@@ -34,25 +34,37 @@
   and the type; the browser gets a presigned **PUT** (15 min) with
   `Content-Type`, `x-amz-meta-sha256` and `If-None-Match: *` signed in, so the
   URL can only create that one object, never overwrite it after attach.
+  An image may declare a thumbnail (CF-004: `thumbnail: { sha256,
+  contentType }`, JPEG/WebP, made in the browser by
+  `lib/imageCompression.js`); the response then has `thumb: { uploadUrl,
+  method, headers }`, a second create-only PUT for `<key>.thumb` with the
+  same three headers (no CORS change).
 - **Attach.** `files.attachR2({ entityType, entityId, uploadId, name })`
   (action): re-checks the binding (same user, same company, same record,
   unexpired, unused), HEADs the object (≤ 10 MB), downloads it and hashes the
   bytes against the declared SHA-256, then inserts the `files` row
   (`provider: 'r2'`, `r2Key`, no `storageId`) with the same type, size and
-  per-record checks as `attach`. A refused object is deleted.
+  per-record checks as `attach`. A refused object is deleted. A thumbnail is
+  checked the same way (≤ 512 KB, declared SHA-256); a missing or bad one is
+  deleted and the file is attached without it (`thumbR2Key` on the row).
 - **Download.** `files.requestDownload` (unchanged token, company check) →
   `GET /files/download?token=…` → for `provider: 'r2'` a **302** to a
   presigned GET valid 5 minutes that forces `Content-Disposition: attachment`
   and the recorded type (`Cache-Control: private, no-store`,
   `Referrer-Policy: no-referrer`). Convex rows still stream as before.
+  Thumbnails: `files.requestThumbnails({ fileIds })` issues the same tokens
+  (`variant: 'thumb'`, same company and site checks) for the `<img>` previews
+  in `components/Attachments.js` and custom-field photos.
 - **Delete.** `files.remove` and the company purge (`governance.ts`) delete
-  the Convex blob and schedule `files.deleteR2Object` for an `r2Key`.
-  `files.pruneDownloadTokens` (existing cron) deletes R2 objects of expired,
-  never-attached uploads.
+  the Convex blob and schedule `files.deleteR2Object` for an `r2Key`, and the
+  same for the thumbnail (`thumbStorageId` / `thumbR2Key`).
+  `files.pruneDownloadTokens` (existing cron) and
+  `files.discardUnclaimedUpload` delete R2 objects (file and thumbnail) of
+  expired, never-attached uploads.
 - **Abuse bounds (audit 2026-11-19).** The presigned PUT does not sign the
   body length, so an oversized object can land in the bucket until it is
   refused at attach. `generateUploadUrl` is rate limited (`uploadUrlPerUser`,
-  `uploadUrlPerCompany`); each R2 upload schedules
+  `uploadUrlPerCompany`; a thumbnail takes a second token); each R2 upload schedules
   `files.discardUnclaimedUpload` at the end of its claim window; a removed
   file's key is deleted again once any upload URL for it has expired, since
   `If-None-Match: *` cannot stop a re-PUT after the object is gone.
@@ -99,6 +111,9 @@ automated).
 - Reconciliation cron (weekly `reconcileR2` + platform notification): left
   manual on purpose.
 - Logos (`companies.setLogo`) and data exports stay on Convex storage.
+- `backfillFilesToR2` moves only the file; a Convex-stored thumbnail stays on
+  Convex (`thumbStorageId`) and keeps working, since thumbnails are served
+  from their own field whatever the file's provider.
 
 Implemented on a small hand-written signer instead of `@convex-dev/r2`
 (doc 17 Stage 4) so it fits the Effect service/Fetch/fake-test conventions

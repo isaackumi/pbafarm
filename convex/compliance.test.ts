@@ -278,6 +278,67 @@ describe('document register', () => {
     expect(await t.run((ctx) => ctx.db.query('files').collect())).toEqual([])
   })
 
+  test('an image can carry a thumbnail bound to the same upload; granted like the file, removed with it (CF-004)', async () => {
+    const { t, asStaff, asOutsider, ids } = await setup()
+    const ref = { entityType: 'healthTreatments' as const, entityId: ids.treatmentId }
+    const thumbBytes = new Uint8Array(50).fill(3)
+    const thumbnail = { sha256: await hexSha(thumbBytes), contentType: 'image/jpeg' }
+    // Documents get no thumbnail, and thumbnails are JPEG/WebP only.
+    expect(
+      await errorOf(asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(bytesOf(10)), contentType: 'application/pdf', thumbnail })),
+    ).toMatchObject({ code: 'VALIDATION' })
+    expect(
+      await errorOf(
+        asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(bytesOf(10)), contentType: 'image/png', thumbnail: { ...thumbnail, contentType: 'image/svg+xml' } }),
+      ),
+    ).toMatchObject({ code: 'VALIDATION' })
+
+    const target = await asStaff.mutation(api.files.generateUploadUrl, {
+      ...ref,
+      sha256: await hexSha(bytesOf(1000)),
+      contentType: 'image/jpeg',
+      name: 'net.jpg',
+      thumbnail,
+    })
+    expect(target.thumb).toMatchObject({ method: 'POST', uploadUrl: expect.any(String) })
+    const again = await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(thumbBytes), contentType: 'image/jpeg' })
+    const storageId = await store(t, 'image/jpeg', bytesOf(1000))
+    const thumbStorageId = await store(t, 'image/jpeg', thumbBytes)
+    const attached = await asStaff.mutation(api.files.attach, { ...ref, uploadId: target.uploadId, storageId, thumbStorageId, name: 'net.jpg' })
+    if (!attached.ok) throw new Error(attached.message)
+    expect(await t.run((ctx) => ctx.db.get(attached.id))).toMatchObject({ thumbStorageId, thumbMime: 'image/jpeg', thumbSize: 50 })
+    expect(await asStaff.query(api.files.list, ref)).toEqual([expect.objectContaining({ id: attached.id, has_thumbnail: true })])
+
+    // Another company gets no thumbnail grant; the owner's grant serves the thumbnail only.
+    expect(await asOutsider.mutation(api.files.requestThumbnails, { fileIds: [attached.id] })).toEqual([])
+    const [grant] = await asStaff.mutation(api.files.requestThumbnails, { fileIds: [attached.id, attached.id] })
+    const res = await t.fetch(grant.path, { method: 'GET' })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/jpeg')
+    expect((await res.arrayBuffer()).byteLength).toBe(50)
+
+    // A claimed thumbnail blob cannot be claimed again as a file (binding made before it was stored).
+    expect(
+      await errorOf(asStaff.mutation(api.files.attach, { ...ref, uploadId: again.uploadId, storageId: thumbStorageId, name: 'x.jpg' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+
+    // A thumbnail whose bytes are not the declared ones is ignored (and, not
+    // proven to be this upload's, left alone); the photo is still attached.
+    const other = await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(bytesOf(1000)), contentType: 'image/jpeg', thumbnail })
+    const otherMain = await store(t, 'image/jpeg', bytesOf(1000))
+    const wrongThumb = await store(t, 'image/jpeg', new Uint8Array(50).fill(4))
+    const plain = await asStaff.mutation(api.files.attach, { ...ref, uploadId: other.uploadId, storageId: otherMain, thumbStorageId: wrongThumb, name: 'b.jpg' })
+    if (!plain.ok) throw new Error(plain.message)
+    expect((await t.run((ctx) => ctx.db.get(plain.id)))?.thumbStorageId).toBeUndefined()
+    expect(await t.run((ctx) => ctx.db.system.get(wrongThumb))).not.toBeNull()
+    expect(await asStaff.mutation(api.files.requestThumbnails, { fileIds: [plain.id] })).toEqual([])
+
+    // Removing the file deletes its thumbnail too.
+    await asStaff.mutation(api.files.remove, { fileId: attached.id })
+    expect(await t.run((ctx) => ctx.db.system.get(storageId))).toBeNull()
+    expect(await t.run((ctx) => ctx.db.system.get(thumbStorageId))).toBeNull()
+  })
+
   test('refuses disallowed types and oversized files, and deletes them', async () => {
     const { t, asStaff, ids } = await setup()
     const ref = { entityType: 'healthTreatments' as const, entityId: ids.treatmentId }
@@ -347,6 +408,17 @@ describe('document register site scope (PERM-004, audit C)', () => {
     }
     const { path } = await asField.mutation(api.files.requestDownload, { fileId: ids.photoA })
     expect(await (await t.fetch(path, { method: 'GET' })).text()).toBe('site-A photo')
+
+    // Thumbnails follow the same site scope (CF-004).
+    await t.run(async (ctx) => {
+      for (const id of [ids.photoA, ids.photoB, ids.report]) {
+        await ctx.db.patch(id, { thumbStorageId: await ctx.storage.store(new Blob(['thumb'])), thumbMime: 'image/jpeg', thumbSize: 5 })
+      }
+    })
+    const thumbs = await asField.mutation(api.files.requestThumbnails, { fileIds: [ids.photoA, ids.photoB, ids.report] })
+    expect(thumbs.map((g) => g.fileId)).toEqual([ids.photoA])
+    expect(await (await t.fetch(thumbs[0].path, { method: 'GET' })).text()).toBe('thumb')
+    expect(await asOwner.mutation(api.files.requestThumbnails, { fileIds: [ids.photoA, ids.photoB, ids.report] })).toHaveLength(3)
 
     // All-sites members are unaffected.
     expect(await asOwner.query(api.files.list, { entityType: 'customFieldDefs', entityId: ids.def })).toHaveLength(3)

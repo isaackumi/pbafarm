@@ -135,11 +135,12 @@ describe('permission matrix (generated from the source)', () => {
   test('templates: viewer writes nothing, field staff and managers never hold admin-only permissions', () => {
     const viewer = new Set<string>(ROLE_TEMPLATES.viewer)
     // Not farm data: remember my site; make sure a first site exists; issue a
-    // short-lived download link for a file the viewer may already read.
+    // short-lived download (or thumbnail) link for a file the viewer may already read.
     const preferences = new Set([
       'farmLocations.setActiveLocation',
       'farmLocations.ensureDefault',
       'files.requestDownload',
+      'files.requestThumbnails',
       // own dashboard arrangement; the org default additionally needs customization.manage
       'dashboardLayouts.save',
       'dashboardLayouts.reset',

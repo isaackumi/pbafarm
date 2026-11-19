@@ -44,9 +44,13 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   llmPerCompanyHour: { kind: 'fixed window', rate: 500, period: HOUR },
   /** Usage rows reported by the Next proxy for server-key calls, key = userId. */
   llmUsageReportPerUser: { kind: 'fixed window', rate: 150, period: HOUR },
-  /** Attachment upload URLs (CF-005), key = userId / companyId. Bounds orphaned R2 objects. */
-  uploadUrlPerUser: { kind: 'token bucket', rate: 120, period: HOUR, capacity: 40 },
-  uploadUrlPerCompany: { kind: 'token bucket', rate: 600, period: HOUR, capacity: 150 },
+  /**
+   * Attachment upload URLs (CF-005), key = userId / companyId. Bounds orphaned
+   * R2 objects. An image with a thumbnail (CF-004) takes two tokens, so the
+   * budget is 40 photos (80 documents) in a burst per user.
+   */
+  uploadUrlPerUser: { kind: 'token bucket', rate: 240, period: HOUR, capacity: 80 },
+  uploadUrlPerCompany: { kind: 'token bucket', rate: 1200, period: HOUR, capacity: 300 },
   /** Sensor threshold alerts (ANLY-006), key = `${unitId}:${parameter}`. */
   sensorBreachAlertPerUnit: { kind: 'fixed window', rate: 1, period: HOUR },
 })
