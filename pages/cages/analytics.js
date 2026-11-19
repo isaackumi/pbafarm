@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import React from 'react'
+import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button, StatCard } from '../../components/ui'
-import { fetchCages } from '../../store/slices/cagesSlice'
-import { useAuth } from '../../contexts/AuthContext'
+import { PageHeader, Button, StatCard, LoadingState, EmptyState } from '../../components/ui'
+import { api } from '../../convex/_generated/api'
+import { useLocation } from '../../contexts/LocationContext'
 import {
   BarChart,
   Bar,
@@ -18,7 +18,6 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { analyticsService } from '../../lib/databaseService'
 
 const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
@@ -33,59 +32,21 @@ export default function CageAnalyticsPage() {
 }
 
 function CageAnalytics() {
-  const dispatch = useDispatch()
-  const { user, loading: authLoading } = useAuth()
-  const { cages, loading: reduxLoading, error: reduxError } = useSelector(
-    (state) => state.cages,
-  )
-  const [analyticsData, setAnalyticsData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.list, locationArgs)
 
-  useEffect(() => {
-    if (authLoading || !user) return
-
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        let cageList = cages
-        if (!cageList || cageList.length === 0) {
-          const result = await dispatch(fetchCages({ page: 1, pageSize: 100 }))
-          cageList = result?.payload?.data || cageList || []
-        }
-
-        // Derive stats locally from already-authenticated cage data when possible
-        if (cageList?.length) {
-          setAnalyticsData({
-            totalCages: cageList.length,
-            activeCages: cageList.filter((c) => c.status === 'active').length,
-            harvestedCages: cageList.filter((c) => c.status === 'harvested')
-              .length,
-            maintenanceCages: cageList.filter((c) => c.status === 'maintenance')
-              .length,
-            fallowCages: cageList.filter((c) => c.status === 'fallow').length,
-            emptyCages: cageList.filter((c) => c.status === 'empty').length,
-          })
-        } else {
-          const { data, error: analyticsError } =
-            await analyticsService.getCageSummaryStats()
-          if (analyticsError) throw analyticsError
-          setAnalyticsData(data)
-        }
-      } catch (err) {
-        console.error('Error loading analytics:', err)
-        setError('Failed to load analytics data. Please try again.')
-      } finally {
-        setLoading(false)
-      }
+  const analyticsData = React.useMemo(() => {
+    if (!cages) return null
+    const count = (status) => cages.filter((c) => c.status === status).length
+    return {
+      totalCages: cages.length,
+      activeCages: count('active'),
+      harvestedCages: count('harvested'),
+      maintenanceCages: count('maintenance'),
+      fallowCages: count('fallow'),
+      emptyCages: count('empty'),
     }
-
-    loadData()
-    // Intentionally omit cages from deps to avoid refetch loops; we load once auth is ready.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, user, authLoading])
+  }, [cages])
 
   // Calculate analytics from cages data if analytics service fails
   const analytics = React.useMemo(() => {
@@ -173,48 +134,15 @@ function CageAnalytics() {
     }
   }, [cages])
 
-  if (loading || reduxLoading) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent"></div>
-            <p className="mt-2 text-muted">Loading analytics…</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || reduxError) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-signal" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-signal">Error</h3>
-                <div className="mt-2 text-sm text-signal">
-                  <p>{error || reduxError}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  if (cages === undefined) {
+    return <LoadingState />
   }
 
   if (!cages || cages.length === 0) {
     return (
       <div className="w-full">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center text-muted">No cage data available.</div>
+          <EmptyState title="No cage data available." />
         </div>
       </div>
     )

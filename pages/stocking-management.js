@@ -1,5 +1,6 @@
 // pages/stocking-management.js
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import {
   Search,
@@ -12,9 +13,12 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, Select, Textarea, EmptyState } from '../components/ui'
+import { PageHeader, Button, Field, Input, Select, Textarea, EmptyState, LoadingState } from '../components/ui'
 import FarmLocationSelect from '../components/FarmLocationSelect'
-import { stockingService } from '../lib/databaseService'
+import { api } from '../convex/_generated/api'
+import { stockingPatchArgs } from '../lib/stockingService'
+import { useLocation } from '../contexts/LocationContext'
+import { errorMessage } from '../lib/errorMessage'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { usePermission } from '../hooks/usePermission'
@@ -32,17 +36,19 @@ function StockingManagement() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = usePermission('production.stocking.approve')
-  const [stockings, setStockings] = useState([])
+  const { locationArgs } = useLocation()
+  const stockingsResult = useQuery(api.stocking.listStockingHistory, locationArgs)
+  const updateStockingMutation = useMutation(api.stocking.updateStocking)
+  const removeStocking = useMutation(api.stocking.removeStocking)
+  const stockings = useMemo(() => stockingsResult || [], [stockingsResult])
+  const loading = stockingsResult === undefined
   const [filteredStockings, setFilteredStockings] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [yearFilter, setYearFilter] = useState('all')
   const [cageFilter, setCageFilter] = useState('all')
   const [sortField, setSortField] = useState('stocking_date')
   const [sortDirection, setSortDirection] = useState('desc')
-  const [uniqueCages, setUniqueCages] = useState([])
-  const [availableYears, setAvailableYears] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingStocking, setEditingStocking] = useState(null)
   const [deleteStocking, setDeleteStocking] = useState(null)
@@ -58,51 +64,26 @@ function StockingManagement() {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    fetchData()
-  }, [])
-
-  useEffect(() => {
     filterStockings()
   }, [stockings, searchQuery, yearFilter, cageFilter, sortField, sortDirection])
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await stockingService.getAllStockings()
-
-      if (error) throw error
-
-      console.log('Fetched stockings:', data)
-      setStockings(data || [])
-
-      // Extract unique cages for filtering
-      const cages = [
-        ...new Set(
-          data.map((s) => s.cage?.name || s.cage_name).filter(Boolean),
-        ),
-      ]
+  const uniqueCages = useMemo(
+    () =>
+      [...new Set(stockings.map((s) => s.cage?.name || s.cage_name).filter(Boolean))]
         .map((name) => ({
           name,
-          id: data.find(
-            (s) => (s.cage?.name || s.cage_name) === name,
-          )?.cage_id,
+          id: stockings.find((s) => (s.cage?.name || s.cage_name) === name)?.cage_id,
         }))
-        .sort((a, b) => a.name.localeCompare(b.name))
-
-      setUniqueCages(cages)
-
-      // Extract available years for filtering
-      const years = [
-        ...new Set(data.map((s) => new Date(s.stocking_date).getFullYear())),
-      ].sort((a, b) => b - a)
-
-      setAvailableYears(years)
-    } catch (error) {
-      console.error('Error fetching stockings:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [stockings],
+  )
+  const availableYears = useMemo(
+    () =>
+      [...new Set(stockings.map((s) => new Date(s.stocking_date).getFullYear()))].sort(
+        (a, b) => b - a,
+      ),
+    [stockings],
+  )
 
   const filterStockings = () => {
     let result = [...stockings]
@@ -249,24 +230,18 @@ function StockingManagement() {
       console.log('Updating stocking with data:', updateData)
 
       // Update stocking
-      const { data, error } = await stockingService.updateStocking(
-        editingStocking.id,
-        updateData,
-      )
-
-      if (error) throw error
+      await updateStockingMutation(stockingPatchArgs(editingStocking.id, updateData))
 
       setSuccess('Stocking updated successfully')
       showToast('Stocking updated successfully', 'success')
 
       setTimeout(() => {
-        fetchData()
         setShowEditModal(false)
       }, 800)
     } catch (error) {
       console.error('Error updating stocking:', error)
-      setError(error.message)
-      showToast(error.message || 'Update failed', 'error')
+      setError(errorMessage(error))
+      showToast(errorMessage(error, 'Update failed'), 'error')
     }
   }
 
@@ -274,15 +249,11 @@ function StockingManagement() {
     if (!deleteStocking) return
     setDeleting(true)
     try {
-      const { error } = await stockingService.deleteStocking(
-        deleteStocking.id || deleteStocking._id,
-      )
-      if (error) throw error
+      await removeStocking({ id: deleteStocking.id || deleteStocking._id })
       showToast('Stocking deleted', 'success')
       setDeleteStocking(null)
-      fetchData()
     } catch (err) {
-      showToast(err.message || 'Delete failed', 'error')
+      showToast(errorMessage(err, 'Delete failed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -392,12 +363,7 @@ function StockingManagement() {
           {/* Stocking Table */}
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="py-12 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent mx-auto"></div>
-                <p className="mt-3 text-sm text-muted">
-                  Loading stockings…
-                </p>
-              </div>
+              <LoadingState label="Loading stockings…" />
             ) : filteredStockings.length > 0 ? (
               <table className="min-w-full divide-y divide-foam-deep">
                 <thead className="bg-foam">

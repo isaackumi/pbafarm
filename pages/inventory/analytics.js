@@ -1,14 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import {
-  RefreshCw,
-} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard, Button, Select } from '../../components/ui'
+import { PageHeader, StatCard, Select, LoadingState } from '../../components/ui'
 import { useMoney } from '../../lib/money'
-import { useToast } from '../../components/Toast'
-import { getConvexHttpClient, api } from '../../lib/convexBridge'
+import { api } from '../../convex/_generated/api'
 import {
   LineChart,
   Line,
@@ -42,72 +38,23 @@ export default function InventoryAnalyticsPage() {
 
 function InventoryAnalytics() {
   const money = useMoney()
-  const router = useRouter()
-  const { showToast } = useToast()
-  const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('30d')
-  const [inventoryItems, setInventoryItems] = useState([])
-  const [transactionData, setTransactionData] = useState([])
-  const [categoryData, setCategoryData] = useState([])
-  const [trendData, setTrendData] = useState([])
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    fetchData()
+  // Window fixed per range choice so the live query args stay stable.
+  const range = useMemo(() => {
+    const start = new Date()
+    if (timeRange === '7d') start.setDate(start.getDate() - 7)
+    else if (timeRange === '90d') start.setDate(start.getDate() - 90)
+    else if (timeRange === '1y') start.setFullYear(start.getFullYear() - 1)
+    else start.setDate(start.getDate() - 30)
+    return { dateFrom: start.getTime(), dateTo: Date.now() }
   }, [timeRange])
-
-  const fetchData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const endMs = Date.now()
-      const start = new Date()
-      switch (timeRange) {
-        case '7d':
-          start.setDate(start.getDate() - 7)
-          break
-        case '30d':
-          start.setDate(start.getDate() - 30)
-          break
-        case '90d':
-          start.setDate(start.getDate() - 90)
-          break
-        case '1y':
-          start.setFullYear(start.getFullYear() - 1)
-          break
-        default:
-          start.setDate(start.getDate() - 30)
-      }
-      const dateFrom = start.getTime()
-      const dateTo = endMs
-
-      const client = getConvexHttpClient()
-
-      const itemsData = await client.query(api.inventory.listStockLevels, {})
-      setInventoryItems(itemsData || [])
-
-      const transactionsData = await client.query(api.inventory.listTransactions, {
-        dateFrom,
-        dateTo,
-        limit: 500,
-      })
-
-      const processedTransactionData = processTransactionData(transactionsData)
-      setTransactionData(processedTransactionData)
-
-      const processedCategoryData = processCategoryData(itemsData)
-      setCategoryData(processedCategoryData)
-
-      const processedTrendData = processTrendData(transactionsData)
-      setTrendData(processedTrendData)
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      showToast('error', error.message || 'Failed to load analytics data')
-      setError(error.message || 'Failed to load data. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const itemsResult = useQuery(api.inventory.listStockLevels, {})
+  const transactionsResult = useQuery(api.inventory.listTransactions, {
+    ...range,
+    limit: 500,
+  })
+  const loading = itemsResult === undefined || transactionsResult === undefined
+  const inventoryItems = itemsResult || []
 
   const IN_TYPES = new Set(['purchase', 'adjustment', 'transfer', 'reversal'])
   const OUT_TYPES = new Set(['usage', 'issue', 'daily_usage'])
@@ -171,6 +118,10 @@ function InventoryAnalytics() {
     }))
   }
 
+  const transactionData = processTransactionData(transactionsResult)
+  const categoryData = processCategoryData(itemsResult)
+  const trendData = processTrendData(transactionsResult)
+
   const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   return (
@@ -201,20 +152,14 @@ function InventoryAnalytics() {
               <option value="90d">Last 90 days</option>
               <option value="1y">Last year</option>
             </Select>
-
-            <Button variant="secondary" onClick={fetchData}>
-              <RefreshCw className="w-4 h-4" aria-hidden />
-              Refresh
-            </Button>
           </div>
         }
       />
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
-            {error}
-          </div>
-        )}
+        {loading ? (
+          <LoadingState label="Loading analytics..." />
+        ) : (
+        <>
 
         {/* Transaction Analysis */}
         <div className="page-card p-4 sm:p-6 mb-6">
@@ -322,7 +267,8 @@ function InventoryAnalytics() {
             unit="kg"
           />
         </div>
-
+        </>
+        )}
     </Layout>
   )
 } 

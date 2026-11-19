@@ -80,7 +80,9 @@
       "aiSettings": "Paramètres IA"
     },
     "section": {
-      "production": "Production",
+      "production": "Travail quotidien",
+      "records": "Registres",
+      "finance": "Finances",
       "hatchery": "Écloserie",
       "cages": "Cages",
       "feed": "Aliment",
@@ -1390,6 +1392,44 @@
       "summaryHint": "Sélectionnez une ligne pour voir son graphique.",
       "unit": "Unité",
       "parameter": "Paramètre"
+    }
+  },
+  "settings": {
+    "description": "Les montants sont en cedis (₵) sauf si vous choisissez une autre devise ici. Vos préférences d’affichage sont enregistrées sur votre compte.",
+    "saving": "Enregistrement…",
+    "saveFailed": "Impossible d’enregistrer vos préférences. Réessayez.",
+    "currency": {
+      "title": "Devise",
+      "active": "Active : {currency} ({symbol}). Exemple : {example}",
+      "farm": "Devise de la ferme",
+      "hint": "S’applique aux prix, aux achats, à la valeur des stocks et aux autres montants.",
+      "default": "par défaut",
+      "preview": "Aperçu : {value}",
+      "save": "Enregistrer et publier la devise",
+      "adminOnly": "Seuls les administrateurs peuvent changer la devise de la ferme.",
+      "saved": "Devise de la ferme : {currency}",
+      "saveFailed": "Échec de l’enregistrement de la devise"
+    },
+    "display": {
+      "title": "Préférences d’affichage",
+      "subtitle": "Enregistrées sur votre compte, elles vous suivent sur tous vos appareils.",
+      "dateFormat": "Format de date",
+      "save": "Enregistrer les préférences d’affichage",
+      "saved": "Préférences d’affichage enregistrées sur votre compte"
+    },
+    "shortcuts": {
+      "title": "Barre d’onglets du téléphone",
+      "subtitle": "Choisissez jusqu’à {max} pages pour la barre en bas de l’écran sur téléphone. Le bouton menu est toujours présent.",
+      "chosen": "Dans la barre ({count} sur {max})",
+      "none": "Aucun raccourci : seul le bouton menu s’affichera.",
+      "add": "Ajouter une page",
+      "full": "La barre contient {max} pages. Retirez-en une pour en ajouter une autre.",
+      "moveUp": "Monter {name}",
+      "moveDown": "Descendre {name}",
+      "remove": "Retirer {name}",
+      "useDefaults": "Utiliser les valeurs par défaut",
+      "save": "Enregistrer la barre",
+      "saved": "Barre d’onglets enregistrée"
     }
   }
 }

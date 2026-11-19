@@ -1,6 +1,6 @@
 // pages/feed-suppliers.js
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   Plus,
   Edit,
@@ -13,11 +13,13 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input } from '../components/ui'
+import { PageHeader, Button, Field, Input, LoadingState } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
-import { supplierService } from '../lib/supplierService'
+import { api } from '../convex/_generated/api'
+import { supplierCreateArgs, supplierUpdateArgs } from '../lib/supplierArgs'
+import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
 
 export default function FeedSuppliersPage() {
@@ -30,13 +32,16 @@ export default function FeedSuppliersPage() {
 
 
 function FeedSuppliers() {
-  const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = usePermission('inventory.prices.manage')
 
-  const [suppliers, setSuppliers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const suppliersResult = useQuery(api.feed.listSuppliers, {})
+  const loading = suppliersResult === undefined
+  const suppliers = suppliersResult || []
+  const createSupplier = useMutation(api.feed.createSupplier)
+  const updateSupplier = useMutation(api.feed.updateSupplier)
+  const softDeleteSupplier = useMutation(api.feed.softDeleteSupplier)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState(null)
@@ -47,28 +52,6 @@ function FeedSuppliers() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-
-  // Fetch suppliers on mount
-  useEffect(() => {
-    fetchSuppliers()
-  }, [])
-
-  const fetchSuppliers = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supplierService.getAllSuppliers()
-
-      if (error) throw error
-
-      setSuppliers(data || [])
-    } catch (error) {
-      console.error('Error fetching suppliers:', error)
-      showToast('error', 'Failed to load suppliers')
-      setError('Failed to load suppliers. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -103,20 +86,13 @@ function FeedSuppliers() {
     const id = deleteConfirm?.id || deleteConfirm?._id
     if (!id) return
     try {
-      const { error } = await supplierService.deleteSupplier(id)
-
-      if (error) throw error
-
+      await softDeleteSupplier({ id })
       showToast('success', 'Supplier deleted successfully')
-      fetchSuppliers()
       setDeleteConfirm(null)
     } catch (error) {
       console.error('Error deleting supplier:', error)
-      showToast('error', error.message || 'Failed to delete supplier')
-      setError(
-        error.message ||
-          'Failed to delete supplier. It may be in use in feed types.',
-      )
+      showToast('error', errorMessage(error, 'Failed to delete supplier'))
+      setError(errorMessage(error, 'Failed to delete supplier. It may be in use in feed types.'))
     }
   }
 
@@ -133,16 +109,14 @@ function FeedSuppliers() {
         name: formData.name.trim(),
         website: formData.website.trim() || undefined,
       }
-      const { data, error } = await supplierService.createSupplier(supplierData)
-      if (error) throw error
+      await createSupplier(supplierCreateArgs(supplierData))
       setSuccess('Supplier created successfully')
       showToast('success', 'Supplier created successfully')
       setTimeout(() => {
         setShowAddModal(false)
-        fetchSuppliers()
       }, 1500)
     } catch (error) {
-      setError(error.message)
+      setError(errorMessage(error))
     }
   }
 
@@ -160,19 +134,14 @@ function FeedSuppliers() {
         name: formData.name.trim(),
         website: formData.website.trim() || undefined,
       }
-      const { data, error } = await supplierService.updateSupplier(
-        editingSupplier.id,
-        supplierData,
-      )
-      if (error) throw error
+      await updateSupplier(supplierUpdateArgs(editingSupplier.id, supplierData))
       setSuccess('Supplier updated successfully')
       showToast('success', 'Supplier updated successfully')
       setTimeout(() => {
         setShowEditModal(false)
-        fetchSuppliers()
       }, 1500)
     } catch (error) {
-      setError(error.message)
+      setError(errorMessage(error))
     }
   }
 
@@ -206,10 +175,7 @@ function FeedSuppliers() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
-              <p className="mt-3 text-muted">Loading suppliers...</p>
-            </div>
+            <LoadingState label="Loading suppliers..." />
           ) : suppliers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
               {suppliers.map((supplier) => (

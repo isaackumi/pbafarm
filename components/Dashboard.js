@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import {
@@ -16,13 +16,9 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
-import {
-  cageService,
-  stockingService,
-} from '../lib/databaseService'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
-import { withActiveLocation } from '../lib/locationScope'
-import { errorMessage } from '../lib/errorMessage'
+import { api } from '../convex/_generated/api'
+import QueryBoundary from './QueryBoundary'
+import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import {
   Button,
   Card,
@@ -30,10 +26,10 @@ import {
   StatCard,
   HealthMeter,
   EmptyState,
-  ErrorState,
   TabBar,
   DashboardSkeleton,
 } from './ui'
+import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
 import { useMutation, useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
@@ -96,6 +92,14 @@ function farmHealthScore(metrics) {
 }
 
 export default function Dashboard() {
+  return (
+    <QueryBoundary title="The dashboard could not load">
+      <DashboardView />
+    </QueryBoundary>
+  )
+}
+
+function DashboardView() {
   const router = useRouter()
   const { user } = useAuth()
   const canManageSites = usePermission('org.sites.manage')
@@ -108,134 +112,78 @@ export default function Dashboard() {
   const layout = useQuery(api.dashboardLayouts.get, user && canReports ? { key: 'home' } : 'skip')
   const [customizing, setCustomizing] = useState(false)
   const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
-  const [cages, setCages] = useState([])
-  const [dailyRecords, setDailyRecords] = useState([])
-  const [recentStockings, setRecentStockings] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [reloadKey, setReloadKey] = useState(0)
   const [tableTab, setTableTab] = useState('stockings')
-  const [metrics, setMetrics] = useState({
-    totalActiveCages: 0,
-    totalCages: 0,
-    totalBiomass: 0,
-    averageFCR: 'N/A',
-    mortalityRate: '0.0',
-    avgDailyGrowth: 'N/A',
-    feedCostPerKg: 'N/A',
-    activeFish: 0,
-  })
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setLoading(true)
-      setError(null)
-      try {
-        const [{ data: cagesData, error: cagesErr }, { data: stockingsData }] =
-          await Promise.all([
-            cageService.getAllCages(),
-            stockingService.getAllStockings(),
-          ])
-        if (cagesErr) throw cagesErr
-        if (cancelled) return
+  // asOf: the period ends on the client's today (queries should not
+  // read the server clock: their cache does not expire at midnight).
+  const asOf = useMemo(() => localToday(), [])
+  // The charts show the last 30 logged days, so load ~90 days of
+  // records, not the company's whole daily history.
+  const trendFrom = useMemo(
+    () => new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    [],
+  )
+  // No per-query fallbacks: a failed query shows the error state (QueryBoundary),
+  // not a dashboard of zeros that looks like real numbers.
+  // Trend and biomass come from the rollups (PLAT-002): one row per
+  // unit-day and per occupancy instead of every record and event.
+  const cagesData = useQuery(api.cages.list, locationArgs)
+  const stockingsData = useOptionalQuery(api.stocking.listStockingHistory, locationArgs, [])
+  const kpis = useQuery(api.reports.dashboardKpis, { ...locationArgs, dateRange: 30, asOf })
+  const summary = useQuery(api.reports.dashboardSummary, { ...locationArgs, dateRange: 30, asOf })
+  const series = useQuery(api.reports.dailySeries, { ...locationArgs, from: trendFrom, to: asOf })
+  const overview = useQuery(api.reports.productionOverview, locationArgs)
 
-        const cagesList = cagesData || []
-        setCages(cagesList)
+  const cages = cagesData || []
+  const active = cages.filter((c) => c.status === 'active')
+  // Before the rollup backfill has run: the raw reads as before.
+  const rollupsEmpty =
+    overview !== undefined && cagesData !== undefined && !overview?.occupancies && active.length > 0
+  const rawDaily = useQuery(
+    api.dailyRecords.list,
+    rollupsEmpty ? { ...locationArgs, dateFrom: trendFrom } : 'skip',
+  )
+  const rawGrowth = useQuery(api.cages.growthAll, rollupsEmpty ? { ...locationArgs, asOf } : 'skip')
 
-        const sorted = [...(stockingsData || [])].sort(
-          (a, b) =>
-            new Date(b.stocking_date || b.stockingDate || 0) -
-            new Date(a.stocking_date || a.stockingDate || 0),
-        )
-        setRecentStockings(sorted)
+  const loading =
+    [cagesData, stockingsData, kpis, summary, series, overview].some((r) => r === undefined) ||
+    (rollupsEmpty && (rawDaily === undefined || rawGrowth === undefined))
 
-        const active = cagesList.filter((c) => c.status === 'active')
+  const recentStockings = useMemo(
+    () =>
+      [...(stockingsData || [])].sort(
+        (a, b) =>
+          new Date(b.stocking_date || b.stockingDate || 0) -
+          new Date(a.stocking_date || a.stockingDate || 0),
+      ),
+    [stockingsData],
+  )
 
-        const client = getConvexHttpClient()
-        // asOf: the period ends on the client's today (queries should not
-        // read the server clock: their cache does not expire at midnight).
-        const asOf = localToday()
-        const scoped = withActiveLocation({ dateRange: 30, asOf })
-        // The charts show the last 30 logged days, so load ~90 days of
-        // records, not the company's whole daily history.
-        const trendFrom = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10)
-        // No per-query fallbacks: a failed query must show the error state,
-        // not a dashboard of zeros that looks like real numbers.
-        // Trend and biomass come from the rollups (PLAT-002): one row per
-        // unit-day and per occupancy instead of every record and event.
-        const [kpis, dashSummary, series, overview] = await Promise.all([
-          client.query(api.reports.dashboardKpis, scoped),
-          client.query(api.reports.dashboardSummary, scoped),
-          client.query(
-            api.reports.dailySeries,
-            withActiveLocation({ from: trendFrom, to: asOf }),
-          ),
-          client.query(api.reports.productionOverview, withActiveLocation({})),
-        ])
-        // Before the rollup backfill has run: the raw reads as before.
-        const rollupsEmpty = !overview?.occupancies && active.length > 0
-        const [daily, growth] = rollupsEmpty
-          ? await Promise.all([
-              client.query(api.dailyRecords.list, withActiveLocation({ dateFrom: trendFrom })),
-              client.query(api.cages.growthAll, withActiveLocation({ asOf })),
-            ])
-          : [
-              (series || []).map((d) => ({
-                date: d.date,
-                feedAmount: d.feed_kg,
-                mortality: d.mortality,
-              })),
-              { farm_biomass_kg: overview?.biomass_kg ?? 0 },
-            ]
-        if (cancelled) return
+  const dailyRecords = useMemo(() => {
+    if (rollupsEmpty) return rawDaily || []
+    return (series || []).map((d) => ({
+      date: d.date,
+      feedAmount: d.feed_kg,
+      mortality: d.mortality,
+    }))
+  }, [rollupsEmpty, rawDaily, series])
 
-        setDailyRecords(daily || [])
-        setSummary(dashSummary)
-
-        const totalActive =
-          dashSummary?.cages?.active ??
-          kpis?.active_cages ??
-          active.length
-        const totalCages = dashSummary?.cages?.total ?? cagesList.length
-
-        setMetrics({
-          totalActiveCages: totalActive,
-          totalBiomass: Math.round(growth?.farm_biomass_kg ?? 0),
-          averageFCR:
-            kpis?.avg_fcr != null ? Number(kpis.avg_fcr).toFixed(2) : 'N/A',
-          mortalityRate:
-            kpis?.mortality_rate_pct != null
-              ? Number(kpis.mortality_rate_pct).toFixed(1)
-              : '0.0',
-          avgDailyGrowth:
-            kpis?.avg_daily_growth_g != null
-              ? Number(kpis.avg_daily_growth_g).toFixed(1)
-              : 'N/A',
-          feedCostPerKg:
-            kpis?.feed_cost_per_kg_harvested != null
-              ? Number(kpis.feed_cost_per_kg_harvested).toFixed(2)
-              : 'N/A',
-          activeFish:
-            kpis?.active_fish_count ??
-            dashSummary?.active_fish_count ??
-            0,
-          totalCages,
-        })
-      } catch (err) {
-        if (!cancelled) setError(errorMessage(err))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [activeLocationId, locationArgs?.locationId, reloadKey])
+  const growth = rollupsEmpty ? rawGrowth : { farm_biomass_kg: overview?.biomass_kg ?? 0 }
+  const metrics = {
+    totalActiveCages: summary?.cages?.active ?? kpis?.active_cages ?? active.length,
+    totalBiomass: Math.round(growth?.farm_biomass_kg ?? 0),
+    averageFCR: kpis?.avg_fcr != null ? Number(kpis.avg_fcr).toFixed(2) : 'N/A',
+    mortalityRate:
+      kpis?.mortality_rate_pct != null ? Number(kpis.mortality_rate_pct).toFixed(1) : '0.0',
+    avgDailyGrowth:
+      kpis?.avg_daily_growth_g != null ? Number(kpis.avg_daily_growth_g).toFixed(1) : 'N/A',
+    feedCostPerKg:
+      kpis?.feed_cost_per_kg_harvested != null
+        ? Number(kpis.feed_cost_per_kg_harvested).toFixed(2)
+        : 'N/A',
+    activeFish: kpis?.active_fish_count ?? summary?.active_fish_count ?? 0,
+    totalCages: summary?.cages?.total ?? cages.length,
+  }
 
   const feedTrend = useMemo(() => {
     const byDate = {}
@@ -522,20 +470,6 @@ export default function Dashboard() {
 
   if (loading) {
     return <DashboardSkeleton />
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-[1400px]">
-        <Card>
-          <ErrorState
-            title="The dashboard could not load"
-            message={error}
-            onRetry={() => setReloadKey((k) => k + 1)}
-          />
-        </Card>
-      </div>
-    )
   }
 
   return (

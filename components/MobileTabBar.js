@@ -1,25 +1,25 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { House, ClipboardList, LayoutGrid, Package, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { usePermissions } from '../hooks/usePermission'
 import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
+import { navKey } from '../lib/i18n'
+import { resolveShortcuts } from '../lib/navigation'
+import { useSettings } from '../contexts/SettingsContext'
 
-const TABS = [
-  { href: '/dashboard', label: 'Home', labelKey: 'nav.home', icon: House, permission: 'reports.view' },
-  { href: '/daily-entry', label: 'Daily entry', labelKey: 'nav.dailyEntry', icon: ClipboardList, permission: 'production.daily.record' },
-  { href: '/cages', label: 'Cages', labelKey: 'nav.cages', icon: LayoutGrid, permission: 'production.view' },
-  { href: '/feed-issue', label: 'Feed', labelKey: 'nav.feed', icon: Package, permission: 'inventory.issue' },
-]
-
-/** Phone-only bottom bar: the four places field staff go most, plus the full menu. */
+/**
+ * Phone-only bottom bar: the member's shortcuts (chosen in Global settings,
+ * UX-004; field-staff defaults otherwise), plus the full menu.
+ */
 export default function MobileTabBar({ onOpenMenu }) {
   const router = useRouter()
   // Only the places this member may use (PERM-003); the menu button stays.
   const { can } = usePermissions()
+  const { settings } = useSettings()
   const t = useT()
   const term = useTerm()
-  const tabs = TABS.filter((tab) => can(tab.permission))
+  const tabs = resolveShortcuts(settings?.mobileShortcuts, can)
   const isActive = (href) =>
     router.pathname === href || router.pathname.startsWith(`${href}/`)
 
@@ -32,12 +32,13 @@ export default function MobileTabBar({ onOpenMenu }) {
         className="grid"
         style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}
       >
-        {tabs.map(({ href, label, labelKey, icon: Icon }) => {
-          const active = isActive(href)
+        {tabs.map(({ path, title, shortLabelKey, icon: Icon }) => {
+          const active = isActive(path)
+          const label = term.text(t.or(shortLabelKey || navKey(path), title))
           return (
-            <li key={href}>
+            <li key={path}>
               <Link
-                href={href}
+                href={path}
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors focus:outline-none focus-visible:bg-foam ${
                   active ? 'text-chart-ink font-medium' : 'text-muted'
@@ -50,7 +51,7 @@ export default function MobileTabBar({ onOpenMenu }) {
                 >
                   <Icon size={18} aria-hidden />
                 </span>
-                {term.text(t.or(labelKey, label))}
+                <span className="max-w-full truncate px-1">{label}</span>
               </Link>
             </li>
           )

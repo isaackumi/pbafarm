@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
 import {
   AlertTriangle,
   Package,
-  RefreshCw,
   Bell,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
-import { useToast } from '../components/Toast'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { PageHeader, Button, LoadingState } from '../components/ui'
+import { api } from '../convex/_generated/api'
 import { useMoney } from '../lib/money'
 import { useLocation } from '../contexts/LocationContext'
 
@@ -26,36 +23,10 @@ export default function InventoryAlertsPage() {
 
 function InventoryAlerts() {
   const money = useMoney()
-  const router = useRouter()
-  const { showToast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [alerts, setAlerts] = useState([])
-  const [error, setError] = useState(null)
-
-  const { activeLocationId } = useLocation()
-
-  useEffect(() => {
-    fetchAlerts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLocationId])
-
-  const fetchAlerts = async () => {
-    setLoading(true)
-    try {
-      const client = getConvexHttpClient()
-      const data = await client.query(
-        api.inventory.listAlerts,
-        activeLocationId ? { locationId: activeLocationId } : {},
-      )
-      setAlerts(data || [])
-    } catch (error) {
-      console.error('Error fetching alerts:', error)
-      showToast('error', 'Failed to load alerts')
-      setError('Failed to load alerts. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { locationArgs } = useLocation()
+  const alertsResult = useQuery(api.inventory.listAlerts, locationArgs)
+  const loading = alertsResult === undefined
+  const alerts = alertsResult || []
 
   const getAlertSeverity = (current, minimum) => {
     if (current <= minimum * 0.5) return 'critical'
@@ -105,19 +76,7 @@ function InventoryAlerts() {
           { label: 'Feed purchases', href: '/feed-purchases' },
           { label: 'Ledger', href: '/inventory-transactions' },
         ]}
-        actions={
-          <Button variant="secondary" onClick={fetchAlerts}>
-            <RefreshCw className="w-4 h-4" aria-hidden />
-            Refresh
-          </Button>
-        }
       />
-
-        {error && (
-          <div className="mb-4 rounded-xl border border-signal/25 bg-signal/10 text-signal p-3 text-sm">
-            {error}
-          </div>
-        )}
 
         <div className="page-card overflow-hidden">
           <div className="px-6 py-4 border-b border-foam-deep">
@@ -125,10 +84,7 @@ function InventoryAlerts() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
-              <p className="mt-3 text-muted">Loading alerts...</p>
-            </div>
+            <LoadingState label="Loading alerts..." />
           ) : alerts.length > 0 ? (
             <div className="divide-y divide-foam-deep">
               {alerts.map((item) => {

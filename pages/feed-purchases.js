@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
+import { useState, useEffect, useMemo } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   Plus,
   Edit,
@@ -32,6 +32,7 @@ import {
   Textarea,
   StatCard,
   TabBar,
+  LoadingState,
 } from '../components/ui'
 import FeedTypeField from '../components/FeedTypeField'
 import BagSizeField, {
@@ -43,10 +44,11 @@ import FeedPurchaseModal from '../components/FeedPurchaseModal'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
-import { feedService } from '../lib/feedService'
-import { supplierService } from '../lib/supplierService'
-import { cageService } from '../lib/cageService'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { api } from '../convex/_generated/api'
+import { purchaseUpdateArgs } from '../lib/feedData'
+import { useFeedUsageStats } from '../hooks/useFeedData'
+import { useOptionalQuery } from '../hooks/useOptionalQuery'
+import { errorMessage } from '../lib/errorMessage'
 import { formatCurrency, formatWeight, formatNumber } from '../lib/currencyUtils'
 import {
   LineChart as RechartsLineChart,
@@ -74,16 +76,14 @@ export default function FeedPurchasesPage() {
 }
 
 function FeedPurchases() {
-  const router = useRouter()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   // Purchase edit and void are admin-only on the backend.
   const isAdmin = usePermission('inventory.purchase.correct')
-  const { activeLocationId, activeLocation, locations } = useLocation()
+  const { activeLocationId, activeLocation, locations, locationArgs } = useLocation()
 
   const [feedTypes, setFeedTypes] = useState([])
   const [purchases, setPurchases] = useState([])
-  const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [purchaseDefaultFeedTypeId, setPurchaseDefaultFeedTypeId] = useState('')
@@ -148,46 +148,53 @@ function FeedPurchases() {
     qualityMetrics: {}
   })
 
-  // Fetch data on mount / when location list is ready
+  const feedTypesResult = useQuery(api.feed.listFeedTypes, {})
+  const purchasesResult = useQuery(api.feed.listPurchases, locationArgs)
+  const lotsResult = useQuery(api.inventory.listLots, locationArgs)
+  const stockLevelsResult = useQuery(api.inventory.listStockLevels, locationArgs)
+  const usageResult = useFeedUsageStats(timeRange)
+  const cagesResult = useQuery(api.cages.list, locationArgs)
+  const suppliersResult = useQuery(api.feed.listSuppliers, {})
+  const asOf = useMemo(() => localToday(), [])
+  const growth = useOptionalQuery(api.cages.growthAll, { ...locationArgs, asOf }, null)
+  const updatePurchase = useMutation(api.feed.updatePurchase)
+  const voidPurchase = useMutation(api.feed.voidPurchase)
+  const loading = [
+    feedTypesResult,
+    purchasesResult,
+    lotsResult,
+    stockLevelsResult,
+    usageResult,
+    cagesResult,
+    suppliersResult,
+    growth,
+  ].some((r) => r === undefined)
+
+  // Derived views recompute whenever a live query or the site changes.
   useEffect(() => {
-    fetchData()
+    if (loading) return
+    applyData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange, activeLocationId, locations])
+  }, [
+    loading,
+    feedTypesResult,
+    purchasesResult,
+    lotsResult,
+    stockLevelsResult,
+    usageResult,
+    cagesResult,
+    suppliersResult,
+    growth,
+    activeLocationId,
+    locations,
+  ])
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const [
-        feedTypesResult,
-        purchasesResult,
-        lotsResult,
-        stockLevelsResult,
-        usageResult,
-        cagesResult,
-        suppliersResult,
-      ] = await Promise.all([
-        feedService.getAllFeedTypes(),
-        feedService.getAllPurchases(),
-        feedService.getInventoryLots(),
-        feedService.getStockLevels(),
-        feedService.getFeedUsageStats(timeRange),
-        cageService.getAllCages(),
-        supplierService.getAllSuppliers(),
-      ])
-
-      if (feedTypesResult.error) throw feedTypesResult.error
-      if (purchasesResult.error) throw purchasesResult.error
-      if (lotsResult.error) throw lotsResult.error
-      if (stockLevelsResult.error) throw stockLevelsResult.error
-      if (usageResult.error) throw usageResult.error
-      if (cagesResult.error) throw cagesResult.error
-      if (suppliersResult.error) throw suppliersResult.error
-
-      const feedTypesData = feedTypesResult.data || []
-      const suppliersData = suppliersResult.data || []
-      const cagesData = cagesResult.data || []
-      const lotsData = lotsResult.data || []
-      const stockLevelsData = stockLevelsResult.data || []
+  const applyData = () => {
+      const feedTypesData = feedTypesResult || []
+      const suppliersData = suppliersResult || []
+      const cagesData = cagesResult || []
+      const lotsData = lotsResult || []
+      const stockLevelsData = stockLevelsResult || []
       const feedById = Object.fromEntries(
         feedTypesData.map((t) => [t.id || t._id, t]),
       )
@@ -199,7 +206,7 @@ function FeedPurchases() {
           supplierById[String(id)] = s
         }
       }
-      const usageRows = (usageResult.data?.rows || []).map((u) => {
+      const usageRows = (usageResult?.rows || []).map((u) => {
         const feed = feedById[u.feed_type_id]
         return {
           ...u,
@@ -226,7 +233,7 @@ function FeedPurchases() {
         }
       }
 
-      const purchasesData = (purchasesResult.data || []).map(mapPurchase)
+      const purchasesData = (purchasesResult || []).map(mapPurchase)
 
       const lowStockData = (stockLevelsData || [])
         .map((a) => ({
@@ -270,12 +277,6 @@ function FeedPurchases() {
       setStats(nextStats)
       setCostAnalysis(calculateCostAnalysis(purchasesData, feedTypesData))
       setInventoryMetrics(nextInventory)
-      const growth = await getConvexHttpClient()
-        .query(api.cages.growthAll, {
-          ...(activeLocationId ? { locationId: activeLocationId } : {}),
-          asOf: localToday(),
-        })
-        .catch(() => null)
       setUsageAnalytics({
         ...calculateUsageAnalytics(purchasesData, usageRows, cagesData),
         // eFCR per cage for the current cycle (feed ÷ biomass gained)
@@ -288,13 +289,6 @@ function FeedPurchases() {
       setSupplierMetrics(
         calculateSupplierMetrics(purchasesData, suppliersData),
       )
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      showToast('error', 'Failed to load data')
-      setError('Failed to load data. Please try again.')
-    } finally {
-      setLoading(false)
-    }
   }
 
   const calculateStats = (purchases) => {
@@ -864,7 +858,7 @@ function FeedPurchases() {
       if (!formData.supplier_id) {
         throw new Error('Supplier is required')
       }
-      const { error } = await feedService.updatePurchase(editingPurchase.id, {
+      await updatePurchase(purchaseUpdateArgs(editingPurchase.id, {
         ...formData,
         quantity:
           formData.quantity !== '' && formData.quantity != null
@@ -878,17 +872,15 @@ function FeedPurchases() {
           formData.price_per_kg !== '' && formData.price_per_kg != null
             ? parseFloat(formData.price_per_kg)
             : undefined,
-      })
-      if (error) throw error
+      }))
 
       showToast('success', 'Purchase updated successfully')
       setSuccess('Purchase updated successfully')
       setTimeout(() => {
         setShowEditModal(false)
-        fetchData()
       }, 1500)
     } catch (error) {
-      setError(error.message)
+      setError(errorMessage(error))
     }
   }
 
@@ -896,14 +888,12 @@ function FeedPurchases() {
     const id = deleteConfirm?.id || deleteConfirm?._id
     if (!id) return
     try {
-      const { error } = await feedService.deletePurchase(id)
-      if (error) throw error
+      await voidPurchase({ id })
 
       showToast('success', 'Purchase deleted successfully')
-      fetchData()
       setDeleteConfirm(null)
     } catch (error) {
-      showToast('error', error.message || 'Failed to delete purchase')
+      showToast('error', errorMessage(error, 'Failed to delete purchase'))
     }
   }
 
@@ -1428,10 +1418,7 @@ function FeedPurchases() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
-              <p className="mt-3 text-muted">Loading purchases...</p>
-            </div>
+            <LoadingState label="Loading purchases..." />
           ) : purchases.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-foam-deep">
@@ -1547,7 +1534,6 @@ function FeedPurchases() {
           setShowAddModal(false)
           setPurchaseDefaultFeedTypeId('')
         }}
-        onSaved={fetchData}
         feedTypes={feedTypes}
         suppliers={suppliers}
         defaultFeedTypeId={purchaseDefaultFeedTypeId}
@@ -1591,9 +1577,7 @@ function FeedPurchases() {
                 offerPurchaseCreate={false}
                 hint="Catalog product this purchase adds stock to. Create one if the list is empty."
                 emptyMessage="Add a feed type before recording a purchase."
-                onFeedTypesChanged={fetchData}
                 onCreated={(result) => {
-                  fetchData()
                   if (result?.id) {
                     setFormData((prev) => ({
                       ...prev,

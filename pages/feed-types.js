@@ -1,5 +1,6 @@
 // pages/feed-types.js
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import {
   Plus,
@@ -9,25 +10,19 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, Select } from '../components/ui'
+import { PageHeader, Button, Field, Input, Select, LoadingState } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
-import { useSelector, useDispatch } from 'react-redux'
-import { supplierService } from '../lib/supplierService'
+import { api } from '../convex/_generated/api'
+import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../lib/feedData'
 import {
   buildFeedTypeDescription,
   normalizeBagSizeKg,
 } from '../lib/feedTypeMeta'
-import {
-  fetchFeedTypes,
-  createFeedType,
-  updateFeedType,
-  deleteFeedType,
-  clearFeedError
-} from '../store/slices/feedSlice'
 import { useCurrency } from '../hooks/useCurrency'
 import { useAuth } from '../contexts/AuthContext'
 import { usePermission } from '../hooks/usePermission'
+import { errorMessage } from '../lib/errorMessage'
 
 export default function FeedTypesPage() {
   return (
@@ -42,9 +37,15 @@ function FeedTypes() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = usePermission('inventory.prices.manage')
-  const dispatch = useDispatch()
   const { pricePerKgLabel: priceLabel, formatCurrency: fmt } = useCurrency()
-  const { feedTypes, loading, error } = useSelector(state => state.feed)
+  const feedTypesResult = useQuery(api.feed.listFeedTypes, {})
+  const suppliersResult = useQuery(api.feed.listSuppliers, {})
+  const createFeedType = useMutation(api.feed.createFeedType)
+  const updateFeedType = useMutation(api.feed.updateFeedType)
+  const deleteFeedType = useMutation(api.feed.softDeleteFeedType)
+  const loading = feedTypesResult === undefined
+  const feedTypes = feedTypesResult ?? []
+  const suppliers = suppliersResult ?? []
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -60,30 +61,6 @@ function FeedTypes() {
     active: true,
   })
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [suppliers, setSuppliers] = useState([])
-
-  // Fetch feed types and suppliers on mount
-  useEffect(() => {
-    dispatch(fetchFeedTypes())
-    fetchSuppliers()
-  }, [dispatch])
-
-  useEffect(() => {
-    if (error) {
-      showToast('error', error)
-      dispatch(clearFeedError())
-    }
-  }, [error, showToast, dispatch])
-
-  const fetchSuppliers = async () => {
-    try {
-      const { data, error } = await supplierService.getAllSuppliers()
-      if (error) throw error
-      setSuppliers(data || [])
-    } catch (error) {
-      showToast('error', 'Failed to load suppliers')
-    }
-  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -118,11 +95,7 @@ function FeedTypes() {
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }
-      const result = await dispatch(createFeedType(payload))
-      if (createFeedType.rejected.match(result)) {
-        showToast('error', result.payload || 'Failed to create feed type')
-        return
-      }
+      await createFeedType(feedTypeCreateArgs(payload))
       showToast('success', 'Feed type created')
       setShowAddModal(false)
       setFormData({
@@ -136,7 +109,7 @@ function FeedTypes() {
         active: true,
       })
     } catch (err) {
-      showToast('error', err.message || 'Failed to create feed type')
+      showToast('error', errorMessage(err, 'Failed to create feed type'))
     }
   }
 
@@ -184,13 +157,7 @@ function FeedTypes() {
         supplier_id: formData.supplier_id || undefined,
         active: formData.active !== false,
       }
-      const result = await dispatch(
-        updateFeedType({ id: editingType.id, updates }),
-      )
-      if (updateFeedType.rejected.match(result)) {
-        showToast('error', result.payload || 'Failed to update feed type')
-        return
-      }
+      await updateFeedType(feedTypeUpdateArgs(editingType.id, updates))
       showToast('success', 'Feed type updated')
       setShowEditModal(false)
       setEditingType(null)
@@ -205,14 +172,18 @@ function FeedTypes() {
         active: true,
       })
     } catch (err) {
-      showToast('error', err.message || 'Failed to update feed type')
+      showToast('error', errorMessage(err, 'Failed to update feed type'))
     }
   }
 
   const handleDelete = async () => {
     const id = deleteConfirm?.id || deleteConfirm?._id
     if (!id) return
-    await dispatch(deleteFeedType(id))
+    try {
+      await deleteFeedType({ id })
+    } catch (err) {
+      showToast('error', errorMessage(err, 'Failed to delete feed type'))
+    }
     setDeleteConfirm(null)
   }
 
@@ -247,10 +218,7 @@ function FeedTypes() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto"></div>
-              <p className="mt-3 text-muted">Loading feed types...</p>
-            </div>
+            <LoadingState label="Loading feed types..." />
           ) : (
             <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-foam-deep">

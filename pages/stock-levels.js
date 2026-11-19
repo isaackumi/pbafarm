@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Package, RefreshCw } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { Package } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button } from '../components/ui'
-import { useToast } from '../components/Toast'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { PageHeader, Button, LoadingState } from '../components/ui'
+import { api } from '../convex/_generated/api'
 import { useMoney } from '../lib/money'
 import { useLocation } from '../contexts/LocationContext'
 
@@ -18,38 +17,12 @@ export default function StockLevelsPage() {
 
 function StockLevels() {
   const money = useMoney()
-  const { showToast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [stockLevels, setStockLevels] = useState([])
-  const [tally, setTally] = useState([])
-  const [error, setError] = useState(null)
   // Stock at the header site (FARM-003); the tally check stays company-wide.
-  const { activeLocationId } = useLocation()
-
-  useEffect(() => {
-    fetchStockLevels()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLocationId])
-
-  const fetchStockLevels = async () => {
-    setLoading(true)
-    try {
-      const client = getConvexHttpClient()
-      const [data, tallyRows] = await Promise.all([
-        client.query(api.inventory.listStockLevels, activeLocationId ? { locationId: activeLocationId } : {}),
-        client.query(api.inventory.stockTally, {}),
-      ])
-      setStockLevels(data || [])
-      setTally(tallyRows || [])
-      setError(null)
-    } catch (err) {
-      console.error('Error fetching stock levels:', err)
-      showToast('error', 'Failed to load stock levels')
-      setError('Failed to load stock levels. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { locationArgs } = useLocation()
+  const stockResult = useQuery(api.inventory.listStockLevels, locationArgs)
+  const tally = useQuery(api.inventory.stockTally, {})
+  const loading = stockResult === undefined || tally === undefined
+  const stockLevels = stockResult || []
 
   const getStockStatus = (current, minimum) => {
     if (current <= minimum * 0.5) return 'critical'
@@ -95,19 +68,10 @@ function StockLevels() {
             <Button href="/feed-issue" variant="secondary" size="sm">
               Issue feed
             </Button>
-            <Button variant="secondary" size="sm" onClick={fetchStockLevels}>
-              <RefreshCw className="w-4 h-4" aria-hidden />
-              Refresh
-            </Button>
           </>
         }
       />
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
-            {error}
-          </div>
-        )}
 
         <div className="page-card overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
@@ -121,7 +85,7 @@ function StockLevels() {
           </div>
 
           {loading ? (
-            <div className="py-12 text-center text-muted">Loading…</div>
+            <LoadingState />
           ) : stockLevels.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-foam-deep">

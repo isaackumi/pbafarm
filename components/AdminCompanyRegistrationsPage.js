@@ -1,31 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import companyService from '../lib/companyService'
+import React from 'react'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { errorMessage } from '../lib/errorMessage'
 import { useToast } from './Toast'
+import { LoadingState } from './ui'
 
 const AdminCompanyRegistrationsPage = () => {
-  const [pendingRegistrations, setPendingRegistrations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const pending = useQuery(api.companies.listPending, {})
+  const approve = useMutation(api.companies.approve)
+  const reject = useMutation(api.companies.reject)
+  const pendingRegistrations = pending ?? []
   const { showToast } = useToast()
-
-  useEffect(() => {
-    loadPendingRegistrations()
-  }, [])
-
-  const loadPendingRegistrations = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await companyService.listPendingRegistrations()
-      if (response.error) throw response.error
-      setPendingRegistrations(response.data || [])
-    } catch (err) {
-      console.error('Error loading pending registrations:', err)
-      setError(err.message || 'Failed to load registrations')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleApprove = async (company) => {
     const companyId = company.id || company._id
@@ -38,13 +23,11 @@ const AdminCompanyRegistrationsPage = () => {
       return
     }
     try {
-      const { error } = await companyService.approveRegistration(companyId, userId)
-      if (error) throw error
+      await approve({ companyId, userId })
       showToast(`${company.name || 'Company'} approved`, 'success')
-      await loadPendingRegistrations()
     } catch (err) {
       console.error('Error approving company:', err)
-      showToast(err.message || 'Could not approve the company', 'error')
+      showToast(errorMessage(err, 'Could not approve the company'), 'error')
     }
   }
 
@@ -54,18 +37,16 @@ const AdminCompanyRegistrationsPage = () => {
     if (!reason) return
 
     try {
-      const { error } = await companyService.rejectRegistration(companyId, reason)
-      if (error) throw error
+      await reject({ companyId, reason })
       showToast('Registration rejected', 'success')
-      await loadPendingRegistrations()
     } catch (err) {
       console.error('Error rejecting company:', err)
-      showToast(err.message || 'Could not reject the registration', 'error')
+      showToast(errorMessage(err, 'Could not reject the registration'), 'error')
     }
   }
 
-  if (loading) {
-    return <div className="p-4 text-muted">Loading pending registrations…</div>
+  if (pending === undefined) {
+    return <LoadingState label="Loading pending registrations…" />
   }
 
   return (
@@ -73,12 +54,6 @@ const AdminCompanyRegistrationsPage = () => {
       <h2 className="font-display text-2xl font-semibold text-chart-ink mb-6">
         Company Registration Approvals
       </h2>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg border border-signal/30 bg-signal/10 text-sm text-signal">
-          {error}
-        </div>
-      )}
 
       {pendingRegistrations.length === 0 ? (
         <p className="text-muted">No pending registrations</p>

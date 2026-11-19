@@ -2357,6 +2357,41 @@ const schema = defineSchema({
     .index('by_company_and_createdAt', ['companyId', 'createdAt'])
     .index('by_createdAt', ['createdAt']),
 
+  /**
+   * Per-user display preferences (CUSTOM-007): date/time format, personal
+   * currency fallback and the phone bottom-bar shortcuts (UX-004). Replaces
+   * the per-browser `userSettings` localStorage key; the client keeps a
+   * per-user copy for offline first paint.
+   */
+  userPreferences: defineTable({
+    userId: v.id('users'),
+    dateFormat: v.optional(v.string()),
+    timeFormat: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    notifications: v.optional(
+      v.object({
+        email: v.boolean(),
+        push: v.boolean(),
+        lowFeed: v.boolean(),
+        mortalityAlert: v.boolean(),
+        waterQualityAlert: v.boolean(),
+      }),
+    ),
+    dashboard: v.optional(
+      v.object({
+        defaultTimeRange: v.string(),
+        showCharts: v.boolean(),
+        showMetrics: v.boolean(),
+        showStockings: v.boolean(),
+      }),
+    ),
+    /** Routes pinned to the phone bottom bar, in order (at most 5). */
+    mobileShortcuts: v.optional(v.array(v.string())),
+    /** Set when the row was created from this browser's old local settings. */
+    importedFromDeviceAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_userId', ['userId']),
+
   /** Per-user notification channels and quiet hours (AUTO-003). */
   notificationPreferences: defineTable({
     userId: v.id('users'),
