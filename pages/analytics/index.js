@@ -77,7 +77,7 @@ function Analytics() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <Tabs
-              variant="underline"
+              variant="page"
               label={t('ops.analytics.viewsLabel')}
               tabs={TABS.map((id) => ({ value: id, label: t(`ops.analytics.tabs.${id}`) }))}
               value={tab}

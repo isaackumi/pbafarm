@@ -318,3 +318,24 @@ describe('snapshot dates', () => {
     expect(snapshotDates('2026-05-03', '2026-05-03')).toEqual(['2026-05-03'])
   })
 })
+
+describe('feed cover (sidebar)', () => {
+  test('stock over the average daily use in the window; null with no use', async () => {
+    const { t, as, ids, stock, day } = await setup()
+    const window = { from: '2026-05-01', to: '2026-05-30' }
+    expect(await as.query(api.inventory.coverSummary, window)).toBeNull()
+
+    await stock(ids.A, 10_000, '2026-05-01')
+    await day('2026-05-15', 150, 0)
+    await day('2026-05-16', 150, 0)
+    const stockKg = await t.run(async (ctx) => (await ctx.db.get(ids.feedTypeId))!.currentStock)
+
+    const cover = await as.query(api.inventory.coverSummary, window)
+    expect(cover).not.toBeNull()
+    expect(cover!.daily_kg).toBeCloseTo(300 / 30)
+    expect(cover!.stock_kg).toBe(stockKg)
+    expect(cover!.cover_days).toBeCloseTo(stockKg / 10)
+    // Use outside the window does not count.
+    expect(await as.query(api.inventory.coverSummary, { from: '2026-06-01', to: '2026-06-30' })).toBeNull()
+  })
+})

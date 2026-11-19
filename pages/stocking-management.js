@@ -77,14 +77,10 @@ function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
       <div className="flex flex-wrap items-center gap-2.5">
         {canAct && (
           <>
-            <GradientButton
-              disabled={busy}
-              onClick={onApprove}
-              className="[&>span]:h-[38px] [&>span]:px-5 [&>span]:text-[14px]"
-            >
+            <GradientButton size="row" disabled={busy} onClick={onApprove}>
               {t('stocking.approve')}
             </GradientButton>
-            <GhostButton size="lg" disabled={busy} onClick={onReject} className="!h-[41px] !px-5">
+            <GhostButton size="row" disabled={busy} onClick={onReject}>
               {t('stocking.reject')}
             </GhostButton>
           </>

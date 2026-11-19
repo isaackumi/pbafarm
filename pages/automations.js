@@ -7,7 +7,7 @@ import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { GhostButton, GradientButton, Pill, Segmented, Skeleton, Toggle } from '../components/ui'
 import {
-  FIELD,
+  FIELD_INSPECTOR as FIELD,
   FIELD_LABEL,
   LineTabs,
   Notice,

@@ -8,7 +8,43 @@ import Tabs from './Tabs'
  *
  * columns: [{ key, header, width, align: 'left'|'right', render(row) }]
  * Cells render `row[key]` unless `render` is given; `sub` adds a muted line.
+ *
+ * variant 'card' (default): Paper 24 Sales / 01 Home — 20px radius, 20/24
+ *   header, 17px title, 24px edge cells, 14/18 rows.
+ * variant 'console': Paper 40 tenants — 16px radius, 16/20 header, 20px edge
+ *   cells, an always-open 260×34 search field.
+ * variant 'panel': Paper 42/43 panels — 12px radius, 16/20 header with a
+ *   15px title, 10px header cells, 12px rows of 13/16 text, 20px edge cells.
  */
+const VARIANT = {
+  card: {
+    box: 'rounded-card',
+    header: 'px-6 py-5',
+    title: 'text-[17px] leading-[22px]',
+    edgeL: 'pl-6',
+    edgeR: 'pr-6',
+    th: 'py-3',
+    td: 'py-[14px] text-[14px] leading-[18px]',
+  },
+  console: {
+    box: 'rounded-[16px]',
+    header: 'px-5 py-4',
+    title: 'text-[17px] leading-[22px]',
+    edgeL: 'pl-5',
+    edgeR: 'pr-5',
+    th: 'py-3',
+    td: 'py-[14px] text-[14px] leading-[18px]',
+  },
+  panel: {
+    box: 'rounded-[12px]',
+    header: 'px-5 py-4',
+    title: 'text-[15px] leading-[18px]',
+    edgeL: 'pl-5',
+    edgeR: 'pr-5',
+    th: 'py-[10px]',
+    td: 'py-3 text-[13px] leading-4',
+  },
+}
 export function Table({
   title,
   tabsLabel,
@@ -24,29 +60,36 @@ export function Table({
   rowKey = (row, i) => row._id || row.id || i,
   onRowClick,
   empty = 'Nothing here yet',
+  variant = 'card',
   className = '',
 }) {
+  const v = VARIANT[variant] || VARIANT.card
+  // Console and panel tables keep the search field open (Paper 40: 260×34).
+  const alwaysOpen = variant !== 'card'
   const [searchOpen, setSearchOpen] = useState(Boolean(search))
   const hasHeader = title || tabs || onSearchChange || actions
   return (
-    <div className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)] ${className}`}>
+    <div className={`flex flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-card)] ${v.box} ${className}`}>
       {hasHeader && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
+        <div className={`flex flex-wrap items-center justify-between gap-3 border-b border-line ${v.header}`}>
           <div className="flex flex-wrap items-center gap-5">
-            {title && <h2 className="font-sans text-[17px] font-semibold leading-[22px] text-text">{title}</h2>}
+            {title && <h2 className={`font-sans font-semibold text-text ${v.title}`}>{title}</h2>}
             {tabs && <Tabs tabs={tabs} value={tab} onChange={onTabChange} label={tabsLabel || title} />}
           </div>
           <div className="flex items-center gap-3">
             {onSearchChange &&
-              (searchOpen ? (
+              (alwaysOpen || searchOpen ? (
                 <input
                   type="search"
-                  autoFocus
+                  autoFocus={!alwaysOpen}
+                  aria-label={searchPlaceholder}
                   value={search || ''}
                   placeholder={searchPlaceholder}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  onBlur={() => !search && setSearchOpen(false)}
-                  className="h-8 w-48 rounded-pill border border-line px-3 text-[13px] leading-4 text-text placeholder:text-faint focus:outline-none"
+                  onBlur={() => !alwaysOpen && !search && setSearchOpen(false)}
+                  className={`rounded-pill border bg-transparent text-[13px] leading-4 text-text placeholder:text-faint focus:border-muted focus:outline-none ${
+                    alwaysOpen ? 'h-[34px] w-full border-line-strong px-[14px] sm:w-[260px]' : 'h-8 w-48 border-line px-3'
+                  }`}
                 />
               ) : (
                 <button
@@ -71,9 +114,9 @@ export function Table({
                   key={col.key}
                   scope="col"
                   style={col.width ? { width: col.width } : undefined}
-                  className={`py-3 text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint ${
-                    i === 0 ? 'pl-6' : 'pl-3'
-                  } ${i === columns.length - 1 ? 'pr-6' : 'pr-3'} ${col.align === 'right' ? 'text-right' : ''}`}
+                  className={`${v.th} text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint ${
+                    i === 0 ? v.edgeL : 'pl-3'
+                  } ${i === columns.length - 1 ? v.edgeR : 'pr-3'} ${col.align === 'right' ? 'text-right' : ''}`}
                 >
                   {col.header}
                 </th>
@@ -83,7 +126,7 @@ export function Table({
           <tbody>
             {rows.length === 0 && (
               <tr className="border-t border-line">
-                <td colSpan={columns.length} className="px-6 py-[14px] text-[14px] leading-[18px] text-muted">
+                <td colSpan={columns.length} className={`${v.edgeL} ${v.edgeR} ${v.td} text-muted`}>
                   {empty}
                 </td>
               </tr>
@@ -97,9 +140,9 @@ export function Table({
                 {columns.map((col, i) => (
                   <td
                     key={col.key}
-                    className={`py-[14px] align-middle text-[14px] leading-[18px] text-text ${
-                      i === 0 ? 'pl-6' : 'pl-3'
-                    } ${i === columns.length - 1 ? 'pr-6' : 'pr-3'} ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
+                    className={`${v.td} align-middle text-text ${
+                      i === 0 ? v.edgeL : 'pl-3'
+                    } ${i === columns.length - 1 ? v.edgeR : 'pr-3'} ${col.align === 'right' ? 'text-right tabular-nums' : ''}`}
                   >
                     {col.render ? col.render(row) : row[col.key]}
                     {col.sub && (

@@ -122,7 +122,9 @@
       "feedAnalytics": "Feed analytics",
       "inventoryOverview": "Inventory overview",
       "inventoryAnalytics": "Inventory analytics"
-    }
+    },
+    "feedCover": "Feed cover",
+    "feedCoverDays": "{count} days"
   },
   "common": {
     "language": "Language",

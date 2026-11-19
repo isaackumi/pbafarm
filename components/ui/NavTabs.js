@@ -19,7 +19,7 @@ export function NavTabs({ tabs = [], label, active, className = '' }) {
   const path = router?.pathname
   const current = active ?? shown.find((tab) => tab.href === path)?.href
   return (
-    <nav aria-label={label} className={`-mt-1 overflow-x-auto border-b border-line ${className}`}>
+    <nav aria-label={label} className={`overflow-x-auto border-b border-line ${className}`}>
       <ul className="flex min-w-max gap-[28px]">
         {shown.map((tab) => {
           const on = tab.href === current

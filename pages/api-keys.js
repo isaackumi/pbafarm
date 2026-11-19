@@ -136,7 +136,7 @@ function KeyRow({ k, sitesById, now }) {
       <ul className="flex flex-wrap gap-[6px]" aria-label={t('settingsUi.integ.keys.permissions')}>
         {k.scopes.map((s) => (
           <li key={s}>
-            <Pill tone={scopeTone(s)} className="!px-[10px]">
+            <Pill tone={scopeTone(s)} size="sm">
               {s}
             </Pill>
           </li>
@@ -195,7 +195,7 @@ function OutboundSummary({ now }) {
               <li key={ep.id} className="flex flex-col gap-2 border-t border-line py-[14px]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0 truncate font-mono text-[13px] leading-4 text-text">{ep.url}</span>
-                  <Pill tone={tone} className="shrink-0 !px-[10px]">
+                  <Pill tone={tone} size="sm" className="shrink-0">
                     {label}
                   </Pill>
                 </div>

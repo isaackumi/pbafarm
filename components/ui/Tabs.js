@@ -3,7 +3,9 @@ import { useRef } from 'react'
 /**
  * Filter tabs (WAI-ARIA tablist: arrow keys, Home/End, roving tabindex).
  * variant 'text' (default): text-link tabs in table headers (Paper 24 Sales).
- * 'underline': cyan underline on the active tab (Paper 44 tenant detail).
+ * 'underline': in-card section tabs (Paper 44 tenant detail): 13/16 labels
+ *   20px apart, 14px above and below, cyan underline on the active tab.
+ *   Page-level tabs under a title use 'page'.
  * 'chip': small pills, active on surface-2 (Paper 42/45 filters).
  * 'page': page-level tabs under a title (Paper 03 Cage detail, 12 My tasks):
  *   14/18 labels 28px apart on a hairline, 12px under the label, the active
@@ -18,8 +20,8 @@ const VARIANT = {
   underline: {
     list: 'gap-5',
     tab: (on) =>
-      `-mb-px border-b-2 py-[14px] text-[14px] leading-[18px] ${
-        on ? 'border-pearl-cyan font-medium text-text' : 'border-transparent text-muted hover:text-text'
+      `-mb-px border-b-2 py-[14px] text-[13px] leading-4 ${
+        on ? 'border-pearl-cyan text-text' : 'border-transparent text-muted hover:text-text'
       }`,
   },
   page: {

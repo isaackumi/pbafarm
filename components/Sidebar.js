@@ -22,6 +22,8 @@ import { navKey } from '../lib/i18n'
 import { MENU_SECTIONS } from '../lib/navigation'
 import { routePermission } from '../lib/routePermissions'
 import { api } from '../convex/_generated/api'
+import { useOptionalQuery } from '../hooks/useOptionalQuery'
+import { addDays, localToday } from '../lib/format'
 import { Avatar } from './ui/Avatar'
 import { AnowaLockup, AnowaMark } from './brand/AnowaLogo'
 
@@ -31,6 +33,7 @@ import { AnowaLockup, AnowaMark } from './brand/AnowaLogo'
  * optional feed cover line and the "Stock a new cage" action.
  */
 function WorkspaceCard({ displayName, logoUrl, feedCover, canStock }) {
+  const t = useT()
   const { locations, activeLocationId, setActiveLocation, loading } = useLocation()
   const active = locations.find((loc) => (loc.id || loc._id) === activeLocationId)
   return (
@@ -82,7 +85,7 @@ function WorkspaceCard({ displayName, logoUrl, feedCover, canStock }) {
       </div>
       {feedCover && (
         <div className="px-1.5 text-[12px] leading-[17px] text-muted">
-          Feed cover <span className="text-text">{feedCover.days} days</span>
+          {t('nav.feedCover')} <span className="text-text">{t('nav.feedCoverDays', { count: feedCover.days })}</span>
           {feedCover.tonnes != null && <> · {feedCover.tonnes} t</>}
         </div>
       )}
@@ -119,6 +122,20 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   // Menu follows the member's permissions (PERM-003), not the legacy role.
   const { can } = usePermissions()
   const openTasks = useQuery(api.tasks.openCount, canUseApp ? {} : 'skip')
+  // Feed cover (Paper 7Z-0): stock vs the last 30 days' average use, for the
+  // active site. Optional: the line is simply absent if it can't load.
+  const { locationArgs } = useLocation()
+  const coverWindow = useMemo(() => {
+    const to = localToday()
+    return { from: addDays(to, -29), to }
+  }, [])
+  const cover = useOptionalQuery(
+    api.inventory.coverSummary,
+    canUseApp && can('inventory.view') ? { ...coverWindow, ...(locationArgs || {}) } : 'skip',
+  )
+  const feedCover = cover
+    ? { days: Math.round(cover.cover_days), tonnes: (cover.stock_kg / 1000).toFixed(1) }
+    : null
 
   const menuItems = useMemo(() => {
     const filtered = Object.entries(MENU_SECTIONS)
@@ -230,6 +247,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
         <WorkspaceCard
           displayName={name}
           logoUrl={logoUrl}
+          feedCover={feedCover}
           canStock={can(routePermission('/stocking'))}
         />
       )}

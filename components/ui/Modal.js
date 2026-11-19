@@ -86,12 +86,12 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
-        className={`relative flex max-h-[90vh] w-full flex-col gap-5 rounded-[24px] border border-line-strong bg-surface-2 p-6 text-text shadow-[0_24px_64px_rgb(0_0_0/0.5)] sm:p-7 ${MODAL_SIZE[size] || MODAL_SIZE.md} ${className}`}
+        className={`relative flex max-h-[90vh] w-full flex-col gap-5 rounded-[24px] border border-line-strong bg-surface-2 p-7 text-text shadow-[0_24px_64px_rgb(0_0_0/0.5)] ${MODAL_SIZE[size] || MODAL_SIZE.md} ${className}`}
         {...panelProps}
       >
         {(title || showClose || icon) && (
           <div className="flex items-start gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-5">
               {icon && <IconBadge tone={iconTone}>{icon}</IconBadge>}
               {(title || description) && (
                 <div className="flex flex-col gap-2">
@@ -101,7 +101,7 @@ export function Modal({
                     </h2>
                   )}
                   {description && (
-                    <p id={descriptionId} className="text-sm leading-5 text-muted">
+                    <p id={descriptionId} className="text-[14px] leading-5 text-muted">
                       {description}
                     </p>
                   )}

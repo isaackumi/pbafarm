@@ -165,7 +165,7 @@ function StructurePanel({ units, sites }) {
 
   return (
     <div className="flex flex-col items-start gap-5 xl:flex-row">
-      <SettingsCard className="w-full min-w-0 grow basis-0 !gap-0 !pb-[14px]" aria-labelledby="org-structure-title">
+      <SettingsCard tree className="w-full min-w-0 grow basis-0" aria-labelledby="org-structure-title">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-[14px]">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 id="org-structure-title" className="text-[15px] font-semibold leading-[18px] text-text">

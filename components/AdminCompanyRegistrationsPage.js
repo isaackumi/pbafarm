@@ -204,8 +204,9 @@ export default function AdminCompanyRegistrationsPage() {
               </div>
               <StatusPill status={selected.status} />
             </div>
-            <div className="rounded-input border border-line px-4 py-[6px] [&_dl>div]:py-[9px] [&_dl>div]:text-[13px] [&_dl>div]:leading-4">
+            <div className="rounded-input border border-line px-4 py-[6px]">
               <DetailList
+                compact
                 items={[
                   { label: t('settingsUi.admin.detail.email'), value: selected.contact_email },
                   { label: t('settingsUi.admin.detail.phone'), value: selected.contact_phone },

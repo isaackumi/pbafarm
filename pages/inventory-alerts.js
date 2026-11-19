@@ -51,8 +51,7 @@ function InventoryAlerts() {
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
         <Tabs
-          variant="underline"
-          className="border-b border-line"
+          variant="page"
           label={t('ops.alerts.filter')}
           tabs={FILTERS.map((f) => ({ value: f, label: `${t(`ops.alerts.sev.${f}`)} ${counts[f] || 0}` }))}
           value={filter}

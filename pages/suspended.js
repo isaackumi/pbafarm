@@ -70,7 +70,7 @@ export default function SuspendedPage() {
           {/* Plain links: permission-aware buttons hide while the app's permission query is paused. */}
           {isOwner ? <GradientButton href="/billing">{t('suspended.pay')}</GradientButton> : null}
           {SUPPORT_EMAIL ? (
-            <GhostButton size="lg" href={`mailto:${SUPPORT_EMAIL}`} className="!px-5">
+            <GhostButton size="lg" href={`mailto:${SUPPORT_EMAIL}`} className="px-5">
               {t('suspended.contactSupport')}
             </GhostButton>
           ) : null}

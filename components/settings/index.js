@@ -29,18 +29,19 @@ export function SettingsFrame({ active, children, className = '' }) {
   )
 }
 
-/** Card with a 15/600 title, optional muted meta or action on the right, then rows. */
-export function SettingsCard({ title, meta, action, children, className = '', id, as: Tag = 'section', ...rest }) {
+/** Card with a 15/600 title, optional muted meta or action on the right, then rows (Paper 23: 10px under the title). */
+/** `tree`: no row gap and a 14px bottom (Paper 50 structure tree card). */
+export function SettingsCard({ title, meta, action, children, className = '', id, tree = false, as: Tag = 'section', ...rest }) {
   const headingId = id ? `${id}-title` : undefined
   return (
     <Tag
       id={id}
       aria-labelledby={title && headingId ? headingId : undefined}
-      className={`flex min-w-0 flex-col gap-1 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px] ${className}`}
+      className={`flex min-w-0 flex-col rounded-card border border-line bg-surface px-5 shadow-[var(--shadow-card)] sm:px-[26px] ${tree ? 'pb-[14px] pt-6' : 'gap-1 py-6'} ${className}`}
       {...rest}
     >
       {(title || meta != null || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-[10px]">
           {title && (
             <h2 id={headingId} className="text-[15px] font-semibold leading-[18px] text-text">
               {title}
@@ -59,11 +60,11 @@ export function SettingsCard({ title, meta, action, children, className = '', id
   )
 }
 
-/** One label / helper / control row with a hairline above it. */
+/** One label / helper / control row with a hairline above it (Paper 23: 11px). */
 export function SettingsRow({ label, helper, children, htmlFor, className = '', labelClassName = '' }) {
   const Label = htmlFor ? 'label' : 'div'
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 border-t border-line py-3 ${className}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 border-t border-line py-[11px] ${className}`}>
       <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
         <Label htmlFor={htmlFor} className={`text-[14px] leading-[18px] text-text ${labelClassName}`}>
           {label}
@@ -102,7 +103,7 @@ export function Notice({ tone = 'warn', children, action, role, className = '' }
   return (
     <div
       role={role || (tone === 'alert' ? 'alert' : 'status')}
-      className={`flex flex-wrap items-center gap-3 rounded-input border px-5 py-[14px] text-[14px] leading-[18px] text-text ${className}`}
+      className={`flex flex-wrap items-center gap-[14px] rounded-input border px-[18px] py-[14px] text-[14px] leading-[18px] text-text ${className}`}
       style={{
         borderColor: `color-mix(in oklab, ${color} 35%, transparent)`,
         backgroundColor: `color-mix(in oklab, ${color} 6%, var(--surface))`,
@@ -115,8 +116,11 @@ export function Notice({ tone = 'warn', children, action, role, className = '' }
   )
 }
 
-/** Label / value rows used in detail panels (Paper 50 site detail, 59 registration). */
-export function DetailList({ items = [], className = '' }) {
+/**
+ * Label / value rows used in detail panels (Paper 50 site detail, 59
+ * registration). `compact`: 9px rows of 13/16 text (Paper 59 side panel).
+ */
+export function DetailList({ items = [], compact = false, className = '' }) {
   return (
     <dl className={`flex flex-col ${className}`}>
       {items
@@ -124,7 +128,7 @@ export function DetailList({ items = [], className = '' }) {
         .map((item, i) => (
           <div
             key={item.key || item.label}
-            className={`flex items-center justify-between gap-3 py-3 text-[14px] leading-[18px] ${i ? 'border-t border-line' : ''}`}
+            className={`flex items-center justify-between gap-3 ${compact ? 'py-[9px] text-[13px] leading-4' : 'py-3 text-[14px] leading-[18px]'} ${i ? 'border-t border-line' : ''}`}
           >
             <dt className="shrink-0 text-muted">{item.label}</dt>
             <dd className={`min-w-0 truncate text-right text-text ${item.mono ? 'font-data text-[13px] text-pearl-cyan' : ''}`}>
@@ -139,6 +143,10 @@ export function DetailList({ items = [], className = '' }) {
 /** Paper input style: radius 14, bg fill, line-strong border (21 Automations, 58 Anowa). */
 export const FIELD =
   'w-full rounded-input border border-line-strong bg-bg px-[14px] py-3 text-[14px] leading-[18px] text-text placeholder:text-faint focus:border-muted focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-cyan aria-[invalid=true]:border-alert disabled:opacity-50'
+
+/** Inspector field (Paper 21 rule editor): radius 12, 11/14 padding. */
+export const FIELD_INSPECTOR =
+  'w-full rounded-[12px] border border-line-strong bg-bg px-[14px] py-[11px] text-[14px] leading-[18px] text-text placeholder:text-faint focus:border-muted focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-cyan aria-[invalid=true]:border-alert disabled:opacity-50'
 
 /** 12px muted label above a field. */
 export const FIELD_LABEL = 'mb-1.5 block text-[12px] leading-4 text-muted'

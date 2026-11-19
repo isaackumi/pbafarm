@@ -24,7 +24,7 @@ function StatusPill({ status }) {
   const t = useT()
   const key = STATUS_TONE[status] ? status : 'draft'
   return (
-    <Pill tone={STATUS_TONE[key]} className="!px-[10px]">
+    <Pill tone={STATUS_TONE[key]} size="sm">
       {t(`settingsUi.msg.status.${key}`)}
     </Pill>
   )
@@ -466,7 +466,7 @@ function ChannelSummary({ spec, row, providers, platform }) {
         {row ? (
           <StatusPill status={row.status} />
         ) : (
-          <Pill tone={platformOn ? 'cyan' : 'neutral'} className="!px-[10px]">
+          <Pill tone={platformOn ? 'cyan' : 'neutral'} size="sm">
             {platformOn ? t('settingsUi.msg.platformChannel') : t('settingsUi.msg.notConfigured')}
           </Pill>
         )}
@@ -490,7 +490,6 @@ function PhoneOutboxBanner() {
     <Notice
       tone="warn"
       role="status"
-      className="!gap-[14px] !px-[18px]"
       action={
         <button
           type="button"
