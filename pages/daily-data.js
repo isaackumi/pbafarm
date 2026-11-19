@@ -354,7 +354,7 @@ function DailyRecords() {
         </>
       }
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 sm:gap-7">
         <p className="text-sm text-muted">{t('daily.records.description')}</p>
         <div className="flex flex-wrap items-end gap-4">
           <Segmented
@@ -375,21 +375,19 @@ function DailyRecords() {
           </Field>
         </div>
 
-        <Card>
-          <KpiStrip
-            items={[
-              { key: 'records', label: t('daily.records.kpiRecords'), value: formatNumber(records.length) },
-              { key: 'feed', label: t('daily.records.kpiFeed'), value: fmtKg(totals.feed), suffix: 'kg' },
-              { key: 'cost', label: t('daily.records.kpiCost'), value: formatNumber(totals.cost) },
-              {
-                key: 'mort',
-                label: t('daily.records.kpiMortality'),
-                value: formatNumber(totals.mort),
-                valueTone: totals.mort > 0 ? 'alert' : undefined,
-              },
-            ]}
-          />
-        </Card>
+        <KpiStrip
+          items={[
+            { key: 'records', label: t('daily.records.kpiRecords'), value: formatNumber(records.length) },
+            { key: 'feed', label: t('daily.records.kpiFeed'), value: fmtKg(totals.feed), suffix: 'kg' },
+            { key: 'cost', label: t('daily.records.kpiCost'), value: formatNumber(totals.cost) },
+            {
+              key: 'mort',
+              label: t('daily.records.kpiMortality'),
+              value: formatNumber(totals.mort),
+              valueTone: totals.mort > 0 ? 'alert' : undefined,
+            },
+          ]}
+        />
 
         {loading ? (
           <LoadingState label={t('daily.records.loading')} />

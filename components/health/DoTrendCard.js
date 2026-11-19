@@ -28,11 +28,11 @@ export default function DoTrendCard({ points, threshold, loading, className = ''
         <span className="text-xs leading-4 text-muted">{t('healthWater.doChart.unit')}</span>
       </div>
       {loading ? (
-        <div className="h-[194px] animate-pulse rounded-input bg-surface-2" aria-hidden />
+        <div className="h-[170px] animate-pulse rounded-input bg-surface-2" aria-hidden />
       ) : !hasData ? (
-        <p className="flex h-[194px] items-center justify-center text-sm text-muted">{t('healthWater.doChart.empty')}</p>
+        <p className="flex h-[170px] items-center justify-center text-sm text-muted">{t('healthWater.doChart.empty')}</p>
       ) : (
-        <div className="h-[194px]" role="img" aria-label={t('healthWater.doChart.aria')}>
+        <div className="h-[170px]" role="img" aria-label={t('healthWater.doChart.aria')}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
               <CartesianGrid vertical={false} stroke="var(--line)" />

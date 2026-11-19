@@ -585,7 +585,7 @@ const DailyUploadPage = () => {
   // ---- render ------------------------------------------------------------
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
+    <div className="flex flex-col gap-5 sm:gap-7">
       <PageTitle
         eyebrow={t('daily.eyebrow', { date: formatDate(formData.date) })}
         title={t('daily.title')}
@@ -642,12 +642,12 @@ const DailyUploadPage = () => {
         className="flex flex-col gap-4 rounded-card border border-line bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-6 lg:flex-row lg:items-center lg:gap-6"
       >
         <div className="shrink-0 lg:w-60">
-          <p id="daily-round-title" className="text-sm leading-4 text-muted">
+          <p id="daily-round-title" className="text-[13px] leading-4 text-muted">
             {isToday ? t('daily.round.today') : t('daily.round.forDate', { date: formatDate(formData.date) })}
           </p>
-          <p className="mt-1.5 text-[26px] font-semibold leading-8 tracking-[-0.02em] text-text tabular-nums">
+          <p className="mt-1 text-[26px] font-semibold leading-8 tracking-[-0.02em] text-text tabular-nums">
             {loggedCount}{' '}
-            <span className="text-base font-normal text-muted">
+            <span className="text-[15px] font-normal leading-[18px] text-muted">
               {t('daily.round.ofCages', { total: cages.length })}
             </span>
           </p>
@@ -704,7 +704,7 @@ const DailyUploadPage = () => {
             e.currentTarget.requestSubmit()
           }
         }}
-        className="flex flex-col gap-5 sm:gap-6"
+        className="flex flex-col gap-5 sm:gap-7"
       >
         <section
           aria-labelledby="daily-defaults-title"
@@ -1016,12 +1016,12 @@ const DailyUploadPage = () => {
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 sm:px-6">
-            <p className="text-sm leading-4 text-muted tabular-nums">
+            <p className="text-[13px] leading-4 text-muted tabular-nums">
               {lines.length
                 ? t('daily.totals', { count: lines.length, feed: totals.feed.toFixed(1), dead: totals.mort })
                 : t('common.noCagesSelected')}
             </p>
-            <p className="hidden text-xs leading-4 text-faint sm:block">{t('daily.keyboardHint')}</p>
+            <p className="hidden text-[13px] leading-4 text-text sm:block">{t('daily.keyboardHint')}</p>
           </div>
         </section>
 

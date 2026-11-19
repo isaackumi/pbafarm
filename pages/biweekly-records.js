@@ -344,37 +344,35 @@ function BiweeklyRecordsBody() {
       }
     >
       <div className="flex flex-col gap-6 sm:gap-7">
-        <Card>
-          <KpiStrip
-            items={[
-              {
-                key: 'abw',
-                label: t('biweekly.records.kpiAvgAbw'),
-                value: growth.latest.length ? formatNumber(growth.avgAbw, { decimals: 1 }) : '—',
-                suffix: growth.latest.length ? 'g' : undefined,
-              },
-              {
-                key: 'adg',
-                label: t('biweekly.records.kpiAdg'),
-                value: growth.adg == null ? '—' : formatNumber(growth.adg, { decimals: 2 }),
-                suffix: growth.adg == null ? undefined : t('biweekly.records.gPerDay'),
-              },
-              {
-                key: 'sampled',
-                label: t('biweekly.records.kpiSampled14'),
-                value: formatNumber(growth.sampled14),
-                suffix: t('biweekly.records.ofCages', { total: cages.length }),
-              },
-              { key: 'fish', label: t('biweekly.records.kpiFish'), value: formatNumber(stats.totalFish) },
-            ]}
-          />
-        </Card>
+        <KpiStrip
+          items={[
+            {
+              key: 'abw',
+              label: t('biweekly.records.kpiAvgAbw'),
+              value: growth.latest.length ? formatNumber(growth.avgAbw, { decimals: 1 }) : '—',
+              suffix: growth.latest.length ? 'g' : undefined,
+            },
+            {
+              key: 'adg',
+              label: t('biweekly.records.kpiAdg'),
+              value: growth.adg == null ? '—' : formatNumber(growth.adg, { decimals: 2 }),
+              suffix: growth.adg == null ? undefined : t('biweekly.records.gPerDay'),
+            },
+            {
+              key: 'sampled',
+              label: t('biweekly.records.kpiSampled14'),
+              value: formatNumber(growth.sampled14),
+              suffix: t('biweekly.records.ofCages', { total: cages.length }),
+            },
+            { key: 'fish', label: t('biweekly.records.kpiFish'), value: formatNumber(stats.totalFish) },
+          ]}
+        />
 
         {growth.latest.length > 0 && (
           <Card padding={false} className="px-5 py-6 sm:px-[26px]">
-            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[17px] font-semibold leading-[22px] text-text">{t('biweekly.records.abwByCage')}</h2>
-              <p className="text-xs text-faint">{t('biweekly.records.abwByCageHint')}</p>
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('biweekly.records.abwByCage')}</h2>
+              <p className="text-xs leading-4 text-muted">{t('biweekly.records.abwByCageHint')}</p>
             </div>
             <div className="overflow-x-auto">
               <ul

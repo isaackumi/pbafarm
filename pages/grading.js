@@ -5,13 +5,15 @@ import { useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import GradingForm from '../components/GradingForm'
-import { EmptyState, GradientButton } from '../components/ui'
+import { ArrowLeftRight, Check } from 'lucide-react'
+import { EmptyState, GhostButton, GradientButton } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { usePermission } from '../hooks/usePermission'
 import { formatDate } from '../lib/format'
 import { useLocale, useT } from '../lib/i18n/context'
 
+const FORM_ID = 'grading-form'
 const CARD = 'flex min-w-0 flex-col rounded-card border border-line bg-surface px-[26px] py-6 shadow-[var(--shadow-card)]'
 
 /** Batches made by grading, grouped by the day they were graded, newest first. */
@@ -91,25 +93,44 @@ function GradingContent() {
   const cage = typeof router.query.cage === 'string' ? router.query.cage : ''
   const canGrade = usePermission('production.transfer.approve')
 
+  const aside = (
+    <div className="flex w-full min-w-0 flex-col gap-5 xl:grow xl:basis-0">
+      <section className={`${CARD} gap-2`}>
+        <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('gradingPage.how.title')}</h2>
+        <p className="text-[13px] leading-[18px] text-muted">{t('gradingPage.how.body')}</p>
+      </section>
+      <RecentGradings />
+    </div>
+  )
+
+  if (!router.isReady) return null
+  if (canGrade) return <GradingForm key={cage} initialCageId={cage} formId={FORM_ID} aside={aside} />
   return (
     <div className="flex flex-col items-start gap-5 xl:flex-row">
       <div className="flex w-full min-w-0 flex-col gap-5 xl:w-[700px] xl:shrink-0">
-        {!router.isReady ? null : canGrade ? (
-          <GradingForm key={cage} initialCageId={cage} />
-        ) : (
-          <div className={CARD}>
-            <EmptyState title={t('gradingPage.adminsOnly')} description={t('gradingPage.adminsOnlyHint')} />
-          </div>
-        )}
+        <div className={CARD}>
+          <EmptyState title={t('gradingPage.adminsOnly')} description={t('gradingPage.adminsOnlyHint')} />
+        </div>
       </div>
-      <div className="flex w-full min-w-0 flex-col gap-5 xl:grow xl:basis-0">
-        <section className={`${CARD} gap-2`}>
-          <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('gradingPage.how.title')}</h2>
-          <p className="text-[13px] leading-[18px] text-muted">{t('gradingPage.how.body')}</p>
-        </section>
-        <RecentGradings />
-      </div>
+      {aside}
     </div>
+  )
+}
+
+function GradingActions() {
+  const t = useT()
+  const canGrade = usePermission('production.transfer.approve')
+  return (
+    <>
+      <GhostButton href="/fish-transfers" icon={ArrowLeftRight} size="lg" className="!h-[45px] !gap-2.5 !px-[22px] !text-[15px] font-medium !leading-[18px]">
+        {t('gradingPage.transfers')}
+      </GhostButton>
+      {canGrade && (
+        <GradientButton type="submit" form={FORM_ID} variant="solid" icon={Check} className="hidden sm:inline-flex">
+          Confirm grading
+        </GradientButton>
+      )}
+    </>
   )
 }
 
@@ -120,11 +141,7 @@ export default function GradingPage() {
       <Layout
         title={t('gradingPage.title')}
         eyebrow={t('gradingPage.eyebrow')}
-        actions={
-          <GradientButton href="/fish-transfers" variant="outline">
-            {t('gradingPage.transfers')}
-          </GradientButton>
-        }
+        actions={<GradingActions />}
       >
         <GradingContent />
       </Layout>
