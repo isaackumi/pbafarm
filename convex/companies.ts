@@ -107,6 +107,39 @@ async function logoUrl(ctx: QueryCtx, storageId?: Id<'_storage'>) {
   }
 }
 
+const companyStatusValidator = v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))
+
+/** Shape of toClient(). Computed parts (merged settings, profile, terms) stay v.any(). */
+const companyClientFields = {
+  profile: v.any(),
+  terminology: v.any(),
+  id: v.id('companies'),
+  _id: v.id('companies'),
+  name: v.string(),
+  code: v.string(),
+  abbreviation: v.optional(v.string()),
+  address: v.optional(v.string()),
+  contact_email: v.optional(v.string()),
+  contact_phone: v.optional(v.string()),
+  logo_storage_id: v.optional(v.id('_storage')),
+  logo_url: v.union(v.string(), v.null()),
+  submitted_by_user_id: v.optional(v.id('users')),
+  status: companyStatusValidator,
+  rejection_reason: v.optional(v.string()),
+  settings: v.object({
+    ai_assistant_enabled: v.boolean(),
+    branding: v.any(),
+    farm_rules: v.any(),
+    stocking_rules: v.any(),
+    feed_rules: v.any(),
+    updated_at: v.any(),
+  }),
+  created_at: v.number(),
+  approved_at: v.optional(v.number()),
+  approved_by: v.optional(v.id('users')),
+}
+const companyClientValidator = v.object(companyClientFields)
+
 function toClient(c: any, logo_url: string | null = null) {
   const settings = mergeSettings(c.settings)
   return {
@@ -470,6 +503,17 @@ export const register = mutation({
 /** Company-less user: my latest company registration, to show its status. */
 export const myRegistration = query({
   args: {},
+  returns: v.union(
+    v.object({
+      id: v.id('companies'),
+      name: v.string(),
+      code: v.string(),
+      status: companyStatusValidator,
+      rejectionReason: v.union(v.string(), v.null()),
+      createdAt: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     const latest = await ctx.db
@@ -491,6 +535,7 @@ export const myRegistration = query({
 
 export const listPending = query({
   args: {},
+  returns: v.array(companyClientValidator),
   handler: async (ctx) => {
     const user = await requirePlatformAdmin(ctx)
     
@@ -670,6 +715,7 @@ export const remove = mutation({
 
 export const list = query({
   args: { status: v.optional(v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))) },
+  returns: v.array(v.object({ ...companyClientFields, user_count: v.number() })),
   handler: async (ctx, args) => {
     const user = await requirePlatformAdmin(ctx)
     
@@ -703,6 +749,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id('companies') },
+  returns: v.union(companyClientValidator, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     const company = await ctx.db.get(id)
@@ -843,6 +890,7 @@ export const aiAssistantStatus = query({
 
 export const getCurrentCompany = query({
   args: {},
+  returns: v.union(companyClientValidator, v.null()),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     if (!user.companyId) return null
@@ -856,6 +904,11 @@ export const getCurrentCompany = query({
 
 export const getEffectiveSettings = query({
   args: {},
+  returns: v.object({
+    // mergeSettings() output: every rule group with defaults filled in.
+    settings: v.any(),
+    company: v.union(companyClientValidator, v.null()),
+  }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     if (!user.companyId) {
@@ -874,6 +927,16 @@ export const getEffectiveSettings = query({
 
 export const getSettingsDraft = query({
   args: {},
+  returns: v.object({
+    missingCompany: v.boolean(),
+    // Draft payloads are free-form (companySettingsDrafts.draft is v.any()).
+    draft: v.any(),
+    published: v.any(),
+    hasDraft: v.boolean(),
+    draftUpdatedAt: v.optional(v.union(v.number(), v.null())),
+    logoUrl: v.union(v.string(), v.null()),
+    companyId: v.union(v.id('companies'), v.null()),
+  }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) {
@@ -960,6 +1023,7 @@ export const saveSettingsDraft = mutation({
 
 export const publishSettings = mutation({
   args: { draft: v.optional(v.any()) },
+  returns: v.object({ company: companyClientValidator }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked to your account')
