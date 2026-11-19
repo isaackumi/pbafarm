@@ -8,6 +8,8 @@ import { useT } from '../lib/i18n/context'
 import { GhostButton } from './ui'
 
 const TONE = { ok: 'var(--good)', broken: 'var(--alert)', running: 'var(--cyan)' }
+/** Ring colours from the Paper 47 banner (pill border tokens). */
+const RING = { ok: 'var(--pill-green-border)', broken: 'var(--pill-red-border)', running: 'var(--pill-cyan-border)' }
 
 function shortHash(hash) {
   if (!hash) return null
@@ -36,34 +38,34 @@ export default function AuditChainStatus() {
   return (
     <section
       aria-label={t('settingsUi.audit.chain.label')}
-      className="flex flex-col gap-3 rounded-card border border-line bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-[26px]"
+      className="flex flex-col gap-3 rounded-card border border-line bg-surface px-5 py-[22px] shadow-[var(--shadow-card)] sm:px-[26px]"
     >
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-5">
         <span
           aria-hidden
-          className="flex size-12 shrink-0 items-center justify-center rounded-full border"
-          style={{ borderColor: `color-mix(in oklab, ${color} 45%, transparent)`, color }}
+          className="flex size-11 shrink-0 items-center justify-center rounded-full border"
+          style={{ borderColor: RING[latest?.status] || 'var(--line-strong)', color }}
         >
           <Icon size={20} />
         </span>
-        <div className="min-w-0 flex-1">
-          <p role="status" className="text-[17px] font-medium leading-[22px] text-text">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p role="status" className="text-[15px] font-semibold leading-[18px] text-text">
             {headline}
           </p>
-          <p className="mt-1 text-[14px] leading-[18px] text-muted">
+          <p className="text-[13px] leading-4 text-muted">
             {latest?.finishedAt ? t('settingsUi.audit.chain.lastCheck', { time: formatDateTime(latest.finishedAt) }) : null}
             {latest?.finishedAt ? ' · ' : ''}
             {t('settingsUi.audit.chain.length', { count: status.chainLength.toLocaleString() })}
             {hash && (
               <>
                 {' · '}
-                {t('settingsUi.audit.chain.head')} <span className="font-mono text-[13px] text-pearl-cyan">{hash}</span>
+                {t('settingsUi.audit.chain.head')} <span className="font-mono text-pearl-cyan">{hash}</span>
               </>
             )}
           </p>
-          {latest?.status === 'broken' && latest.reason && <p className="mt-1 text-[13px] leading-4 text-alert">{latest.reason}</p>}
+          {latest?.status === 'broken' && latest.reason && <p className="text-[13px] leading-4 text-alert">{latest.reason}</p>}
           {status.unchainedCount > 0 && (
-            <p className="mt-1 text-[13px] leading-4 text-faint">
+            <p className="text-[13px] leading-4 text-faint">
               {t('settingsUi.audit.chain.unchained', {
                 count: `${status.unchainedCount.toLocaleString()}${status.unchainedMore ? '+' : ''}`,
               })}
@@ -71,7 +73,6 @@ export default function AuditChainStatus() {
           )}
         </div>
         <GhostButton
-          size="lg"
           disabled={latest?.status === 'running'}
           onClick={async () => {
             setError('')

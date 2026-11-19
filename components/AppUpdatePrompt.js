@@ -55,19 +55,19 @@ export default function AppUpdatePrompt() {
         <span className="h-2 w-2 shrink-0 rounded-full bg-cyan" aria-hidden />
         <p className="text-sm font-semibold leading-[18px]">{t('overlay.update.title')}</p>
       </div>
-      <p className="text-sm leading-[18px] text-muted">{t('pwa.updateReady')}</p>
+      <p className="text-[13px] leading-[18px] text-muted">{t('pwa.updateReady')}</p>
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => waiting.postMessage({ type: 'SKIP_WAITING' })}
-          className="rounded-pill bg-button px-4 py-2 text-sm font-semibold leading-[18px] text-button-text hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2"
+          className="rounded-pill bg-button px-4 py-2 text-[13px] font-semibold leading-4 text-button-text hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2"
         >
           {t('pwa.reload')}
         </button>
         <button
           type="button"
           onClick={() => setWaiting(null)}
-          className="rounded-pill px-4 py-2 text-sm leading-[18px] text-muted hover:bg-surface hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          className="rounded-pill border border-line-strong px-4 py-2 text-[13px] leading-4 text-text hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
           {t('pwa.later')}
         </button>

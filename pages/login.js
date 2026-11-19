@@ -88,7 +88,7 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
       <form className="flex flex-col gap-[22px]" onSubmit={verify}>
         {error && <AuthAlert>{error}</AuthAlert>}
         <OtpInput id="otp" label={t('common.code')} value={code} onChange={setCode} autoFocus />
-        <div className="flex items-center justify-between gap-3 text-sm leading-[18px]">
+        <div className="flex items-center justify-between gap-3 text-[13px] leading-4">
           <button type="button" className={AUTH_LINK} disabled={cooldown > 0 || busy} onClick={send}>
             {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
           </button>
@@ -107,11 +107,11 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
         <AuthSubmit disabled={busy || code.length !== 6}>
           {busy ? t('common.checking') : t('authUi.login.verifyAndSignIn')}
         </AuthSubmit>
-        <div className="flex flex-col gap-1 rounded-input border border-line bg-surface px-4 py-3.5">
-          <p className="text-sm font-semibold leading-[18px] text-text">{t('authUi.login.sharedPhoneTitle')}</p>
-          <p className="text-sm leading-5 text-muted">{t('authUi.login.sharedPhoneBody')}</p>
+        <div className="flex flex-col gap-[3px] rounded-input border border-line bg-surface px-4 py-3.5">
+          <p className="text-[13px] font-medium leading-4 text-text">{t('authUi.login.sharedPhoneTitle')}</p>
+          <p className="text-xs leading-[150%] text-muted">{t('authUi.login.sharedPhoneBody')}</p>
         </div>
-        <button type="button" onClick={onUseEmail} className={`self-start text-sm leading-[18px] text-muted hover:text-text ${AUTH_LINK.replace('text-cyan ', '')}`}>
+        <button type="button" onClick={onUseEmail} className={`self-start text-[13px] leading-4 text-muted hover:text-text ${AUTH_LINK.replace('text-cyan ', '')}`}>
           ← {t('authUi.login.useEmail')}
         </button>
       </form>
@@ -255,7 +255,7 @@ export default function Login() {
         />
       ) : method === 'sso' && SSO_NAME ? (
         <div className="flex flex-col gap-[22px]">
-          <p className="text-sm leading-5 text-muted">{t('authUi.login.ssoHint', { name: SSO_NAME })}</p>
+          <p className="text-[13px] leading-5 text-muted">{t('authUi.login.ssoHint', { name: SSO_NAME })}</p>
           <AuthSubmit type="button" onClick={() => signIn('oidc', { redirectTo: safeNextPath(router.query.next) })}>
             {t('auth.login.sso', { name: SSO_NAME })}
           </AuthSubmit>
@@ -278,7 +278,7 @@ export default function Login() {
             label={t('auth.login.password')}
             htmlFor="password"
             aside={
-              <Link href="/reset-password" className={`text-sm leading-[18px] ${AUTH_LINK}`}>
+              <Link href="/reset-password" className={`text-[13px] leading-4 ${AUTH_LINK}`}>
                 {t('auth.login.forgot')}
               </Link>
             }
@@ -305,7 +305,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setMethod('sso')}
-                className="w-full rounded-pill border border-line-strong py-[13px] text-sm font-medium leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                className="w-full rounded-pill border border-line-strong py-[13px] text-sm leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
               >
                 {t('auth.login.sso', { name: SSO_NAME })}
               </button>
@@ -315,7 +315,7 @@ export default function Login() {
       )}
 
       {!codeStep && (
-        <p className="text-sm leading-[18px] text-muted">
+        <p className="text-[13px] leading-4 text-muted">
           {t('authUi.login.newHere')}{' '}
           <Link href="/signup" className={AUTH_LINK}>
             {t('authUi.login.createWorkspace')} →

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
-import { GhostButton, GradientButton } from '../ui'
+import { GhostButton, GradientButton, Pill } from '../ui'
 import { useToast } from '../Toast'
 import { api } from '../../convex/_generated/api'
 import { errorMessage } from '../../lib/errorMessage'
@@ -15,7 +15,7 @@ import {
   layoutProblems,
   resolveLayout,
 } from '../../convex/lib/formLayouts'
-import { FIELD, SettingsCard, SettingsField } from '../settings'
+import { FIELD, InlineError, SettingsCard, SettingsField } from '../settings'
 
 const NO_DEFS = []
 const lite = (defs) => (defs ?? []).map((d) => ({ key: d.key, required: d.required, archived: d.archived }))
@@ -58,7 +58,7 @@ export default function FormLayoutEditor() {
   const t = useT()
   const [formKey, setFormKey] = useState(FORM_KEYS[0])
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       <SettingsCard title={t('formLayout.title')}>
         <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('formLayout.intro')}</p>
         <SettingsField label={t('formLayout.form')} htmlFor="fl-form">
@@ -107,7 +107,7 @@ function FormEditor({ formKey }) {
   const problems = useMemo(() => (draft ? layoutProblems(formKey, clean(draft), lite(defs)) : []), [draft, formKey, defs])
   const allFields = useMemo(() => (draft ?? []).flatMap((s) => s.fields), [draft])
 
-  if (!ready || !draft) return <p className="text-sm text-muted">{t('common.loading')}</p>
+  if (!ready || !draft) return <p className="text-[13px] leading-4 text-muted">{t('common.loading')}</p>
 
   const setSection = (i, patch) => setDraft((d) => d.map((s, k) => (k === i ? { ...s, ...patch } : s)))
   const setField = (si, fi, patch) =>
@@ -158,10 +158,10 @@ function FormEditor({ formKey }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5">
       {draft.map((section, si) => (
-        <SettingsCard key={section.key} className="space-y-3">
-          <div className="flex flex-wrap items-end gap-2">
+        <SettingsCard key={section.key}>
+          <div className="flex flex-wrap items-end gap-2 pb-3">
             <SettingsField label={t('formLayout.sectionTitle')} htmlFor={`fl-s-${section.key}`} className="flex-1 min-w-48">
               <input
                 className={FIELD}
@@ -188,24 +188,28 @@ function FormEditor({ formKey }) {
             </GhostButton>
           </div>
           {section.fields.length === 0 ? (
-            <p className="text-sm text-muted">{t('formLayout.emptySection')}</p>
+            <p className="border-t border-line py-3 text-[13px] leading-4 text-muted">{t('formLayout.emptySection')}</p>
           ) : (
-            <ul className="divide-y divide-line">
+            <ul className="flex flex-col gap-3">
               {section.fields.map((f, fi) => {
                 const controllers = allFields.filter((o) => o.ref !== f.ref && !o.showWhen)
                 const w = f.showWhen
                 return (
-                  <li key={f.ref} className="py-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
+                  <li
+                    key={f.ref}
+                    className="grid gap-3 rounded-input border border-line px-4 py-[14px] sm:grid-cols-[1fr_auto] sm:items-start"
+                    style={{ backgroundColor: 'color-mix(in oklab, var(--bg) 70%, var(--surface-2))' }}
+                  >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-text">
+                      <p className="flex flex-wrap items-center gap-2 text-[14px] leading-[18px] text-text">
                         {label(f.ref)}
-                        {required(f.ref) && <span className="ml-2 text-xs text-muted">{t('formLayout.required')}</span>}
-                        {f.ref.startsWith('custom:') && <span className="ml-2 text-xs text-muted">{t('formLayout.custom')}</span>}
+                        {required(f.ref) && <Pill>{t('formLayout.required')}</Pill>}
+                        {f.ref.startsWith('custom:') && <Pill tone="pink">{t('formLayout.custom')}</Pill>}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <select
                           aria-label={t('formLayout.moveToSection')}
-                          className={`${FIELD} w-auto`}
+                          className={`${FIELD} !w-auto`}
                           value={si}
                           onChange={(e) => moveToSection(si, fi, Number(e.target.value))}
                         >
@@ -217,7 +221,7 @@ function FormEditor({ formKey }) {
                         </select>
                         <select
                           aria-label={t('formLayout.width')}
-                          className={`${FIELD} w-auto`}
+                          className={`${FIELD} !w-auto`}
                           value={f.width ?? ''}
                           onChange={(e) => setField(si, fi, { width: e.target.value || undefined })}
                         >
@@ -228,7 +232,7 @@ function FormEditor({ formKey }) {
                         {!required(f.ref) && (
                           <select
                             aria-label={t('formLayout.showWhen')}
-                            className={`${FIELD} w-auto`}
+                            className={`${FIELD} !w-auto`}
                             value={w?.ref ?? ''}
                             onChange={(e) =>
                               setField(si, fi, {
@@ -248,7 +252,7 @@ function FormEditor({ formKey }) {
                           <>
                             <select
                               aria-label={t('formLayout.condition')}
-                              className={`${FIELD} w-auto`}
+                              className={`${FIELD} !w-auto`}
                               value={w.op}
                               onChange={(e) => setField(si, fi, { showWhen: { ...w, op: e.target.value } })}
                             >
@@ -259,7 +263,7 @@ function FormEditor({ formKey }) {
                             {w.op !== 'is_set' && (
                               <input
                                 aria-label={t('formLayout.conditionValue')}
-                                className={`${FIELD} w-40`}
+                                className={`${FIELD} !w-40`}
                                 value={w.value ?? ''}
                                 onChange={(e) => setField(si, fi, { showWhen: { ...w, value: e.target.value } })}
                               />
@@ -294,11 +298,11 @@ function FormEditor({ formKey }) {
         </SettingsCard>
       ))}
       {problems.length > 0 && (
-        <div role="alert" className="text-sm text-alert border border-signal/20 bg-signal/10 rounded-xl p-3 space-y-1">
+        <InlineError className="flex flex-col gap-1">
           {problems.map((p) => (
             <p key={p}>{p}</p>
           ))}
-        </div>
+        </InlineError>
       )}
       <div className="flex flex-wrap gap-2">
         <GhostButton size="lg" onClick={addSection} disabled={draft.length >= LAYOUT_LIMITS.sections}>

@@ -23,7 +23,11 @@ const STATUS_TONE = { draft: 'amber', verified: 'green', disabled: 'red' }
 function StatusPill({ status }) {
   const t = useT()
   const key = STATUS_TONE[status] ? status : 'draft'
-  return <Pill tone={STATUS_TONE[key]}>{t(`settingsUi.msg.status.${key}`)}</Pill>
+  return (
+    <Pill tone={STATUS_TONE[key]} className="!px-[10px]">
+      {t(`settingsUi.msg.status.${key}`)}
+    </Pill>
+  )
 }
 
 function formatTime(ms) {
@@ -455,19 +459,19 @@ function ChannelSummary({ spec, row, providers, platform }) {
   return (
     <a
       href={`#${spec.id}`}
-      className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface px-[18px] py-5 shadow-[var(--shadow-card)] hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      className="flex min-w-0 flex-col gap-[14px] rounded-card border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-card)] hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[17px] font-semibold leading-[22px] text-text">{name}</span>
+        <span className="text-[15px] font-semibold leading-[18px] text-text">{name}</span>
         {row ? (
           <StatusPill status={row.status} />
         ) : (
-          <Pill tone={platformOn ? 'cyan' : 'neutral'}>
+          <Pill tone={platformOn ? 'cyan' : 'neutral'} className="!px-[10px]">
             {platformOn ? t('settingsUi.msg.platformChannel') : t('settingsUi.msg.notConfigured')}
           </Pill>
         )}
       </div>
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-[2px]">
         <span className="text-[13px] leading-4 text-muted">
           {provider ? `${provider.label} · ${provider.senderLabel || ''}`.replace(/ · $/, '') : t(`settingsUi.msg.channel.${spec.id}`)}
         </span>
@@ -486,12 +490,13 @@ function PhoneOutboxBanner() {
     <Notice
       tone="warn"
       role="status"
+      className="!gap-[14px] !px-[18px]"
       action={
         <button
           type="button"
           onClick={() => send()}
           disabled={sending}
-          className="text-[14px] font-medium text-warn underline-offset-2 hover:underline disabled:opacity-50"
+          className="shrink-0 text-[13px] leading-4 text-warn underline-offset-2 hover:underline disabled:opacity-50"
         >
           {sending ? t('settingsUi.msg.outbox.syncing') : t('settingsUi.msg.outbox.sync')}
         </button>
@@ -557,7 +562,7 @@ function MessagingSettings() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                 {CHANNELS.map((spec) => (
                   <ChannelSummary
                     key={spec.id}

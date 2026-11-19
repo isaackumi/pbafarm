@@ -839,13 +839,13 @@ function SubscriptionCard({ d, show, canManage }) {
     : []
   return (
     <section aria-labelledby="sub-card" className="flex flex-col gap-3 rounded-[12px] border border-line bg-surface p-5">
-      <h2 id="sub-card" className="text-base font-semibold leading-[18px] text-text">
+      <h2 id="sub-card" className="text-[15px] font-semibold leading-[18px] text-text">
         {t('platform.detail.subscription')}
       </h2>
       {s ? (
         <dl className="flex flex-col gap-3">
           {rows.map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-3 text-sm leading-4">
+            <div key={k} className="flex justify-between gap-3 text-[13px] leading-4">
               <dt className="text-muted">{k}</dt>
               <dd className="text-right text-text">{v}</dd>
             </div>
@@ -878,7 +878,7 @@ function RecentActivity({ d }) {
   const recent = d.events.slice(0, 5)
   return (
     <section aria-labelledby="recent-activity" className="flex flex-col gap-[10px] rounded-[12px] border border-line bg-surface p-5">
-      <h2 id="recent-activity" className="text-base font-semibold leading-[18px] text-text">
+      <h2 id="recent-activity" className="text-[15px] font-semibold leading-[18px] text-text">
         {t('platform.detail.recentActivity')}
       </h2>
       {recent.length === 0 ? (

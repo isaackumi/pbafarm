@@ -276,7 +276,7 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
         </label>
       </div>
 
-      <fieldset className="rounded-lg border border-line p-4 space-y-3">
+      <fieldset className="flex flex-col gap-3 rounded-input border border-line p-4">
         <legend className="px-1 text-sm font-semibold text-text">Show only when</legend>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <SettingsField label="Field" htmlFor="cf-cond-field">
@@ -326,7 +326,7 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
                     type="button"
                     aria-pressed={on}
                     onClick={() => setF((p) => ({ ...p, locationIds: on ? p.locationIds.filter((x) => x !== id) : [...p.locationIds, id] }))}
-                    className={`min-h-10 rounded-lg border px-3 text-sm ${on ? 'border-lake bg-lake-soft text-text' : 'border-line text-muted hover:border-lake'}`}
+                    className={`min-h-10 rounded-pill border px-3 text-[13px] ${on ? 'border-lake bg-lake-soft text-text' : 'border-line text-muted hover:border-lake'}`}
                   >
                     {s.name}
                   </button>
@@ -382,8 +382,8 @@ export default function FieldsBuilder() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <div className="flex flex-col gap-5 lg:col-span-2">
         <SettingsCard title="Custom fields" action={
               !editing && (
                 <GradientButton size="sm" onClick={() => setEditing(blank())}>
@@ -420,22 +420,26 @@ export default function FieldsBuilder() {
               onDone={() => setEditing(null)}
             />
           ) : defs === undefined ? (
-            <p className="text-sm text-muted">Loading…</p>
+            <p className="text-[13px] leading-4 text-muted">Loading…</p>
           ) : active.length === 0 ? (
             <EmptyState
               title={`No custom fields on ${CUSTOM_ENTITY_LABELS[entity].toLowerCase()}`}
               description="Add one when your team needs to record something the built-in form does not ask for."
             />
           ) : (
-            <ul className="divide-y divide-line border border-line rounded-lg">
+            <ul className="flex flex-col gap-3">
               {active.map((d, i) => (
-                <li key={d._id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text truncate">
+                <li
+                  key={d._id}
+                  className="flex flex-wrap items-center gap-3 rounded-input border border-line px-4 py-[14px]"
+                  style={{ backgroundColor: 'color-mix(in oklab, var(--bg) 70%, var(--surface-2))' }}
+                >
+                  <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                    <p className="truncate text-[14px] leading-[18px] text-text">
                       {d.label}
                       {d.required && <span className="text-alert ml-0.5">*</span>}
                     </p>
-                    <p className="text-xs text-muted truncate">
+                    <p className="truncate text-[12px] leading-4 text-muted">
                       {CUSTOM_FIELD_TYPE_LABELS[d.type]}
                       {d.unit ? ` · ${d.unit}` : ''}
                       {d.conditions?.length ? ' · conditional' : ''}
@@ -462,10 +466,10 @@ export default function FieldsBuilder() {
         {archived.length > 0 && !editing && (
           <SettingsCard title="Archived">
             <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">Not shown on forms. Values already recorded stay on records and in exports.</p>
-            <ul className="divide-y divide-line">
+            <ul>
               {archived.map((d) => (
-                <li key={d._id} className="flex items-center justify-between gap-3 py-2">
-                  <span className="text-sm text-muted truncate">
+                <li key={d._id} className="flex items-center justify-between gap-3 border-t border-line py-3">
+                  <span className="truncate text-[14px] leading-[18px] text-muted">
                     {d.label} <span className="font-data">· {d.key}</span>
                   </span>
                   <GhostButton size="sm" onClick={() => toggle(d)}>Restore</GhostButton>
@@ -481,7 +485,7 @@ export default function FieldsBuilder() {
         {active.length ? (
           <CustomFields entity={entity} value={preview} onChange={setPreview} columns={1} idPrefix="cf-preview" />
         ) : (
-          <p className="text-sm text-muted">Nothing to preview yet.</p>
+          <p className="text-[13px] leading-4 text-muted">Nothing to preview yet.</p>
         )}
       </SettingsCard>
     </div>

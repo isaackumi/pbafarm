@@ -87,7 +87,7 @@ export function useHumanCheck(purpose) {
 
   // Paper 60 human-check card: the Turnstile box sits on a bordered surface.
   const widget = SITE_KEY ? (
-    <div className="flex flex-col gap-1.5 rounded-input border border-line-strong bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-input border border-line bg-surface p-2">
       <div ref={setContainer} className="min-h-[65px]" />
       {loadError && <p className="px-2 pb-1 text-xs text-alert">{loadError}</p>}
     </div>

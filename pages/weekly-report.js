@@ -136,7 +136,7 @@ export default function WeeklyReportPage() {
               {showCosts(report) ? (
                 <section aria-labelledby="weekly-costs" className="flex flex-col gap-3 rounded-[12px] border border-line bg-surface p-5">
                   <div className="flex items-center justify-between">
-                    <h2 id="weekly-costs" className="text-base font-semibold leading-[18px] text-text">
+                    <h2 id="weekly-costs" className="text-[15px] font-semibold leading-[18px] text-text">
                       {t('weeklyReport.costs')}
                     </h2>
                     <span className="text-[11px] leading-[14px] text-faint">{t('weeklyReport.financeOnly')}</span>
@@ -198,12 +198,12 @@ function KeyFigures({ figures: f, lang }) {
   ]
   return (
     <section aria-labelledby="weekly-figures" className="flex flex-col gap-3 rounded-[12px] border border-line bg-surface p-5">
-      <h2 id="weekly-figures" className="text-base font-semibold leading-[18px] text-text">
+      <h2 id="weekly-figures" className="text-[15px] font-semibold leading-[18px] text-text">
         {t('weeklyReport.keyFigures')}
       </h2>
       <dl className="flex flex-col gap-3">
         {rows.map(([label, value, tone]) => (
-          <div key={label} className="flex justify-between gap-3 text-sm leading-4">
+          <div key={label} className="flex justify-between gap-3 text-[13px] leading-4">
             <dt className="text-muted">{label}</dt>
             <dd className={`text-right tabular-nums ${tone || 'text-text'}`}>{value}</dd>
           </div>

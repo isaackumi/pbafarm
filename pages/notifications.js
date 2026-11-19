@@ -71,7 +71,7 @@ function NotificationsList() {
           <div className="flex w-full flex-col gap-5 xl:w-[760px] xl:shrink-0">
             <section
               aria-label={t('notifications.title')}
-              className="flex flex-col rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
+              className="flex flex-col gap-1 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]"
             >
               {status === 'LoadingFirstPage' ? (
                 <Skeleton className="h-40" />

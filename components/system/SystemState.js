@@ -58,7 +58,7 @@ function Waves() {
 export function NotFoundCard({ homeHref = '/' }) {
   const t = useT()
   return (
-    <SystemCard eyebrow="404" className="min-h-[400px] pb-20">
+    <SystemCard eyebrow="404" className="min-h-[400px]">
       <p
         aria-hidden
         className="bg-clip-text text-[72px] font-semibold leading-[72px] tracking-[-0.05em] text-transparent sm:text-[96px] sm:leading-[96px]"

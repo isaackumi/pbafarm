@@ -117,13 +117,13 @@ function KeyRow({ k, sitesById, now }) {
     ? k.locationIds.map((id) => sitesById[id] || t('settingsUi.integ.keys.removedSite')).join(', ')
     : t('settingsUi.integ.keys.allSites')
   return (
-    <li className="grid gap-3 border-t border-line py-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_auto_auto] md:items-center md:gap-5">
+    <li className="grid gap-3 border-t border-line py-[14px] md:grid-cols-[minmax(0,1fr)_230px_120px_84px] md:items-center md:gap-5">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[15px] leading-5 text-text">{k.name}</span>
+          <span className="text-[14px] leading-[18px] text-text">{k.name}</span>
           {!active && <Pill tone={STATUS_TONE[k.status] || 'neutral'}>{t(`settingsUi.integ.keys.status.${k.status}`)}</Pill>}
         </div>
-        <p className="mt-1 truncate font-mono text-[13px] leading-4 text-muted">{k.prefix}…</p>
+        <p className="mt-1 truncate font-mono text-[12px] leading-4 text-muted">{k.prefix}…</p>
         <p className="mt-1 text-[12px] leading-4 text-faint">
           {sites}
           {k.expiresAt ? ` · ${t('settingsUi.integ.keys.expiresOn', { time: formatTime(k.expiresAt) })}` : ''}
@@ -133,14 +133,16 @@ function KeyRow({ k, sitesById, now }) {
             : t('settingsUi.integ.keys.created', { time: formatTime(k.createdAt) })}
         </p>
       </div>
-      <ul className="flex flex-wrap gap-2" aria-label={t('settingsUi.integ.keys.permissions')}>
+      <ul className="flex flex-wrap gap-[6px]" aria-label={t('settingsUi.integ.keys.permissions')}>
         {k.scopes.map((s) => (
           <li key={s}>
-            <Pill tone={scopeTone(s)}>{s}</Pill>
+            <Pill tone={scopeTone(s)} className="!px-[10px]">
+              {s}
+            </Pill>
           </li>
         ))}
       </ul>
-      <span className={`whitespace-nowrap text-[14px] leading-[18px] ${stale ? 'text-warn' : 'text-muted'}`}>
+      <span className={`whitespace-nowrap text-[13px] leading-4 ${stale ? 'text-warn' : 'text-muted'}`}>
         {stale
           ? t('settingsUi.integ.keys.unusedDays', { count: idleDays })
           : k.lastUsedAt
@@ -149,7 +151,7 @@ function KeyRow({ k, sitesById, now }) {
       </span>
       <div className="md:justify-self-end">
         {active && (
-          <GhostButton size="lg" onClick={onRevoke}>
+          <GhostButton onClick={onRevoke}>
             {t('settingsUi.integ.keys.revoke')}
           </GhostButton>
         )}
@@ -166,7 +168,7 @@ function OutboundSummary({ now }) {
     <SettingsCard
       title={t('settingsUi.integ.nav.outbound')}
       action={
-        <Link href="/webhooks" className="flex items-center gap-1 rounded text-[14px] leading-[18px] text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+        <Link href="/webhooks" className="flex items-center gap-1 rounded text-[13px] leading-4 text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
           <Plus size={14} aria-hidden />
           {t('settingsUi.integ.addEndpoint')}
         </Link>
@@ -190,12 +192,14 @@ function OutboundSummary({ now }) {
                     ? t('settingsUi.integ.hooks.deliveredAgo', { time: ago(ep.lastSuccessAt, now) })
                     : t('integ.common.on')
             return (
-              <li key={ep.id} className="flex flex-col gap-2 border-t border-line py-4">
+              <li key={ep.id} className="flex flex-col gap-2 border-t border-line py-[14px]">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate font-mono text-[14px] leading-[18px] text-text">{ep.url}</span>
-                  <Pill tone={tone}>{label}</Pill>
+                  <span className="min-w-0 truncate font-mono text-[13px] leading-4 text-text">{ep.url}</span>
+                  <Pill tone={tone} className="shrink-0 !px-[10px]">
+                    {label}
+                  </Pill>
                 </div>
-                <p className="truncate text-[13px] leading-4 text-muted">{ep.eventTypes.join(' · ')}</p>
+                <p className="truncate text-[12px] leading-4 text-muted">{ep.eventTypes.join(' · ')}</p>
               </li>
             )
           })}
@@ -218,15 +222,15 @@ function InboundSummary({ now }) {
       ) : (
         <ul>
           {data.webhooks.map((h) => (
-            <li key={h.id} className="flex items-center justify-between gap-3 border-t border-line py-4">
+            <li key={h.id} className="flex items-center justify-between gap-3 border-t border-line py-3">
               <div className="min-w-0">
                 <Link
                   href="/inbound-webhooks"
-                  className="rounded text-[15px] leading-5 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  className="rounded text-[14px] leading-[18px] text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                 >
                   {h.name}
                 </Link>
-                <p className="mt-1 truncate text-[13px] leading-4 text-muted">
+                <p className="mt-[2px] truncate text-[12px] leading-4 text-muted">
                   {h.lastReceivedAt ? t('settingsUi.integ.hooks.receivedAgo', { time: ago(h.lastReceivedAt, now) }) : t('integ.inbound.noEvents')}
                   {h.secretHint ? ` · ${t('settingsUi.integ.hooks.secretEnding', { hint: h.secretHint })}` : ''}
                 </p>
@@ -245,14 +249,14 @@ function DocsLink() {
   return (
     <Link
       href="/api-docs"
-      className="flex items-center gap-5 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:px-[26px]"
+      className="flex items-center gap-4 rounded-card border border-line px-5 py-5 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:px-[26px]"
     >
-      <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-full border border-line-strong text-cyan">
-        <CodeXml size={20} />
+      <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--pill-cyan-border)] text-cyan">
+        <CodeXml size={18} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[17px] font-medium leading-[22px] text-text">{t('settingsUi.integ.docsTitle')}</span>
-        <span className="mt-1 block text-[14px] leading-[18px] text-muted">{t('settingsUi.integ.docsHint')}</span>
+        <span className="block text-[14px] font-medium leading-[18px] text-text">{t('settingsUi.integ.docsTitle')}</span>
+        <span className="mt-[2px] block text-[12px] leading-4 text-muted">{t('settingsUi.integ.docsHint')}</span>
       </span>
       <ArrowRight size={18} aria-hidden className="shrink-0 text-muted" />
     </Link>
@@ -312,7 +316,7 @@ function ApiKeysScreen() {
               </ul>
             )}
           </SettingsCard>
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <OutboundSummary now={now} />
             <InboundSummary now={now} />
           </div>

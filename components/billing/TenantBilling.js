@@ -5,6 +5,10 @@ import { formatDate, formatMinor } from '../../lib/billingFormat'
 import { limitTone } from '../../lib/billingBalance'
 import { useT } from '../../lib/i18n/context'
 
+/** Paper 43 invoices panel: 12px radius, 16/20 header with a 15px title, 13px rows with 12px padding. */
+const PANEL_TABLE =
+  'h-full !rounded-[12px] [&>div:first-child]:!px-5 [&>div:first-child]:!py-4 [&_h2]:!text-[15px] [&_h2]:!leading-[18px] [&_th]:!py-[10px] [&_td]:!py-3 [&_td]:!text-[13px] [&_td]:!leading-4 [&_th:first-child]:!pl-5 [&_td:first-child]:!pl-5 [&_th:last-child]:!pr-5 [&_td:last-child]:!pr-5'
+
 export const INVOICE_TONE = { paid: 'good', open: 'warn', void: 'neutral', uncollectible: 'alert' }
 const STATUS_TONE = { trialing: 'cyan', active: 'good', past_due: 'warn', suspended: 'alert', cancelled: 'neutral', none: 'neutral' }
 const BAR_TONE = { alert: 'alert', warn: 'warn', ok: 'cyan' }
@@ -87,6 +91,7 @@ export default function TenantBilling() {
 
         <div className="flex flex-col lg:grow lg:basis-0">
           <Table
+            className={PANEL_TABLE}
             title={t('billing.invoices')}
             rowKey={(r) => r.id}
             rows={b.invoices}
@@ -113,7 +118,7 @@ export default function TenantBilling() {
 
       {open.length > 0 && b.paymentInstructions ? (
         <section aria-labelledby="billing-pay" className="rounded-[12px] border border-line bg-surface p-5">
-          <h2 id="billing-pay" className="text-base font-semibold leading-[18px] text-text">
+          <h2 id="billing-pay" className="text-[15px] font-semibold leading-[18px] text-text">
             {t('billing.howToPay')}
           </h2>
           <p className="mt-3 whitespace-pre-wrap rounded-[10px] bg-surface-2 p-3 text-sm leading-5 text-text">{b.paymentInstructions}</p>

@@ -31,7 +31,7 @@ export function ActAsBanner() {
   return (
     // Paper 63 act-as strip: gradient hairline under a pink-tinted bar.
     <div role="status" className="sticky top-0 z-40 pb-[1.5px]" style={{ backgroundImage: 'var(--gradient-brand)' }}>
-      <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-3.5 gap-y-1 bg-[color:var(--banner-pink-bg)] px-4 py-2 text-sm leading-[18px]">
+      <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-3.5 gap-y-1 bg-[color:var(--banner-pink-bg)] px-4 py-2 text-[13px] leading-4">
         <Eye className="h-4 w-4 shrink-0 text-pink" aria-hidden />
         <span className="text-text">
           {t('overlay.actAs.viewingAs')} <b className="font-semibold">{session.companyName}</b>

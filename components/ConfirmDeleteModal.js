@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button, Modal } from './ui'
 import { useT } from '../lib/i18n/context'
 
@@ -25,7 +25,7 @@ export default function ConfirmDeleteModal({
       role="alertdialog"
       tone="danger"
       title={title || t('overlay.confirmDelete.title')}
-      icon={<AlertTriangle aria-hidden />}
+      icon={<Trash2 aria-hidden />}
       footer={
         <>
           <Button variant="secondary" disabled={busy} onClick={onCancel}>

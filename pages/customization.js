@@ -40,7 +40,7 @@ function Customization() {
 
   return (
     <Layout title={t('settingsUi.custom.title')} eyebrow={eyebrow}>
-      <div className="flex flex-col gap-6" data-tour="page-customization">
+      <div className="flex flex-col gap-7" data-tour="page-customization">
         <p className="text-[14px] leading-[18px] text-muted">
           {t('settingsUi.custom.description')}{' '}
           <RouteGate href="/company-settings">

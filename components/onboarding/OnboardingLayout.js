@@ -48,18 +48,18 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
       <Head>
         <title>{`${pageTitle || title} · Anowa`}</title>
       </Head>
-      <aside className="flex shrink-0 flex-col gap-8 border-b border-line bg-surface px-6 py-6 sm:px-7 lg:w-[340px] lg:border-b-0 lg:border-r lg:py-9">
+      <aside className="flex shrink-0 flex-col gap-8 border-b border-line bg-surface px-6 py-6 sm:px-7 lg:w-[340px] lg:gap-11 lg:border-b-0 lg:border-r lg:px-10 lg:py-11">
         <div className="flex items-center justify-between">
           <Brand />
           <LanguageSwitcher className="lg:hidden" />
         </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-[13px] uppercase leading-4 tracking-[0.08em] text-cyan">{t('onboarding.eyebrow')}</p>
-          <p className="text-sm leading-5 text-muted">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs uppercase leading-4 tracking-[0.08em] text-cyan">{t('onboarding.eyebrow')}</p>
+          <p className="text-[13px] leading-4 text-muted">
             {t('onboarding.stepOf', { n: currentIndex + 1, total: steps.length })}
           </p>
           <div
-            className="mt-1.5 h-1 overflow-hidden rounded-pill bg-surface-2"
+            className="mt-2 h-1 overflow-hidden rounded-pill bg-line"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -69,42 +69,43 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
             <div className="h-full rounded-pill" style={{ width: `${progress}%`, backgroundImage: 'var(--gradient-bar)' }} />
           </div>
         </div>
-        <ol className="hidden flex-col gap-5 lg:flex">
+        <ol className="hidden flex-col lg:flex">
           {steps.map((s, i) => (
-            <li key={s.id} className="flex items-start gap-3.5" aria-current={s.state === 'current' ? 'step' : undefined}>
+            <li key={s.id} className="flex items-center gap-3.5 py-2.5" aria-current={s.state === 'current' ? 'step' : undefined}>
               <StepMarker state={s.state} n={i + 1} />
-              <div className="flex min-w-0 flex-col gap-0.5 pt-0.5">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <span
-                  className={`text-[15px] leading-5 ${
+                  className={`text-sm leading-[18px] ${
                     s.state === 'upcoming' ? 'text-muted' : s.state === 'current' ? 'font-semibold text-text' : 'text-text'
                   }`}
                 >
                   {s.label}
                   <span className="sr-only"> · {t(`onboarding.state.${s.state}`)}</span>
                 </span>
-                {s.hint && <span className="truncate text-[13px] leading-4 text-faint">{s.hint}</span>}
+                {s.hint && <span className="truncate text-xs leading-4 text-faint">{s.hint}</span>}
               </div>
             </li>
           ))}
         </ol>
-        {aside && <div className="mt-auto hidden text-sm leading-5 text-muted lg:block">{aside}</div>}
+        {aside && <div className="mt-auto hidden text-[13px] leading-4 text-muted lg:block">{aside}</div>}
       </aside>
 
-      <main className="flex min-w-0 grow flex-col px-6 pb-8 pt-10 sm:px-12 lg:px-20 lg:pt-14">
-        <div className="hidden justify-end lg:flex">
+      <main className="relative flex min-w-0 grow flex-col px-6 pb-8 pt-10 sm:px-12 lg:px-20 lg:pb-10 lg:pt-14">
+        {/* Kept out of the flow so the step title sits at Paper's 56px top padding. */}
+        <div className="absolute right-5 top-3 hidden lg:flex">
           <LanguageSwitcher />
         </div>
-        <div className="flex w-full max-w-[720px] grow flex-col gap-7">
+        <div className="flex w-full max-w-[940px] grow flex-col gap-8">
           <div className="flex flex-col gap-2.5">
             <h1 className="text-[28px] font-semibold leading-9 tracking-[-0.03em] text-text sm:text-[34px] sm:leading-[42px]">
               {title}
             </h1>
-            {subtitle && <p className="text-base leading-[22px] text-muted">{subtitle}</p>}
+            {subtitle && <p className="text-[15px] leading-[18px] text-muted">{subtitle}</p>}
           </div>
           {children}
         </div>
         {footer && (
-          <div className="mt-10 flex w-full max-w-[720px] flex-wrap items-center gap-3 border-t border-line pt-6">{footer}</div>
+          <div className="mt-10 flex w-full max-w-[940px] flex-wrap items-center gap-5 border-t border-line pt-6">{footer}</div>
         )}
       </main>
     </div>
@@ -113,13 +114,13 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
 
 /** Paper 16 input: bg-bg, 14px radius, 13/16 padding. */
 export const ONBOARDING_INPUT =
-  'w-full rounded-input border border-line-strong bg-bg px-4 py-[13px] text-[15px] leading-5 text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 disabled:opacity-60'
+  'w-full rounded-input border border-line-strong bg-bg px-4 py-[13px] text-[15px] leading-[18px] text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 disabled:opacity-60'
 
 export function OnboardingField({ label, htmlFor, hint, required, children, className = '' }) {
   const t = useT()
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <label htmlFor={htmlFor} className="text-sm leading-[18px] text-muted">
+      <label htmlFor={htmlFor} className="text-[13px] leading-4 text-muted">
         {label}
         {required ? <span className="sr-only"> ({t('onboarding.required')})</span> : null}
       </label>
