@@ -132,6 +132,7 @@ function CagePnL() {
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Segmented
+            size="md"
             label={t('ops.pnl.view')}
             value={view}
             onChange={setView}
