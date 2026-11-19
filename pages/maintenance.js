@@ -33,15 +33,15 @@ function DueCard({ due }) {
   const t = useT()
   const items = [...due.overdue.map((i) => ({ ...i, overdue: true })), ...due.dueSoon]
   return (
-    <section aria-labelledby="due-title" className={`flex flex-col gap-1 p-6 ${card}`}>
+    <section aria-labelledby="due-title" className={`flex flex-col gap-1 px-[26px] py-6 ${card}`}>
       <div className="flex items-center justify-between pb-[10px]">
-        <h2 id="due-title" className="text-base font-semibold leading-[18px] text-text">
+        <h2 id="due-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {t('equipmentUi.dueTitle')}
         </h2>
-        <span className="text-xs text-muted">{t('equipmentUi.next7')}</span>
+        <span className="text-xs leading-4 text-muted">{t('equipmentUi.next7')}</span>
       </div>
       {items.length === 0 ? (
-        <p className="border-t border-line py-4 text-sm text-muted">{t('equipmentUi.nothingDue')}</p>
+        <p className="border-t border-line py-[11px] text-[14px] leading-[18px] text-muted">{t('equipmentUi.nothingDue')}</p>
       ) : (
         <ul>
           {items.map((i) => (
@@ -146,7 +146,7 @@ function Maintenance() {
 
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
           <Table
-            className="min-w-0 xl:grow-[1.6] xl:basis-0"
+            className="min-w-0 xl:w-[700px] xl:shrink-0"
             title={t('equipmentUi.registry')}
             tabsLabel={t('equipmentUi.registry')}
             tabs={TABS.map((v) => ({ value: v, label: t(`equipmentUi.tab.${v}`) }))}
@@ -161,13 +161,15 @@ function Maintenance() {
           />
           <div className="flex min-w-0 flex-col gap-5 xl:grow xl:basis-0">
             {due && <DueCard due={due} />}
-            <section aria-labelledby="jobs-title" className={card}>
-              <div className="border-b border-line px-6 py-5">
-                <h2 id="jobs-title" className="text-base font-semibold leading-[18px] text-text">
+            <section aria-labelledby="jobs-title" className={`flex flex-col gap-1 px-[26px] pt-6 ${card}`}>
+              <div className="border-b border-line pb-[10px]">
+                <h2 id="jobs-title" className="text-[15px] font-semibold leading-[18px] text-text">
                   {t('equipmentUi.recent')}
                 </h2>
               </div>
-              <InspectionHistory rows={recent} showUnit />
+              <div className="-mx-5 -mt-1">
+                <InspectionHistory rows={recent} showUnit />
+              </div>
             </section>
           </div>
         </div>

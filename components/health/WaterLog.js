@@ -56,13 +56,13 @@ export function waterLogColumns(t, locale) {
     {
       key: 'time',
       header: t('healthWater.log.col.time'),
-      width: 130,
+      width: 110,
       render: (r) => <span className="tabular-nums">{readingTime(r.reading?.measuredAt, locale)}</span>,
     },
     {
       key: 'unit',
       header: t('healthWater.log.col.unit'),
-      width: 120,
+      width: 90,
       render: (r) => (
         <Link
           href={`/units/${r.unit.id || r.unit._id}/water`}

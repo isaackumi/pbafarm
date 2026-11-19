@@ -200,7 +200,7 @@ function Items() {
 
       <div className="flex flex-col gap-[20px] xl:flex-row xl:items-start">
         <Table
-          className="min-w-0 xl:grow-[1.6] xl:basis-0"
+          className="min-w-0 xl:w-[700px] xl:shrink-0"
           title={t('ops.tab.items')}
           tabs={[{ value: 'all', label: t('ops.common.all') }, ...categoriesPresent.map(([k]) => ({ value: k, label: t(`ops.items.cat.${k}`) }))]}
           tab={category}
@@ -325,7 +325,7 @@ function Items() {
 
       <div className="flex flex-col gap-[20px] xl:flex-row xl:items-start">
         <Table
-          className="min-w-0 xl:grow-[1.6] xl:basis-0"
+          className="min-w-0 xl:w-[700px] xl:shrink-0"
           title={t('ops.feed.recentMovements')}
           columns={[
             { key: 'date', header: t('ops.col.date'), width: 110, render: (m) => <span className="text-muted">{shortDate(m.date)}</span> },

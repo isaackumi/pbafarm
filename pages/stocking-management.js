@@ -54,13 +54,13 @@ function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
   ]
   if (record.type !== 'fish_transfer') stats.push({ label: t('stocking.col.batch'), value: record.batchNumber })
   return (
-    <article className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6 shadow-[var(--shadow-card)]">
+    <article className="flex flex-col gap-[18px] rounded-card border border-line bg-surface p-6 shadow-[var(--shadow-card)]">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[19px] font-semibold leading-6 text-text">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="text-[17px] font-semibold leading-[22px] text-text">
             {typeLabel} · {heading}
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="text-[13px] leading-4 text-muted">
             {t('stocking.mgmt.requested', { date: formatDate(record.date), when: formatDateTime(record.createdAt) })}
           </p>
         </div>
@@ -68,26 +68,30 @@ function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
       </header>
       <dl className="grid grid-cols-2 gap-y-4 sm:grid-cols-4">
         {stats.map((st, i) => (
-          <div key={st.label} className={`min-w-0 px-0 sm:px-4 ${i ? 'sm:border-l sm:border-line' : 'sm:pl-0'}`}>
-            <dt className="text-[13px] leading-4 text-faint">{st.label}</dt>
-            <dd className="mt-1.5 truncate text-[17px] leading-[22px] text-text tabular-nums">{st.value}</dd>
+          <div key={st.label} className={`flex min-w-0 flex-col gap-1 ${i ? 'sm:border-l sm:border-line sm:pl-4' : ''}`}>
+            <dt className="text-xs leading-4 text-faint">{st.label}</dt>
+            <dd className="truncate text-base font-medium leading-5 text-text tabular-nums">{st.value}</dd>
           </div>
         ))}
       </dl>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         {canAct && (
           <>
-            <GradientButton disabled={busy} onClick={onApprove}>
+            <GradientButton
+              disabled={busy}
+              onClick={onApprove}
+              className="[&>span]:h-[38px] [&>span]:px-5 [&>span]:text-[14px]"
+            >
               {t('stocking.approve')}
             </GradientButton>
-            <GhostButton size="lg" disabled={busy} onClick={onReject}>
+            <GhostButton size="lg" disabled={busy} onClick={onReject} className="!h-[41px] !px-5">
               {t('stocking.reject')}
             </GhostButton>
           </>
         )}
         <a
           href={details}
-          className="rounded-sm px-2 text-[15px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          className="inline-flex h-[41px] items-center rounded-pill px-3.5 text-[14px] leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
           {t('stocking.mgmt.viewDetails')}
         </a>
@@ -588,10 +592,8 @@ function StockingManagement() {
         </>
       }
     >
-      <div className="flex flex-col gap-6 sm:gap-8">
-        <div className="-mt-2 overflow-x-auto border-b border-line">
-          <Tabs variant="underline" label={t('stocking.mgmt.tabsLabel')} tabs={tabs} value={activeTab} onChange={setTab} />
-        </div>
+      <div className="flex flex-col gap-6 sm:gap-7">
+        <Tabs variant="page" label={t('stocking.mgmt.tabsLabel')} tabs={tabs} value={activeTab} onChange={setTab} />
 
         {activeTab === 'approvals' && (
           <>

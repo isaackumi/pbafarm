@@ -191,10 +191,12 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <Card padding={false} className="flex flex-col gap-5 px-5 py-6 sm:px-[26px]">
-        {header}
-        <p className="text-sm text-muted">{t('csvImport.columnsLine', { columns: config.columns })}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {header}
+          <p className="text-[13px] leading-4 text-muted">{t('csvImport.columnsLine', { columns: config.columns })}</p>
+        </div>
 
         {error && (
           <div
@@ -221,18 +223,18 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          className={`flex flex-col gap-4 rounded-input border-[1.5px] border-dashed bg-bg p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-7 ${
+          className={`flex flex-col gap-4 rounded-input border-[1.5px] border-dashed bg-[color-mix(in_oklab,var(--bg)_50%,var(--surface))] p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-7 ${
             dragging ? 'border-pearl-cyan' : 'border-line-strong'
           }`}
         >
           <div className="flex size-[52px] shrink-0 items-center justify-center rounded-full bg-surface-2 text-pearl-cyan">
             <FileSpreadsheet size={22} strokeWidth={2} aria-hidden />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold leading-5 text-text">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p className="truncate text-[15px] font-semibold leading-[18px] text-text">
               {file ? file.name : t('csvImport.dropTitle')}
             </p>
-            <p className="mt-1 text-sm leading-[18px] text-muted tabular-nums">
+            <p className="text-[13px] leading-4 text-muted tabular-nums">
               {file
                 ? preview && !preview.error
                   ? t('csvImport.fileMeta', { size: formatSize(file.size), rows: formatNumber(totalCount) })
@@ -276,7 +278,7 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
           ]}
           tab={filter}
           onTabChange={setFilter}
-          actions={<span className="text-xs text-muted">{t('csvImport.preview.note')}</span>}
+          actions={<span className="text-[13px] leading-4 text-muted">{t('csvImport.preview.note')}</span>}
           columns={columns}
           rows={shown}
           rowKey={(r) => r.line}
@@ -286,19 +288,19 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
 
       {file && preview && !preview.error && (
         <ActionBar aria-live="polite">
-          <div className="mr-auto flex min-w-0 items-center gap-2.5">
-            <StatusDot tone={okCount ? 'good' : 'alert'} size={8} />
-            <p className="text-sm text-text tabular-nums">
-              <span className="font-semibold">{t('csvImport.readyCount', { count: okCount })}</span>
-              {errorCount > 0 && (
-                <span className="text-muted"> · {t('csvImport.skipCount', { count: errorCount })}</span>
-              )}
-            </p>
+          <div className="mr-auto flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="flex items-center gap-2">
+              <StatusDot tone={okCount ? 'good' : 'alert'} size={8} />
+              <span className="text-[14px] leading-[18px] text-text tabular-nums">{t('csvImport.readyCount', { count: okCount })}</span>
+            </span>
+            {errorCount > 0 && (
+              <span className="text-[13px] leading-4 text-muted tabular-nums">{t('csvImport.skipCount', { count: errorCount })}</span>
+            )}
           </div>
           <button
             type="button"
             onClick={cancel}
-            className="min-h-11 rounded-pill px-3 text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            className="min-h-11 rounded-pill px-[18px] text-[14px] leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
           >
             {t('common.cancel')}
           </button>

@@ -84,113 +84,115 @@ function HatcheryOverview() {
         </>
       }
     >
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      <KpiStrip
-        items={[
-          {
-            key: 'brood',
-            label: t('hatcheryPage.kpi.broodstock'),
-            value: fmt(k.broodstock_total),
-            suffix: k.broodstock_by_status ? t('hatcheryPage.readyN', { n: fmt(k.broodstock_by_status.ready || 0) }) : undefined,
-          },
-          { key: 'eggs', label: t('hatcheryPage.kpi.eggs'), value: fmt(k.eggs_incubating), suffix: t('hatcheryPage.lotsN', { count: k.lots_incubating || 0 }) },
-          {
-            key: 'larvae',
-            label: t('hatcheryPage.kpi.larvae'),
-            value: fmt(sum(larvae)),
-            suffix: k.larval_survival_pct != null ? t('hatcheryPage.survival', { pct: pct(k.larval_survival_pct) }) : undefined,
-          },
-          { key: 'fingerlings', label: t('hatcheryPage.kpi.fingerlings'), value: fmt(sum(nursery)), suffix: t('hatcheryPage.batchesN', { count: nursery?.length || 0 }) },
-        ]}
-      />
+        <KpiStrip
+          items={[
+            {
+              key: 'brood',
+              label: t('hatcheryPage.kpi.broodstock'),
+              value: fmt(k.broodstock_total),
+              suffix: k.broodstock_by_status ? t('hatcheryPage.readyN', { n: fmt(k.broodstock_by_status.ready || 0) }) : undefined,
+            },
+            { key: 'eggs', label: t('hatcheryPage.kpi.eggs'), value: fmt(k.eggs_incubating), suffix: t('hatcheryPage.lotsN', { count: k.lots_incubating || 0 }) },
+            {
+              key: 'larvae',
+              label: t('hatcheryPage.kpi.larvae'),
+              value: fmt(sum(larvae)),
+              suffix: k.larval_survival_pct != null ? t('hatcheryPage.survival', { pct: pct(k.larval_survival_pct) }) : undefined,
+            },
+            { key: 'fingerlings', label: t('hatcheryPage.kpi.fingerlings'), value: fmt(sum(nursery)), suffix: t('hatcheryPage.batchesN', { count: nursery?.length || 0 }) },
+          ]}
+        />
 
-      <div className="grid w-full items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Column title={t('hatcheryPage.col.spawning')} items={waiting} empty={t('hatcheryPage.emptySpawning')}>
-          {waiting?.map((s) => (
-            <Item
-              key={s.id}
-              title={[s.female_codes.join(', '), s.male_codes.length ? s.male_codes.join(', ') : null].filter(Boolean).join(' × ')}
-              sub={[s.unit_name, s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : t('hatcheryPage.eggsNotCounted')].filter(Boolean).join(' · ')}
-              meta={d(s.spawn_date)}
-            />
-          ))}
-        </Column>
-        <Column title={t('hatcheryPage.col.incubation')} items={incubating} empty={t('hatcheryPage.emptyIncubation')}>
-          {incubating?.map((l) => (
-            <IncubationItem key={l.id} lot={l} />
-          ))}
-        </Column>
-        <Column title={t('hatcheryPage.col.larvae')} items={larvae} empty={t('hatcheryPage.emptyLarvae')}>
-          {larvae?.map((b) => (
-            <Item
-              key={b.id}
-              title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
-              sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
-              meta={[t('hatcheryPage.dayN', { n: b.days_since_hatch }), b.survival_pct != null ? pct(b.survival_pct) : null].filter(Boolean).join(' · ')}
-            />
-          ))}
-        </Column>
-        <Column title={t('hatcheryPage.col.nursery')} items={nursery} empty={t('hatcheryPage.emptyNursery')}>
-          {nursery?.map((b) => (
-            <Item
-              key={b.id}
-              title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
-              sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
-              meta={b.abw_g != null ? `${fmt(b.abw_g, 2)} g` : t('hatcheryPage.dayN', { n: b.days_since_hatch })}
-            />
-          ))}
-        </Column>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <PaperCard title={t('hatcheryPage.performance')} meta={t('hatcheryPage.spawningsN', { count: k.spawnings || 0 })}>
-          <dl className="flex flex-col">
-            {[
-              [t('hatcheryPage.kpi.eggsCollected'), fmt(k.eggs_collected)],
-              [t('hatcheryPage.kpi.fertilization'), pct(k.fertilization_pct)],
-              [t('hatcheryPage.kpi.hatchRate'), pct(k.hatch_rate_pct)],
-              [t('hatcheryPage.kpi.larvaeHatched'), fmt(k.larvae_hatched)],
-              [t('hatcheryPage.kpi.fryPerKg'), fmt(k.fry_per_kg_female)],
-            ].map(([key, v]) => (
-              <div key={key} className="flex justify-between gap-3 border-t border-line py-[11px]">
-                <dt className="text-[14px] leading-[18px] text-muted">{key}</dt>
-                <dd className="text-[14px] leading-[18px] text-text tabular-nums">{v}</dd>
-              </div>
+        <div className="grid w-full items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Column title={t('hatcheryPage.col.spawning')} items={waiting} empty={t('hatcheryPage.emptySpawning')}>
+            {waiting?.map((s) => (
+              <Item
+                key={s.id}
+                title={[s.female_codes.join(', '), s.male_codes.length ? s.male_codes.join(', ') : null].filter(Boolean).join(' × ')}
+                sub={[s.unit_name, s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : t('hatcheryPage.eggsNotCounted')].filter(Boolean).join(' · ')}
+                meta={d(s.spawn_date)}
+              />
             ))}
-          </dl>
-        </PaperCard>
-        <PaperCard title={t('hatcheryPage.latestHatches')}>
-          {recent.length === 0 ? (
-            <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('hatcheryPage.noHatches')}</p>
-          ) : (
-            <ul className="flex flex-col">
-              {recent.map((l) => (
-                <li key={l.id} className="flex items-center justify-between gap-3 border-t border-line py-[11px]">
-                  <div className="flex min-w-0 flex-col gap-[2px]">
-                    <span className="text-[14px] leading-[18px] text-text">
-                      {l.batch_id ? (
-                        <Link href={`/batches/${l.batch_id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
-                          {l.batch_number}
-                        </Link>
-                      ) : (
-                        l.unit_name
-                      )}
-                    </span>
-                    <span className="text-xs leading-4 text-muted">
-                      {t('hatcheryPage.hatchLine', { date: formatDate(l.hatched_on, { locale }), larvae: fmt(l.larvae_count), eggs: fmt(l.eggs) })}
-                    </span>
-                  </div>
-                  {l.status === 'failed' ? (
-                    <Pill tone={statusTone(l.status)}>{label(t, 'status', l.status)}</Pill>
-                  ) : (
-                    <span className="text-[14px] leading-[18px] text-text tabular-nums">{pct(l.hatch_pct)}</span>
-                  )}
-                </li>
+          </Column>
+          <Column title={t('hatcheryPage.col.incubation')} items={incubating} empty={t('hatcheryPage.emptyIncubation')}>
+            {incubating?.map((l) => (
+              <IncubationItem key={l.id} lot={l} />
+            ))}
+          </Column>
+          <Column title={t('hatcheryPage.col.larvae')} items={larvae} empty={t('hatcheryPage.emptyLarvae')}>
+            {larvae?.map((b) => (
+              <Item
+                key={b.id}
+                title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+                sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+                meta={[t('hatcheryPage.dayN', { n: b.days_since_hatch }), b.survival_pct != null ? pct(b.survival_pct) : null].filter(Boolean).join(' · ')}
+              />
+            ))}
+          </Column>
+          <Column title={t('hatcheryPage.col.nursery')} items={nursery} empty={t('hatcheryPage.emptyNursery')}>
+            {nursery?.map((b) => (
+              <Item
+                key={b.id}
+                title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+                sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+                meta={b.abw_g != null ? `${fmt(b.abw_g, 2)} g` : t('hatcheryPage.dayN', { n: b.days_since_hatch })}
+              />
+            ))}
+          </Column>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <PaperCard title={t('hatcheryPage.performance')} meta={t('hatcheryPage.spawningsN', { count: k.spawnings || 0 })}>
+            <dl className="flex flex-col">
+              {[
+                [t('hatcheryPage.kpi.eggsCollected'), fmt(k.eggs_collected)],
+                [t('hatcheryPage.kpi.fertilization'), pct(k.fertilization_pct)],
+                [t('hatcheryPage.kpi.hatchRate'), pct(k.hatch_rate_pct)],
+                [t('hatcheryPage.kpi.larvaeHatched'), fmt(k.larvae_hatched)],
+                [t('hatcheryPage.kpi.fryPerKg'), fmt(k.fry_per_kg_female)],
+              ].map(([key, v]) => (
+                <div key={key} className="flex justify-between gap-3 border-t border-line py-[11px]">
+                  <dt className="text-[14px] leading-[18px] text-muted">{key}</dt>
+                  <dd className="text-[14px] leading-[18px] text-text tabular-nums">{v}</dd>
+                </div>
               ))}
-            </ul>
-          )}
-        </PaperCard>
+            </dl>
+          </PaperCard>
+          <PaperCard title={t('hatcheryPage.latestHatches')}>
+            {recent.length === 0 ? (
+              <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('hatcheryPage.noHatches')}</p>
+            ) : (
+              <ul className="flex flex-col">
+                {recent.map((l) => (
+                  <li key={l.id} className="flex items-center justify-between gap-3 border-t border-line py-[11px]">
+                    <div className="flex min-w-0 flex-col gap-[2px]">
+                      <span className="text-[14px] leading-[18px] text-text">
+                        {l.batch_id ? (
+                          <Link href={`/batches/${l.batch_id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                            {l.batch_number}
+                          </Link>
+                        ) : (
+                          l.unit_name
+                        )}
+                      </span>
+                      <span className="text-xs leading-4 text-muted">
+                        {t('hatcheryPage.hatchLine', { date: formatDate(l.hatched_on, { locale }), larvae: fmt(l.larvae_count), eggs: fmt(l.eggs) })}
+                      </span>
+                    </div>
+                    {l.status === 'failed' ? (
+                      <Pill tone={statusTone(l.status)}>{label(t, 'status', l.status)}</Pill>
+                    ) : (
+                      <span className="text-[14px] leading-[18px] text-text tabular-nums">{pct(l.hatch_pct)}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PaperCard>
+        </div>
       </div>
     </Layout>
   )

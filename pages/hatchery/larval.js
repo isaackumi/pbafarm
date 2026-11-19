@@ -42,75 +42,77 @@ function Larval() {
 
   return (
     <Layout title={t('hatcheryPage.larval.title')} eyebrow={t('hatcheryPage.larval.eyebrow')}>
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <PaperCard
-          padded={false}
-          className={selected ? 'hidden lg:block' : ''}
-          title={t('hatcheryPage.larval.batches')}
-          action={
-            <Tabs
-              label={t('hatcheryPage.larval.statusFilter')}
-              value={status}
-              onChange={setStatus}
-              tabs={[
-                { value: 'active', label: t('hatcheryPage.larval.active') },
-                { value: 'closed', label: t('hatcheryPage.larval.closed') },
-              ]}
-            />
-          }
-        >
-          {batches === undefined ? (
-            <p className={`px-[26px] pb-6 ${HINT}`}>{t('ui.loading')}</p>
-          ) : batches.length === 0 ? (
-            <div className="px-[26px] pb-6">
-              <EmptyState title={t('hatcheryPage.larval.empty')} description={t('hatcheryPage.larval.emptyHint')} />
-            </div>
-          ) : (
-            <ul className="flex flex-col">
-              {batches.map((b) => (
-                <li key={b.id} className="border-t border-line">
-                  <button
-                    type="button"
-                    onClick={() => select(b.id)}
-                    aria-current={b.id === selectedId ? 'true' : undefined}
-                    className={`flex min-h-12 w-full flex-col gap-1 px-[22px] py-[11px] text-left hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan sm:px-[26px] ${
-                      b.id === selectedId ? 'bg-surface-2' : ''
-                    }`}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[13px] font-medium text-text">{b.batch_number}</span>
-                      <Pill tone={b.stage === 'larvae' ? 'accent' : 'good'}>{label(t, 'stage', b.stage)}</Pill>
-                    </span>
-                    <span className={SUB}>
-                      {[
-                        b.units.map((u) => u.name).join(', ') || null,
-                        t('hatcheryPage.fishN', { n: fmt(b.count) }),
-                        t('hatcheryPage.dayN', { n: b.days_since_hatch }),
-                        b.survival_pct != null ? t('hatcheryPage.survival', { pct: `${fmt(b.survival_pct, 1)}%` }) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </span>
-                    {status === 'active' && !b.logged_today && b.stage === 'larvae' && (
-                      <span className="text-xs leading-4 text-warn">{t('hatcheryPage.larval.notLogged')}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </PaperCard>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <PaperCard
+            padded={false}
+            className={selected ? 'hidden lg:block' : ''}
+            title={t('hatcheryPage.larval.batches')}
+            action={
+              <Tabs
+                label={t('hatcheryPage.larval.statusFilter')}
+                value={status}
+                onChange={setStatus}
+                tabs={[
+                  { value: 'active', label: t('hatcheryPage.larval.active') },
+                  { value: 'closed', label: t('hatcheryPage.larval.closed') },
+                ]}
+              />
+            }
+          >
+            {batches === undefined ? (
+              <p className={`px-[26px] pb-6 ${HINT}`}>{t('ui.loading')}</p>
+            ) : batches.length === 0 ? (
+              <div className="px-[26px] pb-6">
+                <EmptyState title={t('hatcheryPage.larval.empty')} description={t('hatcheryPage.larval.emptyHint')} />
+              </div>
+            ) : (
+              <ul className="flex flex-col">
+                {batches.map((b) => (
+                  <li key={b.id} className="border-t border-line">
+                    <button
+                      type="button"
+                      onClick={() => select(b.id)}
+                      aria-current={b.id === selectedId ? 'true' : undefined}
+                      className={`flex min-h-12 w-full flex-col gap-1 px-[22px] py-[11px] text-left hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan sm:px-[26px] ${
+                        b.id === selectedId ? 'bg-surface-2' : ''
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[13px] font-medium text-text">{b.batch_number}</span>
+                        <Pill tone={b.stage === 'larvae' ? 'accent' : 'good'}>{label(t, 'stage', b.stage)}</Pill>
+                      </span>
+                      <span className={SUB}>
+                        {[
+                          b.units.map((u) => u.name).join(', ') || null,
+                          t('hatcheryPage.fishN', { n: fmt(b.count) }),
+                          t('hatcheryPage.dayN', { n: b.days_since_hatch }),
+                          b.survival_pct != null ? t('hatcheryPage.survival', { pct: `${fmt(b.survival_pct, 1)}%` }) : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                      {status === 'active' && !b.logged_today && b.stage === 'larvae' && (
+                        <span className="text-xs leading-4 text-warn">{t('hatcheryPage.larval.notLogged')}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PaperCard>
 
-        <div className={selected ? '' : 'hidden lg:block'}>
-          {selected ? (
-            <BatchPanel batch={selected} onBack={() => select(null)} />
-          ) : (
-            <PaperCard>
-              <p className={HINT}>{t('hatcheryPage.larval.choose')}</p>
-            </PaperCard>
-          )}
+          <div className={selected ? '' : 'hidden lg:block'}>
+            {selected ? (
+              <BatchPanel batch={selected} onBack={() => select(null)} />
+            ) : (
+              <PaperCard>
+                <p className={HINT}>{t('hatcheryPage.larval.choose')}</p>
+              </PaperCard>
+            )}
+          </div>
         </div>
       </div>
     </Layout>

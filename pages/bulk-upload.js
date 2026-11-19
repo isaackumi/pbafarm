@@ -30,7 +30,7 @@ function KindPicker({ value, onChange }) {
     <div
       role="radiogroup"
       aria-label={t('csvImport.page.kindLabel')}
-      className="inline-flex w-fit flex-wrap gap-[2px] rounded-pill border border-line bg-bg p-1"
+      className="inline-flex w-fit flex-wrap gap-1 rounded-pill border border-line bg-bg p-1"
     >
       {KINDS.map((k) => (
         <button
@@ -39,7 +39,7 @@ function KindPicker({ value, onChange }) {
           role="radio"
           aria-checked={value === k}
           onClick={() => onChange(k)}
-          className={`min-h-11 rounded-pill px-4 text-sm leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:min-h-0 sm:py-2 ${
+          className={`min-h-11 rounded-pill px-[18px] text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:min-h-0 sm:py-2 ${
             value === k ? 'bg-button font-medium text-button-text' : 'text-muted hover:text-text'
           }`}
         >
@@ -64,7 +64,7 @@ function BulkUpload() {
         </GradientButton>
       }
     >
-      <div className="w-full max-w-5xl">
+      <div className="w-full">
         {activeTab === 'daily' && <BulkDailyUploadForm header={picker} />}
         {activeTab === 'biweekly' && <BulkBiweeklyUploadForm header={picker} />}
       </div>
