@@ -572,6 +572,139 @@
     "listEmptyHint": "Enregistrez une récolte quand les poissons quittent une cage.",
     "listAdd": "Enregistrer une récolte"
   },
+  "harvestPage": {
+    "title": "Récolte",
+    "eyebrow": "Production · Récoltes, calibrage et lots",
+    "record": "Enregistrer une récolte",
+    "sampling": "Échantillonnage",
+    "addSampling": "Ajouter un échantillon",
+    "delete": "Supprimer",
+    "backToList": "Retour aux récoltes",
+    "deleteTitle": "Supprimer la récolte",
+    "deleteMessage": "Supprimer la récolte de {cage} du {date} ? Cette action est irréversible.",
+    "kpi": {
+      "harvested": "Récolté · {month}",
+      "vsLast": "{pct} % vs mois dernier",
+      "avgSize": "Poids moyen",
+      "thisMonth": "ce mois-ci",
+      "ready": "Prêtes à récolter",
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "openLots": "Lots ouverts",
+      "forSale": "à vendre"
+    },
+    "grades": {
+      "title": "Dernière récolte · calibres",
+      "titleFor": "Dernière récolte · {cage} · calibres",
+      "fish": {
+        "one": "{n} poisson",
+        "other": "{n} poissons"
+      },
+      "empty": "Aucune récolte avec répartition par calibre pour l'instant.",
+      "barLabel": "{grade} : {pct} % du poids calibré"
+    },
+    "ready": {
+      "title": "Prêtes à récolter",
+      "viewAll": "Tout voir",
+      "empty": "Aucune cage n'a atteint le poids de récolte cible.",
+      "ready": "Prête",
+      "held": "En délai d'attente",
+      "inWithdrawal": "Délai d'attente jusqu'au {date}",
+      "day": "Jour {n}"
+    },
+    "table": {
+      "title": "Récoltes",
+      "filter": "Type de récolte",
+      "all": "Toutes",
+      "search": "Rechercher une cage ou un lot",
+      "from": "Date de début",
+      "to": "Date de fin",
+      "export": "Exporter"
+    },
+    "type": {
+      "full": "Totale",
+      "partial": "Partielle"
+    },
+    "col": {
+      "date": "Date",
+      "cage": "Cage",
+      "type": "Type",
+      "lot": "Lot",
+      "fish": "Poissons",
+      "weight": "Poids",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "lot": {
+      "none": "Pas encore de lot",
+      "open": "Lot ouvert · {sent} expédiés",
+      "out": "Entièrement expédié"
+    },
+    "edit": {
+      "title": "Modifier la récolte · {cage}",
+      "status": "Statut",
+      "completed": "Terminée",
+      "inProgress": "En cours"
+    },
+    "toast": {
+      "updated": "Récolte mise à jour",
+      "updateFailed": "Impossible de mettre à jour la récolte",
+      "deleted": "Récolte supprimée",
+      "deleteFailed": "Impossible de supprimer la récolte",
+      "nothingToExport": "Aucune récolte à exporter",
+      "exportFailed": "Impossible d'exporter les récoltes"
+    },
+    "samplingPage": {
+      "title": "Échantillonnage de récolte",
+      "eyebrow": "Production · Récolte",
+      "intro": "Enregistrez le poids et la répartition par calibre d'un échantillon avant la récolte. Cela n'enregistre pas de récolte et ne modifie pas l'effectif de la cage. Les JDC et le PMI sont calculés à partir de la date d'empoissonnement.",
+      "theCage": "la cage",
+      "saved": "Échantillon enregistré pour {cage}. Enregistrez la récolte elle-même sur la page Récolte quand les poissons quittent la cage.",
+      "failed": "Impossible d'enregistrer l'échantillon",
+      "goToHarvest": "Aller à la récolte",
+      "loadingCages": "Chargement des cages…",
+      "cageAndSample": "Cage et échantillon",
+      "cage": "Cage",
+      "selectCage": "Choisir une cage",
+      "date": "Date de l'échantillon",
+      "weight": "Poids total (kg)",
+      "fishCount": "Nombre de poissons",
+      "doc": "Jours de culture",
+      "days": "jours",
+      "abw": "Poids moyen individuel",
+      "sizeBreakdown": "Répartition par calibre",
+      "sizeHint": "Nombre de poissons par calibre, facultatif.",
+      "save": "Enregistrer l'échantillon"
+    },
+    "analytics": {
+      "title": "Préparation à la récolte",
+      "eyebrow": "Analyses · Unités proches de la récolte",
+      "all": "Toutes les analyses",
+      "kpiSoon": "Dans {n} jours",
+      "kpiStocked": "Unités empoissonnées",
+      "readiness": "Jours de culture et jours avant récolte",
+      "weights": "Poids initial et actuel",
+      "table": "Unités par date de récolte",
+      "empty": "Aucune unité empoissonnée à afficher.",
+      "days": "{n} j",
+      "status": {
+        "ready": "Prête",
+        "soon": "Bientôt",
+        "growing": "En croissance"
+      },
+      "col": {
+        "cage": "Unité",
+        "doc": "Jours de culture",
+        "daysLeft": "Jours avant récolte",
+        "initial": "Poids initial",
+        "current": "Poids actuel",
+        "growth": "Taux de croissance",
+        "status": "Statut"
+      }
+    }
+  },
   "healthWater": {
     "title": "Santé et eau",
     "eyebrow": "Production · Qualité de l’eau, traitements, délai d’attente",

@@ -572,6 +572,139 @@
     "listEmptyHint": "Record a harvest when fish leave a cage.",
     "listAdd": "Record harvest"
   },
+  "harvestPage": {
+    "title": "Harvest",
+    "eyebrow": "Production · Harvests, sizing and lots",
+    "record": "Record harvest",
+    "sampling": "Harvest sampling",
+    "addSampling": "Add sampling",
+    "delete": "Delete",
+    "backToList": "Back to harvests",
+    "deleteTitle": "Delete harvest",
+    "deleteMessage": "Delete the harvest for {cage} on {date}? This cannot be undone.",
+    "kpi": {
+      "harvested": "Harvested · {month}",
+      "vsLast": "{pct}% vs last month",
+      "avgSize": "Avg size",
+      "thisMonth": "this month",
+      "ready": "Ready to harvest",
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "openLots": "Open lots",
+      "forSale": "for sale"
+    },
+    "grades": {
+      "title": "Last harvest · size grades",
+      "titleFor": "Last harvest · {cage} · size grades",
+      "fish": {
+        "one": "{n} fish",
+        "other": "{n} fish"
+      },
+      "empty": "No harvest with a size breakdown yet.",
+      "barLabel": "{grade}: {pct}% of graded weight"
+    },
+    "ready": {
+      "title": "Ready to harvest",
+      "viewAll": "View all",
+      "empty": "No cage has reached the target harvest weight.",
+      "ready": "Ready",
+      "held": "On withdrawal hold",
+      "inWithdrawal": "In withdrawal to {date}",
+      "day": "Day {n}"
+    },
+    "table": {
+      "title": "Harvests",
+      "filter": "Harvest type",
+      "all": "All",
+      "search": "Search cage or lot",
+      "from": "From date",
+      "to": "To date",
+      "export": "Export"
+    },
+    "type": {
+      "full": "Full",
+      "partial": "Partial"
+    },
+    "col": {
+      "date": "Date",
+      "cage": "Cage",
+      "type": "Type",
+      "lot": "Lot",
+      "fish": "Fish",
+      "weight": "Weight",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "lot": {
+      "none": "No lot yet",
+      "open": "Lot open · {sent} dispatched",
+      "out": "Fully dispatched"
+    },
+    "edit": {
+      "title": "Edit harvest · {cage}",
+      "status": "Status",
+      "completed": "Completed",
+      "inProgress": "In progress"
+    },
+    "toast": {
+      "updated": "Harvest updated",
+      "updateFailed": "Could not update the harvest",
+      "deleted": "Harvest deleted",
+      "deleteFailed": "Could not delete the harvest",
+      "nothingToExport": "No harvest records to export",
+      "exportFailed": "Could not export the harvest records"
+    },
+    "samplingPage": {
+      "title": "Harvest sampling",
+      "eyebrow": "Production · Harvest",
+      "intro": "Record a sample's weight and size mix before harvest. This does not record a harvest or change the cage's fish count. DOC and ABW are calculated from the cage's stocking date.",
+      "theCage": "the cage",
+      "saved": "Sample saved for {cage}. Record the harvest itself on the Harvest page when the fish leave the cage.",
+      "failed": "Could not save the sample",
+      "goToHarvest": "Go to Harvest",
+      "loadingCages": "Loading cages…",
+      "cageAndSample": "Cage and sample",
+      "cage": "Cage",
+      "selectCage": "Select cage",
+      "date": "Sample date",
+      "weight": "Total weight (kg)",
+      "fishCount": "Fish count",
+      "doc": "Days of culture",
+      "days": "days",
+      "abw": "Avg body weight",
+      "sizeBreakdown": "Size breakdown",
+      "sizeHint": "Optional fish count per grade.",
+      "save": "Save sample"
+    },
+    "analytics": {
+      "title": "Harvest readiness",
+      "eyebrow": "Analytics · Units approaching harvest",
+      "all": "All analytics",
+      "kpiSoon": "Due in {n} days",
+      "kpiStocked": "Stocked units",
+      "readiness": "Days of culture and days to harvest",
+      "weights": "Initial and current weight",
+      "table": "Units by harvest date",
+      "empty": "No stocked unit to show.",
+      "days": "{n} d",
+      "status": {
+        "ready": "Ready",
+        "soon": "Soon",
+        "growing": "Growing"
+      },
+      "col": {
+        "cage": "Unit",
+        "doc": "Days of culture",
+        "daysLeft": "Days to harvest",
+        "initial": "Initial weight",
+        "current": "Current weight",
+        "growth": "Growth rate",
+        "status": "Status"
+      }
+    }
+  },
   "healthWater": {
     "title": "Health & water",
     "eyebrow": "Production · Water quality, treatments, withdrawal",
