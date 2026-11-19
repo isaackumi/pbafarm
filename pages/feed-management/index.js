@@ -12,6 +12,7 @@ import {
   Textarea,
   StatCard,
   LoadingState,
+  Modal,
 } from '../../components/ui'
 import DataTable from '../../components/DataTable'
 import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../../lib/feedData'
@@ -600,174 +601,174 @@ const FeedManagement = () => {
 
         {/* Add/Edit Feed Type Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
-            <div className="page-card-xl max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
-              <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-                <h3 className="text-lg font-medium text-chart-ink">
-                  {editingType ? 'Edit feed type' : 'Add feed type'}
-                </h3>
+          <Modal
+            onClose={closeFeedModal}
+            closeOnBackdrop={false}
+            as="form"
+            onSubmit={handleSubmit}
+            title={editingType ? 'Edit feed type' : 'Add feed type'}
+            footer={
+              <>
+                <Button variant="secondary" onClick={closeFeedModal}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingType ? 'Save changes' : 'Add feed type'}
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <Field label="Name" htmlFor="fm-type-name">
+                <Input
+                  id="fm-type-name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </Field>
+              <Field label="Protein content (%)" htmlFor="fm-type-protein-content">
+                <Input
+                  id="fm-type-protein-content"
+                  type="number"
+                  name="protein_content"
+                  value={formData.protein_content}
+                  onChange={handleChange}
+                  required
+                />
+              </Field>
+              <Field
+                label="Price per kg (₵)"
+                htmlFor="fm-type-price-per-kg"
+                hint={editingType && !isAdmin ? 'Only an admin can change the price' : undefined}
+              >
+                <Input
+                  id="fm-type-price-per-kg"
+                  type="number"
+                  name="price_per_kg"
+                  value={formData.price_per_kg}
+                  disabled={Boolean(editingType) && !isAdmin}
+                  onChange={handleChange}
+                  step="0.01"
+                  required
+                />
+              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Minimum stock (kg)" htmlFor="fm-type-minimum-stock">
+                  <Input
+                    id="fm-type-minimum-stock"
+                    type="number"
+                    name="minimum_stock"
+                    value={formData.minimum_stock}
+                    onChange={handleChange}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 500"
+                    className="font-data tabular-nums"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Alerts when stock ≤ this
+                  </p>
+                </Field>
+                <Field label="Bag size (kg)" htmlFor="fm-type-bag-size-kg">
+                  <Input
+                    id="fm-type-bag-size-kg"
+                    type="number"
+                    name="bag_size_kg"
+                    value={formData.bag_size_kg}
+                    onChange={handleChange}
+                    step="0.1"
+                    min="0.1"
+                    className="font-data tabular-nums"
+                  />
+                </Field>
               </div>
-              <form onSubmit={handleSubmit} className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <Field label="Name" htmlFor="fm-type-name">
-                    <Input
-                      id="fm-type-name"
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Field>
-                  <Field label="Protein content (%)" htmlFor="fm-type-protein-content">
-                    <Input
-                      id="fm-type-protein-content"
-                      type="number"
-                      name="protein_content"
-                      value={formData.protein_content}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Field>
-                  <Field
-                    label="Price per kg (₵)"
-                    htmlFor="fm-type-price-per-kg"
-                    hint={editingType && !isAdmin ? 'Only an admin can change the price' : undefined}
-                  >
-                    <Input
-                      id="fm-type-price-per-kg"
-                      type="number"
-                      name="price_per_kg"
-                      value={formData.price_per_kg}
-                      disabled={Boolean(editingType) && !isAdmin}
-                      onChange={handleChange}
-                      step="0.01"
-                      required
-                    />
-                  </Field>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="Minimum stock (kg)" htmlFor="fm-type-minimum-stock">
-                      <Input
-                        id="fm-type-minimum-stock"
-                        type="number"
-                        name="minimum_stock"
-                        value={formData.minimum_stock}
-                        onChange={handleChange}
-                        step="1"
-                        min="0"
-                        placeholder="e.g. 500"
-                        className="font-data tabular-nums"
-                      />
-                      <p className="mt-1 text-xs text-muted">
-                        Alerts when stock ≤ this
-                      </p>
-                    </Field>
-                    <Field label="Bag size (kg)" htmlFor="fm-type-bag-size-kg">
-                      <Input
-                        id="fm-type-bag-size-kg"
-                        type="number"
-                        name="bag_size_kg"
-                        value={formData.bag_size_kg}
-                        onChange={handleChange}
-                        step="0.1"
-                        min="0.1"
-                        className="font-data tabular-nums"
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Description" htmlFor="fm-type-description">
-                    <Textarea
-                      id="fm-type-description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows="3"
-                    />
-                  </Field>
-                </div>
-                <div className="mt-6 flex flex-wrap justify-end gap-3">
-                  <Button variant="secondary" onClick={closeFeedModal}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    {editingType ? 'Save changes' : 'Add feed type'}
-                  </Button>
-                </div>
-              </form>
+              <Field label="Description" htmlFor="fm-type-description">
+                <Textarea
+                  id="fm-type-description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows="3"
+                />
+              </Field>
             </div>
-          </div>
+          </Modal>
         )}
 
         {/* Add Supplier Modal */}
         {showAddSupplierModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
-            <div className="page-card-xl max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
-              <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-                <h3 className="text-lg font-medium text-chart-ink">Add supplier</h3>
-              </div>
-              <form onSubmit={handleSupplierSubmit} className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <Field label="Company name" htmlFor="fm-supplier-name">
-                    <Input
-                      id="fm-supplier-name"
-                      type="text"
-                      name="name"
-                      value={supplierFormData.name}
-                      onChange={handleSupplierChange}
-                      required
-                    />
-                  </Field>
-                  <Field label="Contact person" htmlFor="fm-supplier-contact-person">
-                    <Input
-                      id="fm-supplier-contact-person"
-                      type="text"
-                      name="contact_person"
-                      value={supplierFormData.contact_person}
-                      onChange={handleSupplierChange}
-                      required
-                    />
-                  </Field>
-                  <Field label="Phone" htmlFor="fm-supplier-phone">
-                    <Input
-                      id="fm-supplier-phone"
-                      type="tel"
-                      name="phone"
-                      value={supplierFormData.phone}
-                      onChange={handleSupplierChange}
-                      required
-                    />
-                  </Field>
-                  <Field label="Email" htmlFor="fm-supplier-email">
-                    <Input
-                      id="fm-supplier-email"
-                      type="email"
-                      name="email"
-                      value={supplierFormData.email}
-                      onChange={handleSupplierChange}
-                      required
-                    />
-                  </Field>
-                  <Field label="Address" htmlFor="fm-supplier-address">
-                    <Textarea
-                      id="fm-supplier-address"
-                      name="address"
-                      value={supplierFormData.address}
-                      onChange={handleSupplierChange}
-                      rows="3"
-                    />
-                  </Field>
-                </div>
-                <div className="mt-6 flex flex-wrap justify-end gap-3">
-                  <Button variant="secondary" onClick={() => setShowAddSupplierModal(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    Add supplier
-                  </Button>
-                </div>
-              </form>
+          <Modal
+            onClose={() => setShowAddSupplierModal(false)}
+            closeOnBackdrop={false}
+            as="form"
+            onSubmit={handleSupplierSubmit}
+            title="Add supplier"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setShowAddSupplierModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Add supplier
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <Field label="Company name" htmlFor="fm-supplier-name">
+                <Input
+                  id="fm-supplier-name"
+                  type="text"
+                  name="name"
+                  value={supplierFormData.name}
+                  onChange={handleSupplierChange}
+                  required
+                />
+              </Field>
+              <Field label="Contact person" htmlFor="fm-supplier-contact-person">
+                <Input
+                  id="fm-supplier-contact-person"
+                  type="text"
+                  name="contact_person"
+                  value={supplierFormData.contact_person}
+                  onChange={handleSupplierChange}
+                  required
+                />
+              </Field>
+              <Field label="Phone" htmlFor="fm-supplier-phone">
+                <Input
+                  id="fm-supplier-phone"
+                  type="tel"
+                  name="phone"
+                  value={supplierFormData.phone}
+                  onChange={handleSupplierChange}
+                  required
+                />
+              </Field>
+              <Field label="Email" htmlFor="fm-supplier-email">
+                <Input
+                  id="fm-supplier-email"
+                  type="email"
+                  name="email"
+                  value={supplierFormData.email}
+                  onChange={handleSupplierChange}
+                  required
+                />
+              </Field>
+              <Field label="Address" htmlFor="fm-supplier-address">
+                <Textarea
+                  id="fm-supplier-address"
+                  name="address"
+                  value={supplierFormData.address}
+                  onChange={handleSupplierChange}
+                  rows="3"
+                />
+              </Field>
             </div>
-          </div>
+          </Modal>
         )}
 
         <FeedPurchaseModal

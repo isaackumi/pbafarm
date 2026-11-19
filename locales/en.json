@@ -850,7 +850,10 @@
     "form": "Form",
     "formName": {
       "production_sampling": "Bi-weekly sampling",
-      "production_stocking": "Stocking"
+      "production_stocking": "Stocking",
+      "production_harvest": "Harvest",
+      "production_daily": "Daily entry (each cage)",
+      "inventory_feedIssue": "Feed issue"
     },
     "section": {
       "session": "Session",
@@ -860,7 +863,13 @@
       "cageBatch": "Cage & batch",
       "fish": "Fish metrics",
       "source": "Source & supervisors",
-      "notes": "Notes"
+      "notes": "Notes",
+      "details": "Harvest details",
+      "grades": "Size breakdown",
+      "feed": "Feed",
+      "mortality": "Mortality",
+      "what": "What & where",
+      "quantity": "Quantity"
     },
     "core": {
       "date": "Sampling date",
@@ -878,7 +887,20 @@
       "sourceLocation": "Source location",
       "transferSupervisor": "Transfer supervisor",
       "samplingSupervisor": "Sampling supervisor",
-      "notes": "Notes"
+      "notes": "Notes",
+      "harvestDate": "Harvest date",
+      "harvestType": "Harvest type",
+      "totalWeight": "Total weight",
+      "estimatedCount": "Estimated count",
+      "fcr": "FCR",
+      "sizeBreakdown": "Size breakdown",
+      "feedQty": "Feed amount",
+      "feedTypeId": "Feed type",
+      "mortality": "Mortality",
+      "mortalityCause": "Cause of death",
+      "usageDate": "Issue date",
+      "bags": "Bags",
+      "quantityKg": "Kilograms"
     },
     "sectionTitle": "Section title",
     "newSection": "New section",

@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
-import stockingService from '../lib/stockingService'
 import { api } from '../convex/_generated/api'
 import {
   Button,
@@ -21,6 +20,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useSpeciesOptions } from '../hooks/useSpeciesOptions'
 import { localToday } from '../lib/format'
 import { customPayload } from './CustomFields'
+import { stockingCreateArgs } from '../lib/recordArgs'
 import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 import { DEFAULT_SETTINGS, densityStatus } from '../convex/lib/farmRules'
 
@@ -47,6 +47,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
   const settingsData = useQuery(api.companies.getEffectiveSettings)
   const rules = settingsData?.settings
   const allCages = useQuery(api.cages.list, user ? locationArgs : 'skip')
+  const createStocking = useMutation(api.stocking.createStocking)
 
   const { formData, handleChange, clear, setFormData } = usePersistedForm(
     'stocking-create',
@@ -138,8 +139,7 @@ const StockingForm = ({ onSuccess, onCancel }) => {
         custom: customPayload(formData.custom),
       }
 
-      const response = await stockingService.createStocking(stockingData)
-      if (response.error) throw response.error
+      await createStocking(stockingCreateArgs(stockingData))
 
       clear()
       setFormData({

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useMutation } from 'convex/react'
 import { useToast } from './Toast'
-import { biweeklyRecordService } from '../lib/databaseService'
+import { api } from '../convex/_generated/api'
+import { biweeklyCreateArgs } from '../lib/recordArgs'
 import { Plus, Trash, Save, AlertCircle, RefreshCw, CheckCircle } from 'lucide-react'
 import {
   Button,
@@ -26,6 +28,7 @@ function generateBatchCode() {
 
 const BiweeklyEntryForm = ({ cage, onComplete }) => {
   const { showToast } = useToast()
+  const createBiweekly = useMutation(api.biweeklyRecords.create)
   const [custom, setCustom] = useState({})
   const [samplings, setSamplings] = useState([
     { id: 1, fish_count: '', total_weight: '', abw: 0 },
@@ -141,10 +144,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
           })),
       }
 
-      const { data: record, error: recordError } =
-        await biweeklyRecordService.createBiweeklyRecord(recordData)
-
-      if (recordError) throw recordError
+      const id = await createBiweekly(biweeklyCreateArgs(recordData))
 
       showToast('success', 'Biweekly record saved')
       setSuccess(true)
@@ -157,7 +157,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       setSamplings([{ id: 1, fish_count: '', total_weight: '', abw: 0 }])
 
       if (onComplete) {
-        setTimeout(() => onComplete(record), 500)
+        setTimeout(() => onComplete({ id }), 500)
       }
     } catch (err) {
       console.error('Failed to save bi-weekly records:', err)

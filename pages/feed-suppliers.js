@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, LoadingState } from '../components/ui'
+import { PageHeader, Button, Field, Input, LoadingState, Modal } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -246,128 +246,118 @@ function FeedSuppliers() {
 
       {/* Add Supplier Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowAddModal(false)}
-          ></div>
-          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 p-4 sm:p-6" role="dialog" aria-modal="true">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Add supplier
-            </h3>
+        <Modal
+          onClose={() => setShowAddModal(false)}
+          as="form"
+          onSubmit={handleSubmitAdd}
+          title="Add supplier"
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save supplier
+              </Button>
+            </>
+          }
+        >
+          {error && (
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+              {error}
+            </div>
+          )}
 
-            {error && (
-              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
-                {error}
-              </div>
-            )}
+          {success && (
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+              {success}
+            </div>
+          )}
 
-            {success && (
-              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
-                {success}
-              </div>
-            )}
+          <Field label="Company name" htmlFor="supplier-name" required>
+            <Input
+              id="supplier-name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-            <form onSubmit={handleSubmitAdd} className="space-y-4">
-              <Field label="Company name" htmlFor="supplier-name" required>
-                <Input
-                  id="supplier-name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-
-              <Field label="Website" htmlFor="supplier-website">
-                <Input
-                  id="supplier-website"
-                  type="url"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleChange}
-                  placeholder="https://example.com"
-                />
-              </Field>
-
-              <div className="flex flex-wrap justify-end gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save supplier
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+          <Field label="Website" htmlFor="supplier-website">
+            <Input
+              id="supplier-website"
+              type="url"
+              name="website"
+              value={formData.website}
+              onChange={handleChange}
+              placeholder="https://example.com"
+            />
+          </Field>
+        </Modal>
       )}
 
       {/* Edit Supplier Modal */}
       {showEditModal && editingSupplier && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowEditModal(false)}
-          ></div>
-          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 p-4 sm:p-6" role="dialog" aria-modal="true">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit supplier
-            </h3>
+        <Modal
+          onClose={() => setShowEditModal(false)}
+          as="form"
+          onSubmit={handleSubmitEdit}
+          title="Edit supplier"
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save changes
+              </Button>
+            </>
+          }
+        >
+          {error && (
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+              {error}
+            </div>
+          )}
 
-            {error && (
-              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
-                {error}
-              </div>
-            )}
+          {success && (
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+              {success}
+            </div>
+          )}
 
-            {success && (
-              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
-                {success}
-              </div>
-            )}
+          <Field label="Company name" htmlFor="supplier-name" required>
+            <Input
+              id="supplier-name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-            <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <Field label="Company name" htmlFor="supplier-name" required>
-                <Input
-                  id="supplier-name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-
-              <Field label="Website" htmlFor="supplier-website">
-                <Input
-                  id="supplier-website"
-                  type="url"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleChange}
-                  placeholder="https://example.com"
-                />
-              </Field>
-
-              <div className="flex flex-wrap justify-end gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save changes
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+          <Field label="Website" htmlFor="supplier-website">
+            <Input
+              id="supplier-website"
+              type="url"
+              name="website"
+              value={formData.website}
+              onChange={handleChange}
+              placeholder="https://example.com"
+            />
+          </Field>
+        </Modal>
       )}
 
       <ConfirmDeleteModal

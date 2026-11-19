@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
-import { cageCreateArgs } from '../lib/cageService'
+import { cageCreateArgs } from '../lib/recordArgs'
 import { errorMessage } from '../lib/errorMessage'
 import { useLocation } from '../contexts/LocationContext'
 import FarmLocationSelect from './FarmLocationSelect'
@@ -10,7 +10,6 @@ import {
   Button,
   FormCard,
   FormActions,
-  FormSection,
   Field,
   Input,
   Select,
@@ -18,7 +17,8 @@ import {
 } from './ui'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs } from './UnitGeometryFields'
 import { unitLabel } from '../lib/format'
-import CustomFields, { customPayload } from './CustomFields'
+import { customPayload } from './CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 
 const CreateCageForm = () => {
   const router = useRouter()
@@ -44,6 +44,7 @@ const CreateCageForm = () => {
     status: 'empty',
   })
 
+  const layout = useFormLayout('setup.cage')
   const existingResult = useQuery(api.cages.list, locationArgs)
   const existingCages = useMemo(() => existingResult || [], [existingResult])
   const createCage = useMutation(api.cages.create)
@@ -124,18 +125,21 @@ const CreateCageForm = () => {
         )
       }
 
+      // Optional fields a layout condition hides are not saved.
+      const hidden = hiddenCoreKeys(layout.sections, coreValues, custom)
+      const shown = (key, value) => (hidden.has(key) ? '' : value)
       const cageData = {
         name: formData.name.trim(),
         code: formData.code,
         locationId,
         location: selectedLocationName || undefined,
         ...geometryArgs(geometry),
-        capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
-        dimensions: formData.dimensions ? formData.dimensions.trim() : undefined,
-        material: formData.material ? formData.material.trim() : undefined,
-        installation_date: formData.installation_date || undefined,
-        notes: formData.notes ? formData.notes.trim() : undefined,
-        status: formData.status || 'empty',
+        capacity: shown('capacity', formData.capacity) ? parseInt(formData.capacity, 10) : undefined,
+        dimensions: shown('dimensions', formData.dimensions) ? formData.dimensions.trim() : undefined,
+        material: shown('material', formData.material) ? formData.material.trim() : undefined,
+        installation_date: shown('installationDate', formData.installation_date) || undefined,
+        notes: shown('notes', formData.notes) ? formData.notes.trim() : undefined,
+        status: shown('status', formData.status) || 'empty',
         custom: customPayload(custom),
       }
 
@@ -169,6 +173,157 @@ const CreateCageForm = () => {
     }
   }
 
+  const coreValues = {
+    code: cageCode,
+    name: formData.name,
+    locationId: formData.locationId || activeLocationId || '',
+    status: formData.status,
+    unitType: geometry.unitType,
+    capacity: formData.capacity,
+    dimensions: formData.dimensions,
+    material: formData.material,
+    installationDate: formData.installation_date,
+    notes: formData.notes,
+  }
+
+  const layoutFields = {
+    code: (
+      <Field
+        label="Cage code"
+        htmlFor="code"
+        required
+        hint="Auto-generated unique code"
+      >
+        <Input
+          id="code"
+          type="text"
+          name="code"
+          value={cageCode}
+          readOnly
+          className="bg-foam font-data"
+        />
+      </Field>
+    ),
+    name: (
+      <Field
+        label="Cage name"
+        htmlFor="name"
+        required
+        error={nameError || undefined}
+      >
+        <Input
+          id="name"
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          placeholder="e.g., Cage 1, North A"
+          required
+          className={nameError ? 'border-signal' : ''}
+        />
+      </Field>
+    ),
+    locationId: (
+      <Field
+        label="Farm location"
+        htmlFor="locationId"
+        required
+        hint="Defaults to the location selected in the header"
+      >
+        <FarmLocationSelect
+          id="locationId"
+          name="locationId"
+          value={formData.locationId}
+          onChange={handleChange}
+          required
+          allowEmpty={false}
+          locked
+        />
+      </Field>
+    ),
+    status: (
+      <Field label="Status" htmlFor="status">
+        <Select
+          id="status"
+          name="status"
+          value={formData.status}
+          onChange={handleChange}
+          required
+        >
+          <option value="empty">Empty</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="fallow">Fallow</option>
+        </Select>
+      </Field>
+    ),
+    unitType: (
+      <UnitGeometryFields
+        value={geometry}
+        idPrefix="create-unit"
+        onChange={(key, value) => setGeometry((g) => ({ ...g, [key]: value }))}
+      />
+    ),
+    capacity: (
+      <Field label="Capacity (fish count)" htmlFor="capacity">
+        <Input
+          id="capacity"
+          type="number"
+          name="capacity"
+          value={formData.capacity}
+          onChange={handleChange}
+          className="font-data"
+          placeholder="Maximum fish capacity"
+        />
+      </Field>
+    ),
+    dimensions: (
+      <Field label="Dimensions" htmlFor="dimensions">
+        <Input
+          id="dimensions"
+          type="text"
+          name="dimensions"
+          value={formData.dimensions}
+          onChange={handleChange}
+          placeholder="e.g., 5m × 5m × 3m"
+        />
+      </Field>
+    ),
+    material: (
+      <Field label="Material" htmlFor="material">
+        <Input
+          id="material"
+          type="text"
+          name="material"
+          value={formData.material}
+          onChange={handleChange}
+          placeholder="e.g., HDPE, Metal frame"
+        />
+      </Field>
+    ),
+    installationDate: (
+      <Field label="Installation date" htmlFor="installation_date">
+        <Input
+          id="installation_date"
+          type="date"
+          name="installation_date"
+          value={formData.installation_date}
+          onChange={handleChange}
+        />
+      </Field>
+    ),
+    notes: (
+      <Field label="Optional notes" htmlFor="notes">
+        <Textarea
+          id="notes"
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          placeholder="Optional notes about the cage"
+        />
+      </Field>
+    ),
+  }
+
   return (
     <FormCard
       title="Cage details"
@@ -186,141 +341,15 @@ const CreateCageForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        <FormSection title="Identity">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Field
-              label="Cage code"
-              htmlFor="code"
-              required
-              hint="Auto-generated unique code"
-            >
-              <Input
-                id="code"
-                type="text"
-                name="code"
-                value={cageCode}
-                readOnly
-                className="bg-foam font-data"
-              />
-            </Field>
-            <Field
-              label="Cage name"
-              htmlFor="name"
-              required
-              error={nameError || undefined}
-            >
-              <Input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g., Cage 1, North A"
-                required
-                className={nameError ? 'border-signal' : ''}
-              />
-            </Field>
-            <Field
-              label="Farm location"
-              htmlFor="locationId"
-              required
-              hint="Defaults to the location selected in the header"
-            >
-              <FarmLocationSelect
-                id="locationId"
-                name="locationId"
-                value={formData.locationId}
-                onChange={handleChange}
-                required
-                allowEmpty={false}
-                locked
-              />
-            </Field>
-            <Field label="Status" htmlFor="status">
-              <Select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                required
-              >
-                <option value="empty">Empty</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="fallow">Fallow</option>
-              </Select>
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Capacity & build">
-          <UnitGeometryFields
-            value={geometry}
-            idPrefix="create-unit"
-            onChange={(key, value) => setGeometry((g) => ({ ...g, [key]: value }))}
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <Field label="Capacity (fish count)" htmlFor="capacity">
-              <Input
-                id="capacity"
-                type="number"
-                name="capacity"
-                value={formData.capacity}
-                onChange={handleChange}
-                className="font-data"
-                placeholder="Maximum fish capacity"
-              />
-            </Field>
-            <Field label="Dimensions" htmlFor="dimensions">
-              <Input
-                id="dimensions"
-                type="text"
-                name="dimensions"
-                value={formData.dimensions}
-                onChange={handleChange}
-                placeholder="e.g., 5m × 5m × 3m"
-              />
-            </Field>
-            <Field label="Material" htmlFor="material">
-              <Input
-                id="material"
-                type="text"
-                name="material"
-                value={formData.material}
-                onChange={handleChange}
-                placeholder="e.g., HDPE, Metal frame"
-              />
-            </Field>
-            <Field label="Installation date" htmlFor="installation_date">
-              <Input
-                id="installation_date"
-                type="date"
-                name="installation_date"
-                value={formData.installation_date}
-                onChange={handleChange}
-              />
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection title="Notes">
-          <Field label="Optional notes" htmlFor="notes">
-            <Textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              placeholder="Optional notes about the cage"
-            />
-          </Field>
-        </FormSection>
-
-        <CustomFields
-          entity="cages"
-          value={custom}
-          onChange={setCustom}
+        <FormLayout
+          formKey="setup.cage"
+          layout={layout}
+          fields={layoutFields}
+          coreValues={coreValues}
+          custom={custom}
+          onCustomChange={setCustom}
           locationId={formData.locationId || activeLocationId}
           core={{ unitType: geometry.unitType, status: formData.status }}
-          title="More details"
         />
 
         <FormActions>

@@ -165,7 +165,7 @@ function HarvestAnalytics() {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           cage.status === 'Ready' ? 'bg-signal/15 text-signal' :
-                          cage.status === 'Soon' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' :
+                          cage.status === 'Soon' ? 'bg-warn/10 text-warn' :
                           'bg-kelp/15 text-kelp'
                         }`}>
                           {cage.status}

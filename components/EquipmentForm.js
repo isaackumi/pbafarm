@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Select, Textarea } from './ui'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
-import CustomFields, { customPayload } from './CustomFields'
+import { customPayload } from './CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 import { useLocation } from '../contexts/LocationContext'
 
 export const EQUIPMENT_KINDS = [
@@ -47,33 +48,65 @@ export default function EquipmentForm({ unitId, onDone }) {
     locationId: '', assetTag: '', purchasedOn: '', purchaseCost: '', supplier: '', warrantyUntil: '',
   })
   const [saving, setSaving] = useState(false)
+  const layout = useFormLayout('operations.equipment')
+  const setCustom = useCallback((custom) => setForm((f) => ({ ...f, custom })), [])
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const t = (s) => s.trim() || undefined
+  const coreValues = {
+    name: form.name,
+    kind: form.kind,
+    unitId: form.unitId,
+    unitGroupId: form.unitGroupId,
+    locationId: form.locationId,
+    assetTag: form.assetTag,
+    make: form.make,
+    model: form.model,
+    serialNumber: form.serialNumber,
+    rating: form.rating,
+    installationDate: form.installedOn,
+    purchasedOn: form.purchasedOn,
+    purchaseCost: form.purchaseCost,
+    supplier: form.supplier,
+    warrantyUntil: form.warrantyUntil,
+    maintenanceIntervalDays: form.maintenanceIntervalDays,
+    nextMaintenanceDue: form.nextMaintenanceDue,
+    sparePartId: form.spareId,
+    notes: form.notes,
+  }
+  const FORM_KEY = {
+    installationDate: 'installedOn',
+    sparePartId: 'spareId',
+  }
 
   const submit = async (e) => {
     e.preventDefault()
+    // Optional fields a layout condition hides are not saved (a fixed unit always is).
+    const hidden = hiddenCoreKeys(layout.sections, coreValues, form.custom)
+    if (unitId) hidden.delete('unitId')
+    const values = { ...form }
+    for (const key of hidden) values[FORM_KEY[key] || key] = ''
     setSaving(true)
     try {
       await create({
         name: form.name,
         kind: form.kind,
-        unitId: form.unitId || undefined,
-        unitGroupId: form.unitGroupId || undefined,
-        make: t(form.make),
-        model: t(form.model),
-        serialNumber: t(form.serialNumber),
-        rating: t(form.rating),
-        installedOn: form.installedOn || undefined,
-        maintenanceIntervalDays: form.maintenanceIntervalDays === '' ? undefined : Number(form.maintenanceIntervalDays),
-        nextMaintenanceDue: form.nextMaintenanceDue || undefined,
-        sparePartItemIds: form.spareId ? [form.spareId] : undefined,
-        notes: t(form.notes),
-        locationId: form.unitId || form.unitGroupId ? undefined : form.locationId || activeLocationId || undefined,
-        assetTag: t(form.assetTag),
-        purchasedOn: form.purchasedOn || undefined,
-        purchaseCost: form.purchaseCost === '' ? undefined : Number(form.purchaseCost),
-        supplier: t(form.supplier),
-        warrantyUntil: form.warrantyUntil || undefined,
+        unitId: values.unitId || undefined,
+        unitGroupId: values.unitGroupId || undefined,
+        make: t(values.make),
+        model: t(values.model),
+        serialNumber: t(values.serialNumber),
+        rating: t(values.rating),
+        installedOn: values.installedOn || undefined,
+        maintenanceIntervalDays: values.maintenanceIntervalDays === '' ? undefined : Number(values.maintenanceIntervalDays),
+        nextMaintenanceDue: values.nextMaintenanceDue || undefined,
+        sparePartItemIds: values.spareId ? [values.spareId] : undefined,
+        notes: t(values.notes),
+        locationId: values.unitId || values.unitGroupId ? undefined : values.locationId || activeLocationId || undefined,
+        assetTag: t(values.assetTag),
+        purchasedOn: values.purchasedOn || undefined,
+        purchaseCost: values.purchaseCost === '' ? undefined : Number(values.purchaseCost),
+        supplier: t(values.supplier),
+        warrantyUntil: values.warrantyUntil || undefined,
         custom: customPayload(form.custom),
       })
       showToast(`Added ${form.name.trim()}`, 'success')

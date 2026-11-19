@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { harvestRecordService } from '../lib/databaseService'
+import { useMutation } from 'convex/react'
+import { api } from '../convex/_generated/api'
 import { useToast } from './Toast'
 import { Button, Field, FormActions, FormSection, Input, Select } from './ui'
 
@@ -26,6 +27,7 @@ const SamplingForm = ({ harvestId, onComplete }) => {
   })
   const [loading, setLoading] = useState(false)
   const { showToast } = useToast()
+  const createSampling = useMutation(api.harvest.createSampling)
 
   const handleSamplingDataChange = (index, field, value) => {
     const newSamples = [...formData.samples]
@@ -59,9 +61,10 @@ const SamplingForm = ({ harvestId, onComplete }) => {
 
     setLoading(true)
     try {
-      const samplingData = {
-        harvest_id: harvestId,
-        crate_size: parseInt(formData.crateSize),
+      const crateSize = parseInt(formData.crateSize)
+      await createSampling({
+        harvestId,
+        crateSize: Number.isFinite(crateSize) ? crateSize : undefined,
         samples: formData.samples
           .filter(sample => sample.quantity && sample.abw)
           .map(sample => ({
@@ -70,10 +73,7 @@ const SamplingForm = ({ harvestId, onComplete }) => {
             quantity: parseInt(sample.quantity),
             abw: parseFloat(sample.abw)
           }))
-      }
-
-      const { error } = await harvestRecordService.addSamplingData(samplingData)
-      if (error) throw error
+      })
 
       showToast('Sampling data saved successfully', 'success')
       if (onComplete) {

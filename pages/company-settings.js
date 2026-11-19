@@ -356,7 +356,7 @@ function CompanySettings() {
       />
 
       {dirty && (
-        <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
+        <p className="mb-4 text-sm text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-2">
           Unpublished changes — save a draft or publish to apply.
         </p>
       )}

@@ -35,7 +35,7 @@ function StockLevels() {
       case 'critical':
         return 'text-signal bg-signal/10'
       case 'low':
-        return 'text-amber-700 dark:text-amber-300 bg-amber-500/15'
+        return 'text-warn bg-warn/10'
       case 'good':
         return 'text-kelp bg-kelp/10'
       default:

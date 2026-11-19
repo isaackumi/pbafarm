@@ -16,6 +16,7 @@ import {
   resolveLayout,
 } from '../../convex/lib/formLayouts'
 
+const NO_DEFS = []
 const lite = (defs) => (defs ?? []).map((d) => ({ key: d.key, required: d.required, archived: d.archived }))
 
 /** Drop empty optional props so the saved layout matches the validator. */
@@ -79,7 +80,8 @@ function FormEditor({ formKey }) {
   const { showToast } = useToast()
   const entity = FORM_CATALOG[formKey].entity
   const saved = useQuery(api.formLayouts.get, { formKey })
-  const defs = useCustomFieldDefs(entity)
+  const entityDefs = useCustomFieldDefs(entity)
+  const defs = entity ? entityDefs : NO_DEFS
   const save = useMutation(api.formLayouts.save)
   const reset = useMutation(api.formLayouts.reset)
   const [draft, setDraft] = useState(null)

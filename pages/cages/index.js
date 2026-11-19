@@ -171,7 +171,7 @@ function CagesManagement() {
       cell: (row) => {
         const styles = {
           active: 'bg-kelp/15 text-kelp',
-          maintenance: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+          maintenance: 'bg-warn/10 text-warn',
           harvested: 'bg-foam-deep text-lake',
           fallow: 'bg-foam-deep/60 text-muted',
           empty: 'bg-lake-soft text-lake',

@@ -12,9 +12,8 @@ import { errorMessage } from '../lib/errorMessage'
 import { formatCurrency } from '../lib/currencyUtils'
 import { useLocation } from '../contexts/LocationContext'
 import { useToast } from './Toast'
-import { Button, Field, Input, Select, Textarea } from './ui'
+import { Button, Field, Input, Modal, Select, Textarea } from './ui'
 import { localToday } from '../lib/format'
-import { useDialogA11y } from '../hooks/useDialogA11y'
 
 const emptyEntry = (overrides = {}) => ({
   feed_type_id: '',
@@ -87,7 +86,6 @@ export default function FeedPurchaseModal({
       document.body.style.overflow = prev
     }
   }, [open])
-  const panelRef = useDialogA11y({ open, onClose, canClose: !saving })
 
   const handleAddFeedEntry = () => {
     if (
@@ -199,247 +197,237 @@ export default function FeedPurchaseModal({
   const activeFeedTypes = (feedTypes || []).filter((t) => t.active !== false)
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop">
-      <div
-        ref={panelRef}
-        className="page-card-xl max-h-[90vh] w-full max-w-4xl overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feed-purchase-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="border-b border-foam-deep px-4 py-4 sm:px-6">
-          <h3
-            id="feed-purchase-title"
-            className="text-lg font-medium text-chart-ink"
+    <Modal
+      onClose={onClose}
+      dismissible={!saving}
+      as="form"
+      closeOnBackdrop={false}
+      onSubmit={handleSubmit}
+      title={title}
+      size="4xl"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            disabled={saving}
+            onClick={onClose}
           >
-            {title}
-          </h3>
-        </div>
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6">
-          <div className="mb-6">
-            <LocationMetaField />
-          </div>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save purchase'}
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-6">
+        <LocationMetaField />
+      </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Field label="Supplier" htmlFor="fpm-supplier" required>
-              <Select
-                id="fpm-supplier"
-                value={purchaseData.supplier_id}
-                onChange={(e) =>
-                  setPurchaseData((prev) => ({
-                    ...prev,
-                    supplier_id: e.target.value,
-                  }))
-                }
-                required
+      <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Supplier" htmlFor="fpm-supplier" required>
+          <Select
+            id="fpm-supplier"
+            value={purchaseData.supplier_id}
+            onChange={(e) =>
+              setPurchaseData((prev) => ({
+                ...prev,
+                supplier_id: e.target.value,
+              }))
+            }
+            required
+          >
+            <option value="">Select supplier</option>
+            {suppliers.map((supplier) => (
+              <option
+                key={supplier.id || supplier._id}
+                value={supplier.id || supplier._id}
               >
-                <option value="">Select supplier</option>
-                {suppliers.map((supplier) => (
-                  <option
-                    key={supplier.id || supplier._id}
-                    value={supplier.id || supplier._id}
-                  >
-                    {supplier.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Purchase date" htmlFor="fpm-date" required>
-              <Input
-                id="fpm-date"
-                type="date"
-                value={purchaseData.purchase_date}
-                onChange={(e) =>
-                  setPurchaseData((prev) => ({
-                    ...prev,
-                    purchase_date: e.target.value,
-                  }))
-                }
-                required
-              />
-            </Field>
-          </div>
+                {supplier.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Purchase date" htmlFor="fpm-date" required>
+          <Input
+            id="fpm-date"
+            type="date"
+            value={purchaseData.purchase_date}
+            onChange={(e) =>
+              setPurchaseData((prev) => ({
+                ...prev,
+                purchase_date: e.target.value,
+              }))
+            }
+            required
+          />
+        </Field>
+      </div>
 
-          <div className="mb-6">
-            <h4 className="mb-3 text-sm font-medium text-chart-ink">
-              Feed entries
-            </h4>
-            <div className="space-y-3">
-              {purchaseData.feed_entries.map((entry, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-4 rounded-lg border border-foam-deep bg-foam p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-chart-ink">
-                      {activeFeedTypes.find(
-                        (ft) => (ft.id || ft._id) === entry.feed_type_id,
-                      )?.name || 'Feed'}
-                    </p>
-                    <p className="text-xs text-muted tabular-nums">
-                      {entry.number_of_bags} × {entry.bag_size || DEFAULT_BAG_SIZE_KG} kg bags (
-                      {entry.quantity_kg ??
-                        Number(entry.number_of_bags) *
-                          Number(entry.bag_size || DEFAULT_BAG_SIZE_KG)}{' '}
-                      kg) × {formatCurrency(entry.price_per_bag)}/bag ={' '}
-                      {formatCurrency(entry.total_amount)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveFeedEntry(index)}
-                    className="shrink-0 text-signal"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-              {purchaseData.feed_entries.length === 0 && (
-                <p className="text-xs text-muted">
-                  Add one or more feed types below, then save.
+      <div className="mb-6">
+        <h4 className="mb-3 text-sm font-medium text-chart-ink">
+          Feed entries
+        </h4>
+        <div className="space-y-3">
+          {purchaseData.feed_entries.map((entry, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-4 rounded-lg border border-foam-deep bg-foam p-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-chart-ink">
+                  {activeFeedTypes.find(
+                    (ft) => (ft.id || ft._id) === entry.feed_type_id,
+                  )?.name || 'Feed'}
                 </p>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-6 rounded-lg border border-foam-deep p-4">
-            <h4 className="mb-3 text-sm font-medium text-chart-ink">
-              Add feed entry
-            </h4>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Field label="Feed type" htmlFor="fpm-feed-type">
-                <Select
-                  id="fpm-feed-type"
-                  value={currentFeedEntry.feed_type_id}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    const ft = activeFeedTypes.find(
-                      (t) => (t.id || t._id) === id,
-                    )
-                    setCurrentFeedEntry((prev) => ({
-                      ...prev,
-                      feed_type_id: id,
-                    }))
-                    // Prefill supplier from feed type when purchase supplier empty
-                    const feedSupplier = ft?.supplier_id || ft?.supplierId
-                    if (feedSupplier) {
-                      setPurchaseData((prev) =>
-                        prev.supplier_id
-                          ? prev
-                          : { ...prev, supplier_id: String(feedSupplier) },
-                      )
-                    }
-                  }}
-                >
-                  <option value="">Select feed type</option>
-                  {activeFeedTypes.map((type) => (
-                    <option
-                      key={type.id || type._id}
-                      value={type.id || type._id}
-                    >
-                      {type.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Number of bags" htmlFor="fpm-bags">
-                <Input
-                  id="fpm-bags"
-                  type="number"
-                  value={currentFeedEntry.number_of_bags}
-                  onChange={(e) =>
-                    setCurrentFeedEntry((prev) => ({
-                      ...prev,
-                      number_of_bags: e.target.value,
-                    }))
-                  }
-                  className="font-data tabular-nums"
-                  min="1"
-                  step="0.01"
-                />
-              </Field>
-              <Field label="Price per bag (₵)" htmlFor="fpm-price">
-                <Input
-                  id="fpm-price"
-                  type="number"
-                  value={currentFeedEntry.price_per_bag}
-                  onChange={(e) =>
-                    setCurrentFeedEntry((prev) => ({
-                      ...prev,
-                      price_per_bag: e.target.value,
-                    }))
-                  }
-                  className="font-data tabular-nums"
-                  min="0"
-                  step="0.01"
-                />
-              </Field>
-              <div className="flex items-end">
-                <Button
-                  variant="secondary"
-                  onClick={handleAddFeedEntry}
-                  className="w-full"
-                >
-                  Add entry
-                </Button>
+                <p className="text-xs text-muted tabular-nums">
+                  {entry.number_of_bags} × {entry.bag_size || DEFAULT_BAG_SIZE_KG} kg bags (
+                  {entry.quantity_kg ??
+                    Number(entry.number_of_bags) *
+                      Number(entry.bag_size || DEFAULT_BAG_SIZE_KG)}{' '}
+                  kg) × {formatCurrency(entry.price_per_bag)}/bag ={' '}
+                  {formatCurrency(entry.total_amount)}
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveFeedEntry(index)}
+                className="shrink-0 text-signal"
+              >
+                Remove
+              </Button>
             </div>
-            <div className="mt-4">
-              <BagSizeField
-                id="shared-purchase-bag-size"
-                value={currentFeedEntry.bag_size}
-                onChange={(e) =>
-                  setCurrentFeedEntry((prev) => ({
-                    ...prev,
-                    bag_size: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
+          ))}
+          {purchaseData.feed_entries.length === 0 && (
+            <p className="text-xs text-muted">
+              Add one or more feed types below, then save.
+            </p>
+          )}
+        </div>
+      </div>
 
-          <Field label="Notes" htmlFor="fpm-notes" className="mb-6">
-            <Textarea
-              id="fpm-notes"
-              value={purchaseData.notes}
-              onChange={(e) =>
-                setPurchaseData((prev) => ({
+      <div className="mb-6 rounded-lg border border-foam-deep p-4">
+        <h4 className="mb-3 text-sm font-medium text-chart-ink">
+          Add feed entry
+        </h4>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Feed type" htmlFor="fpm-feed-type">
+            <Select
+              id="fpm-feed-type"
+              value={currentFeedEntry.feed_type_id}
+              onChange={(e) => {
+                const id = e.target.value
+                const ft = activeFeedTypes.find(
+                  (t) => (t.id || t._id) === id,
+                )
+                setCurrentFeedEntry((prev) => ({
                   ...prev,
-                  notes: e.target.value,
+                  feed_type_id: id,
+                }))
+                // Prefill supplier from feed type when purchase supplier empty
+                const feedSupplier = ft?.supplier_id || ft?.supplierId
+                if (feedSupplier) {
+                  setPurchaseData((prev) =>
+                    prev.supplier_id
+                      ? prev
+                      : { ...prev, supplier_id: String(feedSupplier) },
+                  )
+                }
+              }}
+            >
+              <option value="">Select feed type</option>
+              {activeFeedTypes.map((type) => (
+                <option
+                  key={type.id || type._id}
+                  value={type.id || type._id}
+                >
+                  {type.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Number of bags" htmlFor="fpm-bags">
+            <Input
+              id="fpm-bags"
+              type="number"
+              value={currentFeedEntry.number_of_bags}
+              onChange={(e) =>
+                setCurrentFeedEntry((prev) => ({
+                  ...prev,
+                  number_of_bags: e.target.value,
                 }))
               }
-              rows={3}
+              className="font-data tabular-nums"
+              min="1"
+              step="0.01"
             />
           </Field>
-
-          <div className="mb-6">
-            <div className="flex items-center justify-between rounded-lg border border-foam-deep bg-foam p-4">
-              <span className="text-sm font-medium text-chart-ink">
-                Total amount
-              </span>
-              <span className="text-lg font-semibold text-chart-ink tabular-nums">
-                {formatCurrency(purchaseData.total_amount)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-3">
+          <Field label="Price per bag (₵)" htmlFor="fpm-price">
+            <Input
+              id="fpm-price"
+              type="number"
+              value={currentFeedEntry.price_per_bag}
+              onChange={(e) =>
+                setCurrentFeedEntry((prev) => ({
+                  ...prev,
+                  price_per_bag: e.target.value,
+                }))
+              }
+              className="font-data tabular-nums"
+              min="0"
+              step="0.01"
+            />
+          </Field>
+          <div className="flex items-end">
             <Button
               variant="secondary"
-              disabled={saving}
-              onClick={onClose}
+              onClick={handleAddFeedEntry}
+              className="w-full"
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save purchase'}
+              Add entry
             </Button>
           </div>
-        </form>
+        </div>
+        <div className="mt-4">
+          <BagSizeField
+            id="shared-purchase-bag-size"
+            value={currentFeedEntry.bag_size}
+            onChange={(e) =>
+              setCurrentFeedEntry((prev) => ({
+                ...prev,
+                bag_size: e.target.value,
+              }))
+            }
+          />
+        </div>
       </div>
-    </div>,
+
+      <Field label="Notes" htmlFor="fpm-notes" className="mb-6">
+        <Textarea
+          id="fpm-notes"
+          value={purchaseData.notes}
+          onChange={(e) =>
+            setPurchaseData((prev) => ({
+              ...prev,
+              notes: e.target.value,
+            }))
+          }
+          rows={3}
+        />
+      </Field>
+
+      <div className="mb-6">
+        <div className="flex items-center justify-between rounded-lg border border-foam-deep bg-foam p-4">
+          <span className="text-sm font-medium text-chart-ink">
+            Total amount
+          </span>
+          <span className="text-lg font-semibold text-chart-ink tabular-nums">
+            {formatCurrency(purchaseData.total_amount)}
+          </span>
+        </div>
+      </div>
+    </Modal>,
     document.body,
   )
 }

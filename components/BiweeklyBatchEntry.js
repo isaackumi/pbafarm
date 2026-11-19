@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { ScanLine, Trash2 } from 'lucide-react'
-import { cageService } from '../lib/cageService'
 import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
 import { useAuth } from '../contexts/AuthContext'
 import OutboxPanel from './OutboxPanel'
 import { parseCageScan } from '../lib/qrTarget'
-import { getActiveLocationId } from '../lib/locationScope'
-import { readReferenceList, saveReferenceData } from '../lib/referenceCache'
+import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
+import { useReferenceList } from '../hooks/useReferenceList'
 import { usePersistedForm } from '../hooks/usePersistedForm'
 import { Button, Field, FormCard, FormSection, Input, StickyActions } from './ui'
 import DependencyEmpty from './DependencyEmpty'
@@ -54,10 +54,10 @@ export default function BiweeklyBatchEntry() {
   const { showToast } = useToast()
   const t = useT()
   const { user } = useAuth()
-  const userId = user?.id
   const online = useOnline()
-  const [cages, setCages] = useState([])
-  const [ready, setReady] = useState(false)
+  const { locationArgs } = useLocation()
+  // No signal: the cage list this user last saw on this device.
+  const { list: cages, ready } = useReferenceList('cages', api.cages.getActive, locationArgs)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [errorLine, setErrorLine] = useState(null)
@@ -70,28 +70,7 @@ export default function BiweeklyBatchEntry() {
   )
   const lines = Array.isArray(formData.lines) ? formData.lines : []
 
-  const loadCages = useCallback(async () => {
-    try {
-      const res = await cageService.getActiveCages()
-      if (!res.error) {
-        setCages(res.data || [])
-        saveReferenceData(userId, getActiveLocationId(), { cages: res.data || [] })
-        return
-      }
-      // No signal: the cage list this user last saw on this device.
-      const cached = readReferenceList(userId, getActiveLocationId(), 'cages')
-      if (cached) setCages(cached)
-    } catch (err) {
-      const cached = readReferenceList(userId, getActiveLocationId(), 'cages')
-      if (cached) setCages(cached)
-      else console.error('Error loading cages:', err)
-    } finally {
-      setReady(true)
-    }
-  }, [userId])
-
   useEffect(() => {
-    loadCages()
     setFormData((prev) => ((prev.lines || []).length === 0 ? { ...prev, date: isoDay() } : prev))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -263,7 +242,6 @@ export default function BiweeklyBatchEntry() {
               message={t('biweekly.needsCage')}
               createKind="cage"
               createLabel={t('entry.createCage')}
-              onCreated={loadCages}
             />
           ) : (
             <>

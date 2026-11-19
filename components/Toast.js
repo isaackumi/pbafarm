@@ -45,7 +45,7 @@ export const ToastProvider = ({ children }) => {
                 : toast.type === 'success'
                   ? 'border-kelp/40 text-kelp'
                   : toast.type === 'warning'
-                    ? 'border-amber-300 text-amber-800 dark:border-amber-500/40 dark:text-amber-300'
+                    ? 'border-warn/40 text-warn'
                     : 'border-foam-deep text-chart-ink'
             }`}
           >

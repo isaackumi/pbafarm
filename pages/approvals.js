@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, EmptyState, Field, Textarea } from '../components/ui'
+import { PageHeader, Button, EmptyState, Field, Modal, Textarea } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -241,7 +241,7 @@ function PendingApprovals() {
                             ? 'bg-lake-soft text-lake'
                             : record.type === 'fish_transfer'
                               ? 'bg-foam-deep text-chart-ink'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
+                              : 'bg-warn/10 text-warn'
                         }`}
                       >
                         {typeLabel(record.type)}
@@ -340,64 +340,12 @@ function PendingApprovals() {
       </div>
 
       {showApproveModal && currentRecord && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => !processingAction && setShowApproveModal(false)}
-          ></div>
-          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-chart-ink mb-4">
-              Approve request?
-            </h3>
-
-            <p className="text-muted mb-4">
-              Are you sure you want to approve this{' '}
-              {currentRecord.type === 'stocking'
-                ? 'stocking'
-                : currentRecord.type === 'fish_transfer'
-                  ? 'fish transfer'
-                  : 'top-up'}{' '}
-              for{' '}
-              <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
-              in <span className="font-medium">{currentRecord.cageName}</span>?
-            </p>
-
-            <div className="bg-foam border border-foam-deep p-3 rounded-lg mb-4">
-              <div className="grid grid-cols-2 gap-2 text-sm tabular-nums">
-                <div>
-                  <span className="font-medium text-muted">Date:</span>{' '}
-                  <span className="text-chart-ink">
-                    {formatDate(currentRecord.date)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-muted">Quantity:</span>{' '}
-                  <span className="text-chart-ink">
-                    {currentRecord.count.toLocaleString()} fish
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-muted">ABW:</span>{' '}
-                  <span className="text-chart-ink">
-                    {currentRecord.abw.toFixed(1)}g
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-muted">Biomass:</span>{' '}
-                  <span className="text-chart-ink">
-                    {(currentRecord.biomass || 0).toFixed(1)}kg
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {actionError && (
-              <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-                {actionError}
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Modal
+          onClose={() => setShowApproveModal(false)}
+          dismissible={!processingAction}
+          title="Approve request?"
+          footer={
+            <>
               <Button
                 variant="secondary"
                 onClick={() => setShowApproveModal(false)}
@@ -412,57 +360,65 @@ function PendingApprovals() {
               >
                 {processingAction ? 'Processing…' : 'Approve'}
               </Button>
+            </>
+          }
+        >
+          <p className="text-muted mb-4">
+            Are you sure you want to approve this{' '}
+            {currentRecord.type === 'stocking'
+              ? 'stocking'
+              : currentRecord.type === 'fish_transfer'
+                ? 'fish transfer'
+                : 'top-up'}{' '}
+            for{' '}
+            <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
+            in <span className="font-medium">{currentRecord.cageName}</span>?
+          </p>
+
+          <div className="bg-foam border border-foam-deep p-3 rounded-lg mb-4">
+            <div className="grid grid-cols-2 gap-2 text-sm tabular-nums">
+              <div>
+                <span className="font-medium text-muted">Date:</span>{' '}
+                <span className="text-chart-ink">
+                  {formatDate(currentRecord.date)}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-muted">Quantity:</span>{' '}
+                <span className="text-chart-ink">
+                  {currentRecord.count.toLocaleString()} fish
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-muted">ABW:</span>{' '}
+                <span className="text-chart-ink">
+                  {currentRecord.abw.toFixed(1)}g
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-muted">Biomass:</span>{' '}
+                <span className="text-chart-ink">
+                  {(currentRecord.biomass || 0).toFixed(1)}kg
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+
+          {actionError && (
+            <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
+              {actionError}
+            </div>
+          )}
+        </Modal>
       )}
 
       {showRejectModal && currentRecord && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => !processingAction && setShowRejectModal(false)}
-          ></div>
-          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-chart-ink mb-4">
-              Reject request?
-            </h3>
-
-            <p className="text-muted mb-4">
-              Are you sure you want to reject this{' '}
-              {currentRecord.type === 'stocking'
-                ? 'stocking'
-                : currentRecord.type === 'fish_transfer'
-                  ? 'fish transfer'
-                  : 'top-up'}{' '}
-              for{' '}
-              <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
-              in <span className="font-medium">{currentRecord.cageName}</span>?
-            </p>
-
-            <Field
-              label="Reason for rejection"
-              htmlFor="rejection-reason"
-              required
-              className="mb-4"
-            >
-              <Textarea
-                id="rejection-reason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                rows={3}
-                placeholder="Tell the requester why this was rejected"
-                required
-              />
-            </Field>
-
-            {actionError && (
-              <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-                {actionError}
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Modal
+          onClose={() => setShowRejectModal(false)}
+          dismissible={!processingAction}
+          title="Reject request?"
+          footer={
+            <>
               <Button
                 variant="secondary"
                 onClick={() => setShowRejectModal(false)}
@@ -477,9 +433,43 @@ function PendingApprovals() {
               >
                 {processingAction ? 'Processing…' : 'Reject'}
               </Button>
+            </>
+          }
+        >
+          <p className="text-muted mb-4">
+            Are you sure you want to reject this{' '}
+            {currentRecord.type === 'stocking'
+              ? 'stocking'
+              : currentRecord.type === 'fish_transfer'
+                ? 'fish transfer'
+                : 'top-up'}{' '}
+            for{' '}
+            <span className="font-medium">{currentRecord.batchNumber}</span>{' '}
+            in <span className="font-medium">{currentRecord.cageName}</span>?
+          </p>
+
+          <Field
+            label="Reason for rejection"
+            htmlFor="rejection-reason"
+            required
+            className="mb-4"
+          >
+            <Textarea
+              id="rejection-reason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={3}
+              placeholder="Tell the requester why this was rejected"
+              required
+            />
+          </Field>
+
+          {actionError && (
+            <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
+              {actionError}
             </div>
-          </div>
-        </div>
+          )}
+        </Modal>
       )}
     </Layout>
   )

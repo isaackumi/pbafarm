@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { Trash2, Plus, Copy, QrCode, ScanLine, TriangleAlert } from 'lucide-react'
-import { cageService } from '../lib/cageService'
-import { feedTypeService } from '../lib/feedTypeService'
-import { dailyRecordService } from '../lib/databaseService'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
-import { getActiveLocationId } from '../lib/locationScope'
-import { readReferenceData, saveReferenceData } from '../lib/referenceCache'
+import { useConvex } from 'convex/react'
+import { api } from '../convex/_generated/api'
 import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
+import { useOptionalQuery } from '../hooks/useOptionalQuery'
+import { useReferenceList } from '../hooks/useReferenceList'
+import { useLocation } from '../contexts/LocationContext'
 import OutboxPanel from './OutboxPanel'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
+import RationSuggestion from './RationSuggestion'
 import {
   Button,
   FormCard,
@@ -32,7 +33,7 @@ import { MORTALITY_CAUSES } from '../lib/farmHealth'
 import { parseCageScan } from '../lib/qrTarget'
 import QrScanner from './QrScanner'
 import { usePermission } from '../hooks/usePermission'
-import CustomFields, { customPayload } from './CustomFields'
+import { customPayload } from './CustomFields'
 import { useT } from '../lib/i18n/context'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
@@ -72,19 +73,16 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0
 }
 const optNum = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? undefined : Number(v))
+const usableFeedTypes = (rows) => (rows || []).filter((f) => f.active !== false && !f.deleted_at)
+const NO_RECORDS = []
 
 const DailyUploadPage = () => {
   const router = useRouter()
-  const [cages, setCages] = useState([])
-  const [feedTypes, setFeedTypes] = useState([])
-  // Feed on hand at the active site (the server checks stock per site).
-  const [siteStockById, setSiteStockById] = useState(null)
-  const [loggedCageIds, setLoggedCageIds] = useState(() => new Set())
+  const convex = useConvex()
   const [loading, setLoading] = useState(false)
   const [copying, setCopying] = useState(false)
   const [error, setError] = useState('')
   const [errorLine, setErrorLine] = useState(null)
-  const [lookupsReady, setLookupsReady] = useState(false)
   const online = useOnline()
   const [scanOpen, setScanOpen] = useState(false)
   // Blank feed is "not recorded", not 0 kg: the first Save asks (Q-016).
@@ -102,71 +100,39 @@ const DailyUploadPage = () => {
   )
   const lines = Array.isArray(formData.lines) ? formData.lines : []
   const unit = formData.feedUnit === 'bags' ? 'bags' : 'kg'
+  const layout = useFormLayout('production.daily')
 
-  const loadLookups = useCallback(async () => {
-    let locationId
-    try {
-      locationId = getActiveLocationId()
-      const [cageRes, feedRes, levels] = await Promise.all([
-        cageService.getActiveCages(),
-        feedTypeService.getAllFeedTypes(),
-        locationId
-          ? getConvexHttpClient()
-              .query(api.inventory.listStockLevels, { locationId })
-              .catch(() => null)
-          : Promise.resolve(null),
-      ])
-      setSiteStockById(
-        levels ? new Map(levels.map((l) => [l.feed_type_id, Number(l.current_stock) || 0])) : null,
-      )
-      const ok = !cageRes.error && !feedRes.error
-      if (ok) {
-        const nextCages = cageRes.data || []
-        const nextFeed = (feedRes.data || []).filter(
-          (f) => f.active !== false && !f.deleted_at,
-        )
-        setCages(nextCages)
-        setFeedTypes(nextFeed)
-        saveReferenceData(userId, locationId, { cages: nextCages, feedTypes: nextFeed })
-        return
-      }
-      // No signal: fall back to the last lists this user saw on this device.
-      const cached = readReferenceData(userId, locationId)
-      if (cached) {
-        setCages(cached.cages || [])
-        setFeedTypes(cached.feedTypes || [])
-      }
-    } catch (err) {
-      const cached = readReferenceData(userId, locationId)
-      if (cached) {
-        setCages(cached.cages || [])
-        setFeedTypes(cached.feedTypes || [])
-      } else {
-        console.error('Error loading lookups:', err)
-      }
-    } finally {
-      setLookupsReady(true)
-    }
-  }, [userId])
-
-  const loadLogged = useCallback(async (date) => {
-    if (!date) return
-    const { data } = await dailyRecordService.listForDate(date)
-    setLoggedCageIds(new Set((data || []).map((r) => r.cage_id)))
-  }, [])
+  // Live lists, kept on the device for entry with no signal (MOBILE-003).
+  const { activeLocationId, locationArgs } = useLocation()
+  const cageRef = useReferenceList('cages', api.cages.getActive, locationArgs)
+  const feedRef = useReferenceList('feedTypes', api.feed.listFeedTypes, {}, usableFeedTypes)
+  const cages = cageRef.list
+  const feedTypes = feedRef.list
+  const lookupsReady = cageRef.ready && feedRef.ready
+  // Feed on hand at the active site (the server checks stock per site).
+  const levels = useOptionalQuery(
+    api.inventory.listStockLevels,
+    user && activeLocationId ? { locationId: activeLocationId } : 'skip',
+  )
+  const siteStockById = useMemo(
+    () => (levels ? new Map(levels.map((l) => [l.feed_type_id, Number(l.current_stock) || 0])) : null),
+    [levels],
+  )
+  // Cages already logged on the date; updates live, including when the outbox sends.
+  const logged = useOptionalQuery(
+    api.dailyRecords.listForDate,
+    user && formData.date ? { date: formData.date } : 'skip',
+    NO_RECORDS,
+  )
+  const loggedCageIds = useMemo(() => new Set((logged || NO_RECORDS).map((r) => r.cage_id)), [logged])
 
   useEffect(() => {
-    loadLookups()
     // A stale empty draft should open on today, not on the day it was started.
     setFormData((prev) =>
       (prev.lines || []).length === 0 ? { ...prev, date: isoDay() } : prev,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    loadLogged(formData.date)
-  }, [formData.date, loadLogged])
 
   // ---- lines -------------------------------------------------------------
 
@@ -281,8 +247,7 @@ const DailyUploadPage = () => {
     setCopying(true)
     try {
       const prevDate = dayBefore(formData.date)
-      const { data, error: err } = await dailyRecordService.listForDate(prevDate)
-      if (err) throw err
+      const data = await convex.query(api.dailyRecords.listForDate, { date: prevDate })
       const active = new Set(cages.map(idOf))
       const rows = (data || []).filter(
         (r) => active.has(r.cage_id) && !loggedCageIds.has(r.cage_id),
@@ -382,15 +347,6 @@ const DailyUploadPage = () => {
     return ['', null]
   }
 
-  // ---- offline outbox ----------------------------------------------------
-
-  // Queued batches are sent by OutboxSync; refresh what is logged when they go.
-  useEffect(() => {
-    const onChange = () => loadLogged(formData.date)
-    window.addEventListener('pbafarm:outbox', onChange)
-    return () => window.removeEventListener('pbafarm:outbox', onChange)
-  }, [loadLogged, formData.date])
-
   // ---- submit ------------------------------------------------------------
 
   const resetForm = () => {
@@ -403,6 +359,15 @@ const DailyUploadPage = () => {
       showWater: formData.showWater,
       mortalityOnly: formData.mortalityOnly,
     })
+  }
+
+  // A field a layout condition hides is not saved (its value would be unseen).
+  const withoutHidden = (line) => {
+    const hidden = hiddenCoreKeys(layout.sections, line, line.custom)
+    if (!hidden.size) return line
+    const out = { ...line }
+    for (const key of hidden) out[key] = key === 'mortalityCause' ? 'unknown' : ''
+    return out
   }
 
   const handleSubmit = async (e) => {
@@ -418,7 +383,8 @@ const DailyUploadPage = () => {
 
     const payload = {
       date: formData.date,
-      records: lines.map((l) => {
+      records: lines.map((line) => {
+        const l = withoutHidden(line)
         const kg = Math.round(kgOf(l) * 1000) / 1000
         const mort = num(l.mortality)
         return {
@@ -457,8 +423,6 @@ const DailyUploadPage = () => {
           : t('daily.savedRecords', { count }),
         'success',
       )
-      loadLookups()
-      loadLogged(formData.date)
     } catch (err) {
       console.error('Error saving daily records:', err)
       const msg = cleanError(err)
@@ -468,6 +432,127 @@ const DailyUploadPage = () => {
       showToast(msg, 'error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  /** One line's built-in inputs, keyed as in FORM_CATALOG['production.daily']; null = hidden by this form. */
+  const lineFields = (line, i) => {
+    const mort = num(line.mortality)
+    const kg = kgOf(line)
+    const blankFeed = Boolean(line.cageId) && (line.feedQty === '' || line.feedQty == null)
+    return {
+      feedQty: mortalityOnly ? null : (
+        <Field
+          label={unit === 'bags' ? t('daily.feedBags') : t('daily.feedKg')}
+          htmlFor={`qty-${line.key}`}
+          hint={unit === 'bags' && kg > 0 ? `${kg.toFixed(1)} kg` : undefined}
+          error={confirmBlank && blankFeed ? t('daily.notRecorded') : undefined}
+        >
+          <Input
+            id={`qty-${line.key}`}
+            type="number"
+            inputMode="decimal"
+            enterKeyHint="next"
+            step={unit === 'bags' ? '0.5' : '0.1'}
+            min="0"
+            placeholder={t('daily.notRecorded')}
+            value={line.feedQty}
+            onChange={(e) => updateLine(line.key, 'feedQty', e.target.value)}
+            className="tabular-nums"
+          />
+        </Field>
+      ),
+      mortality: (
+        <Field label={t('daily.mortality')} htmlFor={`mort-${line.key}`}>
+          <Input
+            id={`mort-${line.key}`}
+            type="number"
+            inputMode="numeric"
+            enterKeyHint="next"
+            step="1"
+            min="0"
+            placeholder="0"
+            value={line.mortality}
+            onChange={(e) => updateLine(line.key, 'mortality', e.target.value)}
+            className="tabular-nums"
+          />
+        </Field>
+      ),
+      feedTypeId: mortalityOnly ? null : (
+        <Field label={t('daily.feedType')} htmlFor={`feed-${line.key}`}>
+          <Select
+            id={`feed-${line.key}`}
+            value={line.feedTypeId}
+            onChange={(e) => updateLine(line.key, 'feedTypeId', e.target.value)}
+          >
+            <option value="">{t('daily.none')}</option>
+            {feedTypes.map((f) => (
+              <option key={idOf(f)} value={idOf(f)}>
+                {f.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ),
+      mortalityCause:
+        mort > 0 ? (
+          <Field label={t('daily.causeOfDeath')} htmlFor={`cause-${line.key}`}>
+            <Select
+              id={`cause-${line.key}`}
+              value={line.mortalityCause || 'unknown'}
+              onChange={(e) => updateLine(line.key, 'mortalityCause', e.target.value)}
+            >
+              {MORTALITY_CAUSES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null,
+      dissolvedOxygen: formData.showWater ? (
+        <Field label={t('entry.doMgL')} htmlFor={`do-${line.key}`}>
+          <Input
+            id={`do-${line.key}`}
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            min="0"
+            value={line.dissolvedOxygen ?? ''}
+            onChange={(e) => updateLine(line.key, 'dissolvedOxygen', e.target.value)}
+            className="tabular-nums"
+          />
+        </Field>
+      ) : null,
+      temperatureC: formData.showWater ? (
+        <Field label={t('entry.tempC')} htmlFor={`temp-${line.key}`}>
+          <Input
+            id={`temp-${line.key}`}
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            value={line.temperatureC ?? ''}
+            onChange={(e) => updateLine(line.key, 'temperatureC', e.target.value)}
+            className="tabular-nums"
+          />
+        </Field>
+      ) : null,
+      notes: (
+        <details open={Boolean(line.notes) || undefined}>
+          <summary className="inline-flex min-h-12 sm:min-h-9 cursor-pointer items-center text-sm text-muted hover:text-chart-ink select-none">
+            {line.notes ? t('daily.note') : t('daily.addNote')}
+          </summary>
+          <label htmlFor={`notes-${line.key}`} className="sr-only">
+            {t('daily.noteFor', { n: i + 1 })}
+          </label>
+          <Input
+            id={`notes-${line.key}`}
+            value={line.notes}
+            onChange={(e) => updateLine(line.key, 'notes', e.target.value)}
+            placeholder={t('daily.notePlaceholder')}
+          />
+        </details>
+      ),
     }
   }
 
@@ -497,7 +582,6 @@ const DailyUploadPage = () => {
               createProps={{ defaultFeedTypeId: shortages[0]?.feedTypeId }}
               onCreated={() => {
                 setError('')
-                loadLookups()
                 showToast(t('daily.purchaseRecorded'), 'success')
               }}
             />
@@ -534,9 +618,7 @@ const DailyUploadPage = () => {
                 onChange={handleChange}
                 feedTypes={feedTypes}
                 ready={lookupsReady}
-                onFeedTypesChanged={loadLookups}
                 onCreated={(result) => {
-                  loadLookups()
                   if (result?.kind === 'feedType' && result.id) {
                     setFormData((prev) => ({ ...prev, defaultFeedTypeId: result.id }))
                   }
@@ -593,7 +675,6 @@ const DailyUploadPage = () => {
               secondaryCreateKind="stocking"
               secondaryCreateLabel={t('daily.stockCage')}
               onCreated={(result) => {
-                loadLookups()
                 if (result?.kind === 'stocking') {
                   showToast(t('daily.stockingCreated'), 'success')
                 }
@@ -685,7 +766,6 @@ const DailyUploadPage = () => {
                 const mort = num(line.mortality)
                 const kg = kgOf(line)
                 const flagged = errorLine === i
-                const blankFeed = Boolean(line.cageId) && (line.feedQty === '' || line.feedQty == null)
                 return (
                   <div
                     key={line.key}
@@ -735,119 +815,18 @@ const DailyUploadPage = () => {
                         <Trash2 size={18} aria-hidden />
                       </button>
                     </div>
-                    {!mortalityOnly && (
-                    <Field
-                      label={unit === 'bags' ? t('daily.feedBags') : t('daily.feedKg')}
-                      htmlFor={`qty-${line.key}`}
-                      hint={unit === 'bags' && kg > 0 ? `${kg.toFixed(1)} kg` : undefined}
-                      error={confirmBlank && blankFeed ? t('daily.notRecorded') : undefined}
-                      className="md:col-span-3"
-                    >
-                      <Input
-                        id={`qty-${line.key}`}
-                        type="number"
-                        inputMode="decimal"
-                        enterKeyHint="next"
-                        step={unit === 'bags' ? '0.5' : '0.1'}
-                        min="0"
-                        placeholder={t('daily.notRecorded')}
-                        value={line.feedQty}
-                        onChange={(e) => updateLine(line.key, 'feedQty', e.target.value)}
-                        className="tabular-nums"
-                      />
-                    </Field>
+                    {line.cageId && !mortalityOnly && (
+                      <RationSuggestion cageId={line.cageId} className="col-span-2 md:col-span-12 text-xs" />
                     )}
-                    <Field label={t('daily.mortality')} htmlFor={`mort-${line.key}`} className="md:col-span-3">
-                      <Input
-                        id={`mort-${line.key}`}
-                        type="number"
-                        inputMode="numeric"
-                        enterKeyHint="next"
-                        step="1"
-                        min="0"
-                        placeholder="0"
-                        value={line.mortality}
-                        onChange={(e) => updateLine(line.key, 'mortality', e.target.value)}
-                        className="tabular-nums"
-                      />
-                    </Field>
-                    {!mortalityOnly && (
-                    <Field label={t('daily.feedType')} htmlFor={`feed-${line.key}`} className="col-span-2 md:col-span-3">
-                      <Select
-                        id={`feed-${line.key}`}
-                        value={line.feedTypeId}
-                        onChange={(e) => updateLine(line.key, 'feedTypeId', e.target.value)}
-                      >
-                        <option value="">{t('daily.none')}</option>
-                        {feedTypes.map((f) => (
-                          <option key={idOf(f)} value={idOf(f)}>
-                            {f.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                    )}
-                    {mort > 0 && (
-                      <Field label={t('daily.causeOfDeath')} htmlFor={`cause-${line.key}`} className="col-span-2 md:col-span-3">
-                        <Select
-                          id={`cause-${line.key}`}
-                          value={line.mortalityCause || 'unknown'}
-                          onChange={(e) => updateLine(line.key, 'mortalityCause', e.target.value)}
-                        >
-                          {MORTALITY_CAUSES.map((c) => (
-                            <option key={c.value} value={c.value}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </Field>
-                    )}
-                    {formData.showWater && (
-                      <>
-                        <Field label={t('entry.doMgL')} htmlFor={`do-${line.key}`} className="md:col-span-3">
-                          <Input
-                            id={`do-${line.key}`}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.1"
-                            min="0"
-                            value={line.dissolvedOxygen ?? ''}
-                            onChange={(e) => updateLine(line.key, 'dissolvedOxygen', e.target.value)}
-                            className="tabular-nums"
-                          />
-                        </Field>
-                        <Field label={t('entry.tempC')} htmlFor={`temp-${line.key}`} className="md:col-span-3">
-                          <Input
-                            id={`temp-${line.key}`}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.1"
-                            value={line.temperatureC ?? ''}
-                            onChange={(e) => updateLine(line.key, 'temperatureC', e.target.value)}
-                            className="tabular-nums"
-                          />
-                        </Field>
-                      </>
-                    )}
-                    <details className="col-span-2 md:col-span-12" open={Boolean(line.notes) || undefined}>
-                      <summary className="inline-flex min-h-12 sm:min-h-9 cursor-pointer items-center text-sm text-muted hover:text-chart-ink select-none">
-                        {line.notes ? t('daily.note') : t('daily.addNote')}
-                      </summary>
-                      <label htmlFor={`notes-${line.key}`} className="sr-only">
-                        {t('daily.noteFor', { n: i + 1 })}
-                      </label>
-                      <Input
-                        id={`notes-${line.key}`}
-                        value={line.notes}
-                        onChange={(e) => updateLine(line.key, 'notes', e.target.value)}
-                        placeholder={t('daily.notePlaceholder')}
-                      />
-                    </details>
-                    <div className="col-span-2 md:col-span-12">
-                      <CustomFields
-                        entity="dailyRecords"
-                        value={line.custom}
-                        onChange={(next) => updateLine(line.key, 'custom', next)}
+                    <div className="col-span-2 md:col-span-12 space-y-2">
+                      <FormLayout
+                        formKey="production.daily"
+                        layout={layout}
+                        compact
+                        fields={lineFields(line, i)}
+                        coreValues={line}
+                        custom={line.custom}
+                        onCustomChange={(next) => updateLine(line.key, 'custom', next)}
                         locationId={cages.find((c) => idOf(c) === line.cageId)?.location_id}
                         core={{ mortality: mort, feedAmount: kg, mortalityCause: line.mortalityCause }}
                         idPrefix={`cf-${line.key}`}
@@ -889,14 +868,13 @@ const DailyUploadPage = () => {
               createProps={{ defaultFeedTypeId: shortages[0].feedTypeId }}
               onCreated={() => {
                 setError('')
-                loadLookups()
                 showToast(t('daily.purchaseRecorded'), 'success')
               }}
             />
           )}
 
           {canOverride && shortages.length > 0 && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3 dark:bg-amber-500/10 dark:border-amber-500/30">
+            <div className="mt-4 rounded-lg border border-warn/30 bg-warn/10 p-4 space-y-3">
               <label className="flex items-center gap-2 text-sm text-chart-ink">
                 <input
                   type="checkbox"
@@ -925,7 +903,7 @@ const DailyUploadPage = () => {
 
         <StickyActions>
           {confirmBlank && blankFeedLines.length > 0 && (
-            <p role="alert" className="basis-full flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+            <p role="alert" className="basis-full flex items-start gap-2 text-sm text-warn">
               <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
               <span>
                 {t('daily.noFeedFor', { names: blankFeedLines.map((l) => cageName(l.cageId)).join(', ') })}

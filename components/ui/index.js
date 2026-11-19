@@ -1,9 +1,11 @@
 /** Shared UI primitives — Harbor Soft light dashboard */
-import { Children, cloneElement, isValidElement, useRef } from 'react'
+import { Children, cloneElement, isValidElement, useId, useRef } from 'react'
 import Link from 'next/link'
+import { X } from 'lucide-react'
 import { useT } from '../../lib/i18n/context'
 import { useTerm } from '../../hooks/useTerm'
 import { usePermission, usePermissions } from '../../hooks/usePermission'
+import { useDialogA11y } from '../../hooks/useDialogA11y'
 import { routePermission } from '../../lib/routePermissions'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
@@ -141,7 +143,7 @@ export function HealthMeter({ score, label }) {
       >
         <div
           className={`h-full rounded-full ${
-            clamped >= 75 ? 'bg-kelp' : clamped >= 50 ? 'bg-amber-500' : 'bg-signal'
+            clamped >= 75 ? 'bg-kelp' : clamped >= 50 ? 'bg-warn' : 'bg-signal'
           }`}
           style={{ width: `${clamped}%` }}
         />
@@ -193,6 +195,106 @@ export function LoadingState({ label, className = '' }) {
     <div role="status" aria-live="polite" className={`flex items-center justify-center gap-3 py-8 text-sm text-muted ${className}`}>
       <span className="h-5 w-5 animate-spin rounded-full border-2 border-lake border-t-transparent" aria-hidden />
       <span>{label || t('ui.loading')}</span>
+    </div>
+  )
+}
+
+const MODAL_SIZE = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
+  '4xl': 'max-w-4xl',
+}
+
+/**
+ * Shared dialog (UX-901). Renders nothing while `open` is false. Backdrop
+ * click and Escape call `onClose` unless `dismissible` is false (e.g. while
+ * saving); `closeOnBackdrop={false}` keeps long forms open on a stray
+ * click. Focus moves in, is trapped, and returns to the opener
+ * (useDialogA11y). `footer` holds the actions; the body scrolls. Pass
+ * `as="form"` plus `onSubmit` to make the whole panel a form.
+ */
+export function Modal({
+  open = true,
+  onClose,
+  title,
+  description,
+  icon,
+  footer,
+  children,
+  size = 'md',
+  dismissible = true,
+  closeOnBackdrop = true,
+  showClose = false,
+  role = 'dialog',
+  as: Panel = 'div',
+  className = '',
+  bodyClassName = '',
+  layerClassName = 'z-[100]',
+  ...panelProps
+}) {
+  const t = useT()
+  const titleId = useId()
+  const descriptionId = useId()
+  const close = () => {
+    if (dismissible) onClose?.()
+  }
+  const panelRef = useDialogA11y({ open, onClose, canClose: dismissible })
+  if (!open) return null
+
+  return (
+    <div className={`fixed inset-0 flex items-center justify-center p-4 ${layerClassName}`}>
+      <div
+        className="absolute inset-0 modal-backdrop"
+        onClick={closeOnBackdrop ? close : undefined}
+        aria-hidden
+      />
+      <Panel
+        ref={panelRef}
+        role={role}
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-describedby={description ? descriptionId : undefined}
+        className={`relative flex max-h-[90vh] w-full flex-col gap-4 rounded-xl border border-foam-deep bg-surface p-6 text-chart-ink shadow-xl ${MODAL_SIZE[size] || MODAL_SIZE.md} ${className}`}
+        {...panelProps}
+      >
+        {(title || showClose) && (
+          <div className="flex items-start gap-3">
+            {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
+            <div className="min-w-0 flex-1">
+              {title && (
+                <h2 id={titleId} className="text-lg font-semibold text-chart-ink">
+                  {title}
+                </h2>
+              )}
+              {description && (
+                <p id={descriptionId} className="mt-1 text-sm text-muted">
+                  {description}
+                </p>
+              )}
+            </div>
+            {showClose && (
+              <button
+                type="button"
+                onClick={close}
+                disabled={!dismissible}
+                aria-label={t('common.close')}
+                className="-m-1 rounded-lg p-1 text-muted hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake disabled:opacity-50"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            )}
+          </div>
+        )}
+        {children != null && children !== false && (
+          <div className={`-mx-1 min-h-0 flex-1 overflow-y-auto px-1 ${bodyClassName}`}>{children}</div>
+        )}
+        {footer && (
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">{footer}</div>
+        )}
+      </Panel>
     </div>
   )
 }

@@ -850,7 +850,10 @@
     "form": "Formulaire",
     "formName": {
       "production_sampling": "Échantillonnage bimensuel",
-      "production_stocking": "Empoissonnement"
+      "production_stocking": "Empoissonnement",
+      "production_harvest": "Récolte",
+      "production_daily": "Saisie quotidienne (chaque cage)",
+      "inventory_feedIssue": "Sortie d'aliment"
     },
     "section": {
       "session": "Séance",
@@ -860,7 +863,13 @@
       "cageBatch": "Cage et lot",
       "fish": "Mesures des poissons",
       "source": "Origine et superviseurs",
-      "notes": "Notes"
+      "notes": "Notes",
+      "details": "Détails de la récolte",
+      "grades": "Répartition par taille",
+      "feed": "Alimentation",
+      "mortality": "Mortalité",
+      "what": "Quoi et où",
+      "quantity": "Quantité"
     },
     "core": {
       "date": "Date d'échantillonnage",
@@ -878,7 +887,20 @@
       "sourceLocation": "Lieu d'origine",
       "transferSupervisor": "Superviseur du transfert",
       "samplingSupervisor": "Superviseur de l'échantillonnage",
-      "notes": "Notes"
+      "notes": "Notes",
+      "harvestDate": "Date de récolte",
+      "harvestType": "Type de récolte",
+      "totalWeight": "Poids total",
+      "estimatedCount": "Nombre estimé",
+      "fcr": "IC",
+      "sizeBreakdown": "Répartition par taille",
+      "feedQty": "Quantité d'aliment",
+      "feedTypeId": "Type d'aliment",
+      "mortality": "Mortalité",
+      "mortalityCause": "Cause de la mort",
+      "usageDate": "Date de sortie",
+      "bags": "Sacs",
+      "quantityKg": "Kilogrammes"
     },
     "sectionTitle": "Titre de la section",
     "newSection": "Nouvelle section",

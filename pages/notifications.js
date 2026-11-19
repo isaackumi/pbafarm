@@ -12,7 +12,7 @@ import { api } from '../convex/_generated/api'
 
 const TONE = {
   success: 'bg-lagoon-700',
-  warning: 'bg-amber-500',
+  warning: 'bg-warn',
   error: 'bg-signal',
   info: 'bg-lake',
 }

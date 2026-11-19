@@ -59,7 +59,7 @@ function profileRows(unit, type) {
 
 const LEVEL_TONE = {
   ok: 'bg-kelp',
-  warn: 'bg-amber-500',
+  warn: 'bg-warn',
   over: 'bg-signal',
   unknown: 'bg-foam-deep',
 }

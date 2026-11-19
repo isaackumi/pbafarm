@@ -5,10 +5,10 @@ import { useT } from '../../lib/i18n/context'
 import { formatDateTime } from '../../lib/format'
 
 const TONE = {
-  succeeded: 'bg-emerald-50 text-emerald-800',
-  partial: 'bg-amber-50 text-amber-900',
-  failed: 'bg-red-50 text-red-800',
-  retrying: 'bg-amber-50 text-amber-900',
+  succeeded: 'bg-kelp/10 text-kelp',
+  partial: 'bg-warn/10 text-warn',
+  failed: 'bg-signal/10 text-signal',
+  retrying: 'bg-warn/10 text-warn',
   skipped: 'bg-foam text-muted',
   queued: 'bg-foam text-muted',
   running: 'bg-foam text-muted',
@@ -67,7 +67,7 @@ export default function DeliveryLog() {
                       {t('reportBuilder.log.nextAttempt', { when: formatDateTime(d.nextAttemptAt) })}
                     </span>
                   )}
-                  {d.error && <span className="block max-w-xs text-xs text-red-800">{d.error}</span>}
+                  {d.error && <span className="block max-w-xs text-xs text-signal">{d.error}</span>}
                 </td>
                 <td className="px-3 py-2">
                   <ul className="space-y-0.5">

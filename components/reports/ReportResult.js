@@ -121,12 +121,12 @@ function ResultView({ definition, result, name }) {
         )}
       </div>
       {result.sourceTruncated && (
-        <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
           {t('reportBuilder.result.sourceTruncated')}
         </p>
       )}
       {result.rowsTruncated && (
-        <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p role="note" className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
           {t('reportBuilder.result.rowsTruncated')}
         </p>
       )}

@@ -54,9 +54,9 @@ const CHANNELS = [
 const RUN_STATUS = {
   queued: { label: 'Queued', className: 'bg-foam text-chart-ink' },
   running: { label: 'Running', className: 'bg-lake/10 text-lake' },
-  retrying: { label: 'Retrying', className: 'bg-amber-100 text-amber-900' },
+  retrying: { label: 'Retrying', className: 'bg-warn/10 text-warn' },
   succeeded: { label: 'Sent', className: 'bg-kelp/15 text-kelp' },
-  partial: { label: 'Partly failed', className: 'bg-amber-100 text-amber-900' },
+  partial: { label: 'Partly failed', className: 'bg-warn/10 text-warn' },
   failed: { label: 'Failed', className: 'bg-signal/10 text-signal' },
   skipped: { label: 'Skipped', className: 'bg-foam text-muted' },
 }

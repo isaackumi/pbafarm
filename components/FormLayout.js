@@ -20,9 +20,12 @@ import { defaultValues, isEmpty, visibleDefs } from '../convex/lib/customFieldRu
 /** `{ sections, defs, ready }` for a catalogued form; sections are never empty once defs load. */
 export function useFormLayout(formKey) {
   const { canUseApp } = useAuth()
+  const known = !!FORM_CATALOG[formKey]
   const entity = FORM_CATALOG[formKey]?.entity
-  const saved = useQuery(api.formLayouts.get, canUseApp && entity ? { formKey } : 'skip')
-  const defs = useCustomFieldDefs(entity)
+  const saved = useQuery(api.formLayouts.get, canUseApp && known ? { formKey } : 'skip')
+  const entityDefs = useCustomFieldDefs(entity)
+  // Forms with no custom-field entity arrange their core fields only.
+  const defs = entity ? entityDefs : NO_DEFS
   const sections = useMemo(
     () => resolveLayout(formKey, saved?.sections, (defs ?? []).map((d) => ({ key: d.key, required: d.required, archived: d.archived }))),
     [formKey, saved, defs],
@@ -47,13 +50,19 @@ export function hiddenCoreKeys(sections, coreValues, custom) {
   )
 }
 
+const NO_DEFS = []
+
 const WIDTH = { full: 'md:col-span-2', half: '' }
+// Compact (a repeated line, e.g. one cage in daily entry): four columns on wide screens.
+const COMPACT_WIDTH = { full: 'col-span-2 md:col-span-4', half: 'col-span-2' }
 
 /**
  * Props: formKey; layout (from useFormLayout); fields ({ coreKey: node });
  * coreValues (built-in values for conditions); custom / onCustomChange;
  * locationId; core (values for custom fields' own 'core:' conditions);
- * errorKey; idPrefix.
+ * errorKey; idPrefix; compact (render sections as small labelled grids, for
+ * a form repeated per line). A core node that is null (hidden by the form's
+ * own rules) is skipped.
  */
 export default function FormLayout({
   formKey,
@@ -66,6 +75,7 @@ export default function FormLayout({
   core,
   errorKey,
   idPrefix = 'cf',
+  compact = false,
 }) {
   const t = useT()
   const { sections, defs } = layout
@@ -103,7 +113,8 @@ export default function FormLayout({
           .filter((f) => fieldShown(f, values))
           .map((f) => {
             const [ns, key] = f.ref.split(':', 2)
-            const span = WIDTH[f.width] ?? ''
+            const widths = compact ? COMPACT_WIDTH : WIDTH
+            const span = widths[f.width] ?? ''
             if (ns === 'core') {
               const node = fields[key]
               return node ? (
@@ -114,7 +125,7 @@ export default function FormLayout({
             }
             const def = customShown.get(key)
             if (!def) return null
-            const wide = f.width ? span : def.type === 'long_text' || def.type === 'multiselect' ? WIDTH.full : ''
+            const wide = f.width ? span : def.type === 'long_text' || def.type === 'multiselect' ? widths.full : ''
             return (
               <CustomFieldControl
                 key={f.ref}
@@ -129,10 +140,18 @@ export default function FormLayout({
           })
           .filter(Boolean)
         if (!items.length) return null
+        const title = section.title || t.or(`formLayout.section.${section.key}`, section.key)
+        if (compact) {
+          return (
+            <div key={section.key} role="group" aria-label={title}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-2 items-end">{items}</div>
+            </div>
+          )
+        }
         return (
           <FormSection
             key={section.key}
-            title={section.title || t.or(`formLayout.section.${section.key}`, section.key)}
+            title={title}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{items}</div>
           </FormSection>

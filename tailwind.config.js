@@ -32,6 +32,7 @@ module.exports = {
           DEFAULT: '#dc2626',
           soft: '#fca5a5',
         },
+        warn: '#b45309',
         'chart-ink': '#18181b',
         muted: '#71717a',
         surface: '#ffffff',

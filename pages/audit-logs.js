@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Select, StatCard, EmptyState } from '../components/ui'
+import { PageHeader, Button, Select, StatCard, EmptyState, Modal } from '../components/ui'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import AuditChainStatus from '../components/AuditChainStatus'
@@ -200,29 +200,26 @@ function AuditLogsContent() {
         )}
       </div>
 
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 modal-backdrop"
-            onClick={() => setSelected(null)}
-          />
-          <div role="dialog" aria-modal="true" className="relative bg-surface border border-foam-deep rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto p-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-chart-ink">
-                  {selected.action_type} · {selected.table_name}
-                </h3>
-                <p className="text-sm text-muted">
-                  {selected.user_label || selected.user_id || 'Unknown user'} ·{' '}
-                  {selected.created_at
-                    ? new Date(selected.created_at).toLocaleString()
-                    : '—'}
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                Close
-              </Button>
-            </div>
+      <Modal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        size="2xl"
+        title={selected ? `${selected.action_type} · ${selected.table_name}` : ''}
+        description={
+          selected
+            ? `${selected.user_label || selected.user_id || 'Unknown user'} · ${
+                selected.created_at ? new Date(selected.created_at).toLocaleString() : '—'
+              }`
+            : ''
+        }
+        footer={
+          <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
+            Close
+          </Button>
+        }
+      >
+        {selected && (
+          <>
             <p className="text-xs text-muted mb-2">Record: {selected.record_id || '—'}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -240,9 +237,9 @@ function AuditLogsContent() {
                 </pre>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </Layout>
   )
 }

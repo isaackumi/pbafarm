@@ -13,10 +13,10 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, Select, Textarea, EmptyState, LoadingState } from '../components/ui'
+import { PageHeader, Button, Field, Input, Select, Textarea, EmptyState, LoadingState, Modal } from '../components/ui'
 import FarmLocationSelect from '../components/FarmLocationSelect'
 import { api } from '../convex/_generated/api'
-import { stockingPatchArgs } from '../lib/stockingService'
+import { stockingPatchArgs } from '../lib/recordArgs'
 import { useLocation } from '../contexts/LocationContext'
 import { errorMessage } from '../lib/errorMessage'
 import { useToast } from '../components/Toast'
@@ -569,137 +569,122 @@ function StockingManagement() {
 
       {/* Edit Stocking Modal */}
       {showEditModal && editingStocking && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowEditModal(false)}
-          ></div>
-          <div className="relative bg-surface rounded-xl border border-foam-deep shadow-xl max-w-md w-full p-6">
-            <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
-              Edit stocking {editingStocking.batch_number}
-            </h3>
-
-            {error && (
-              <div className="mb-4 bg-signal/10 text-signal p-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 bg-kelp/10 text-kelp p-3 rounded-lg text-sm">
-                {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <Field label="Stocking date" htmlFor="stocking-stocking-date" required>
-                <Input
-                  id="stocking-stocking-date"
-                  type="date"
-                  name="stocking_date"
-                  value={formData.stocking_date}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-
-              <Field label="Fish count" htmlFor="stocking-fish-count" required>
-                <Input
-                  id="stocking-fish-count"
-                  type="number"
-                  name="fish_count"
-                  value={formData.fish_count}
-                  onChange={handleChange}
-                  min="1"
-                  required
-                />
-              </Field>
-
-              <Field label="Initial ABW (g)" htmlFor="stocking-initial-abw-g" required>
-                <Input
-                  id="stocking-initial-abw-g"
-                  type="number"
-                  name="initial_abw"
-                  value={formData.initial_abw}
-                  onChange={handleChange}
-                  step="0.1"
-                  min="0.1"
-                  required
-                />
-              </Field>
-
-              <Field
-                label="Initial biomass (kg)"
-                htmlFor="stocking-biomass"
-                hint="Worked out as (ABW / 1000) × fish count"
+        <Modal
+          onClose={() => setShowEditModal(false)}
+          as="form"
+          onSubmit={handleSubmitEdit}
+          title={`Edit stocking ${editingStocking.batch_number}`}
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowEditModal(false)}
               >
-                <Input
-                  id="stocking-biomass"
-                  type="text"
-                  value={calculateBiomass().toFixed(2)}
-                  className="bg-foam tabular-nums"
-                  readOnly
-                />
-              </Field>
+                Cancel
+              </Button>
+              <Button type="submit">Save changes</Button>
+            </>
+          }
+        >
+          {error && (
+            <div className="bg-signal/10 text-signal p-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
-              <div className="space-y-1.5">
-                <p className="block text-sm font-semibold text-chart-ink">
-                  Source location
-                </p>
-                <FarmLocationSelect
-                  name="source_location"
-                  value={formData.source_location}
-                  onChange={handleChange}
-                  valueKind="name"
-                  syncWithHeader={false}
-                />
-              </div>
+          {success && (
+            <div className="bg-kelp/10 text-kelp p-3 rounded-lg text-sm">
+              {success}
+            </div>
+          )}
 
-              <Field label="Notes" htmlFor="stocking-notes">
-                <Textarea
-                  id="stocking-notes"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Optional notes"
-                />
-              </Field>
+          <Field label="Stocking date" htmlFor="stocking-stocking-date" required>
+            <Input
+              id="stocking-stocking-date"
+              type="date"
+              name="stocking_date"
+              value={formData.stocking_date}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-              <div className="flex justify-end gap-3 mt-5">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Save changes</Button>
-              </div>
-            </form>
+          <Field label="Fish count" htmlFor="stocking-fish-count" required>
+            <Input
+              id="stocking-fish-count"
+              type="number"
+              name="fish_count"
+              value={formData.fish_count}
+              onChange={handleChange}
+              min="1"
+              required
+            />
+          </Field>
+
+          <Field label="Initial ABW (g)" htmlFor="stocking-initial-abw-g" required>
+            <Input
+              id="stocking-initial-abw-g"
+              type="number"
+              name="initial_abw"
+              value={formData.initial_abw}
+              onChange={handleChange}
+              step="0.1"
+              min="0.1"
+              required
+            />
+          </Field>
+
+          <Field
+            label="Initial biomass (kg)"
+            htmlFor="stocking-biomass"
+            hint="Worked out as (ABW / 1000) × fish count"
+          >
+            <Input
+              id="stocking-biomass"
+              type="text"
+              value={calculateBiomass().toFixed(2)}
+              className="bg-foam tabular-nums"
+              readOnly
+            />
+          </Field>
+
+          <div className="space-y-1.5">
+            <p className="block text-sm font-semibold text-chart-ink">
+              Source location
+            </p>
+            <FarmLocationSelect
+              name="source_location"
+              value={formData.source_location}
+              onChange={handleChange}
+              valueKind="name"
+              syncWithHeader={false}
+            />
           </div>
-        </div>
+
+          <Field label="Notes" htmlFor="stocking-notes">
+            <Textarea
+              id="stocking-notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Optional notes"
+            />
+          </Field>
+        </Modal>
       )}
 
       {deleteStocking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 modal-backdrop"
-            onClick={() => !deleting && setDeleteStocking(null)}
-          />
-          <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-6 h-6 text-signal" />
-              <h3 className="font-display text-lg font-medium text-chart-ink">Delete stocking</h3>
-            </div>
-            <p className="text-sm text-muted mb-5">
-              Delete batch{' '}
-              <span className="font-semibold text-chart-ink">
-                {deleteStocking.batch_number || deleteStocking.batchNumber}
-              </span>
-              ? Only pending or rejected stockings can be deleted.
-            </p>
-            <div className="flex justify-end gap-3">
+        <Modal
+          onClose={() => setDeleteStocking(null)}
+          dismissible={!deleting}
+          role="alertdialog"
+          title="Delete stocking"
+          icon={<AlertTriangle className="w-6 h-6 text-signal" />}
+          footer={
+            <>
               <Button
                 type="button"
                 variant="secondary"
@@ -716,9 +701,17 @@ function StockingManagement() {
               >
                 {deleting ? 'Deleting…' : 'Delete stocking'}
               </Button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-sm text-muted mb-5">
+            Delete batch{' '}
+            <span className="font-semibold text-chart-ink">
+              {deleteStocking.batch_number || deleteStocking.batchNumber}
+            </span>
+            ? Only pending or rejected stockings can be deleted.
+          </p>
+        </Modal>
       )}
     </Layout>
   )

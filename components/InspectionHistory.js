@@ -2,7 +2,7 @@ import { INSPECTION_KINDS } from './InspectionForm'
 
 const RESULT_TONE = {
   ok: 'text-kelp',
-  needs_attention: 'text-amber-700 dark:text-amber-300',
+  needs_attention: 'text-warn',
   failed: 'text-signal',
 }
 const RESULT_LABEL = { ok: 'OK', needs_attention: 'Needs attention', failed: 'Failed' }

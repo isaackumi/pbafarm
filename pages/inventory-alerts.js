@@ -39,9 +39,9 @@ function InventoryAlerts() {
       case 'critical':
         return 'text-signal bg-signal/10'
       case 'high':
-        return 'text-orange-700 dark:text-orange-300 bg-orange-500/15'
+        return 'text-warn bg-warn/20'
       case 'medium':
-        return 'text-amber-700 dark:text-amber-300 bg-amber-500/15'
+        return 'text-warn bg-warn/10'
       default:
         return 'text-muted bg-foam-deep/40'
     }

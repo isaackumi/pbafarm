@@ -63,8 +63,8 @@ export const save = mutation({
     const companyId = m.companyId
     if (!companyId) throw userError('FORBIDDEN', 'Choose an organization first')
     requireFormKey(formKey)
-    const entity = FORM_CATALOG[formKey].entity as CustomEntity
-    const defs = await loadDefs(ctx, companyId, entity)
+    const entity = FORM_CATALOG[formKey].entity as CustomEntity | undefined
+    const defs = entity ? await loadDefs(ctx, companyId, entity) : []
     const clean: LayoutSection[] = sections.map((s) => ({
       key: s.key,
       ...(s.title?.trim() ? { title: s.title.trim() } : {}),
