@@ -5,7 +5,39 @@
 @custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
 
 @theme {
-  /* Semantic tokens track light/dark via theme.css variables */
+  /* Paper redesign tokens (theme.css; HANDOFF §2 dark, §3b light) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-pink: var(--pink);
+  --color-pink-fill: var(--pink-fill);
+  --color-cyan: var(--cyan);
+  --color-cyan-fill: var(--cyan-fill);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-alert: var(--alert);
+  --color-dot-good: var(--dot-good);
+  --color-dot-warn: var(--dot-warn);
+  --color-dot-alert: var(--dot-alert);
+  --color-button: var(--button);
+  --color-button-text: var(--button-text);
+  /* Paper token names, so classes copied from get_jsx resolve too */
+  --color-text-muted: var(--muted);
+  --color-text-faint: var(--faint);
+  --color-pearl-pink: var(--pink);
+  --color-pearl-cyan: var(--cyan);
+
+  --radius-card: 20px;
+  --radius-input: 14px;
+  --radius-pill: 999px;
+  --spacing-sidebar: 248px;
+
+  /* Legacy names; theme.css aliases them to the tokens above */
   --color-lagoon-700: var(--lagoon-700);
   --color-lagoon-800: var(--lagoon-800);
   --color-lagoon-950: var(--lagoon-950);
@@ -15,12 +47,8 @@
   --color-kelp-soft: var(--kelp-soft);
   --color-signal: var(--signal);
   --color-signal-soft: var(--signal-soft);
-  --color-warn: var(--warn);
   --color-chart-ink: var(--chart-ink);
-  --color-muted: var(--muted);
-  --color-surface: var(--surface);
   --color-input-border: var(--input-border);
-  /* Lake water: the one accent (selection, focus, links, key figure) */
   --color-lake: var(--lake);
   --color-lake-soft: var(--lake-soft);
 
@@ -35,8 +63,8 @@
   --color-primary-800: #18181b;
   --color-primary-900: #09090b;
 
-  --font-display: var(--font-lexend, 'Lexend'), system-ui, sans-serif;
-  --font-sans: var(--font-figtree, 'Figtree'), system-ui, sans-serif;
+  --font-display: var(--font-inter, 'Inter'), system-ui, sans-serif;
+  --font-sans: var(--font-inter, 'Inter'), system-ui, sans-serif;
   --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
 }
 

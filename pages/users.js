@@ -25,7 +25,9 @@ export default function UsersPage() {
           />
           <div className="space-y-6">
             <MembersPanel />
-            <RolesPanel />
+            <div id="roles" className="scroll-mt-24">
+              <RolesPanel />
+            </div>
             <UserManagement />
           </div>
         </FormPage>

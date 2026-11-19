@@ -81,16 +81,18 @@
       "weeklyReport": "Rapport hebdomadaire"
     },
     "section": {
-      "production": "Travail quotidien",
+      "production": "Production",
       "records": "Registres",
       "finance": "Finances",
       "hatchery": "Écloserie",
       "cages": "Cages",
-      "feed": "Aliment",
+      "feed": "Aliment et stocks",
       "inventory": "Stocks",
       "analytics": "Rapports",
-      "management": "Gestion",
-      "admin": "Administration"
+      "management": "Paramètres",
+      "admin": "Administration",
+      "home": "Accueil",
+      "tasks": "Mes tâches"
     },
     "home": "Accueil",
     "dailyEntry": "Saisie du jour",
@@ -105,7 +107,18 @@
     "logOut": "Se déconnecter",
     "loggedOut": "Déconnexion réussie",
     "logoutFailed": "Échec de la déconnexion",
-    "user": "Utilisateur"
+    "user": "Utilisateur",
+    "paper": {
+      "dailyEntry": "Saisie quotidienne",
+      "sampling": "Échantillonnage et croissance",
+      "stocking": "Empoissonnement et transferts",
+      "health": "Santé et eau",
+      "harvest": "Récolte",
+      "feedOverview": "Vue d'ensemble aliment",
+      "feedAnalytics": "Analyses aliment",
+      "inventoryOverview": "Vue d'ensemble stocks",
+      "inventoryAnalytics": "Analyses stocks"
+    }
   },
   "common": {
     "language": "Langue",

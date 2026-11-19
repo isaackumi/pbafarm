@@ -81,16 +81,18 @@
       "weeklyReport": "Weekly report"
     },
     "section": {
-      "production": "Daily work",
+      "production": "Production",
       "records": "Records",
       "finance": "Finance",
       "hatchery": "Hatchery",
       "cages": "Cages",
-      "feed": "Feed",
+      "feed": "Feed & inventory",
       "inventory": "Inventory",
       "analytics": "Reports",
-      "management": "Management",
-      "admin": "Admin"
+      "management": "Settings",
+      "admin": "Admin",
+      "home": "Home",
+      "tasks": "My tasks"
     },
     "home": "Home",
     "dailyEntry": "Daily entry",
@@ -105,7 +107,18 @@
     "logOut": "Log out",
     "loggedOut": "Logged out successfully",
     "logoutFailed": "Logout failed",
-    "user": "User"
+    "user": "User",
+    "paper": {
+      "dailyEntry": "Daily entry",
+      "sampling": "Sampling & growth",
+      "stocking": "Stocking & transfers",
+      "health": "Health & water",
+      "harvest": "Harvest",
+      "feedOverview": "Feed overview",
+      "feedAnalytics": "Feed analytics",
+      "inventoryOverview": "Inventory overview",
+      "inventoryAnalytics": "Inventory analytics"
+    }
   },
   "common": {
     "language": "Language",

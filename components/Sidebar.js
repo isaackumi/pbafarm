@@ -1,37 +1,130 @@
-// components/Sidebar.js — Harbor Soft collapsible nav
+// components/Sidebar.js — Paper shell sidebar (docs/design/paper-redesign, Shell 7Z-0)
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
 import {
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Fish,
-  LogOut,
+  ChevronsUpDown,
+  Plus,
   X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
-import LogoutConfirmationModal from './LogoutConfirmationModal'
-import { useToast } from './Toast'
+import { useLocation } from '../contexts/LocationContext'
 import { usePermissions } from '../hooks/usePermission'
 import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 import { navKey } from '../lib/i18n'
-import LanguageSwitcher from './LanguageSwitcher'
 import { MENU_SECTIONS } from '../lib/navigation'
+import { routePermission } from '../lib/routePermissions'
+import { api } from '../convex/_generated/api'
+import { Avatar } from './ui/Avatar'
 
+/** PBA Farm mark: gradient fish (Paper FG-0). */
+export function BrandMark({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden className="shrink-0">
+      <defs>
+        <linearGradient id="pba-brand-fish" x1="0" y1="0" x2="28" y2="28">
+          <stop style={{ stopColor: 'var(--pink-fill)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--cyan-fill)' }} />
+        </linearGradient>
+      </defs>
+      <path d="M3 14c4-6 11-8 17-4l5-4v16l-5-4c-6 4-13 2-17-4z" fill="url(#pba-brand-fish)" />
+      <circle cx="10" cy="13" r="1.6" className="fill-bg" />
+    </svg>
+  )
+}
+
+/**
+ * Workspace switcher (Paper EZ-0): company, active site (switches location),
+ * optional feed cover line and the "Stock a new cage" action.
+ */
+function WorkspaceCard({ displayName, logoUrl, feedCover, canStock }) {
+  const { locations, activeLocationId, setActiveLocation, loading } = useLocation()
+  const active = locations.find((loc) => (loc.id || loc._id) === activeLocationId)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="relative flex items-center gap-2.5 px-1.5" data-tour="location-switcher">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="size-6 shrink-0 rounded-[6px] border border-line-strong object-cover"
+          />
+        ) : (
+          <Avatar name={displayName} size={24} square />
+        )}
+        <div className="flex min-w-0 grow basis-0 flex-col">
+          <div className="truncate text-[14px] font-medium leading-[18px] text-text">{displayName}</div>
+          {locations.length > 0 ? (
+            <div className="truncate text-[12px] leading-4 text-muted">{active?.name || '—'}</div>
+          ) : (
+            <Link href="/farm-locations" className="relative z-10 text-[12px] leading-4 text-cyan hover:underline">
+              Set location
+            </Link>
+          )}
+        </div>
+        {locations.length > 1 && (
+          <>
+            <ChevronsUpDown size={14} strokeWidth={2} className="shrink-0 text-muted" aria-hidden />
+            <select
+              aria-label="Farm location"
+              title="Changing location refreshes the page"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              value={activeLocationId || ''}
+              disabled={loading}
+              onChange={(e) => {
+                const next = e.target.value
+                if (!next || next === activeLocationId) return
+                setActiveLocation(next)
+              }}
+            >
+              {locations.map((loc) => (
+                <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+      {feedCover && (
+        <div className="px-1.5 text-[12px] leading-[17px] text-muted">
+          Feed cover <span className="text-text">{feedCover.days} days</span>
+          {feedCover.tonnes != null && <> · {feedCover.tonnes} t</>}
+        </div>
+      )}
+      {canStock && (
+        <Link
+          href="/stocking"
+          className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-pill border border-line-strong text-[13px] font-medium leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          <Plus size={14} strokeWidth={2} aria-hidden />
+          Stock a new cage
+        </Link>
+      )}
+    </div>
+  )
+}
+
+const ROW =
+  'flex h-10 w-full shrink-0 items-center gap-3 rounded-pill px-3.5 text-left text-[14px] leading-[18px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+const ROW_ACTIVE = 'bg-button text-button-text font-medium'
+const ROW_IDLE = 'text-text hover:bg-surface-2'
 
 const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }) => {
-  const { user, signOut } = useAuth()
+  const { user, canUseApp } = useAuth()
   const { displayName, logoUrl } = useCompanySettings()
   const router = useRouter()
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
-  // Short drawer (UX-004): sections start closed; the one holding the
-  // current page opens on navigation.
-  const [expandedSections, setExpandedSections] = useState({})
-  const { showToast } = useToast()
+  // Production stays open like the Paper shell; the section holding the
+  // current page also opens on navigation (UX-004).
+  const [expandedSections, setExpandedSections] = useState({ production: true })
   const t = useT()
   const term = useTerm()
 
@@ -39,6 +132,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   const isSuperAdmin = role === 'super_admin'
   // Menu follows the member's permissions (PERM-003), not the legacy role.
   const { can } = usePermissions()
+  const openTasks = useQuery(api.tasks.openCount, canUseApp ? {} : 'skip')
 
   const menuItems = useMemo(() => {
     const filtered = Object.entries(MENU_SECTIONS)
@@ -72,20 +166,6 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     }
   }, [router.pathname])
 
-  const handleLogout = async () => {
-    try {
-      const { cancelled } = (await signOut()) || {}
-      if (cancelled) return
-      showToast(t('nav.loggedOut'), 'success')
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout failed:', error)
-      showToast(t('nav.logoutFailed'), 'error')
-    } finally {
-      setShowLogoutModal(false)
-    }
-  }
-
   const toggleSection = (section) => {
     if (collapsed) return
     setExpandedSections((prev) => ({
@@ -117,39 +197,28 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     return !hasMoreSpecific
   }
 
+  const label = (item) => term.text(t.or(item.labelKey || navKey(item.path), item.title))
+  const sectionLabel = (key, section) => t.or(`nav.section.${key}`, section.title)
+  const name = displayName || 'PBA Farm'
+
   return (
     <aside
-      className={`print:hidden fixed top-0 left-0 h-screen flex flex-col z-40 border-r border-lagoon-950/40 bg-lagoon-950 text-foam transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
+      className={`print:hidden fixed top-0 left-0 z-40 flex h-screen flex-col overflow-y-auto border-r border-line bg-bg text-text transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
-      } ${collapsed ? 'w-[4.5rem]' : 'w-72 lg:w-64'}`}
+      } ${collapsed ? 'w-[4.5rem] gap-6 px-3 py-7' : 'w-72 gap-7 px-5 py-7 lg:w-sidebar'}`}
       aria-label={t('nav.mainNavigation')}
       data-tour="sidebar"
     >
-      <div
-        className={`flex items-center border-b border-white/10 ${
-          collapsed ? 'justify-center px-2 py-4' : 'justify-between px-4 py-4'
-        }`}
-      >
+      <div className={`flex items-center ${collapsed ? 'flex-col gap-3' : 'justify-between gap-2'}`}>
         <Link
           href="/dashboard"
-          className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}
-          title={displayName || 'PBA Farm'}
+          className={`flex min-w-0 items-center gap-2.5 ${collapsed ? '' : 'px-1.5'}`}
+          title="PBA Farm"
         >
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-xl object-cover bg-white/10"
-            />
-          ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
-              <Fish size={22} aria-hidden />
-            </span>
-          )}
+          <BrandMark />
           {!collapsed && (
-            <span className="truncate font-display text-base font-semibold text-white">
-              {displayName || 'PBA Farm'}
+            <span className="whitespace-nowrap font-sans text-[20px] font-extrabold leading-6 tracking-[-0.03em] text-text">
+              PBA FARM
             </span>
           )}
         </Link>
@@ -157,51 +226,68 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
           <button
             type="button"
             onClick={onMobileClose}
-            className="lg:hidden rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="lg:hidden rounded-pill p-2 text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             aria-label={t('nav.closeMenu')}
           >
             <X size={18} />
           </button>
         )}
-        {typeof onToggle === 'function' && !collapsed && (
+        {typeof onToggle === 'function' && (
           <button
             type="button"
             onClick={onToggle}
-            className="hidden lg:block rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label={t('nav.collapse')}
+            className="hidden lg:block rounded-pill p-1.5 text-faint hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            aria-label={collapsed ? t('nav.expand') : t('nav.collapse')}
           >
-            <ChevronsLeft size={18} />
+            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
           </button>
         )}
       </div>
 
-      {collapsed && typeof onToggle === 'function' && (
-        <div className="flex justify-center py-2 border-b border-white/10">
-          <button
-            type="button"
-            onClick={onToggle}
-            className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label={t('nav.expand')}
-          >
-            <ChevronsRight size={18} />
-          </button>
-        </div>
+      {!collapsed && (
+        <WorkspaceCard
+          displayName={name}
+          logoUrl={logoUrl}
+          canStock={can(routePermission('/stocking'))}
+        />
       )}
 
-      <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-5">
-        {Object.entries(menuItems).map(([key, section], index) => {
+      <nav className="flex flex-col gap-[2px]">
+        {Object.entries(menuItems).map(([key, section]) => {
           const SectionIcon = section.icon
+          const title = sectionLabel(key, section)
+
+          if (section.direct) {
+            const item = section.items[0]
+            const active = isActive(item.path)
+            const count = item.path === '/tasks' ? openTasks : undefined
+            return (
+              <Link
+                key={key}
+                href={item.path}
+                data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? title : undefined}
+                className={`${ROW} ${active ? ROW_ACTIVE : ROW_IDLE} ${collapsed ? 'justify-center px-0' : ''}`}
+              >
+                <SectionIcon size={16} strokeWidth={2} className="shrink-0" aria-hidden />
+                {!collapsed && <span className="grow basis-0 truncate">{title}</span>}
+                {!collapsed && count > 0 && (
+                  <span className={`text-[12px] leading-4 ${active ? 'text-button-text' : 'text-muted'}`}>
+                    {count}
+                  </span>
+                )}
+              </Link>
+            )
+          }
+
           const open = collapsed ? false : expandedSections[key]
           const sectionActive = section.items.some((item) => isActive(item.path))
-
+          // Paper highlights the group row when the current page belongs to a
+          // closed group; an open group highlights the page itself.
+          const rowActive = sectionActive && !open
           return (
-            <div key={key}>
-              {index > 0 && (
-                <div
-                  className={`mb-4 ${collapsed ? 'mx-2' : 'mx-1'} border-t border-white/10`}
-                  aria-hidden
-                />
-              )}
+            <div key={key} className="flex flex-col">
               <button
                 type="button"
                 data-tour-section={key}
@@ -221,57 +307,39 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                   }
                   toggleSection(key)
                 }}
-                className={`w-full flex items-center rounded-lg px-3 min-h-10 text-left text-sm font-medium leading-5 transition-colors ${
-                  sectionActive
-                    ? 'bg-white/10 text-white'
-                    : 'text-zinc-100 hover:bg-white/5 hover:text-white'
-                } ${collapsed ? 'justify-center' : 'justify-between'}`}
-                title={collapsed ? t.or(`nav.section.${key}`, section.title) : undefined}
+                className={`${ROW} ${rowActive ? ROW_ACTIVE : ROW_IDLE} ${collapsed ? 'justify-center px-0' : ''}`}
+                title={collapsed ? title : undefined}
               >
-                <span className={`flex items-center min-w-0 ${collapsed ? '' : 'gap-2.5'}`}>
-                  <SectionIcon
-                    size={18}
-                    className="shrink-0 text-zinc-200"
-                    aria-hidden
-                  />
-                  {!collapsed && <span className="truncate">{t.or(`nav.section.${key}`, section.title)}</span>}
-                </span>
+                <SectionIcon size={16} strokeWidth={2} className="shrink-0" aria-hidden />
+                {!collapsed && <span className="grow basis-0 truncate">{title}</span>}
                 {!collapsed &&
                   (open ? (
-                    <ChevronDown size={16} className="text-zinc-400 shrink-0" />
+                    <ChevronDown size={14} strokeWidth={2} className="shrink-0" aria-hidden />
                   ) : (
-                    <ChevronRight size={16} className="text-zinc-400 shrink-0" />
+                    <ChevronRight
+                      size={14}
+                      strokeWidth={2}
+                      className={`shrink-0 ${rowActive ? '' : 'text-muted'}`}
+                      aria-hidden
+                    />
                   ))}
               </button>
 
               {open && (
-                <ul className="mt-1.5 mb-1 ml-2.5 border-l border-white/15 pl-2.5 space-y-1">
+                <ul className="flex flex-col pl-[42px]">
                   {section.items.map((item) => {
-                    const ItemIcon = item.icon
                     const active = isActive(item.path)
                     return (
                       <li key={item.path}>
                         <Link
                           href={item.path}
                           data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
-                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 min-h-9 text-sm leading-5 transition-colors ${
-                            active
-                              ? 'bg-white text-lagoon-950 shadow-sm'
-                              : 'text-zinc-200 hover:bg-white/5 hover:text-white'
+                          aria-current={active ? 'page' : undefined}
+                          className={`-ml-3 flex h-[34px] items-center rounded-pill px-3 text-[13px] leading-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                            active ? 'bg-surface-2 font-medium text-text' : 'text-muted hover:text-text'
                           }`}
                         >
-                          {active && (
-                            <span
-                              className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-lagoon-950"
-                              aria-hidden
-                            />
-                          )}
-                          <ItemIcon
-                            size={18}
-                            className={active ? 'text-lagoon-950' : 'text-zinc-400'}
-                            aria-hidden
-                          />
-                          <span className="truncate">{term.text(t.or(navKey(item.path), item.title))}</span>
+                          <span className="truncate">{label(item)}</span>
                         </Link>
                       </li>
                     )
@@ -282,51 +350,6 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
           )
         })}
       </nav>
-
-      <div className={`border-t border-white/10 ${collapsed ? 'p-2' : 'p-3'}`}>
-        <div
-          className={`flex items-center ${
-            collapsed ? 'flex-col gap-2' : 'justify-between gap-2'
-          }`}
-        >
-          <div
-            className={`flex items-center min-w-0 ${collapsed ? 'justify-center' : 'gap-2.5'}`}
-            title={user?.email || 'User'}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-lagoon-950">
-              {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white leading-5">
-                  {user?.name || user?.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="truncate font-data text-xs text-zinc-400 mt-0.5">
-                  {user?.email || '—'}
-                </p>
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowLogoutModal(true)}
-            className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            title={t('nav.logOut')}
-            aria-label={t('nav.logOut')}
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
-        {!collapsed && <LanguageSwitcher tone="dark" className="mt-3" />}
-      </div>
-
-      {showLogoutModal && (
-        <LogoutConfirmationModal
-          isOpen={showLogoutModal}
-          onClose={() => setShowLogoutModal(false)}
-          onConfirm={handleLogout}
-        />
-      )}
     </aside>
   )
 }
