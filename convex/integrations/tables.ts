@@ -189,12 +189,15 @@ export const integrationTables = {
     payloadBytes: v.number(),
     /** Signature timestamp (unix seconds). */
     signedAt: v.optional(v.number()),
+    /** Hex SHA-256 of the signed `${t}.${body}`: replay key the signature covers. */
+    signedDigest: v.optional(v.string()),
     duplicates: v.optional(v.number()),
     lastDuplicateAt: v.optional(v.number()),
     domainEventId: v.optional(v.id('domainEvents')),
     receivedAt: v.number(),
   })
     .index('by_webhookId_and_externalId', ['webhookId', 'externalId'])
+    .index('by_webhookId_and_signedDigest', ['webhookId', 'signedDigest'])
     .index('by_webhookId_and_receivedAt', ['webhookId', 'receivedAt'])
     .index('by_companyId_and_receivedAt', ['companyId', 'receivedAt'])
     .index('by_receivedAt', ['receivedAt']),

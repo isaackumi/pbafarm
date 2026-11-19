@@ -8,9 +8,11 @@
  *   X-PBA-Event-Type: <type>                 (optional, or `type` in the body)
  *
  * Replay protection: the timestamp must be within TOLERANCE_SEC of now, and
- * an event id is processed once per webhook (inboundWebhookEvents). A
- * captured request replayed later fails the timestamp; replayed at once, it
- * is a duplicate.
+ * an event is processed once per webhook (inboundWebhookEvents), keyed by
+ * both its event id and the SHA-256 of the signed material (`${t}.${body}`).
+ * The event id header is not signed, so the digest is what stops a captured
+ * request from being resent at once under a fresh X-PBA-Event-Id. A replay
+ * later fails the timestamp; replayed at once, it is a duplicate.
  */
 import { hmacSha256Hex } from './webhookLogic'
 
@@ -30,7 +32,7 @@ export function inboundAad(companyId: string, webhookId: string) {
 }
 
 export type SignatureCheck =
-  | { ok: true; signedAt: number }
+  | { ok: true; signedAt: number; signedDigest: string }
   | { ok: false; reason: 'missing_signature' | 'malformed_signature' | 'stale_timestamp' | 'bad_signature' }
 
 /** Constant-time comparison of two hex strings. */
@@ -62,8 +64,16 @@ export async function checkSignature(
   }
   if (t === null || !sigs.length) return { ok: false, reason: 'malformed_signature' }
   if (Math.abs(nowMs / 1000 - t) > toleranceSec) return { ok: false, reason: 'stale_timestamp' }
-  const expected = await hmacSha256Hex(secret, `${t}.${rawBody}`)
-  return sigs.some((s) => sameHex(expected, s)) ? { ok: true, signedAt: t } : { ok: false, reason: 'bad_signature' }
+  const signed = `${t}.${rawBody}`
+  const expected = await hmacSha256Hex(secret, signed)
+  if (!sigs.some((s) => sameHex(expected, s))) return { ok: false, reason: 'bad_signature' }
+  return { ok: true, signedAt: t, signedDigest: await sha256Hex(signed) }
+}
+
+/** Hex SHA-256 of the signed string: the replay key that the signature covers. */
+export async function sha256Hex(message: string): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message)))
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 export const REJECT_MESSAGES: Record<Exclude<SignatureCheck, { ok: true }>['reason'], string> = {

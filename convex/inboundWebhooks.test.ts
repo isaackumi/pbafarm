@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api } from './_generated/api'
 import { toBase64 } from './lib/crypto'
-import { checkSignature, eventIdentity, signInbound } from './integrations/inboundLogic'
+import { checkSignature, eventIdentity, sha256Hex, signInbound } from './integrations/inboundLogic'
 
 const modules = import.meta.glob('./**/*.ts')
 const TEST_KEY = toBase64(new Uint8Array(32).map((_, i) => i + 3))
@@ -57,7 +57,11 @@ describe('inbound signature rules', () => {
     const now = 1_800_000_000_000
     const body = '{"id":"e1"}'
     const header = await signInbound('whsec_x', body, now)
-    expect(await checkSignature('whsec_x', body, header, now)).toEqual({ ok: true, signedAt: now / 1000 })
+    expect(await checkSignature('whsec_x', body, header, now)).toEqual({
+      ok: true,
+      signedAt: now / 1000,
+      signedDigest: await sha256Hex(`${now / 1000}.${body}`),
+    })
     expect(await checkSignature('whsec_x', body + ' ', header, now)).toMatchObject({ reason: 'bad_signature' })
     expect(await checkSignature('whsec_y', body, header, now)).toMatchObject({ reason: 'bad_signature' })
     expect(await checkSignature('whsec_x', body, header, now + 301_000)).toMatchObject({ reason: 'stale_timestamp' })
@@ -121,6 +125,28 @@ describe('inbound webhooks', () => {
     expect(domain[0].companyId).toBe(s.companyA)
     const audit = await s.t.run((ctx) => ctx.db.query('auditLogs').collect())
     expect(audit.some((a) => a.actionType === 'inbound_webhook_received' && a.companyId === s.companyA)).toBe(true)
+  })
+
+  test('a captured signed request resent with a new event id header is a duplicate', async () => {
+    const s = await setup()
+    const hook = await createHook(s)
+    const body = JSON.stringify({ id: 'evt_1', type: 'lab.result' })
+    const sig = await signInbound(hook.secret, body, Date.now())
+    const first = await post(s, hook.path, body, { 'X-PBA-Signature': sig })
+    expect(await first.json()).toMatchObject({ duplicate: false, id: 'evt_1' })
+    for (const replayId of ['evt_replay_1', 'evt_replay_2']) {
+      const replay = await post(s, hook.path, body, { 'X-PBA-Signature': sig, 'X-PBA-Event-Id': replayId })
+      expect(replay.status).toBe(200)
+      expect(await replay.json()).toMatchObject({ duplicate: true })
+    }
+    const events = await eventsOf(s)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ externalId: 'evt_1', duplicates: 2 })
+    expect(await s.t.run((ctx) => ctx.db.query('domainEvents').collect())).toHaveLength(1)
+    // A legitimate new event (different body) is still accepted.
+    const body2 = JSON.stringify({ id: 'evt_2' })
+    const next = await post(s, hook.path, body2, { 'X-PBA-Signature': await signInbound(hook.secret, body2, Date.now()) })
+    expect(await next.json()).toMatchObject({ duplicate: false, id: 'evt_2' })
   })
 
   test('bad, stale or missing signatures are 401 and logged without the body', async () => {

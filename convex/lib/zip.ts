@@ -3,6 +3,7 @@
  * exports (ENT-005). No dependencies: CRC-32, local headers, central
  * directory, end record. Files must stay under 4 GB in total (no ZIP64).
  */
+import { csvCell } from './csvCell'
 
 let CRC_TABLE: Uint32Array | null = null
 
@@ -127,7 +128,7 @@ export function readZip(bytes: Uint8Array): Array<{ name: string; data: Uint8Arr
   return out
 }
 
-/** RFC 4180 CSV of rows; columns are the union of keys, objects as JSON. */
+/** RFC 4180 CSV of rows; columns are the union of keys, objects as JSON, formula-leading text neutralised. */
 export function toCsv(rows: Array<Record<string, unknown>>): string {
   const columns: string[] = []
   const seen = new Set<string>()
@@ -139,12 +140,7 @@ export function toCsv(rows: Array<Record<string, unknown>>): string {
       }
     }
   }
-  const cell = (value: unknown) => {
-    if (value === undefined || value === null) return ''
-    const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-  }
-  const lines = [columns.map(cell).join(',')]
-  for (const row of rows) lines.push(columns.map((c) => cell(row[c])).join(','))
+  const lines = [columns.map((c) => csvCell(c)).join(',')]
+  for (const row of rows) lines.push(columns.map((c) => csvCell(row[c])).join(','))
   return lines.join('\r\n') + '\r\n'
 }

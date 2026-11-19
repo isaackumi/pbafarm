@@ -94,6 +94,12 @@ describe('zip writer', () => {
       'a,b,c\r\n"x,y","say ""hi""",\r\n1,,"{""k"":2}"\r\n',
     )
   })
+
+  test('CSV neutralises spreadsheet formulas but keeps numbers', () => {
+    expect(toCsv([{ note: '=1+1', at: '@SUM(A1)', qty: -5, amount: '-12.50', cmd: '-2+3' }])).toBe(
+      "note,at,qty,amount,cmd\r\n'=1+1,'@SUM(A1),-5,-12.50,'-2+3\r\n",
+    )
+  })
 })
 
 describe('tenant table list matches the schema', () => {
