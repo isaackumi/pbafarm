@@ -10,10 +10,10 @@
 
 import type * as accountingExport from "../accountingExport.js";
 import type * as actAs from "../actAs.js";
+import type * as aiReports from "../aiReports.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as approvalAlerts from "../approvalAlerts.js";
-import type * as aiReports from "../aiReports.js";
 import type * as assistant from "../assistant.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
@@ -97,8 +97,8 @@ import type * as lib_customFields from "../lib/customFields.js";
 import type * as lib_cycles from "../lib/cycles.js";
 import type * as lib_dashboardLayout from "../lib/dashboardLayout.js";
 import type * as lib_dates from "../lib/dates.js";
-import type * as lib_earlyWarning from "../lib/earlyWarning.js";
 import type * as lib_docValidators from "../lib/docValidators.js";
+import type * as lib_earlyWarning from "../lib/earlyWarning.js";
 import type * as lib_effect from "../lib/effect.js";
 import type * as lib_effectHttp from "../lib/effectHttp.js";
 import type * as lib_email from "../lib/email.js";
@@ -226,10 +226,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountingExport: typeof accountingExport;
   actAs: typeof actAs;
+  aiReports: typeof aiReports;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   approvalAlerts: typeof approvalAlerts;
-  aiReports: typeof aiReports;
   assistant: typeof assistant;
   audit: typeof audit;
   auth: typeof auth;
@@ -313,8 +313,8 @@ declare const fullApi: ApiFromModules<{
   "lib/cycles": typeof lib_cycles;
   "lib/dashboardLayout": typeof lib_dashboardLayout;
   "lib/dates": typeof lib_dates;
-  "lib/earlyWarning": typeof lib_earlyWarning;
   "lib/docValidators": typeof lib_docValidators;
+  "lib/earlyWarning": typeof lib_earlyWarning;
   "lib/effect": typeof lib_effect;
   "lib/effectHttp": typeof lib_effectHttp;
   "lib/email": typeof lib_email;

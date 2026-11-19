@@ -68,6 +68,13 @@ describe('weekly report (AI-003)', () => {
     expect(acceptReply('Too short.', pack, 'en')).toBeNull()
   })
 
+  it('rejects a reply carrying links or contacts (prompt injection via names)', () => {
+    const ok = 'This week 312 fish died (0.8%) and the farm used 1,450.2 kg of feed for 1,204.5 kg of gain, FCR 1.2.'
+    expect(acceptReply(ok + ' Renew at https://evil.example now.', pack, 'en')).toBeNull()
+    expect(acceptReply(ok + ' Visit pay-farm.com today.', pack, 'en')).toBeNull()
+    expect(acceptReply(ok + ' Email boss@farm-pay.io for help.', pack, 'en')).toBeNull()
+  })
+
   it('renders costs only in the finance text', () => {
     const fin = { currency: 'GHS', feed_cost: 21753, other_cost: 1200, total_cost: 22953, cost_per_kg_gain: 19.06 }
     expect(financeText(fin, 'en')).toContain('22,953')
