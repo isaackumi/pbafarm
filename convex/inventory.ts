@@ -106,6 +106,21 @@ export const listStockLevels = query({
     includeInactive: v.optional(v.boolean()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      feed_type_id: v.id('feedTypes'),
+      feed_type_name: v.string(),
+      current_stock: v.number(),
+      current_stock_bags: v.number(),
+      bag_size_kg: v.number(),
+      minimum_stock: v.number(),
+      price_per_kg: v.number(),
+      supplier_name: v.union(v.string(), v.null()),
+      active: v.boolean(),
+      stock_value: v.number(),
+      is_low_stock: v.boolean(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes =
@@ -187,6 +202,36 @@ export const listTransactions = query({
     /** Only this site's movements (FARM-003). */
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('feedInventoryTransactions'),
+      _id: v.id('feedInventoryTransactions'),
+      feed_type_id: v.id('feedTypes'),
+      transaction_type: v.union(
+        v.literal('issue'),
+        v.literal('usage'),
+        v.literal('purchase'),
+        v.literal('daily_usage'),
+        v.literal('adjustment'),
+        v.literal('transfer'),
+        v.literal('reversal'),
+        v.literal('transfer_out'),
+        v.literal('transfer_in'),
+      ),
+      quantity_kg: v.number(),
+      bags: v.optional(v.number()),
+      transaction_date: v.number(),
+      reference_id: v.optional(v.string()),
+      transfer_id: v.union(v.string(), v.null()),
+      batch_number: v.union(v.string(), v.null()),
+      expiry_date: v.union(v.string(), v.null()),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+      notes: v.optional(v.string()),
+      company_id: v.optional(v.id('companies')),
+      created_by: v.optional(v.id('users')),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const maxRows = Math.min(args.limit ?? 200, 500)
@@ -492,6 +537,22 @@ export const listLots = query({
     feedTypeId: v.optional(v.id('feedTypes')),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('feedInventory'),
+      _id: v.id('feedInventory'),
+      feed_type_id: v.id('feedTypes'),
+      feed_type_name: v.union(v.string(), v.null()),
+      quantity_kg: v.number(),
+      batch_number: v.union(v.string(), v.null()),
+      expiry_date: v.union(v.string(), v.null()),
+      location: v.string(),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+      company_id: v.optional(v.id('companies')),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let lots = args.feedTypeId
@@ -531,6 +592,16 @@ export const listAlerts = query({
     /** Stock at this site (its lots plus unassigned stock), FARM-003. */
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      feed_type_id: v.id('feedTypes'),
+      feed_type_name: v.string(),
+      current_stock: v.number(),
+      minimum_stock: v.number(),
+      shortage: v.number(),
+      supplier_name: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
@@ -628,6 +699,18 @@ export const stockTally = query({
  */
 export const siteLedgerTally = query({
   args: { feedTypeId: v.optional(v.id('feedTypes')) },
+  returns: v.array(
+    v.object({
+      feed_type_id: v.id('feedTypes'),
+      feed_type_name: v.string(),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+      ledger_kg: v.number(),
+      lots_kg: v.number(),
+      delta: v.number(),
+      ok: v.boolean(),
+      legacy_transfers: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')

@@ -74,6 +74,42 @@ function validateDate(date: string) {
 
 export const listCategories = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.array(
+    v.union(
+      v.object({
+        key: v.union(
+          v.literal('other'),
+          v.literal('treatment'),
+          v.literal('equipment'),
+          v.literal('feed'),
+          v.literal('fingerlings'),
+          v.literal('labour'),
+          v.literal('utilities'),
+          v.literal('transport'),
+        ),
+        label: v.union(
+          v.literal('Fingerlings'),
+          v.literal('Feed (not in purchases)'),
+          v.literal('Labour'),
+          v.literal('Treatment'),
+          v.literal('Equipment'),
+          v.literal('Utilities'),
+          v.literal('Transport'),
+          v.literal('Other'),
+        ),
+        builtIn: v.boolean(),
+        active: v.boolean(),
+        id: v.null(),
+      }),
+      v.object({
+        key: v.string(),
+        label: v.string(),
+        builtIn: v.boolean(),
+        active: v.boolean(),
+        id: v.id('expenseCategories'),
+      }),
+    ),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)
@@ -167,6 +203,30 @@ export const list = query({
     cageId: v.optional(v.id('cages')),
     category: v.optional(v.string()),
   },
+  returns: v.object({
+    rows: v.array(
+      v.object({
+        id: v.id('expenses'),
+        date: v.string(),
+        category: v.string(),
+        amount: v.number(),
+        currency: v.string(),
+        notes: v.string(),
+        custom: v.record(v.string(), v.any()),
+        location_id: v.union(v.id('farmLocations'), v.null()),
+        location_name: v.union(v.string(), v.null()),
+        cage_id: v.union(v.id('cages'), v.null()),
+        cage_name: v.union(v.string(), v.null()),
+        stocking_id: v.union(v.id('stockingHistory'), v.null()),
+        supplier_id: v.union(v.id('feedSuppliers'), v.null()),
+        supplier_name: v.union(v.string(), v.null()),
+        created_at: v.number(),
+      }),
+    ),
+    total: v.number(),
+    by_category: v.record(v.string(), v.number()),
+    truncated: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const scope = tenantScope(user)

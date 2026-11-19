@@ -149,8 +149,30 @@ async function insertPayment(
   return id
 }
 
+const salePaymentRow = v.object({
+  id: v.id('salePayments'),
+  _id: v.id('salePayments'),
+  sale_id: v.id('sales'),
+  amount: v.number(),
+  paid_date: v.string(),
+  method: v.union(
+    v.literal('other'),
+    v.literal('cash'),
+    v.literal('mobile_money'),
+    v.literal('bank'),
+    v.literal('cheque'),
+  ),
+  reference: v.union(v.string(), v.null()),
+  notes: v.union(v.string(), v.null()),
+  voided: v.boolean(),
+  void_reason: v.union(v.string(), v.null()),
+  created_by: v.union(v.id('users'), v.null()),
+  created_at: v.number(),
+})
+
 export const listPayments = query({
   args: { saleId: v.id('sales') },
+  returns: v.array(salePaymentRow),
   handler: async (ctx, { saleId }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     await loadSale(ctx, user, saleId)
@@ -172,6 +194,7 @@ export const recordPayment = mutation({
     reference: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('salePayments'),
   handler: async (ctx, { saleId, ...args }) => {
     // Payment status is a financial edit (doc 07 V9).
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
@@ -188,6 +211,7 @@ export const markSalePaid = mutation({
     method: paymentMethod,
     reference: v.optional(v.string()),
   },
+  returns: v.union(v.id('salePayments'), v.null()),
   handler: async (ctx, { saleId, ...args }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const sale = await loadSale(ctx, user, saleId)
@@ -205,6 +229,7 @@ export const markSalePaid = mutation({
 /** Void a payment (kept for the audit trail); the sale's balance reopens. */
 export const removePayment = mutation({
   args: { paymentId: v.id('salePayments'), reason: v.string() },
+  returns: v.null(),
   handler: async (ctx, { paymentId, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     if (!reason.trim()) throw userError('VALIDATION', 'A reason is required')
@@ -233,6 +258,7 @@ export const issueInvoice = mutation({
     dueDate: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id('invoices'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
     const sale = await loadSale(ctx, user, args.saleId)
@@ -285,6 +311,7 @@ export const issueInvoice = mutation({
 
 export const voidInvoice = mutation({
   args: { invoiceId: v.id('invoices') },
+  returns: v.null(),
   handler: async (ctx, { invoiceId }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.correct' })
     const invoice = await ctx.db.get(invoiceId)
@@ -306,6 +333,58 @@ export const voidInvoice = mutation({
 /** Everything the printable invoice shows. */
 export const getInvoice = query({
   args: { invoiceId: v.id('invoices') },
+  returns: v.union(
+    v.object({
+      company: v.union(
+        v.object({
+          name: v.string(),
+          address: v.union(v.string(), v.null()),
+          phone: v.union(v.string(), v.null()),
+          email: v.union(v.string(), v.null()),
+        }),
+        v.null(),
+      ),
+      customer: v.union(
+        v.object({
+          name: v.string(),
+          contact_name: v.union(v.string(), v.null()),
+          phone: v.union(v.string(), v.null()),
+          email: v.union(v.string(), v.null()),
+        }),
+        v.null(),
+      ),
+      site_name: v.union(v.string(), v.null()),
+      sale: v.union(
+        v.object({
+          id: v.id('sales'),
+          sale_date: v.string(),
+          weight_kg: v.number(),
+          price_per_kg: v.number(),
+          unit_count: v.union(v.number(), v.null()),
+          price_per_unit: v.union(v.number(), v.null()),
+          total_amount: v.number(),
+          notes: v.union(v.string(), v.null()),
+        }),
+        v.null(),
+      ),
+      payments: v.array(salePaymentRow),
+      amount_paid: v.number(),
+      balance: v.number(),
+      id: v.id('invoices'),
+      _id: v.id('invoices'),
+      sale_id: v.id('sales'),
+      number: v.string(),
+      issue_date: v.string(),
+      due_date: v.union(v.string(), v.null()),
+      customer_id: v.union(v.id('customers'), v.null()),
+      customer_name: v.string(),
+      amount: v.number(),
+      notes: v.union(v.string(), v.null()),
+      voided: v.boolean(),
+      created_at: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { invoiceId }) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const invoice = await ctx.db.get(invoiceId)
@@ -359,6 +438,40 @@ export const listReceivables = query({
     asOf: v.string(),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.object({
+    total: v.number(),
+    customers: v.array(
+      v.object({
+        customer_id: v.union(v.id('customers'), v.null()),
+        customer_name: v.string(),
+        balance: v.number(),
+        sale_count: v.number(),
+        oldest_days: v.number(),
+        aging: v.object({
+          current: v.number(),
+          d1_30: v.number(),
+          d31_60: v.number(),
+          d61_90: v.number(),
+          d90_plus: v.number(),
+        }),
+      }),
+    ),
+    sales: v.array(
+      v.object({
+        sale_id: v.id('sales'),
+        sale_date: v.string(),
+        customer_id: v.union(v.id('customers'), v.null()),
+        customer_name: v.string(),
+        total_amount: v.number(),
+        amount_paid: v.number(),
+        balance: v.number(),
+        invoice_id: v.union(v.id('invoices'), v.null()),
+        invoice_number: v.union(v.string(), v.null()),
+        due_date: v.union(v.string(), v.null()),
+        days_overdue: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const sales = await scopedRows(ctx, user, 'sales', { locationId: args.locationId })
@@ -402,7 +515,15 @@ export const listReceivables = query({
     }
 
     const bucket = (d: number) => (d === 0 ? 'current' : d <= 30 ? 'd1_30' : d <= 60 ? 'd31_60' : d <= 90 ? 'd61_90' : 'd90_plus')
-    const byCustomer = new Map<string, any>()
+    type CustomerBalance = {
+      customer_id: Id<'customers'> | null
+      customer_name: string
+      balance: number
+      sale_count: number
+      oldest_days: number
+      aging: Record<ReturnType<typeof bucket>, number>
+    }
+    const byCustomer = new Map<string, CustomerBalance>()
     for (const r of open) {
       const key = r.customer_id ?? `name:${r.customer_name.toLowerCase()}`
       if (!byCustomer.has(key)) {
@@ -415,7 +536,7 @@ export const listReceivables = query({
           aging: { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0 },
         })
       }
-      const c = byCustomer.get(key)
+      const c = byCustomer.get(key)!
       c.balance = round2(c.balance + r.balance)
       c.sale_count += 1
       c.oldest_days = Math.max(c.oldest_days, r.days_overdue)

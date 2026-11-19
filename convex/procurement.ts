@@ -61,6 +61,39 @@ export const list = query({
       v.union(v.literal('draft'), v.literal('ordered'), v.literal('received'), v.literal('cancelled')),
     ),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('purchaseOrders'),
+      po_number: v.string(),
+      status: v.union(
+        v.literal('draft'),
+        v.literal('cancelled'),
+        v.literal('ordered'),
+        v.literal('received'),
+      ),
+      supplier_id: v.id('feedSuppliers'),
+      supplier_name: v.union(v.string(), v.null()),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+      location_name: v.union(v.string(), v.null()),
+      expected_date: v.union(v.string(), v.null()),
+      received_date: v.union(v.string(), v.null()),
+      notes: v.string(),
+      lines: v.array(
+        v.object({
+          feed_type_id: v.id('feedTypes'),
+          feed_type_name: v.union(v.string(), v.null()),
+          quantity_kg: v.number(),
+          price_per_kg: v.number(),
+          received_kg: v.union(v.number(), v.null()),
+          received_price_per_kg: v.union(v.number(), v.null()),
+          purchase_id: v.union(v.id('feedPurchases'), v.null()),
+        }),
+      ),
+      ordered_value: v.number(),
+      received_value: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)

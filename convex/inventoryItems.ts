@@ -111,6 +111,29 @@ export const listItems = query({
     locationId: v.optional(v.id('farmLocations')),
     includeArchived: v.optional(v.boolean()),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('inventoryItems'),
+      name: v.string(),
+      category: v.string(),
+      unit: v.string(),
+      minimum_stock: v.number(),
+      unit_cost: v.union(v.number(), v.null()),
+      supplier_id: v.union(v.id('feedSuppliers'), v.null()),
+      supplier_name: v.union(v.string(), v.null()),
+      active: v.boolean(),
+      total: v.number(),
+      site_quantity: v.union(v.number(), v.null()),
+      levels: v.array(
+        v.object({
+          location_id: v.id('farmLocations'),
+          location_name: v.string(),
+          quantity: v.number(),
+        }),
+      ),
+      low: v.boolean(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)
@@ -167,6 +190,26 @@ export const listItems = query({
 
 export const listMovements = query({
   args: { itemId: v.optional(v.id('inventoryItems')), limit: v.optional(v.number()) },
+  returns: v.array(
+    v.object({
+      id: v.id('inventoryMovements'),
+      item_id: v.id('inventoryItems'),
+      item_name: v.union(v.string(), v.null()),
+      location_name: v.union(v.string(), v.null()),
+      cage_name: v.union(v.string(), v.null()),
+      type: v.union(
+        v.literal('issue'),
+        v.literal('adjustment'),
+        v.literal('transfer_out'),
+        v.literal('transfer_in'),
+        v.literal('receipt'),
+      ),
+      quantity: v.number(),
+      unit_cost: v.union(v.number(), v.null()),
+      date: v.string(),
+      notes: v.string(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const scope = tenantScope(user)
