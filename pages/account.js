@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import NotificationPreferencesCard from '../components/NotificationPreferencesCard'
 import AccountDeletionCard from '../components/AccountDeletionCard'
+import { AuthenticatorCard } from '../components/AuthenticatorApp'
 import {
   PageHeader,
   FormPage,
@@ -157,8 +158,11 @@ export default function AccountPage() {
 
           {!(forced && !done) && (
             <div className="mt-6">
-              <NotificationPreferencesCard />
-              {user?.role !== 'super_admin' && (
+              <AuthenticatorCard />
+              <div className="mt-6">
+                <NotificationPreferencesCard />
+              </div>
+              {(user?.realRole ?? user?.role) !== 'super_admin' && (
                 <div className="mt-6">
                   <AccountDeletionCard />
                 </div>

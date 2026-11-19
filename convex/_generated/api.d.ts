@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actAs from "../actAs.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as approvalAlerts from "../approvalAlerts.js";
@@ -50,6 +51,7 @@ import type * as harvest from "../harvest.js";
 import type * as hatchery from "../hatchery.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
+import type * as humanVerification from "../humanVerification.js";
 import type * as idempotency from "../idempotency.js";
 import type * as integrations_apiHttp from "../integrations/apiHttp.js";
 import type * as integrations_apiScopes from "../integrations/apiScopes.js";
@@ -62,6 +64,7 @@ import type * as inventory from "../inventory.js";
 import type * as inventoryItems from "../inventoryItems.js";
 import type * as invoices from "../invoices.js";
 import type * as legacyData from "../legacyData.js";
+import type * as lib_actAs from "../lib/actAs.js";
 import type * as lib_analytics from "../lib/analytics.js";
 import type * as lib_apiActor from "../lib/apiActor.js";
 import type * as lib_auditChain from "../lib/auditChain.js";
@@ -111,10 +114,13 @@ import type * as lib_rollups from "../lib/rollups.js";
 import type * as lib_scope from "../lib/scope.js";
 import type * as lib_siteKpis from "../lib/siteKpis.js";
 import type * as lib_species from "../lib/species.js";
+import type * as lib_sso from "../lib/sso.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_terminology from "../lib/terminology.js";
 import type * as lib_tokens from "../lib/tokens.js";
+import type * as lib_totp from "../lib/totp.js";
 import type * as lib_traceability from "../lib/traceability.js";
+import type * as lib_turnstile from "../lib/turnstile.js";
 import type * as lib_unitStatus from "../lib/unitStatus.js";
 import type * as lib_waterQuality from "../lib/waterQuality.js";
 import type * as lib_zip from "../lib/zip.js";
@@ -132,6 +138,7 @@ import type * as messaging_providers_types from "../messaging/providers/types.js
 import type * as messaging_providers_whatsappCloud from "../messaging/providers/whatsappCloud.js";
 import type * as messaging_validators from "../messaging/validators.js";
 import type * as mfa from "../mfa.js";
+import type * as mfaTotp from "../mfaTotp.js";
 import type * as migrations from "../migrations.js";
 import type * as notificationDispatch from "../notificationDispatch.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
@@ -173,6 +180,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  actAs: typeof actAs;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   approvalAlerts: typeof approvalAlerts;
@@ -215,6 +223,7 @@ declare const fullApi: ApiFromModules<{
   hatchery: typeof hatchery;
   health: typeof health;
   http: typeof http;
+  humanVerification: typeof humanVerification;
   idempotency: typeof idempotency;
   "integrations/apiHttp": typeof integrations_apiHttp;
   "integrations/apiScopes": typeof integrations_apiScopes;
@@ -227,6 +236,7 @@ declare const fullApi: ApiFromModules<{
   inventoryItems: typeof inventoryItems;
   invoices: typeof invoices;
   legacyData: typeof legacyData;
+  "lib/actAs": typeof lib_actAs;
   "lib/analytics": typeof lib_analytics;
   "lib/apiActor": typeof lib_apiActor;
   "lib/auditChain": typeof lib_auditChain;
@@ -276,10 +286,13 @@ declare const fullApi: ApiFromModules<{
   "lib/scope": typeof lib_scope;
   "lib/siteKpis": typeof lib_siteKpis;
   "lib/species": typeof lib_species;
+  "lib/sso": typeof lib_sso;
   "lib/tenancy": typeof lib_tenancy;
   "lib/terminology": typeof lib_terminology;
   "lib/tokens": typeof lib_tokens;
+  "lib/totp": typeof lib_totp;
   "lib/traceability": typeof lib_traceability;
+  "lib/turnstile": typeof lib_turnstile;
   "lib/unitStatus": typeof lib_unitStatus;
   "lib/waterQuality": typeof lib_waterQuality;
   "lib/zip": typeof lib_zip;
@@ -297,6 +310,7 @@ declare const fullApi: ApiFromModules<{
   "messaging/providers/whatsappCloud": typeof messaging_providers_whatsappCloud;
   "messaging/validators": typeof messaging_validators;
   mfa: typeof mfa;
+  mfaTotp: typeof mfaTotp;
   migrations: typeof migrations;
   notificationDispatch: typeof notificationDispatch;
   notificationPreferences: typeof notificationPreferences;

@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import MobileTabBar from './MobileTabBar'
+import { ActAsBanner } from './ActAs'
 
 const TITLE_BY_PREFIX = [
   ['/admin/company-registrations', 'Company Registrations'],
@@ -112,6 +113,7 @@ const Layout = ({ children, title: initialTitle }) => {
           sidebarCollapsed ? 'lg:ml-[4.5rem]' : 'lg:ml-64'
         }`}
       >
+        <ActAsBanner />
         <Header title={title} onOpenMenu={() => setMobileNavOpen(true)} />
         <main className="flex-1 px-4 py-5 pb-24 sm:px-8 sm:py-8 lg:pb-8 animate-fade-in bg-transparent">
           {error && !authError && (

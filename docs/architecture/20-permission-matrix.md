@@ -6,6 +6,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 
 | Function | Permission | Owner | Admin | Manager | Field staff | Viewer |
 |---|---|---|---|---|---|---|
+| `actAs.listForCompany` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.start` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.status` | `allowlisted` | see test | see test | see test | see test | see test |
+| `actAs.stop` | `allowlisted` | see test | see test | see test | see test | see test |
 | `analytics.comparison` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.cycles` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.growth` | `reports.view` | yes | yes | yes | yes | yes |
@@ -111,6 +115,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `dailyRecords.listPage` | `production.view` | yes | yes | yes | yes | yes |
 | `dailyRecords.remove` | `production.records.delete` | yes | yes | no | no | no |
 | `dailyRecords.update` | `production.daily.correct` | yes | yes | yes | no | no |
+| `dashboardLayouts.get` | `reports.view` | yes | yes | yes | yes | yes |
+| `dashboardLayouts.getOrgDefault` | `customization.manage` | yes | yes | no | no | no |
+| `dashboardLayouts.reset` | `reports.view` | yes | yes | yes | yes | yes |
+| `dashboardLayouts.save` | `reports.view` | yes | yes | yes | yes | yes |
 | `emailVerification.requestCode` | `account` | self | self | self | self | self |
 | `emailVerification.status` | `account` | self | self | self | self | self |
 | `emailVerification.verify` | `account` | self | self | self | self | self |
@@ -148,6 +156,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `feed.updatePurchase` | `inventory.purchase.correct` | yes | yes | no | no | no |
 | `feed.updateSupplier` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `feed.voidPurchase` | `inventory.purchase.correct` | yes | yes | no | no | no |
+| `feedingPlans.list` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.rationForCage` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.rations` | `production.view` | yes | yes | yes | yes | yes |
+| `feedingPlans.reset` | `org.settings.manage` | yes | yes | no | no | no |
+| `feedingPlans.save` | `org.settings.manage` | yes | yes | no | no | no |
 | `files.attach` | `files.upload` | yes | yes | yes | yes | no |
 | `files.generateUploadUrl` | `files.upload` | yes | yes | yes | yes | no |
 | `files.list` | `org.view` | yes | yes | yes | yes | yes |
@@ -160,6 +173,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `fishTransfers.listFishTransfersPage` | `production.view` | yes | yes | yes | yes | yes |
 | `fishTransfers.rejectFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
 | `fishTransfers.reverseFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
+| `formLayouts.get` | `org.view` | yes | yes | yes | yes | yes |
+| `formLayouts.listSaved` | `customization.manage` | yes | yes | no | no | no |
+| `formLayouts.reset` | `customization.manage` | yes | yes | no | no | no |
+| `formLayouts.save` | `customization.manage` | yes | yes | no | no | no |
 | `governance.cancelRequest` | `account` | self | self | self | self | self |
 | `governance.decideRequest` | `platform` | no | no | no | no | no |
 | `governance.exportDownloadUrl` | `org.data.export` | yes | yes | no | no | no |
@@ -201,6 +218,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `health.create` | `production.health.record` | yes | yes | yes | yes | no |
 | `health.list` | `production.view` | yes | yes | yes | yes | yes |
 | `health.remove` | `production.records.delete` | yes | yes | no | no | no |
+| `humanVerification.verify` | `allowlisted` | see test | see test | see test | see test | see test |
 | `inventory.createAdjustment` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.createTransfer` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.listAlerts` | `inventory.view` | yes | yes | yes | yes | yes |
@@ -250,6 +268,13 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `mfa.startChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.verifyChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.confirmEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.disable` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.redeemRecoveryCode` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.regenerateRecoveryCodes` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.status` | `allowlisted` | see test | see test | see test | see test | see test |
+| `mfaTotp.verify` | `allowlisted` | see test | see test | see test | see test | see test |
 | `notificationPreferences.mine` | `account` | self | self | self | self | self |
 | `notificationPreferences.update` | `account` | self | self | self | self | self |
 | `notifications.deleteNotification` | `account` | self | self | self | self | self |

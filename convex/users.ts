@@ -5,6 +5,7 @@ import { v } from 'convex/values'
 import { requireUser, revokeUserSessions, sessionMfaVerified } from './lib/authz'
 import { logAudit } from './lib/tenancy'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
+import { actingUser, liveActAsSession } from './lib/actAs'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { maskPhone, normalizePhone } from './lib/phone'
 import { messagingPrefs } from './messaging/channels'
@@ -108,31 +109,34 @@ async function normalizeForCompany(
   return phone
 }
 
-const NO_MFA = {
-  mfaPolicy: false,
-  mfaRequired: false,
-  mfaChannels: [] as string[],
-  mfaDefaultChannel: null as string | null,
-}
-
 /** Two-step state of the current session, for users.current. */
 async function mfaState(ctx: QueryCtx, user: Doc<'users'>) {
-  if (!user.companyId) return NO_MFA
+  // An authenticator app (ENT-003) counts as a way to verify on its own.
+  const mfaTotp = user.totpEnabledAt !== undefined
+  const none = {
+    mfaPolicy: false,
+    mfaRequired: false,
+    mfaChannels: [] as string[],
+    mfaDefaultChannel: null as string | null,
+    mfaTotp,
+  }
+  if (!user.companyId) return none
   const company = await ctx.db.get(user.companyId)
   const policy = securityPolicy(company)
-  if (!policy.require2fa) return NO_MFA
+  if (!policy.require2fa && !mfaTotp) return none
   const verified = await sessionMfaVerified(ctx, user._id)
   const mfaChannels: string[] = []
-  if (!verified) {
+  if (!verified && policy.require2fa) {
     for (const c of ['sms', 'whatsapp'] as const) {
       if (await channelAvailable(ctx, user.companyId, c)) mfaChannels.push(c)
     }
   }
   return {
-    mfaPolicy: true,
+    mfaPolicy: policy.require2fa,
     mfaRequired: !verified,
     mfaChannels,
-    mfaDefaultChannel: policy.twoFactorChannel as string | null,
+    mfaDefaultChannel: policy.require2fa ? (policy.twoFactorChannel as string | null) : null,
+    mfaTotp,
   }
 }
 
@@ -157,8 +161,13 @@ export const current = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) return null
-    const user = await ctx.db.get(userId)
-    if (!user) return null
+    const realUser = await ctx.db.get(userId)
+    if (!realUser) return null
+    // Support access (ENT-006): the app shows the organization being acted as,
+    // as its admin; `actingAs` drives the banner and `realRole` stays visible.
+    const actAs =
+      (realUser.role ?? 'user') === 'super_admin' ? await liveActAsSession(ctx, realUser._id, Date.now()) : null
+    const user = actAs ? await actingUser(ctx, realUser, actAs) : realUser
     // Not requireUser: the client needs this even when access is refused, to
     // route to the password change, registration, or sign out with a reason.
     let companyStatus: Doc<'companies'>['status'] | 'missing' | null = null
@@ -168,7 +177,7 @@ export const current = query({
     }
     // Two-step verification for this session (SEC-007); the client routes
     // to /verify while mfaRequired is true.
-    const mfa = await mfaState(ctx, user)
+    const mfa = await mfaState(ctx, realUser)
     // Keep raw Convex fields for AuthContext + add client aliases
     return {
       ...user,
@@ -176,6 +185,10 @@ export const current = query({
       role: user.role ?? 'user',
       companyStatus,
       ...mfa,
+      realRole: realUser.role ?? 'user',
+      actingAs: actAs
+        ? { sessionId: actAs._id, companyId: actAs.companyId, allowWrites: actAs.allowWrites, expiresAt: actAs.expiresAt }
+        : null,
       hasPhone: !!user.phone,
       maskedPhone: user.phone ? maskPhone(user.phone) : null,
     }

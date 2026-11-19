@@ -159,24 +159,40 @@ describe('compliance checklists', () => {
 })
 
 describe('document register', () => {
-  const upload = (t: Awaited<ReturnType<typeof setup>>['t'], type: string, bytes = 1000) =>
-    t.run((ctx) => ctx.storage.store(new Blob([new Uint8Array(bytes)], { type })))
+  type T = Awaited<ReturnType<typeof setup>>
+  type Ref = { entityType: 'healthTreatments'; entityId: T['ids']['treatmentId'] }
+  const bytesOf = (size: number) => new Uint8Array(size).fill(7)
+  const hexSha = async (b: Uint8Array) =>
+    Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)), (x) => x.toString(16).padStart(2, '0')).join('')
+  const store = (t: T['t'], type: string, b: Uint8Array) => t.run((ctx) => ctx.storage.store(new Blob([b], { type })))
+  /** generateUploadUrl, then put the bytes in storage (as the browser would). */
+  async function upload(t: T['t'], who: T['as'], ref: Ref, type: string, size = 1000) {
+    const b = bytesOf(size)
+    const { uploadId, uploadUrl } = await who.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(b) })
+    expect(typeof uploadUrl).toBe('string')
+    return { uploadId, storageId: await store(t, type, b) }
+  }
 
   test('attach, list, download with a short-lived token, and remove — only for the owning company', async () => {
     const { t, as, asStaff, asOutsider, ids } = await setup()
     const ref = { entityType: 'healthTreatments' as const, entityId: ids.treatmentId }
 
-    expect(typeof (await asStaff.mutation(api.files.generateUploadUrl, ref))).toBe('string')
-    await expect(asOutsider.mutation(api.files.generateUploadUrl, ref)).rejects.toThrow(/not found/)
+    await expect(
+      asOutsider.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(bytesOf(1)) }),
+    ).rejects.toThrow(/not found/)
 
-    const storageId = await upload(t, 'application/pdf')
-    const attached = await asStaff.mutation(api.files.attach, { ...ref, storageId, name: 'Vet report.pdf' })
+    const { uploadId, storageId } = await upload(t, asStaff, ref, 'application/pdf')
+    const attached = await asStaff.mutation(api.files.attach, { ...ref, uploadId, storageId, name: 'Vet report.pdf' })
     if (!attached.ok) throw new Error(attached.message)
     const fileId = attached.id
-    // The same stored file cannot be attached twice (or to another record).
-    expect(await errorOf(asStaff.mutation(api.files.attach, { ...ref, storageId, name: 'again.pdf' }))).toMatchObject({
-      code: 'NOT_FOUND',
-    })
+    // The same binding / stored file cannot be used twice.
+    expect(
+      await errorOf(asStaff.mutation(api.files.attach, { ...ref, uploadId, storageId, name: 'again.pdf' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    const again = await upload(t, asStaff, ref, 'application/pdf')
+    expect(
+      await errorOf(asStaff.mutation(api.files.attach, { ...ref, uploadId: again.uploadId, storageId, name: 'again.pdf' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
     expect(await as.query(api.files.list, ref)).toEqual([
       expect.objectContaining({ name: 'Vet report.pdf', mime: 'application/pdf', size: 1000 }),
     ])
@@ -202,24 +218,81 @@ describe('document register', () => {
     expect(await as.query(api.files.list, ref)).toEqual([])
   })
 
+  test('another company cannot claim an upload, even with its storage id and binding id (CF-004)', async () => {
+    const { t, as, asStaff, asOutsider, ids } = await setup()
+    const ref = { entityType: 'healthTreatments' as const, entityId: ids.treatmentId }
+    const victim = await upload(t, asStaff, ref, 'application/pdf')
+
+    // The outsider's own record and binding, pointed at the victim's storage id.
+    const otherTreatment = await t.run(async (ctx) => {
+      const cageId = await ctx.db.insert('cages', {
+        name: 'X', status: 'active', currentCount: 1, companyId: (await ctx.db.get(ids.otherSiteId))!.companyId,
+        locationId: ids.otherSiteId, updatedAt: Date.now(),
+      })
+      return await ctx.db.insert('healthTreatments', {
+        cageId, date: '2026-11-01', treatment: 'x', companyId: (await ctx.db.get(ids.otherSiteId))!.companyId,
+        locationId: ids.otherSiteId, updatedAt: Date.now(),
+      })
+    })
+    const otherRef = { entityType: 'healthTreatments' as const, entityId: otherTreatment }
+    const { uploadId: outsiderUpload } = await asOutsider.mutation(api.files.generateUploadUrl, {
+      ...otherRef,
+      sha256: await hexSha(bytesOf(1000)),
+    })
+    // Same bytes, own binding: still refused, the storage id predates the binding.
+    expect(
+      await errorOf(
+        asOutsider.mutation(api.files.attach, { ...otherRef, uploadId: outsiderUpload, storageId: victim.storageId, name: 'stolen.pdf' }),
+      ),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    // The victim's binding with the outsider's record / identity: refused.
+    expect(
+      await errorOf(
+        asOutsider.mutation(api.files.attach, { ...otherRef, uploadId: victim.uploadId, storageId: victim.storageId, name: 's.pdf' }),
+      ),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    // A colleague in the same company cannot use someone else's binding either.
+    expect(
+      await errorOf(as.mutation(api.files.attach, { ...ref, uploadId: victim.uploadId, storageId: victim.storageId, name: 's.pdf' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    // Different bytes from those declared: refused.
+    const { uploadId: declared } = await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: await hexSha(bytesOf(5)) })
+    const other = await store(t, 'application/pdf', bytesOf(6))
+    expect(
+      await errorOf(asStaff.mutation(api.files.attach, { ...ref, uploadId: declared, storageId: other, name: 'x.pdf' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    // Expired binding: refused, and pruned.
+    await t.run(async (ctx) => ctx.db.patch(victim.uploadId, { expiresAt: Date.now() - 1 }))
+    expect(
+      await errorOf(asStaff.mutation(api.files.attach, { ...ref, uploadId: victim.uploadId, storageId: victim.storageId, name: 'v.pdf' })),
+    ).toMatchObject({ code: 'NOT_FOUND' })
+    await t.mutation(internal.files.pruneDownloadTokens, {})
+    expect(await t.run((ctx) => ctx.db.get(victim.uploadId))).toBeNull()
+    // Nothing was ever attached.
+    expect(await t.run((ctx) => ctx.db.query('files').collect())).toEqual([])
+  })
+
   test('refuses disallowed types and oversized files, and deletes them', async () => {
     const { t, asStaff, ids } = await setup()
     const ref = { entityType: 'healthTreatments' as const, entityId: ids.treatmentId }
-    const exe = await upload(t, 'application/x-msdownload')
-    expect(await asStaff.mutation(api.files.attach, { ...ref, storageId: exe, name: 'x.exe' })).toMatchObject({
+    const exe = await upload(t, asStaff, ref, 'application/x-msdownload')
+    expect(await asStaff.mutation(api.files.attach, { ...ref, ...exe, name: 'x.exe' })).toMatchObject({
       ok: false,
       code: 'VALIDATION',
     })
-    expect(await t.run((ctx) => ctx.db.system.get(exe))).toBeNull()
-    const big = await upload(t, 'image/png', 10 * 1024 * 1024 + 1)
-    expect(await asStaff.mutation(api.files.attach, { ...ref, storageId: big, name: 'big.png' })).toMatchObject({
+    expect(await t.run((ctx) => ctx.db.system.get(exe.storageId))).toBeNull()
+    const big = await upload(t, asStaff, ref, 'image/png', 10 * 1024 * 1024 + 1)
+    expect(await asStaff.mutation(api.files.attach, { ...ref, ...big, name: 'big.png' })).toMatchObject({
       ok: false,
       message: expect.stringMatching(/10 MB/),
     })
-    expect(await t.run((ctx) => ctx.db.system.get(big))).toBeNull()
-    // An unknown record id is refused before anything is uploaded.
+    expect(await t.run((ctx) => ctx.db.system.get(big.storageId))).toBeNull()
+    // An unknown record id or a bad checksum is refused before anything is uploaded.
     await expect(
-      asStaff.mutation(api.files.generateUploadUrl, { entityType: 'harvestLots', entityId: 'nope' }),
+      asStaff.mutation(api.files.generateUploadUrl, { entityType: 'harvestLots', entityId: 'nope', sha256: 'a'.repeat(64) }),
     ).rejects.toThrow(/not found/)
+    expect(await errorOf(asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256: 'nothex' }))).toMatchObject({
+      code: 'VALIDATION',
+    })
   })
 })

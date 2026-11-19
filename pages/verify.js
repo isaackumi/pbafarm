@@ -7,6 +7,7 @@ import { errorMessage } from '../lib/errorMessage'
 import { Button, Field, Input, Select } from '../components/ui'
 import { useT } from '../lib/i18n/context'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import { AuthenticatorEnrol, AuthenticatorVerify } from '../components/AuthenticatorApp'
 
 const CHANNEL_KEY = { sms: 'auth.verify.channelSms', whatsapp: 'auth.verify.channelWhatsapp' }
 const RESEND_SECONDS = 30
@@ -33,6 +34,7 @@ export default function VerifyPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
+  const [method, setMethod] = useState(null)
 
   useEffect(() => {
     if (!channel && channels.length) {
@@ -53,6 +55,14 @@ export default function VerifyPage() {
 
   if (!user) return null
   const enrolling = !user.hasPhone
+  const smsPossible = channels.length > 0
+  const mode = method ?? (user.mfaTotp ? 'app' : 'sms')
+  const switchTo = (m) => {
+    setMethod(m)
+    setError('')
+    setCode('')
+    setSentTo(null)
+  }
 
   const send = async (e) => {
     e?.preventDefault()
@@ -112,7 +122,13 @@ export default function VerifyPage() {
             </div>
           )}
 
-          {channels.length === 0 ? (
+          {mode === 'app' ? (
+            user.mfaTotp ? (
+              <AuthenticatorVerify />
+            ) : (
+              <AuthenticatorEnrol onDone={() => router.replace('/dashboard')} />
+            )
+          ) : channels.length === 0 ? (
             <p className="text-sm text-chart-ink">{t('auth.verify.noChannel')}</p>
           ) : !sentTo ? (
             <form className="space-y-5" onSubmit={send}>
@@ -192,6 +208,25 @@ export default function VerifyPage() {
                 </button>
               </div>
             </form>
+          )}
+
+          {mode === 'app' && (smsPossible || !user.mfaTotp) && (
+            <button
+              type="button"
+              className="w-full text-center text-sm text-lake hover:underline"
+              onClick={() => switchTo('sms')}
+            >
+              {t('auth.verify.useText')}
+            </button>
+          )}
+          {mode === 'sms' && (user.mfaTotp || enrolling) && (
+            <button
+              type="button"
+              className="w-full text-center text-sm text-lake hover:underline"
+              onClick={() => switchTo('app')}
+            >
+              {user.mfaTotp ? t('auth.verify.useApp') : t('auth.verify.setUpApp')}
+            </button>
           )}
 
           <button

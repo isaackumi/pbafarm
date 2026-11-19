@@ -3,6 +3,7 @@ import { requireUser } from './authz'
 import { apiActorOf } from './apiActor'
 import { AUTH_ERROR_MESSAGES } from './authErrors'
 import { inSiteScope, rowInSiteScope, siteScopeOf } from './scope'
+import { actAsSessionOf } from './actAs'
 import { MutationCtx, QueryCtx } from '../_generated/server'
 import { Doc, Id } from '../_generated/dataModel'
 
@@ -170,8 +171,12 @@ export async function logAudit(
   // carried on the ctx (convex/lib/apiActor.ts) and recorded with its key.
   const actor = apiActorOf(ctx)
   const user = actor ? actor.user : await requireUser(ctx)
+  // During support access (ENT-006) userId is the real super-admin and the
+  // row is filed under the organization they are acting in.
+  const actAs = actor ? undefined : actAsSessionOf(user)
   await insertAuditLog(ctx, {
     ...(actor ? { apiKeyId: actor.apiKeyId } : {}),
+    ...(actAs ? { actAsSessionId: actAs._id } : {}),
     userId: user._id,
     actionType: args.actionType,
     tableName: args.tableName,

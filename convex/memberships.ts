@@ -27,6 +27,7 @@ import {
 } from './lib/memberships'
 import { sha256Hex } from './lib/tokens'
 import { requireAccount, requireMember } from './lib/permissions'
+import { assertHumanTicket } from './humanVerification'
 
 const ADMIN_KEYS = new Set(['owner', 'admin'])
 
@@ -414,10 +415,11 @@ export const inviteInfo = query({
  * and be verified. Single use; expired links fail.
  */
 export const acceptInvite = mutation({
-  args: { token: v.string() },
+  args: { token: v.string(), humanTicket: v.optional(v.string()) },
   returns: v.object({ companyId: v.id('companies'), activated: v.boolean() }),
-  handler: async (ctx, { token }) => {
+  handler: async (ctx, { token, humanTicket }) => {
     const me = await requireAccount(ctx)
+    await assertHumanTicket(ctx, humanTicket, 'invite_accept')
     const invite = await inviteByToken(ctx, token)
     if (!invite) throw userError('NOT_FOUND', 'This invite link is not valid')
     const state = inviteState(invite, Date.now())

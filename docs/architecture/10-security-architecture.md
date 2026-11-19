@@ -49,9 +49,10 @@ Out of scope for this document: physical device theft beyond sign-out hygiene, p
 | Password policy | ORG-001 | Minimum 10 characters, block the 10k most common passwords (bundled list), max 128; same rule in `userAccounts.assertPassword` |
 | Session revocation | 0 (SEC-001) | Internal `revokeSessions(userId, { exceptSessionId? })` deleting `authSessions` and their `authRefreshTokens` (library indexes `userId`, `sessionId`); called on deactivate, membership removal from the only organization, password change (other sessions) |
 | Forced password change | 0 (SEC-001) | Guard step 3 (`03` §5) |
-| MFA | ENT | TOTP for owners/admins; not before email verification exists |
-| SSO / OAuth | ENT | Google/Microsoft providers when an enterprise customer requires it; the stub in `AuthContext.signInWithGoogle` is removed until then |
+| MFA | ENT-003 (implemented) | SMS/WhatsApp codes (SEC-007) plus TOTP authenticator apps for any user (`convex/mfaTotp.ts`, RFC 6238, ±1 step, replay-protected, 5-attempt lockout). Secrets encrypted with `INTEGRATIONS_ENCRYPTION_KEY`; 10 single-use recovery codes stored as SHA-256 hashes. A user with TOTP is always challenged per session; admins require 2FA per organization with the existing `require2fa` policy |
+| SSO / OAuth | ENT-003 (implemented, OIDC) | Generic OIDC provider (`convex/lib/sso.ts`) enabled only when `AUTH_OIDC_ISSUER`/`AUTH_OIDC_ID`/`AUTH_OIDC_SECRET` are set; the profile never carries `role` and `emailVerified` is only true when the IdP asserts `email_verified`, so SSO never auto-links or escalates. SAML is out of scope: the only Auth.js path (BoxyHQ SAML Jackson) needs a separately operated service; customers with SAML-only IdPs use an OIDC broker (Entra ID, Okta, Keycloak, Auth0) |
 | Token storage | ENT (evaluate) | Tokens stay in `localStorage` (plain React provider); CSP (§6) is the main mitigation. Moving to cookie-based sessions would need server rendering of auth, which conflicts with the static pages-router setup (D-001); revisit only with a concrete requirement |
+| Human check | CF-003 (implemented) | Turnstile on sign-up, company registration, password reset and invite acceptance: `humanVerification.verify` calls `siteverify` (Effect `requestJson`), stores a hashed single-use ticket (5 min, purpose-bound) that the Password provider `authorize` wrapper, `companies.register` and `memberships.acceptInvite` consume. No-op when `TURNSTILE_SECRET_KEY` is unset |
 | Login redirect | 0 (SEC-002) | Accept `next` only if it starts with `/` and not `//` or `/\` (TD-014) |
 | Enumeration | ORG-001 | Generic sign-in and sign-up messages in the UI; `ConvexError` codes without the email; admin oracles reworded (TD-025) |
 
@@ -79,6 +80,10 @@ The full model is in `03`. Security-relevant rules:
 | SEC-002 | Ownership checks: `feedTypeId` (4 daily paths), `supplierId`, `harvest.createSampling.cageId`, `sales.updateSale.customerId`, `inventory.createTransfer` sites, logo storage ids; ownership check inside `applyStockChange` | `convex/dailyRecords.ts`, `feed.ts`, `harvest.ts`, `sales.ts`, `inventory.ts`, `companies.ts`, `lib/feedLedger.ts` | Cross-tenant negative test per path |
 | SEC-002 | `seed.seedDemo` internal; `notifications.create/createBulk` internal; `users.invite` refuses existing users and never touches super_admins; `users.update` cannot modify super_admins, last-admin guard; per-company biweekly batch-code uniqueness; login redirect fix | `convex/seed.ts`, `notifications.ts`, `users.ts`, `biweeklyRecords.ts`, `pages/login.js` | Negative tests |
 | SEC-002 | Admin-only UI parity: hide or disable actions the backend refuses; admin-gate `createMany` bulk import, `feed.updateFeedType` price, `sales.updateSale` price/payment, `harvest.update` counts on the backend | Pages in TD-104, `convex/*` | Role tests |
+
+### Support access (ENT-006)
+
+Super-admins reach a tenant only through an explicit act-as session (`convex/actAs.ts`, table `actAsSessions`): reason required, 1–120 minutes, read-only unless `allowWrites` is set, one live session per admin. While live, `requireUser`/`requireMember` resolve the target organization with the `admin` role (platform functions are refused); every mutation in a write session is audit-logged under the tenant with the real actor and `auditLogs.actAsSessionId`; mutations in a read-only session fail with `ACT_AS_READ_ONLY`. Start and stop are audited in both the tenant and the platform log, sessions expire on their own, and the app shows a banner while one is live.
 
 ## 5. Data protection
 

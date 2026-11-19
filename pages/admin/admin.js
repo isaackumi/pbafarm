@@ -10,6 +10,7 @@ import DeletionRequestsPanel from '../../components/DeletionRequestsPanel'
 import { useAuth } from '../../contexts/AuthContext'
 import companyService from '../../lib/companyService'
 import { useToast } from '../../components/Toast'
+import { ActAsStartModal } from '../../components/ActAs'
 
 export default function CompaniesPage() {
   return (
@@ -25,6 +26,7 @@ function CompaniesList() {
   const { showToast } = useToast()
 
   const [companies, setCompanies] = useState([])
+  const [actAsCompany, setActAsCompany] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -124,6 +126,22 @@ function CompaniesList() {
       sortable: true,
       cell: (row) => row.user_count || 0,
     },
+    {
+      header: 'Support',
+      accessor: 'id',
+      cell: (row) =>
+        row.status === 'approved' ? (
+          <button
+            type="button"
+            className="text-sm font-medium text-lake hover:underline"
+            onClick={() => setActAsCompany(row)}
+          >
+            Act as…
+          </button>
+        ) : (
+          '—'
+        ),
+    },
   ]
 
   const tableActions = {
@@ -160,6 +178,8 @@ function CompaniesList() {
       </div>
 
       <DeletionRequestsPanel />
+
+      <ActAsStartModal company={actAsCompany} onClose={() => setActAsCompany(null)} />
 
       <ConfirmDeleteModal
         open={showDeleteModal}

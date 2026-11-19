@@ -127,6 +127,7 @@ export const TENANT_TABLES: TenantTable[] = [
  */
 export const SKIPPED_TABLES: Record<string, string> = {
   dataRequests: 'the deletion record itself; kept as evidence',
+  actAsSessions: 'platform support-access record (ENT-006); kept with the audit trail as evidence',
 }
 
 export function tenantTable(name: string): TenantTable | undefined {

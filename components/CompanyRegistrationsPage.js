@@ -6,6 +6,7 @@ import companyService from '../lib/companyService'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { Button, Field, Input, Textarea } from './ui'
+import { useHumanCheck } from './HumanCheck'
 
 function suggestCode(name) {
   if (!name) return ''
@@ -45,6 +46,7 @@ const CompanyRegistrationsPage = () => {
   const registration = useQuery(api.companies.myRegistration, user ? {} : 'skip')
   const invites = useQuery(api.users.myInvites, companyless ? {} : 'skip')
   const requestToJoin = useMutation(api.users.claimInvite)
+  const human = useHumanCheck('register_company')
   const [joiningId, setJoiningId] = useState(null)
   const isSuperAdmin = user?.role === 'super_admin'
 
@@ -117,7 +119,9 @@ const CompanyRegistrationsPage = () => {
 
     try {
       setLoading(true)
+      const humanTicket = await human.getTicket()
       const response = await companyService.registerCompany({
+        humanTicket,
         name: formData.name.trim(),
         code,
         contactEmail: formData.contactEmail.trim(),
@@ -355,9 +359,11 @@ const CompanyRegistrationsPage = () => {
               />
             </Field>
 
+            {human.widget}
+
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !human.ready}
               className="w-full"
               size="lg"
             >

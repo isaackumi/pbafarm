@@ -158,6 +158,8 @@ files: defineTable({
 
 API (all in Convex; provider hidden from callers): `files.requestUpload({ subjectTable, subjectId, kind, contentType, size })` → `{ fileId, uploadUrl, method }`; `files.confirmUpload({ fileId })` (verifies size/type/sha256 from `_storage` or R2 metadata, sets `ready`); `files.getDownloadUrl({ fileId })` (authorizes, returns short-lived URL; audits document downloads); `files.remove({ fileId })` (soft delete). An internal job deletes `pending` rows older than 24 h with their objects (fixes the orphan problem of today's logo flow, TD-015) and purges `deleted` rows after the grace period.
 
+> Implementation note (CF-004): uploads are bound before they are attached. `files.generateUploadUrl` records a `fileUploads` row (company, uploader, entity, declared SHA-256, expiry) and `files.attach` requires that binding, so one company cannot claim another's upload.
+
 ### 9.2 Steps
 
 > Steps 4–5 (copy + reconciliation) have code: `convex/r2Sync.ts` (`copyToR2`, `reconcileR2`), not yet wired to `files`; see `docs/ops/r2-storage.md`.

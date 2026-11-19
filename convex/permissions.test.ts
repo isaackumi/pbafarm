@@ -49,6 +49,18 @@ const ALLOWLIST: Record<string, string> = {
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
   'customFields.setValues': 'guarded by requireEntityEditor: the permission that edits that entity (ENTITY_EDIT_PERMISSION in customFields.ts) plus site scope',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
+  'actAs.start': 'super_admin only, checked on the real account (requireUser({ ignoreActAs })): support access is not a company permission',
+  'actAs.stop': 'own act-as session; any signed-in account, ends only its own',
+  'actAs.status': 'own act-as session for the banner; null for everyone but a super_admin',
+  'actAs.listForCompany': 'super_admin only, checked on the real account (requireUser({ ignoreActAs }))',
+  'humanVerification.verify': 'public by design: exchanges a Turnstile token for a single-use ticket (CF-003)',
+  'mfaTotp.status': 'own authenticator app; requireUser(OWN = { allowPendingMfa, ignoreActAs })',
+  'mfaTotp.startEnrolment': 'own authenticator app; guarded in internal.mfaTotp.storePending',
+  'mfaTotp.confirmEnrolment': 'own authenticator app; requireUser(OWN = { allowPendingMfa, ignoreActAs })',
+  'mfaTotp.verify': 'own two-step code; requireUser(OWN = { allowPendingMfa, ignoreActAs })',
+  'mfaTotp.redeemRecoveryCode': 'own recovery code; requireUser(OWN = { allowPendingMfa, ignoreActAs })',
+  'mfaTotp.regenerateRecoveryCodes': 'own recovery codes; requireUser({ ignoreActAs })',
+  'mfaTotp.disable': 'own authenticator app; requireUser({ ignoreActAs })',
 }
 
 type Guard = string // a permission, 'account', 'platform' or 'allowlisted'

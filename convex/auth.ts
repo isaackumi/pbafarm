@@ -2,10 +2,13 @@ import { Password } from '@convex-dev/auth/providers/Password'
 import { Email } from '@convex-dev/auth/providers/Email'
 import { convexAuth } from '@convex-dev/auth/server'
 import type { DataModel } from './_generated/dataModel'
+import type { GenericActionCtx } from 'convex/server'
 import { pickEmailAdapter } from './lib/email'
 import { randomDigits } from './lib/tokens'
 import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
 import { authorizePhoneOtp } from './phoneAuth'
+import { internal } from './_generated/api'
+import { oidcProviderFromEnv } from './lib/sso'
 
 /**
  * Password reset by emailed code (SEC-005): signIn('password', { email, flow: 'reset' })
@@ -27,7 +30,7 @@ const PasswordReset = Email({
   },
 })
 
-const PasswordProvider = Password<DataModel>({
+const BasePasswordProvider = Password<DataModel>({
   profile(params) {
     const email = String(params.email || '')
       .trim()
@@ -47,6 +50,34 @@ const PasswordProvider = Password<DataModel>({
 })
 
 /**
+ * Human check (CF-003) before the two public password flows that create an
+ * account or send an email: the browser passes `humanTicket` from
+ * humanVerification.verify; a no-op when TURNSTILE_SECRET_KEY is unset.
+ * Wraps the provider's authorize because `profile` is synchronous.
+ */
+type CredentialsOptions = {
+  authorize: (params: Record<string, unknown>, ctx: { runMutation: (...args: never[]) => unknown }) => Promise<unknown>
+}
+const passwordOptions = (BasePasswordProvider as unknown as { options: CredentialsOptions }).options
+export const PasswordProvider = {
+  ...BasePasswordProvider,
+  options: {
+    ...passwordOptions,
+    authorize: async (params: Record<string, unknown>, ctx: Parameters<CredentialsOptions['authorize']>[1]) => {
+      const purpose = params.flow === 'signUp' ? 'signup' : params.flow === 'reset' ? 'password_reset' : null
+      if (purpose) {
+        const ticket = typeof params.humanTicket === 'string' ? params.humanTicket : undefined
+        await (ctx as unknown as GenericActionCtx<DataModel>).runMutation(internal.humanVerification.consumeTicket, {
+          ticket,
+          purpose,
+        })
+      }
+      return await passwordOptions.authorize(params, ctx)
+    },
+  },
+} as typeof BasePasswordProvider
+
+/**
  * Passwordless phone sign-in (SEC-006, doc 18 §7). A credentials provider
  * rather than the library's Phone provider: that one creates a user and
  * account before sending a code, which would create users for unknown
@@ -59,5 +90,5 @@ const PhoneOtpProvider = ConvexCredentials<DataModel>({
 })
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [PasswordProvider, PhoneOtpProvider],
+  providers: [PasswordProvider, PhoneOtpProvider, ...oidcProviderFromEnv()],
 })

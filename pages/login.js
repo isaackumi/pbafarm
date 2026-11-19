@@ -11,6 +11,10 @@ import {
 import { Button, Field, Input } from '../components/ui'
 import { useT } from '../lib/i18n/context'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import { useAuthActions } from '@convex-dev/auth/react'
+
+/** Enterprise SSO (ENT-003): shown when the deployment has an OIDC provider. */
+const SSO_NAME = process.env.NEXT_PUBLIC_AUTH_OIDC_NAME || ''
 
 /** Passwordless sign-in with a code sent to a registered phone (SEC-006). */
 function PhoneSignIn({ onSignedIn }) {
@@ -144,6 +148,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [method, setMethod] = useState('email')
   const { signInWithEmail, user } = useAuth()
+  const { signIn } = useAuthActions()
   const t = useT()
   const router = useRouter()
   const reason =
@@ -266,6 +271,18 @@ export default function Login() {
               {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
             </Button>
           </form>
+          )}
+
+          {SSO_NAME && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="mt-4 w-full"
+              onClick={() => signIn('oidc', { redirectTo: safeNextPath(router.query.next) })}
+            >
+              {t('auth.login.sso', { name: SSO_NAME })}
+            </Button>
           )}
 
           <p className="mt-6 text-center text-sm text-muted">
