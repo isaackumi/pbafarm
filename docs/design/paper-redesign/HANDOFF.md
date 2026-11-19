@@ -80,7 +80,7 @@ Add these as CSS variables in `styles/theme.css` and Tailwind theme keys. The ap
 | 30 Notifications | A4K-0 | `/notifications` and delivery preferences |
 | 31 Account & security | ACU-0 | `/account` (passkeys, TOTP, sessions, export, delete) |
 | 32 Customization | AJU-0 | `/customization` (form layouts, custom fields, terminology) |
-| Website: Landing 1440 | 3I0-0 | `/` (`pages/index.js`) |
+| Website: Landing v2 — Sky | B9Q-0 | `/` (`pages/index.js`). Supersedes 3I0-0. Marketing-only tokens: lime `#D7F75B`, ink `#0B0D10`, sky `#1562D6 → #B9DDF9`, fonts Inter Tight + DM Mono |
 
 ## 3b. Light theme
 
