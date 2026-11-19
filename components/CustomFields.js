@@ -14,7 +14,9 @@ import {
   isEmpty,
   visibleDefs,
 } from '../convex/lib/customFieldRules'
-import { uploadAndAttach } from '../lib/uploadFile'
+import { MAX_UPLOAD_BYTES, uploadAndAttach } from '../lib/uploadFile'
+import { isCompressible } from '../lib/imageCompression'
+import { useFileThumbnails } from '../hooks/useFileThumbnails'
 
 /**
  * Custom fields (D-007, CUSTOM-001): one renderer for every entity's forms and
@@ -56,12 +58,16 @@ function PhotoInput({ def, value, onChange, id, locationId }) {
   const { showToast } = useToast()
   const input = useRef(null)
   const [busy, setBusy] = useState(false)
+  // Older photos and photos from browsers that could not decode them have no thumbnail.
+  const thumbUrl = useFileThumbnails(value ? [value] : [])[value]
+  const [brokenThumb, setBrokenThumb] = useState(null)
 
   const pick = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) return showToast('error', 'Photos can be at most 10 MB')
+    // Compressed before upload (CF-004); uploadAndAttach checks the size again.
+    if (file.size > MAX_UPLOAD_BYTES && !isCompressible(file.type)) return showToast('error', 'Photos can be at most 10 MB')
     setBusy(true)
     try {
       const out = await uploadAndAttach({
@@ -97,6 +103,12 @@ function PhotoInput({ def, value, onChange, id, locationId }) {
         <Camera className="h-4 w-4" aria-hidden />
         {busy ? 'Uploading…' : value ? 'Replace photo' : 'Add photo'}
       </Button>
+      {value && thumbUrl && brokenThumb !== thumbUrl && (
+        <button type="button" onClick={view} className="shrink-0" aria-label="View photo">
+          {/* eslint-disable-next-line @next/next/no-img-element -- short-lived private link */}
+          <img src={thumbUrl} alt="" className="h-12 w-12 rounded object-cover border border-foam" onError={() => setBrokenThumb(thumbUrl)} />
+        </button>
+      )}
       {value && (
         <>
           <Button variant="ghost" size="sm" onClick={view}>View</Button>

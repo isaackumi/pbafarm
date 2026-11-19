@@ -8,10 +8,11 @@ import { Button } from './ui'
 import { convexSiteUrl } from '../lib/apiBase'
 import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
-import { uploadAndAttach } from '../lib/uploadFile'
+import { MAX_UPLOAD_BYTES, uploadAndAttach } from '../lib/uploadFile'
+import { isCompressible } from '../lib/imageCompression'
+import { useFileThumbnails } from '../hooks/useFileThumbnails'
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.txt,.xls,.xlsx,.doc,.docx'
-const MAX_BYTES = 10 * 1024 * 1024
 
 const size = (n) =>
   n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`
@@ -19,6 +20,7 @@ const size = (n) =>
 /**
  * Files attached to one record (TRACE-005): list, upload, download through a
  * short-lived link, remove. `entityType` is the table name of the record.
+ * Photos are compressed before upload and shown by their thumbnail (CF-004).
  */
 export default function Attachments({ entityType, entityId, compact = false }) {
   const { user, hasRole } = useAuth()
@@ -30,6 +32,8 @@ export default function Attachments({ entityType, entityId, compact = false }) {
   const attachR2 = useAction(api.files.attachR2)
   const requestDownload = useMutation(api.files.requestDownload)
   const remove = useMutation(api.files.remove)
+  const thumbs = useFileThumbnails(files?.filter((f) => f.has_thumbnail).map((f) => f.id))
+  const [brokenThumbs, setBrokenThumbs] = useState({})
   const input = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -37,7 +41,8 @@ export default function Attachments({ entityType, entityId, compact = false }) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (file.size > MAX_BYTES) {
+    // Photos may shrink below the limit once compressed; uploadAndAttach checks again.
+    if (file.size > MAX_UPLOAD_BYTES && !isCompressible(file.type)) {
       showToast('error', 'Files can be at most 10 MB')
       return
     }
@@ -86,7 +91,18 @@ export default function Attachments({ entityType, entityId, compact = false }) {
           {files.map((f) => (
             <li key={f.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <button type="button" onClick={() => open(f)} className="inline-flex items-center gap-1.5 text-lake hover:underline text-left">
-                <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {thumbs[f.id] && !brokenThumbs[f.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- short-lived private link, not an optimisable asset
+                  <img
+                    src={thumbs[f.id]}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 shrink-0 rounded object-cover border border-foam"
+                    onError={() => setBrokenThumbs((b) => ({ ...b, [f.id]: true }))}
+                  />
+                ) : (
+                  <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                )}
                 {f.name}
               </button>
               <span className="text-xs text-muted">{size(f.size)}</span>

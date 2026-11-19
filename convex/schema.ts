@@ -2572,6 +2572,15 @@ const schema = defineSchema({
     storageId: v.optional(v.id('_storage')),
     /** R2 object key for provider 'r2'. */
     r2Key: v.optional(v.string()),
+    /**
+     * Thumbnail made in the browser for an image (CF-004, doc 14 §2.5): a
+     * second private object bound to the same upload, on Convex storage
+     * (thumbStorageId) or R2 (thumbR2Key). Absent on documents and older rows.
+     */
+    thumbStorageId: v.optional(v.id('_storage')),
+    thumbR2Key: v.optional(v.string()),
+    thumbMime: v.optional(v.string()),
+    thumbSize: v.optional(v.number()),
     name: v.string(),
     mime: v.string(),
     size: v.number(),
@@ -2579,7 +2588,8 @@ const schema = defineSchema({
     createdAt: v.number(),
   })
     .index('by_companyId_and_entityType_and_entityId', ['companyId', 'entityType', 'entityId'])
-    .index('by_storageId', ['storageId']),
+    .index('by_storageId', ['storageId'])
+    .index('by_thumbStorageId', ['thumbStorageId']),
 
   /** One-time-ish download grants: valid for a few minutes, stored hashed. */
   fileDownloadTokens: defineTable({
@@ -2587,6 +2597,8 @@ const schema = defineSchema({
     fileId: v.id('files'),
     companyId: v.id('companies'),
     userId: v.id('users'),
+    /** 'thumb' grants the file's thumbnail only (CF-004); absent = the file. */
+    variant: v.optional(v.literal('thumb')),
     expiresAt: v.number(),
   })
     .index('by_tokenHash', ['tokenHash'])
@@ -2615,6 +2627,10 @@ const schema = defineSchema({
     r2Key: v.optional(v.string()),
     /** Content type signed into the R2 PUT. */
     contentType: v.optional(v.string()),
+    /** Optional thumbnail upload (CF-004): declared SHA-256 and type; R2 key `<r2Key>.thumb`. */
+    thumbSha256: v.optional(v.string()),
+    thumbContentType: v.optional(v.string()),
+    thumbR2Key: v.optional(v.string()),
     /** Site a custom-field photo is for (PERM-004); copied to files.locationId. */
     locationId: v.optional(v.id('farmLocations')),
     createdAt: v.number(),

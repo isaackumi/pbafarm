@@ -8,7 +8,7 @@ import schema from './schema'
 import { api, internal } from './_generated/api'
 import { fetchLayer, type FetchFn } from './lib/effectHttp'
 import { R2Storage, r2Layer, type R2Config } from './lib/r2'
-import { filesProvider, inspectUpload, presignDownload, presignUpload, r2UploadKey } from './lib/r2Files'
+import { filesProvider, inspectUpload, presignDownload, presignUpload, r2ThumbKey, r2UploadKey } from './lib/r2Files'
 
 /** R2 behind the `files` table (CF-005/CF-006), with an in-memory S3 behind a fake fetch. */
 const modules = import.meta.glob('./**/*.ts')
@@ -307,11 +307,78 @@ describe('files on R2 (CF-005)', () => {
     }
   })
 
-  test('upload URLs are rate limited per user', async () => {
-    const { asStaff, ref } = await setup()
+  test('upload URLs are rate limited per user; a thumbnail costs a second URL', async () => {
+    const { asStaff, asStaff2, ref } = await setup()
     const sha256 = await hexSha(bytesOf(10))
-    for (let i = 0; i < 40; i++) await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256 })
+    for (let i = 0; i < 80; i++) await asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256 })
     expect(await codeOf(asStaff.mutation(api.files.generateUploadUrl, { ...ref, sha256 }))).toBe('RATE_LIMITED')
+    const photo = { ...ref, sha256, contentType: 'image/jpeg', thumbnail: { sha256, contentType: 'image/jpeg' } }
+    for (let i = 0; i < 40; i++) await asStaff2.mutation(api.files.generateUploadUrl, photo)
+    expect(await codeOf(asStaff2.mutation(api.files.generateUploadUrl, photo))).toBe('RATE_LIMITED')
+  })
+
+  test('thumbnails on R2: bound to the upload, granted like the file, deleted with it and when unclaimed (CF-004)', async () => {
+    const r2 = useR2()
+    const { t, ids, ref, asStaff, asStaff2, asOutsider } = await setup()
+    const b = bytesOf(1000)
+    const th = bytesOf(40, 3)
+    const stored = (key: string) => [...r2.objects.keys()].some((k) => k.endsWith(`/${key}`))
+    const photo = async (thumbBytes = th) => {
+      const target = await asStaff.mutation(api.files.generateUploadUrl, {
+        ...ref,
+        sha256: await hexSha(b),
+        contentType: 'image/jpeg',
+        name: 'net.jpg',
+        thumbnail: { sha256: await hexSha(th), contentType: 'image/jpeg' },
+      })
+      if (!target.thumb) throw new Error('no thumbnail URL')
+      expect(target.thumb.method).toBe('PUT')
+      expect(decodeURIComponent(new URL(target.thumb.uploadUrl).pathname)).toContain(r2ThumbKey(ids.companyId, target.uploadId))
+      await r2.fetchFn(target.uploadUrl, { method: 'PUT', headers: target.headers, body: b as BodyInit })
+      await r2.fetchFn(target.thumb.uploadUrl, { method: 'PUT', headers: target.thumb.headers, body: thumbBytes as BodyInit })
+      return target
+    }
+    vi.useFakeTimers()
+    try {
+      const target = await photo()
+      const thumbKey = r2ThumbKey(ids.companyId, target.uploadId)
+      const attached = await asStaff.action(api.files.attachR2, { ...ref, uploadId: target.uploadId, name: 'net.jpg' })
+      if (!attached.ok) throw new Error(attached.message)
+      expect(await t.run((ctx) => ctx.db.get(attached.id))).toMatchObject({ thumbR2Key: thumbKey, thumbMime: 'image/jpeg', thumbSize: 40 })
+
+      // Same company and site scope as the file.
+      expect(await asOutsider.mutation(api.files.requestThumbnails, { fileIds: [attached.id] })).toEqual([])
+      expect(await asStaff2.mutation(api.files.requestThumbnails, { fileIds: [attached.id] })).toHaveLength(1)
+      const [grant] = await asStaff.mutation(api.files.requestThumbnails, { fileIds: [attached.id] })
+      const res = await t.fetch(grant.path, { method: 'GET', redirect: 'manual' })
+      expect(res.status).toBe(302)
+      const location = new URL(res.headers.get('Location') ?? '')
+      expect(decodeURIComponent(location.pathname)).toContain(thumbKey)
+      expect(location.searchParams.get('response-content-type')).toBe('image/jpeg')
+
+      // A thumbnail with other bytes than declared is deleted; the photo is attached without one.
+      const mismatched = await photo(bytesOf(40, 4))
+      const plain = await asStaff.action(api.files.attachR2, { ...ref, uploadId: mismatched.uploadId, name: 'b.jpg' })
+      if (!plain.ok) throw new Error(plain.message)
+      expect((await t.run((ctx) => ctx.db.get(plain.id)))?.thumbR2Key).toBeUndefined()
+      expect(stored(r2ThumbKey(ids.companyId, mismatched.uploadId))).toBe(false)
+
+      // Never attached: both objects go when the claim window ends.
+      const abandoned = await photo()
+      expect(stored(r2ThumbKey(ids.companyId, abandoned.uploadId))).toBe(true)
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      expect(stored(r2UploadKey(ids.companyId, abandoned.uploadId))).toBe(false)
+      expect(stored(r2ThumbKey(ids.companyId, abandoned.uploadId))).toBe(false)
+
+      // Removing the file deletes its thumbnail too.
+      expect(stored(thumbKey)).toBe(true)
+      await asStaff.mutation(api.files.remove, { fileId: attached.id })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      expect(stored(thumbKey)).toBe(false)
+      expect(stored(r2UploadKey(ids.companyId, target.uploadId))).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   test('types outside the allow-list are refused before any URL is signed', async () => {

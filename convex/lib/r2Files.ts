@@ -32,6 +32,11 @@ export function r2UploadKey(companyId: string, uploadId: string): string {
   return `files/${companyId}/${uploadId}`
 }
 
+/** The thumbnail object next to an upload (CF-004). */
+export function r2ThumbKey(companyId: string, uploadId: string): string {
+  return `${r2UploadKey(companyId, uploadId)}.thumb`
+}
+
 /** The upload is missing, too large, or not the declared bytes. */
 export class R2UploadRejected extends Data.TaggedError('R2UploadRejected')<{
   readonly reason: 'missing' | 'too_large' | 'hash_mismatch'
