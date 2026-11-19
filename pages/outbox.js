@@ -1,32 +1,30 @@
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import OutboxPanel from '../components/OutboxPanel'
-import { FormCard, FormPage, PageHeader } from '../components/ui'
+import { SettingsCard } from '../components/settings'
 import { useOnline } from '../hooks/useOutbox'
+import { useT } from '../lib/i18n/context'
 
 export default function OutboxPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Outbox">
-        <Outbox />
-      </Layout>
+      <Outbox />
     </ProtectedRoute>
   )
 }
 
-/** Everything saved on this phone that has not reached the server yet (MOBILE-002). */
+/** Everything saved on this phone that has not reached the server yet (MOBILE-002, Paper 57). */
 function Outbox() {
+  const t = useT()
   const online = useOnline()
   return (
-    <FormPage>
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Outbox' }]}
-        description="Entries saved without signal. They send by themselves when the phone is back online; each is written once even if it is sent again."
-      />
-      <FormCard>
-        <OutboxPanel online={online} />
-      </FormCard>
-    </FormPage>
+    <Layout title={t('settingsUi.outbox.title')} eyebrow={t('settingsUi.outbox.eyebrow')}>
+      <div className="flex max-w-3xl flex-col gap-5">
+        <p className="text-[14px] leading-[18px] text-muted">{t('settingsUi.outbox.description')}</p>
+        <SettingsCard title={t('settingsUi.outbox.cardTitle')}>
+          <OutboxPanel online={online} />
+        </SettingsCard>
+      </div>
+    </Layout>
   )
 }

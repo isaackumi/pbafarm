@@ -3854,6 +3854,100 @@
         "words": "Terminologie",
         "dashboard": "Tableau de bord"
       }
+    },
+    "msg": {
+      "channel": {
+        "sms": "SMS pour les codes de connexion et les alertes.",
+        "whatsapp": "Codes de connexion via un modèle WhatsApp approuvé.",
+        "email": "E-mails depuis votre propre domaine d'envoi."
+      },
+      "channelName": {
+        "email": "E-mail"
+      },
+      "status": {
+        "draft": "Non vérifié",
+        "verified": "Vérifié",
+        "disabled": "Désactivé"
+      },
+      "toast": {
+        "savedNewProvider": "Enregistré. Saisissez les identifiants du nouveau fournisseur, puis envoyez un test.",
+        "saved": "Canal enregistré. Envoyez un test pour le vérifier.",
+        "credsSaved": "Identifiants enregistrés. Envoyez un test pour vérifier le canal.",
+        "testOk": "Message de test envoyé. Le canal est vérifié.",
+        "testRefused": "Le fournisseur a refusé le message : {error}",
+        "disabled": "Canal désactivé.",
+        "removed": "Canal supprimé."
+      },
+      "usingPlatform": "Canal {channel} de la plateforme utilisé tant que vous n'ajoutez pas le vôtre.",
+      "provider": "Fournisseur",
+      "saveChanges": "Enregistrer",
+      "addChannel": "Ajouter le canal {channel}",
+      "disable": "Désactiver",
+      "confirmRemove": "Supprimer ce canal et ses identifiants enregistrés ?",
+      "remove": "Supprimer",
+      "credentials": "Identifiants",
+      "credsHint": "Configurés · se terminent par {hint}. Saisissez de nouvelles valeurs uniquement pour les remplacer.",
+      "credsSet": "Configurés. Saisissez de nouvelles valeurs uniquement pour les remplacer.",
+      "credsUnset": "Non définis. Ils sont chiffrés et ne sont plus jamais affichés après l'enregistrement.",
+      "noKeyShort": "Les identifiants ne peuvent pas être enregistrés tant que la clé de chiffrement de la plateforme n'est pas définie sur le serveur.",
+      "saveCreds": "Enregistrer les identifiants",
+      "sendTestTitle": "Envoyer un message de test",
+      "sendTo": "Envoyer à",
+      "sending": "Envoi…",
+      "sendTest": "Envoyer le test",
+      "lastTest": "Dernier test {when} : {result}",
+      "deliveredToProvider": "remis au fournisseur",
+      "notSetUp": "{channel} (non configuré)",
+      "sec": {
+        "title": "Sécurité de connexion",
+        "sub": "Les codes passent par les canaux ci-dessus. Activez-les seulement après réception d'un message de test.",
+        "phone": "Permettre au personnel de se connecter avec un code reçu sur son téléphone",
+        "phoneHelp": "Seules les personnes dont vous avez ajouté le numéro mobile sur la page Utilisateurs peuvent l'utiliser.",
+        "phoneOn": "Le personnel peut maintenant se connecter avec un code téléphone.",
+        "phoneOff": "Connexion par téléphone désactivée.",
+        "loginChannel": "Envoyer les codes de connexion par",
+        "mfa": "Exiger un code à chaque nouvelle connexion (vérification en deux étapes)",
+        "mfaHelpHas": "Le personnel sans numéro mobile en ajoute un la première fois.",
+        "mfaHelpNone": "Ajoutez d'abord votre propre numéro mobile sur la page Utilisateurs.",
+        "mfaOn": "La vérification en deux étapes est activée. Chacun saisira un code à sa prochaine connexion.",
+        "mfaOff": "Vérification en deux étapes désactivée.",
+        "mfaChannel": "Envoyer les codes de vérification par",
+        "phoneCounts": "Un code de connexion par téléphone compte aussi comme deuxième étape",
+        "phoneCountsHelp": "Si désactivé alors que la vérification en deux étapes est active, la connexion par téléphone n'est pas proposée."
+      },
+      "saved": "Enregistré.",
+      "def": {
+        "title": "Valeurs par défaut",
+        "sub": "Lecture des numéros de téléphone et repli sur les canaux de la plateforme.",
+        "country": "Pays des numéros locaux",
+        "countryHint": "0244 123 456 est lu comme un numéro de ce pays.",
+        "available": "Disponible sur cette plateforme.",
+        "unavailable": "Non proposé sur cette plateforme.",
+        "usePlatform": {
+          "sms": "Utiliser le canal SMS de la plateforme si nous n'en avons pas",
+          "whatsapp": "Utiliser le canal WhatsApp de la plateforme si nous n'en avons pas",
+          "email": "Utiliser le canal e-mail de la plateforme si nous n'en avons pas"
+        }
+      },
+      "platformChannel": "Canal de la plateforme",
+      "notConfigured": "Non configuré",
+      "outbox": {
+        "syncing": "Synchronisation…",
+        "sync": "Synchroniser",
+        "waiting": "Boîte d'envoi du téléphone : {count} saisies en attente",
+        "open": "Ouvrir la boîte d'envoi"
+      },
+      "crumb": "SMS, WhatsApp, e-mail",
+      "title": "Messagerie et boîte d'envoi",
+      "sendTestAction": "Envoyer un message de test",
+      "description": "Choisissez les fournisseurs SMS, WhatsApp et e-mail de votre entreprise. Un canal ne sert aux codes de connexion qu'après un message de test réussi.",
+      "noKey": "Les identifiants des fournisseurs ne peuvent pas encore être enregistrés : la clé de chiffrement de la plateforme n'est pas définie sur le serveur. Vous pouvez quand même configurer les canaux ; demandez à l'opérateur de la plateforme de définir la clé."
+    },
+    "outbox": {
+      "title": "Boîte d'envoi",
+      "eyebrow": "Ce téléphone",
+      "cardTitle": "En attente d'envoi",
+      "description": "Saisies enregistrées sans réseau. Elles partent d'elles-mêmes quand le téléphone retrouve le réseau ; chacune n'est écrite qu'une fois, même si elle est renvoyée."
     }
   },
   "country": {

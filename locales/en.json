@@ -3854,6 +3854,100 @@
         "words": "Terminology",
         "dashboard": "Dashboard"
       }
+    },
+    "msg": {
+      "channel": {
+        "sms": "Text messages for sign-in codes and alerts.",
+        "whatsapp": "Sign-in codes through an approved WhatsApp template.",
+        "email": "Email from your own sending domain."
+      },
+      "channelName": {
+        "email": "Email"
+      },
+      "status": {
+        "draft": "Not verified",
+        "verified": "Verified",
+        "disabled": "Disabled"
+      },
+      "toast": {
+        "savedNewProvider": "Saved. Enter the credentials for the new provider, then send a test.",
+        "saved": "Channel saved. Send a test to verify it.",
+        "credsSaved": "Credentials saved. Send a test to verify the channel.",
+        "testOk": "Test message sent. The channel is verified.",
+        "testRefused": "The provider refused the message: {error}",
+        "disabled": "Channel disabled.",
+        "removed": "Channel removed."
+      },
+      "usingPlatform": "Using the platform's {channel} channel until you add your own.",
+      "provider": "Provider",
+      "saveChanges": "Save changes",
+      "addChannel": "Add {channel} channel",
+      "disable": "Disable",
+      "confirmRemove": "Remove this channel and its saved credentials?",
+      "remove": "Remove",
+      "credentials": "Credentials",
+      "credsHint": "Configured · ends in {hint}. Enter new values only to replace them.",
+      "credsSet": "Configured. Enter new values only to replace them.",
+      "credsUnset": "Not set. They are encrypted and never shown again after saving.",
+      "noKeyShort": "Credentials cannot be saved until the platform encryption key is set on the server.",
+      "saveCreds": "Save credentials",
+      "sendTestTitle": "Send a test message",
+      "sendTo": "Send to",
+      "sending": "Sending…",
+      "sendTest": "Send test",
+      "lastTest": "Last test {when}: {result}",
+      "deliveredToProvider": "delivered to the provider",
+      "notSetUp": "{channel} (not set up)",
+      "sec": {
+        "title": "Sign-in security",
+        "sub": "Codes are sent through the channels above. Turn these on only after a test message arrives.",
+        "phone": "Let staff sign in with a code sent to their phone",
+        "phoneHelp": "Only people whose mobile number you added on the Users page can use it.",
+        "phoneOn": "Staff can now sign in with a phone code.",
+        "phoneOff": "Phone sign-in turned off.",
+        "loginChannel": "Send sign-in codes by",
+        "mfa": "Require a code at every new sign-in (two-step verification)",
+        "mfaHelpHas": "Staff without a mobile number add one the first time.",
+        "mfaHelpNone": "Add your own mobile number on the Users page first.",
+        "mfaOn": "Two-step verification is on. Everyone enters a code at their next sign-in.",
+        "mfaOff": "Two-step verification turned off.",
+        "mfaChannel": "Send verification codes by",
+        "phoneCounts": "A phone sign-in code also counts as the second step",
+        "phoneCountsHelp": "When off and two-step verification is on, phone sign-in is not offered."
+      },
+      "saved": "Saved.",
+      "def": {
+        "title": "Defaults",
+        "sub": "How phone numbers are read, and whether to fall back to the platform's channels.",
+        "country": "Country for local numbers",
+        "countryHint": "0244 123 456 is read as a number in this country.",
+        "available": "Available on this platform.",
+        "unavailable": "Not offered on this platform.",
+        "usePlatform": {
+          "sms": "Use the platform SMS channel when we have none of our own",
+          "whatsapp": "Use the platform WhatsApp channel when we have none of our own",
+          "email": "Use the platform email channel when we have none of our own"
+        }
+      },
+      "platformChannel": "Platform channel",
+      "notConfigured": "Not set up",
+      "outbox": {
+        "syncing": "Syncing…",
+        "sync": "Sync now",
+        "waiting": "Phone outbox: {count} entries waiting",
+        "open": "Open outbox"
+      },
+      "crumb": "SMS, WhatsApp, email",
+      "title": "Messaging & outbox",
+      "sendTestAction": "Send test message",
+      "description": "Choose the SMS, WhatsApp and email providers your company sends with. A channel is used for sign-in codes only after a successful test message.",
+      "noKey": "Provider credentials cannot be saved yet: the platform encryption key is not set on the server. You can still set up channels; ask the platform operator to set the key."
+    },
+    "outbox": {
+      "title": "Outbox",
+      "eyebrow": "This phone",
+      "cardTitle": "Waiting to send",
+      "description": "Entries saved without signal. They send by themselves when the phone is back online; each is written once even if it is sent again."
     }
   },
   "country": {
