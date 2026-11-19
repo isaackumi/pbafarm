@@ -73,4 +73,11 @@ crons.cron('equipment maintenance reminders', '0 6 * * *', internal.equipment.ma
 crons.interval('report schedules tick', { minutes: 15 }, internal.reportSchedules.tick, {})
 crons.cron('prune report deliveries', '55 3 * * *', internal.reportSchedules.prune, {})
 
+// 05:00 UTC: subscription lifecycle (PLAT-108): trials and unpaid manual
+// periods go past_due, past_due past grace (BILLING_GRACE_DAYS) suspends.
+crons.cron('billing lifecycle', '0 5 * * *', internal.billing.lifecycle.runDaily, {})
+
+// 00:40 UTC: yesterday's per-organization usage for the platform console (PLAT-110).
+crons.cron('platform usage rollup', '40 0 * * *', internal.platform.usage.rollupYesterday, {})
+
 export default crons

@@ -2,6 +2,10 @@
 
 Changes to this repository during the Aquaculture OS engagement. Newest first. One line per PR; docs additions listed by file. Source: `gh pr list --state all`, `git log origin/main`, 2026-11-18.
 
+## feat/platform-console — Platform console and billing foundation
+
+- PLAT-101..113: console on `console.heitechinc.com` (`middleware.js`), `pages/platform/*`, `convex/platform/*`; billing model, plan limits, tenant suspension, trial/dunning cron, usage rollup, `/billing`. Docs: `docs/architecture/22-platform-console-billing.md`, `docs/ops/platform-console-dns.md`.
+
 ## 2026-11-18 — Discovery, architecture and roadmap (branch `docs/discovery`, not yet committed)
 
 Docs only; no application code changed on this branch.

@@ -213,9 +213,17 @@ export async function requireAccount(ctx: Ctx, opts?: Parameters<typeof requireU
   return await requireUser(ctx, opts)
 }
 
-/** Platform functions (company approval, platform lists): super_admin only. */
-export async function requirePlatformAdmin(ctx: Ctx): Promise<Doc<'users'>> {
-  const user = await requireUser(ctx)
+/**
+ * Platform functions (company approval, platform lists, the platform
+ * console): super_admin only. requireUser already demands a verified
+ * second factor for every super_admin session. `ignoreActAs` keeps the
+ * console usable while the same admin has a support session open.
+ */
+export async function requirePlatformAdmin(
+  ctx: Ctx,
+  opts: { ignoreActAs?: boolean } = {},
+): Promise<Doc<'users'>> {
+  const user = await requireUser(ctx, { ignoreActAs: opts.ignoreActAs })
   if ((user.role ?? 'user') !== 'super_admin') forbidden('platform.admin')
   return user
 }

@@ -11,6 +11,7 @@ import { scopedRows, tenantScope, PLATFORM_SCAN_LIMIT } from './lib/scope'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { assertUserCan, requireMember } from './lib/permissions'
+import { assertPlanLimit } from './lib/planLimits'
 
 /**
  * The caller's stocked cages (optionally one site): status active or
@@ -519,6 +520,7 @@ export const create = mutation({
   handler: async (ctx, rawArgs) => {
     const args = normalizeGeometry(rawArgs)
     const { user } = await requireMember(ctx, { permission: 'production.units.manage' })
+    await assertPlanLimit(ctx, user.companyId, 'units')
     const now = Date.now()
     await ensureDefaultLocation(ctx, user)
     const locationId =

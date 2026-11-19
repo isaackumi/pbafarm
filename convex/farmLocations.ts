@@ -15,6 +15,7 @@ import { isValidTimezone } from './lib/orgProfile'
 import { requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
+import { assertPlanLimit } from './lib/planLimits'
 
 /** Site metadata args (FARM-001). */
 const siteArgs = {
@@ -233,6 +234,7 @@ export const create = mutation({
     if (!name) throw new Error('Name is required')
 
     const companyId = await writeCompanyId(user)
+    if (args.active !== false) await assertPlanLimit(ctx, companyId, 'sites')
     const custom = await validateCustom(ctx, {
       companyId,
       entity: 'farmLocations',

@@ -8,6 +8,7 @@ import { saveDailyBatch } from './dailyRecords'
 import { saveSamplingBatch } from './biweeklyRecords'
 import { customValues } from './schema'
 import { timingSafeEqual } from './integrations/apiScopes'
+import { companyUsable } from './lib/tenantStatus'
 
 /**
  * Internal functions behind the /api/v1 httpActions (convex/integrations/apiHttp.ts).
@@ -45,7 +46,7 @@ async function loadUsableKey(
   if (!key || !timingSafeEqual(key.hash, hash)) return unauthorized
   if (key.revokedAt || (key.expiresAt && key.expiresAt <= now)) return unauthorized
   const company = await ctx.db.get(key.companyId)
-  if (!company || company.status !== 'approved') {
+  if (!companyUsable(company)) {
     return { ok: false, status: 403, code: 'forbidden', message: 'Organization is not active' }
   }
   const creator = await ctx.db.get(key.createdBy)

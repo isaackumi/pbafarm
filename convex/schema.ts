@@ -4,6 +4,7 @@ import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
 import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
+import { billingTables } from './billing/tables'
 import {
   automationAction,
   automationCondition,
@@ -226,6 +227,7 @@ export const customCondition = v.object({
 const schema = defineSchema({
   ...authTables,
   ...integrationTables,
+  ...billingTables,
 
   users: defineTable({
     name: v.optional(v.string()),
@@ -479,6 +481,15 @@ const schema = defineSchema({
       v.literal('rejected'),
     ),
     rejectionReason: v.optional(v.string()),
+    /**
+     * Suspended by the platform console or by billing after the grace period
+     * (PLAT-104). requireUser refuses members with TENANT_SUSPENDED while set;
+     * status stays 'approved' so reactivation restores access unchanged.
+     */
+    suspendedAt: v.optional(v.number()),
+    suspendedBy: v.optional(v.id('users')),
+    suspensionReason: v.optional(v.string()),
+    suspensionSource: v.optional(v.union(v.literal('platform'), v.literal('billing'))),
     /** Organization profile (M3, D-012). Read with defaults from lib/orgProfile. */
     country: v.optional(v.string()),
     timezone: v.optional(v.string()),

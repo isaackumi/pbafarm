@@ -89,10 +89,12 @@ function publicFunctions(): Array<{ name: string; kind: string; guard: Guard | n
       const member = /requireMember\(ctx, \{ permission: '([\w.]+)'/.exec(body)
       const action = /authorizedMember, \{\s*permission: '([\w.]+)'/.exec(body)
       const hatchery = /requireHatchery\(ctx, '([\w.]+)'\)/.exec(body)
+      const explicit = /requirePermission\(\w+, '([\w.]+)'\)/.exec(body)
       if (member) guard = member[1]
       else if (action) guard = action[1]
       else if (hatchery) guard = hatchery[1]
-      else if (body.includes('requirePlatformAdmin(ctx)')) guard = 'platform'
+      else if (explicit) guard = explicit[1]
+      else if (body.includes('requirePlatformAdmin(ctx)') || body.includes('requireConsoleAdmin(ctx)')) guard = 'platform'
       else if (body.includes('requireAccount(ctx')) guard = 'account'
       else {
         for (const [helper, perm] of Object.entries(HELPER_PERMISSIONS)) {

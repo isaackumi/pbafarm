@@ -28,6 +28,7 @@ import {
 import { sha256Hex } from './lib/tokens'
 import { requireAccount, requireMember } from './lib/permissions'
 import { assertHumanTicket } from './humanVerification'
+import { companyUsable } from './lib/tenantStatus'
 
 const ADMIN_KEYS = new Set(['owner', 'admin'])
 
@@ -90,7 +91,7 @@ export const switchActive = mutation({
       throw userError('FORBIDDEN', 'You are not a member of that organization')
     }
     const company = await ctx.db.get(companyId)
-    if (!company || company.status !== 'approved') {
+    if (!companyUsable(company)) {
       throw userError('CONFLICT', 'That organization is not active')
     }
     const previous = me.companyId
@@ -507,7 +508,7 @@ export const acceptInvite = mutation({
       throw userError('FORBIDDEN', 'Verify your email address before accepting the invite.', { reason: 'EMAIL_NOT_VERIFIED' })
     }
     const company = await ctx.db.get(invite.companyId)
-    if (!company || company.status !== 'approved') {
+    if (!companyUsable(company)) {
       throw userError('CONFLICT', 'That organization is not active')
     }
     const roleKey = invite.roleKey ?? roleKeyFromLegacy(invite.role)
