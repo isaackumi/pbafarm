@@ -13,7 +13,7 @@ function HomeSkyPanel() {
   return (
     <div
       aria-hidden
-      className="home-sky-panel pointer-events-none absolute -inset-x-2 top-0 -bottom-[84px] -z-10 overflow-hidden rounded-[28px] sm:-inset-x-4 sm:-bottom-[226px]"
+      className="home-sky-panel pointer-events-none absolute -inset-x-2 top-0 -bottom-[84px] -z-10 overflow-hidden rounded-[28px] sm:-inset-x-4 sm:-top-5 sm:-bottom-[226px]"
     >
       <span className="home-sky-glow absolute right-[7%] top-[-90px] h-[240px] w-[40%] rounded-pill blur-[70px]" />
       <span className="home-sky-cloud absolute right-[21%] top-[40px] h-[54px] w-[23%] rounded-pill opacity-[0.55] blur-[22px]" />
@@ -59,13 +59,16 @@ function CageRings({ className, cx, rx, ry, single = false }) {
 
 /**
  * Greeting over the sky: white text, lime primary, dark-glass secondaries.
- * The panel hangs from this block (330px on wide screens, ~220px on phones)
+ * Paper geometry (INK-0): the panel starts 20px above the greeting (16px
+ * under the top bar), 16px outside the content edges, and is 330px tall on
+ * wide screens (~220px on phones); the greeting is inset 28px with 26px on top.
+ * The panel hangs from this block
  * so it grows with the header when the buttons wrap. The parent needs
  * `isolate` so the panel stays behind the cards that follow.
  */
 export function HomeSkyTitle({ eyebrow, title, actions }) {
   return (
-    <div className="relative flex flex-col gap-4 px-2 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-3 sm:pb-5 sm:pt-[26px]">
+    <div className="relative flex flex-col gap-4 px-2 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-7 sm:pt-[26px]">
       <HomeSkyPanel />
       <div className="flex min-w-0 flex-col gap-[6px]">
         <div className="home-sky-eyebrow text-[13px] leading-4">{eyebrow}</div>

@@ -113,7 +113,7 @@ export default function PlatformLayout({ title, eyebrow, children, actions, hide
           </span>
           <button
             type="button"
-            className="self-start rounded text-sm leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            className="self-start rounded text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             onClick={() => signOut()}
           >
             {t('platform.signOut')}
@@ -142,7 +142,7 @@ export function ConsoleHeader({ eyebrow, title, actions }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-[6px]">
-        {eyebrow ? <div className="text-sm leading-4 text-muted">{eyebrow}</div> : null}
+        {eyebrow ? <div className="text-[13px] leading-4 text-muted">{eyebrow}</div> : null}
         <h1 className="text-[30px] font-semibold leading-9 tracking-[-0.02em] text-text">{title}</h1>
       </div>
       {actions ? <div className="flex flex-wrap gap-[10px]">{actions}</div> : null}
@@ -187,7 +187,7 @@ export function ConsolePanel({ title, action, children, className = '', bodyClas
     <section className={`flex flex-col rounded-[12px] border border-line bg-surface ${className}`}>
       {title || action ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-          {title ? <h2 className="text-base font-semibold leading-[18px] text-text">{title}</h2> : <span />}
+          {title ? <h2 className="text-[15px] font-semibold leading-[18px] text-text">{title}</h2> : <span />}
           {action}
         </div>
       ) : null}

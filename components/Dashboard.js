@@ -88,7 +88,10 @@ function DashboardView() {
   const canManageOrg = can('customization.manage')
   const layout = useQuery(api.dashboardLayouts.get, user && canReports ? { key: 'home' } : 'skip')
   const [customizing, setCustomizing] = useState(false)
-  const shownWidgets = visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can)
+  // A saved layout (mine or the organization's) wins; otherwise the client's
+  // default, so a new default ships with the page, not with a backend deploy.
+  const savedLayout = layout?.source === 'me' || layout?.source === 'org' ? layout.widgets : null
+  const shownWidgets = visibleWidgets(savedLayout ?? DEFAULT_DASHBOARD, can)
   const [feedRange, setFeedRange] = useState('30')
   const { settings } = useSettings()
   const { theme } = useTheme()
@@ -204,16 +207,19 @@ function DashboardView() {
       label: t('home.kpi.activeCages'),
       value: metrics.totalActiveCages,
       suffix: t('home.kpi.ofTotal', { count: metrics.totalCages ?? cages.length }),
+      suffixTone: 'unit',
     },
     'stat.biomass': {
       label: t('home.kpi.biomass'),
       value: biomassInT ? (biomassKg / 1000).toFixed(1) : biomassKg.toLocaleString(),
       suffix: biomassInT ? 't' : 'kg',
+      suffixTone: 'unit',
     },
     'stat.fcr': {
       label: t('home.kpi.fcr'),
       value: metrics.averageFCR === 'N/A' ? '—' : metrics.averageFCR,
       suffix: t('home.kpi.fcrHint'),
+      suffixTone: 'unit',
     },
     'stat.mortality': {
       label: t('home.kpi.mortality'),
@@ -224,6 +230,7 @@ function DashboardView() {
       label: t('home.kpi.adg'),
       value: metrics.avgDailyGrowth === 'N/A' ? '—' : metrics.avgDailyGrowth,
       suffix: metrics.avgDailyGrowth === 'N/A' ? undefined : 'g/day',
+      suffixTone: 'unit',
     },
     'stat.feed30d': {
       label: t('home.kpi.feed30d'),
@@ -232,12 +239,14 @@ function DashboardView() {
           ? Number(summary.recent_feed_usage_kg).toLocaleString(undefined, { maximumFractionDigits: 0 })
           : '—',
       suffix: summary?.recent_feed_usage_kg != null ? 'kg' : undefined,
+      suffixTone: 'unit',
     },
     'stat.health': {
       label: t('home.kpi.health'),
       value: health.toFixed(0),
       valueTone: health >= 75 ? 'good' : health >= 50 ? 'warn' : 'alert',
       suffix: '/ 100',
+      suffixTone: 'unit',
     },
   }
 
@@ -256,10 +265,10 @@ function DashboardView() {
     {
       key: 'date',
       header: t('home.activity.date'),
-      width: 120,
+      width: 110,
       render: (r) => <span className="text-muted tabular-nums">{formatDate(r.stocking_date || r.stockingDate)}</span>,
     },
-    { key: 'type', header: t('home.activity.type'), width: 150, render: () => <Pill tone="cyan">{t('home.activity.stocking')}</Pill> },
+    { key: 'type', header: t('home.activity.type'), width: 130, render: () => <Pill tone="cyan">{t('home.activity.stocking')}</Pill> },
     { key: 'unit', header: t('home.activity.unit'), render: (r) => r.cage?.name || '—' },
     {
       key: 'batch',
@@ -277,14 +286,14 @@ function DashboardView() {
     {
       key: 'abw',
       header: t('home.activity.abw'),
-      width: 150,
+      width: 130,
       align: 'right',
       render: (r) => (r.initial_abw != null ? `${Number(r.initial_abw).toFixed(1)} g` : '—'),
     },
     {
       key: 'status',
       header: t('home.activity.status'),
-      width: 190,
+      width: 180,
       render: (r) =>
         r.status ? (
           <span className="inline-flex items-center gap-2">
@@ -297,11 +306,11 @@ function DashboardView() {
     },
   ]
 
-  const cardTitle = 'text-base font-semibold leading-5 text-text'
+  const cardTitle = 'text-[15px] font-semibold leading-[18px] text-text'
 
   const widgetNodes = {
-    // Over the sky panel the strip needs its own surface to stay readable.
-    __kpis: sky ? (
+    // Over the sky panel (strip placed first) it needs its own surface to stay readable.
+    __kpis: sky && gridWidgets[0]?.widget === '__kpis' ? (
       <div className="rounded-card border border-line bg-surface px-[22px] py-5 shadow-[var(--shadow-card)]">
         <KpiStrip items={kpiCells} className="py-1" />
       </div>
@@ -309,7 +318,7 @@ function DashboardView() {
       <KpiStrip items={kpiCells} className="py-1" />
     ),
     insights: (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-7">
         <FarmAlerts locationId={locationArgs?.locationId} />
         <DashboardInsights
           locationId={locationArgs?.locationId}
@@ -320,23 +329,12 @@ function DashboardView() {
     'chart.feedTrend': (
       <section
         aria-labelledby="home-feed-title"
-        className="flex min-h-[340px] flex-col gap-[18px] rounded-card border border-line bg-surface px-[26px] pb-[22px] pt-[26px] shadow-[var(--shadow-card)]"
+        className="flex min-h-[340px] flex-col gap-1 rounded-card border border-line bg-surface px-5 pb-[22px] pt-[26px] shadow-[var(--shadow-card)] sm:px-7"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-2">
-            <h2 id="home-feed-title" className="text-sm leading-[18px] text-muted">
-              {t('home.feed.title')}
-            </h2>
-            <p className="text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-text tabular-nums sm:text-[48px] sm:leading-[52px]">
-              {feedTotal >= 1000 ? (feedTotal / 1000).toFixed(1) : Math.round(feedTotal).toLocaleString()}
-              <span className="text-[24px] font-normal tracking-normal text-muted">
-                {feedTotal >= 1000 ? ' t' : ' kg'}
-              </span>
-            </p>
-            <p className="text-[13px] leading-4 text-muted">
-              {t('home.feed.cumulative', { count: feedTrend.length })}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="home-feed-title" className="text-[13px] leading-4 text-muted">
+            {t('home.feed.title')}
+          </h2>
           <Segmented
             label={t('home.feed.range')}
             value={feedRange}
@@ -347,6 +345,15 @@ function DashboardView() {
             ]}
           />
         </div>
+        <p className="text-[40px] font-semibold leading-[48px] tracking-[-0.035em] text-text tabular-nums sm:text-[48px] sm:leading-[56px]">
+          {feedTotal >= 1000 ? (feedTotal / 1000).toFixed(1) : Math.round(feedTotal).toLocaleString()}
+          <span className="text-[24px] font-medium tracking-[-0.035em] text-muted">
+            {feedTotal >= 1000 ? ' t' : ' kg'}
+          </span>
+        </p>
+        <p className="text-[13px] leading-4 text-muted">
+          {t('home.feed.cumulative', { count: feedTrend.length })}
+        </p>
         {feedTrend.length === 0 ? (
           <EmptyState
             title={t('home.feed.emptyTitle')}
@@ -358,16 +365,18 @@ function DashboardView() {
             }
           />
         ) : (
-          <div className="h-[190px] grow">
-            <FeedTrendChart feedTrend={feedTrend} name={t('home.feed.series')} />
+          <div className="flex min-h-[168px] grow flex-col pt-[14px]">
+            <div className="h-[154px] grow">
+              <FeedTrendChart feedTrend={feedTrend} name={t('home.feed.series')} />
+            </div>
           </div>
         )}
       </section>
     ),
     'chart.mortality': (
-      <Card className="min-h-[340px]">
+      <Card padding={false} className="min-h-[340px] px-5 pb-5 pt-[26px] sm:px-6">
         <h2 className={cardTitle}>{t('home.mortality.title')}</h2>
-        <p className="mb-4 mt-1 text-xs leading-4 text-muted">{t('home.mortality.subtitle')}</p>
+        <p className="mb-[14px] mt-1 text-xs leading-4 text-muted">{t('home.mortality.subtitle')}</p>
         {mortalityBars.length === 0 ? (
           <EmptyState title={t('home.mortality.emptyTitle')} description={t('home.mortality.emptyBody')} />
         ) : (

@@ -18,7 +18,7 @@ export const SEVERITY_TONE = {
 }
 
 const ACTION_BUTTON =
-  'rounded-pill border border-line-strong px-[14px] py-2 text-sm leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
+  'rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 disabled:cursor-not-allowed'
 
 export function useAlertLang() {
   const { locale } = useLocale()
@@ -63,7 +63,7 @@ export function AlertRow({ alert: a, lang, canAct, actions, compact = false }) {
           <span className={`text-[11px] font-semibold uppercase leading-[14px] tracking-[0.08em] ${tone.text}`}>
             {t(`farmAlerts.severity.${a.severity}`)}
           </span>
-          <span className="text-base font-semibold leading-[18px] text-text">{text.title}</span>
+          <span className="text-[15px] font-semibold leading-[18px] text-text">{text.title}</span>
           <span className="text-xs leading-4 text-faint">
             {t(`farmAlerts.status.${a.status}`)} · {t('farmAlerts.since', { date: a.date })}
           </span>
@@ -130,7 +130,7 @@ export default function FarmAlerts({ locationId, unitId, compact = false }) {
     <section className="rounded-card border border-line bg-surface shadow-[var(--shadow-card)]" aria-labelledby="farm-alerts-title">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
         <div>
-          <h2 id="farm-alerts-title" className="text-base font-semibold leading-[18px] text-text">
+          <h2 id="farm-alerts-title" className="text-[15px] font-semibold leading-[18px] text-text">
             {t('farmAlerts.title')}
           </h2>
           {compact ? null : <p className="mt-1 text-xs leading-4 text-muted">{t('farmAlerts.subtitle')}</p>}
