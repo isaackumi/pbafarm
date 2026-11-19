@@ -59,7 +59,7 @@ describe('mfaTotp', () => {
     const s = await setup()
     const a1 = s.as(s.userA, s.s1)
     const { secret, uri } = await a1.action(api.mfaTotp.startEnrolment, {})
-    expect(uri).toMatch(/^otpauth:\/\/totp\/PBA%20Farm%3Aa%40a\.com\?secret=/)
+    expect(uri).toMatch(/^otpauth:\/\/totp\/Anowa%3Aa%40a\.com\?secret=/)
     // Secret is stored encrypted, never in plain text.
     const row = await s.t.run((ctx) => ctx.db.query('mfaTotp').first())
     expect(JSON.stringify(row)).not.toContain(secret)

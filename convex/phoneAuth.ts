@@ -119,7 +119,7 @@ export const deliverLoginCode = internalAction({
     const result = await deliverMessage(ctx, args.companyId, {
       to: args.phone,
       channel: args.channel,
-      body: `Your PBA Farm sign-in code is ${args.code}. It expires in 10 minutes. Do not share it.`,
+      body: `Your Anowa sign-in code is ${args.code}. It expires in 10 minutes. Do not share it.`,
       otpCode: args.code,
     })
     if (!result.ok) {

@@ -4,7 +4,7 @@ Branch `docs/discovery` (code of PRs #8–#12 and #14; PR #7's page edits are no
 
 ## 1. Summary
 
-PBA Farm is a Next.js 15 **pages-router** single-page application, fully client-rendered (61 statically prerendered routes, no SSR, no middleware), backed by one Convex deployment that holds all data, business logic, authorization, one cron and file storage for logos. Two Next API routes proxy an LLM assistant. A hand-written service worker and a `localStorage` outbox give the daily-entry screen partial offline capability (doc 01 §1–§2, doc 12 §1).
+Anowa is a Next.js 15 **pages-router** single-page application, fully client-rendered (61 statically prerendered routes, no SSR, no middleware), backed by one Convex deployment that holds all data, business logic, authorization, one cron and file storage for logos. Two Next API routes proxy an LLM assistant. A hand-written service worker and a `localStorage` outbox give the daily-entry screen partial offline capability (doc 01 §1–§2, doc 12 §1).
 
 | Layer | What it is | Evidence |
 |---|---|---|

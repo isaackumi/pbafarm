@@ -31,6 +31,7 @@ import { SearchField } from './ui/SearchField'
 import { Toggle } from './ui/Toggle'
 import LanguageSwitcher from './LanguageSwitcher'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
+import { AnowaMark } from './brand/AnowaLogo'
 import { useToast } from './Toast'
 
 /**
@@ -293,8 +294,8 @@ const TopBar = ({ onOpenMenu }) => {
             </button>
           )}
           <NavSearch />
-          <Link href="/dashboard" className="md:hidden text-[16px] font-extrabold tracking-[-0.03em] text-text">
-            PBA FARM
+          <Link href="/dashboard" className="md:hidden" aria-label="Anowa">
+            <AnowaMark size={32} />
           </Link>
         </div>
 

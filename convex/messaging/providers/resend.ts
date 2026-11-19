@@ -30,7 +30,7 @@ export const resend: ProviderAdapter = {
   channels: ['email'],
   credentialFields: [{ key: 'apiKey', label: 'API key (re_…)', required: true, env: 'RESEND_API_KEY' }],
   settingFields: [],
-  senderLabel: 'From address, e.g. "PBA Farm <alerts@yourfarm.com>"',
+  senderLabel: 'From address, e.g. "Anowa <alerts@yourfarm.com>"',
   senderRequired: true,
 
   send(input, creds, config, fetchImpl) {
@@ -41,12 +41,12 @@ export const resend: ProviderAdapter = {
           headers: {
             Authorization: `Bearer ${creds.apiKey ?? ''}`,
             'Content-Type': 'application/json',
-            'User-Agent': 'pbafarm-messaging/1.0',
+            'User-Agent': 'anowa-messaging/1.0',
           },
           body: JSON.stringify({
             from: config.senderId ?? '',
             to: [input.to],
-            subject: input.subject ?? 'Message from PBA Farm',
+            subject: input.subject ?? 'Message from Anowa',
             text: input.body,
             ...(input.attachments?.length
               ? {

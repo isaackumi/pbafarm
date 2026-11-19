@@ -16,7 +16,7 @@ import {
 
 const modules = import.meta.glob('./**/*.ts')
 const TEST_KEY = toBase64(new Uint8Array(32).map((_, i) => i + 7))
-const URL_OK = 'https://hooks.example.com/pba'
+const URL_OK = 'https://hooks.example.com/anowa'
 
 type Call = { url: string; init: RequestInit }
 

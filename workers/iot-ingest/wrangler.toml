@@ -1,5 +1,5 @@
 # CF-008 IoT ingestion Worker. Not deployed by CI; see README.md for steps.
-name = "pbafarm-iot-ingest"
+name = "anowa-iot-ingest"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 workers_dev = false

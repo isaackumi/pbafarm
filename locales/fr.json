@@ -81,7 +81,7 @@
       "weeklyReport": "Rapport hebdomadaire",
       "alerts": "Alertes et analyses",
       "calendar": "Calendrier",
-      "assistant": "Demander à PBA"
+      "assistant": "Anowa"
     },
     "section": {
       "production": "Production",
@@ -144,7 +144,7 @@
     "sendAgainIn": "Renvoyer dans {seconds} s",
     "changeNumber": "Changer de numéro",
     "mobileNumber": "Numéro de mobile",
-    "appName": "PBA Farm",
+    "appName": "Anowa",
     "offlineSession": "Pas de connexion. Utilisation du compte enregistré sur ce téléphone. Les saisies restent sur cet appareil et seront envoyées au retour de la connexion.",
     "queuedOffline": "Pas de connexion. Enregistré sur cet appareil, envoi au retour de la connexion",
     "noCagesSelected": "Aucune cage sélectionnée",
@@ -1829,7 +1829,7 @@
     "openCage": "Ouvrir la cage"
   },
   "pwa": {
-    "updateReady": "Une nouvelle version de PBA Farm est prête.",
+    "updateReady": "Une nouvelle version d'Anowa est prête.",
     "reload": "Recharger",
     "later": "Plus tard"
   },
@@ -2756,7 +2756,7 @@
     "calendarLink": "calendrier"
   },
   "assistantUi": {
-    "title": "Demander à PBA",
+    "title": "Demander à Anowa",
     "eyebrow": "Fondé sur les données de votre ferme",
     "dialog": "Assistant de la ferme",
     "welcome": "Posez vos questions sur vos unités, l’aliment, la mortalité, la croissance ou le moment de la récolte. Les réponses utilisent les données enregistrées de votre ferme.",
@@ -3144,7 +3144,7 @@
     },
     "inbound": {
       "title": "Webhooks entrants",
-      "description": "Permettez à des systèmes partenaires d’envoyer des événements à PBA Farm. Chaque webhook a son propre secret de signature ; les envois non signés, trop anciens ou répétés sont refusés.",
+      "description": "Permettez à des systèmes partenaires d’envoyer des événements à Anowa. Chaque webhook a son propre secret de signature ; les envois non signés, trop anciens ou répétés sont refusés.",
       "secretTitle": "Secret de signature",
       "secretHint": "Copiez-le maintenant : il n’est affiché qu’une fois. Donnez-le au système émetteur.",
       "noEvents": "Rien reçu pour l’instant.",
@@ -4631,7 +4631,7 @@
     "whatsappUnavailable": "WhatsApp n'est pas encore disponible sur ce déploiement.",
     "whatsappVerifyPhone": "WhatsApp se connecte uniquement depuis votre numéro vérifié. Ajoutez et confirmez d'abord votre téléphone.",
     "whatsappHow": "Depuis le {phone}, envoyez le code à usage unique au {bot}. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
-    "whatsappBotFallback": "numéro WhatsApp de PBA Farm",
+    "whatsappBotFallback": "numéro WhatsApp d'Anowa",
     "telegramHow": "Ouvrez le lien à usage unique sur votre téléphone et appuyez sur Démarrer. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
     "telegramUnavailable": "Telegram n'est pas encore disponible sur ce déploiement.",
     "minutesLeft": {
@@ -4671,7 +4671,7 @@
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "navLabel": "Console de la plateforme",
-    "eyebrow": "console.heitechinc.com · Administrateur plateforme",
+    "eyebrow": "console.getanowa.com · Administrateur plateforme",
     "loadError": "Impossible de charger cette page de la console",
     "nav": {
       "overview": "Vue d'ensemble",
@@ -5013,7 +5013,7 @@
       "sharedPhoneBody": "Déconnectez-vous à la fin pour que la personne suivante ne voie pas votre ferme.",
       "useEmail": "Utiliser l'e-mail",
       "ssoHint": "Connectez-vous avec le compte de votre entreprise via {name}.",
-      "newHere": "Nouveau sur PBA Farm ?",
+      "newHere": "Nouveau sur Anowa ?",
       "createWorkspace": "Créer un espace pour votre ferme"
     },
     "signup": {
@@ -5089,7 +5089,7 @@
     "newBadge": "Nouveau",
     "newText": "Saisie quotidienne hors ligne pour les équipes terrain",
     "heroTitle": "Gérez chaque cage comme si c'était la seule.",
-    "heroBody": "PBA Farm est le système d'exploitation des fermes piscicoles : de l'empoissonnement à la récolte, de l'aliment aux finances, sur chaque site et pour chaque équipe.",
+    "heroBody": "Anowa est le système d'exploitation des fermes piscicoles : de l'empoissonnement à la récolte, de l'aliment aux finances, sur chaque site et pour chaque équipe.",
     "heroNote": "La saisie quotidienne fonctionne hors ligne sur téléphone",
     "product": {
       "eyebrow": "Produit",
@@ -5129,7 +5129,7 @@
       "runBody": "Saisissez, approuvez, récoltez et vendez. Rapports et compte de résultat se construisent seuls."
     },
     "cta": {
-      "title": "Votre prochain cycle commence sur PBA Farm.",
+      "title": "Votre prochain cycle commence sur Anowa.",
       "body": "Configurez votre espace en un après-midi.",
       "start": "Créer un espace"
     },
@@ -5154,7 +5154,7 @@
       "company": "Entreprise",
       "companyHint": "Nom, code et contacts",
       "approval": "Approbation",
-      "approvalHint": "Un administrateur PBA Farm l'examine",
+      "approvalHint": "Un administrateur Anowa l'examine",
       "units": "Premières unités",
       "unitsHint": "Cages, étangs, bassins"
     },
@@ -5188,7 +5188,7 @@
     "askToJoin": "Demander à rejoindre",
     "rejected": "Votre enregistrement de {name} n'a pas été approuvé. Vous pouvez en soumettre un nouveau.",
     "pendingTitle": "En attente d'approbation",
-    "pendingSubtitle": "Votre enregistrement est entre les mains d'un administrateur PBA Farm.",
+    "pendingSubtitle": "Votre enregistrement est entre les mains d'un administrateur Anowa.",
     "pendingBody": "Vous y aurez accès en tant que propriétaire dès son approbation. Cette page se met à jour toute seule.",
     "submitted": "Enregistrement soumis",
     "nameRequired": "Le nom de l'entreprise est obligatoire",

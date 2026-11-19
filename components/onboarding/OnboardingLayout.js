@@ -46,7 +46,7 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text lg:flex-row">
       <Head>
-        <title>{`${pageTitle || title} · PBA Farm`}</title>
+        <title>{`${pageTitle || title} · Anowa`}</title>
       </Head>
       <aside className="flex shrink-0 flex-col gap-8 border-b border-line bg-surface px-6 py-6 sm:px-7 lg:w-[340px] lg:border-b-0 lg:border-r lg:py-9">
         <div className="flex items-center justify-between">

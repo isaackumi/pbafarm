@@ -7,7 +7,7 @@ export default function Custom404() {
   return (
     <SystemPage>
       <Head>
-        <title>{`${t('system.notFound.title')} · PBA Farm`}</title>
+        <title>{`${t('system.notFound.title')} · Anowa`}</title>
       </Head>
       <NotFoundCard />
     </SystemPage>

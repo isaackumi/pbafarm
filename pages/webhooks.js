@@ -67,7 +67,7 @@ function NewEndpoint({ events, onCreated, disabled }) {
               type="url"
               inputMode="url"
               className={`${FIELD} font-mono`}
-              placeholder="https://example.com/pba-webhook"
+              placeholder="https://example.com/anowa-webhook"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required

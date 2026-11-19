@@ -5,7 +5,7 @@
  * Account emails are not sent on a tenant's behalf, so they always use the
  * platform default email channel from convex/messaging (doc 18 §6):
  *   PLATFORM_EMAIL_PROVIDER=resend
- *   PLATFORM_EMAIL_SENDER="PBA Farm <no-reply@your-domain>"
+ *   PLATFORM_EMAIL_SENDER="Anowa <no-reply@your-domain>"
  *   PLATFORM_RESEND_API_KEY=re_…
  * Without it the log adapter prints the message to the Convex logs, so dev and
  * test deployments work without a provider. send() uses fetch: actions only.

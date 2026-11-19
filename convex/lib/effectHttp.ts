@@ -61,7 +61,7 @@ export type HttpError = HttpTransportError | HttpDecodeError
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>
 
 /** The fetch implementation, as a service so tests can replace it. */
-export class Fetch extends Context.Service<Fetch, FetchFn>()('pbafarm/Fetch') {}
+export class Fetch extends Context.Service<Fetch, FetchFn>()('anowa/Fetch') {}
 
 /** Production layer: the runtime's global fetch (looked up per call). */
 export const FetchLive = Layer.succeed(Fetch, (input, init) => globalThis.fetch(input, init))

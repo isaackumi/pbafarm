@@ -5,6 +5,7 @@ import { useT } from '../../lib/i18n/context'
 import { Brand, LakeScene } from '../auth/AuthUi'
 import LanguageSwitcher from '../LanguageSwitcher'
 import { GhostButton, GradientButton } from '../ui/Buttons'
+import { BRAND } from '../../lib/brand'
 
 const SECTION = 'mx-auto w-full max-w-[1200px] px-6 sm:px-10'
 const NAV_LINK = 'rounded-sm hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
@@ -120,8 +121,11 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-bg text-text">
       <Head>
-        <title>{`PBA Farm · ${t('landing.metaTitle')}`}</title>
+        <title>{`Anowa · ${t('landing.metaTitle')}`}</title>
         <meta name="description" content={t('landing.heroBody')} />
+        <meta property="og:title" content={`Anowa · ${t('landing.metaTitle')}`} />
+        <meta property="og:description" content={t('landing.heroBody')} />
+        <meta property="og:url" content={BRAND.appUrl} />
       </Head>
 
       <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur">
@@ -270,7 +274,15 @@ export default function Landing() {
             </div>
           </nav>
         </div>
-        <div className={`${SECTION} border-t border-line py-6 text-xs leading-4 text-faint`}>© {year} PBA Farm</div>
+        <div className={`${SECTION} flex flex-wrap gap-x-4 gap-y-2 border-t border-line py-6 text-xs leading-4 text-faint`}>
+          <span>© {year} Anowa</span>
+          <a href={BRAND.siteUrl} className={NAV_LINK}>
+            getanowa.com
+          </a>
+          <a href={`mailto:${BRAND.email}`} className={NAV_LINK}>
+            {BRAND.email}
+          </a>
+        </div>
       </footer>
     </div>
   )

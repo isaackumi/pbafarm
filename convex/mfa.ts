@@ -137,7 +137,7 @@ async function sendChallenge(
   const result = await deliverMessage(ctx, target.companyId, {
     to: target.to,
     channel: args.channel,
-    body: `Your PBA Farm verification code is ${code}. It expires in 10 minutes. Do not share it.`,
+    body: `Your Anowa verification code is ${code}. It expires in 10 minutes. Do not share it.`,
     otpCode: code,
   })
   if (!result.ok) {
@@ -353,7 +353,7 @@ export const startPhoneConfirmation = action({
     const result = await deliverMessage(ctx, target.companyId, {
       to: target.to,
       channel,
-      body: `Your PBA Farm code to confirm this number is ${code}. It expires in 10 minutes. Do not share it.`,
+      body: `Your Anowa code to confirm this number is ${code}. It expires in 10 minutes. Do not share it.`,
       otpCode: code,
     })
     if (!result.ok) {

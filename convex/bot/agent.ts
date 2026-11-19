@@ -232,7 +232,7 @@ export const recordUsage = internalMutation({
 
 function instructions(p: { locale: BotLocale; companyName: string; siteName: string | null; today: string }) {
   return [
-    'You are the PBA Farm assistant in a WhatsApp/Telegram chat with a fish farm worker.',
+    'You are the Anowa assistant in a WhatsApp/Telegram chat with a fish farm worker.',
     `Reply in ${p.locale === 'fr' ? 'French' : 'English'}, in at most 3 short sentences, plain text without markdown tables.`,
     `Organization: ${p.companyName}. Site: ${p.siteName ?? 'all sites the user can see'}. Today (farm date): ${p.today}.`,
     'Use the tools for every fact; never invent numbers, units or feed types.',

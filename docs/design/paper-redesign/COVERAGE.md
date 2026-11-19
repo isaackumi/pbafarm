@@ -4,6 +4,8 @@ Every route in `pages/` and every shared UI component maps to a Paper artboard (
 
 Artboard ids are listed in [HANDOFF.md §3](./HANDOFF.md). Patterns are defined at the bottom of this file.
 
+Brand: the product is now **Anowa** (logo on Paper page `p-5-0`, artboard EMT-0). The Paper file keeps its original title.
+
 Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper (dark + light).
 
 ## Phase 0: foundation (must land first)
@@ -22,75 +24,83 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper 
 
 | | Route | Artboard / pattern |
 |---|---|---|
-| [ ] | `/` | Website Landing 3I0-0 |
-| [ ] | `/login` | 15 / 15b |
-| [ ] | `/signup`, `/verify`, `/verify-email`, `/reset-password`, `/invite/[token]` | P-AUTH (15 layout) |
-| [ ] | `/register-company`, `/create-cage` | 16 Onboarding (stepper) |
-| [ ] | `/dashboard` | 01 Home |
-| [ ] | `/tasks` | 12 My tasks |
-| [ ] | `/cages`, `/units`, `/units/groups` | 02 Cages |
-| [ ] | `/units/map` | 02 header and filters + full-width map card (P-LIST) |
-| [ ] | `/cages/[id]`, `/batches/[id]` | 03 Cage detail (batch adds the 26 timeline) |
-| [ ] | `/units/[id]/water` | 03 tab + 07 |
-| [ ] | `/units/[id]/maintenance`, `/maintenance` | 03 tab + 27 (checklist/findings rows) |
-| [ ] | `/cages/settings`, `/species` | P-SETTINGS |
-| [ ] | `/cages/qr-codes`, `/scan` | 26 label card · P-MOBILE |
-| [ ] | `/cages/analytics`, `/cages/analytics/growth` | 05 |
-| [ ] | `/cages/analytics/harvest` | 08 |
-| [ ] | `/daily-entry`, `/daily-data`, `/water-entry`, `/inspection-entry` | 04 Daily entry |
-| [ ] | `/bulk-upload` | 04 + P-UPLOAD |
-| [ ] | `/biweekly-entry`, `/biweekly-records` | 05 |
-| [ ] | `/stocking`, `/stocking-management`, `/stocking/[id]/details`, `/fish-transfers`, `/topup`, `/topup/[id]/details` | 06 (detail = 25 detail panel) |
-| [ ] | `/pending-approval` | redirect only, keep |
-| [ ] | `/approvals` | 25 |
-| [ ] | `/health`, `/water-quality` | 07 |
-| [ ] | `/harvest`, `/harvest-sampling`, `/grading` | 08 |
-| [ ] | `/trace`, `/trace/[lotId]` | 26 |
-| [ ] | `/hatchery`, `/hatchery/broodstock`, `/hatchery/broodstock/[id]`, `/hatchery/larval`, `/hatchery/live-feed`, `/hatchery/spawning` | 13 |
-| [ ] | `/feed-management`, `/feed-management/overview`, `/feed-management/analytics`, `/feed-issue`, `/feed-types`, `/feeding-plans`, `/stock-levels` | 09 |
-| [ ] | `/inventory/overview`, `/inventory/items`, `/inventory/lots`, `/inventory/counts`, `/inventory/adjust`, `/inventory/analytics`, `/inventory-transactions` | 09 + P-LIST |
-| [ ] | `/inventory-alerts` | 30 feed list |
-| [ ] | `/procurement`, `/feed-purchases`, `/feed-suppliers` | 29 |
-| [ ] | `/sales`, `/invoices/[id]` | 24 |
-| [ ] | `/pnl` | 10 |
-| [ ] | `/expenses`, `/accounting-export` | 19 |
-| [ ] | `/reports`, `/report`, `/reports/regions`, `/group-reports`, `/analytics` | 11 |
-| [ ] | `/export` | 31 "Download my data" row + P-SETTINGS |
-| [ ] | `/compliance` | 27 |
-| [ ] | `/sensors` | 28 |
-| [ ] | `/automations` | 21 + `automation-flow.html` (motion) |
-| [ ] | `/notifications` | 30 |
-| [ ] | `/messaging-settings`, `/outbox` | 30 delivery matrix · 30 feed list |
-| [ ] | `/users`, `/teams`, `/workforce` | 14 Team + 23 Member access |
-| [ ] | `/organization-structure`, `/farm-locations`, `/company-settings` | P-SETTINGS (23 scope chips) |
-| [ ] | `/customization` | 32 |
-| [ ] | `/account` | 31 |
-| [ ] | `/ai-settings` | P-SETTINGS (31 rows) |
-| [ ] | `/api-keys`, `/webhooks`, `/inbound-webhooks`, `/api-docs` | P-SETTINGS + P-LIST |
-| [ ] | `/audit-logs` | P-LIST + 23 access history rows |
-| [ ] | `/admin/admin`, `/admin/company-registrations`, `/global-settings` | P-SETTINGS · 25 queue |
-| [ ] | `/404`, `_error` | P-SYSTEM |
+| [x] | `/` | Website Landing 3I0-0 |
+| [x] | `/login` | 15 / 15b |
+| [x] | `/signup`, `/verify`, `/verify-email`, `/reset-password`, `/invite/[token]` | P-AUTH (15 layout) |
+| [x] | `/register-company`, `/create-cage` | 16 Onboarding (stepper) |
+| [x] | `/dashboard` | 01 Home |
+| [x] | `/tasks` | 12 My tasks |
+| [x] | `/cages`, `/units`, `/units/groups` | 02 Cages |
+| [x] | `/units/map` | 02 header and filters + full-width map card (P-LIST) |
+| [x] | `/cages/[id]`, `/batches/[id]` | 03 Cage detail (batch adds the 26 timeline) |
+| [x] | `/units/[id]/water` | 03 tab + 07 |
+| [x] | `/units/[id]/maintenance`, `/maintenance` | 03 tab + 27 (checklist/findings rows) |
+| [x] | `/cages/settings`, `/species` | P-SETTINGS |
+| [x] | `/cages/qr-codes`, `/scan` | 26 label card · P-MOBILE |
+| [x] | `/cages/analytics`, `/cages/analytics/growth` | 05 |
+| [x] | `/cages/analytics/harvest` | 08 |
+| [x] | `/daily-entry`, `/daily-data`, `/water-entry`, `/inspection-entry` | 04 Daily entry |
+| [x] | `/bulk-upload` | 04 + P-UPLOAD |
+| [x] | `/biweekly-entry`, `/biweekly-records` | 05 |
+| [x] | `/stocking`, `/stocking-management`, `/stocking/[id]/details`, `/fish-transfers`, `/topup`, `/topup/[id]/details` | 06 (detail = 25 detail panel) |
+| [x] | `/pending-approval` | redirect only, keep |
+| [x] | `/approvals` | 25 |
+| [x] | `/health`, `/water-quality` | 07 |
+| [x] | `/harvest`, `/harvest-sampling`, `/grading` | 08 |
+| [x] | `/trace`, `/trace/[lotId]` | 26 |
+| [x] | `/hatchery`, `/hatchery/broodstock`, `/hatchery/broodstock/[id]`, `/hatchery/larval`, `/hatchery/live-feed`, `/hatchery/spawning` | 13 |
+| [x] | `/feed-management`, `/feed-management/overview`, `/feed-management/analytics`, `/feed-issue`, `/feed-types`, `/feeding-plans`, `/stock-levels` | 09 |
+| [x] | `/inventory/overview`, `/inventory/items`, `/inventory/lots`, `/inventory/counts`, `/inventory/adjust`, `/inventory/analytics`, `/inventory-transactions` | 09 + P-LIST |
+| [x] | `/inventory-alerts` | 30 feed list |
+| [x] | `/procurement`, `/feed-purchases`, `/feed-suppliers` | 29 |
+| [x] | `/sales`, `/invoices/[id]` | 24 |
+| [x] | `/pnl` | 10 |
+| [x] | `/expenses`, `/accounting-export` | 19 |
+| [x] | `/reports`, `/report`, `/reports/regions`, `/group-reports`, `/analytics` | 11 |
+| [x] | `/export` | 31 "Download my data" row + P-SETTINGS |
+| [x] | `/compliance` | 27 |
+| [x] | `/sensors` | 28 |
+| [x] | `/automations` | 21 + `automation-flow.html` (motion) |
+| [x] | `/notifications` | 30 |
+| [x] | `/messaging-settings`, `/outbox` | 30 delivery matrix · 30 feed list |
+| [x] | `/users`, `/teams`, `/workforce` | 14 Team + 23 Member access |
+| [x] | `/organization-structure`, `/farm-locations`, `/company-settings` | P-SETTINGS (23 scope chips) |
+| [x] | `/customization` | 32 |
+| [x] | `/account` | 31 |
+| [x] | `/ai-settings` | P-SETTINGS (31 rows) |
+| [x] | `/api-keys`, `/webhooks`, `/inbound-webhooks`, `/api-docs` | P-SETTINGS + P-LIST |
+| [x] | `/audit-logs` | P-LIST + 23 access history rows |
+| [x] | `/admin/admin`, `/admin/company-registrations`, `/global-settings` | P-SETTINGS · 25 queue |
+| [x] | `/404`, `_error` | P-SYSTEM |
+| [x] | `/calendar` | 18 Calendar |
+| [x] | `/assistant` | 17 (full page) |
+| [x] | `/alerts`, `/weekly-report` | 30 feed list · 11 |
+| [x] | `/billing`, `/suspended` | P-SETTINGS · P-SYSTEM |
+| [x] | `/platform`, `/platform/tenants`, `/platform/tenants/[id]`, `/platform/admins`, `/platform/audit`, `/platform/billing`, `/platform/usage` | Platform console (P-LIST + P-SETTINGS) |
+| [ ] | Projects (tasks grouped by cycle) | 20 Projects 4HK-0 — not built; no route yet |
 
 ## Phase 2: shared components
 
 | | Component | Artboard / pattern |
 |---|---|---|
-| [ ] | `AiAssistant.js` (drawer + full page) | 17 |
-| [ ] | `RolesPanel.js` | 22 |
-| [ ] | `MembersPanel.js`, `UserManagement.js`, `PersonPicker.js` | 23 / 14 |
-| [ ] | `AuthenticatorApp.js`, `DataPrivacyCard.js`, `AccountDeletionCard.js`, `NotificationPreferencesCard.js` | 31 / 30 |
-| [ ] | `CustomFields.js`, `FormLayout.js`, `customization/*` | 32 |
-| [ ] | All entry forms (`StockingForm`, `FishTransferForm`, `MultiTransferForm`, `TopUpForm`, `HarvestForm`, `GradingForm`, `SamplingForm`, `WaterQualityForm`, `InspectionForm`, `BiweeklyEntryForm`, `CreateCageForm`, `EquipmentForm`, `FeedPurchaseModal`) | 04 form pattern |
-| [ ] | `CsvImportForm`, `BulkDailyUploadForm`, `BulkBiweeklyUploadForm`, `DailyUploadPage` | P-UPLOAD |
-| [ ] | `DataTable.js`, `SiteKpiTable.js` | Table primitive |
-| [ ] | Modals: `ConfirmDeleteModal`, `LogoutConfirmationModal`, `SignOutOutboxDialog`, `CageManageModals`, `QuickCreateModals` | P-MODAL |
-| [ ] | `Toast.js`, `AppUpdatePrompt.js`, `ActAs.js` banner, `OutboxSync` indicator | P-FEEDBACK |
-| [ ] | `QueryBoundary`, `ErrorBoundary`, `DependencyEmpty` | P-SYSTEM |
-| [ ] | `BatchTrace`, `BatchHistory`, `InspectionHistory` | 26 timeline |
-| [ ] | `Dashboard.js`, `DashboardInsights.js`, `dashboard/*`, `charts/*` | 01 (chart styling from 01 / 10) |
-| [ ] | `UnitTabs`, `UnitProfile`, `Waterline`, `SiteConditions` | 03 / 28 |
-| [ ] | `TourProvider` (walkthrough popovers) | P-MODAL styling |
-| [ ] | `HumanCheck`, `LanguageSwitcher`, `QrScanner` | P-AUTH / P-MOBILE |
+| [x] | `AiAssistant.js` (drawer + full page) | 17 |
+| [x] | `RolesPanel.js` | 22 |
+| [x] | `MembersPanel.js`, `UserManagement.js`, `PersonPicker.js` | 23 / 14 |
+| [x] | `AuthenticatorApp.js`, `DataPrivacyCard.js`, `AccountDeletionCard.js`, `NotificationPreferencesCard.js` | 31 / 30 |
+| [x] | `CustomFields.js`, `FormLayout.js`, `customization/*` | 32 |
+| [x] | All entry forms (`StockingForm`, `FishTransferForm`, `MultiTransferForm`, `TopUpForm`, `HarvestForm`, `GradingForm`, `SamplingForm`, `WaterQualityForm`, `InspectionForm`, `BiweeklyEntryForm`, `CreateCageForm`, `EquipmentForm`, `FeedPurchaseModal`) | 04 form pattern |
+| [x] | `CsvImportForm`, `BulkDailyUploadForm`, `BulkBiweeklyUploadForm`, `DailyUploadPage` | P-UPLOAD |
+| [x] | `DataTable.js`, `SiteKpiTable.js` | Table primitive |
+| [x] | Modals: `ConfirmDeleteModal`, `LogoutConfirmationModal`, `SignOutOutboxDialog`, `CageManageModals`, `QuickCreateModals` | P-MODAL |
+| [x] | `Toast.js`, `AppUpdatePrompt.js`, `ActAs.js` banner, `OutboxSync` indicator | P-FEEDBACK |
+| [x] | `QueryBoundary`, `ErrorBoundary`, `DependencyEmpty` | P-SYSTEM |
+| [x] | `BatchTrace`, `BatchHistory`, `InspectionHistory` | 26 timeline |
+| [x] | `Dashboard.js`, `DashboardInsights.js`, `dashboard/*`, `charts/*` | 01 (chart styling from 01 / 10) |
+| [x] | `UnitTabs`, `UnitProfile`, `Waterline`, `SiteConditions` | 03 / 28 |
+| [x] | `TourProvider` (walkthrough popovers; styling lives in `styles/tour.css`) | P-MODAL styling |
+| [x] | `HumanCheck`, `LanguageSwitcher`, `QrScanner` (the unused `dark` variant of `LanguageSwitcher` still has legacy zinc classes) | P-AUTH / P-MOBILE |
+
+Audit 2026-11-19 (Anowa rebrand PR): every ticked row was checked against `pages/`/`components/` on `main` after redesign PRs #97–#103. Each file exists and was rebuilt in those PRs or renders only through `components/ui` primitives and token aliases (`FormLayout`, `EquipmentForm`, `QueryBoundary`, the bulk-upload wrappers, `TourProvider`). Known leftovers: `/cages/qr-codes` keeps `bg-white`/`text-black` on the printable label on purpose, and `/company-settings` uses zinc swatches to preview nav contrast.
 
 ## Patterns
 

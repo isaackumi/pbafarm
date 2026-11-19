@@ -201,7 +201,7 @@ export interface R2StorageApi {
   readonly presign: (method: 'GET' | 'PUT', key: string, ttlSec?: number, opts?: R2PresignOptions) => Effect.Effect<string, R2Failure>
 }
 
-export class R2Storage extends Context.Service<R2Storage, R2StorageApi>()('pbafarm/R2Storage') {}
+export class R2Storage extends Context.Service<R2Storage, R2StorageApi>()('anowa/R2Storage') {}
 
 export type R2Policy = {
   readonly timeoutMs?: number

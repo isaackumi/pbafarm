@@ -600,8 +600,8 @@ export const sendTest = action({
       {
         to,
         channel: prep.channel,
-        subject: 'PBA Farm test message',
-        body: `PBA Farm test message: your ${prep.channel.toUpperCase()} channel works.`,
+        subject: 'Anowa test message',
+        body: `Anowa test message: your ${prep.channel.toUpperCase()} channel works.`,
         otpCode: code,
       },
       creds,

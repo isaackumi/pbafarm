@@ -334,7 +334,7 @@ export default function AiAssistant() {
   )
 }
 
-/** 17 Ask PBA full page: chat on the left, insights and prompts on the right. */
+/** 17 Ask Anowa full page: chat on the left, insights and prompts on the right. */
 export function AssistantPage() {
   const t = useT()
   const { locationArgs } = useLocation()

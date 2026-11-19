@@ -95,7 +95,7 @@ export async function verifyTotp(
 }
 
 /** otpauth:// URI for the QR code an authenticator app scans. */
-export function otpauthUri(secretBase32: string, account: string, issuer = 'PBA Farm'): string {
+export function otpauthUri(secretBase32: string, account: string, issuer = 'Anowa'): string {
   const label = encodeURIComponent(`${issuer}:${account}`)
   const params = new URLSearchParams({
     secret: secretBase32,

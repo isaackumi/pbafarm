@@ -72,14 +72,14 @@ If the deployment sets a platform channel, companies without their own verified 
 
 ```
 PLATFORM_SMS_PROVIDER=hubtel            # or africastalking | twilio
-PLATFORM_SMS_SENDER=PBAFarm
+PLATFORM_SMS_SENDER=Anowa
 PLATFORM_HUBTEL_CLIENT_ID=…
 PLATFORM_HUBTEL_CLIENT_SECRET=…
 # Africa's Talking: PLATFORM_AT_USERNAME, PLATFORM_AT_API_KEY
 # Twilio:           PLATFORM_TWILIO_ACCOUNT_SID, PLATFORM_TWILIO_AUTH_TOKEN (+ PLATFORM_TWILIO_MESSAGING_SERVICE_SID)
 PLATFORM_WHATSAPP_PROVIDER=whatsapp_cloud   # optional; or twilio_whatsapp (+ PLATFORM_TWILIO_CONTENT_SID)
 PLATFORM_META_ACCESS_TOKEN=…  PLATFORM_META_PHONE_NUMBER_ID=…  PLATFORM_META_OTP_TEMPLATE=…  PLATFORM_META_TEMPLATE_LANG=en_US
-PLATFORM_EMAIL_PROVIDER=resend  PLATFORM_EMAIL_SENDER="PBA Farm <no-reply@…>"  PLATFORM_RESEND_API_KEY=…
+PLATFORM_EMAIL_PROVIDER=resend  PLATFORM_EMAIL_SENDER="Anowa <no-reply@…>"  PLATFORM_RESEND_API_KEY=…
 ```
 
 The rule is `PLATFORM_<CHANNEL>_PROVIDER`, `PLATFORM_<CHANNEL>_SENDER`, and `PLATFORM_<FIELD>` for each adapter field. An incomplete configuration counts as absent. Platform credentials stay in the environment and are never stored in tables.

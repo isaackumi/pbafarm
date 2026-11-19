@@ -1,5 +1,5 @@
 /* Driver.js tour popovers — Paper P-MODAL styling, token-driven so both themes follow */
-.pbafarm-tour-popover.driver-popover {
+.anowa-tour-popover.driver-popover {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--line-strong);
@@ -11,7 +11,7 @@
   overflow: visible !important;
 }
 
-.pbafarm-tour-popover .driver-popover-title {
+.anowa-tour-popover .driver-popover-title {
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
   font-size: 16px;
   line-height: 22px;
@@ -20,21 +20,21 @@
   color: var(--text);
 }
 
-.pbafarm-tour-popover .driver-popover-description {
+.anowa-tour-popover .driver-popover-description {
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;
   color: var(--muted);
 }
 
-.pbafarm-tour-popover .driver-popover-description strong,
-.pbafarm-tour-popover .driver-popover-description .tour-em {
+.anowa-tour-popover .driver-popover-description strong,
+.anowa-tour-popover .driver-popover-description .tour-em {
   font-weight: 600;
   color: var(--text);
 }
 
-.pbafarm-tour-popover .driver-popover-description mark,
-.pbafarm-tour-popover .driver-popover-description .tour-mark {
+.anowa-tour-popover .driver-popover-description mark,
+.anowa-tour-popover .driver-popover-description .tour-mark {
   background: color-mix(in srgb, var(--cyan-fill) 16%, transparent);
   color: var(--text);
   font-weight: 600;
@@ -44,29 +44,29 @@
   -webkit-box-decoration-break: clone;
 }
 
-.pbafarm-tour-popover .driver-popover-description .tour-flow {
+.anowa-tour-popover .driver-popover-description .tour-flow {
   display: inline;
   font-weight: 600;
   color: var(--cyan);
   letter-spacing: 0.01em;
 }
 
-.pbafarm-tour-popover .driver-popover-footer {
+.anowa-tour-popover .driver-popover-footer {
   margin-top: 16px;
 }
 
-.pbafarm-tour-popover .driver-popover-progress-text {
+.anowa-tour-popover .driver-popover-progress-text {
   font-size: 12px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
 
-.pbafarm-tour-popover .driver-popover-navigation-btns {
+.anowa-tour-popover .driver-popover-navigation-btns {
   gap: 8px;
 }
 
-.pbafarm-tour-popover .driver-popover-next-btn,
-.pbafarm-tour-popover .driver-popover-prev-btn {
+.anowa-tour-popover .driver-popover-next-btn,
+.anowa-tour-popover .driver-popover-prev-btn {
   border-radius: 999px;
   text-shadow: none;
   font-size: 13px;
@@ -75,42 +75,42 @@
   font-family: inherit;
 }
 
-.pbafarm-tour-popover .driver-popover-next-btn {
+.anowa-tour-popover .driver-popover-next-btn {
   background: var(--button);
   color: var(--button-text);
   border: 1px solid transparent;
   font-weight: 600;
 }
 
-.pbafarm-tour-popover .driver-popover-next-btn:hover,
-.pbafarm-tour-popover .driver-popover-next-btn:focus {
+.anowa-tour-popover .driver-popover-next-btn:hover,
+.anowa-tour-popover .driver-popover-next-btn:focus {
   background: var(--button);
   opacity: 0.9;
 }
 
-.pbafarm-tour-popover .driver-popover-prev-btn {
+.anowa-tour-popover .driver-popover-prev-btn {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--line-strong);
   font-weight: 500;
 }
 
-.pbafarm-tour-popover .driver-popover-prev-btn:hover,
-.pbafarm-tour-popover .driver-popover-prev-btn:focus {
+.anowa-tour-popover .driver-popover-prev-btn:hover,
+.anowa-tour-popover .driver-popover-prev-btn:focus {
   background: var(--surface);
 }
 
-.pbafarm-tour-popover .driver-popover-close-btn {
+.anowa-tour-popover .driver-popover-close-btn {
   color: var(--muted);
   border-radius: 999px;
 }
 
-.pbafarm-tour-popover .driver-popover-close-btn:hover,
-.pbafarm-tour-popover .driver-popover-close-btn:focus {
+.anowa-tour-popover .driver-popover-close-btn:hover,
+.anowa-tour-popover .driver-popover-close-btn:focus {
   color: var(--text);
 }
 
-.pbafarm-tour-popover :is(.driver-popover-next-btn, .driver-popover-prev-btn, .driver-popover-close-btn):focus-visible {
+.anowa-tour-popover :is(.driver-popover-next-btn, .driver-popover-prev-btn, .driver-popover-close-btn):focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
@@ -119,7 +119,7 @@
   Popover pointer arrow — Driver uses a CSS border triangle.
   Force size + contrast so it stays visible on the dim overlay.
 */
-.pbafarm-tour-popover .driver-popover-arrow {
+.anowa-tour-popover .driver-popover-arrow {
   content: '';
   position: absolute;
   border: 10px solid var(--surface-2) !important;
@@ -127,14 +127,14 @@
   z-index: 1;
 }
 
-.pbafarm-tour-popover .driver-popover-arrow-side-over,
-.pbafarm-tour-popover .driver-popover-arrow-side-center,
-.pbafarm-tour-popover .driver-popover-arrow-none {
+.anowa-tour-popover .driver-popover-arrow-side-over,
+.anowa-tour-popover .driver-popover-arrow-side-center,
+.anowa-tour-popover .driver-popover-arrow-none {
   display: none !important;
 }
 
 /* Popover below the target → arrow on top edge, pointing up */
-.pbafarm-tour-popover .driver-popover-arrow-side-bottom {
+.anowa-tour-popover .driver-popover-arrow-side-bottom {
   bottom: 100% !important;
   top: auto !important;
   border-top-color: transparent !important;
@@ -144,7 +144,7 @@
 }
 
 /* Popover above the target → arrow on bottom edge, pointing down */
-.pbafarm-tour-popover .driver-popover-arrow-side-top {
+.anowa-tour-popover .driver-popover-arrow-side-top {
   top: 100% !important;
   bottom: auto !important;
   border-bottom-color: transparent !important;
@@ -154,7 +154,7 @@
 }
 
 /* Popover to the right of target → arrow on left edge, pointing left */
-.pbafarm-tour-popover .driver-popover-arrow-side-right {
+.anowa-tour-popover .driver-popover-arrow-side-right {
   right: 100% !important;
   left: auto !important;
   border-top-color: transparent !important;
@@ -164,7 +164,7 @@
 }
 
 /* Popover to the left of target → arrow on right edge, pointing right */
-.pbafarm-tour-popover .driver-popover-arrow-side-left {
+.anowa-tour-popover .driver-popover-arrow-side-left {
   left: 100% !important;
   right: auto !important;
   border-top-color: transparent !important;
