@@ -43,9 +43,9 @@ function Card({ title, meta, action, children }) {
   return (
     <section className={CARD}>
       <div className="flex items-center justify-between gap-3 pb-3">
-        <h2 className="text-[15px] font-semibold leading-[18px] text-text">{title}</h2>
-        <div className="flex items-center gap-3">
-          {meta != null && <span className="text-[13px] leading-4 text-muted">{meta}</span>}
+        <h2 className="shrink-0 text-[15px] font-semibold leading-[18px] text-text">{title}</h2>
+        <div className="flex min-w-0 items-center gap-3">
+          {meta != null && <span className="text-right text-[13px] leading-4 text-muted">{meta}</span>}
           {action}
         </div>
       </div>
@@ -150,7 +150,7 @@ function Compliance() {
       {!activeLocationId ? (
         <EmptyState title={t('compliancePage.noSite')} description={t('compliancePage.noSiteHint')} />
       ) : (
-        <>
+        <div className="flex flex-col gap-[28px]">
           <KpiStrip
             items={[
               {
@@ -182,7 +182,8 @@ function Compliance() {
             ]}
           />
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="grid items-start gap-[20px] xl:grid-cols-[700px_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-[20px]">
             <Table
               title={t('compliancePage.log')}
               tabsLabel={t('compliancePage.logFilter')}
@@ -213,7 +214,6 @@ function Compliance() {
               ]}
             />
 
-            <div className="flex flex-col gap-6">
               <Card title={t('compliancePage.findings')} meta={records ? findings.length : undefined}>
                 {findings.length === 0 ? (
                   <p className={`${ROW} text-[13px] leading-[18px] text-muted`}>{t('compliancePage.noFindings')}</p>
@@ -245,7 +245,9 @@ function Compliance() {
                   </ul>
                 )}
               </Card>
+            </div>
 
+            <div className="flex min-w-0 flex-col gap-[20px]">
               <Card title={t('compliancePage.holds')} meta={holdCages.length ? <span className="text-alert">{t('compliancePage.harvestBlocked')}</span> : undefined}>
                 {!holds || holds.length === 0 ? (
                   <p className={`${ROW} text-[13px] leading-[18px] text-muted`}>{holds ? t('compliancePage.noHolds') : t('ui.loading')}</p>
@@ -270,7 +272,7 @@ function Compliance() {
           <IfPermitted permission="org.settings.manage">
             {templates && templates.length > 0 && <TemplatePacks />}
           </IfPermitted>
-        </>
+        </div>
       )}
 
       {picking && (

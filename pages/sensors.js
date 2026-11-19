@@ -353,7 +353,7 @@ function SensorsPage() {
               <section className={`${CARD} px-[22px] py-6 sm:px-[26px]`}>
                 <div className="flex items-center justify-between gap-3 pb-3">
                   <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('sensorsPage.alertRules')}</h2>
-                  <span className="text-xs leading-4 text-muted">{t('sensorsPage.rulesN', { count: rules.length })}</span>
+                  <span className="text-[13px] leading-4 text-muted">{t('sensorsPage.rulesN', { count: rules.length })}</span>
                 </div>
                 {rules.length === 0 ? (
                   <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('sensorsPage.noRules')}</p>
