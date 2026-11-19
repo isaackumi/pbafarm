@@ -572,6 +572,130 @@
     "listEmptyHint": "Record a harvest when fish leave a cage.",
     "listAdd": "Record harvest"
   },
+  "healthWater": {
+    "title": "Health & water",
+    "eyebrow": "Production · Water quality, treatments, withdrawal",
+    "wqTitle": "Water quality",
+    "wqEyebrow": "Production · Latest reading per unit against its thresholds",
+    "logWater": "Log water",
+    "newTreatment": "New treatment",
+    "kpi": {
+      "avgDo": "Avg DO · latest",
+      "belowThreshold": {
+        "one": "{count} unit below threshold",
+        "other": "{count} units below threshold"
+      },
+      "waterTemp": "Water temp",
+      "activeTreatments": "Active treatments",
+      "inWithdrawal": "In withdrawal",
+      "units": {
+        "one": "{count} unit",
+        "other": "{count} units"
+      },
+      "noHarvestUntil": "no harvest until {date}",
+      "outOfRange": "Out of range",
+      "unitsLogged": "Units logged",
+      "ofUnits": {
+        "one": "of {count} unit",
+        "other": "of {count} units"
+      }
+    },
+    "doChart": {
+      "title": "Dissolved oxygen · 7 days",
+      "unit": "mg/L, daily records",
+      "avg": "Average",
+      "lowest": "Lowest unit",
+      "threshold": "Alert below {value}",
+      "empty": "No dissolved oxygen logged in the last 7 days.",
+      "aria": "Dissolved oxygen over the last 7 days: daily average and lowest unit"
+    },
+    "active": {
+      "title": "Active treatments",
+      "viewAll": "View all",
+      "empty": "No treatments in the last 7 days and no withdrawal running.",
+      "until": "Until {date}",
+      "noWithdrawal": "No withdrawal",
+      "inWithdrawal": "In withdrawal",
+      "recent": "Given in the last 7 days"
+    },
+    "log": {
+      "title": "Water log",
+      "filter": "Water log filter",
+      "all": "All",
+      "alerts": "Alerts",
+      "treatments": "Treatments",
+      "search": "Search",
+      "col": {
+        "time": "Time",
+        "unit": "Unit",
+        "do": "DO",
+        "temp": "Temp",
+        "ph": "pH",
+        "nh3": "NH₃",
+        "secchi": "Secchi",
+        "status": "Status"
+      },
+      "normal": "Normal",
+      "outOfRange": {
+        "one": "{count} out of range",
+        "other": "{count} out of range"
+      },
+      "noReading": "No reading",
+      "low": "below threshold",
+      "high": "above threshold",
+      "empty": "No units yet.",
+      "emptyAlerts": "No unit is out of range."
+    },
+    "table": {
+      "date": "Date",
+      "diagnosis": "Diagnosis",
+      "treatment": "Treatment",
+      "withdrawal": "Withdrawal until",
+      "actions": "Actions",
+      "documents": "Documents",
+      "documentsFor": "Documents · {name}",
+      "delete": "Delete",
+      "deleted": "Deleted",
+      "empty": "No treatments recorded yet."
+    },
+    "form": {
+      "title": "New treatment",
+      "unit": "Unit",
+      "selectUnit": "Select a unit…",
+      "date": "Date",
+      "diagnosis": "Diagnosis",
+      "optional": "Optional",
+      "treatment": "Treatment",
+      "treatmentPlaceholder": "e.g. Salt bath, antibiotic course",
+      "product": "Product",
+      "dosage": "Dosage",
+      "fishAffected": "Fish affected",
+      "withdrawalDays": "Withdrawal days",
+      "withdrawalPlaceholder": "Days before harvest is allowed",
+      "administeredBy": "Administered by",
+      "notes": "Notes",
+      "errUnit": "Select a unit",
+      "errTreatment": "Treatment is required",
+      "saved": "Treatment recorded",
+      "saveFailed": "Could not save the treatment"
+    },
+    "thresholds": {
+      "title": "Thresholds",
+      "subtitle": "Defaults suit warm-water finfish; adjust per unit type. Breaches can alert through the Water quality automation.",
+      "unitType": "Unit type",
+      "parameter": "Parameter",
+      "min": "Min",
+      "max": "Max",
+      "saveFor": "Save for {units}",
+      "useDefault": "Use default",
+      "blankHint": "Saving with both boxes blank turns the alert for that parameter off.",
+      "noAlert": "No alert",
+      "and": "and",
+      "saved": "Threshold saved",
+      "resetDone": "Back to the default",
+      "saveFailed": "Could not save the threshold"
+    }
+  },
   "ui": {
     "farmHealth": "Farm health",
     "relatedPages": "Related pages",

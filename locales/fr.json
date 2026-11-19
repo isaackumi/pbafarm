@@ -572,6 +572,130 @@
     "listEmptyHint": "Enregistrez une récolte quand les poissons quittent une cage.",
     "listAdd": "Enregistrer une récolte"
   },
+  "healthWater": {
+    "title": "Santé et eau",
+    "eyebrow": "Production · Qualité de l’eau, traitements, délai d’attente",
+    "wqTitle": "Qualité de l’eau",
+    "wqEyebrow": "Production · Dernière mesure par unité comparée à ses seuils",
+    "logWater": "Saisir l’eau",
+    "newTreatment": "Nouveau traitement",
+    "kpi": {
+      "avgDo": "OD moyen · dernier",
+      "belowThreshold": {
+        "one": "{count} unité sous le seuil",
+        "other": "{count} unités sous le seuil"
+      },
+      "waterTemp": "Temp. de l’eau",
+      "activeTreatments": "Traitements actifs",
+      "inWithdrawal": "En délai d’attente",
+      "units": {
+        "one": "{count} unité",
+        "other": "{count} unités"
+      },
+      "noHarvestUntil": "pas de récolte avant le {date}",
+      "outOfRange": "Hors plage",
+      "unitsLogged": "Unités mesurées",
+      "ofUnits": {
+        "one": "sur {count} unité",
+        "other": "sur {count} unités"
+      }
+    },
+    "doChart": {
+      "title": "Oxygène dissous · 7 jours",
+      "unit": "mg/L, relevés quotidiens",
+      "avg": "Moyenne",
+      "lowest": "Unité la plus basse",
+      "threshold": "Alerte sous {value}",
+      "empty": "Aucun oxygène dissous saisi ces 7 derniers jours.",
+      "aria": "Oxygène dissous sur les 7 derniers jours : moyenne quotidienne et unité la plus basse"
+    },
+    "active": {
+      "title": "Traitements actifs",
+      "viewAll": "Tout voir",
+      "empty": "Aucun traitement ces 7 derniers jours et aucun délai d’attente en cours.",
+      "until": "Jusqu’au {date}",
+      "noWithdrawal": "Sans délai",
+      "inWithdrawal": "En délai d’attente",
+      "recent": "Donné ces 7 derniers jours"
+    },
+    "log": {
+      "title": "Journal de l’eau",
+      "filter": "Filtre du journal de l’eau",
+      "all": "Tout",
+      "alerts": "Alertes",
+      "treatments": "Traitements",
+      "search": "Rechercher",
+      "col": {
+        "time": "Heure",
+        "unit": "Unité",
+        "do": "OD",
+        "temp": "Temp.",
+        "ph": "pH",
+        "nh3": "NH₃",
+        "secchi": "Secchi",
+        "status": "Statut"
+      },
+      "normal": "Normal",
+      "outOfRange": {
+        "one": "{count} hors plage",
+        "other": "{count} hors plage"
+      },
+      "noReading": "Aucune mesure",
+      "low": "sous le seuil",
+      "high": "au-dessus du seuil",
+      "empty": "Aucune unité pour l’instant.",
+      "emptyAlerts": "Aucune unité hors plage."
+    },
+    "table": {
+      "date": "Date",
+      "diagnosis": "Diagnostic",
+      "treatment": "Traitement",
+      "withdrawal": "Délai jusqu’au",
+      "actions": "Actions",
+      "documents": "Documents",
+      "documentsFor": "Documents · {name}",
+      "delete": "Supprimer",
+      "deleted": "Supprimé",
+      "empty": "Aucun traitement enregistré."
+    },
+    "form": {
+      "title": "Nouveau traitement",
+      "unit": "Unité",
+      "selectUnit": "Choisir une unité…",
+      "date": "Date",
+      "diagnosis": "Diagnostic",
+      "optional": "Facultatif",
+      "treatment": "Traitement",
+      "treatmentPlaceholder": "ex. bain de sel, cure d’antibiotique",
+      "product": "Produit",
+      "dosage": "Dosage",
+      "fishAffected": "Poissons touchés",
+      "withdrawalDays": "Jours de délai d’attente",
+      "withdrawalPlaceholder": "Jours avant que la récolte soit permise",
+      "administeredBy": "Administré par",
+      "notes": "Notes",
+      "errUnit": "Choisissez une unité",
+      "errTreatment": "Le traitement est obligatoire",
+      "saved": "Traitement enregistré",
+      "saveFailed": "Impossible d’enregistrer le traitement"
+    },
+    "thresholds": {
+      "title": "Seuils",
+      "subtitle": "Les valeurs par défaut conviennent aux poissons d’eau chaude ; ajustez-les par type d’unité. Les dépassements peuvent alerter via l’automatisation Qualité de l’eau.",
+      "unitType": "Type d’unité",
+      "parameter": "Paramètre",
+      "min": "Min",
+      "max": "Max",
+      "saveFor": "Enregistrer pour {units}",
+      "useDefault": "Valeur par défaut",
+      "blankHint": "Enregistrer avec les deux cases vides désactive l’alerte pour ce paramètre.",
+      "noAlert": "Pas d’alerte",
+      "and": "et",
+      "saved": "Seuil enregistré",
+      "resetDone": "Valeur par défaut rétablie",
+      "saveFailed": "Impossible d’enregistrer le seuil"
+    }
+  },
   "ui": {
     "farmHealth": "Santé de la ferme",
     "relatedPages": "Pages associées",
