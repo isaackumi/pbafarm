@@ -6,6 +6,15 @@ Format: `date · artboard (node id) · change · status`
 
 ## 2026-11-19
 
+- Website · Landing v2 — Sky (B9Q-0) · ELEVATED (same artboard, supersedes the v2 entry below):
+  - Editorial type: every section headline pairs Inter Tight with an **Instrument Serif italic** accent ("data, not *guesswork*", "*and traceable*", "*in one calm place*", "*without the spreadsheets*", "*not per seat*", "*answered*", "*finally in one place*"). Load Instrument Serif (400 + italic) on marketing pages only.
+  - Glass nav: links sit in a translucent pill (`#FFFFFF1F`, 1px `#FFFFFF38`); the active link is a white pill.
+  - NEW Live ticker (C5L-0) under the logos: an ink pill with a lime "Live · 320 farms" badge and a horizontally scrolling marquee of farm events (CSS marquee animation, pause on hover, respect `prefers-reduced-motion`).
+  - NEW Showcase — underwater (C70-0) after About: sky top → wavy waterline → deep-water gradient with blurred light rays, bubbles and fish silhouettes. Inside sits a framed dark app window (Home dashboard: sidebar, KPI strip, biomass vs plan chart, "Cages needing you") with four floating chips (live DO sensor, Ask PBA, offline queue, lot QR trace). Animate: rays drift slowly, bubbles rise, chips float ±6px.
+  - NEW Testimonial (CC6-0) before Pricing: large serif-italic quote, avatar, three metrics divided by hairlines.
+  - NEW FAQ (CCQ-0) after Pricing: left heading and a WhatsApp CTA; right accordion (first item open, lime minus button).
+  - Footer: giant clipped "pba farm" wordmark (Inter Tight 300px, `#EEF2F6`) behind the footer columns. · pending
+
 - Website · Landing v2 — Sky (B9Q-0) · NEW, replaces Landing 3I0-0 for `/`:
   - Sky-blue hero with blurred clouds and a lake horizon with cage rings.
   - Nine floating product cards in an arc. CSS `skewY` is allowed; scale and fade them on narrow screens.
