@@ -12,8 +12,12 @@ Named after the founder's mother. The product brand is **Anowa**; PBA is one cli
 | 6 | Four cages | An Adinkra-style pinwheel of four fish around one centre | Geist 500, lowercase |
 | 7 | Droplet a | A single-storey "a" whose dot is a water drop; also reads as "ai" | Inter Tight 600, lowercase |
 | 8 | First light | The sun rising over the lake | Fraunces 500, "Anowa" |
+| 9 | Mother & fry | A large fish guiding a small one | Instrument Serif, "Anowa" |
+| 10 | Hex cage | A floating cage seen from above, with a fish inside | Geist 600, lowercase |
+| 11 | Leaf fish | A fish whose body is a leaf (the veins read like a fishbone, so it needs rework) | Newsreader 500, "Anowa" |
+| 12 | Pulse | A heartbeat line that turns into a fish tail | Geist Mono 500, lowercase |
 
-Concepts 1–4 are on artboard DOM-0 and concepts 5–8 on DVT-0, both on the "Brand — Anowa" page.
+Concepts 1–4 are on artboard DOM-0 concepts 5–8 on DVT-0 and concepts 9–12 on E3I-0, both on the "Brand — Anowa" page.
 
 **Recommendation:** Concept 3 (Cradle), with Concept 1 as the runner-up. Of concepts 5–8, Talking fish is the strongest; it fits Anowa if the brand leads with the AI.
 - **Cradle** carries the story behind the name, is distinct from other agri-tech marks, and still reads at 16px.
