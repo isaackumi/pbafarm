@@ -11,6 +11,7 @@ import {
 import { INBOUND_PREFIX, inboundWebhookHandler } from './integrations/inboundHttp'
 import { API_RESOURCES } from './publicApi'
 import { download as fileDownload } from './files'
+import { telegramWebhook, whatsappVerify, whatsappWebhook } from './bot/http'
 
 const http = httpRouter()
 
@@ -33,5 +34,10 @@ http.route({ pathPrefix: INBOUND_PREFIX, method: 'POST', handler: inboundWebhook
 
 // Short-lived document downloads (TRACE-005, D-016).
 http.route({ path: '/files/download', method: 'GET', handler: fileDownload })
+
+// Farm bot webhooks (BOT-001, doc 23): signature-verified, idempotent ingest.
+http.route({ path: '/channels/whatsapp', method: 'GET', handler: whatsappVerify })
+http.route({ path: '/channels/whatsapp', method: 'POST', handler: whatsappWebhook })
+http.route({ path: '/channels/telegram', method: 'POST', handler: telegramWebhook })
 
 export default http

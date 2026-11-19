@@ -1,9 +1,12 @@
 import { defineApp } from 'convex/server'
 import rateLimiter from '@convex-dev/rate-limiter/convex.config'
+import agent from '@convex-dev/agent/convex.config'
 
 // Components (D-017): application rate limits live in the rate limiter's own
-// tables, see convex/lib/rateLimits.ts.
+// tables, see convex/lib/rateLimits.ts. The farm bot's conversation threads
+// live in the agent component (doc 23).
 const app = defineApp()
 app.use(rateLimiter)
+app.use(agent)
 
 export default app

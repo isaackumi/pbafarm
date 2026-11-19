@@ -51,7 +51,7 @@ const MAX_SUMMARY_ROWS = 5000
 const MAX_CREDENTIALS = Object.keys(PROVIDERS).length
 
 const feature = v.union(v.literal('chat'), v.literal('insights'))
-const usageFeature = v.union(v.literal('chat'), v.literal('insights'), v.literal('report'))
+const usageFeature = v.union(v.literal('chat'), v.literal('insights'), v.literal('report'), v.literal('bot'))
 const message = v.object({
   role: v.union(v.literal('system'), v.literal('user'), v.literal('assistant')),
   content: v.string(),
@@ -71,7 +71,7 @@ async function loadOwn(ctx: Ctx, companyId: Id<'companies'>, credentialId: Id<'l
   return row
 }
 
-async function companyCredentials(ctx: Ctx, companyId: Id<'companies'>) {
+export async function companyCredentials(ctx: Ctx, companyId: Id<'companies'>) {
   return await ctx.db
     .query('llmCredentials')
     .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
@@ -100,7 +100,7 @@ function cleanBaseUrl(providerId: string, baseUrl?: string) {
 }
 
 /** Pick the credential for a call: the requested provider, else the default, else any enabled. */
-function pickCredential(rows: Doc<'llmCredentials'>[], providerId?: string) {
+export function pickCredential(rows: Doc<'llmCredentials'>[], providerId?: string) {
   const live = rows.filter((r) => r.enabled)
   return (
     (providerId ? live.find((r) => r.providerId === providerId) : undefined) ??
@@ -524,6 +524,7 @@ const usageFields = {
   durationMs: v.optional(v.number()),
 }
 
+/** Also used by the farm bot (BOT-002) for its own calls. */
 export async function insertUsage(
   ctx: MutationCtx,
   row: {
@@ -532,7 +533,7 @@ export async function insertUsage(
     source: 'org_key' | 'server_key'
     providerId: string
     model: string
-    feature: 'chat' | 'insights' | 'report'
+    feature: 'chat' | 'insights' | 'report' | 'bot'
     ok: boolean
     error?: string
     inputTokens?: number

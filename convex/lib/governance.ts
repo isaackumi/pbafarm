@@ -131,6 +131,11 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'llmUsage', index: 'by_companyId_and_createdAt' },
   { table: 'farmAlerts', index: 'by_companyId_and_date' },
   { table: 'weeklyReports', index: 'by_companyId_and_weekEnd' },
+  // Farm bot (doc 23): bindings and cost rows exported; codes and drafts are transient.
+  { table: 'channelBindings', index: 'by_companyId' },
+  { table: 'channelMessageCosts', index: 'by_companyId_and_sentAt' },
+  { table: 'channelConnectCodes', index: 'by_companyId', export: false },
+  { table: 'pendingBotActions', index: 'by_companyId', export: false },
   // Governance bookkeeping: purged, not exported.
   { table: 'dataExports', index: 'by_companyId', export: false },
   { table: 'auditChainVerifications', index: 'by_companyId', export: false, purge: 'keep' },

@@ -1,7 +1,8 @@
 import * as Effect from 'effect/Effect'
 import * as Schema from 'effect/Schema'
 import { decodeBody, providerPost, runSend } from './send'
-import { providerError, type ProviderAdapter } from './types'
+import { providerError, type ProviderAdapter, type SendResult } from './types'
+import type { FetchFn } from '../../lib/effectHttp'
 
 /** Error body: { error: { code, message } }. Success: { messages: [{ id }] }. */
 const GraphError = Schema.Struct({
@@ -110,4 +111,127 @@ export const whatsappCloud: ProviderAdapter = {
     })
     return runSend(program, fetchImpl)
   },
+}
+
+/**
+ * A farm-bot chat message (BOT-001..004, doc 23), provider-neutral: the
+ * WhatsApp sender below and `telegramBot.ts` both render it.
+ */
+export type ChatButton = { id: string; title: string }
+export type ChatMessage =
+  | { kind: 'text'; text: string }
+  /** Up to 3 reply buttons (WhatsApp limit). */
+  | { kind: 'buttons'; text: string; buttons: ChatButton[] }
+  /** A pick list, up to 10 rows (WhatsApp limit). */
+  | { kind: 'list'; text: string; button: string; rows: Array<ChatButton & { description?: string }> }
+  /**
+   * An approved template: the only message allowed outside WhatsApp's 24-hour
+   * window. `quickReplies` are the payloads of the template's quick-reply
+   * buttons, in order. `fallbackText` is what Telegram shows.
+   */
+  | {
+      kind: 'template'
+      name: string
+      language: string
+      bodyParams: string[]
+      quickReplies: string[]
+      fallbackText: string
+      fallbackButtons: ChatButton[]
+    }
+
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+
+/** The Graph API body for a chat message (exported for tests). */
+export function whatsappChatPayload(to: string, message: ChatMessage): Record<string, unknown> {
+  const base = { messaging_product: 'whatsapp', recipient_type: 'individual', to }
+  switch (message.kind) {
+    case 'text':
+      return { ...base, type: 'text', text: { preview_url: false, body: clip(message.text, 4096) } }
+    case 'buttons':
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: clip(message.text, 1024) },
+          action: {
+            buttons: message.buttons.slice(0, 3).map((b) => ({
+              type: 'reply',
+              reply: { id: clip(b.id, 256), title: clip(b.title, 20) },
+            })),
+          },
+        },
+      }
+    case 'list':
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: { text: clip(message.text, 1024) },
+          action: {
+            button: clip(message.button, 20),
+            sections: [
+              {
+                title: clip(message.button, 24),
+                rows: message.rows.slice(0, 10).map((r) => ({
+                  id: clip(r.id, 200),
+                  title: clip(r.title, 24),
+                  ...(r.description ? { description: clip(r.description, 72) } : {}),
+                })),
+              },
+            ],
+          },
+        },
+      }
+    case 'template':
+      return {
+        ...base,
+        type: 'template',
+        template: {
+          name: message.name,
+          language: { code: message.language },
+          components: [
+            { type: 'body', parameters: message.bodyParams.map((text) => ({ type: 'text', text: clip(text, 1000) })) },
+            ...message.quickReplies.map((payload, index) => ({
+              type: 'button',
+              sub_type: 'quick_reply',
+              index: String(index),
+              parameters: [{ type: 'payload', payload }],
+            })),
+          ],
+        },
+      }
+  }
+}
+
+/**
+ * Send a farm-bot message from the platform's bot number. Same transport,
+ * error mapping and retry policy as the one-time-code send above (no retry on
+ * timeout: Meta has no idempotency key). Never throws.
+ */
+export async function sendWhatsAppChat(
+  config: { phoneNumberId: string; accessToken: string },
+  to: string,
+  message: ChatMessage,
+  fetchImpl?: FetchFn,
+): Promise<SendResult> {
+  const program = Effect.gen(function* () {
+    const res = yield* providerPost(
+      {
+        url: `https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(config.phoneNumberId)}/messages`,
+        headers: { Authorization: `Bearer ${config.accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(whatsappChatPayload(to, message)),
+      },
+      (status, json, text) => {
+        const decoded = Schema.decodeUnknownOption(GraphError)(json)
+        const err = decoded._tag === 'Some' ? decoded.value.error : undefined
+        return err?.message
+          ? `WhatsApp ${err.code ?? status}: ${String(err.message).slice(0, 160)}`
+          : providerError(status, text)
+      },
+    )
+    return { providerMessageId: decodeBody(GraphSent, res)?.messages?.[0]?.id ?? undefined }
+  })
+  return runSend(program, fetchImpl)
 }

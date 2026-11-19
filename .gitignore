@@ -52,3 +52,6 @@ graphify-out/
 
 # Convex export snapshots (scripts/ops); contain customer data
 backups/
+
+# Security audit working artifacts (security-audit skill)
+docs/security/audits/

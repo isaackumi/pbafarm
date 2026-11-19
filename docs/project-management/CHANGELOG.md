@@ -2,6 +2,10 @@
 
 Changes to this repository during the Aquaculture OS engagement. Newest first. One line per PR; docs additions listed by file. Source: `gh pr list --state all`, `git log origin/main`, 2026-11-18.
 
+## feat/whatsapp-telegram-farm-bot — Farm bot (BOT-001..004, BOT-008)
+
+- WhatsApp + Telegram webhooks (`/channels/whatsapp`, `/channels/telegram`), chat bindings from `/account`, `@convex-dev/agent` read tools, draft → Save/Undo through shared write helpers, daily reminders, rate limits, EN/FR. Docs: `docs/architecture/23-farm-bot.md`, `docs/ops/farm-bot-runbook.md`, `docs/product/2026-11-research-bots-ai-competitors.md`; D-021.
+
 ## feat/platform-console — Platform console and billing foundation
 
 - PLAT-101..113: console on `console.heitechinc.com` (`middleware.js`), `pages/platform/*`, `convex/platform/*`; billing model, plan limits, tenant suspension, trial/dunning cron, usage rollup, `/billing`. Docs: `docs/architecture/22-platform-console-billing.md`, `docs/ops/platform-console-dns.md`.

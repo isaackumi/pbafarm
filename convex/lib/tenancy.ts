@@ -175,7 +175,8 @@ export async function logAudit(
   // row is filed under the organization they are acting in.
   const actAs = actor ? undefined : actAsSessionOf(user)
   await insertAuditLog(ctx, {
-    ...(actor ? { apiKeyId: actor.apiKeyId } : {}),
+    ...(actor?.apiKeyId ? { apiKeyId: actor.apiKeyId } : {}),
+    ...(actor?.channel ? { channel: actor.channel.provider, sourceMessageId: actor.channel.sourceMessageId } : {}),
     ...(actAs ? { actAsSessionId: actAs._id } : {}),
     userId: user._id,
     actionType: args.actionType,

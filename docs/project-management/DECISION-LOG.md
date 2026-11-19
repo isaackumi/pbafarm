@@ -23,6 +23,7 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 | D-013 | Insert a Phase 0 "Stabilize" before the brief's Phase 1 | Proposed — awaiting owner approval |
 | D-019 | Adopt Effect incrementally for integration code, via a thin in-house bridge | Accepted — owner request 2026-11-18 |
 | D-020 | No analytics warehouse export yet (ANLY-008 won't do); saved and scheduled reports instead | Proposed — awaiting owner approval |
+| D-021 | Farm bot on WhatsApp/Telegram: platform bot number, chat bound to a verified user, drafts confirmed by a button, field staff may use it under the org's AI switch | Proposed — awaiting owner approval |
 
 ---
 
@@ -329,3 +330,25 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 **Consequences.**
 - No second copy of tenant data to secure, retain (ENT-005 retention) or delete on request.
 - Revisit when any of these happens: a customer asks for BI-tool access; a required report hits the builder's source-row cap for normal tenants; cross-tenant benchmarking is approved; the rollup measurement shows read limits are near. The first step then is Convex streaming export per doc 02 §7, not a hand-built per-table exporter.
+
+## D-021 — Farm bot: binding, drafts and who may use it
+
+**Status.** Proposed — awaiting owner approval. Doc 23; tracker BOT-001..004, BOT-008.
+
+**Context.** Field staff record feed and mortality from the cage side, where WhatsApp is open all day and the web app is not (research report §1). A chat message is untrusted input from a phone number or Telegram chat, read by an LLM that can be talked into anything.
+
+**Decision.**
+- One platform bot (WhatsApp number and Telegram bot), credentials in Convex env. Per-organization bot numbers later.
+- A chat acts as exactly one user in one organization: a binding created only by a code made on `/account` (WhatsApp: plus the sender being the user's verified phone; Telegram: deep-link token). Company and site come from the binding, permissions from the membership, re-checked on every message and write; never from the model.
+- The model only proposes. Writes are drafts the person confirms with a button; the commit re-checks scope and calls the same write helpers as the web app, once per draft (idempotency key), with the channel in the audit log.
+- The bot runs when the organization's AI assistant switch is on, for members with `ai.use` **or** `production.daily.record` (field staff have no `ai.use`), under the same per-user and per-organization LLM limits.
+- The bot does not apply web-session MFA: possession of the bound, verified chat is the factor.
+
+**Alternatives considered.**
+1. Bind by phone number alone. Rejected: numbers are recycled and spoofable in other channels; the in-app code proves the person controls both.
+2. Let the model write directly with tool calls. Rejected: one prompt injection away from wrong records.
+3. Require `ai.use` only. Rejected: excludes the people the bot is for; organizations already decide with the switch.
+
+**Consequences.**
+- Revoking app access (membership, phone change, account deletion) ends chat access.
+- WhatsApp templates outside the 24 h window cost money per organization, tracked in `channelMessageCosts`.

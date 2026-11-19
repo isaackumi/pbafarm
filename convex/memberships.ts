@@ -13,6 +13,7 @@ import { mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { revokeUserSessions } from './lib/authz'
+import { revokeBindingsForUser } from './bot/bindings'
 import { logAudit } from './lib/tenancy'
 import {
   activateMembership,
@@ -388,6 +389,7 @@ async function changeStatus(
   let sessionsRevoked = 0
   if (status !== 'active') {
     await leaveActiveCompany(ctx, userId, companyId)
+    await revokeBindingsForUser(ctx, userId, `membership_${status}`, { companyId })
     // Account with no other organization: end its sessions now.
     if ((await otherActiveMemberships(ctx, userId, companyId)).length === 0) {
       sessionsRevoked = await revokeUserSessions(ctx, userId)

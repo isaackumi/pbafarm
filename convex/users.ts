@@ -33,6 +33,7 @@ import { isPermission, requireAccount, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 import { assertAdminChange } from './memberships'
 import { assertPlanLimit } from './lib/planLimits'
+import { revokeWhatsAppNotMatching } from './bot/bindings'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -481,7 +482,10 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, next)
-    if (phoneChanged) await dropPendingPhoneCodes(ctx, id, target.phone)
+    if (phoneChanged) {
+      await dropPendingPhoneCodes(ctx, id, target.phone)
+      await revokeWhatsAppNotMatching(ctx, id, undefined, false)
+    }
     if (roleWrite && roleCompany) {
       const { m, roleKey } = roleWrite
       await upsertMembership(ctx, {
@@ -540,6 +544,7 @@ export const setPhone = mutation({
     // its owner confirms it with a code (phoneAuth, mfa).
     await ctx.db.patch(id, { phone: next, phoneVerificationTime: undefined })
     await dropPendingPhoneCodes(ctx, id, target.phone)
+    await revokeWhatsAppNotMatching(ctx, id, undefined, false)
     await logAudit(ctx, {
       actionType: next ? 'set_phone' : 'clear_phone',
       tableName: 'users',

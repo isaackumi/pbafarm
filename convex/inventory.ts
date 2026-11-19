@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { scopedRows } from './lib/scope'
 import {
@@ -430,6 +431,20 @@ export const reverseTransaction = mutation({
   returns: v.id('feedInventoryTransactions'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
+    return await reverseTransactionAs(ctx, user, args)
+  },
+})
+
+/**
+ * reverseTransaction's body for a caller that has passed its own guard: the
+ * mutation above and the farm bot's 10-minute undo of its own feed issue
+ * (BOT-003).
+ */
+export async function reverseTransactionAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: { transactionId: Id<'feedInventoryTransactions'>; reason: string },
+): Promise<Id<'feedInventoryTransactions'>> {
     if (!args.reason.trim()) throw new Error('Reversal reason is required')
 
     const txn = await ctx.db.get(args.transactionId)
@@ -529,8 +544,7 @@ export const reverseTransaction = mutation({
     })
 
     return transactionId
-  },
-})
+}
 
 export const listLots = query({
   args: {
