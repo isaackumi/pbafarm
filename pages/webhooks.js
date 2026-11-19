@@ -1,30 +1,15 @@
 import { useState } from 'react'
 import { useAction, useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, FormPage, Input, PageHeader, Skeleton } from '../components/ui'
+import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
+import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
+import { CheckTile, IntegrationsShell, SecretOnce, formatTime } from '../components/integrations/kit'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
 
-const DELIVERY_STATUS = {
-  pending: { label: 'Retrying', className: 'bg-foam text-chart-ink' },
-  succeeded: { label: 'Delivered', className: 'bg-kelp/15 text-kelp' },
-  failed: { label: 'Failed', className: 'bg-signal/10 text-signal' },
-}
-
-function formatTime(ms) {
-  if (!ms) return '—'
-  try {
-    return new Date(ms).toLocaleString()
-  } catch {
-    return '—'
-  }
-}
-
-function Pill({ className, children }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>{children}</span>
-}
+const DELIVERY_TONE = { pending: 'amber', succeeded: 'green', failed: 'red' }
 
 function useToasts() {
   const { showToast } = useToast()
@@ -35,52 +20,23 @@ function useToasts() {
 }
 
 function EventPicker({ events, value, onChange, idPrefix }) {
+  const t = useT()
   const toggle = (id) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id])
   return (
     <fieldset>
-      <legend className="text-sm font-medium text-chart-ink mb-2">Events</legend>
+      <legend className="mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.integ.hooks.events')}</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {events.map((e) => (
-          <label key={e.id} htmlFor={`${idPrefix}-${e.id}`} className="flex items-center gap-3 rounded-lg border border-foam-deep px-3 min-h-12 sm:min-h-10 text-sm">
-            <input id={`${idPrefix}-${e.id}`} type="checkbox" checked={value.includes(e.id)} onChange={() => toggle(e.id)} />
-            <span>
-              {e.label}
-              <span className="block text-xs text-muted font-mono">{e.id}</span>
-            </span>
-          </label>
+          <CheckTile key={e.id} id={`${idPrefix}-${e.id}`} checked={value.includes(e.id)} onChange={() => toggle(e.id)} label={e.label} sub={e.id} />
         ))}
       </div>
     </fieldset>
   )
 }
 
-function SecretOnce({ title, secret, onDone }) {
-  const t = useToasts()
-  return (
-    <Card className="border-lake">
-      <CardHeader title={title} subtitle="Shown once. Your receiver uses it to check the X-PBA-Signature header." />
-      <code className="block break-all rounded-lg bg-foam px-3 py-3 font-mono text-sm select-all">{secret}</code>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(secret)
-              t.ok('Secret copied')
-            } catch {
-              t.fail(new Error('Copy failed; select the secret and copy it'))
-            }
-          }}
-        >
-          Copy secret
-        </Button>
-        <Button variant="secondary" onClick={onDone}>I have stored it</Button>
-      </div>
-    </Card>
-  )
-}
-
-function NewEndpoint({ events, onCreated }) {
-  const t = useToasts()
+function NewEndpoint({ events, onCreated, disabled }) {
+  const t = useT()
+  const toasts = useToasts()
   const create = useAction(api.webhooks.create)
   const [url, setUrl] = useState('')
   const [description, setDescription] = useState('')
@@ -96,88 +52,98 @@ function NewEndpoint({ events, onCreated }) {
       setDescription('')
       setTypes([])
     } catch (err) {
-      t.fail(err)
+      toasts.fail(err)
     } finally {
       setBusy(false)
     }
   }
   return (
-    <Card>
-      <CardHeader title="Add an endpoint" subtitle="We POST each chosen event as JSON to this HTTPS address." />
-      <form onSubmit={submit} className="space-y-5">
-        <Field label="URL" htmlFor="wh-url" hint="https only, a public host name, port 443 or 8443" required>
-          <Input id="wh-url" type="url" inputMode="url" placeholder="https://example.com/pba-webhook" value={url} onChange={(e) => setUrl(e.target.value)} required />
-        </Field>
-        <Field label="Description" htmlFor="wh-desc" hint="Optional, e.g. Buyer portal">
-          <Input id="wh-desc" value={description} maxLength={200} onChange={(e) => setDescription(e.target.value)} />
-        </Field>
+    <SettingsCard id="new-endpoint" title={t('settingsUi.integ.hooks.addTitle')} meta={t('settingsUi.integ.hooks.addHint')}>
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SettingsField label={t('settingsUi.integ.hooks.url')} htmlFor="wh-url" hint={t('settingsUi.integ.hooks.urlHint')} required>
+            <input
+              id="wh-url"
+              type="url"
+              inputMode="url"
+              className={`${FIELD} font-mono`}
+              placeholder="https://example.com/pba-webhook"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+            />
+          </SettingsField>
+          <SettingsField label={t('settingsUi.integ.hooks.descLabel')} htmlFor="wh-desc" hint={t('settingsUi.integ.hooks.descHint')}>
+            <input id="wh-desc" className={FIELD} value={description} maxLength={200} onChange={(e) => setDescription(e.target.value)} />
+          </SettingsField>
+        </div>
         <EventPicker events={events} value={types} onChange={setTypes} idPrefix="new" />
-        <Button type="submit" disabled={busy || !url.trim() || !types.length}>
-          {busy ? 'Adding…' : 'Add endpoint'}
-        </Button>
+        <div>
+          <GradientButton type="submit" size="sm" disabled={busy || disabled || !url.trim() || !types.length}>
+            {busy ? t('integ.common.adding') : t('settingsUi.integ.addEndpoint')}
+          </GradientButton>
+        </div>
       </form>
-    </Card>
+    </SettingsCard>
   )
 }
 
 function DeliveryLog({ endpointId }) {
-  const t = useToasts()
+  const t = useT()
+  const toasts = useToasts()
   const redeliver = useMutation(api.webhooks.redeliver)
   const { results, status, loadMore } = usePaginatedQuery(api.webhooks.deliveries, { endpointId }, { initialNumItems: 10 })
   if (status === 'LoadingFirstPage') return <Skeleton className="h-24" />
-  if (!results.length) return <p className="text-sm text-muted">No deliveries yet.</p>
+  if (!results.length) return <p className="text-[13px] leading-4 text-muted">{t('settingsUi.integ.hooks.noDeliveries')}</p>
   return (
     <div>
-      <ul className="divide-y divide-foam-deep">
-        {results.map((d) => {
-          const s = DELIVERY_STATUS[d.status] || DELIVERY_STATUS.pending
-          return (
-            <li key={d.id} className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Pill className={s.className}>{s.label}</Pill>
-                  <span className="font-mono text-xs text-chart-ink">{d.eventType}</span>
-                  {d.redelivery && <span className="text-xs text-muted">redelivery</span>}
-                </div>
-                <p className="mt-1 text-muted">
-                  {formatTime(d.createdAt)} · {d.attempts} attempt{d.attempts === 1 ? '' : 's'}
-                  {d.responseStatus ? ` · HTTP ${d.responseStatus}` : ''}
-                  {d.durationMs != null ? ` · ${d.durationMs} ms` : ''}
-                </p>
-                {d.lastError && d.status !== 'succeeded' && <p className="mt-0.5 text-signal">{d.lastError}</p>}
-                {d.status === 'pending' && d.nextAttemptAt && (
-                  <p className="mt-0.5 text-muted">Next try {formatTime(d.nextAttemptAt)}</p>
-                )}
+      <ul>
+        {results.map((d) => (
+          <li key={d.id} className="flex flex-col gap-2 border-t border-line py-3 first:border-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 text-[13px] leading-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone={DELIVERY_TONE[d.status] || 'amber'}>{t(`settingsUi.integ.hooks.status.${d.status in DELIVERY_TONE ? d.status : 'pending'}`)}</Pill>
+                <span className="font-mono text-[12px] text-text">{d.eventType}</span>
+                {d.redelivery && <span className="text-faint">{t('settingsUi.integ.hooks.redelivery')}</span>}
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    await redeliver({ deliveryId: d.id })
-                    t.ok('Sent again')
-                  } catch (err) {
-                    t.fail(err)
-                  }
-                }}
-              >
-                Redeliver
-              </Button>
-            </li>
-          )
-        })}
+              <p className="mt-1.5 text-muted">
+                {formatTime(d.createdAt)} · {t('settingsUi.integ.hooks.attempts', { count: d.attempts })}
+                {d.responseStatus ? ` · HTTP ${d.responseStatus}` : ''}
+                {d.durationMs != null ? ` · ${d.durationMs} ms` : ''}
+              </p>
+              {d.lastError && d.status !== 'succeeded' && <p className="mt-1 text-alert">{d.lastError}</p>}
+              {d.status === 'pending' && d.nextAttemptAt && (
+                <p className="mt-1 text-muted">{t('settingsUi.integ.hooks.nextTry', { time: formatTime(d.nextAttemptAt) })}</p>
+              )}
+            </div>
+            <GhostButton
+              size="sm"
+              onClick={async () => {
+                try {
+                  await redeliver({ deliveryId: d.id })
+                  toasts.ok(t('settingsUi.integ.hooks.sentAgain'))
+                } catch (err) {
+                  toasts.fail(err)
+                }
+              }}
+            >
+              {t('settingsUi.integ.hooks.redeliver')}
+            </GhostButton>
+          </li>
+        ))}
       </ul>
       {status === 'CanLoadMore' && (
-        <Button variant="ghost" size="sm" onClick={() => loadMore(20)}>
-          Show older
-        </Button>
+        <GhostButton size="sm" className="mt-2" onClick={() => loadMore(20)}>
+          {t('integ.common.showOlder')}
+        </GhostButton>
       )}
     </div>
   )
 }
 
 function EndpointCard({ ep, events, onSecret }) {
-  const t = useToasts()
+  const t = useT()
+  const toasts = useToasts()
   const update = useMutation(api.webhooks.update)
   const remove = useMutation(api.webhooks.remove)
   const sendTest = useMutation(api.webhooks.sendTest)
@@ -186,109 +152,118 @@ function EndpointCard({ ep, events, onSecret }) {
   const [types, setTypes] = useState(ep.eventTypes)
   const [showLog, setShowLog] = useState(false)
   const label = (id) => events.find((e) => e.id === id)?.label || id
+  const active = ep.status === 'active'
+  const failing = active && ep.consecutiveFailures > 0
 
   const act = async (fn, okText) => {
     try {
       await fn()
-      if (okText) t.ok(okText)
+      if (okText) toasts.ok(okText)
     } catch (err) {
-      t.fail(err)
+      toasts.fail(err)
     }
   }
 
   return (
-    <Card>
+    <SettingsCard>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-chart-ink break-all">{ep.description || ep.url}</span>
-            <Pill className={ep.status === 'active' ? 'bg-kelp/15 text-kelp' : 'bg-signal/10 text-signal'}>
-              {ep.status === 'active' ? 'On' : 'Off'}
+            <span className="break-all font-mono text-[14px] leading-[18px] text-text">{ep.url}</span>
+            <Pill tone={!active ? 'neutral' : failing ? 'red' : 'green'}>
+              {!active
+                ? t('integ.common.off')
+                : failing
+                  ? t('settingsUi.integ.hooks.failing', { count: ep.consecutiveFailures })
+                  : t('integ.common.on')}
             </Pill>
           </div>
-          {ep.description && <p className="mt-1 text-sm text-muted break-all">{ep.url}</p>}
-          {ep.disabledReason && ep.status !== 'active' && <p className="mt-1 text-sm text-signal">{ep.disabledReason}</p>}
-          <p className="mt-1 text-sm text-muted">
-            Secret {ep.secretHint || 'not set'} · Last delivered {formatTime(ep.lastSuccessAt)}
-            {ep.consecutiveFailures > 0 ? ` · ${ep.consecutiveFailures} failed in a row` : ''}
+          {ep.description && <p className="mt-1 text-[14px] leading-[18px] text-text">{ep.description}</p>}
+          {ep.disabledReason && !active && <p className="mt-1 text-[13px] leading-4 text-alert">{ep.disabledReason}</p>}
+          <p className="mt-1 text-[13px] leading-4 text-muted">
+            {t('settingsUi.integ.hooks.secretLine', {
+              hint: ep.secretHint || t('settingsUi.integ.hooks.notSet'),
+              time: formatTime(ep.lastSuccessAt),
+            })}
           </p>
-          {!editing && <p className="mt-1 text-sm text-chart-ink">{ep.eventTypes.map(label).join(', ')}</p>}
+          {!editing && <p className="mt-2 text-[13px] leading-4 text-muted">{ep.eventTypes.map(label).join(' · ')}</p>}
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          {ep.status === 'active' ? (
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {active ? (
             <>
-              <Button size="sm" variant="secondary" onClick={() => act(() => sendTest({ endpointId: ep.id }), 'Test sent')}>
-                Send test
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => act(() => update({ endpointId: ep.id, enabled: false }), 'Turned off')}>
-                Turn off
-              </Button>
+              <GhostButton size="sm" onClick={() => act(() => sendTest({ endpointId: ep.id }), t('settingsUi.integ.hooks.testSent'))}>
+                {t('settingsUi.integ.hooks.sendTest')}
+              </GhostButton>
+              <GhostButton size="sm" onClick={() => act(() => update({ endpointId: ep.id, enabled: false }), t('settingsUi.integ.hooks.turnedOff'))}>
+                {t('integ.common.turnOff')}
+              </GhostButton>
             </>
           ) : (
-            <Button size="sm" onClick={() => act(() => update({ endpointId: ep.id, enabled: true }), 'Turned on')}>
-              Turn on
-            </Button>
+            <GradientButton size="sm" onClick={() => act(() => update({ endpointId: ep.id, enabled: true }), t('settingsUi.integ.hooks.turnedOn'))}>
+              {t('integ.common.turnOn')}
+            </GradientButton>
           )}
-          <Button size="sm" variant="ghost" onClick={() => setEditing((x) => !x)}>
-            {editing ? 'Cancel' : 'Edit events'}
-          </Button>
+          <GhostButton size="sm" aria-expanded={editing} onClick={() => setEditing((x) => !x)}>
+            {editing ? t('common.cancel') : t('settingsUi.integ.hooks.editEvents')}
+          </GhostButton>
         </div>
       </div>
 
       {editing && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 flex flex-col gap-4">
           <EventPicker events={events} value={types} onChange={setTypes} idPrefix={`ep-${ep.id}`} />
-          <Button
-            size="sm"
-            disabled={!types.length}
-            onClick={() =>
-              act(async () => {
-                await update({ endpointId: ep.id, eventTypes: types })
-                setEditing(false)
-              }, 'Events saved')
-            }
-          >
-            Save events
-          </Button>
+          <div>
+            <GradientButton
+              size="sm"
+              disabled={!types.length}
+              onClick={() =>
+                act(async () => {
+                  await update({ endpointId: ep.id, eventTypes: types })
+                  setEditing(false)
+                }, t('settingsUi.integ.hooks.eventsSaved'))
+              }
+            >
+              {t('settingsUi.integ.hooks.saveEvents')}
+            </GradientButton>
+          </div>
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-foam-deep pt-4">
-        <Button size="sm" variant="ghost" onClick={() => setShowLog((x) => !x)}>
-          {showLog ? 'Hide deliveries' : 'Show deliveries'}
-        </Button>
-        <Button
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+        <GhostButton size="sm" aria-expanded={showLog} onClick={() => setShowLog((x) => !x)}>
+          {showLog ? t('settingsUi.integ.hooks.hideDeliveries') : t('settingsUi.integ.hooks.showDeliveries')}
+        </GhostButton>
+        <GhostButton
           size="sm"
-          variant="ghost"
           onClick={() =>
             act(async () => {
-              if (!window.confirm('Replace the signing secret? The old one stops working at once.')) return
+              if (!window.confirm(t('settingsUi.integ.hooks.rotateConfirm'))) return
               const res = await rotate({ endpointId: ep.id })
               onSecret(res.secret)
             })
           }
         >
-          Rotate secret
-        </Button>
-        <Button
+          {t('integ.common.rotate')}
+        </GhostButton>
+        <GhostButton
           size="sm"
-          variant="ghost"
+          tone="danger"
           onClick={() =>
             act(async () => {
-              if (!window.confirm(`Delete ${ep.url}? Nothing more is sent to it.`)) return
+              if (!window.confirm(t('settingsUi.integ.hooks.deleteConfirm', { url: ep.url }))) return
               await remove({ endpointId: ep.id })
-            }, 'Endpoint deleted')
+            }, t('settingsUi.integ.hooks.deleted'))
           }
         >
-          Delete
-        </Button>
+          {t('settingsUi.integ.hooks.delete')}
+        </GhostButton>
       </div>
       {showLog && (
         <div className="mt-3">
           <DeliveryLog endpointId={ep.id} />
         </div>
       )}
-    </Card>
+    </SettingsCard>
   )
 }
 
@@ -302,55 +277,67 @@ function verify(rawBody, header, secret) {
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1 || ''))
 }`
 
-export default function WebhooksPage() {
+function WebhooksScreen() {
+  const t = useT()
+  const toasts = useToasts()
   const data = useQuery(api.webhooks.overview)
   const [secret, setSecret] = useState(null)
+  const copySecret = async () => {
+    try {
+      await navigator.clipboard.writeText(secret)
+      toasts.ok(t('integ.common.copied'))
+    } catch {
+      toasts.fail(new Error(t('integ.common.copyFailed')))
+    }
+  }
 
   return (
-    <ProtectedRoute permission="integrations.manage">
-      <Layout title="Webhooks">
-        <FormPage width="lg">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Company settings', href: '/company-settings' },
-              { label: 'Webhooks' },
-            ]}
-            description="Tell your other systems the moment something happens on the farm. Failed deliveries are retried for about a day; you can send any delivery again."
-            related={[
-              { label: 'API keys', href: '/api-keys' },
-              { label: 'Automations', href: '/automations' },
-            ]}
-          />
-          {!data ? (
-            <Skeleton className="h-64" />
-          ) : (
-            <div className="space-y-6">
-              {!data.encryptionReady && (
-                <Card>
-                  <p className="text-sm text-chart-ink">
-                    Endpoints cannot be added yet: the platform encryption key is not set on the server. Ask the platform operator to set it.
-                  </p>
-                </Card>
-              )}
-              {secret && <SecretOnce title="Copy the signing secret now" secret={secret} onDone={() => setSecret(null)} />}
-              {data.endpoints.length === 0 ? (
-                <Card>
-                  <EmptyState title="No webhook endpoints" description="Add one below to receive farm events in another system." />
-                </Card>
-              ) : (
-                data.endpoints.map((ep) => <EndpointCard key={ep.id} ep={ep} events={data.events} onSecret={setSecret} />)
-              )}
-              <NewEndpoint events={data.events} onCreated={setSecret} />
-              <Card>
-                <CardHeader title="Checking deliveries" subtitle="Each POST carries X-PBA-Event-Id, X-PBA-Event-Type, X-PBA-Delivery-Id and X-PBA-Signature (t=unix seconds, v1=HMAC-SHA256 of t.body). The same event can arrive more than once: skip ids you have seen." />
-                <pre className="overflow-x-auto rounded-lg bg-foam px-3 py-3 font-mono text-xs leading-relaxed text-chart-ink">{VERIFY_SNIPPET}</pre>
-              </Card>
-            </div>
+    <IntegrationsShell
+      title={t('settingsUi.integ.nav.outbound')}
+      actions={
+        <GradientButton href="#new-endpoint">
+          {t('settingsUi.integ.addEndpoint')}
+        </GradientButton>
+      }
+    >
+      <p className="max-w-3xl text-[14px] leading-[18px] text-muted">{t('settingsUi.integ.hooks.description')}</p>
+      {!data ? (
+        <Skeleton className="h-64" />
+      ) : (
+        <>
+          {!data.encryptionReady && <Notice tone="alert">{t('integ.common.encryptionMissing')}</Notice>}
+          {secret && (
+            <SecretOnce
+              title={t('settingsUi.integ.hooks.secretTitle')}
+              hint={t('settingsUi.integ.hooks.secretHint')}
+              secret={secret}
+              copyLabel={t('integ.common.copySecret')}
+              onCopy={copySecret}
+              onDone={() => setSecret(null)}
+            />
           )}
-        </FormPage>
-      </Layout>
+          {data.endpoints.length === 0 ? (
+            <Notice tone="cyan">{t('settingsUi.integ.hooks.emptyHint')}</Notice>
+          ) : (
+            data.endpoints.map((ep) => <EndpointCard key={ep.id} ep={ep} events={data.events} onSecret={setSecret} />)
+          )}
+          <NewEndpoint events={data.events} onCreated={setSecret} disabled={!data.encryptionReady} />
+          <SettingsCard title={t('settingsUi.integ.hooks.checkingTitle')}>
+            <p className="mb-3 text-[13px] leading-[18px] text-muted">{t('settingsUi.integ.hooks.checkingHint')}</p>
+            <pre className="overflow-x-auto rounded-input border border-line-strong bg-bg px-[14px] py-3 font-mono text-[12px] leading-relaxed text-text">
+              {VERIFY_SNIPPET}
+            </pre>
+          </SettingsCard>
+        </>
+      )}
+    </IntegrationsShell>
+  )
+}
+
+export default function WebhooksPage() {
+  return (
+    <ProtectedRoute permission="integrations.manage">
+      <WebhooksScreen />
     </ProtectedRoute>
   )
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useAction, useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
-import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, FormPage, Input, PageHeader, Skeleton } from '../components/ui'
+import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
+import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
+import { IntegrationsShell, SecretOnce as SecretCard, formatTime } from '../components/integrations/kit'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -14,19 +15,6 @@ import { useT } from '../lib/i18n/context'
  * with a per-webhook secret (shown once). Admins create, rotate, switch off
  * and inspect what arrived.
  */
-
-function formatTime(ms) {
-  if (!ms) return '—'
-  try {
-    return new Date(ms).toLocaleString()
-  } catch {
-    return '—'
-  }
-}
-
-function Pill({ className, children }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>{children}</span>
-}
 
 function useToasts() {
   const { showToast } = useToast()
@@ -47,16 +35,14 @@ function SecretOnce({ secret, onDone }) {
   const t = useT()
   const toasts = useToasts()
   return (
-    <Card className="border-lake">
-      <CardHeader title={t('integ.inbound.secretTitle')} subtitle={t('integ.inbound.secretHint')} />
-      <code className="block break-all rounded-lg bg-foam px-3 py-3 font-mono text-sm select-all">{secret}</code>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => copy(secret, t, toasts)}>{t('integ.common.copySecret')}</Button>
-        <Button variant="secondary" onClick={onDone}>
-          {t('integ.common.stored')}
-        </Button>
-      </div>
-    </Card>
+    <SecretCard
+      title={t('integ.inbound.secretTitle')}
+      hint={t('integ.inbound.secretHint')}
+      secret={secret}
+      copyLabel={t('integ.common.copySecret')}
+      onCopy={() => copy(secret, t, toasts)}
+      onDone={onDone}
+    />
   )
 }
 
@@ -64,26 +50,26 @@ function EventLog({ webhookId }) {
   const t = useT()
   const { results, status, loadMore } = usePaginatedQuery(api.inboundWebhooks.events, { webhookId }, { initialNumItems: 10 })
   if (status === 'LoadingFirstPage') return <Skeleton className="h-24" />
-  if (!results.length) return <p className="text-sm text-muted">{t('integ.inbound.noEvents')}</p>
+  if (!results.length) return <p className="text-[13px] leading-4 text-muted">{t('integ.inbound.noEvents')}</p>
   return (
     <div>
-      <ul className="divide-y divide-foam-deep">
+      <ul>
         {results.map((e) => (
-          <li key={e.id} className="py-3 text-sm">
+          <li key={e.id} className="border-t border-line py-3 text-[13px] leading-4 first:border-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Pill className={e.status === 'accepted' ? 'bg-kelp/15 text-kelp' : 'bg-signal/10 text-signal'}>
+              <Pill tone={e.status === 'accepted' ? 'green' : 'red'}>
                 {e.status === 'accepted' ? t('integ.inbound.accepted') : t('integ.inbound.rejected')}
               </Pill>
-              {e.eventType && <span className="font-mono text-xs text-chart-ink">{e.eventType}</span>}
-              {e.externalId && <span className="font-mono text-xs text-muted break-all">{e.externalId}</span>}
+              {e.eventType && <span className="font-mono text-[12px] text-text">{e.eventType}</span>}
+              {e.externalId && <span className="break-all font-mono text-[12px] text-muted">{e.externalId}</span>}
             </div>
-            <p className="mt-1 text-muted">
+            <p className="mt-1.5 text-muted">
               {formatTime(e.receivedAt)} · {t('integ.inbound.bytes', { count: e.payloadBytes })}
               {e.duplicates > 0 ? ` · ${t('integ.inbound.duplicates', { count: e.duplicates })}` : ''}
             </p>
-            {e.reason && <p className="mt-0.5 text-signal">{e.reason}</p>}
+            {e.reason && <p className="mt-1 text-alert">{e.reason}</p>}
             {e.payloadPreview && (
-              <pre className="mt-2 max-h-32 overflow-auto rounded-lg bg-foam px-3 py-2 font-mono text-xs whitespace-pre-wrap break-all">
+              <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-input border border-line-strong bg-bg px-3 py-2 font-mono text-[12px] text-text">
                 {e.payloadPreview}
               </pre>
             )}
@@ -91,9 +77,9 @@ function EventLog({ webhookId }) {
         ))}
       </ul>
       {status === 'CanLoadMore' && (
-        <Button variant="ghost" size="sm" onClick={() => loadMore(20)}>
+        <GhostButton size="sm" className="mt-2" onClick={() => loadMore(20)}>
           {t('integ.common.showOlder')}
-        </Button>
+        </GhostButton>
       )}
     </div>
   )
@@ -117,33 +103,31 @@ function WebhookCard({ hook, base, onSecret }) {
   }
   const active = hook.status === 'active'
   return (
-    <Card>
+    <SettingsCard>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-chart-ink">{hook.name}</span>
-            <Pill className={active ? 'bg-kelp/15 text-kelp' : 'bg-signal/10 text-signal'}>
+            <span className="text-[15px] font-medium leading-5 text-text">{hook.name}</span>
+            <Pill tone={active ? 'green' : 'neutral'}>
               {active ? t('integ.common.on') : t('integ.common.off')}
             </Pill>
           </div>
-          <p className="mt-1 font-mono text-xs text-muted break-all">{url}</p>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 break-all font-mono text-[13px] leading-4 text-muted">{url}</p>
+          <p className="mt-1 text-[13px] leading-4 text-muted">
             {t('integ.inbound.secretLine', { hint: hook.secretHint || '—', time: formatTime(hook.lastReceivedAt) })}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button variant="secondary" size="sm" onClick={() => copy(url, t, toasts)}>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <GhostButton size="sm" onClick={() => copy(url, t, toasts)}>
             {t('integ.inbound.copyUrl')}
-          </Button>
-          <Button
-            variant="secondary"
+          </GhostButton>
+          <GhostButton
             size="sm"
             onClick={() => act(() => update({ webhookId: hook.id, enabled: !active }), active ? t('integ.inbound.turnedOff') : t('integ.inbound.turnedOn'))}
           >
             {active ? t('integ.common.turnOff') : t('integ.common.turnOn')}
-          </Button>
-          <Button
-            variant="secondary"
+          </GhostButton>
+          <GhostButton
             size="sm"
             onClick={() => {
               if (!window.confirm(t('integ.inbound.rotateConfirm'))) return
@@ -151,28 +135,28 @@ function WebhookCard({ hook, base, onSecret }) {
             }}
           >
             {t('integ.common.rotate')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowLog((s) => !s)}>
+          </GhostButton>
+          <GhostButton size="sm" aria-expanded={showLog} onClick={() => setShowLog((s) => !s)}>
             {showLog ? t('integ.inbound.hideLog') : t('integ.inbound.showLog')}
-          </Button>
-          <Button
-            variant="ghost"
+          </GhostButton>
+          <GhostButton
             size="sm"
+            tone="danger"
             onClick={() => {
               if (!window.confirm(t('integ.inbound.removeConfirm', { name: hook.name }))) return
               act(() => remove({ webhookId: hook.id }), t('integ.inbound.removed'))
             }}
           >
             {t('integ.common.remove')}
-          </Button>
+          </GhostButton>
         </div>
       </div>
       {showLog && (
-        <div className="mt-4 border-t border-foam-deep pt-4">
+        <div className="mt-4 border-t border-line pt-4">
           <EventLog webhookId={hook.id} />
         </div>
       )}
-    </Card>
+    </SettingsCard>
   )
 }
 
@@ -201,63 +185,70 @@ function InboundWebhooksPage() {
   }
 
   return (
-    <FormPage>
-      <PageHeader title={t('integ.inbound.title')} description={t('integ.inbound.description')} />
-      <div className="space-y-6">
-        {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
-        {data === undefined ? (
-          <Skeleton className="h-40" />
-        ) : (
-          <>
-            {!data.encryptionReady && (
-              <Card className="border-signal">
-                <p className="text-sm text-signal">{t('integ.common.encryptionMissing')}</p>
-              </Card>
-            )}
-            <Card>
-              <CardHeader title={t('integ.inbound.addTitle')} subtitle={t('integ.inbound.addHint')} />
-              <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <Field label={t('integ.inbound.name')} htmlFor="inw-name" className="flex-1">
-                  <Input id="inw-name" value={name} maxLength={100} placeholder={t('integ.inbound.namePlaceholder')} onChange={(e) => setName(e.target.value)} required />
-                </Field>
-                <Button type="submit" disabled={busy || !name.trim() || !data.encryptionReady}>
-                  {busy ? t('integ.common.adding') : t('integ.inbound.add')}
-                </Button>
-              </form>
-            </Card>
-            {data.webhooks.length === 0 ? (
-              <EmptyState title={t('integ.inbound.emptyTitle')} description={t('integ.inbound.emptyHint')} />
-            ) : (
-              data.webhooks.map((hook) => <WebhookCard key={hook.id} hook={hook} base={base} onSecret={setSecret} />)
-            )}
-            <Card>
-              <CardHeader title={t('integ.inbound.signingTitle')} />
-              <ul className="space-y-1 text-sm text-chart-ink">
-                <li>
-                  <span className="font-mono">{data.signing.signatureHeader}</span>: t=&lt;unix&gt;,v1=HMAC-SHA256(secret, &quot;t.body&quot;)
-                </li>
-                <li>
-                  <span className="font-mono">{data.signing.eventIdHeader}</span>: {t('integ.inbound.eventIdHelp')}
-                </li>
-                <li>
-                  <span className="font-mono">{data.signing.eventTypeHeader}</span>: {t('integ.inbound.eventTypeHelp')}
-                </li>
-                <li>{t('integ.inbound.toleranceHelp', { seconds: data.signing.toleranceSec })}</li>
-              </ul>
-            </Card>
-          </>
-        )}
-      </div>
-    </FormPage>
+    <IntegrationsShell
+      title={t('integ.inbound.title')}
+      actions={
+        <GradientButton href="#new-inbound">
+          {t('integ.inbound.add')}
+        </GradientButton>
+      }
+    >
+      <p className="max-w-3xl text-[14px] leading-[18px] text-muted">{t('integ.inbound.description')}</p>
+      {secret && <SecretOnce secret={secret} onDone={() => setSecret(null)} />}
+      {data === undefined ? (
+        <Skeleton className="h-40" />
+      ) : (
+        <>
+          {!data.encryptionReady && <Notice tone="alert">{t('integ.common.encryptionMissing')}</Notice>}
+          {data.webhooks.length === 0 ? (
+            <Notice tone="cyan">
+              <span className="text-text">{t('integ.inbound.emptyTitle')}.</span> <span className="text-muted">{t('integ.inbound.emptyHint')}</span>
+            </Notice>
+          ) : (
+            data.webhooks.map((hook) => <WebhookCard key={hook.id} hook={hook} base={base} onSecret={setSecret} />)
+          )}
+          <SettingsCard id="new-inbound" title={t('integ.inbound.addTitle')} meta={t('integ.inbound.addHint')}>
+            <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <SettingsField label={t('integ.inbound.name')} htmlFor="inw-name" className="flex-1">
+                <input
+                  id="inw-name"
+                  className={FIELD}
+                  value={name}
+                  maxLength={100}
+                  placeholder={t('integ.inbound.namePlaceholder')}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </SettingsField>
+              <GradientButton type="submit" size="sm" className="sm:mb-1" disabled={busy || !name.trim() || !data.encryptionReady}>
+                {busy ? t('integ.common.adding') : t('integ.inbound.add')}
+              </GradientButton>
+            </form>
+          </SettingsCard>
+          <SettingsCard title={t('integ.inbound.signingTitle')}>
+            <ul className="flex flex-col gap-2 text-[13px] leading-[18px] text-muted">
+              <li>
+                <span className="font-mono text-text">{data.signing.signatureHeader}</span>: t=&lt;unix&gt;,v1=HMAC-SHA256(secret, &quot;t.body&quot;)
+              </li>
+              <li>
+                <span className="font-mono text-text">{data.signing.eventIdHeader}</span>: {t('integ.inbound.eventIdHelp')}
+              </li>
+              <li>
+                <span className="font-mono text-text">{data.signing.eventTypeHeader}</span>: {t('integ.inbound.eventTypeHelp')}
+              </li>
+              <li>{t('integ.inbound.toleranceHelp', { seconds: data.signing.toleranceSec })}</li>
+            </ul>
+          </SettingsCard>
+        </>
+      )}
+    </IntegrationsShell>
   )
 }
 
 export default function InboundWebhooks() {
   return (
     <ProtectedRoute permission="integrations.manage">
-      <Layout>
-        <InboundWebhooksPage />
-      </Layout>
+      <InboundWebhooksPage />
     </ProtectedRoute>
   )
 }
