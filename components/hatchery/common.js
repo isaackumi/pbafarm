@@ -1,6 +1,9 @@
 /** Shared bits of the hatchery workspace (Phase 5). */
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { Pill as UiPill } from '../ui'
+import { useT } from '../../lib/i18n/context'
+import { usePermissions } from '../../hooks/usePermission'
 
 export const fmt = (v, dp = 0) =>
   v == null || v === '' ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
@@ -42,31 +45,46 @@ export const LIVE_FEED_LABEL = {
 export const LIVE_FEED_UNIT = { million: 'million', L: 'L', g: 'g' }
 
 const TABS = [
-  { href: '/hatchery', label: 'Overview' },
-  { href: '/hatchery/broodstock', label: 'Broodstock' },
-  { href: '/hatchery/spawning', label: 'New spawning' },
-  { href: '/hatchery/larval', label: 'Larvae & fingerlings' },
-  { href: '/hatchery/live-feed', label: 'Live feed' },
+  { href: '/hatchery', key: 'board' },
+  { href: '/hatchery/broodstock', key: 'broodstock' },
+  { href: '/hatchery/spawning', key: 'spawning', permission: 'hatchery.spawning.record' },
+  { href: '/hatchery/larval', key: 'larval' },
+  { href: '/hatchery/live-feed', key: 'liveFeed' },
 ]
 
-/** Section links; scrolls sideways on phones. */
+const FALLBACK = {
+  status: STATUS_LABEL,
+  sex: SEX_LABEL,
+  origin: ORIGIN_LABEL,
+  method: METHOD_LABEL,
+  liveFeed: LIVE_FEED_LABEL,
+  unit: LIVE_FEED_UNIT,
+  stage: { larvae: 'Larvae', fingerlings: 'Fingerlings' },
+}
+
+/** Translated label for a hatchery enum value (status, sex, origin, method, liveFeed, unit, stage). */
+export const label = (t, group, value) => t.or(`hatcheryPage.${group}.${value}`, FALLBACK[group]?.[value] || value || '—')
+
+/** Paper 13 section tabs (underline links); scrolls sideways on phones. */
 export function HatcheryNav() {
+  const t = useT()
   const { pathname } = useRouter()
+  const { can } = usePermissions()
   return (
-    <nav aria-label="Hatchery" className="-mx-4 px-4 sm:mx-0 sm:px-0 mb-6 overflow-x-auto">
-      <ul className="flex gap-1 min-w-max border-b border-foam-deep">
-        {TABS.map((t) => {
-          const active = t.href === '/hatchery' ? pathname === t.href : pathname.startsWith(t.href)
+    <nav aria-label={t('hatcheryPage.nav')} className="overflow-x-auto border-b border-line">
+      <ul className="flex min-w-max gap-[28px]">
+        {TABS.filter((tab) => can(tab.permission)).map((tab) => {
+          const active = tab.href === '/hatchery' ? pathname === tab.href : pathname.startsWith(tab.href)
           return (
-            <li key={t.href}>
+            <li key={tab.href}>
               <Link
-                href={t.href}
+                href={tab.href}
                 aria-current={active ? 'page' : undefined}
-                className={`inline-flex items-center px-3 min-h-11 text-sm border-b-2 -mb-px transition-colors ${
-                  active ? 'border-lake text-chart-ink font-medium' : 'border-transparent text-muted hover:text-chart-ink'
+                className={`-mb-px inline-flex border-b-2 pb-3 text-[14px] leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                  active ? 'border-text font-medium text-text' : 'border-transparent text-muted hover:text-text'
                 }`}
               >
-                {t.label}
+                {t(`hatcheryPage.tab.${tab.key}`)}
               </Link>
             </li>
           )
@@ -76,18 +94,32 @@ export function HatcheryNav() {
   )
 }
 
-/** Small status pill. */
+const PILL_TONE = { good: 'green', warn: 'red', accent: 'cyan', default: 'neutral' }
+
+/** Status pill on the shared Paper Pill. */
 export function Pill({ children, tone = 'default' }) {
-  const cls =
-    tone === 'good'
-      ? 'bg-kelp/10 text-kelp'
-      : tone === 'warn'
-        ? 'bg-signal/10 text-signal'
-        : tone === 'accent'
-          ? 'bg-lake/10 text-lake'
-          : 'bg-foam text-muted'
-  return <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>
+  return <UiPill tone={PILL_TONE[tone] || 'neutral'}>{children}</UiPill>
 }
 
 export const statusTone = (s) =>
   s === 'ready' || s === 'hatched' ? 'good' : s === 'dead' || s === 'failed' ? 'warn' : s === 'conditioning' || s === 'incubating' ? 'accent' : 'default'
+
+/** Paper card shell and title used across the hatchery pages. */
+export const CARD = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
+
+export function PaperCard({ title, meta, action, children, className = '', padded = true }) {
+  return (
+    <section className={`${CARD} ${padded ? 'px-[22px] py-6 sm:px-[26px]' : ''} ${className}`}>
+      {(title || meta != null || action) && (
+        <div className={`flex flex-wrap items-center justify-between gap-3 pb-3 ${padded ? '' : 'px-[22px] pt-6 sm:px-[26px]'}`}>
+          {title && <h2 className="text-[15px] font-semibold leading-[18px] text-text">{title}</h2>}
+          <div className="flex items-center gap-3">
+            {meta != null && <span className="text-[13px] leading-4 text-muted">{meta}</span>}
+            {action}
+          </div>
+        </div>
+      )}
+      {children}
+    </section>
+  )
+}

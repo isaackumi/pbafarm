@@ -572,6 +572,1105 @@
     "listEmptyHint": "Record a harvest when fish leave a cage.",
     "listAdd": "Record harvest"
   },
+  "approvalsPage": {
+    "title": "Approvals",
+    "eyebrow": {
+      "one": "Inbox · {count} waiting on you",
+      "other": "Inbox · {count} waiting on you"
+    },
+    "eyebrowLoading": "Inbox",
+    "filter": "Request type",
+    "listLabel": "Pending requests",
+    "loading": "Loading pending approvals…",
+    "emptyTitle": "No pending approvals",
+    "emptyHint": "Every stocking, transfer and top-up request has been processed.",
+    "tab": {
+      "all": "All",
+      "stocking": "Stocking",
+      "fish_transfer": "Transfers",
+      "topup": "Top-ups"
+    },
+    "type": {
+      "stocking": "Stocking",
+      "fish_transfer": "Transfer",
+      "topup": "Top-up"
+    },
+    "age": {
+      "m": "{n}m",
+      "h": "{n}h",
+      "d": "{n}d"
+    },
+    "summary": {
+      "transfer": "{route} · {n} fish",
+      "stocking": "{cage} · {n} fish",
+      "topup": "{cage} · +{n} fish"
+    },
+    "request": "{type} request",
+    "requestedAgo": "requested {age} ago",
+    "from": "From · {cage}",
+    "to": "To · {cage}",
+    "unit": "Unit",
+    "quantity": "Quantity",
+    "fish": "fish",
+    "date": "Date",
+    "abw": "Average body weight",
+    "biomass": "Biomass",
+    "noteLabel": "Reason (required to reject)",
+    "notePlaceholder": "Add a reason if rejecting…",
+    "reasonRequired": "Add a reason before rejecting this request.",
+    "auditHint": "Your decision is recorded in the audit trail.",
+    "details": "View details",
+    "reject": "Reject",
+    "approve": "Approve {type}",
+    "processing": "Processing…",
+    "toast": {
+      "approved": "{type} approved",
+      "approveFailed": "Could not approve the request",
+      "rejected": "{type} rejected",
+      "rejectFailed": "Could not reject the request"
+    }
+  },
+  "compliancePage": {
+    "title": "Compliance",
+    "eyebrow": "Compliance · {site}",
+    "thisSite": "this site",
+    "startChecklist": "Start checklist",
+    "logEntry": "Log entry",
+    "noSite": "No site selected",
+    "noSiteHint": "Create or pick a farm site first.",
+    "kpi": {
+      "checklists": "Checklists due now",
+      "doneOf": "{done} of {total} done",
+      "findings": "Open findings",
+      "last30": "last 30 days",
+      "holds": "Withdrawal holds",
+      "cagesN": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "biosecurity": "Biosecurity entries"
+    },
+    "log": "Biosecurity log",
+    "logFilter": "Filter the log",
+    "tab": {
+      "all": "All",
+      "issues": "Issues",
+      "checklists": "Checklists",
+      "biosecurity": "Biosecurity"
+    },
+    "search": "Search checks or people",
+    "logEmpty": "Nothing logged at this site yet.",
+    "col": {
+      "when": "When",
+      "check": "Check",
+      "by": "By",
+      "result": "Result"
+    },
+    "passed": "Pass",
+    "issuesN": {
+      "one": "{count} issue",
+      "other": "{count} issues"
+    },
+    "logged": "Logged",
+    "controlsMissed": "Entry controls missed",
+    "findings": "Open findings",
+    "noFindings": "No failed checks in the last 30 days.",
+    "more": "+{n} more",
+    "holds": "Withdrawal holds",
+    "harvestBlocked": "Harvest blocked",
+    "noHolds": "No cage is in a withdrawal period.",
+    "clears": "Clears {date}",
+    "checklists": "Checklists",
+    "dueN": {
+      "one": "{count} due",
+      "other": "{count} due"
+    },
+    "allOff": "Every checklist is switched off.",
+    "noChecklists": "No checklists yet",
+    "noChecklistsHint": "Start with the standard ones: daily biosecurity, weekly net inspection and monthly water quality review.",
+    "addStandard": "Add standard checklists",
+    "added": {
+      "one": "{count} checklist added",
+      "other": "{count} checklists added"
+    },
+    "itemsN": {
+      "one": "{count} item",
+      "other": "{count} items"
+    },
+    "doneOn": "done {date}",
+    "lastDone": "last done {date}",
+    "done": "Done",
+    "doneIssues": "Done with issues",
+    "complete": "Complete",
+    "due": "Due",
+    "freq": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "pickTitle": "Which checklist?",
+    "saveChecklist": "Save checklist",
+    "saved": "Checklist saved",
+    "savedIssues": "Checklist saved with issues",
+    "saveFailed": "Could not save the checklist",
+    "date": "Date",
+    "items": "Items",
+    "ok": "OK",
+    "notOk": "Not OK",
+    "whatWrong": "What was wrong and what was done",
+    "whatWrongFor": "What was wrong: {item}",
+    "newEntry": "New biosecurity entry",
+    "entryLogged": "Entry logged",
+    "entryFailed": "Could not log the entry",
+    "type": "Type",
+    "kind": {
+      "visitor": "Visitor",
+      "vehicle": "Vehicle",
+      "disinfection": "Disinfection",
+      "other": "Other"
+    },
+    "driver": "Driver",
+    "name": "Name",
+    "organisation": "Organisation",
+    "vehicle": "Vehicle registration",
+    "purpose": "Purpose",
+    "area": "Area or equipment",
+    "disinfectant": "Disinfectant and strength",
+    "entryControls": "Footbath, wheel dip and hand wash done on entry"
+  },
+  "gradingPage": {
+    "title": "Grading",
+    "eyebrow": "Production · Sort by size, split into cages",
+    "transfers": "Fish transfers",
+    "adminsOnly": "Admins only",
+    "adminsOnlyHint": "Ask a company admin to record a grading.",
+    "how": {
+      "title": "How grading works",
+      "body": "Sort a cage's fish by size into new batches, one per destination cage. The batch they came from is kept as their parent, and culls are logged as mortality."
+    },
+    "recent": {
+      "title": "Recent gradings",
+      "all": "All batches",
+      "empty": "No grading recorded yet.",
+      "batches": {
+        "one": "{count} batch",
+        "other": "{count} batches"
+      }
+    }
+  },
+  "harvestPage": {
+    "title": "Harvest",
+    "eyebrow": "Production · Harvests, sizing and lots",
+    "record": "Record harvest",
+    "sampling": "Harvest sampling",
+    "addSampling": "Add sampling",
+    "delete": "Delete",
+    "backToList": "Back to harvests",
+    "deleteTitle": "Delete harvest",
+    "deleteMessage": "Delete the harvest for {cage} on {date}? This cannot be undone.",
+    "kpi": {
+      "harvested": "Harvested · {month}",
+      "vsLast": "{pct}% vs last month",
+      "avgSize": "Avg size",
+      "thisMonth": "this month",
+      "ready": "Ready to harvest",
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "openLots": "Open lots",
+      "forSale": "for sale"
+    },
+    "grades": {
+      "title": "Last harvest · size grades",
+      "titleFor": "Last harvest · {cage} · size grades",
+      "fish": {
+        "one": "{n} fish",
+        "other": "{n} fish"
+      },
+      "empty": "No harvest with a size breakdown yet.",
+      "barLabel": "{grade}: {pct}% of graded weight"
+    },
+    "ready": {
+      "title": "Ready to harvest",
+      "viewAll": "View all",
+      "empty": "No cage has reached the target harvest weight.",
+      "ready": "Ready",
+      "held": "On withdrawal hold",
+      "inWithdrawal": "In withdrawal to {date}",
+      "day": "Day {n}"
+    },
+    "table": {
+      "title": "Harvests",
+      "filter": "Harvest type",
+      "all": "All",
+      "search": "Search cage or lot",
+      "from": "From date",
+      "to": "To date",
+      "export": "Export"
+    },
+    "type": {
+      "full": "Full",
+      "partial": "Partial"
+    },
+    "col": {
+      "date": "Date",
+      "cage": "Cage",
+      "type": "Type",
+      "lot": "Lot",
+      "fish": "Fish",
+      "weight": "Weight",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "lot": {
+      "none": "No lot yet",
+      "open": "Lot open · {sent} dispatched",
+      "out": "Fully dispatched"
+    },
+    "edit": {
+      "title": "Edit harvest · {cage}",
+      "status": "Status",
+      "completed": "Completed",
+      "inProgress": "In progress"
+    },
+    "toast": {
+      "updated": "Harvest updated",
+      "updateFailed": "Could not update the harvest",
+      "deleted": "Harvest deleted",
+      "deleteFailed": "Could not delete the harvest",
+      "nothingToExport": "No harvest records to export",
+      "exportFailed": "Could not export the harvest records"
+    },
+    "samplingPage": {
+      "title": "Harvest sampling",
+      "eyebrow": "Production · Harvest",
+      "intro": "Record a sample's weight and size mix before harvest. This does not record a harvest or change the cage's fish count. DOC and ABW are calculated from the cage's stocking date.",
+      "theCage": "the cage",
+      "saved": "Sample saved for {cage}. Record the harvest itself on the Harvest page when the fish leave the cage.",
+      "failed": "Could not save the sample",
+      "goToHarvest": "Go to Harvest",
+      "loadingCages": "Loading cages…",
+      "cageAndSample": "Cage and sample",
+      "cage": "Cage",
+      "selectCage": "Select cage",
+      "date": "Sample date",
+      "weight": "Total weight (kg)",
+      "fishCount": "Fish count",
+      "doc": "Days of culture",
+      "days": "days",
+      "abw": "Avg body weight",
+      "sizeBreakdown": "Size breakdown",
+      "sizeHint": "Optional fish count per grade.",
+      "save": "Save sample"
+    },
+    "analytics": {
+      "title": "Harvest readiness",
+      "eyebrow": "Analytics · Units approaching harvest",
+      "all": "All analytics",
+      "kpiSoon": "Due in {n} days",
+      "kpiStocked": "Stocked units",
+      "readiness": "Days of culture and days to harvest",
+      "weights": "Initial and current weight",
+      "table": "Units by harvest date",
+      "empty": "No stocked unit to show.",
+      "days": "{n} d",
+      "status": {
+        "ready": "Ready",
+        "soon": "Soon",
+        "growing": "Growing"
+      },
+      "col": {
+        "cage": "Unit",
+        "doc": "Days of culture",
+        "daysLeft": "Days to harvest",
+        "initial": "Initial weight",
+        "current": "Current weight",
+        "growth": "Growth rate",
+        "status": "Status"
+      }
+    }
+  },
+  "hatcheryPage": {
+    "title": "Hatchery",
+    "eyebrow": "Hatchery · Broodstock to fingerlings",
+    "nav": "Hatchery sections",
+    "newSpawning": "New spawning",
+    "moveToNursery": "Move to nursery",
+    "today": "Today",
+    "all": "All",
+    "choose": "Choose…",
+    "date": "Date",
+    "abw": "ABW (g)",
+    "saved": "Saved",
+    "saveFailed": "Could not save",
+    "tab": {
+      "board": "Board",
+      "broodstock": "Broodstock",
+      "spawning": "Spawning",
+      "larval": "Larvae & fingerlings",
+      "liveFeed": "Live feed"
+    },
+    "kpi": {
+      "broodstock": "Broodstock",
+      "eggs": "Eggs incubating",
+      "larvae": "Larvae",
+      "fingerlings": "Fingerlings",
+      "eggsCollected": "Eggs collected",
+      "fertilization": "Fertilization",
+      "hatchRate": "Hatch rate",
+      "larvaeHatched": "Larvae hatched",
+      "fryPerKg": "Fry per kg female"
+    },
+    "readyN": "{n} ready",
+    "lotsN": {
+      "one": "{count} lot",
+      "other": "{count} lots"
+    },
+    "survival": "{pct} survival",
+    "batchesN": {
+      "one": "{count} batch",
+      "other": "{count} batches"
+    },
+    "spawningsN": {
+      "one": "{count} spawning",
+      "other": "{count} spawnings"
+    },
+    "eggsN": "{n} eggs",
+    "larvaeN": "{n} larvae",
+    "fishN": "{n} fish",
+    "fryPerKg": "{n} fry/kg female",
+    "eggsNotCounted": "Eggs not counted",
+    "dayN": "Day {n}",
+    "spawnedOn": "Spawned {date}",
+    "fertilized": "{pct} fertilized",
+    "hatchLine": "{date} · {larvae} larvae from {eggs} eggs",
+    "col": {
+      "spawning": "Spawning",
+      "incubation": "Incubation",
+      "larvae": "Larvae",
+      "nursery": "Nursery"
+    },
+    "emptySpawning": "No spawnings waiting for incubation.",
+    "emptyIncubation": "No eggs incubating.",
+    "emptyLarvae": "No larvae in the hatchery.",
+    "emptyNursery": "No fingerlings in the nursery.",
+    "performance": "Performance",
+    "latestHatches": "Latest hatches",
+    "noHatches": "No hatches yet.",
+    "recordHatch": "Record hatch",
+    "failed": "Failed",
+    "hatchTitle": "Record hatch · {unit}",
+    "failTitle": "Mark lot failed · {unit}",
+    "hatchSaved": "Batch {batch} started with {n} larvae",
+    "failSaved": "Lot marked as failed",
+    "larvaeHatched": "Larvae hatched",
+    "stockIn": "Stock larvae in",
+    "stockInHint": "Tank the larvae go to; leave as is to keep them in the incubator",
+    "reason": "Reason",
+    "reasonPlaceholder": "Fungus, temperature drop…",
+    "status": {
+      "conditioning": "Conditioning",
+      "ready": "Ready",
+      "spent": "Spent",
+      "resting": "Resting",
+      "retired": "Retired",
+      "dead": "Dead",
+      "failed": "Failed",
+      "spawned": "Spawned",
+      "incubating": "Incubating",
+      "hatched": "Hatched"
+    },
+    "sex": {
+      "female": "Female",
+      "male": "Male",
+      "mixed": "Mixed",
+      "unknown": "Unknown"
+    },
+    "origin": {
+      "wild": "Wild",
+      "farm": "Own farm",
+      "purchased": "Purchased",
+      "hatchery": "Own hatchery",
+      "other": "Other",
+      "title": "Hatchery origin",
+      "here": "Hatched on this farm.",
+      "back": {
+        "one": "Hatched here as {batch}, {count} generation back.",
+        "other": "Hatched here as {batch}, {count} generations back."
+      },
+      "induced": "Induced, {hormone}",
+      "spawned": "Spawned",
+      "females": "Females",
+      "males": "Males",
+      "method": "Method",
+      "eggs": "Eggs",
+      "fertilization": "Fertilization",
+      "hatchRate": "Hatch rate",
+      "fryPerKg": "Fry per kg female"
+    },
+    "method": {
+      "natural": "Natural",
+      "induced": "Induced (hormone)",
+      "stripped": "Stripped"
+    },
+    "liveFeed": {
+      "artemia": "Artemia",
+      "rotifer": "Rotifers",
+      "microalgae": "Microalgae",
+      "copepod": "Copepods",
+      "other": "Other"
+    },
+    "unit": {
+      "million": "million",
+      "L": "L",
+      "g": "g"
+    },
+    "stage": {
+      "larvae": "Larvae",
+      "fingerlings": "Fingerlings"
+    },
+    "brood": {
+      "title": "Broodstock",
+      "eyebrow": "Hatchery · Breeding fish",
+      "add": "Add broodstock",
+      "added": "{code} added",
+      "addFailed": "Could not add the broodstock",
+      "newTitle": "Add broodstock",
+      "newHint": "Tag an individual fish, or record a group kept together (male groups, for example).",
+      "record": "Record",
+      "individual": "Individual",
+      "group": "Group",
+      "groupName": "Group name",
+      "tag": "Tag",
+      "sex": "Sex",
+      "fishInGroup": "Fish in group",
+      "pitTag": "PIT tag",
+      "meanWeight": "Mean weight (g)",
+      "weight": "Weight (g)",
+      "length": "Length (cm)",
+      "species": "Species",
+      "strain": "Strain",
+      "origin": "Origin",
+      "source": "Source",
+      "sourceHint": "Supplier, river or farm",
+      "tank": "Tank",
+      "notAssigned": "Not assigned",
+      "acquiredOn": "Acquired on",
+      "conditionToday": "Start conditioning today",
+      "kpiFish": "Broodstock fish",
+      "records": {
+        "one": "{count} record",
+        "other": "{count} records"
+      },
+      "listTitle": "All broodstock",
+      "statusFilter": "Filter by status",
+      "search": "Search tag, tank or strain",
+      "loading": "Loading broodstock…",
+      "empty": "No broodstock yet. Add the breeding fish to start.",
+      "fish": "Fish",
+      "lastSpawned": "Last spawned",
+      "notSpawned": "Not yet",
+      "status": "Status",
+      "notFound": "Broodstock not found",
+      "back": "Back to broodstock",
+      "groupOf": "Group of {n}",
+      "totalKg": "{kg} kg in total",
+      "spawnings": "Spawnings",
+      "lastOn": "last {date}",
+      "conditioningSince": "conditioning since {date}",
+      "history": "Spawning history",
+      "noSpawnings": "No spawnings yet.",
+      "editTitle": "Edit {code}"
+    },
+    "spawn": {
+      "title": "New spawning",
+      "eyebrow": "Hatchery · Pick broodstock, record eggs, start incubation",
+      "steps": "Steps",
+      "step": {
+        "broodstock": "Broodstock",
+        "spawning": "Spawning",
+        "eggs": "Eggs",
+        "incubation": "Incubation"
+      },
+      "broodHint": "Choose the females and the males or male groups that spawned.",
+      "noBrood": "No broodstock",
+      "noBroodHint": "Add broodstock first.",
+      "females": "Females",
+      "males": "Males",
+      "chosen": "({n} chosen)",
+      "method": "Method",
+      "hormone": "Hormone",
+      "hormoneHint": "Ovaprim, hCG, carp pituitary…",
+      "dose": "Dose",
+      "doseHint": "For example 0.5 ml/kg",
+      "tank": "Spawning tank",
+      "notRecorded": "Not recorded",
+      "eggCollection": "Egg collection",
+      "eggHint": "Leave blank if the eggs are counted later.",
+      "eggWeight": "Egg weight (g)",
+      "fertilization": "Fertilization (%)",
+      "placed": "{placed} of {total} eggs placed.",
+      "incubationHint": "Put the eggs in one or more incubators, or skip and do it from the board later.",
+      "incubator": "Incubator",
+      "eggs": "Eggs",
+      "waterC": "Water °C",
+      "addIncubator": "Add incubator",
+      "back": "Back",
+      "next": "Next",
+      "save": "Save spawning",
+      "saved": "Spawning saved",
+      "savedLots": {
+        "one": "Spawning saved; {count} incubation lot started",
+        "other": "Spawning saved; {count} incubation lots started"
+      },
+      "saveFailed": "Could not save the spawning",
+      "noAccess": "You can't record spawnings",
+      "noAccessHint": "Ask an admin for the hatchery spawning permission.",
+      "toBoard": "Back to the board"
+    },
+    "larval": {
+      "title": "Larvae & fingerlings",
+      "eyebrow": "Hatchery · Daily logs, grading and dispatch",
+      "batches": "Batches",
+      "statusFilter": "Batch status",
+      "active": "In the hatchery",
+      "closed": "Closed",
+      "empty": "No larval batches",
+      "emptyHint": "Record a hatch on the board to start one.",
+      "notLogged": "Not logged today",
+      "choose": "Choose a batch to log its day or move its fish.",
+      "tabLog": "Daily log",
+      "tabGrade": "Grade",
+      "tabMove": "Move",
+      "tabSell": "Sell or send",
+      "actions": "Batch actions",
+      "allBatches": "All batches",
+      "hatchedOn": "Hatched {date}",
+      "asBatch": "as {batch}",
+      "inN": "{n} in",
+      "deadN": "{n} dead",
+      "outN": "{n} out",
+      "queued": "No connection. Saved on this device and will send when you are back online",
+      "logSaved": "Saved. {n} larvae on record",
+      "logFailed": "Could not save the log",
+      "alreadyLogged": "This day is already logged; saving replaces it.",
+      "survivalHead": "Survival",
+      "deadRemoved": "Dead removed",
+      "countedAlive": "Counted alive",
+      "countedHint": "Sets the count on record",
+      "feeding": "Feeding",
+      "liveFeed": "Live feed",
+      "amount": "Amount",
+      "unit": "Unit",
+      "removeFeed": "Remove live feed",
+      "addLiveFeed": "Add live feed",
+      "dryFeed": "Dry feed (g)",
+      "feedings": "Feedings",
+      "water": "Water",
+      "do": "DO (mg/L)",
+      "salinity": "Salinity (ppt)",
+      "saveChanges": "Save changes",
+      "saveLog": "Save log",
+      "logs": "Daily logs",
+      "noLogs": "No logs yet.",
+      "dead": "Dead",
+      "counted": "Counted",
+      "graded": {
+        "one": "Graded into {count} batch.",
+        "other": "Graded into {count} batches."
+      },
+      "unaccounted": "{n} unaccounted.",
+      "gradeFailed": "Could not grade",
+      "gradeHint": "Grade the whole tank: each size class opens a fingerling batch in its tank. Fish not counted into a grade or culls are recorded as unaccounted.",
+      "tankGraded": "Tank graded",
+      "gradeTo": "Grade {grade} to",
+      "batchNumber": "Batch number",
+      "automatic": "Automatic",
+      "addGrade": "Add grade",
+      "culls": "Culls",
+      "accounted": "{done} of {total} accounted for",
+      "grading": "Grading…",
+      "moved": "Fingerlings moved",
+      "moveFailed": "Could not move the fish",
+      "moveHint": "Move fingerlings to nursery or grow-out units. Into an empty unit the batch moves with them; into an occupied one they join its batch.",
+      "from": "From",
+      "to": "To",
+      "emptyUnit": "empty",
+      "addDestination": "Add destination",
+      "moving": "Moving…",
+      "moveFish": "Move fingerlings",
+      "reverseTitle": "Reverse this movement",
+      "reverse": "Reverse",
+      "reverseReason": "Why reverse this?",
+      "reversed": "Reversed; the fish are back on record",
+      "reverseFailed": "Could not reverse",
+      "saleSaved": "Sale recorded",
+      "dispatchSaved": "Dispatch recorded",
+      "fingerlingsAre": "Fingerlings are",
+      "sold": "Sold",
+      "sentFarm": "Sent to another farm",
+      "pricePerFish": "Price per fish",
+      "total": "Total {amount}",
+      "customer": "Customer",
+      "otherBuyer": "Other buyer",
+      "buyerName": "Buyer name",
+      "payment": "Payment",
+      "pay": {
+        "pending": "Pending",
+        "partial": "Partial",
+        "paid": "Paid"
+      },
+      "receivingFarm": "Receiving farm",
+      "overrideReason": "Withdrawal override reason",
+      "overrideHint": "Only if the fish are in a treatment withdrawal period",
+      "recordSale": "Record sale",
+      "recordDispatch": "Record dispatch",
+      "fishOut": "Fish out of this batch",
+      "noneYet": "None yet.",
+      "mv": {
+        "moved": "{date} · {n} moved to {dest}",
+        "sold": "{date} · {n} sold to {dest}",
+        "sent": "{date} · {n} sent to {dest}"
+      },
+      "fromUnit": "From {unit}",
+      "amountEach": "{amount} ({each} each)",
+      "reversedPill": "Reversed"
+    },
+    "feed": {
+      "title": "Live feed",
+      "eyebrow": "Hatchery · Artemia, rotifer and algae cultures",
+      "add": "Add entry",
+      "newTitle": "Live feed entry",
+      "newHint": "What was produced, fed or thrown away. Feed recorded on a larval log is counted automatically.",
+      "feed": "Feed",
+      "entry": "Entry",
+      "mv": {
+        "produced": "Produced",
+        "used": "Used",
+        "discarded": "Discarded"
+      },
+      "culture": "Culture",
+      "cultureHint": "Tank or cone",
+      "inputs": "Inputs",
+      "inputsHint": "Cysts, algae paste, enrichment",
+      "onHand": "{feed} on hand",
+      "producedUsed": "{produced} produced · {used} used",
+      "entries": "Entries",
+      "empty": "No live feed entries",
+      "emptyHint": "Record a culture harvest to start the balance.",
+      "fromLog": "From a larval log",
+      "remove": "Remove",
+      "removeFailed": "Could not remove"
+    }
+  },
+  "healthWater": {
+    "title": "Health & water",
+    "eyebrow": "Production · Water quality, treatments, withdrawal",
+    "wqTitle": "Water quality",
+    "wqEyebrow": "Production · Latest reading per unit against its thresholds",
+    "logWater": "Log water",
+    "newTreatment": "New treatment",
+    "kpi": {
+      "avgDo": "Avg DO · latest",
+      "belowThreshold": {
+        "one": "{count} unit below threshold",
+        "other": "{count} units below threshold"
+      },
+      "waterTemp": "Water temp",
+      "activeTreatments": "Active treatments",
+      "inWithdrawal": "In withdrawal",
+      "units": {
+        "one": "{count} unit",
+        "other": "{count} units"
+      },
+      "noHarvestUntil": "no harvest until {date}",
+      "outOfRange": "Out of range",
+      "unitsLogged": "Units logged",
+      "ofUnits": {
+        "one": "of {count} unit",
+        "other": "of {count} units"
+      }
+    },
+    "doChart": {
+      "title": "Dissolved oxygen · 7 days",
+      "unit": "mg/L, daily records",
+      "avg": "Average",
+      "lowest": "Lowest unit",
+      "threshold": "Alert below {value}",
+      "empty": "No dissolved oxygen logged in the last 7 days.",
+      "aria": "Dissolved oxygen over the last 7 days: daily average and lowest unit"
+    },
+    "active": {
+      "title": "Active treatments",
+      "viewAll": "View all",
+      "empty": "No treatments in the last 7 days and no withdrawal running.",
+      "until": "Until {date}",
+      "noWithdrawal": "No withdrawal",
+      "inWithdrawal": "In withdrawal",
+      "recent": "Given in the last 7 days"
+    },
+    "log": {
+      "title": "Water log",
+      "filter": "Water log filter",
+      "all": "All",
+      "alerts": "Alerts",
+      "treatments": "Treatments",
+      "search": "Search",
+      "col": {
+        "time": "Time",
+        "unit": "Unit",
+        "do": "DO",
+        "temp": "Temp",
+        "ph": "pH",
+        "nh3": "NH₃",
+        "secchi": "Secchi",
+        "status": "Status"
+      },
+      "normal": "Normal",
+      "outOfRange": {
+        "one": "{count} out of range",
+        "other": "{count} out of range"
+      },
+      "noReading": "No reading",
+      "low": "below threshold",
+      "high": "above threshold",
+      "empty": "No units yet.",
+      "emptyAlerts": "No unit is out of range."
+    },
+    "table": {
+      "date": "Date",
+      "diagnosis": "Diagnosis",
+      "treatment": "Treatment",
+      "withdrawal": "Withdrawal until",
+      "actions": "Actions",
+      "documents": "Documents",
+      "documentsFor": "Documents · {name}",
+      "delete": "Delete",
+      "deleted": "Deleted",
+      "empty": "No treatments recorded yet."
+    },
+    "form": {
+      "title": "New treatment",
+      "unit": "Unit",
+      "selectUnit": "Select a unit…",
+      "date": "Date",
+      "diagnosis": "Diagnosis",
+      "optional": "Optional",
+      "treatment": "Treatment",
+      "treatmentPlaceholder": "e.g. Salt bath, antibiotic course",
+      "product": "Product",
+      "dosage": "Dosage",
+      "fishAffected": "Fish affected",
+      "withdrawalDays": "Withdrawal days",
+      "withdrawalPlaceholder": "Days before harvest is allowed",
+      "administeredBy": "Administered by",
+      "notes": "Notes",
+      "errUnit": "Select a unit",
+      "errTreatment": "Treatment is required",
+      "saved": "Treatment recorded",
+      "saveFailed": "Could not save the treatment"
+    },
+    "thresholds": {
+      "title": "Thresholds",
+      "subtitle": "Defaults suit warm-water finfish; adjust per unit type. Breaches can alert through the Water quality automation.",
+      "unitType": "Unit type",
+      "parameter": "Parameter",
+      "min": "Min",
+      "max": "Max",
+      "saveFor": "Save for {units}",
+      "useDefault": "Use default",
+      "blankHint": "Saving with both boxes blank turns the alert for that parameter off.",
+      "noAlert": "No alert",
+      "and": "and",
+      "saved": "Threshold saved",
+      "resetDone": "Back to the default",
+      "saveFailed": "Could not save the threshold"
+    }
+  },
+  "sensorsPage": {
+    "eyebrow": "Live · {readings} on {units} · updated {updated}",
+    "eyebrowSite": "Sensors · {site}",
+    "readingsN": {
+      "one": "{count} reading",
+      "other": "{count} readings"
+    },
+    "unitsOn": {
+      "one": "{count} unit",
+      "other": "{count} units"
+    },
+    "alertRules": "Alert rules",
+    "editThresholds": "Edit thresholds",
+    "kpi": {
+      "reporting": "Reporting",
+      "quietN": {
+        "one": "{count} quiet",
+        "other": "{count} quiet"
+      },
+      "unitsN": {
+        "one": "on {count} unit",
+        "other": "on {count} units"
+      },
+      "breaches": "Breaches · {period}",
+      "lowDo": {
+        "one": "{count} low DO",
+        "other": "{count} low DO"
+      },
+      "waterTemp": "Water temp",
+      "unitsAvg": {
+        "one": "{count} unit avg",
+        "other": "{count} units avg"
+      }
+    },
+    "status": {
+      "alert": "Alert",
+      "warn": "Breached",
+      "good": "Online",
+      "offline": "Quiet"
+    },
+    "minAvgMax": "Min {min} · avg {avg} · max {max}",
+    "minMax": "{min} – {max}",
+    "below": "Below {value}",
+    "above": "Above {value}",
+    "within": "Within {min}–{max}",
+    "atLeast": "At least {value}",
+    "atMost": "At most {value}",
+    "noRange": "No alert range",
+    "quietSince": "No reading since {ago}",
+    "breachedN": {
+      "one": "Back in range · {count} breach",
+      "other": "Back in range · {count} breaches"
+    },
+    "readings": "Readings",
+    "filter": "Filter readings",
+    "tab": {
+      "all": "All",
+      "alerts": "Alerts",
+      "quiet": "Quiet"
+    },
+    "search": "Search units or parameters",
+    "noMatch": "No readings match.",
+    "col": {
+      "reading": "Reading",
+      "lastSeen": "Last seen",
+      "status": "Status"
+    },
+    "rulesN": {
+      "one": "{count} active",
+      "other": "{count} active"
+    },
+    "noRules": "No alert ranges apply to these readings.",
+    "ruleOutside": "{label} outside {min}–{max} {unit}",
+    "ruleBelow": "{label} below {value} {unit}",
+    "ruleAbove": "{label} above {value} {unit}",
+    "ruleNotify": "Notifies the site team on breach"
+  },
+  "tracePage": {
+    "lotsTitle": "Harvest lots",
+    "eyebrowLots": "Traceability",
+    "eyebrowLot": "Harvest lot",
+    "reportTitle": "Trace report",
+    "lotTitle": "Lot {code}",
+    "loadingReport": "Loading trace report…",
+    "loadingLots": "Loading lots…",
+    "loadingTrace": "Loading trace…",
+    "notFound": "Lot not found",
+    "notFoundHint": "It may belong to another company, or the link is wrong.",
+    "back": "Back to harvest lots",
+    "addDispatch": "Add dispatch",
+    "exportRecall": "Export recall pack",
+    "print": "Print",
+    "kpi": {
+      "weight": "Weight",
+      "fish": "Fish",
+      "dispatched": "Dispatched",
+      "withdrawal": "Withdrawal",
+      "lots": "Lots",
+      "notDispatched": "Not yet dispatched",
+      "unlotted": "Harvests to lot"
+    },
+    "grade": "grade {grade}",
+    "avgG": "avg {g} g",
+    "dispatchCount": {
+      "one": "{count} dispatch",
+      "other": "{count} dispatches"
+    },
+    "openCount": {
+      "one": "{count} open",
+      "other": "{count} open"
+    },
+    "harvestsSuffix": "with weight not in a lot",
+    "clear": "Clear",
+    "clearedOn": "Cleared {date}",
+    "since": "since {date}",
+    "overridden": "Overridden: {reason}",
+    "overrideShort": "Overridden",
+    "running": "Running at harvest",
+    "runningShort": "Running",
+    "farmToCustomer": "Farm to customer",
+    "batch": "Batch {batch}",
+    "noBatch": "This harvest is not linked to a batch, so its origin, feed and treatments cannot be traced.",
+    "batchTraceHint": "Origin, feed, treatments and where the fish went.",
+    "parents": {
+      "one": "Includes {count} parent batch: fish carry their history with them.",
+      "other": "Includes {count} parent batches: fish carry their history with them."
+    },
+    "noHistory": "No origin, movements or treatments on record.",
+    "noLotsYet": "No harvest lots yet.",
+    "createLot": "Create one after a harvest →",
+    "origin": {
+      "stocking": "Stocked",
+      "transfer_split": "Split off by a transfer",
+      "grading_split": "Graded from a parent batch",
+      "merge": "Formed by a merge",
+      "hatchery": "Hatchery",
+      "legacy": "Imported"
+    },
+    "move": {
+      "stocked": "Stocked",
+      "topped_up": "Topped up",
+      "transfer_in": "Moved in",
+      "transfer_out": "Moved out",
+      "graded": "Graded into",
+      "merged": "Merged into",
+      "harvested": "Harvested"
+    },
+    "step": {
+      "treatment": "Treatment",
+      "growout": {
+        "one": "Grow-out · {count} day",
+        "other": "Grow-out · {count} days"
+      },
+      "harvest": "Harvest",
+      "dispatch": "Dispatch",
+      "lot": "Harvest lot"
+    },
+    "fishN": "{n} fish",
+    "fishAt": "{n} fish @ {g} g",
+    "with": "with {name}",
+    "withdrawalDays": "{n}-day withdrawal",
+    "withdrawalUntil": "withdrawal until {date}",
+    "feedKg": "Feed {kg} kg",
+    "noFeed": "No feed with a feed type on record",
+    "feedLots": "Feed lots",
+    "feedLotsHint": "Matched first in, first out",
+    "noLotNumber": "No lot number",
+    "noPurchases": "No purchases of this feed on record.",
+    "dispatches": "Dispatches",
+    "notDispatched": "Not dispatched yet.",
+    "complianceChecks": "Compliance checks",
+    "check": {
+      "withdrawal": "Withdrawal period",
+      "coldChain": "Cold chain",
+      "remaining": "Remaining stock"
+    },
+    "notRecorded": "Not recorded",
+    "allDispatched": "All dispatched",
+    "documents": "Documents",
+    "documentsHint": "Health certificates, lab results and delivery notes for this lot.",
+    "lotsTable": "Lots",
+    "filter": "Lot status",
+    "tab": {
+      "all": "All",
+      "open": "In stock",
+      "dispatched": "Dispatched"
+    },
+    "search": "Search lot, cage, grade or destination",
+    "emptyLots": "No harvest lots yet. Record a harvest, then split it into lots so every sale can be traced back to its cage, feed and treatments.",
+    "noMatch": "No lots match these filters.",
+    "col": {
+      "lot": "Lot",
+      "harvested": "Harvested",
+      "cage": "Cage",
+      "weight": "Weight",
+      "dispatched": "Dispatched",
+      "status": "Status"
+    },
+    "status": {
+      "open": "In stock",
+      "partial": "Partly dispatched",
+      "dispatched": "Dispatched"
+    },
+    "newLot": {
+      "action": "New lot",
+      "title": "New harvest lot",
+      "description": "Each lot is a traceable part of a harvest.",
+      "harvest": "Harvest",
+      "selectHarvest": "Select a harvest",
+      "harvestOption": "{date} · {cage} · {kg} kg not in a lot",
+      "weight": "Weight (kg)",
+      "upTo": "Up to {kg} kg",
+      "fishCount": "Fish count",
+      "grade": "Grade",
+      "gradeHint": "For example Reg, S1 or Eco",
+      "destination": "Destination",
+      "destinationHint": "Market, processor or cold store",
+      "code": "Lot code",
+      "codeHint": "Leave blank to number it from the batch and harvest date.",
+      "automatic": "Automatic",
+      "submit": "Create lot",
+      "pickHarvest": "Pick a harvest",
+      "enterWeight": "Enter the lot weight",
+      "created": "Lot {code} created",
+      "failed": "Could not create the lot"
+    },
+    "dispatch": {
+      "title": "Dispatch {code}",
+      "left": "{kg} kg left",
+      "date": "Date",
+      "weight": "Weight (kg)",
+      "customer": "Customer",
+      "otherBuyer": "Other buyer…",
+      "buyerName": "Buyer name",
+      "vehicle": "Vehicle",
+      "vehicleHint": "Registration number",
+      "driver": "Driver",
+      "temperature": "Temperature at loading (°C)",
+      "overrideReason": "Override reason",
+      "overrideHint": "Kept in the audit log",
+      "askAdmin": "Ask an admin to record this dispatch.",
+      "submit": "Record dispatch",
+      "saved": "Dispatch recorded",
+      "failed": "Could not record the dispatch"
+    },
+    "history": {
+      "title": "Batch history",
+      "hint": "Every change to this cage's fish, from the stock ledger.",
+      "countOn": "Count on",
+      "loading": "Loading history…",
+      "emptyTitle": "No ledger history yet",
+      "emptyHint": "Stock events appear here once fish are stocked, or after the backfill has run for older cycles.",
+      "fishOn": "Fish on {date}",
+      "biomass": "Biomass then",
+      "ledgerToday": "Ledger today",
+      "matches": "matches the cage",
+      "cageShows": "cage shows {n}",
+      "batches": "Batches in this cage",
+      "since": "since {date}, {n} fish",
+      "to": "to {cage}",
+      "from": "from {cage}",
+      "reversed": "reversed"
+    },
+    "inspection": {
+      "label": "Inspections and maintenance",
+      "empty": "Nothing logged yet.",
+      "faults": "Faults: {list}",
+      "nextDue": "Next due {date}",
+      "kind": {
+        "net_inspection": "Net inspection",
+        "maintenance": "Maintenance",
+        "repair": "Repair",
+        "cleaning": "Cleaning",
+        "calibration": "Calibration",
+        "inspection": "Inspection"
+      },
+      "result": {
+        "ok": "OK",
+        "needs_attention": "Needs attention",
+        "failed": "Failed"
+      }
+    }
+  },
   "ui": {
     "farmHealth": "Farm health",
     "relatedPages": "Related pages",

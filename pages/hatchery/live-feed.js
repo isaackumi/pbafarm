@@ -1,32 +1,32 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { Plus } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, StatCard } from '../../components/ui'
+import { EmptyState, Field, GhostButton, GradientButton, IfPermitted, Input, KpiStrip, Modal, Select } from '../../components/ui'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
-import { HatcheryNav, LIVE_FEED_LABEL, LIVE_FEED_UNIT, fmt, num, today } from '../../components/hatchery/common'
+import { formatDate } from '../../lib/format'
+import { useLocale, useT } from '../../lib/i18n/context'
+import { HatcheryNav, LIVE_FEED_LABEL, LIVE_FEED_UNIT, PaperCard, Pill, fmt, label, num, today } from '../../components/hatchery/common'
 
-const MOVEMENT_LABEL = { produced: 'Produced', used: 'Used', discarded: 'Discarded' }
+const MOVEMENTS = ['produced', 'used', 'discarded']
+const MOVEMENT_TONE = { produced: 'good', used: 'accent', discarded: 'warn' }
 
 export default function LiveFeedPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Live feed">
-        <LiveFeed />
-      </Layout>
+      <LiveFeed />
     </ProtectedRoute>
   )
 }
 
-function LiveFeed() {
-  const { user } = useAuth()
+function EntryModal({ onClose }) {
+  const t = useT()
   const { showToast } = useToast()
-  const data = useQuery(api.nursery.liveFeed, user ? {} : 'skip')
   const record = useMutation(api.nursery.recordLiveFeed)
-  const remove = useMutation(api.nursery.removeLiveFeed)
   const [form, setForm] = useState({
     date: today(),
     kind: 'artemia',
@@ -52,121 +52,149 @@ function LiveFeed() {
         culture: form.culture || undefined,
         inputNote: form.inputNote || undefined,
       })
-      showToast('success', 'Saved')
-      setForm((p) => ({ ...p, quantity: '', inputNote: '' }))
+      showToast('success', t('hatcheryPage.saved'))
+      onClose()
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not save'))
+      showToast('error', errorMessage(err, t('hatcheryPage.saveFailed')))
     } finally {
       setSaving(false)
     }
   }
 
+  return (
+    <Modal
+      as="form"
+      onSubmit={submit}
+      noValidate
+      onClose={onClose}
+      showClose
+      title={t('hatcheryPage.feed.newTitle')}
+      description={t('hatcheryPage.feed.newHint')}
+      footer={
+        <>
+          <GhostButton type="button" onClick={onClose}>{t('common.cancel')}</GhostButton>
+          <GradientButton type="submit" variant="solid" size="sm" disabled={saving}>
+            {saving ? t('common.saving') : t('common.save')}
+          </GradientButton>
+        </>
+      }
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={t('hatcheryPage.date')} htmlFor="lf-date">
+          <Input id="lf-date" type="date" value={form.date} onChange={set('date')} />
+        </Field>
+        <Field label={t('hatcheryPage.feed.feed')} htmlFor="lf-kind">
+          <Select id="lf-kind" value={form.kind} onChange={set('kind')}>
+            {Object.keys(LIVE_FEED_LABEL).map((k) => (
+              <option key={k} value={k}>{label(t, 'liveFeed', k)}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label={t('hatcheryPage.feed.entry')} htmlFor="lf-mv">
+          <Select id="lf-mv" value={form.movement} onChange={set('movement')}>
+            {MOVEMENTS.map((k) => (
+              <option key={k} value={k}>{t(`hatcheryPage.feed.mv.${k}`)}</option>
+            ))}
+          </Select>
+        </Field>
+        <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+          <Field label={t('hatcheryPage.larval.amount')} htmlFor="lf-q">
+            <Input id="lf-q" type="number" inputMode="decimal" step="any" value={form.quantity} onChange={set('quantity')} />
+          </Field>
+          <Select aria-label={t('hatcheryPage.larval.unit')} value={form.unit} onChange={set('unit')} className="w-28">
+            {Object.keys(LIVE_FEED_UNIT).map((k) => (
+              <option key={k} value={k}>{label(t, 'unit', k)}</option>
+            ))}
+          </Select>
+        </div>
+        <Field label={t('hatcheryPage.feed.culture')} htmlFor="lf-c" hint={t('hatcheryPage.feed.cultureHint')}>
+          <Input id="lf-c" value={form.culture} onChange={set('culture')} />
+        </Field>
+        <Field label={t('hatcheryPage.feed.inputs')} htmlFor="lf-i" hint={t('hatcheryPage.feed.inputsHint')}>
+          <Input id="lf-i" value={form.inputNote} onChange={set('inputNote')} />
+        </Field>
+      </div>
+    </Modal>
+  )
+}
+
+function LiveFeed() {
+  const t = useT()
+  const { locale } = useLocale()
+  const { user } = useAuth()
+  const { showToast } = useToast()
+  const data = useQuery(api.nursery.liveFeed, user ? {} : 'skip')
+  const remove = useMutation(api.nursery.removeLiveFeed)
+  const [adding, setAdding] = useState(false)
+
   const del = async (id) => {
     try {
       await remove({ id })
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not remove'))
+      showToast('error', errorMessage(err, t('hatcheryPage.feed.removeFailed')))
     }
   }
 
   return (
-    <div className="max-w-5xl">
-      <PageHeader
-        title="Live feed"
-        description="Artemia, rotifer and algae cultures: what was produced, fed and thrown away. Feed recorded on a larval log is counted here."
-      />
+    <Layout
+      title={t('hatcheryPage.feed.title')}
+      eyebrow={t('hatcheryPage.feed.eyebrow')}
+      actions={
+        <IfPermitted permission="hatchery.larval.record">
+          <GradientButton icon={Plus} onClick={() => setAdding(true)}>
+            {t('hatcheryPage.feed.add')}
+          </GradientButton>
+        </IfPermitted>
+      }
+    >
       <HatcheryNav />
 
       {data?.balances?.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {data.balances.map((b) => (
-            <StatCard
-              key={`${b.kind}-${b.unit}`}
-              label={`${LIVE_FEED_LABEL[b.kind]} on hand`}
-              value={fmt(b.on_hand, 2)}
-              unit={LIVE_FEED_UNIT[b.unit]}
-              hint={`${fmt(b.produced, 2)} produced · ${fmt(b.used, 2)} used`}
-              tone={b.on_hand < 0 ? 'warn' : 'default'}
-            />
-          ))}
-        </div>
+        <KpiStrip
+          items={data.balances.map((b) => ({
+            key: `${b.kind}-${b.unit}`,
+            label: t('hatcheryPage.feed.onHand', { feed: label(t, 'liveFeed', b.kind) }),
+            value: fmt(b.on_hand, 2),
+            valueTone: b.on_hand < 0 ? 'alert' : undefined,
+            suffix: `${label(t, 'unit', b.unit)} · ${t('hatcheryPage.feed.producedUsed', { produced: fmt(b.produced, 2), used: fmt(b.used, 2) })}`,
+          }))}
+        />
       )}
 
-      <Card className="mb-6">
-        <form onSubmit={submit} noValidate className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-          <Field label="Date" htmlFor="lf-date">
-            <Input id="lf-date" type="date" value={form.date} onChange={set('date')} />
-          </Field>
-          <Field label="Feed" htmlFor="lf-kind">
-            <Select id="lf-kind" value={form.kind} onChange={set('kind')}>
-              {Object.entries(LIVE_FEED_LABEL).map(([k, l]) => (
-                <option key={k} value={k}>
-                  {l}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Entry" htmlFor="lf-mv">
-            <Select id="lf-mv" value={form.movement} onChange={set('movement')}>
-              {Object.entries(MOVEMENT_LABEL).map(([k, l]) => (
-                <option key={k} value={k}>
-                  {l}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-            <Field label="Amount" htmlFor="lf-q">
-              <Input id="lf-q" type="number" inputMode="decimal" step="any" value={form.quantity} onChange={set('quantity')} />
-            </Field>
-            <Select aria-label="Unit" value={form.unit} onChange={set('unit')} className="w-24">
-              {Object.entries(LIVE_FEED_UNIT).map(([k, l]) => (
-                <option key={k} value={k}>
-                  {l}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Field label="Culture" htmlFor="lf-c" hint="Tank or cone">
-            <Input id="lf-c" value={form.culture} onChange={set('culture')} />
-          </Field>
-          <Field label="Inputs" htmlFor="lf-i" hint="Cysts, algae paste, enrichment" className="lg:col-span-2">
-            <Input id="lf-i" value={form.inputNote} onChange={set('inputNote')} />
-          </Field>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        </form>
-      </Card>
-
-      <Card padding={false}>
-        <div className="p-5 sm:p-6 pb-0 sm:pb-0">
-          <CardHeader title="Entries" />
-        </div>
+      <PaperCard title={t('hatcheryPage.feed.entries')} meta={data ? data.entries.length : undefined}>
         {data === undefined ? (
-          <p className="p-6 text-sm text-muted">Loading…</p>
+          <p className="text-[13px] leading-[18px] text-muted">{t('ui.loading')}</p>
         ) : data.entries.length === 0 ? (
-          <EmptyState title="No live feed entries" description="Record a culture harvest to start the balance." />
+          <EmptyState title={t('hatcheryPage.feed.empty')} description={t('hatcheryPage.feed.emptyHint')} />
         ) : (
-          <ul className="divide-y divide-foam-deep">
+          <ul className="flex flex-col">
             {data.entries.map((e) => (
-              <li key={e.id} className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-chart-ink">
-                    {e.date} · {MOVEMENT_LABEL[e.movement]} {fmt(e.quantity, 2)} {LIVE_FEED_UNIT[e.unit]} {LIVE_FEED_LABEL[e.kind].toLowerCase()}
-                  </p>
-                  <p className="text-sm text-muted">{[e.culture, e.input_note].filter(Boolean).join(' · ') || '—'}</p>
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-[11px]">
+                <div className="flex min-w-0 flex-col gap-[2px]">
+                  <span className="text-[14px] leading-[18px] text-text">
+                    {formatDate(e.date, { locale })} · {fmt(e.quantity, 2)} {label(t, 'unit', e.unit)} {label(t, 'liveFeed', e.kind)}
+                  </span>
+                  <span className="text-xs leading-4 text-muted">
+                    {[e.culture, e.input_note, e.from_larval_log ? t('hatcheryPage.feed.fromLog') : null].filter(Boolean).join(' · ') || '—'}
+                  </span>
                 </div>
-                {!e.from_larval_log && (
-                  <Button size="sm" variant="ghost" onClick={() => del(e.id)}>
-                    Remove
-                  </Button>
-                )}
+                <div className="flex items-center gap-3">
+                  <Pill tone={MOVEMENT_TONE[e.movement]}>{t(`hatcheryPage.feed.mv.${e.movement}`)}</Pill>
+                  {!e.from_larval_log && (
+                    <IfPermitted permission="hatchery.larval.record">
+                      <GhostButton size="sm" tone="danger" onClick={() => del(e.id)}>
+                        {t('hatcheryPage.feed.remove')}
+                      </GhostButton>
+                    </IfPermitted>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         )}
-      </Card>
-    </div>
+      </PaperCard>
+
+      {adding && <EntryModal onClose={() => setAdding(false)} />}
+    </Layout>
   )
 }

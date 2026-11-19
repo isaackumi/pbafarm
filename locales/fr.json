@@ -572,6 +572,1105 @@
     "listEmptyHint": "Enregistrez une récolte quand les poissons quittent une cage.",
     "listAdd": "Enregistrer une récolte"
   },
+  "approvalsPage": {
+    "title": "Approbations",
+    "eyebrow": {
+      "one": "Boîte de réception · {count} en attente de vous",
+      "other": "Boîte de réception · {count} en attente de vous"
+    },
+    "eyebrowLoading": "Boîte de réception",
+    "filter": "Type de demande",
+    "listLabel": "Demandes en attente",
+    "loading": "Chargement des approbations en attente…",
+    "emptyTitle": "Aucune approbation en attente",
+    "emptyHint": "Toutes les demandes d'empoissonnement, de transfert et de complément ont été traitées.",
+    "tab": {
+      "all": "Toutes",
+      "stocking": "Empoissonnement",
+      "fish_transfer": "Transferts",
+      "topup": "Compléments"
+    },
+    "type": {
+      "stocking": "Empoissonnement",
+      "fish_transfer": "Transfert",
+      "topup": "Complément"
+    },
+    "age": {
+      "m": "{n} min",
+      "h": "{n} h",
+      "d": "{n} j"
+    },
+    "summary": {
+      "transfer": "{route} · {n} poissons",
+      "stocking": "{cage} · {n} poissons",
+      "topup": "{cage} · +{n} poissons"
+    },
+    "request": "Demande de {type}",
+    "requestedAgo": "demandé il y a {age}",
+    "from": "De · {cage}",
+    "to": "Vers · {cage}",
+    "unit": "Unité",
+    "quantity": "Quantité",
+    "fish": "poissons",
+    "date": "Date",
+    "abw": "Poids moyen individuel",
+    "biomass": "Biomasse",
+    "noteLabel": "Motif (obligatoire pour refuser)",
+    "notePlaceholder": "Indiquez un motif en cas de refus…",
+    "reasonRequired": "Indiquez un motif avant de refuser cette demande.",
+    "auditHint": "Votre décision est enregistrée dans le journal d'audit.",
+    "details": "Voir le détail",
+    "reject": "Refuser",
+    "approve": "Approuver ({type})",
+    "processing": "Traitement…",
+    "toast": {
+      "approved": "{type} approuvé",
+      "approveFailed": "Impossible d'approuver la demande",
+      "rejected": "{type} refusé",
+      "rejectFailed": "Impossible de refuser la demande"
+    }
+  },
+  "compliancePage": {
+    "title": "Conformité",
+    "eyebrow": "Conformité · {site}",
+    "thisSite": "ce site",
+    "startChecklist": "Démarrer une liste",
+    "logEntry": "Ajouter une entrée",
+    "noSite": "Aucun site sélectionné",
+    "noSiteHint": "Créez ou choisissez d'abord un site.",
+    "kpi": {
+      "checklists": "Listes à faire",
+      "doneOf": "{done} sur {total} faites",
+      "findings": "Constats ouverts",
+      "last30": "30 derniers jours",
+      "holds": "Délais d'attente",
+      "cagesN": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "biosecurity": "Entrées de biosécurité"
+    },
+    "log": "Registre de biosécurité",
+    "logFilter": "Filtrer le registre",
+    "tab": {
+      "all": "Tout",
+      "issues": "Problèmes",
+      "checklists": "Listes",
+      "biosecurity": "Biosécurité"
+    },
+    "search": "Rechercher un contrôle ou une personne",
+    "logEmpty": "Rien n'a encore été enregistré sur ce site.",
+    "col": {
+      "when": "Quand",
+      "check": "Contrôle",
+      "by": "Par",
+      "result": "Résultat"
+    },
+    "passed": "Conforme",
+    "issuesN": {
+      "one": "{count} problème",
+      "other": "{count} problèmes"
+    },
+    "logged": "Enregistré",
+    "controlsMissed": "Contrôles d'entrée manqués",
+    "findings": "Constats ouverts",
+    "noFindings": "Aucun contrôle non conforme ces 30 derniers jours.",
+    "more": "+{n} autres",
+    "holds": "Délais d'attente",
+    "harvestBlocked": "Récolte bloquée",
+    "noHolds": "Aucune cage en délai d'attente.",
+    "clears": "Levé le {date}",
+    "checklists": "Listes de contrôle",
+    "dueN": {
+      "one": "{count} à faire",
+      "other": "{count} à faire"
+    },
+    "allOff": "Toutes les listes sont désactivées.",
+    "noChecklists": "Aucune liste de contrôle",
+    "noChecklistsHint": "Commencez par les listes standard : biosécurité quotidienne, inspection hebdomadaire des filets et revue mensuelle de la qualité de l'eau.",
+    "addStandard": "Ajouter les listes standard",
+    "added": {
+      "one": "{count} liste ajoutée",
+      "other": "{count} listes ajoutées"
+    },
+    "itemsN": {
+      "one": "{count} point",
+      "other": "{count} points"
+    },
+    "doneOn": "faite le {date}",
+    "lastDone": "dernière le {date}",
+    "done": "Faite",
+    "doneIssues": "Faite avec problèmes",
+    "complete": "Remplir",
+    "due": "À faire",
+    "freq": {
+      "daily": "Quotidienne",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuelle"
+    },
+    "pickTitle": "Quelle liste ?",
+    "saveChecklist": "Enregistrer la liste",
+    "saved": "Liste enregistrée",
+    "savedIssues": "Liste enregistrée avec problèmes",
+    "saveFailed": "Impossible d'enregistrer la liste",
+    "date": "Date",
+    "items": "Points",
+    "ok": "OK",
+    "notOk": "Non conforme",
+    "whatWrong": "Ce qui n'allait pas et ce qui a été fait",
+    "whatWrongFor": "Ce qui n'allait pas : {item}",
+    "newEntry": "Nouvelle entrée de biosécurité",
+    "entryLogged": "Entrée enregistrée",
+    "entryFailed": "Impossible d'enregistrer l'entrée",
+    "type": "Type",
+    "kind": {
+      "visitor": "Visiteur",
+      "vehicle": "Véhicule",
+      "disinfection": "Désinfection",
+      "other": "Autre"
+    },
+    "driver": "Chauffeur",
+    "name": "Nom",
+    "organisation": "Organisation",
+    "vehicle": "Immatriculation",
+    "purpose": "Motif",
+    "area": "Zone ou équipement",
+    "disinfectant": "Désinfectant et dosage",
+    "entryControls": "Pédiluve, rotoluve et lavage des mains faits à l'entrée"
+  },
+  "gradingPage": {
+    "title": "Calibrage",
+    "eyebrow": "Production · Trier par taille, répartir en cages",
+    "transfers": "Transferts de poissons",
+    "adminsOnly": "Réservé aux administrateurs",
+    "adminsOnlyHint": "Demandez à un administrateur de l'entreprise d'enregistrer un calibrage.",
+    "how": {
+      "title": "Fonctionnement du calibrage",
+      "body": "Triez les poissons d'une cage par taille en nouveaux lots d'élevage, un par cage de destination. Le lot d'origine est conservé comme parent et les rebuts sont enregistrés comme mortalité."
+    },
+    "recent": {
+      "title": "Calibrages récents",
+      "all": "Tous les lots",
+      "empty": "Aucun calibrage enregistré pour l'instant.",
+      "batches": {
+        "one": "{count} lot",
+        "other": "{count} lots"
+      }
+    }
+  },
+  "harvestPage": {
+    "title": "Récolte",
+    "eyebrow": "Production · Récoltes, calibrage et lots",
+    "record": "Enregistrer une récolte",
+    "sampling": "Échantillonnage",
+    "addSampling": "Ajouter un échantillon",
+    "delete": "Supprimer",
+    "backToList": "Retour aux récoltes",
+    "deleteTitle": "Supprimer la récolte",
+    "deleteMessage": "Supprimer la récolte de {cage} du {date} ? Cette action est irréversible.",
+    "kpi": {
+      "harvested": "Récolté · {month}",
+      "vsLast": "{pct} % vs mois dernier",
+      "avgSize": "Poids moyen",
+      "thisMonth": "ce mois-ci",
+      "ready": "Prêtes à récolter",
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "openLots": "Lots ouverts",
+      "forSale": "à vendre"
+    },
+    "grades": {
+      "title": "Dernière récolte · calibres",
+      "titleFor": "Dernière récolte · {cage} · calibres",
+      "fish": {
+        "one": "{n} poisson",
+        "other": "{n} poissons"
+      },
+      "empty": "Aucune récolte avec répartition par calibre pour l'instant.",
+      "barLabel": "{grade} : {pct} % du poids calibré"
+    },
+    "ready": {
+      "title": "Prêtes à récolter",
+      "viewAll": "Tout voir",
+      "empty": "Aucune cage n'a atteint le poids de récolte cible.",
+      "ready": "Prête",
+      "held": "En délai d'attente",
+      "inWithdrawal": "Délai d'attente jusqu'au {date}",
+      "day": "Jour {n}"
+    },
+    "table": {
+      "title": "Récoltes",
+      "filter": "Type de récolte",
+      "all": "Toutes",
+      "search": "Rechercher une cage ou un lot",
+      "from": "Date de début",
+      "to": "Date de fin",
+      "export": "Exporter"
+    },
+    "type": {
+      "full": "Totale",
+      "partial": "Partielle"
+    },
+    "col": {
+      "date": "Date",
+      "cage": "Cage",
+      "type": "Type",
+      "lot": "Lot",
+      "fish": "Poissons",
+      "weight": "Poids",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "lot": {
+      "none": "Pas encore de lot",
+      "open": "Lot ouvert · {sent} expédiés",
+      "out": "Entièrement expédié"
+    },
+    "edit": {
+      "title": "Modifier la récolte · {cage}",
+      "status": "Statut",
+      "completed": "Terminée",
+      "inProgress": "En cours"
+    },
+    "toast": {
+      "updated": "Récolte mise à jour",
+      "updateFailed": "Impossible de mettre à jour la récolte",
+      "deleted": "Récolte supprimée",
+      "deleteFailed": "Impossible de supprimer la récolte",
+      "nothingToExport": "Aucune récolte à exporter",
+      "exportFailed": "Impossible d'exporter les récoltes"
+    },
+    "samplingPage": {
+      "title": "Échantillonnage de récolte",
+      "eyebrow": "Production · Récolte",
+      "intro": "Enregistrez le poids et la répartition par calibre d'un échantillon avant la récolte. Cela n'enregistre pas de récolte et ne modifie pas l'effectif de la cage. Les JDC et le PMI sont calculés à partir de la date d'empoissonnement.",
+      "theCage": "la cage",
+      "saved": "Échantillon enregistré pour {cage}. Enregistrez la récolte elle-même sur la page Récolte quand les poissons quittent la cage.",
+      "failed": "Impossible d'enregistrer l'échantillon",
+      "goToHarvest": "Aller à la récolte",
+      "loadingCages": "Chargement des cages…",
+      "cageAndSample": "Cage et échantillon",
+      "cage": "Cage",
+      "selectCage": "Choisir une cage",
+      "date": "Date de l'échantillon",
+      "weight": "Poids total (kg)",
+      "fishCount": "Nombre de poissons",
+      "doc": "Jours de culture",
+      "days": "jours",
+      "abw": "Poids moyen individuel",
+      "sizeBreakdown": "Répartition par calibre",
+      "sizeHint": "Nombre de poissons par calibre, facultatif.",
+      "save": "Enregistrer l'échantillon"
+    },
+    "analytics": {
+      "title": "Préparation à la récolte",
+      "eyebrow": "Analyses · Unités proches de la récolte",
+      "all": "Toutes les analyses",
+      "kpiSoon": "Dans {n} jours",
+      "kpiStocked": "Unités empoissonnées",
+      "readiness": "Jours de culture et jours avant récolte",
+      "weights": "Poids initial et actuel",
+      "table": "Unités par date de récolte",
+      "empty": "Aucune unité empoissonnée à afficher.",
+      "days": "{n} j",
+      "status": {
+        "ready": "Prête",
+        "soon": "Bientôt",
+        "growing": "En croissance"
+      },
+      "col": {
+        "cage": "Unité",
+        "doc": "Jours de culture",
+        "daysLeft": "Jours avant récolte",
+        "initial": "Poids initial",
+        "current": "Poids actuel",
+        "growth": "Taux de croissance",
+        "status": "Statut"
+      }
+    }
+  },
+  "hatcheryPage": {
+    "title": "Écloserie",
+    "eyebrow": "Écloserie · Des géniteurs aux alevins",
+    "nav": "Sections de l'écloserie",
+    "newSpawning": "Nouvelle ponte",
+    "moveToNursery": "Transférer en nurserie",
+    "today": "Aujourd'hui",
+    "all": "Tous",
+    "choose": "Choisir…",
+    "date": "Date",
+    "abw": "PMI (g)",
+    "saved": "Enregistré",
+    "saveFailed": "Enregistrement impossible",
+    "tab": {
+      "board": "Tableau",
+      "broodstock": "Géniteurs",
+      "spawning": "Ponte",
+      "larval": "Larves et alevins",
+      "liveFeed": "Proies vivantes"
+    },
+    "kpi": {
+      "broodstock": "Géniteurs",
+      "eggs": "Œufs en incubation",
+      "larvae": "Larves",
+      "fingerlings": "Alevins",
+      "eggsCollected": "Œufs collectés",
+      "fertilization": "Fécondation",
+      "hatchRate": "Taux d'éclosion",
+      "larvaeHatched": "Larves écloses",
+      "fryPerKg": "Alevins par kg de femelle"
+    },
+    "readyN": "{n} prêts",
+    "lotsN": {
+      "one": "{count} lot",
+      "other": "{count} lots"
+    },
+    "survival": "{pct} de survie",
+    "batchesN": {
+      "one": "{count} lot",
+      "other": "{count} lots"
+    },
+    "spawningsN": {
+      "one": "{count} ponte",
+      "other": "{count} pontes"
+    },
+    "eggsN": "{n} œufs",
+    "larvaeN": "{n} larves",
+    "fishN": "{n} poissons",
+    "fryPerKg": "{n} alevins/kg de femelle",
+    "eggsNotCounted": "Œufs non comptés",
+    "dayN": "Jour {n}",
+    "spawnedOn": "Ponte du {date}",
+    "fertilized": "{pct} fécondés",
+    "hatchLine": "{date} · {larvae} larves sur {eggs} œufs",
+    "col": {
+      "spawning": "Ponte",
+      "incubation": "Incubation",
+      "larvae": "Larves",
+      "nursery": "Nurserie"
+    },
+    "emptySpawning": "Aucune ponte en attente d'incubation.",
+    "emptyIncubation": "Aucun œuf en incubation.",
+    "emptyLarvae": "Aucune larve à l'écloserie.",
+    "emptyNursery": "Aucun alevin en nurserie.",
+    "performance": "Performance",
+    "latestHatches": "Dernières éclosions",
+    "noHatches": "Aucune éclosion pour l'instant.",
+    "recordHatch": "Enregistrer l'éclosion",
+    "failed": "Échec",
+    "hatchTitle": "Enregistrer l'éclosion · {unit}",
+    "failTitle": "Marquer le lot en échec · {unit}",
+    "hatchSaved": "Lot {batch} démarré avec {n} larves",
+    "failSaved": "Lot marqué en échec",
+    "larvaeHatched": "Larves écloses",
+    "stockIn": "Placer les larves dans",
+    "stockInHint": "Bac de destination ; laissez tel quel pour les garder dans l'incubateur",
+    "reason": "Motif",
+    "reasonPlaceholder": "Champignons, chute de température…",
+    "status": {
+      "conditioning": "Conditionnement",
+      "ready": "Prêt",
+      "spent": "Épuisé",
+      "resting": "Au repos",
+      "retired": "Réformé",
+      "dead": "Mort",
+      "failed": "Échec",
+      "spawned": "Pondu",
+      "incubating": "En incubation",
+      "hatched": "Éclos"
+    },
+    "sex": {
+      "female": "Femelle",
+      "male": "Mâle",
+      "mixed": "Mixte",
+      "unknown": "Inconnu"
+    },
+    "origin": {
+      "wild": "Sauvage",
+      "farm": "Notre ferme",
+      "purchased": "Acheté",
+      "hatchery": "Notre écloserie",
+      "other": "Autre",
+      "title": "Origine écloserie",
+      "here": "Éclos dans cette ferme.",
+      "back": {
+        "one": "Éclos ici sous {batch}, il y a {count} génération.",
+        "other": "Éclos ici sous {batch}, il y a {count} générations."
+      },
+      "induced": "Induite, {hormone}",
+      "spawned": "Ponte",
+      "females": "Femelles",
+      "males": "Mâles",
+      "method": "Méthode",
+      "eggs": "Œufs",
+      "fertilization": "Fécondation",
+      "hatchRate": "Taux d'éclosion",
+      "fryPerKg": "Alevins par kg de femelle"
+    },
+    "method": {
+      "natural": "Naturelle",
+      "induced": "Induite (hormone)",
+      "stripped": "Par pression"
+    },
+    "liveFeed": {
+      "artemia": "Artémia",
+      "rotifer": "Rotifères",
+      "microalgae": "Microalgues",
+      "copepod": "Copépodes",
+      "other": "Autre"
+    },
+    "unit": {
+      "million": "million",
+      "L": "L",
+      "g": "g"
+    },
+    "stage": {
+      "larvae": "Larves",
+      "fingerlings": "Alevins"
+    },
+    "brood": {
+      "title": "Géniteurs",
+      "eyebrow": "Écloserie · Reproducteurs",
+      "add": "Ajouter des géniteurs",
+      "added": "{code} ajouté",
+      "addFailed": "Impossible d'ajouter les géniteurs",
+      "newTitle": "Ajouter des géniteurs",
+      "newHint": "Marquez un poisson individuel, ou enregistrez un groupe gardé ensemble (des mâles, par exemple).",
+      "record": "Fiche",
+      "individual": "Individuel",
+      "group": "Groupe",
+      "groupName": "Nom du groupe",
+      "tag": "Marque",
+      "sex": "Sexe",
+      "fishInGroup": "Poissons dans le groupe",
+      "pitTag": "Marque PIT",
+      "meanWeight": "Poids moyen (g)",
+      "weight": "Poids (g)",
+      "length": "Longueur (cm)",
+      "species": "Espèce",
+      "strain": "Souche",
+      "origin": "Origine",
+      "source": "Provenance",
+      "sourceHint": "Fournisseur, rivière ou ferme",
+      "tank": "Bac",
+      "notAssigned": "Non affecté",
+      "acquiredOn": "Acquis le",
+      "conditionToday": "Commencer le conditionnement aujourd'hui",
+      "kpiFish": "Poissons géniteurs",
+      "records": {
+        "one": "{count} fiche",
+        "other": "{count} fiches"
+      },
+      "listTitle": "Tous les géniteurs",
+      "statusFilter": "Filtrer par statut",
+      "search": "Rechercher une marque, un bac ou une souche",
+      "loading": "Chargement des géniteurs…",
+      "empty": "Aucun géniteur. Ajoutez les reproducteurs pour commencer.",
+      "fish": "Poissons",
+      "lastSpawned": "Dernière ponte",
+      "notSpawned": "Pas encore",
+      "status": "Statut",
+      "notFound": "Géniteur introuvable",
+      "back": "Retour aux géniteurs",
+      "groupOf": "Groupe de {n}",
+      "totalKg": "{kg} kg au total",
+      "spawnings": "Pontes",
+      "lastOn": "dernière le {date}",
+      "conditioningSince": "en conditionnement depuis le {date}",
+      "history": "Historique des pontes",
+      "noSpawnings": "Aucune ponte pour l'instant.",
+      "editTitle": "Modifier {code}"
+    },
+    "spawn": {
+      "title": "Nouvelle ponte",
+      "eyebrow": "Écloserie · Choisir les géniteurs, noter les œufs, lancer l'incubation",
+      "steps": "Étapes",
+      "step": {
+        "broodstock": "Géniteurs",
+        "spawning": "Ponte",
+        "eggs": "Œufs",
+        "incubation": "Incubation"
+      },
+      "broodHint": "Choisissez les femelles et les mâles ou groupes de mâles qui ont pondu.",
+      "noBrood": "Aucun géniteur",
+      "noBroodHint": "Ajoutez d'abord des géniteurs.",
+      "females": "Femelles",
+      "males": "Mâles",
+      "chosen": "({n} choisis)",
+      "method": "Méthode",
+      "hormone": "Hormone",
+      "hormoneHint": "Ovaprim, hCG, hypophyse de carpe…",
+      "dose": "Dose",
+      "doseHint": "Par exemple 0,5 ml/kg",
+      "tank": "Bac de ponte",
+      "notRecorded": "Non renseigné",
+      "eggCollection": "Collecte des œufs",
+      "eggHint": "Laissez vide si les œufs sont comptés plus tard.",
+      "eggWeight": "Poids des œufs (g)",
+      "fertilization": "Fécondation (%)",
+      "placed": "{placed} œufs placés sur {total}.",
+      "incubationHint": "Placez les œufs dans un ou plusieurs incubateurs, ou faites-le plus tard depuis le tableau.",
+      "incubator": "Incubateur",
+      "eggs": "Œufs",
+      "waterC": "Eau °C",
+      "addIncubator": "Ajouter un incubateur",
+      "back": "Retour",
+      "next": "Suivant",
+      "save": "Enregistrer la ponte",
+      "saved": "Ponte enregistrée",
+      "savedLots": {
+        "one": "Ponte enregistrée ; {count} lot d'incubation démarré",
+        "other": "Ponte enregistrée ; {count} lots d'incubation démarrés"
+      },
+      "saveFailed": "Impossible d'enregistrer la ponte",
+      "noAccess": "Vous ne pouvez pas enregistrer de pontes",
+      "noAccessHint": "Demandez à un administrateur la permission de ponte de l'écloserie.",
+      "toBoard": "Retour au tableau"
+    },
+    "larval": {
+      "title": "Larves et alevins",
+      "eyebrow": "Écloserie · Suivi quotidien, tri et expédition",
+      "batches": "Lots",
+      "statusFilter": "Statut des lots",
+      "active": "À l'écloserie",
+      "closed": "Clôturés",
+      "empty": "Aucun lot larvaire",
+      "emptyHint": "Enregistrez une éclosion sur le tableau pour en démarrer un.",
+      "notLogged": "Pas de relevé aujourd'hui",
+      "choose": "Choisissez un lot pour saisir sa journée ou déplacer ses poissons.",
+      "tabLog": "Relevé quotidien",
+      "tabGrade": "Trier",
+      "tabMove": "Déplacer",
+      "tabSell": "Vendre ou envoyer",
+      "actions": "Actions sur le lot",
+      "allBatches": "Tous les lots",
+      "hatchedOn": "Éclos le {date}",
+      "asBatch": "sous {batch}",
+      "inN": "{n} entrés",
+      "deadN": "{n} morts",
+      "outN": "{n} sortis",
+      "queued": "Pas de connexion. Enregistré sur cet appareil, envoi au retour du réseau",
+      "logSaved": "Enregistré. {n} larves au registre",
+      "logFailed": "Impossible d'enregistrer le relevé",
+      "alreadyLogged": "Ce jour est déjà saisi ; l'enregistrement le remplace.",
+      "survivalHead": "Survie",
+      "deadRemoved": "Morts retirés",
+      "countedAlive": "Vivants comptés",
+      "countedHint": "Remplace l'effectif au registre",
+      "feeding": "Alimentation",
+      "liveFeed": "Proies vivantes",
+      "amount": "Quantité",
+      "unit": "Unité",
+      "removeFeed": "Retirer la proie vivante",
+      "addLiveFeed": "Ajouter une proie vivante",
+      "dryFeed": "Aliment sec (g)",
+      "feedings": "Repas",
+      "water": "Eau",
+      "do": "OD (mg/L)",
+      "salinity": "Salinité (ppt)",
+      "saveChanges": "Enregistrer les modifications",
+      "saveLog": "Enregistrer le relevé",
+      "logs": "Relevés quotidiens",
+      "noLogs": "Aucun relevé pour l'instant.",
+      "dead": "Morts",
+      "counted": "Comptés",
+      "graded": {
+        "one": "Trié en {count} lot.",
+        "other": "Trié en {count} lots."
+      },
+      "unaccounted": "{n} non comptabilisés.",
+      "gradeFailed": "Tri impossible",
+      "gradeHint": "Triez tout le bac : chaque classe de taille ouvre un lot d'alevins dans son bac. Les poissons non comptés dans un tri ou en rebut sont notés non comptabilisés.",
+      "tankGraded": "Bac trié",
+      "gradeTo": "Classe {grade} vers",
+      "batchNumber": "Numéro de lot",
+      "automatic": "Automatique",
+      "addGrade": "Ajouter une classe",
+      "culls": "Rebuts",
+      "accounted": "{done} sur {total} comptabilisés",
+      "grading": "Tri en cours…",
+      "moved": "Alevins déplacés",
+      "moveFailed": "Impossible de déplacer les poissons",
+      "moveHint": "Déplacez les alevins vers la nurserie ou le grossissement. Vers une unité vide, le lot suit ; vers une unité occupée, ils rejoignent son lot.",
+      "from": "De",
+      "to": "Vers",
+      "emptyUnit": "vide",
+      "addDestination": "Ajouter une destination",
+      "moving": "Déplacement…",
+      "moveFish": "Déplacer les alevins",
+      "reverseTitle": "Annuler ce mouvement",
+      "reverse": "Annuler",
+      "reverseReason": "Pourquoi l'annuler ?",
+      "reversed": "Annulé ; les poissons sont de nouveau au registre",
+      "reverseFailed": "Annulation impossible",
+      "saleSaved": "Vente enregistrée",
+      "dispatchSaved": "Expédition enregistrée",
+      "fingerlingsAre": "Les alevins sont",
+      "sold": "Vendus",
+      "sentFarm": "Envoyés à une autre ferme",
+      "pricePerFish": "Prix par poisson",
+      "total": "Total {amount}",
+      "customer": "Client",
+      "otherBuyer": "Autre acheteur",
+      "buyerName": "Nom de l'acheteur",
+      "payment": "Paiement",
+      "pay": {
+        "pending": "En attente",
+        "partial": "Partiel",
+        "paid": "Payé"
+      },
+      "receivingFarm": "Ferme destinataire",
+      "overrideReason": "Motif de dérogation au délai d'attente",
+      "overrideHint": "Seulement si les poissons sont en délai d'attente après traitement",
+      "recordSale": "Enregistrer la vente",
+      "recordDispatch": "Enregistrer l'expédition",
+      "fishOut": "Sorties de ce lot",
+      "noneYet": "Aucune pour l'instant.",
+      "mv": {
+        "moved": "{date} · {n} déplacés vers {dest}",
+        "sold": "{date} · {n} vendus à {dest}",
+        "sent": "{date} · {n} envoyés à {dest}"
+      },
+      "fromUnit": "Depuis {unit}",
+      "amountEach": "{amount} ({each} l'unité)",
+      "reversedPill": "Annulé"
+    },
+    "feed": {
+      "title": "Proies vivantes",
+      "eyebrow": "Écloserie · Cultures d'artémia, de rotifères et d'algues",
+      "add": "Ajouter une saisie",
+      "newTitle": "Saisie de proies vivantes",
+      "newHint": "Ce qui a été produit, distribué ou jeté. Les proies saisies dans un relevé larvaire sont comptées automatiquement.",
+      "feed": "Proie",
+      "entry": "Mouvement",
+      "mv": {
+        "produced": "Produit",
+        "used": "Utilisé",
+        "discarded": "Jeté"
+      },
+      "culture": "Culture",
+      "cultureHint": "Bac ou cône",
+      "inputs": "Intrants",
+      "inputsHint": "Cystes, pâte d'algues, enrichissement",
+      "onHand": "{feed} en stock",
+      "producedUsed": "{produced} produits · {used} utilisés",
+      "entries": "Saisies",
+      "empty": "Aucune saisie de proies vivantes",
+      "emptyHint": "Enregistrez une récolte de culture pour démarrer le solde.",
+      "fromLog": "Depuis un relevé larvaire",
+      "remove": "Supprimer",
+      "removeFailed": "Suppression impossible"
+    }
+  },
+  "healthWater": {
+    "title": "Santé et eau",
+    "eyebrow": "Production · Qualité de l’eau, traitements, délai d’attente",
+    "wqTitle": "Qualité de l’eau",
+    "wqEyebrow": "Production · Dernière mesure par unité comparée à ses seuils",
+    "logWater": "Saisir l’eau",
+    "newTreatment": "Nouveau traitement",
+    "kpi": {
+      "avgDo": "OD moyen · dernier",
+      "belowThreshold": {
+        "one": "{count} unité sous le seuil",
+        "other": "{count} unités sous le seuil"
+      },
+      "waterTemp": "Temp. de l’eau",
+      "activeTreatments": "Traitements actifs",
+      "inWithdrawal": "En délai d’attente",
+      "units": {
+        "one": "{count} unité",
+        "other": "{count} unités"
+      },
+      "noHarvestUntil": "pas de récolte avant le {date}",
+      "outOfRange": "Hors plage",
+      "unitsLogged": "Unités mesurées",
+      "ofUnits": {
+        "one": "sur {count} unité",
+        "other": "sur {count} unités"
+      }
+    },
+    "doChart": {
+      "title": "Oxygène dissous · 7 jours",
+      "unit": "mg/L, relevés quotidiens",
+      "avg": "Moyenne",
+      "lowest": "Unité la plus basse",
+      "threshold": "Alerte sous {value}",
+      "empty": "Aucun oxygène dissous saisi ces 7 derniers jours.",
+      "aria": "Oxygène dissous sur les 7 derniers jours : moyenne quotidienne et unité la plus basse"
+    },
+    "active": {
+      "title": "Traitements actifs",
+      "viewAll": "Tout voir",
+      "empty": "Aucun traitement ces 7 derniers jours et aucun délai d’attente en cours.",
+      "until": "Jusqu’au {date}",
+      "noWithdrawal": "Sans délai",
+      "inWithdrawal": "En délai d’attente",
+      "recent": "Donné ces 7 derniers jours"
+    },
+    "log": {
+      "title": "Journal de l’eau",
+      "filter": "Filtre du journal de l’eau",
+      "all": "Tout",
+      "alerts": "Alertes",
+      "treatments": "Traitements",
+      "search": "Rechercher",
+      "col": {
+        "time": "Heure",
+        "unit": "Unité",
+        "do": "OD",
+        "temp": "Temp.",
+        "ph": "pH",
+        "nh3": "NH₃",
+        "secchi": "Secchi",
+        "status": "Statut"
+      },
+      "normal": "Normal",
+      "outOfRange": {
+        "one": "{count} hors plage",
+        "other": "{count} hors plage"
+      },
+      "noReading": "Aucune mesure",
+      "low": "sous le seuil",
+      "high": "au-dessus du seuil",
+      "empty": "Aucune unité pour l’instant.",
+      "emptyAlerts": "Aucune unité hors plage."
+    },
+    "table": {
+      "date": "Date",
+      "diagnosis": "Diagnostic",
+      "treatment": "Traitement",
+      "withdrawal": "Délai jusqu’au",
+      "actions": "Actions",
+      "documents": "Documents",
+      "documentsFor": "Documents · {name}",
+      "delete": "Supprimer",
+      "deleted": "Supprimé",
+      "empty": "Aucun traitement enregistré."
+    },
+    "form": {
+      "title": "Nouveau traitement",
+      "unit": "Unité",
+      "selectUnit": "Choisir une unité…",
+      "date": "Date",
+      "diagnosis": "Diagnostic",
+      "optional": "Facultatif",
+      "treatment": "Traitement",
+      "treatmentPlaceholder": "ex. bain de sel, cure d’antibiotique",
+      "product": "Produit",
+      "dosage": "Dosage",
+      "fishAffected": "Poissons touchés",
+      "withdrawalDays": "Jours de délai d’attente",
+      "withdrawalPlaceholder": "Jours avant que la récolte soit permise",
+      "administeredBy": "Administré par",
+      "notes": "Notes",
+      "errUnit": "Choisissez une unité",
+      "errTreatment": "Le traitement est obligatoire",
+      "saved": "Traitement enregistré",
+      "saveFailed": "Impossible d’enregistrer le traitement"
+    },
+    "thresholds": {
+      "title": "Seuils",
+      "subtitle": "Les valeurs par défaut conviennent aux poissons d’eau chaude ; ajustez-les par type d’unité. Les dépassements peuvent alerter via l’automatisation Qualité de l’eau.",
+      "unitType": "Type d’unité",
+      "parameter": "Paramètre",
+      "min": "Min",
+      "max": "Max",
+      "saveFor": "Enregistrer pour {units}",
+      "useDefault": "Valeur par défaut",
+      "blankHint": "Enregistrer avec les deux cases vides désactive l’alerte pour ce paramètre.",
+      "noAlert": "Pas d’alerte",
+      "and": "et",
+      "saved": "Seuil enregistré",
+      "resetDone": "Valeur par défaut rétablie",
+      "saveFailed": "Impossible d’enregistrer le seuil"
+    }
+  },
+  "sensorsPage": {
+    "eyebrow": "En direct · {readings} sur {units} · mis à jour {updated}",
+    "eyebrowSite": "Capteurs · {site}",
+    "readingsN": {
+      "one": "{count} mesure",
+      "other": "{count} mesures"
+    },
+    "unitsOn": {
+      "one": "{count} unité",
+      "other": "{count} unités"
+    },
+    "alertRules": "Règles d'alerte",
+    "editThresholds": "Modifier les seuils",
+    "kpi": {
+      "reporting": "Actifs",
+      "quietN": {
+        "one": "{count} silencieux",
+        "other": "{count} silencieux"
+      },
+      "unitsN": {
+        "one": "sur {count} unité",
+        "other": "sur {count} unités"
+      },
+      "breaches": "Dépassements · {period}",
+      "lowDo": {
+        "one": "{count} O₂ bas",
+        "other": "{count} O₂ bas"
+      },
+      "waterTemp": "Temp. de l'eau",
+      "unitsAvg": {
+        "one": "moy. {count} unité",
+        "other": "moy. {count} unités"
+      }
+    },
+    "status": {
+      "alert": "Alerte",
+      "warn": "Dépassé",
+      "good": "En ligne",
+      "offline": "Silencieux"
+    },
+    "minAvgMax": "Min {min} · moy. {avg} · max {max}",
+    "minMax": "{min} – {max}",
+    "below": "Sous {value}",
+    "above": "Au-dessus de {value}",
+    "within": "Entre {min} et {max}",
+    "atLeast": "Au moins {value}",
+    "atMost": "Au plus {value}",
+    "noRange": "Pas de plage d'alerte",
+    "quietSince": "Aucune mesure depuis {ago}",
+    "breachedN": {
+      "one": "Revenu dans la plage · {count} dépassement",
+      "other": "Revenu dans la plage · {count} dépassements"
+    },
+    "readings": "Mesures",
+    "filter": "Filtrer les mesures",
+    "tab": {
+      "all": "Toutes",
+      "alerts": "Alertes",
+      "quiet": "Silencieuses"
+    },
+    "search": "Rechercher une unité ou un paramètre",
+    "noMatch": "Aucune mesure ne correspond.",
+    "col": {
+      "reading": "Mesure",
+      "lastSeen": "Dernière",
+      "status": "Statut"
+    },
+    "rulesN": {
+      "one": "{count} active",
+      "other": "{count} actives"
+    },
+    "noRules": "Aucune plage d'alerte ne s'applique à ces mesures.",
+    "ruleOutside": "{label} hors {min}–{max} {unit}",
+    "ruleBelow": "{label} sous {value} {unit}",
+    "ruleAbove": "{label} au-dessus de {value} {unit}",
+    "ruleNotify": "Prévient l'équipe du site en cas de dépassement"
+  },
+  "tracePage": {
+    "lotsTitle": "Lots de récolte",
+    "eyebrowLots": "Traçabilité",
+    "eyebrowLot": "Lot de récolte",
+    "reportTitle": "Rapport de traçabilité",
+    "lotTitle": "Lot {code}",
+    "loadingReport": "Chargement du rapport de traçabilité…",
+    "loadingLots": "Chargement des lots…",
+    "loadingTrace": "Chargement de la traçabilité…",
+    "notFound": "Lot introuvable",
+    "notFoundHint": "Il appartient peut-être à une autre entreprise, ou le lien est incorrect.",
+    "back": "Retour aux lots de récolte",
+    "addDispatch": "Ajouter une expédition",
+    "exportRecall": "Exporter le dossier de rappel",
+    "print": "Imprimer",
+    "kpi": {
+      "weight": "Poids",
+      "fish": "Poissons",
+      "dispatched": "Expédié",
+      "withdrawal": "Délai d'attente",
+      "lots": "Lots",
+      "notDispatched": "Pas encore expédié",
+      "unlotted": "Récoltes à lotir"
+    },
+    "grade": "calibre {grade}",
+    "avgG": "moy. {g} g",
+    "dispatchCount": {
+      "one": "{count} expédition",
+      "other": "{count} expéditions"
+    },
+    "openCount": {
+      "one": "{count} ouvert",
+      "other": "{count} ouverts"
+    },
+    "harvestsSuffix": "avec du poids hors lot",
+    "clear": "Levé",
+    "clearedOn": "Levé le {date}",
+    "since": "depuis le {date}",
+    "overridden": "Dérogation : {reason}",
+    "overrideShort": "Dérogation",
+    "running": "En cours à la récolte",
+    "runningShort": "En cours",
+    "farmToCustomer": "De la ferme au client",
+    "batch": "Lot d'élevage {batch}",
+    "noBatch": "Cette récolte n'est liée à aucun lot d'élevage : son origine, son alimentation et ses traitements ne peuvent pas être tracés.",
+    "batchTraceHint": "Origine, alimentation, traitements et destination des poissons.",
+    "parents": {
+      "one": "Inclut {count} lot parent : les poissons gardent leur historique.",
+      "other": "Inclut {count} lots parents : les poissons gardent leur historique."
+    },
+    "noHistory": "Aucune origine, aucun mouvement ni traitement enregistré.",
+    "noLotsYet": "Aucun lot de récolte pour l'instant.",
+    "createLot": "En créer un après une récolte →",
+    "origin": {
+      "stocking": "Empoissonné",
+      "transfer_split": "Séparé par un transfert",
+      "grading_split": "Trié depuis un lot parent",
+      "merge": "Formé par une fusion",
+      "hatchery": "Écloserie",
+      "legacy": "Importé"
+    },
+    "move": {
+      "stocked": "Empoissonné",
+      "topped_up": "Complété",
+      "transfer_in": "Entrée",
+      "transfer_out": "Sortie",
+      "graded": "Trié vers",
+      "merged": "Fusionné dans",
+      "harvested": "Récolté"
+    },
+    "step": {
+      "treatment": "Traitement",
+      "growout": {
+        "one": "Grossissement · {count} jour",
+        "other": "Grossissement · {count} jours"
+      },
+      "harvest": "Récolte",
+      "dispatch": "Expédition",
+      "lot": "Lot de récolte"
+    },
+    "fishN": "{n} poissons",
+    "fishAt": "{n} poissons à {g} g",
+    "with": "avec {name}",
+    "withdrawalDays": "délai d'attente de {n} jours",
+    "withdrawalUntil": "délai d'attente jusqu'au {date}",
+    "feedKg": "Aliment {kg} kg",
+    "noFeed": "Aucun aliment avec un type enregistré",
+    "feedLots": "Lots d'aliment",
+    "feedLotsHint": "Premier entré, premier sorti",
+    "noLotNumber": "Sans numéro de lot",
+    "noPurchases": "Aucun achat de cet aliment enregistré.",
+    "dispatches": "Expéditions",
+    "notDispatched": "Pas encore expédié.",
+    "complianceChecks": "Contrôles de conformité",
+    "check": {
+      "withdrawal": "Délai d'attente",
+      "coldChain": "Chaîne du froid",
+      "remaining": "Stock restant"
+    },
+    "notRecorded": "Non enregistré",
+    "allDispatched": "Tout expédié",
+    "documents": "Documents",
+    "documentsHint": "Certificats sanitaires, résultats de laboratoire et bons de livraison de ce lot.",
+    "lotsTable": "Lots",
+    "filter": "Statut du lot",
+    "tab": {
+      "all": "Tous",
+      "open": "En stock",
+      "dispatched": "Expédiés"
+    },
+    "search": "Rechercher un lot, une cage, un calibre ou une destination",
+    "emptyLots": "Aucun lot de récolte pour l'instant. Enregistrez une récolte, puis divisez-la en lots pour que chaque vente remonte à sa cage, son aliment et ses traitements.",
+    "noMatch": "Aucun lot ne correspond à ces filtres.",
+    "col": {
+      "lot": "Lot",
+      "harvested": "Récolté",
+      "cage": "Cage",
+      "weight": "Poids",
+      "dispatched": "Expédié",
+      "status": "Statut"
+    },
+    "status": {
+      "open": "En stock",
+      "partial": "Partiellement expédié",
+      "dispatched": "Expédié"
+    },
+    "newLot": {
+      "action": "Nouveau lot",
+      "title": "Nouveau lot de récolte",
+      "description": "Chaque lot est une partie traçable d'une récolte.",
+      "harvest": "Récolte",
+      "selectHarvest": "Sélectionnez une récolte",
+      "harvestOption": "{date} · {cage} · {kg} kg hors lot",
+      "weight": "Poids (kg)",
+      "upTo": "Jusqu'à {kg} kg",
+      "fishCount": "Nombre de poissons",
+      "grade": "Calibre",
+      "gradeHint": "Par exemple Reg, S1 ou Eco",
+      "destination": "Destination",
+      "destinationHint": "Marché, transformateur ou chambre froide",
+      "code": "Code du lot",
+      "codeHint": "Laissez vide pour le numéroter d'après le lot d'élevage et la date de récolte.",
+      "automatic": "Automatique",
+      "submit": "Créer le lot",
+      "pickHarvest": "Choisissez une récolte",
+      "enterWeight": "Saisissez le poids du lot",
+      "created": "Lot {code} créé",
+      "failed": "Impossible de créer le lot"
+    },
+    "dispatch": {
+      "title": "Expédier {code}",
+      "left": "{kg} kg restants",
+      "date": "Date",
+      "weight": "Poids (kg)",
+      "customer": "Client",
+      "otherBuyer": "Autre acheteur…",
+      "buyerName": "Nom de l'acheteur",
+      "vehicle": "Véhicule",
+      "vehicleHint": "Numéro d'immatriculation",
+      "driver": "Chauffeur",
+      "temperature": "Température au chargement (°C)",
+      "overrideReason": "Motif de la dérogation",
+      "overrideHint": "Conservé dans le journal d'audit",
+      "askAdmin": "Demandez à un administrateur d'enregistrer cette expédition.",
+      "submit": "Enregistrer l'expédition",
+      "saved": "Expédition enregistrée",
+      "failed": "Impossible d'enregistrer l'expédition"
+    },
+    "history": {
+      "title": "Historique des lots",
+      "hint": "Chaque changement des poissons de cette cage, d'après le registre de stock.",
+      "countOn": "Effectif au",
+      "loading": "Chargement de l'historique…",
+      "emptyTitle": "Pas encore d'historique dans le registre",
+      "emptyHint": "Les mouvements de stock apparaissent ici dès l'empoissonnement, ou après la reprise des anciens cycles.",
+      "fishOn": "Poissons au {date}",
+      "biomass": "Biomasse à cette date",
+      "ledgerToday": "Registre aujourd'hui",
+      "matches": "conforme à la cage",
+      "cageShows": "la cage indique {n}",
+      "batches": "Lots dans cette cage",
+      "since": "depuis le {date}, {n} poissons",
+      "to": "vers {cage}",
+      "from": "depuis {cage}",
+      "reversed": "annulé"
+    },
+    "inspection": {
+      "label": "Inspections et maintenance",
+      "empty": "Rien d'enregistré pour l'instant.",
+      "faults": "Défauts : {list}",
+      "nextDue": "Prochaine échéance le {date}",
+      "kind": {
+        "net_inspection": "Inspection du filet",
+        "maintenance": "Maintenance",
+        "repair": "Réparation",
+        "cleaning": "Nettoyage",
+        "calibration": "Étalonnage",
+        "inspection": "Inspection"
+      },
+      "result": {
+        "ok": "OK",
+        "needs_attention": "À surveiller",
+        "failed": "Échec"
+      }
+    }
+  },
   "ui": {
     "farmHealth": "Santé de la ferme",
     "relatedPages": "Pages associées",

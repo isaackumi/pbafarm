@@ -1,192 +1,164 @@
-import React from 'react'
+import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
-import { PageHeader, Button, LoadingState, EmptyState } from '../../../components/ui'
+import { GradientButton, KpiStrip, StatusDot, Table } from '../../../components/ui'
 import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useLocation } from '../../../contexts/LocationContext'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts'
+import { daysBetween, formatNumber, localToday } from '../../../lib/format'
+import { useLocale, useT } from '../../../lib/i18n/context'
 
-export default function HarvestAnalyticsPage() {
+// Days of culture at which a cage is due for harvest.
+const HARVEST_DOC = 120
+const SOON_DAYS = 20
+const STATUS_TONE = { ready: 'good', soon: 'warn', growing: 'neutral' }
+const TOOLTIP = {
+  cursor: { fill: 'var(--surface-2)' },
+  contentStyle: {
+    background: 'var(--surface-2)',
+    border: '1px solid var(--line)',
+    borderRadius: 12,
+    color: 'var(--text)',
+    fontSize: 12,
+  },
+  labelStyle: { color: 'var(--muted)' },
+}
+const AXIS = { axisLine: false, tickLine: false, tick: { fill: 'var(--faint)', fontSize: 12 } }
+
+/** Active stocked cages with days of culture and days left to harvest, soonest first. */
+function harvestReadiness(cages, today) {
+  return (cages || [])
+    .filter((c) => c.stocking_date)
+    .map((c) => {
+      const doc = daysBetween(c.stocking_date, today)
+      const daysToHarvest = Math.max(0, HARVEST_DOC - doc)
+      return {
+        id: c.id || c._id,
+        name: c.name,
+        doc,
+        daysToHarvest,
+        initialWeight: c.initial_weight || 0,
+        currentWeight: c.current_weight || 0,
+        growthRate: c.growth_rate ?? null,
+        status: daysToHarvest <= 0 ? 'ready' : daysToHarvest <= SOON_DAYS ? 'soon' : 'growing',
+      }
+    })
+    .sort((a, b) => a.daysToHarvest - b.daysToHarvest)
+}
+
+function ChartCard({ title, children }) {
   return (
-    <ProtectedRoute>
-      <Layout>
-        <HarvestAnalytics />
-      </Layout>
-    </ProtectedRoute>
+    <section className="flex min-w-0 flex-col gap-4 rounded-card border border-line bg-surface px-[26px] py-6 shadow-[var(--shadow-card)]">
+      <h2 className="text-[15px] font-semibold leading-[18px] text-text">{title}</h2>
+      <div className="h-72">{children}</div>
+    </section>
   )
 }
 
 function HarvestAnalytics() {
+  const t = useT()
+  const { locale } = useLocale()
+  const { user } = useAuth()
   const { locationArgs } = useLocation()
-  const activeCages = useQuery(api.cages.getActive, locationArgs)
-  const cages = React.useMemo(
-    () => activeCages?.filter(isHarvestReady),
-    [activeCages],
-  )
+  const activeCages = useQuery(api.cages.getActive, user ? locationArgs : 'skip')
+  const today = localToday()
+  const rows = useMemo(() => harvestReadiness(activeCages, today), [activeCages, today])
+  const loaded = activeCages !== undefined
+  const count = (s) => rows.filter((r) => r.status === s).length
+  const legend = { wrapperStyle: { fontSize: 12, color: 'var(--muted)' } }
 
-  // Calculate harvest readiness data
-  const harvestData = React.useMemo(() => {
-    if (!cages || cages.length === 0) return []
-
-    return cages
-      .filter(cage => cage.stocking_date)
-      .map(cage => {
-        const stockingDate = new Date(cage.stocking_date)
-        const today = new Date()
-        const doc = Math.floor((today - stockingDate) / (1000 * 60 * 60 * 24))
-        const daysToHarvest = Math.max(0, 120 - doc) // 120 days is the harvest threshold
-
-        return {
-          cageId: cage.id,
-          cageName: cage.name,
-          doc,
-          daysToHarvest,
-          initialWeight: cage.initial_weight || 0,
-          currentWeight: cage.current_weight || 0,
-          growthRate: cage.growth_rate || 0,
-          status: daysToHarvest <= 0 ? 'Ready' : daysToHarvest <= 20 ? 'Soon' : 'Growing'
-        }
-      })
-      .sort((a, b) => a.daysToHarvest - b.daysToHarvest)
-  }, [cages])
-
-  if (cages === undefined) {
-    return <LoadingState />
-  }
-
-  if (!cages || cages.length === 0) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <EmptyState title="No cage data available." />
-        </div>
-      </div>
-    )
-  }
+  const columns = [
+    { key: 'name', header: t('harvestPage.analytics.col.cage') },
+    { key: 'doc', header: t('harvestPage.analytics.col.doc'), align: 'right', render: (r) => t('harvestPage.analytics.days', { n: r.doc }) },
+    { key: 'left', header: t('harvestPage.analytics.col.daysLeft'), align: 'right', render: (r) => t('harvestPage.analytics.days', { n: r.daysToHarvest }) },
+    { key: 'initial', header: t('harvestPage.analytics.col.initial'), align: 'right', render: (r) => `${formatNumber(r.initialWeight, { locale })} g` },
+    { key: 'current', header: t('harvestPage.analytics.col.current'), align: 'right', render: (r) => `${formatNumber(r.currentWeight, { locale })} g` },
+    {
+      key: 'growth',
+      header: t('harvestPage.analytics.col.growth'),
+      align: 'right',
+      render: (r) => (r.growthRate == null ? '—' : `${formatNumber(r.growthRate, { locale, decimals: 1 })}%`),
+    },
+    {
+      key: 'status',
+      header: t('harvestPage.analytics.col.status'),
+      render: (r) => (
+        <span className="flex items-center gap-2">
+          <StatusDot tone={STATUS_TONE[r.status]} />
+          <span className="text-[13px] leading-4 text-muted">{t.or(`harvestPage.analytics.status.${r.status}`, r.status)}</span>
+        </span>
+      ),
+    },
+  ]
 
   return (
-    <div className="w-full">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Cages', href: '/cages' },
-            { label: 'Analytics', href: '/cages/analytics' },
-            { label: 'Harvest' },
-          ]}
-          description="See which cages are approaching harvest and how size grades break down."
-          related={[
-            { label: 'Cage analytics', href: '/cages/analytics' },
-            { label: 'Growth', href: '/cages/analytics/growth' },
-            { label: 'Harvest sampling', href: '/harvest-sampling' },
-          ]}
-          actions={
-            <Button href="/cages/analytics" variant="secondary" size="sm">
-              All analytics
-            </Button>
-          }
-        />
-
-        <div className="grid grid-cols-1 gap-6">
-          {/* Harvest Readiness Chart */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Harvest readiness</h2>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={harvestData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis yAxisId="left" orientation="left" stroke="var(--lake)" />
-                  <YAxis yAxisId="right" orientation="right" stroke="var(--kelp)" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="doc" name="Days of culture" fill="var(--lake)" />
-                  <Bar yAxisId="right" dataKey="daysToHarvest" name="Days to harvest" fill="var(--kelp)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Growth Rate Chart */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth rate</h2>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={harvestData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="initialWeight" name="Initial weight" fill="var(--lake)" />
-                  <Bar dataKey="currentWeight" name="Current weight" fill="var(--kelp)" />
-                  <Bar dataKey="growthRate" name="Growth rate" fill="#d97706" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Harvest Ready Cages Table */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Cages ready to harvest</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-foam-deep">
-                <thead className="bg-foam">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Cage</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">DOC</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Days to harvest</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Initial weight</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Current weight</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Growth rate</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-surface divide-y divide-foam-deep">
-                  {harvestData.map((cage) => (
-                    <tr key={cage.cageId}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink">{cage.cageName}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.doc} days</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.daysToHarvest} days</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.initialWeight} g</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.currentWeight} g</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.growthRate}%</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          cage.status === 'Ready' ? 'bg-signal/15 text-signal' :
-                          cage.status === 'Soon' ? 'bg-warn/10 text-warn' :
-                          'bg-kelp/15 text-kelp'
-                        }`}>
-                          {cage.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+    <div className="flex flex-col gap-[28px]">
+      <KpiStrip
+        items={[
+          { key: 'ready', label: t('harvestPage.analytics.status.ready'), value: loaded ? count('ready') : '—', valueTone: count('ready') ? 'good' : undefined },
+          { key: 'soon', label: t('harvestPage.analytics.kpiSoon', { n: SOON_DAYS }), value: loaded ? count('soon') : '—', valueTone: count('soon') ? 'warn' : undefined },
+          { key: 'growing', label: t('harvestPage.analytics.status.growing'), value: loaded ? count('growing') : '—' },
+          { key: 'stocked', label: t('harvestPage.analytics.kpiStocked'), value: loaded ? rows.length : '—' },
+        ]}
+      />
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <ChartCard title={t('harvestPage.analytics.readiness')}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                <CartesianGrid vertical={false} stroke="var(--line)" />
+                <XAxis dataKey="name" {...AXIS} />
+                <YAxis {...AXIS} width={36} />
+                <Tooltip {...TOOLTIP} />
+                <Legend {...legend} />
+                <Bar dataKey="doc" name={t('harvestPage.analytics.col.doc')} fill="var(--cyan)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="daysToHarvest" name={t('harvestPage.analytics.col.daysLeft')} fill="var(--pink)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+          <ChartCard title={t('harvestPage.analytics.weights')}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                <CartesianGrid vertical={false} stroke="var(--line)" />
+                <XAxis dataKey="name" {...AXIS} />
+                <YAxis {...AXIS} width={44} />
+                <Tooltip {...TOOLTIP} formatter={(v, name) => [`${formatNumber(v, { locale })} g`, name]} />
+                <Legend {...legend} />
+                <Bar dataKey="initialWeight" name={t('harvestPage.analytics.col.initial')} fill="var(--line-strong)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="currentWeight" name={t('harvestPage.analytics.col.current')} fill="var(--cyan)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
         </div>
-      </div>
+      )}
+      <Table
+        title={t('harvestPage.analytics.table')}
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        empty={loaded ? t('harvestPage.analytics.empty') : t('ui.loading')}
+      />
     </div>
   )
-} 
+}
 
-// Active cages at least 180 days in culture with growth rate of 80 or more.
-function isHarvestReady(cage) {
-  const daysOfCulture = cage.stockingDate
-    ? Math.floor((new Date() - new Date(cage.stockingDate)) / (1000 * 60 * 60 * 24))
-    : 0
-  return daysOfCulture >= 180 && cage.growthRate >= 80
+export default function HarvestAnalyticsPage() {
+  const t = useT()
+  return (
+    <ProtectedRoute>
+      <Layout
+        title={t('harvestPage.analytics.title')}
+        eyebrow={t('harvestPage.analytics.eyebrow')}
+        actions={
+          <GradientButton href="/cages/analytics" variant="outline">
+            {t('harvestPage.analytics.all')}
+          </GradientButton>
+        }
+      >
+        <HarvestAnalytics />
+      </Layout>
+    </ProtectedRoute>
+  )
 }

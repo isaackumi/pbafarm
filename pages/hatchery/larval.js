@@ -2,44 +2,36 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
+import { ArrowLeft, Plus, X } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import OutboxPanel from '../../components/OutboxPanel'
-import {
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Field,
-  FormSection,
-  Input,
-  PageHeader,
-  Select,
-  StickyActions,
-  TabBar,
-  Textarea,
-} from '../../components/ui'
+import { EmptyState, Field, GhostButton, GradientButton, IfPermitted, Input, Modal, Select, Tabs, Textarea } from '../../components/ui'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
 import { saveOrQueue } from '../../lib/outboxSenders'
 import { cleanError } from '../../lib/offlineOutbox'
+import { formatDate } from '../../lib/format'
+import { useLocale, useT } from '../../lib/i18n/context'
 import { useOnline } from '../../hooks/useOutbox'
-import { HatcheryNav, LIVE_FEED_LABEL, LIVE_FEED_UNIT, Pill, fmt, num, today } from '../../components/hatchery/common'
+import { HatcheryNav, LIVE_FEED_LABEL, LIVE_FEED_UNIT, PaperCard, Pill, fmt, label, num, today } from '../../components/hatchery/common'
 import { usePermission } from '../../hooks/usePermission'
+
+const SUB = 'text-xs leading-4 text-muted'
+const HINT = 'text-[13px] leading-[18px] text-muted'
 
 export default function LarvalPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Larvae & fingerlings">
-        <Larval />
-      </Layout>
+      <Larval />
     </ProtectedRoute>
   )
 }
 
 function Larval() {
+  const t = useT()
   const router = useRouter()
   const { user } = useAuth()
   const [status, setStatus] = useState('active')
@@ -49,107 +41,122 @@ function Larval() {
   const select = (id) => router.replace({ pathname: '/hatchery/larval', query: id ? { batch: id } : {} }, undefined, { shallow: true })
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader
-        title="Larvae and fingerlings"
-        description="Hatched batches and the fingerling batches graded from them. Log each tank daily; grade, move or sell fingerlings."
-      />
+    <Layout title={t('hatcheryPage.larval.title')} eyebrow={t('hatcheryPage.larval.eyebrow')}>
       <HatcheryNav />
-      <div className="mb-4">
-        <TabBar
-          tabs={[
-            { id: 'active', label: 'In the hatchery' },
-            { id: 'closed', label: 'Closed' },
-          ]}
-          active={status}
-          onChange={setStatus}
-        />
-      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <Card padding={false} className={selected ? 'hidden lg:block' : ''}>
+        <PaperCard
+          padded={false}
+          className={selected ? 'hidden lg:block' : ''}
+          title={t('hatcheryPage.larval.batches')}
+          action={
+            <Tabs
+              label={t('hatcheryPage.larval.statusFilter')}
+              value={status}
+              onChange={setStatus}
+              tabs={[
+                { value: 'active', label: t('hatcheryPage.larval.active') },
+                { value: 'closed', label: t('hatcheryPage.larval.closed') },
+              ]}
+            />
+          }
+        >
           {batches === undefined ? (
-            <p className="p-6 text-sm text-muted">Loading batches…</p>
+            <p className={`px-[26px] pb-6 ${HINT}`}>{t('ui.loading')}</p>
           ) : batches.length === 0 ? (
-            <EmptyState title="No larval batches" description="Record a hatch on the incubation board to start one." />
+            <div className="px-[26px] pb-6">
+              <EmptyState title={t('hatcheryPage.larval.empty')} description={t('hatcheryPage.larval.emptyHint')} />
+            </div>
           ) : (
-            <ul className="divide-y divide-foam-deep">
+            <ul className="flex flex-col">
               {batches.map((b) => (
-                <li key={b.id}>
+                <li key={b.id} className="border-t border-line">
                   <button
                     type="button"
                     onClick={() => select(b.id)}
-                    className={`w-full text-left px-4 sm:px-5 py-3 min-h-12 hover:bg-foam ${b.id === selectedId ? 'bg-foam' : ''}`}
+                    aria-current={b.id === selectedId ? 'true' : undefined}
+                    className={`flex min-h-12 w-full flex-col gap-1 px-[22px] py-[11px] text-left hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan sm:px-[26px] ${
+                      b.id === selectedId ? 'bg-surface-2' : ''
+                    }`}
                   >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-data font-medium text-chart-ink">{b.batch_number}</span>
-                      <Pill tone={b.stage === 'larvae' ? 'accent' : 'good'}>{b.stage}</Pill>
-                    </div>
-                    <p className="text-sm text-muted">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[13px] font-medium text-text">{b.batch_number}</span>
+                      <Pill tone={b.stage === 'larvae' ? 'accent' : 'good'}>{label(t, 'stage', b.stage)}</Pill>
+                    </span>
+                    <span className={SUB}>
                       {[
                         b.units.map((u) => u.name).join(', ') || null,
-                        `${fmt(b.count)} fish`,
-                        `day ${b.days_since_hatch}`,
-                        b.survival_pct != null ? `${fmt(b.survival_pct, 1)} % survival` : null,
+                        t('hatcheryPage.fishN', { n: fmt(b.count) }),
+                        t('hatcheryPage.dayN', { n: b.days_since_hatch }),
+                        b.survival_pct != null ? t('hatcheryPage.survival', { pct: `${fmt(b.survival_pct, 1)}%` }) : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
-                    </p>
+                    </span>
                     {status === 'active' && !b.logged_today && b.stage === 'larvae' && (
-                      <p className="text-xs text-signal mt-1">Not logged today</p>
+                      <span className="text-xs leading-4 text-warn">{t('hatcheryPage.larval.notLogged')}</span>
                     )}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </PaperCard>
 
         <div className={selected ? '' : 'hidden lg:block'}>
           {selected ? (
             <BatchPanel batch={selected} onBack={() => select(null)} />
           ) : (
-            <Card>
-              <p className="text-sm text-muted">Choose a batch to log its day or move its fish.</p>
-            </Card>
+            <PaperCard>
+              <p className={HINT}>{t('hatcheryPage.larval.choose')}</p>
+            </PaperCard>
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }
 
 function BatchPanel({ batch, onBack }) {
-  const { user } = useAuth()
+  const t = useT()
+  const { locale } = useLocale()
   const canGrade = usePermission('hatchery.grade')
   const canDispatch = usePermission('hatchery.dispatch')
   const [tab, setTab] = useState('log')
-  const tabs = [{ id: 'log', label: 'Daily log' }]
-  if (canGrade && batch.count > 0) tabs.push({ id: 'grade', label: 'Grade' })
+  const tabs = [{ value: 'log', label: t('hatcheryPage.larval.tabLog') }]
+  if (canGrade && batch.count > 0) tabs.push({ value: 'grade', label: t('hatcheryPage.larval.tabGrade') })
   if (canDispatch && batch.count > 0) {
-    tabs.push({ id: 'move', label: 'Move' }, { id: 'sell', label: 'Sell or send' })
+    tabs.push({ value: 'move', label: t('hatcheryPage.larval.tabMove') }, { value: 'sell', label: t('hatcheryPage.larval.tabSell') })
   }
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <button type="button" onClick={onBack} className="text-sm text-lake hover:underline lg:hidden min-h-11">
-            All batches
-          </button>
-          <h3 className="font-display text-xl text-chart-ink">
-            <Link href={`/batches/${batch.id}`} className="hover:underline font-data">
-              {batch.batch_number}
-            </Link>
-          </h3>
-          <p className="text-sm text-muted">
-            Hatched {batch.hatched_on}
-            {batch.hatched_batch_number !== batch.batch_number ? ` as ${batch.hatched_batch_number}` : ''} · {fmt(batch.stocked)} in ·{' '}
-            {fmt(batch.deaths)} dead · {fmt(batch.moved_out)} out
-            {batch.abw_g ? ` · ${fmt(batch.abw_g, 3)} g` : ''}
-          </p>
-        </div>
-        {tabs.length > 1 && <TabBar tabs={tabs} active={tab} onChange={setTab} />}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <GhostButton size="sm" icon={ArrowLeft} onClick={onBack} className="self-start lg:hidden">
+          {t('hatcheryPage.larval.allBatches')}
+        </GhostButton>
+        <h2 className="text-[22px] font-semibold leading-7 text-text">
+          <Link href={`/batches/${batch.id}`} className="font-mono hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+            {batch.batch_number}
+          </Link>
+        </h2>
+        <p className={HINT}>
+          {[
+            t('hatcheryPage.larval.hatchedOn', { date: formatDate(batch.hatched_on, { locale }) }) +
+              (batch.hatched_batch_number !== batch.batch_number ? ` ${t('hatcheryPage.larval.asBatch', { batch: batch.hatched_batch_number })}` : ''),
+            t('hatcheryPage.larval.inN', { n: fmt(batch.stocked) }),
+            t('hatcheryPage.larval.deadN', { n: fmt(batch.deaths) }),
+            t('hatcheryPage.larval.outN', { n: fmt(batch.moved_out) }),
+            batch.abw_g ? `${fmt(batch.abw_g, 3)} g` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
       </div>
+      {tabs.length > 1 && (
+        <div className="border-b border-line">
+          <Tabs variant="underline" label={t('hatcheryPage.larval.actions')} tabs={tabs} value={tab} onChange={setTab} />
+        </div>
+      )}
       {tab === 'log' && <DailyLog batch={batch} />}
       {tab === 'grade' && <GradeForm batch={batch} />}
       {tab === 'move' && <MoveForm batch={batch} />}
@@ -170,10 +177,17 @@ const EMPTY_LOG = {
   notes: '',
 }
 
+function SubHead({ children }) {
+  return <h3 className="text-[13px] font-semibold leading-4 text-text">{children}</h3>
+}
+
 function DailyLog({ batch }) {
+  const t = useT()
+  const { locale } = useLocale()
   const { user } = useAuth()
   const { showToast } = useToast()
   const online = useOnline()
+  const canLog = usePermission('hatchery.larval.record')
   const logs = useQuery(api.nursery.listLarvalLogs, { batchId: batch.id })
   const [unitId, setUnitId] = useState(batch.units[0]?.id || '')
   const [date, setDate] = useState(today())
@@ -237,19 +251,17 @@ function DailyLog({ batch }) {
       if (res.error) throw res.error
       showToast(
         res.queued ? 'info' : 'success',
-        res.queued
-          ? 'No connection. Saved on this device and will send when you are back online'
-          : `Saved. ${fmt(res.data?.alive)} larvae on record`,
+        res.queued ? t('hatcheryPage.larval.queued') : t('hatcheryPage.larval.logSaved', { n: fmt(res.data?.alive) }),
       )
     } catch (err) {
-      showToast('error', cleanError(err) || errorMessage(err, 'Could not save the log'))
+      showToast('error', cleanError(err) || errorMessage(err, t('hatcheryPage.larval.logFailed')))
     } finally {
       setSaving(false)
     }
   }
 
-  const numberField = (k, label, opts = {}) => (
-    <Field label={label} htmlFor={`log-${k}`} hint={opts.hint}>
+  const numberField = (k, text, opts = {}) => (
+    <Field label={text} htmlFor={`log-${k}`} hint={opts.hint}>
       <Input
         id={`log-${k}`}
         type="number"
@@ -257,21 +269,23 @@ function DailyLog({ batch }) {
         step={opts.decimal ? 'any' : '1'}
         value={form[k]}
         onChange={set(k)}
+        disabled={!canLog}
         className="tabular-nums"
       />
     </Field>
   )
+  const setFeedRow = (i, k) => (e) => setFeed((p) => p.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
 
   return (
     <>
-      <Card>
+      <PaperCard title={t('hatcheryPage.larval.tabLog')}>
         <OutboxPanel compact online={online} kinds={['larval-log']} />
-        <form onSubmit={submit} noValidate className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Date" htmlFor="log-date">
+        <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label={t('hatcheryPage.date')} htmlFor="log-date">
               <Input id="log-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
-            <Field label="Tank" htmlFor="log-unit">
+            <Field label={t('hatcheryPage.brood.tank')} htmlFor="log-unit">
               <Select id="log-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
                 {batch.units.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -281,130 +295,122 @@ function DailyLog({ batch }) {
               </Select>
             </Field>
           </div>
-          {existing && <p className="text-sm text-muted">This day is already logged; saving replaces it.</p>}
-          <FormSection title="Survival">
+          {existing && <p className={HINT}>{t('hatcheryPage.larval.alreadyLogged')}</p>}
+          <div className="flex flex-col gap-3">
+            <SubHead>{t('hatcheryPage.larval.survivalHead')}</SubHead>
             <div className="grid grid-cols-2 gap-4">
-              {numberField('mortality', 'Dead removed')}
-              {numberField('countedAlive', 'Counted alive', { hint: 'Sets the count on record' })}
+              {numberField('mortality', t('hatcheryPage.larval.deadRemoved'))}
+              {numberField('countedAlive', t('hatcheryPage.larval.countedAlive'), { hint: t('hatcheryPage.larval.countedHint') })}
             </div>
-          </FormSection>
-          <FormSection title="Feeding">
-            <div className="space-y-3">
-              {feed.map((f, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
-                  <Field label={i === 0 ? 'Live feed' : undefined} htmlFor={`lf-k-${i}`}>
-                    <Select
-                      id={`lf-k-${i}`}
-                      value={f.kind}
-                      onChange={(e) => setFeed((p) => p.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))}
-                    >
-                      {Object.entries(LIVE_FEED_LABEL).map(([k, l]) => (
-                        <option key={k} value={k}>
-                          {l}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label={i === 0 ? 'Amount' : undefined} htmlFor={`lf-q-${i}`}>
-                    <Input
-                      id={`lf-q-${i}`}
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      value={f.quantity}
-                      onChange={(e) => setFeed((p) => p.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))}
-                    />
-                  </Field>
-                  <Select
-                    aria-label="Unit"
-                    value={f.unit}
-                    onChange={(e) => setFeed((p) => p.map((x, j) => (j === i ? { ...x, unit: e.target.value } : x)))}
-                    className="w-28"
-                  >
-                    {Object.entries(LIVE_FEED_UNIT).map(([k, l]) => (
-                      <option key={k} value={k}>
-                        {l}
-                      </option>
+          </div>
+          <div className="flex flex-col gap-3">
+            <SubHead>{t('hatcheryPage.larval.feeding')}</SubHead>
+            {feed.map((f, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_auto_auto] items-end gap-2">
+                <Field label={i === 0 ? t('hatcheryPage.larval.liveFeed') : undefined} htmlFor={`lf-k-${i}`}>
+                  <Select id={`lf-k-${i}`} value={f.kind} onChange={setFeedRow(i, 'kind')} disabled={!canLog}>
+                    {Object.keys(LIVE_FEED_LABEL).map((k) => (
+                      <option key={k} value={k}>{label(t, 'liveFeed', k)}</option>
                     ))}
                   </Select>
-                  <Button variant="ghost" size="sm" aria-label="Remove" onClick={() => setFeed((p) => p.filter((_, j) => j !== i))}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-              {feed.length < 10 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFeed((p) => [...p, { kind: 'artemia', quantity: '', unit: 'million' }])}
-                >
-                  Add live feed
-                </Button>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                {numberField('dryFeedG', 'Dry feed (g)', { decimal: true })}
-                {numberField('feedingsPerDay', 'Feedings')}
+                </Field>
+                <Field label={i === 0 ? t('hatcheryPage.larval.amount') : undefined} htmlFor={`lf-q-${i}`}>
+                  <Input id={`lf-q-${i}`} type="number" inputMode="decimal" step="any" value={f.quantity} onChange={setFeedRow(i, 'quantity')} disabled={!canLog} />
+                </Field>
+                <Select aria-label={t('hatcheryPage.larval.unit')} value={f.unit} onChange={setFeedRow(i, 'unit')} className="w-28" disabled={!canLog}>
+                  {Object.keys(LIVE_FEED_UNIT).map((k) => (
+                    <option key={k} value={k}>{label(t, 'unit', k)}</option>
+                  ))}
+                </Select>
+                {canLog && (
+                  <GhostButton
+                    size="sm"
+                    icon={X}
+                    aria-label={t('hatcheryPage.larval.removeFeed')}
+                    onClick={() => setFeed((p) => p.filter((_, j) => j !== i))}
+                  />
+                )}
               </div>
+            ))}
+            {canLog && feed.length < 10 && (
+              <div>
+                <GhostButton size="sm" icon={Plus} onClick={() => setFeed((p) => [...p, { kind: 'artemia', quantity: '', unit: 'million' }])}>
+                  {t('hatcheryPage.larval.addLiveFeed')}
+                </GhostButton>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              {numberField('dryFeedG', t('hatcheryPage.larval.dryFeed'), { decimal: true })}
+              {numberField('feedingsPerDay', t('hatcheryPage.larval.feedings'))}
             </div>
-          </FormSection>
-          <FormSection title="Water">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          </div>
+          <div className="flex flex-col gap-3">
+            <SubHead>{t('hatcheryPage.larval.water')}</SubHead>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {numberField('temperatureC', '°C', { decimal: true })}
-              {numberField('dissolvedOxygen', 'DO (mg/L)', { decimal: true })}
+              {numberField('dissolvedOxygen', t('hatcheryPage.larval.do'), { decimal: true })}
               {numberField('ph', 'pH', { decimal: true })}
-              {numberField('salinityPpt', 'Salinity (ppt)', { decimal: true })}
+              {numberField('salinityPpt', t('hatcheryPage.larval.salinity'), { decimal: true })}
             </div>
-          </FormSection>
-          <Field label="Notes" htmlFor="log-notes">
-            <Textarea id="log-notes" rows={2} value={form.notes} onChange={set('notes')} />
+          </div>
+          <Field label={t('common.notes')} htmlFor="log-notes">
+            <Textarea id="log-notes" rows={2} value={form.notes} onChange={set('notes')} disabled={!canLog} />
           </Field>
-          <StickyActions>
-            <Button type="submit" disabled={saving || !unitId}>
-              {saving ? 'Saving…' : existing ? 'Save changes' : 'Save log'}
-            </Button>
-          </StickyActions>
+          {canLog && (
+            <div className="flex justify-end">
+              <GradientButton type="submit" variant="solid" disabled={saving || !unitId}>
+                {saving ? t('common.saving') : existing ? t('hatcheryPage.larval.saveChanges') : t('hatcheryPage.larval.saveLog')}
+              </GradientButton>
+            </div>
+          )}
         </form>
-      </Card>
+      </PaperCard>
 
-      <Card>
-        <CardHeader title="Daily logs" />
+      <PaperCard title={t('hatcheryPage.larval.logs')} meta={logs ? logs.length : undefined}>
         {logs === undefined ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <p className={HINT}>{t('ui.loading')}</p>
         ) : logs.length === 0 ? (
-          <p className="text-sm text-muted">No logs yet.</p>
+          <p className={`border-t border-line py-[11px] ${HINT}`}>{t('hatcheryPage.larval.noLogs')}</p>
         ) : (
-          <div className="overflow-x-auto -mx-5 sm:-mx-6">
-            <table className="w-full text-sm tabular-nums">
-              <thead className="text-muted text-left">
+          <div className="-mx-[22px] overflow-x-auto sm:-mx-[26px]">
+            <table className="w-full text-[13px] leading-4 tabular-nums">
+              <thead className="text-left text-xs text-muted">
                 <tr>
-                  <th className="px-5 sm:px-6 py-2 font-normal">Date</th>
-                  <th className="px-2 py-2 font-normal text-right">Dead</th>
-                  <th className="px-2 py-2 font-normal text-right">Counted</th>
-                  <th className="px-2 py-2 font-normal">Live feed</th>
-                  <th className="px-2 py-2 font-normal text-right">°C</th>
+                  <th scope="col" className="px-[22px] py-2 font-normal sm:px-[26px]">{t('hatcheryPage.date')}</th>
+                  <th scope="col" className="px-2 py-2 text-right font-normal">{t('hatcheryPage.larval.dead')}</th>
+                  <th scope="col" className="px-2 py-2 text-right font-normal">{t('hatcheryPage.larval.counted')}</th>
+                  <th scope="col" className="px-2 py-2 font-normal">{t('hatcheryPage.larval.liveFeed')}</th>
+                  <th scope="col" className="px-2 py-2 pr-[22px] text-right font-normal sm:pr-[26px]">°C</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-foam-deep">
+              <tbody>
                 {logs.map((l) => (
-                  <tr key={l.id}>
-                    <td className="px-5 sm:px-6 py-2">
-                      <button type="button" className="text-lake hover:underline" onClick={() => { setDate(l.log_date); setUnitId(l.unit_id) }}>
-                        {l.log_date}
+                  <tr key={l.id} className="border-t border-line text-text">
+                    <td className="px-[22px] py-[11px] sm:px-[26px]">
+                      <button
+                        type="button"
+                        className="text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                        onClick={() => {
+                          setDate(l.log_date)
+                          setUnitId(l.unit_id)
+                        }}
+                      >
+                        {formatDate(l.log_date, { locale })}
                       </button>
                     </td>
-                    <td className="px-2 py-2 text-right">{fmt(l.mortality)}</td>
-                    <td className="px-2 py-2 text-right">{fmt(l.counted_alive)}</td>
-                    <td className="px-2 py-2">
-                      {l.live_feed.map((f) => `${LIVE_FEED_LABEL[f.kind]} ${fmt(f.quantity, 2)} ${f.unit}`).join(', ') || '—'}
+                    <td className="px-2 py-[11px] text-right">{fmt(l.mortality)}</td>
+                    <td className="px-2 py-[11px] text-right">{fmt(l.counted_alive)}</td>
+                    <td className="px-2 py-[11px] text-muted">
+                      {l.live_feed.map((f) => `${label(t, 'liveFeed', f.kind)} ${fmt(f.quantity, 2)} ${label(t, 'unit', f.unit)}`).join(', ') || '—'}
                     </td>
-                    <td className="px-2 py-2 text-right">{fmt(l.temperature_c, 1)}</td>
+                    <td className="px-2 py-[11px] pr-[22px] text-right sm:pr-[26px]">{fmt(l.temperature_c, 1)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </Card>
+      </PaperCard>
     </>
   )
 }
@@ -415,6 +421,7 @@ function useUnits() {
 }
 
 function GradeForm({ batch }) {
+  const t = useT()
   const { showToast } = useToast()
   const units = useUnits()
   const grade = useMutation(api.nursery.gradeFingerlings)
@@ -424,7 +431,7 @@ function GradeForm({ batch }) {
   const [rows, setRows] = useState([{ unitId: '', quantity: '', abwG: '', batchNumber: '' }])
   const [saving, setSaving] = useState(false)
   const here = batch.units.find((u) => u.id === unitId)
-  const total = rows.reduce((t, r) => t + (num(r.quantity) || 0), 0) + (num(culls) || 0)
+  const total = rows.reduce((sum, r) => sum + (num(r.quantity) || 0), 0) + (num(culls) || 0)
   const setRow = (i, k) => (e) => setRows((p) => p.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
 
   const submit = async (e) => {
@@ -441,25 +448,23 @@ function GradeForm({ batch }) {
       })
       showToast(
         'success',
-        `Graded into ${r.childBatchIds.length} batch(es)${r.unaccounted ? `; ${fmt(r.unaccounted)} unaccounted` : ''}`,
+        t('hatcheryPage.larval.graded', { count: r.childBatchIds.length }) +
+          (r.unaccounted ? ` ${t('hatcheryPage.larval.unaccounted', { n: fmt(r.unaccounted) })}` : ''),
       )
       setRows([{ unitId: '', quantity: '', abwG: '', batchNumber: '' }])
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not grade'))
+      showToast('error', errorMessage(err, t('hatcheryPage.larval.gradeFailed')))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Card>
-      <form onSubmit={submit} noValidate className="space-y-5">
-        <p className="text-sm text-muted">
-          Grade the whole tank: each size class opens a fingerling batch in its tank. Fish not counted into a grade or culls are recorded as
-          unaccounted.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Tank graded" htmlFor="g-unit">
+    <PaperCard title={t('hatcheryPage.larval.tabGrade')}>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+        <p className={HINT}>{t('hatcheryPage.larval.gradeHint')}</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t('hatcheryPage.larval.tankGraded')} htmlFor="g-unit">
             <Select id="g-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
               {batch.units.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -468,57 +473,58 @@ function GradeForm({ batch }) {
               ))}
             </Select>
           </Field>
-          <Field label="Date" htmlFor="g-date">
+          <Field label={t('hatcheryPage.date')} htmlFor="g-date">
             <Input id="g-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         </div>
         {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
-            <Field label={`Grade ${String.fromCharCode(65 + i)} to`} htmlFor={`g-u-${i}`}>
+          <div key={i} className="grid grid-cols-2 items-end gap-3 border-t border-line pt-4 sm:grid-cols-4">
+            <Field label={t('hatcheryPage.larval.gradeTo', { grade: String.fromCharCode(65 + i) })} htmlFor={`g-u-${i}`}>
               <Select id={`g-u-${i}`} value={r.unitId} onChange={setRow(i, 'unitId')}>
-                <option value="">Choose…</option>
+                <option value="">{t('hatcheryPage.choose')}</option>
                 {units
                   .filter((u) => u.id === unitId || u.count <= 0)
                   .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
               </Select>
             </Field>
-            <Field label="Fish" htmlFor={`g-q-${i}`}>
+            <Field label={t('hatcheryPage.brood.fish')} htmlFor={`g-q-${i}`}>
               <Input id={`g-q-${i}`} type="number" inputMode="numeric" value={r.quantity} onChange={setRow(i, 'quantity')} />
             </Field>
-            <Field label="ABW (g)" htmlFor={`g-a-${i}`}>
+            <Field label={t('hatcheryPage.abw')} htmlFor={`g-a-${i}`}>
               <Input id={`g-a-${i}`} type="number" inputMode="decimal" step="any" value={r.abwG} onChange={setRow(i, 'abwG')} />
             </Field>
-            <Field label="Batch number" htmlFor={`g-b-${i}`}>
-              <Input id={`g-b-${i}`} value={r.batchNumber} onChange={setRow(i, 'batchNumber')} placeholder="Automatic" />
+            <Field label={t('hatcheryPage.larval.batchNumber')} htmlFor={`g-b-${i}`}>
+              <Input id={`g-b-${i}`} value={r.batchNumber} onChange={setRow(i, 'batchNumber')} placeholder={t('hatcheryPage.larval.automatic')} />
             </Field>
           </div>
         ))}
         <div className="flex flex-wrap items-end gap-4">
           {rows.length < 20 && (
-            <Button variant="ghost" size="sm" onClick={() => setRows((p) => [...p, { unitId: '', quantity: '', abwG: '', batchNumber: '' }])}>
-              Add grade
-            </Button>
+            <GhostButton size="sm" icon={Plus} onClick={() => setRows((p) => [...p, { unitId: '', quantity: '', abwG: '', batchNumber: '' }])}>
+              {t('hatcheryPage.larval.addGrade')}
+            </GhostButton>
           )}
-          <Field label="Culls" htmlFor="g-culls" className="w-32">
+          <Field label={t('hatcheryPage.larval.culls')} htmlFor="g-culls" className="w-32">
             <Input id="g-culls" type="number" inputMode="numeric" value={culls} onChange={(e) => setCulls(e.target.value)} />
           </Field>
-          <p className="text-sm text-muted pb-3 tabular-nums">
-            {fmt(total)} of {fmt(here?.count)} accounted for
+          <p className={`pb-3 tabular-nums ${HINT}`}>
+            {t('hatcheryPage.larval.accounted', { done: fmt(total), total: fmt(here?.count) })}
           </p>
         </div>
-        <Button type="submit" disabled={saving || !rows.some((r) => r.unitId)}>
-          {saving ? 'Grading…' : 'Grade'}
-        </Button>
+        <div className="flex justify-end">
+          <GradientButton type="submit" variant="solid" disabled={saving || !rows.some((r) => r.unitId)}>
+            {saving ? t('hatcheryPage.larval.grading') : t('hatcheryPage.larval.tabGrade')}
+          </GradientButton>
+        </div>
       </form>
-    </Card>
+    </PaperCard>
   )
 }
 
 function MoveForm({ batch }) {
+  const t = useT()
   const { showToast } = useToast()
   const units = useUnits()
   const transfer = useMutation(api.nursery.transferFingerlings)
@@ -539,22 +545,20 @@ function MoveForm({ batch }) {
           .filter((l) => l.destinationUnitId)
           .map((l) => ({ destinationUnitId: l.destinationUnitId, quantity: num(l.quantity), abwG: num(l.abwG) })),
       })
-      showToast('success', 'Fingerlings moved')
+      showToast('success', t('hatcheryPage.larval.moved'))
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not move the fish'))
+      showToast('error', errorMessage(err, t('hatcheryPage.larval.moveFailed')))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Card>
-      <form onSubmit={submit} noValidate className="space-y-5">
-        <p className="text-sm text-muted">
-          Move fingerlings to nursery or grow-out units. Into an empty unit the batch moves with them; into an occupied one they join its batch.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="From" htmlFor="m-src">
+    <PaperCard title={t('hatcheryPage.larval.tabMove')}>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+        <p className={HINT}>{t('hatcheryPage.larval.moveHint')}</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t('hatcheryPage.larval.from')} htmlFor="m-src">
             <Select id="m-src" value={sourceUnitId} onChange={(e) => setSource(e.target.value)}>
               {batch.units.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -563,55 +567,97 @@ function MoveForm({ batch }) {
               ))}
             </Select>
           </Field>
-          <Field label="Date" htmlFor="m-date">
+          <Field label={t('hatcheryPage.date')} htmlFor="m-date">
             <Input id="m-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         </div>
         {lines.map((l, i) => (
-          <div key={i} className="grid grid-cols-3 gap-3 items-end">
-            <Field label="To" htmlFor={`m-u-${i}`}>
+          <div key={i} className="grid grid-cols-3 items-end gap-3 border-t border-line pt-4">
+            <Field label={t('hatcheryPage.larval.to')} htmlFor={`m-u-${i}`}>
               <Select id={`m-u-${i}`} value={l.destinationUnitId} onChange={setLine(i, 'destinationUnitId')}>
-                <option value="">Choose…</option>
+                <option value="">{t('hatcheryPage.choose')}</option>
                 {units
                   .filter((u) => u.id !== sourceUnitId)
                   .map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
-                      {u.count > 0 ? ` · ${fmt(u.count)} (${u.batch_number})` : ' · empty'}
+                      {u.count > 0 ? ` · ${fmt(u.count)} (${u.batch_number})` : ` · ${t('hatcheryPage.larval.emptyUnit')}`}
                     </option>
                   ))}
               </Select>
             </Field>
-            <Field label="Fish" htmlFor={`m-q-${i}`}>
+            <Field label={t('hatcheryPage.brood.fish')} htmlFor={`m-q-${i}`}>
               <Input id={`m-q-${i}`} type="number" inputMode="numeric" value={l.quantity} onChange={setLine(i, 'quantity')} />
             </Field>
-            <Field label="ABW (g)" htmlFor={`m-a-${i}`}>
+            <Field label={t('hatcheryPage.abw')} htmlFor={`m-a-${i}`}>
               <Input id={`m-a-${i}`} type="number" inputMode="decimal" step="any" value={l.abwG} onChange={setLine(i, 'abwG')} />
             </Field>
           </div>
         ))}
-        {lines.length < 20 && (
-          <Button variant="ghost" size="sm" onClick={() => setLines((p) => [...p, { destinationUnitId: '', quantity: '', abwG: p[0]?.abwG || '' }])}>
-            Add destination
-          </Button>
-        )}
-        <div>
-          <Button type="submit" disabled={saving || !lines.some((l) => l.destinationUnitId)}>
-            {saving ? 'Moving…' : 'Move fingerlings'}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {lines.length < 20 ? (
+            <GhostButton size="sm" icon={Plus} onClick={() => setLines((p) => [...p, { destinationUnitId: '', quantity: '', abwG: p[0]?.abwG || '' }])}>
+              {t('hatcheryPage.larval.addDestination')}
+            </GhostButton>
+          ) : (
+            <span />
+          )}
+          <GradientButton type="submit" variant="solid" disabled={saving || !lines.some((l) => l.destinationUnitId)}>
+            {saving ? t('hatcheryPage.larval.moving') : t('hatcheryPage.larval.moveFish')}
+          </GradientButton>
         </div>
       </form>
-    </Card>
+    </PaperCard>
+  )
+}
+
+function ReverseModal({ onClose, onConfirm }) {
+  const t = useT()
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!reason.trim()) return
+    setSaving(true)
+    const ok = await onConfirm(reason.trim())
+    setSaving(false)
+    if (ok) onClose()
+  }
+  return (
+    <Modal
+      as="form"
+      onSubmit={submit}
+      noValidate
+      size="sm"
+      onClose={onClose}
+      showClose
+      title={t('hatcheryPage.larval.reverseTitle')}
+      footer={
+        <>
+          <GhostButton type="button" onClick={onClose}>{t('common.cancel')}</GhostButton>
+          <GradientButton type="submit" variant="solid" size="sm" disabled={saving || !reason.trim()}>
+            {saving ? t('common.saving') : t('hatcheryPage.larval.reverse')}
+          </GradientButton>
+        </>
+      }
+    >
+      <Field label={t('hatcheryPage.larval.reverseReason')} htmlFor="rv-reason" required>
+        <Textarea id="rv-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+      </Field>
+    </Modal>
   )
 }
 
 function SellForm({ batch }) {
+  const t = useT()
+  const { locale } = useLocale()
   const { user } = useAuth()
   const { showToast } = useToast()
   const customers = useQuery(api.sales.listCustomers, user ? {} : 'skip')
   const movements = useQuery(api.nursery.listMovements, { batchId: batch.id })
   const dispatch = useMutation(api.nursery.dispatchFingerlings)
   const reverse = useMutation(api.nursery.reverseMovement)
+  const [reversing, setReversing] = useState(null)
   const [form, setForm] = useState({
     kind: 'sale',
     unitId: batch.units[0]?.id || '',
@@ -646,38 +692,38 @@ function SellForm({ batch }) {
         paymentStatus: form.kind === 'sale' ? form.paymentStatus : undefined,
         withdrawalOverrideReason: form.withdrawalOverrideReason || undefined,
       })
-      showToast('success', form.kind === 'sale' ? 'Sale recorded' : 'Dispatch recorded')
+      showToast('success', form.kind === 'sale' ? t('hatcheryPage.larval.saleSaved') : t('hatcheryPage.larval.dispatchSaved'))
       setForm((p) => ({ ...p, quantity: '', withdrawalOverrideReason: '' }))
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not save'))
+      showToast('error', errorMessage(err, t('hatcheryPage.saveFailed')))
     } finally {
       setSaving(false)
     }
   }
 
-  const undo = async (id) => {
-    const reason = typeof window !== 'undefined' ? window.prompt('Why reverse this?') : null
-    if (!reason) return
+  const undo = async (reason) => {
     try {
-      await reverse({ id, reason })
-      showToast('success', 'Reversed; the fish are back on record')
+      await reverse({ id: reversing, reason })
+      showToast('success', t('hatcheryPage.larval.reversed'))
+      return true
     } catch (err) {
-      showToast('error', errorMessage(err, 'Could not reverse'))
+      showToast('error', errorMessage(err, t('hatcheryPage.larval.reverseFailed')))
+      return false
     }
   }
 
   return (
     <>
-      <Card>
-        <form onSubmit={submit} noValidate className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Fingerlings are" htmlFor="d-kind">
+      <PaperCard title={t('hatcheryPage.larval.tabSell')}>
+        <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label={t('hatcheryPage.larval.fingerlingsAre')} htmlFor="d-kind">
               <Select id="d-kind" value={form.kind} onChange={set('kind')}>
-                <option value="sale">Sold</option>
-                <option value="external">Sent to another farm</option>
+                <option value="sale">{t('hatcheryPage.larval.sold')}</option>
+                <option value="external">{t('hatcheryPage.larval.sentFarm')}</option>
               </Select>
             </Field>
-            <Field label="From" htmlFor="d-unit">
+            <Field label={t('hatcheryPage.larval.from')} htmlFor="d-unit">
               <Select id="d-unit" value={form.unitId} onChange={set('unitId')}>
                 {batch.units.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -686,86 +732,102 @@ function SellForm({ batch }) {
                 ))}
               </Select>
             </Field>
-            <Field label="Date" htmlFor="d-date">
+            <Field label={t('hatcheryPage.date')} htmlFor="d-date">
               <Input id="d-date" type="date" value={form.date} onChange={set('date')} />
             </Field>
-            <Field label="Fish" htmlFor="d-q" required>
+            <Field label={t('hatcheryPage.brood.fish')} htmlFor="d-q" required>
               <Input id="d-q" type="number" inputMode="numeric" value={form.quantity} onChange={set('quantity')} />
             </Field>
-            <Field label="ABW (g)" htmlFor="d-a" required>
+            <Field label={t('hatcheryPage.abw')} htmlFor="d-a" required>
               <Input id="d-a" type="number" inputMode="decimal" step="any" value={form.abwG} onChange={set('abwG')} />
             </Field>
             {form.kind === 'sale' ? (
               <>
-                <Field label="Price per fish" htmlFor="d-p" required hint={total ? `Total ${fmt(total, 2)}` : undefined}>
+                <Field
+                  label={t('hatcheryPage.larval.pricePerFish')}
+                  htmlFor="d-p"
+                  required
+                  hint={total ? t('hatcheryPage.larval.total', { amount: fmt(total, 2) }) : undefined}
+                >
                   <Input id="d-p" type="number" inputMode="decimal" step="any" value={form.pricePerUnit} onChange={set('pricePerUnit')} />
                 </Field>
-                <Field label="Customer" htmlFor="d-c">
+                <Field label={t('hatcheryPage.larval.customer')} htmlFor="d-c">
                   <Select id="d-c" value={form.customerId} onChange={set('customerId')}>
-                    <option value="">Other buyer</option>
+                    <option value="">{t('hatcheryPage.larval.otherBuyer')}</option>
                     {(customers || []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </Select>
                 </Field>
                 {!form.customerId && (
-                  <Field label="Buyer name" htmlFor="d-cn" required>
+                  <Field label={t('hatcheryPage.larval.buyerName')} htmlFor="d-cn" required>
                     <Input id="d-cn" value={form.customerName} onChange={set('customerName')} />
                   </Field>
                 )}
-                <Field label="Payment" htmlFor="d-ps">
+                <Field label={t('hatcheryPage.larval.payment')} htmlFor="d-ps">
                   <Select id="d-ps" value={form.paymentStatus} onChange={set('paymentStatus')}>
-                    <option value="pending">Pending</option>
-                    <option value="partial">Partial</option>
-                    <option value="paid">Paid</option>
+                    <option value="pending">{t('hatcheryPage.larval.pay.pending')}</option>
+                    <option value="partial">{t('hatcheryPage.larval.pay.partial')}</option>
+                    <option value="paid">{t('hatcheryPage.larval.pay.paid')}</option>
                   </Select>
                 </Field>
               </>
             ) : (
-              <Field label="Receiving farm" htmlFor="d-f" required>
+              <Field label={t('hatcheryPage.larval.receivingFarm')} htmlFor="d-f" required>
                 <Input id="d-f" value={form.destinationFarm} onChange={set('destinationFarm')} />
               </Field>
             )}
-            <Field label="Withdrawal override reason" htmlFor="d-w" hint="Only if the fish are in a treatment withdrawal period" className="sm:col-span-2">
+            <Field
+              label={t('hatcheryPage.larval.overrideReason')}
+              htmlFor="d-w"
+              hint={t('hatcheryPage.larval.overrideHint')}
+              className="sm:col-span-2"
+            >
               <Input id="d-w" value={form.withdrawalOverrideReason} onChange={set('withdrawalOverrideReason')} />
             </Field>
           </div>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : form.kind === 'sale' ? 'Record sale' : 'Record dispatch'}
-          </Button>
+          <div className="flex justify-end">
+            <GradientButton type="submit" variant="solid" disabled={saving}>
+              {saving ? t('common.saving') : form.kind === 'sale' ? t('hatcheryPage.larval.recordSale') : t('hatcheryPage.larval.recordDispatch')}
+            </GradientButton>
+          </div>
         </form>
-      </Card>
-      <Card>
-        <CardHeader title="Fish out of this batch" />
+      </PaperCard>
+      <PaperCard title={t('hatcheryPage.larval.fishOut')} meta={movements ? movements.length : undefined}>
         {!movements || movements.length === 0 ? (
-          <p className="text-sm text-muted">None yet.</p>
+          <p className={`border-t border-line py-[11px] ${HINT}`}>{t('hatcheryPage.larval.noneYet')}</p>
         ) : (
-          <ul className="divide-y divide-foam-deep -my-2">
+          <ul className="flex flex-col">
             {movements.map((m) => (
-              <li key={m.id} className="py-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-chart-ink">
-                    {m.date} · {fmt(m.quantity)} {m.kind === 'transfer' ? 'moved' : m.kind === 'sale' ? 'sold' : 'sent'} to {m.destination || '—'}
-                  </p>
-                  <p className="text-sm text-muted">
-                    From {m.source_unit}
-                    {m.amount != null ? ` · ${fmt(m.amount, 2)} (${fmt(m.price_per_unit, 2)} each)` : ''}
-                  </p>
+              <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-line py-[11px]">
+                <div className="flex min-w-0 flex-col gap-[2px]">
+                  <span className="text-[14px] leading-[18px] text-text">
+                    {t(`hatcheryPage.larval.mv.${m.kind === 'transfer' ? 'moved' : m.kind === 'sale' ? 'sold' : 'sent'}`, {
+                      date: formatDate(m.date, { locale }),
+                      n: fmt(m.quantity),
+                      dest: m.destination || '—',
+                    })}
+                  </span>
+                  <span className={SUB}>
+                    {t('hatcheryPage.larval.fromUnit', { unit: m.source_unit })}
+                    {m.amount != null ? ` · ${t('hatcheryPage.larval.amountEach', { amount: fmt(m.amount, 2), each: fmt(m.price_per_unit, 2) })}` : ''}
+                  </span>
                 </div>
                 {m.status === 'reversed' ? (
-                  <Pill tone="warn">reversed</Pill>
+                  <Pill tone="warn">{t('hatcheryPage.larval.reversedPill')}</Pill>
                 ) : (
-                  <Button size="sm" variant="ghost" onClick={() => undo(m.id)}>
-                    Reverse
-                  </Button>
+                  <IfPermitted permission="hatchery.correct">
+                    <GhostButton size="sm" tone="danger" onClick={() => setReversing(m.id)}>
+                      {t('hatcheryPage.larval.reverse')}
+                    </GhostButton>
+                  </IfPermitted>
                 )}
               </li>
             ))}
           </ul>
         )}
-      </Card>
+      </PaperCard>
+      {reversing && <ReverseModal onClose={() => setReversing(null)} onConfirm={undo} />}
     </>
   )
 }

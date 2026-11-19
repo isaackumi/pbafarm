@@ -1,42 +1,49 @@
 import { INSPECTION_KINDS } from './InspectionForm'
-import { Pill } from './ui'
+import TraceTimeline from './trace/TraceTimeline'
+import { formatDate } from '../lib/format'
+import { useLocale, useT } from '../lib/i18n/context'
 
-const RESULT_TONE = {
-  ok: 'green',
-  needs_attention: 'amber',
-  failed: 'red',
-}
-const RESULT_LABEL = { ok: 'OK', needs_attention: 'Needs attention', failed: 'Failed' }
+const RESULT_TONE = { ok: 'good', needs_attention: 'warn', failed: 'alert' }
+const RESULT_TEXT = { good: 'text-good', warn: 'text-warn', alert: 'text-alert' }
 
-/** List of inspections and maintenance jobs, newest first. */
+/** List of inspections and maintenance jobs, newest first, as the Paper 26 timeline. */
 export default function InspectionHistory({ rows, showUnit = false }) {
-  if (!rows) return <p className="p-5 text-sm text-muted">Loading…</p>
-  if (!rows.length) return <p className="p-5 text-sm text-muted">Nothing logged yet.</p>
+  const t = useT()
+  const { locale } = useLocale()
+  if (!rows) return <p className="p-5 text-[13px] leading-[18px] text-muted">{t('ui.loading')}</p>
+  if (!rows.length) return <p className="p-5 text-[13px] leading-[18px] text-muted">{t('tracePage.inspection.empty')}</p>
   return (
-    <ul className="divide-y divide-line text-sm">
-      {rows.map((r) => {
-        const faults = (r.checklist || []).filter((c) => !c.ok)
-        return (
-          <li key={r._id} className="px-6 py-[14px]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span>
-                <span className="tabular-nums">{r.date}</span>{' '}
-                <span className="font-medium">{INSPECTION_KINDS.find((k) => k.value === r.kind)?.label || r.kind}</span>
-                {r.equipmentName ? ` · ${r.equipmentName}` : ''}
-                {showUnit && r.unitName ? ` · ${r.unitName}` : ''}
+    <div className="p-5">
+      <TraceTimeline
+        label={t('tracePage.inspection.label')}
+        items={rows.map((r) => {
+          const faults = (r.checklist || []).filter((c) => !c.ok)
+          const tone = RESULT_TONE[r.result] || 'neutral'
+          const kind = INSPECTION_KINDS.find((k) => k.value === r.kind)
+          return {
+            key: r._id,
+            tone,
+            label: t.or(`tracePage.inspection.kind.${r.kind}`, kind?.label || r.kind),
+            title: (
+              <span className="flex flex-wrap items-baseline justify-between gap-2">
+                <span>
+                  {[formatDate(r.date, { locale }), r.equipmentName, showUnit ? r.unitName : null].filter(Boolean).join(' · ')}
+                </span>
+                <span className={`text-[13px] font-normal ${RESULT_TEXT[tone] || 'text-muted'}`}>
+                  {t.or(`tracePage.inspection.result.${r.result}`, r.result)}
+                </span>
               </span>
-              <Pill tone={RESULT_TONE[r.result] || 'neutral'}>{RESULT_LABEL[r.result]}</Pill>
-            </div>
-            {faults.length > 0 && (
-              <p className="mt-1 text-muted">
-                Faults: {faults.map((c) => `${c.item}${c.note ? ` (${c.note})` : ''}`).join('; ')}
-              </p>
-            )}
-            {r.findings && <p className="mt-1 text-muted">{r.findings}</p>}
-            {r.nextDueOn && <p className="mt-1 text-xs text-muted">Next due {r.nextDueOn}</p>}
-          </li>
-        )
-      })}
-    </ul>
+            ),
+            sub: [
+              faults.length ? t('tracePage.inspection.faults', { list: faults.map((c) => `${c.item}${c.note ? ` (${c.note})` : ''}`).join('; ') }) : null,
+              r.findings,
+              r.nextDueOn ? t('tracePage.inspection.nextDue', { date: formatDate(r.nextDueOn, { locale }) }) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || null,
+          }
+        })}
+      />
+    </div>
   )
 }
