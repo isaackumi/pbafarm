@@ -3464,6 +3464,139 @@
       "quietHelper": "Suspend SMS, WhatsApp et e-mail la nuit. L’application reçoit toujours ; heure de la ferme.",
       "quietFrom": "De",
       "quietUntil": "Jusqu’à"
+    },
+    "picker": {
+      "placeholder": "Rechercher un utilisateur ou saisir un nom…",
+      "loading": "Chargement des utilisateurs…",
+      "noMatch": "Aucun utilisateur trouvé — continuez pour utiliser ce nom",
+      "none": "Aucun utilisateur chargé — saisissez un nom"
+    },
+    "team": {
+      "invite": "Inviter un membre",
+      "members": "Membres",
+      "rolesSummary": "Rôles de cette organisation",
+      "search": "Rechercher des membres",
+      "tab": {
+        "all": "Tous",
+        "active": "Actifs",
+        "invited": "Invités"
+      },
+      "col": {
+        "name": "Nom",
+        "role": "Rôle",
+        "sites": "Sites",
+        "status": "Statut"
+      },
+      "role": {
+        "owner": "Propriétaire",
+        "admin": "Administrateur",
+        "manager": "Responsable",
+        "field_staff": "Personnel terrain",
+        "viewer": "Lecteur"
+      },
+      "roleBlurb": {
+        "owner": "Facturation, sites, tout",
+        "admin": "Paramètres et membres",
+        "manager": "Tous les sites · approuve",
+        "field_staff": "Saisie quotidienne seulement",
+        "viewer": "Lecture seule"
+      },
+      "memberCount": {
+        "one": "{count} membre",
+        "other": "{count} membres"
+      },
+      "status": {
+        "active": "Actif",
+        "suspended": "Suspendu",
+        "invited": "Invité",
+        "expired": "Invitation expirée"
+      },
+      "allSites": "Tous",
+      "noSites": "Aucun",
+      "siteCount": {
+        "one": "{count} site",
+        "other": "{count} sites"
+      },
+      "withdraw": "Retirer",
+      "empty": "Aucun membre ne correspond.",
+      "updateFailed": "Impossible de mettre à jour le membre",
+      "save": "Enregistrer",
+      "suspend": "Suspendre",
+      "reactivate": "Réactiver",
+      "notFound": "Membre introuvable",
+      "backToMembers": "Tous les membres",
+      "roleCard": "Rôle",
+      "roleHere": "Rôle dans cette organisation",
+      "roleHelper": "Les rôles ne s'appliquent qu'à cette organisation.",
+      "ownRole": "Vous ne pouvez pas modifier votre propre rôle.",
+      "siteScope": "Périmètre des sites",
+      "allLocations": "Tous les sites",
+      "selected": "Sélection",
+      "allLocationsHelper": "Tous les sites, y compris ceux ajoutés plus tard.",
+      "noLocations": "Aucun site pour l'instant.",
+      "effective": "Permissions effectives",
+      "grantedCount": {
+        "one": "{count} accordée",
+        "other": "{count} accordées"
+      },
+      "noPermissions": "Ce rôle n'accorde aucune permission.",
+      "dangerTitle": "Adhésion",
+      "remove": "Retirer de l'organisation",
+      "removeHelper": "Son accès aux autres organisations reste inchangé.",
+      "removeAction": "Retirer",
+      "removeConfirm": "Retirer {email} de cette organisation ?"
+    },
+    "users": {
+      "phoneFailed": "Impossible d'enregistrer le numéro",
+      "mobileFor": "Numéro mobile de {name}",
+      "inviteSent": "Invitation envoyée.",
+      "inviteFailed": "Échec de l'invitation",
+      "joined": "{email} a rejoint l'entreprise.",
+      "declined": "{email} refusé.",
+      "joinFailed": "Impossible de traiter la demande",
+      "roleFailed": "Impossible de modifier le rôle",
+      "passwordShort": "Le mot de passe temporaire doit contenir au moins 6 caractères",
+      "created": "{email} créé. Transmettez le mot de passe temporaire de façon sûre — il devra être changé à la première connexion.",
+      "createFailed": "Impossible de créer l'utilisateur",
+      "updateFailed": "Impossible de mettre à jour l'utilisateur",
+      "legacyRole": {
+        "user": "Utilisateur",
+        "admin": "Administrateur",
+        "super_admin": "Super administrateur"
+      },
+      "mobile": "Mobile",
+      "accessLevel": "Niveau d'accès",
+      "roleFor": "Niveau d'accès de {name}",
+      "deactivate": "Désactiver",
+      "inactive": "Inactif",
+      "mustChange": "Doit changer son mot de passe",
+      "inviteTitle": "Inviter par e-mail",
+      "inviteMeta": "Lien à usage unique · expire sous 7 jours",
+      "email": "E-mail",
+      "sending": "Envoi…",
+      "sendInvite": "Envoyer l'invitation",
+      "inviteLinkHelp": "Ou partagez ce lien directement. Il ne fonctionne que pour l'e-mail invité.",
+      "inviteLink": "Lien d'invitation",
+      "copy": "Copier",
+      "joinTitle": "Demandes d'adhésion",
+      "pendingCount": {
+        "one": "{count} en attente",
+        "other": "{count} en attente"
+      },
+      "noJoin": "Aucune demande en attente.",
+      "joinAs": "{email} · en tant que {role}",
+      "approve": "Approuver",
+      "decline": "Refuser",
+      "joinHelp": "Personnes connectées avec un e-mail invité ayant demandé à rejoindre. N'approuvez que les personnes attendues.",
+      "createTitle": "Ajouter un identifiant",
+      "createMeta": "Mot de passe temporaire · changé à la première connexion",
+      "name": "Nom",
+      "tempPassword": "Mot de passe temporaire",
+      "creating": "Création…",
+      "create": "Créer l'utilisateur",
+      "passwordHint": "Au moins 6 caractères. À changer après la connexion.",
+      "accountsTitle": "Comptes de connexion",
+      "noUsers": "Aucun utilisateur pour cette entreprise."
     }
   },
   "country": {

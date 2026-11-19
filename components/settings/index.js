@@ -1,4 +1,13 @@
 import SettingsNav from '../SettingsNav'
+import { useCompanySettings } from '../../contexts/CompanySettingsContext'
+import { useT } from '../../lib/i18n/context'
+
+/** "Settings · <company>" eyebrow, optionally followed by more crumbs. */
+export function useSettingsEyebrow(...crumbs) {
+  const t = useT()
+  const { displayName } = useCompanySettings()
+  return [t('settingsUi.eyebrow', { company: displayName }), ...crumbs].filter(Boolean).join(' · ')
+}
 
 /**
  * P-SETTINGS pattern (Paper 31 Account ACU-0, 22 Roles 57B-0): the settings
@@ -207,6 +216,20 @@ export function LineTabs({ tabs = [], value, onChange, label, className = '' }) 
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/** 12px label above a Paper field. Children get FIELD styling from the caller. */
+export function SettingsField({ label, htmlFor, hint, required = false, children, className = '' }) {
+  return (
+    <div className={`flex min-w-0 flex-col ${className}`}>
+      <label htmlFor={htmlFor} className={FIELD_LABEL}>
+        {label}
+        {required && <span aria-hidden className="text-alert"> *</span>}
+      </label>
+      {children}
+      {hint && <span className="mt-1 text-[12px] leading-4 text-faint">{hint}</span>}
     </div>
   )
 }

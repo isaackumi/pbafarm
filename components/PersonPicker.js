@@ -2,7 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
-import { Input } from './ui'
+import { Avatar, Input } from './ui'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Searchable person field: pick a company user or type a free-text name.
@@ -13,11 +14,12 @@ export default function PersonPicker({
   name,
   value = '',
   onChange,
-  placeholder = 'Search users or type a name…',
+  placeholder,
   disabled = false,
   className = '',
   required = false,
 }) {
+  const t = useT()
   const { user } = useAuth()
   const directory = useQuery(api.users.listDirectory, user ? {} : 'skip')
   const listId = useId()
@@ -110,7 +112,7 @@ export default function PersonPicker({
         disabled={disabled}
         required={required}
         value={value}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('settingsUi.picker.placeholder')}
         onChange={(e) => {
           emit(e.target.value)
           setOpen(true)
@@ -122,34 +124,31 @@ export default function PersonPicker({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-foam-deep bg-surface shadow-md py-1"
+          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-input border border-line-strong bg-surface p-1 shadow-[var(--shadow-card)]"
         >
           {directory === undefined ? (
-            <li className="px-3.5 py-2 text-sm text-muted">Loading users…</li>
+            <li className="px-3.5 py-2 text-[13px] text-muted">{t('settingsUi.picker.loading')}</li>
           ) : filtered.length === 0 ? (
-            <li className="px-3.5 py-2 text-sm text-muted">
-              {value?.trim()
-                ? 'No matching user — keep typing to use this name'
-                : 'No users loaded — type a name'}
+            <li className="px-3.5 py-2 text-[13px] text-muted">
+              {value?.trim() ? t('settingsUi.picker.noMatch') : t('settingsUi.picker.none')}
             </li>
           ) : (
             filtered.map((p, i) => (
               <li key={p.id} role="option" aria-selected={i === highlight}>
                 <button
                   type="button"
-                  className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
-                    i === highlight
-                      ? 'bg-lake-soft text-chart-ink'
-                      : 'hover:bg-foam text-chart-ink'
+                  className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-[14px] leading-[18px] text-text transition-colors ${
+                    i === highlight ? 'bg-surface-2' : 'hover:bg-surface-2'
                   }`}
                   onMouseEnter={() => setHighlight(i)}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => pick(p)}
                 >
-                  <span className="font-medium">{p.name}</span>
-                  {p.email ? (
-                    <span className="block text-xs text-muted">{p.email}</span>
-                  ) : null}
+                  <Avatar name={p.name} size={24} />
+                  <span className="min-w-0">
+                    <span className="block truncate">{p.name}</span>
+                    {p.email ? <span className="block truncate text-[12px] leading-4 text-muted">{p.email}</span> : null}
+                  </span>
                 </button>
               </li>
             ))

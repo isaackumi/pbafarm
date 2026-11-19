@@ -1,36 +1,67 @@
-// pages/users.js (Updated)
+import { useRouter } from 'next/router'
+import { UserRound } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import UserManagement from '../components/UserManagement'
-import MembersPanel from '../components/MembersPanel'
+import MembersPanel, { MemberDetail } from '../components/MembersPanel'
 import RolesPanel from '../components/RolesPanel'
-import { PageHeader, FormPage } from '../components/ui'
+import { GradientButton } from '../components/ui'
+import { SettingsFrame, useSettingsEyebrow } from '../components/settings'
+import { useT } from '../lib/i18n/context'
 
+/**
+ * Settings · Members (Paper 14 Team 38C-0), one member (23 Member access
+ * 5OB-0, `?member=<userId>`) and Roles & permissions (22, `?view=roles`).
+ */
 export default function UsersPage() {
+  const router = useRouter()
+  const t = useT()
+  const eyebrow = useSettingsEyebrow()
+  const view = router.query.view === 'roles' ? 'roles' : 'members'
+  const memberId = typeof router.query.member === 'string' ? router.query.member : null
+
+  if (memberId) {
+    return (
+      <ProtectedRoute permission="org.members.manage">
+        <MemberDetail
+          userId={memberId}
+          renderShell={({ name, actions, children }) => (
+            <Layout
+              title={name || t('settingsUi.nav.members')}
+              eyebrow={[eyebrow, t('settingsUi.nav.members'), name].filter(Boolean).join(' · ')}
+              actions={actions}
+            >
+              <SettingsFrame active="members">{children}</SettingsFrame>
+            </Layout>
+          )}
+        />
+      </ProtectedRoute>
+    )
+  }
+
   return (
     <ProtectedRoute permission="org.members.manage">
-      <Layout title="User Management">
-        <FormPage width="full">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Users' },
-            ]}
-            description="Manage farm users, roles, and access."
-            related={[
-              { label: 'Company settings', href: '/company-settings' },
-              { label: 'Approvals', href: '/approvals' },
-            ]}
-          />
-          <div className="space-y-6">
-            <MembersPanel />
-            <div id="roles" className="scroll-mt-24">
-              <RolesPanel />
-            </div>
-            <UserManagement />
-          </div>
-        </FormPage>
+      <Layout
+        title={t('settingsUi.nav.label')}
+        eyebrow={eyebrow}
+        actions={
+          view === 'members' ? (
+            <GradientButton icon={UserRound} href="#invite">
+              {t('settingsUi.team.invite')}
+            </GradientButton>
+          ) : null
+        }
+      >
+        <SettingsFrame active={view}>
+          {view === 'roles' ? (
+            <RolesPanel />
+          ) : (
+            <>
+              <MembersPanel />
+              <UserManagement />
+            </>
+          )}
+        </SettingsFrame>
       </Layout>
     </ProtectedRoute>
   )

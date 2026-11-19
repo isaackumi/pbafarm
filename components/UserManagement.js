@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
-import { Button, Field, Input, Select, FormCard, LoadingState } from './ui'
+import { GhostButton, GradientButton, Pill, Table } from './ui'
 import { errorMessage } from '../lib/errorMessage'
+import { useT } from '../lib/i18n/context'
+import { CardNote, FIELD, FIELD_LABEL, InlineError, InlineSuccess, SettingsCard, SettingsRow } from './settings'
 
-const ROLES = [
-  { value: 'user', label: 'User' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'super_admin', label: 'Super Admin' },
-]
+const ROLES = ['user', 'admin', 'super_admin']
 
 const EMPTY_CREATE = {
   email: '',
@@ -20,6 +18,7 @@ const EMPTY_CREATE = {
 
 /** Mobile number for phone sign-in and verification codes (SEC-006). */
 function PhoneCell({ user, disabled, onSaved, onError }) {
+  const t = useT()
   const setPhone = useMutation(api.users.setPhone)
   const [value, setValue] = useState(user.phone || '')
   const [saving, setSaving] = useState(false)
@@ -37,7 +36,7 @@ function PhoneCell({ user, disabled, onSaved, onError }) {
       setValue(result?.phone || '')
       await onSaved?.()
     } catch (err) {
-      onError(errorMessage(err, 'Could not save the phone number'))
+      onError(errorMessage(err, t('settingsUi.users.phoneFailed')))
     } finally {
       setSaving(false)
     }
@@ -45,26 +44,27 @@ function PhoneCell({ user, disabled, onSaved, onError }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Input
-        aria-label={`Mobile number for ${user.name || user.email}`}
+      <input
+        aria-label={t('settingsUi.users.mobileFor', { name: user.name || user.email })}
         type="tel"
         inputMode="tel"
         placeholder="024 412 3456"
         value={value}
         disabled={disabled || saving}
         onChange={(e) => setValue(e.target.value)}
-        className="min-w-[10rem]"
+        className={`${FIELD} w-40 py-2 font-data`}
       />
       {dirty && (
-        <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={save}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
+        <GhostButton size="sm" disabled={saving} onClick={save}>
+          {saving ? t('settingsUi.saving') : t('common.save')}
+        </GhostButton>
       )}
     </div>
   )
 }
 
 const UserManagement = () => {
+  const t = useT()
   const { user: me, hasRole } = useAuth()
   const createWithPassword = useAction(api.userAccounts.createWithPassword)
   const usersResult = useQuery(api.users.list, {})
@@ -96,9 +96,9 @@ const UserManagement = () => {
       const data = await inviteByEmail({ email: invite.email, roleKey: invite.roleKey })
       setInvite({ email: '', roleKey: 'manager' })
       setInviteLink(data?.inviteUrl || '')
-      setSuccess(data?.message || 'Invite sent.')
+      setSuccess(data?.message || t('settingsUi.users.inviteSent'))
     } catch (err) {
-      setError(err.message || 'Failed to invite')
+      setError(errorMessage(err, t('settingsUi.users.inviteFailed')))
     } finally {
       setInviting(false)
     }
@@ -111,13 +111,13 @@ const UserManagement = () => {
     try {
       if (approve) {
         await approveJoin({ inviteId: request.id })
-        setSuccess(`${request.email} joined the company.`)
+        setSuccess(t('settingsUi.users.joined', { email: request.email }))
       } else {
         await declineJoin({ inviteId: request.id })
-        setSuccess(`Declined ${request.email}.`)
+        setSuccess(t('settingsUi.users.declined', { email: request.email }))
       }
     } catch (err) {
-      setError(err.message || 'Failed to update the join request')
+      setError(errorMessage(err, t('settingsUi.users.joinFailed')))
     } finally {
       setDecidingId(null)
     }
@@ -130,7 +130,7 @@ const UserManagement = () => {
       await updateUser({ id: userId, patch: { role } })
     } catch (err) {
       console.error('Error updating user:', err)
-      setError(err.message || 'Failed to update role')
+      setError(errorMessage(err, t('settingsUi.users.roleFailed')))
     } finally {
       setSavingId(null)
     }
@@ -144,7 +144,7 @@ const UserManagement = () => {
     const emailForMessage = form.email
     try {
       if (!form.password || form.password.length < 6) {
-        throw new Error('Temporary password must be at least 6 characters')
+        throw new Error(t('settingsUi.users.passwordShort'))
       }
       const data = await createWithPassword({
         email: form.email,
@@ -153,12 +153,9 @@ const UserManagement = () => {
         password: form.password,
       })
       setForm(EMPTY_CREATE)
-      setSuccess(
-        data?.message ||
-          `Created ${emailForMessage}. Share the temporary password securely — they must change it on first login.`,
-      )
+      setSuccess(data?.message || t('settingsUi.users.created', { email: emailForMessage }))
     } catch (err) {
-      setError(err.message || 'Failed to create user')
+      setError(errorMessage(err, t('settingsUi.users.createFailed')))
     } finally {
       setCreating(false)
     }
@@ -174,265 +171,210 @@ const UserManagement = () => {
         await deactivateUser({ id })
       }
     } catch (err) {
-      setError(err.message || 'Failed to update user')
+      setError(errorMessage(err, t('settingsUi.users.updateFailed')))
     } finally {
       setSavingId(null)
     }
   }
 
-  if (loading) {
-    return <LoadingState label="Loading users…" />
-  }
+  const myId = me?._id || me?.id
+  const roleLabel = (role) => t(`settingsUi.users.legacyRole.${role || 'user'}`)
+
+  const columns = [
+    {
+      key: 'name',
+      header: t('settingsUi.team.col.name'),
+      render: (user) => user.name || '—',
+      sub: (user) => <span className="font-data">{user.email}</span>,
+    },
+    {
+      key: 'phone',
+      header: t('settingsUi.users.mobile'),
+      width: 230,
+      render: (user) => (
+        <PhoneCell
+          user={user}
+          disabled={(user.role || 'user') === 'super_admin' && !hasRole?.('super_admin')}
+          onError={setError}
+        />
+      ),
+    },
+    {
+      key: 'role',
+      header: t('settingsUi.users.accessLevel'),
+      width: 170,
+      render: (user) => {
+        const id = user._id || user.id
+        // Only a super_admin can change a super_admin account (backend).
+        const locked = (user.role || 'user') === 'super_admin' && !hasRole?.('super_admin')
+        return (
+          <select
+            aria-label={t('settingsUi.users.roleFor', { name: user.name || user.email })}
+            value={user.role || 'user'}
+            disabled={savingId === id || id === myId || locked}
+            onChange={(e) => handleRoleChange(id, e.target.value)}
+            className={`${FIELD} w-36 py-2`}
+          >
+            {ROLES.filter((r) => r !== 'super_admin' || hasRole?.('super_admin') || locked).map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
+          </select>
+        )
+      },
+    },
+    {
+      key: 'status',
+      header: t('settingsUi.team.col.status'),
+      width: 260,
+      align: 'right',
+      render: (user) => {
+        const id = user._id || user.id
+        const locked = (user.role || 'user') === 'super_admin' && !hasRole?.('super_admin')
+        return (
+          <span className="inline-flex items-center justify-end gap-2">
+            {id !== myId && !locked && (
+              <GhostButton size="sm" disabled={savingId === id} onClick={() => toggleActive(user)}>
+                {user.active === false ? t('settingsUi.team.reactivate') : t('settingsUi.users.deactivate')}
+              </GhostButton>
+            )}
+            {user.active === false ? (
+              <Pill tone="red">{t('settingsUi.users.inactive')}</Pill>
+            ) : user.mustChangePassword ? (
+              <Pill tone="amber">{t('settingsUi.users.mustChange')}</Pill>
+            ) : (
+              <Pill tone="green">{t('settingsUi.team.status.active')}</Pill>
+            )}
+          </span>
+        )
+      },
+    },
+  ]
 
   return (
-    <div className="space-y-6">
-      <FormCard
-        title="Add user"
-        subtitle="Create a login with a temporary password. They must change it after signing in."
-      >
-        <form
-          onSubmit={handleCreate}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end"
-        >
-          <Field label="Email" required>
-            <Input
+    <div className="flex flex-col gap-5">
+      <SettingsCard id="invite" title={t('settingsUi.users.inviteTitle')} meta={t('settingsUi.users.inviteMeta')}>
+        <form onSubmit={handleInvite} className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-[minmax(0,1fr)_200px_auto]">
+          <div>
+            <label htmlFor="invite-email" className={FIELD_LABEL}>{t('settingsUi.users.email')}</label>
+            <input
+              id="invite-email"
               type="email"
               required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
               autoComplete="off"
+              className={FIELD}
             />
-          </Field>
-          <Field label="Name">
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Role">
-            <Select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+          </div>
+          <div>
+            <label htmlFor="invite-role" className={FIELD_LABEL}>{t('settingsUi.team.col.role')}</label>
+            <select
+              id="invite-role"
+              value={invite.roleKey}
+              onChange={(e) => setInvite({ ...invite, roleKey: e.target.value })}
+              className={FIELD}
             >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </Select>
-          </Field>
-          <Field label="Temporary password" required hint="Min 6 characters">
-            <Input
+              {['manager', 'field_staff', 'viewer', 'admin'].map((r) => (
+                <option key={r} value={r}>{t(`settingsUi.team.role.${r}`)}</option>
+              ))}
+            </select>
+          </div>
+          <GradientButton type="submit" variant="solid" disabled={inviting}>
+            {inviting ? t('settingsUi.users.sending') : t('settingsUi.users.sendInvite')}
+          </GradientButton>
+        </form>
+        {inviteLink && (
+          <div className="flex flex-col gap-1.5 pt-4">
+            <p className="text-[12px] leading-4 text-muted">{t('settingsUi.users.inviteLinkHelp')}</p>
+            <div className="flex gap-2">
+              <input readOnly value={inviteLink} className={`${FIELD} font-data text-[13px]`} aria-label={t('settingsUi.users.inviteLink')} />
+              <GhostButton onClick={() => navigator.clipboard?.writeText(inviteLink)}>
+                {t('settingsUi.users.copy')}
+              </GhostButton>
+            </div>
+          </div>
+        )}
+      </SettingsCard>
+
+      <SettingsCard
+        title={t('settingsUi.users.joinTitle')}
+        meta={joinRequests?.length ? t('settingsUi.users.pendingCount', { count: joinRequests.length }) : undefined}
+      >
+        {joinRequests === undefined ? (
+          <CardNote>{t('common.loading')}</CardNote>
+        ) : joinRequests.length === 0 ? (
+          <CardNote>{t('settingsUi.users.noJoin')}</CardNote>
+        ) : (
+          joinRequests.map((request) => (
+            <SettingsRow
+              key={request.id}
+              label={request.name || request.email}
+              helper={t('settingsUi.users.joinAs', {
+                email: request.email,
+                role: roleLabel(request.role === 'admin' ? 'admin' : 'user'),
+              })}
+            >
+              <GradientButton size="sm" variant="solid" disabled={decidingId === request.id} onClick={() => decideJoin(request, true)}>
+                {t('settingsUi.users.approve')}
+              </GradientButton>
+              <GhostButton disabled={decidingId === request.id} onClick={() => decideJoin(request, false)}>
+                {t('settingsUi.users.decline')}
+              </GhostButton>
+            </SettingsRow>
+          ))
+        )}
+        <p className="pt-2 text-[12px] leading-4 text-muted">{t('settingsUi.users.joinHelp')}</p>
+      </SettingsCard>
+
+      <SettingsCard title={t('settingsUi.users.createTitle')} meta={t('settingsUi.users.createMeta')}>
+        <form onSubmit={handleCreate} className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+          <div>
+            <label htmlFor="create-email" className={FIELD_LABEL}>{t('settingsUi.users.email')}</label>
+            <input id="create-email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="off" className={FIELD} />
+          </div>
+          <div>
+            <label htmlFor="create-name" className={FIELD_LABEL}>{t('settingsUi.users.name')}</label>
+            <input id="create-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="off" className={FIELD} />
+          </div>
+          <div>
+            <label htmlFor="create-role" className={FIELD_LABEL}>{t('settingsUi.users.accessLevel')}</label>
+            <select id="create-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className={FIELD}>
+              <option value="user">{roleLabel('user')}</option>
+              <option value="admin">{roleLabel('admin')}</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="create-password" className={FIELD_LABEL}>{t('settingsUi.users.tempPassword')}</label>
+            <input
+              id="create-password"
               type="text"
               required
               minLength={6}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               autoComplete="new-password"
-              className="font-data tabular-nums"
+              aria-describedby="create-password-hint"
+              className={`${FIELD} font-data tabular-nums`}
             />
-          </Field>
-          <Button type="submit" disabled={creating}>
-            {creating ? 'Creating…' : 'Create user'}
-          </Button>
-        </form>
-      </FormCard>
-
-      <FormCard
-        title="Invite by email"
-        subtitle="We email a link that works once and expires in 7 days. People who already use PBA Farm for another organization can be invited too."
-      >
-        <form
-          onSubmit={handleInvite}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
-        >
-          <Field label="Email" required>
-            <Input
-              type="email"
-              required
-              value={invite.email}
-              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Role">
-            <Select
-              value={invite.roleKey}
-              onChange={(e) => setInvite({ ...invite, roleKey: e.target.value })}
-            >
-              <option value="manager">Manager</option>
-              <option value="field_staff">Field staff</option>
-              <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-            </Select>
-          </Field>
-          <Button type="submit" disabled={inviting}>
-            {inviting ? 'Sending…' : 'Send invite'}
-          </Button>
-        </form>
-        {inviteLink && (
-          <div className="mt-4 space-y-1.5">
-            <p className="text-sm text-muted">
-              Or share this link directly. It only works for the invited email.
-            </p>
-            <div className="flex gap-2">
-              <Input readOnly value={inviteLink} className="font-data text-sm" aria-label="Invite link" />
-              <Button
-                variant="secondary"
-                onClick={() => navigator.clipboard?.writeText(inviteLink)}
-              >
-                Copy
-              </Button>
-            </div>
           </div>
-        )}
-      </FormCard>
+          <GradientButton type="submit" disabled={creating}>
+            {creating ? t('settingsUi.users.creating') : t('settingsUi.users.create')}
+          </GradientButton>
+        </form>
+        <p id="create-password-hint" className="pt-2 text-[12px] leading-4 text-muted">{t('settingsUi.users.passwordHint')}</p>
+      </SettingsCard>
 
-      <FormCard
-        title="Pending join requests"
-        subtitle="People who signed in with an invited email and asked to join. Approve only people you expect."
-      >
-        {joinRequests === undefined ? (
-          <p className="text-sm text-muted">Loading…</p>
-        ) : joinRequests.length === 0 ? (
-          <p className="text-sm text-muted">No pending requests.</p>
-        ) : (
-          <ul className="divide-y divide-zinc-100">
-            {joinRequests.map((request) => (
-              <li
-                key={request.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <div className="text-sm">
-                  <p className="font-medium text-chart-ink">
-                    {request.name || request.email}
-                  </p>
-                  <p className="text-muted">
-                    <span className="font-data">{request.email}</span> · as{' '}
-                    {request.role === 'admin' ? 'Admin' : 'User'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    disabled={decidingId === request.id}
-                    onClick={() => decideJoin(request, true)}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={decidingId === request.id}
-                    onClick={() => decideJoin(request, false)}
-                  >
-                    Decline
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </FormCard>
+      <InlineSuccess>{success}</InlineSuccess>
+      <InlineError>{error}</InlineError>
 
-      {success && (
-        <div role="status" className="rounded-lg bg-kelp/10 text-kelp border border-kelp/20 px-4 py-3 text-sm">
-          {success}
-        </div>
-      )}
-
-      {error && (
-        <div role="alert" className="rounded-lg bg-signal/10 text-signal border border-signal/20 px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
-
-      <div className="page-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-foam">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Mobile</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                    No users found for this company.
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => {
-                  const id = user._id || user.id
-                  const isMe = id === (me?._id || me?.id)
-                  // Only a super_admin can change a super_admin account (backend).
-                  const locked =
-                    (user.role || 'user') === 'super_admin' && !hasRole?.('super_admin')
-                  return (
-                    <tr key={id} className="border-t border-foam-deep hover:bg-foam">
-                      <td className="px-4 py-3 text-sm text-chart-ink">{user.name || '—'}</td>
-                      <td className="px-4 py-3 font-data text-sm text-chart-ink">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <PhoneCell
-                          user={user}
-                          disabled={locked}
-                          onError={setError}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Select
-                          aria-label={`Role for ${user.name || user.email}`}
-                          value={user.role || 'user'}
-                          disabled={savingId === id || isMe || locked}
-                          onChange={(e) => handleRoleChange(id, e.target.value)}
-                          className="min-w-[9rem]"
-                        >
-                          {ROLES.filter(
-                            (r) =>
-                              r.value !== 'super_admin' ||
-                              hasRole?.('super_admin') ||
-                              locked,
-                          ).map((r) => (
-                            <option key={r.value} value={r.value}>
-                              {r.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {user.active === false ? (
-                          <span className="text-signal font-medium">Inactive</span>
-                        ) : user.mustChangePassword ? (
-                          <span className="text-warn font-medium">Must change password</span>
-                        ) : (
-                          <span className="text-kelp font-medium">Active</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {!isMe && !locked && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={savingId === id}
-                            onClick={() => toggleActive(user)}
-                          >
-                            {user.active === false ? 'Reactivate' : 'Deactivate'}
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Table
+        title={t('settingsUi.users.accountsTitle')}
+        columns={columns}
+        rows={loading ? [] : users}
+        empty={loading ? t('common.loading') : t('settingsUi.users.noUsers')}
+      />
     </div>
   )
 }

@@ -3464,6 +3464,139 @@
       "quietHelper": "Pause SMS, WhatsApp and email at night. In-app still arrives; farm time.",
       "quietFrom": "From",
       "quietUntil": "Until"
+    },
+    "picker": {
+      "placeholder": "Search users or type a name…",
+      "loading": "Loading users…",
+      "noMatch": "No matching user — keep typing to use this name",
+      "none": "No users loaded — type a name"
+    },
+    "team": {
+      "invite": "Invite member",
+      "members": "Members",
+      "rolesSummary": "Roles in this organization",
+      "search": "Search members",
+      "tab": {
+        "all": "All",
+        "active": "Active",
+        "invited": "Invited"
+      },
+      "col": {
+        "name": "Name",
+        "role": "Role",
+        "sites": "Sites",
+        "status": "Status"
+      },
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "manager": "Manager",
+        "field_staff": "Field staff",
+        "viewer": "Viewer"
+      },
+      "roleBlurb": {
+        "owner": "Billing, sites, everything",
+        "admin": "Settings and members",
+        "manager": "All sites · approves",
+        "field_staff": "Daily entry only",
+        "viewer": "Read only"
+      },
+      "memberCount": {
+        "one": "{count} member",
+        "other": "{count} members"
+      },
+      "status": {
+        "active": "Active",
+        "suspended": "Suspended",
+        "invited": "Invited",
+        "expired": "Invite expired"
+      },
+      "allSites": "All",
+      "noSites": "None",
+      "siteCount": {
+        "one": "{count} site",
+        "other": "{count} sites"
+      },
+      "withdraw": "Withdraw",
+      "empty": "No members match.",
+      "updateFailed": "Could not update the member",
+      "save": "Save changes",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "notFound": "Member not found",
+      "backToMembers": "All members",
+      "roleCard": "Role",
+      "roleHere": "Role in this organization",
+      "roleHelper": "Roles apply to this organization only.",
+      "ownRole": "You can't change your own role.",
+      "siteScope": "Site scope",
+      "allLocations": "All locations",
+      "selected": "Selected",
+      "allLocationsHelper": "Every site, including ones added later.",
+      "noLocations": "No farm sites yet.",
+      "effective": "Effective permissions",
+      "grantedCount": {
+        "one": "{count} granted",
+        "other": "{count} granted"
+      },
+      "noPermissions": "This role grants no permissions.",
+      "dangerTitle": "Membership",
+      "remove": "Remove from organization",
+      "removeHelper": "Their access to other organizations stays as it is.",
+      "removeAction": "Remove",
+      "removeConfirm": "Remove {email} from this organization?"
+    },
+    "users": {
+      "phoneFailed": "Could not save the phone number",
+      "mobileFor": "Mobile number for {name}",
+      "inviteSent": "Invite sent.",
+      "inviteFailed": "Failed to invite",
+      "joined": "{email} joined the company.",
+      "declined": "Declined {email}.",
+      "joinFailed": "Failed to update the join request",
+      "roleFailed": "Failed to update role",
+      "passwordShort": "Temporary password must be at least 6 characters",
+      "created": "Created {email}. Share the temporary password securely — they must change it on first login.",
+      "createFailed": "Failed to create user",
+      "updateFailed": "Failed to update user",
+      "legacyRole": {
+        "user": "User",
+        "admin": "Admin",
+        "super_admin": "Super admin"
+      },
+      "mobile": "Mobile",
+      "accessLevel": "Access level",
+      "roleFor": "Access level for {name}",
+      "deactivate": "Deactivate",
+      "inactive": "Inactive",
+      "mustChange": "Must change password",
+      "inviteTitle": "Invite by email",
+      "inviteMeta": "Link works once · expires in 7 days",
+      "email": "Email",
+      "sending": "Sending…",
+      "sendInvite": "Send invite",
+      "inviteLinkHelp": "Or share this link directly. It only works for the invited email.",
+      "inviteLink": "Invite link",
+      "copy": "Copy",
+      "joinTitle": "Pending join requests",
+      "pendingCount": {
+        "one": "{count} pending",
+        "other": "{count} pending"
+      },
+      "noJoin": "No pending requests.",
+      "joinAs": "{email} · as {role}",
+      "approve": "Approve",
+      "decline": "Decline",
+      "joinHelp": "People who signed in with an invited email and asked to join. Approve only people you expect.",
+      "createTitle": "Add a login",
+      "createMeta": "Temporary password · changed on first sign-in",
+      "name": "Name",
+      "tempPassword": "Temporary password",
+      "creating": "Creating…",
+      "create": "Create user",
+      "passwordHint": "At least 6 characters. They must change it after signing in.",
+      "accountsTitle": "Login accounts",
+      "noUsers": "No users found for this company."
     }
   },
   "country": {
