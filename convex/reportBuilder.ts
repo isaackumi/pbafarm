@@ -464,6 +464,46 @@ export const filterOptions = query({
 /** Internal: run a saved report as `ownerId` for a scheduled delivery (ANLY-007). */
 export const runForOwner = internalQuery({
   args: { reportId: v.id('savedReports'), ownerId: v.id('users'), companyId: v.id('companies') },
+  returns: v.union(
+    v.object({
+      ok: v.literal(true),
+      name: v.string(),
+      dataset: v.union(
+        v.literal('mortality'),
+        v.literal('sales'),
+        v.literal('harvest'),
+        v.literal('feed'),
+        v.literal('production'),
+        v.literal('inventory'),
+      ),
+      result: v.object({
+        columns: v.array(
+          v.object({
+            id: v.string(),
+            label: v.string(),
+            kind: v.union(v.literal('dimension'), v.literal('measure')),
+            format: v.optional(
+              v.union(
+                v.literal('quantity'),
+                v.literal('count'),
+                v.literal('kg'),
+                v.literal('money'),
+                v.literal('pct'),
+                v.literal('ratio'),
+              ),
+            ),
+          }),
+        ),
+        rows: v.array(v.record(v.string(), v.union(v.string(), v.number(), v.null()))),
+        sourceTruncated: v.boolean(),
+        rowsTruncated: v.boolean(),
+        from: v.union(v.string(), v.null()),
+        to: v.union(v.string(), v.null()),
+        today: v.string(),
+      }),
+    }),
+    v.object({ ok: v.literal(false), error: v.string() }),
+  ),
   handler: async (ctx, args): Promise<
     { ok: true; name: string; dataset: ReportDefinition['dataset']; result: ReportResult } | { ok: false; error: string }
   > => {

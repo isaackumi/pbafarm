@@ -13,6 +13,15 @@ import { requireAccount } from './lib/permissions'
  */
 export const mine = query({
   args: {},
+  returns: v.object({
+    inApp: v.boolean(),
+    sms: v.boolean(),
+    whatsapp: v.boolean(),
+    email: v.boolean(),
+    quietHours: v.union(v.object({ start: v.string(), end: v.string() }), v.null()),
+    hasPhone: v.boolean(),
+    hasEmail: v.boolean(),
+  }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     const row = await ctx.db

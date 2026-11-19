@@ -117,9 +117,65 @@ export function messagingPrefs(company: Doc<'companies'> | null) {
   }
 }
 
+const credentialFieldRow = v.object({
+  key: v.string(),
+  label: v.string(),
+  required: v.boolean(),
+  help: v.union(v.string(), v.null()),
+})
+
+const providerValues = v.union(
+  v.literal('hubtel'),
+  v.literal('africastalking'),
+  v.literal('twilio'),
+  v.literal('whatsapp_cloud'),
+  v.literal('twilio_whatsapp'),
+  v.literal('resend'),
+)
+
 /** Settings page: channels, platform defaults and the provider catalog. */
 export const overview = query({
   args: {},
+  returns: v.object({
+    encryptionReady: v.boolean(),
+    defaultCountryCode: v.string(),
+    countries: v.array(v.object({ code: v.string(), callingCode: v.string() })),
+    platform: v.record(
+      v.string(),
+      v.object({
+        enabled: v.boolean(),
+        available: v.boolean(),
+        provider: v.union(v.string(), v.null()),
+      }),
+    ),
+    channels: v.array(
+      v.object({
+        id: v.id('messagingChannels'),
+        channel: v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp')),
+        provider: providerValues,
+        status: v.union(v.literal('disabled'), v.literal('draft'), v.literal('verified')),
+        senderId: v.string(),
+        settings: v.record(v.string(), v.string()),
+        credentialsConfigured: v.boolean(),
+        credentialHint: v.union(v.string(), v.null()),
+        credentialsSetAt: v.union(v.number(), v.null()),
+        lastTestAt: v.union(v.number(), v.null()),
+        lastTestResult: v.union(v.string(), v.null()),
+        updatedAt: v.number(),
+      }),
+    ),
+    providers: v.array(
+      v.object({
+        id: providerValues,
+        label: v.string(),
+        channels: v.array(v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp'))),
+        senderLabel: v.string(),
+        senderRequired: v.boolean(),
+        credentialFields: v.array(credentialFieldRow),
+        settingFields: v.array(credentialFieldRow),
+      }),
+    ),
+  }),
   handler: async (ctx) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const company = await ctx.db.get(companyId)
@@ -329,6 +385,11 @@ export const updatePreferences = mutation({
 /** Internal: the channel's company and provider, for an admin of that company. */
 export const channelForAdmin = internalQuery({
   args: { channelId: v.id('messagingChannels') },
+  returns: v.object({
+    companyId: v.id('companies'),
+    provider: providerValues,
+    channel: v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp')),
+  }),
   handler: async (ctx, { channelId }) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)
@@ -432,6 +493,15 @@ export const saveCredentials = action({
 /** Internal: rate-limit a test send and hand the action what it needs to send. */
 export const prepareTest = internalMutation({
   args: { channelId: v.id('messagingChannels') },
+  returns: v.object({
+    companyId: v.id('companies'),
+    channel: v.union(v.literal('email'), v.literal('sms'), v.literal('whatsapp')),
+    provider: providerValues,
+    senderId: v.optional(v.string()),
+    settings: v.record(v.string(), v.string()),
+    secret: v.object({ ciphertext: v.string(), iv: v.string() }),
+    defaultCountryCode: v.string(),
+  }),
   handler: async (ctx, { channelId }) => {
     const { companyId } = await requireMessagingAdmin(ctx)
     const row = await loadOwnChannel(ctx, companyId, channelId)

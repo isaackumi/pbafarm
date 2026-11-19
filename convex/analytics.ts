@@ -91,6 +91,98 @@ export const comparison = query({
     to: v.string(),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.object({
+    from: v.string(),
+    to: v.string(),
+    farm: v.object({
+      occupancies: v.number(),
+      fish_end: v.number(),
+      biomass_kg: v.number(),
+      feed_kg: v.number(),
+      gain_kg: v.number(),
+      harvested_kg: v.number(),
+      mortality: v.number(),
+      fcr: v.union(v.number(), v.null()),
+      survival_pct: v.union(v.number(), v.null()),
+      mortality_pct: v.union(v.number(), v.null()),
+      sgr_pct_day: v.union(v.number(), v.null()),
+      feed_cost: v.number(),
+      fingerling_cost: v.number(),
+      other_cost: v.number(),
+      revenue: v.number(),
+      total_cost: v.number(),
+      cost_per_kg: v.union(v.number(), v.null()),
+      cost_per_kg_produced: v.union(v.number(), v.null()),
+      net_margin: v.number(),
+      net_margin_pct: v.union(v.number(), v.null()),
+    }),
+    sites: v.array(
+      v.object({
+        occupancies: v.number(),
+        fish_end: v.number(),
+        biomass_kg: v.number(),
+        feed_kg: v.number(),
+        gain_kg: v.number(),
+        harvested_kg: v.number(),
+        mortality: v.number(),
+        fcr: v.union(v.number(), v.null()),
+        survival_pct: v.union(v.number(), v.null()),
+        mortality_pct: v.union(v.number(), v.null()),
+        sgr_pct_day: v.union(v.number(), v.null()),
+        feed_cost: v.number(),
+        fingerling_cost: v.number(),
+        other_cost: v.number(),
+        revenue: v.number(),
+        total_cost: v.number(),
+        cost_per_kg: v.union(v.number(), v.null()),
+        cost_per_kg_produced: v.union(v.number(), v.null()),
+        net_margin: v.number(),
+        net_margin_pct: v.union(v.number(), v.null()),
+        id: v.union(v.string(), v.null()),
+        name: v.string(),
+        units: v.number(),
+      }),
+    ),
+    units: v.array(
+      v.object({
+        occupancies: v.number(),
+        fish_end: v.number(),
+        biomass_kg: v.number(),
+        feed_kg: v.number(),
+        gain_kg: v.number(),
+        harvested_kg: v.number(),
+        mortality: v.number(),
+        fcr: v.union(v.number(), v.null()),
+        survival_pct: v.union(v.number(), v.null()),
+        mortality_pct: v.union(v.number(), v.null()),
+        sgr_pct_day: v.union(v.number(), v.null()),
+        feed_cost: v.number(),
+        fingerling_cost: v.number(),
+        other_cost: v.number(),
+        revenue: v.number(),
+        total_cost: v.number(),
+        cost_per_kg: v.union(v.number(), v.null()),
+        cost_per_kg_produced: v.union(v.number(), v.null()),
+        net_margin: v.number(),
+        net_margin_pct: v.union(v.number(), v.null()),
+        id: v.string(),
+        name: v.string(),
+        unit_type: v.union(
+          v.literal('cage'),
+          v.literal('pond'),
+          v.literal('tank'),
+          v.literal('raceway'),
+          v.literal('hatchery_tank'),
+          v.literal('incubator'),
+          v.literal('hapa'),
+        ),
+        site_id: v.union(v.id('farmLocations'), v.null()),
+        site_name: v.union(v.string(), v.null()),
+        batches: v.array(v.string()),
+      }),
+    ),
+    updated_at: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     assertDate(args.from, 'From')
     assertDate(args.to, 'To')
@@ -215,6 +307,53 @@ export const growth = query({
     /** Include occupancies closed in the last N days (default 0: open only). */
     closedWithinDays: v.optional(v.number()),
   },
+  returns: v.object({
+    target: v.object({ abw_g: v.number(), days: v.number(), harvest_abw_g: v.number() }),
+    forecast_on: v.string(),
+    occupancies: v.array(
+      v.object({
+        unit_id: v.id('cages'),
+        unit_name: v.string(),
+        site_name: v.union(v.string(), v.null()),
+        batch_id: v.id('batches'),
+        batch_number: v.string(),
+        species: v.union(v.string(), v.null()),
+        open: v.boolean(),
+        as_of: v.string(),
+        opened_on: v.union(v.string(), v.null()),
+        days_of_culture: v.union(v.number(), v.null()),
+        count: v.number(),
+        abw_g: v.union(v.number(), v.null()),
+        biomass_kg: v.number(),
+        efcr: v.union(v.number(), v.null()),
+        sgr_pct_day: v.union(v.number(), v.null()),
+        survival_pct: v.union(v.number(), v.null()),
+        curve: v.array(
+          v.object({
+            date: v.string(),
+            doc: v.union(v.number(), v.null()),
+            abw_g: v.union(v.number(), v.null()),
+            target_g: v.union(v.number(), v.null()),
+          }),
+        ),
+        forecast: v.union(
+          v.object({
+            abw_g: v.union(v.number(), v.null()),
+            abw_date: v.string(),
+            sgr_pct_day: v.union(v.number(), v.null()),
+            sgr_source: v.union(v.literal('recent samples'), v.literal('cycle')),
+            daily_mortality_pct: v.union(v.number(), v.null()),
+            projected_abw_g: v.union(v.number(), v.null()),
+            projected_count: v.number(),
+            projected_biomass_kg: v.union(v.number(), v.null()),
+            harvest_ready_on: v.union(v.string(), v.null()),
+            days_to_target: v.union(v.number(), v.null()),
+          }),
+          v.null(),
+        ),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     assertDate(args.asOf, 'As of')
     if (args.forecastOn) assertDate(args.forecastOn, 'Forecast date')
@@ -254,6 +393,17 @@ export const growth = query({
   },
 })
 
+const farmRow = v.object({
+  week_end: v.string(),
+  units: v.number(),
+  feed_kg: v.number(),
+  gain_kg: v.number(),
+  week_fcr: v.union(v.number(), v.null()),
+  cycle_fcr: v.union(v.number(), v.null()),
+  mortality: v.number(),
+  mortality_pct: v.union(v.number(), v.null()),
+})
+
 /**
  * Week by week figures for the farm and each unit: feed, gain, the week's
  * FCR and the cycle-to-date FCR, deaths and mortality %. Feeds the feed
@@ -266,6 +416,18 @@ export const trends = query({
     weeks: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.object({
+    weeks: v.array(v.string()),
+    farm: v.array(farmRow),
+    units: v.array(
+      v.object({
+        unit_id: v.string(),
+        unit_name: v.string(),
+        site_name: v.union(v.string(), v.null()),
+        series: v.array(farmRow),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     assertDate(args.asOf, 'As of')
     const weeks = weekEnds(args.asOf, Math.max(2, Math.min(args.weeks ?? 12, 26)))
@@ -297,6 +459,38 @@ export const trends = query({
  */
 export const cycles = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.array(
+    v.object({
+      occupancies: v.number(),
+      fish_end: v.number(),
+      biomass_kg: v.number(),
+      feed_kg: v.number(),
+      gain_kg: v.number(),
+      harvested_kg: v.number(),
+      mortality: v.number(),
+      fcr: v.union(v.number(), v.null()),
+      survival_pct: v.union(v.number(), v.null()),
+      mortality_pct: v.union(v.number(), v.null()),
+      sgr_pct_day: v.union(v.number(), v.null()),
+      feed_cost: v.number(),
+      fingerling_cost: v.number(),
+      other_cost: v.number(),
+      revenue: v.number(),
+      total_cost: v.number(),
+      cost_per_kg: v.union(v.number(), v.null()),
+      cost_per_kg_produced: v.union(v.number(), v.null()),
+      net_margin: v.number(),
+      net_margin_pct: v.union(v.number(), v.null()),
+      unit_id: v.id('cages'),
+      unit_name: v.string(),
+      site_name: v.union(v.string(), v.null()),
+      batch_number: v.string(),
+      open: v.boolean(),
+      start_date: v.string(),
+      end_date: v.string(),
+      days_of_culture: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)

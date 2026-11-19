@@ -6,6 +6,7 @@ import type { QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
 import { notifyUsers } from './lib/notify'
 import { isActiveMember, ownTeam, teamMemberRows, teamsOfUser } from './teams'
+import { docFields } from './lib/docValidators'
 
 /**
  * Simple tasks (AUTO-005): title, assignee, due date, optional cage, status.
@@ -32,9 +33,16 @@ async function teamTasks(ctx: QueryCtx, user: Doc<'users'>) {
 
 const statusV = v.union(v.literal('open'), v.literal('done'), v.literal('cancelled'))
 
+const openRow = v.object({
+  ...docFields('tasks'),
+  teamName: v.optional(v.string()),
+  cageName: v.optional(v.string()),
+})
+
 /** The caller's tasks: open ones first by due date, then recently closed. */
 export const mine = query({
   args: { includeClosed: v.optional(v.boolean()) },
+  returns: v.object({ open: v.array(openRow), closed: v.array(openRow) }),
   handler: async (ctx, { includeClosed }) => {
     const user = await requireAccount(ctx)
     const open = await ctx.db

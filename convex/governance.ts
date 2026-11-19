@@ -30,6 +30,7 @@ import {
 } from './lib/governance'
 import { buildZip, toCsv, type ZipEntry } from './lib/zip'
 import { deleteUserPreferences } from './userPreferences'
+import { docValidator } from './lib/docValidators'
 
 // ─── Organization export ────────────────────────────────────────────────────
 
@@ -80,6 +81,25 @@ export const requestExport = mutation({
 
 export const listExports = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('dataExports'),
+      status: v.union(
+        v.literal('failed'),
+        v.literal('running'),
+        v.literal('queued'),
+        v.literal('ready'),
+        v.literal('expired'),
+      ),
+      sizeBytes: v.union(v.number(), v.null()),
+      tableCounts: v.union(v.record(v.string(), v.number()), v.null()),
+      truncatedTables: v.array(v.string()),
+      error: v.union(v.string(), v.null()),
+      createdAt: v.number(),
+      finishedAt: v.union(v.number(), v.null()),
+      expiresAt: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.data.export' })
     if (!companyId) return []
@@ -112,6 +132,7 @@ export const exportDownloadUrl = mutation({
 
 export const exportJob = internalQuery({
   args: { exportId: v.id('dataExports') },
+  returns: v.union(docValidator('dataExports'), v.null()),
   handler: async (ctx, { exportId }) => await ctx.db.get(exportId),
 })
 
@@ -145,6 +166,12 @@ export const exportPage = internalQuery({
     table: v.string(),
     cursor: v.union(v.string(), v.null()),
   },
+  returns: v.object({
+    // Rows come from whichever exportable table is requested, so the shape varies per table.
+    rows: v.array(v.record(v.string(), v.any())),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
   handler: async (ctx, { companyId, table, cursor }) => {
     const spec = tenantTable(table)
     if (!spec || spec.export === false) throw new Error(`Not an exported table: ${table}`)
@@ -273,7 +300,10 @@ async function openRequest(
   return null
 }
 
-function requestToClient(r: Doc<'dataRequests'>, extra: Record<string, unknown> = {}) {
+function requestToClient<E extends Record<string, unknown> = Record<never, never>>(
+  r: Doc<'dataRequests'>,
+  extra: E = {} as E,
+) {
   return {
     id: r._id,
     kind: r.kind,
@@ -368,9 +398,33 @@ export const cancelRequest = mutation({
   },
 })
 
+const statusValues = v.union(
+  v.literal('rejected'),
+  v.literal('approved'),
+  v.literal('requested'),
+  v.literal('completed'),
+  v.literal('in_progress'),
+  v.literal('cancelled'),
+)
+
 /** My account request, and my organization's request when I may manage it. */
 export const myRequests = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('dataRequests'),
+      kind: v.union(v.literal('org_deletion'), v.literal('account_deletion')),
+      status: statusValues,
+      companyId: v.union(v.id('companies'), v.null()),
+      userId: v.id('users'),
+      reason: v.union(v.string(), v.null()),
+      requestedAt: v.number(),
+      decidedAt: v.union(v.number(), v.null()),
+      decisionNote: v.union(v.string(), v.null()),
+      graceEndsAt: v.union(v.number(), v.null()),
+      completedAt: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     const out: Doc<'dataRequests'>[] = []
@@ -402,6 +456,23 @@ export const myRequests = query({
 /** Platform: open deletion requests to decide or follow. */
 export const platformListRequests = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('dataRequests'),
+      kind: v.union(v.literal('org_deletion'), v.literal('account_deletion')),
+      status: statusValues,
+      companyId: v.union(v.id('companies'), v.null()),
+      userId: v.id('users'),
+      reason: v.union(v.string(), v.null()),
+      requestedAt: v.number(),
+      decidedAt: v.union(v.number(), v.null()),
+      decisionNote: v.union(v.string(), v.null()),
+      graceEndsAt: v.union(v.number(), v.null()),
+      completedAt: v.union(v.number(), v.null()),
+      companyName: v.union(v.string(), v.null()),
+      requesterLabel: v.string(),
+    }),
+  ),
   handler: async (ctx) => {
     await requirePlatformAdmin(ctx)
     const rows: Doc<'dataRequests'>[] = []
@@ -650,6 +721,11 @@ export const purgeCompanyBatch = internalMutation({
     tableIndex: v.optional(v.number()),
     counts: v.optional(v.record(v.string(), v.number())),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    counts: v.record(v.string(), v.number()),
+    done: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun !== false
     if (dryRun) {

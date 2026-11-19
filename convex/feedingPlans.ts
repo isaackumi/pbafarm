@@ -50,6 +50,27 @@ async function tablesFor(ctx: QueryCtx, companyId: Id<'companies'>) {
 /** Every species the organization can plan for, with its table (saved or default) or none. */
 export const list = query({
   args: {},
+  returns: v.array(
+    v.object({
+      speciesKey: v.string(),
+      speciesName: v.union(v.string(), v.null()),
+      name: v.union(v.string(), v.null()),
+      bands: v.union(
+        v.array(
+          v.object({
+            feedingsPerDay: v.number(),
+            minAbwG: v.number(),
+            bodyWeightPct: v.number(),
+            pelletMm: v.number(),
+          }),
+        ),
+        v.null(),
+      ),
+      source: v.union(v.literal('none'), v.literal('default'), v.literal('saved')),
+      hasDefault: v.boolean(),
+      updatedAt: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx) => {
     const m = await requireMember(ctx, { permission: 'production.view' })
     if (!m.companyId) return []
@@ -168,6 +189,34 @@ function inScope(m: MemberContext, cage: Doc<'cages'>) {
   return m.siteScope === 'all' || (!!cage.locationId && m.siteScope.has(cage.locationId))
 }
 
+const row2 = v.object({
+  cageId: v.id('cages'),
+  cageName: v.string(),
+  locationId: v.union(v.id('farmLocations'), v.null()),
+  speciesKey: v.union(v.string(), v.null()),
+  count: v.number(),
+  abwG: v.union(v.number(), v.null()),
+  ration: v.union(
+    v.object({
+      ok: v.literal(true),
+      biomassKg: v.number(),
+      kgPerDay: v.number(),
+      kgPerFeeding: v.number(),
+      feedingsPerDay: v.number(),
+      pelletMm: v.number(),
+      bodyWeightPct: v.number(),
+      bandIndex: v.number(),
+      bandMinAbwG: v.number(),
+      bandMaxAbwG: v.union(v.number(), v.null()),
+    }),
+    v.object({
+      ok: v.literal(false),
+      reason: v.union(v.literal('no_fish'), v.literal('no_abw'), v.literal('no_plan')),
+    }),
+    v.object({ ok: v.literal(false), reason: v.literal('no_species') }),
+  ),
+})
+
 /**
  * Today's suggested ration for every stocked unit (optionally one site) and
  * the farm total. Units the plan cannot cover say why (no fish, no ABW, no
@@ -175,6 +224,12 @@ function inScope(m: MemberContext, cage: Doc<'cages'>) {
  */
 export const rations = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    rows: v.array(row2),
+    totalKgPerDay: v.number(),
+    planned: v.number(),
+    unplanned: v.number(),
+  }),
   handler: async (ctx, { locationId }) => {
     const m = await requireMember(ctx, { permission: 'production.view', locationId })
     if (!m.companyId) return { rows: [], totalKgPerDay: 0, planned: 0, unplanned: 0 }
@@ -208,6 +263,7 @@ export const rations = query({
 /** One unit's suggested ration (the suggestion card on entry forms and unit pages). */
 export const rationForCage = query({
   args: { cageId: v.id('cages') },
+  returns: v.union(row2, v.null()),
   handler: async (ctx, { cageId }) => {
     const m = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(cageId)

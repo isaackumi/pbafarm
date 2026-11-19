@@ -91,6 +91,23 @@ export const forDashboard = query({
     locationId: v.optional(v.id('farmLocations')),
     limit: v.optional(v.number()),
   },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      kind: v.union(
+        v.literal('fcr_rising'),
+        v.literal('mortality_spike'),
+        v.literal('behind_target'),
+        v.literal('harvest_ready'),
+      ),
+      severity: v.union(v.literal('info'), v.literal('warning'), v.literal('critical')),
+      unit_id: v.string(),
+      unit_name: v.string(),
+      title: v.string(),
+      detail: v.string(),
+      facts: v.record(v.string(), v.union(v.string(), v.number(), v.null())),
+    }),
+  ),
   handler: async (ctx, args) => {
     assertDate(args.asOf)
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
@@ -125,6 +142,53 @@ export const context = query({
     /** Days of daily totals (default 14, at most 30). */
     days: v.optional(v.number()),
   },
+  returns: v.record(
+    v.string(),
+    v.union(
+      v.string(),
+      v.array(
+        v.object({
+          unit: v.string(),
+          batch: v.string(),
+          stocked_on: v.union(v.string(), v.null()),
+          days_of_culture: v.union(v.number(), v.null()),
+          fish: v.number(),
+          abw_g: v.union(v.number(), v.null()),
+          abw_measured_on: v.union(v.string(), v.null()),
+          biomass_kg: v.number(),
+          feed_kg: v.number(),
+          fcr: v.union(v.number(), v.null()),
+          survival_pct: v.union(v.number(), v.null()),
+          sgr_pct_day: v.union(v.number(), v.null()),
+          target_abw_now_g: v.union(v.number(), v.null()),
+          forecast_in_30_days: v.object({
+            abw_g: v.union(v.number(), v.null()),
+            biomass_kg: v.union(v.number(), v.null()),
+          }),
+          harvest_ready_on: v.union(v.string(), v.null()),
+        }),
+      ),
+      v.array(v.object({ date: v.string(), feed_kg: v.number(), deaths: v.number() })),
+      v.array(
+        v.object({
+          unit: v.string(),
+          weeks: v.array(
+            v.object({
+              week_end: v.string(),
+              feed_kg: v.number(),
+              cycle_fcr: v.union(v.number(), v.null()),
+              deaths: v.number(),
+              mortality_pct: v.union(v.number(), v.null()),
+            }),
+          ),
+        }),
+      ),
+      v.array(v.object({ title: v.string(), detail: v.string() })),
+      v.array(v.object({ name: v.string(), stock_kg: v.number(), low: v.boolean() })),
+      v.object({ harvest_abw_g: v.number(), days_of_culture: v.number() }),
+      v.null(),
+    ),
+  ),
   handler: async (ctx, args) => {
     assertDate(args.asOf)
     const { user } = await requireMember(ctx, { permission: 'ai.use' })

@@ -69,6 +69,10 @@ export const run = internalMutation({
     total: v.optional(v.number()),
     date: v.optional(v.string()),
   },
+  returns: v.union(
+    v.object({ done: v.boolean(), total: v.number() }),
+    v.object({ done: v.boolean(), total: v.number(), companies: v.number(), notified: v.number() }),
+  ),
   handler: async (ctx, args) => {
     const date = args.date ?? new Date().toISOString().slice(0, 10)
     const page = await ctx.db.query('cages').paginate({ cursor: args.cursor ?? null, numItems: PAGE })

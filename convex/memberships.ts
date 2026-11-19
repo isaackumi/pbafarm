@@ -47,6 +47,16 @@ async function myMemberships(ctx: QueryCtx | MutationCtx, me: Doc<'users'>) {
 
 export const listMine = query({
   args: {},
+  returns: v.array(
+    v.object({
+      companyId: v.id('companies'),
+      name: v.string(),
+      code: v.string(),
+      companyStatus: v.union(v.literal('pending'), v.literal('rejected'), v.literal('approved')),
+      roleKey: v.string(),
+      isActive: v.boolean(),
+    }),
+  ),
   handler: async (ctx) => {
     const me = await requireAccount(ctx)
     const rows = await myMemberships(ctx, me)
@@ -109,6 +119,41 @@ async function requireCompanyAdmin(ctx: QueryCtx | MutationCtx) {
 
 export const listMembers = query({
   args: {},
+  returns: v.array(
+    v.union(
+      v.object({
+        membershipId: v.string(),
+        userId: v.id('users'),
+        name: v.union(v.string(), v.null()),
+        email: v.union(v.string(), v.null()),
+        roleKey: v.string(),
+        roleId: v.union(v.id('roles'), v.null()),
+        status: v.union(v.literal('active'), v.literal('suspended')),
+        allLocations: v.boolean(),
+        locationIds: v.array(v.id('farmLocations')),
+        isActiveOrg: v.boolean(),
+        legacy: v.boolean(),
+      }),
+      v.object({
+        membershipId: v.null(),
+        userId: v.id('users'),
+        name: v.union(v.string(), v.null()),
+        email: v.union(v.string(), v.null()),
+        roleKey: v.union(
+          v.literal('admin'),
+          v.literal('owner'),
+          v.literal('manager'),
+          v.literal('field_staff'),
+          v.literal('viewer'),
+        ),
+        status: v.string(),
+        allLocations: v.boolean(),
+        locationIds: v.array(v.id('farmLocations')),
+        isActiveOrg: v.boolean(),
+        legacy: v.boolean(),
+      }),
+    ),
+  ),
   handler: async (ctx) => {
     const { companyId } = await requireCompanyAdmin(ctx)
     const rows = await ctx.db
@@ -357,18 +402,34 @@ async function changeStatus(
   return { status }
 }
 
+const suspendItem = v.object({
+  status: v.union(v.literal('active'), v.literal('suspended'), v.literal('removed')),
+})
+
+const stateValues = v.union(
+  v.literal('pending'),
+  v.literal('accepted'),
+  v.literal('declined'),
+  v.literal('requested'),
+  v.literal('revoked'),
+  v.literal('expired'),
+)
+
 export const suspend = mutation({
   args: { userId: v.id('users') },
+  returns: suspendItem,
   handler: async (ctx, { userId }) => changeStatus(ctx, userId, 'suspended'),
 })
 
 export const reactivate = mutation({
   args: { userId: v.id('users') },
+  returns: suspendItem,
   handler: async (ctx, { userId }) => changeStatus(ctx, userId, 'active'),
 })
 
 export const remove = mutation({
   args: { userId: v.id('users') },
+  returns: suspendItem,
   handler: async (ctx, { userId }) => changeStatus(ctx, userId, 'removed'),
 })
 
@@ -396,6 +457,16 @@ function inviteState(invite: Doc<'userInvites'>, now: number) {
 /** Public: what an invite link is for. Works signed out (shows the organization name). */
 export const inviteInfo = query({
   args: { token: v.string() },
+  returns: v.union(
+    v.object({
+      companyName: v.string(),
+      email: v.string(),
+      roleKey: v.string(),
+      state: stateValues,
+      expiresAt: v.union(v.number(), v.null()),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { token }) => {
     const invite = await inviteByToken(ctx, token)
     if (!invite) return null
@@ -494,6 +565,16 @@ export const declineInvite = mutation({
 /** Company admin: open invites (pending, including expired ones not yet re-sent). */
 export const listInvites = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('userInvites'),
+      email: v.string(),
+      roleKey: v.string(),
+      state: stateValues,
+      expiresAt: v.union(v.number(), v.null()),
+      createdAt: v.number(),
+    }),
+  ),
   handler: async (ctx) => {
     const { companyId } = await requireCompanyAdmin(ctx)
     const invites = await ctx.db

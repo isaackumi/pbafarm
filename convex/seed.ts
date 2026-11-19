@@ -9,6 +9,20 @@ import { internalMutation } from './_generated/server'
  */
 export const seedDemo = internalMutation({
   args: { email: v.string() },
+  returns: v.object({
+    success: v.boolean(),
+    demo_data_created: v.object({
+      cages: v.number(),
+      suppliers: v.number(),
+      feed_types: v.number(),
+      daily_records: v.number(),
+      biweekly_records: v.number(),
+      stocking_records: v.number(),
+    }),
+    cage_ids: v.array(v.id('cages')),
+    supplier_id: v.id('feedSuppliers'),
+    feed_type_id: v.id('feedTypes'),
+  }),
   handler: async (ctx, { email }) => {
     const user = await ctx.db
       .query('users')

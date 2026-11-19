@@ -237,8 +237,50 @@ function logRow(l: Doc<'larvalLogs'>) {
   }
 }
 
+const kindValues = v.union(
+  v.literal('other'),
+  v.literal('artemia'),
+  v.literal('rotifer'),
+  v.literal('microalgae'),
+  v.literal('copepod'),
+)
+
+const unitTypeValues = v.union(
+  v.literal('cage'),
+  v.literal('pond'),
+  v.literal('tank'),
+  v.literal('raceway'),
+  v.literal('hatchery_tank'),
+  v.literal('incubator'),
+  v.literal('hapa'),
+)
+
 export const listLarvalLogs = query({
   args: { batchId: v.id('batches') },
+  returns: v.array(
+    v.object({
+      id: v.id('larvalLogs'),
+      log_date: v.string(),
+      unit_id: v.id('cages'),
+      batch_id: v.id('batches'),
+      mortality: v.union(v.number(), v.null()),
+      counted_alive: v.union(v.number(), v.null()),
+      live_feed: v.array(
+        v.object({
+          kind: kindValues,
+          quantity: v.number(),
+          unit: v.union(v.literal('million'), v.literal('L'), v.literal('g')),
+        }),
+      ),
+      dry_feed_g: v.union(v.number(), v.null()),
+      feedings_per_day: v.union(v.number(), v.null()),
+      temperature_c: v.union(v.number(), v.null()),
+      dissolved_oxygen: v.union(v.number(), v.null()),
+      ph: v.union(v.number(), v.null()),
+      salinity_ppt: v.union(v.number(), v.null()),
+      notes: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, { batchId }) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     ownDoc(m, await ctx.db.get(batchId), 'Batch')
@@ -287,6 +329,43 @@ async function nurseryBatches(ctx: Ctx, m: HatcheryMember, status: 'active' | 'c
  */
 export const larvalBatches = query({
   args: { status: v.optional(v.union(v.literal('active'), v.literal('closed'))) },
+  returns: v.array(
+    v.object({
+      id: v.id('batches'),
+      batch_number: v.string(),
+      origin: v.union(
+        v.literal('legacy'),
+        v.literal('hatchery'),
+        v.literal('merge'),
+        v.literal('stocking'),
+        v.literal('transfer_split'),
+        v.literal('grading_split'),
+      ),
+      stage: v.string(),
+      species: v.union(v.string(), v.null()),
+      opened_on: v.string(),
+      closed_on: v.union(v.string(), v.null()),
+      hatched_on: v.string(),
+      days_since_hatch: v.number(),
+      hatched_batch_number: v.string(),
+      count: v.number(),
+      stocked: v.number(),
+      deaths: v.number(),
+      moved_out: v.number(),
+      survival_pct: v.union(v.number(), v.null()),
+      abw_g: v.union(v.number(), v.null()),
+      units: v.array(
+        v.object({
+          id: v.id('cages'),
+          name: v.string(),
+          unit_type: unitTypeValues,
+          count: v.number(),
+        }),
+      ),
+      last_log_date: v.union(v.string(), v.null()),
+      logged_today: v.boolean(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const today = new Date().toISOString().slice(0, 10)
@@ -390,6 +469,32 @@ export const removeLiveFeed = mutation({
 /** Live feed entries in a date range and the running balance per kind and unit. */
 export const liveFeed = query({
   args: { from: v.optional(v.string()), to: v.optional(v.string()) },
+  returns: v.object({
+    entries: v.array(
+      v.object({
+        id: v.id('liveFeedLogs'),
+        date: v.string(),
+        kind: kindValues,
+        movement: v.union(v.literal('produced'), v.literal('used'), v.literal('discarded')),
+        quantity: v.number(),
+        unit: v.union(v.literal('million'), v.literal('L'), v.literal('g')),
+        culture: v.union(v.string(), v.null()),
+        input_note: v.union(v.string(), v.null()),
+        from_larval_log: v.boolean(),
+        notes: v.union(v.string(), v.null()),
+      }),
+    ),
+    balances: v.array(
+      v.object({
+        on_hand: v.union(v.number(), v.null()),
+        kind: v.string(),
+        unit: v.string(),
+        produced: v.number(),
+        used: v.number(),
+        discarded: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const rows = await ctx.db
@@ -793,6 +898,23 @@ async function reverseMovementDoc(
 
 export const listMovements = query({
   args: { batchId: v.optional(v.id('batches')) },
+  returns: v.array(
+    v.object({
+      id: v.id('nurseryMovements'),
+      kind: v.union(v.literal('transfer'), v.literal('sale'), v.literal('external')),
+      date: v.string(),
+      status: v.union(v.literal('approved'), v.literal('reversed')),
+      quantity: v.number(),
+      abw_g: v.number(),
+      source_unit: v.string(),
+      batch_number: v.string(),
+      destination: v.union(v.string(), v.null()),
+      destination_unit_id: v.union(v.id('cages'), v.null()),
+      sale_id: v.union(v.id('sales'), v.null()),
+      amount: v.union(v.number(), v.null()),
+      price_per_unit: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const rows = args.batchId
@@ -835,6 +957,26 @@ export const listMovements = query({
 /** Nursery units for pickers: larval, nursery and incubation units with their batch and count. */
 export const nurseryUnits = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('cages'),
+      name: v.string(),
+      unit_type: unitTypeValues,
+      nursery: v.boolean(),
+      count: v.number(),
+      batch_id: v.union(v.id('batches'), v.null()),
+      batch_number: v.union(v.string(), v.null()),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+      status: v.union(
+        v.literal('active'),
+        v.literal('harvested'),
+        v.literal('harvesting'),
+        v.literal('maintenance'),
+        v.literal('fallow'),
+        v.literal('empty'),
+      ),
+    }),
+  ),
   handler: async (ctx) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const cages = await ctx.db

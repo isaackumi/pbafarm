@@ -72,6 +72,18 @@ export async function channelAvailable(
 /** Internal: the route for a send, including the ciphertext (actions only). */
 export const resolveRoute = internalQuery({
   args: { companyId: v.id('companies'), channel: messagingChannel },
+  returns: v.union(
+    v.object({
+      kind: v.literal('company'),
+      channelId: v.id('messagingChannels'),
+      provider: v.string(),
+      senderId: v.optional(v.string()),
+      settings: v.record(v.string(), v.string()),
+      secret: v.object({ ciphertext: v.string(), iv: v.string() }),
+    }),
+    v.object({ kind: v.literal('platform'), provider: v.string() }),
+    v.null(),
+  ),
   handler: async (ctx, { companyId, channel }) => resolveRouteInQuery(ctx, companyId, channel),
 })
 

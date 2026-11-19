@@ -90,6 +90,25 @@ export const listLots = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      cage_name: v.string(),
+      id: v.id('harvestLots'),
+      lot_code: v.string(),
+      harvest_id: v.id('harvestRecords'),
+      cage_id: v.id('cages'),
+      batch_id: v.union(v.id('batches'), v.null()),
+      harvest_date: v.string(),
+      weight_kg: v.number(),
+      fish_count: v.union(v.number(), v.null()),
+      grade: v.union(v.string(), v.null()),
+      destination: v.union(v.string(), v.null()),
+      notes: v.union(v.string(), v.null()),
+      dispatched_kg: v.number(),
+      remaining_kg: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -392,9 +411,147 @@ async function traceBatch(ctx: QueryCtx, batch: Doc<'batches'>) {
   }
 }
 
+const treatmentRow3 = v.object({
+  id: v.id('healthTreatments'),
+  date: v.string(),
+  product: v.string(),
+  withdrawal_until: v.string(),
+})
+
+const batchRow = v.object({
+  id: v.id('batches'),
+  batch_number: v.string(),
+  depth: v.number(),
+  status: v.union(v.literal('active'), v.literal('closed')),
+})
+
+const stayRow = v.object({
+  batch_number: v.string(),
+  cage_id: v.id('cages'),
+  cage_name: v.string(),
+  from: v.string(),
+  to: v.union(v.string(), v.null()),
+})
+
+const feedRow = v.object({
+  feed_type: v.string(),
+  kg_fed: v.number(),
+  first_fed: v.string(),
+  last_fed: v.string(),
+  lots: v.array(
+    v.object({
+      purchase_id: v.id('feedPurchases'),
+      lot_number: v.union(v.string(), v.null()),
+      received_on: v.string(),
+      quantity_kg: v.number(),
+      expiry_date: v.union(v.string(), v.null()),
+      supplier: v.union(v.string(), v.null()),
+      po_number: v.union(v.string(), v.null()),
+    }),
+  ),
+})
+
+const treatmentRow2 = v.object({
+  id: v.id('healthTreatments'),
+  date: v.string(),
+  batch_number: v.string(),
+  cage_name: v.string(),
+  diagnosis: v.union(v.string(), v.null()),
+  treatment: v.string(),
+  product_name: v.union(v.string(), v.null()),
+  dosage: v.union(v.string(), v.null()),
+  withdrawal_days: v.union(v.number(), v.null()),
+  withdrawal_until: v.union(v.string(), v.null()),
+  administered_by: v.union(v.string(), v.null()),
+})
+
+const journeyRow = v.object({
+  date: v.string(),
+  kind: v.union(
+    v.literal('harvested'),
+    v.literal('transfer_out'),
+    v.literal('transfer_in'),
+    v.literal('stocked'),
+    v.literal('topped_up'),
+    v.literal('graded'),
+    v.literal('merged'),
+  ),
+  batchNumber: v.string(),
+  cageName: v.string(),
+  counterpartCage: v.union(v.string(), v.null()),
+  counterpartBatch: v.union(v.string(), v.null()),
+  qty: v.number(),
+  kg: v.number(),
+  source: v.union(v.string(), v.null()),
+})
+
+const originRow = v.object({
+  batch_id: v.id('batches'),
+  batch_number: v.string(),
+  origin: v.union(
+    v.literal('legacy'),
+    v.literal('hatchery'),
+    v.literal('merge'),
+    v.literal('stocking'),
+    v.literal('transfer_split'),
+    v.literal('grading_split'),
+  ),
+  species: v.union(v.string(), v.null()),
+  opened_on: v.string(),
+  source: v.union(v.string(), v.null()),
+  source_cage: v.union(v.string(), v.null()),
+  stocked_count: v.union(v.number(), v.null()),
+  initial_abw_g: v.union(v.number(), v.null()),
+})
+
+const dispatchRow2 = v.object({
+  id: v.id('dispatches'),
+  harvest_lot_id: v.id('harvestLots'),
+  customer_id: v.union(v.id('customers'), v.null()),
+  customer_name: v.union(v.string(), v.null()),
+  sale_id: v.union(v.id('sales'), v.null()),
+  dispatch_date: v.string(),
+  weight_kg: v.number(),
+  vehicle: v.union(v.string(), v.null()),
+  driver: v.union(v.string(), v.null()),
+  temperature_c: v.union(v.number(), v.null()),
+  notes: v.union(v.string(), v.null()),
+  withdrawal_override: v.union(v.object({ reason: v.string(), until: v.string() }), v.null()),
+})
+
 /** A batch's trace: where its fish came from, what they ate and were treated with, and where they went. */
 export const batchTrace = query({
   args: { batchId: v.id('batches') },
+  returns: v.union(
+    v.object({
+      lots: v.array(
+        v.object({
+          dispatches: v.array(dispatchRow2),
+          id: v.id('harvestLots'),
+          lot_code: v.string(),
+          harvest_id: v.id('harvestRecords'),
+          cage_id: v.id('cages'),
+          batch_id: v.union(v.id('batches'), v.null()),
+          harvest_date: v.string(),
+          weight_kg: v.number(),
+          fish_count: v.union(v.number(), v.null()),
+          grade: v.union(v.string(), v.null()),
+          destination: v.union(v.string(), v.null()),
+          notes: v.union(v.string(), v.null()),
+          dispatched_kg: v.number(),
+          remaining_kg: v.number(),
+          created_at: v.number(),
+        }),
+      ),
+      batches: v.array(batchRow),
+      origins: v.array(originRow),
+      journey: v.array(journeyRow),
+      stays: v.array(stayRow),
+      treatments: v.array(treatmentRow2),
+      feed: v.array(feedRow),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { batchId }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(batchId)
@@ -416,6 +573,7 @@ export const batchTrace = query({
 /** Treatment history of a batch and its ancestors (TRACE-003). */
 export const batchTreatments = query({
   args: { batchId: v.id('batches') },
+  returns: v.union(v.array(treatmentRow2), v.null()),
   handler: async (ctx, { batchId }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(batchId)
@@ -432,15 +590,22 @@ export const batchTreatments = query({
   },
 })
 
+type Withdrawal = { id: Id<'healthTreatments'>; date: string; product: string; withdrawal_until: string }
+
 /** Whether a withdrawal period blocks a harvest or sale from a cage on a date (for forms). */
 export const withdrawalStatus = query({
   args: { cageId: v.id('cages'), date: v.string() },
+  returns: v.union(
+    v.object({ blocked: v.literal(false), until: v.null(), treatments: v.array(treatmentRow3) }),
+    v.object({ blocked: v.literal(true), until: v.string(), treatments: v.array(treatmentRow3) }),
+    v.null(),
+  ),
   handler: async (ctx, { cageId, date }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(cageId)
     if (!cage || !(await listForCompany(user, [cage])).length || !DATE_RE.test(date)) return null
     const rows = await blockingTreatments(ctx, cageId, date)
-    if (!rows.length) return { blocked: false as const, until: null, treatments: [] }
+    if (!rows.length) return { blocked: false as const, until: null, treatments: [] as Withdrawal[] }
     return {
       blocked: true as const,
       until: rows.reduce((m, t) => (t.withdrawalUntil! > m ? t.withdrawalUntil! : m), ''),
@@ -457,6 +622,74 @@ export const withdrawalStatus = query({
 /** Everything a buyer-facing trace report for one harvest lot needs (TRACE-004). */
 export const lotReport = query({
   args: { lotId: v.id('harvestLots') },
+  returns: v.union(
+    v.object({
+      company: v.string(),
+      site: v.union(v.string(), v.null()),
+      lot: v.object({
+        id: v.id('harvestLots'),
+        lot_code: v.string(),
+        harvest_id: v.id('harvestRecords'),
+        cage_id: v.id('cages'),
+        batch_id: v.union(v.id('batches'), v.null()),
+        harvest_date: v.string(),
+        weight_kg: v.number(),
+        fish_count: v.union(v.number(), v.null()),
+        grade: v.union(v.string(), v.null()),
+        destination: v.union(v.string(), v.null()),
+        notes: v.union(v.string(), v.null()),
+        dispatched_kg: v.number(),
+        remaining_kg: v.number(),
+        created_at: v.number(),
+      }),
+      cage_name: v.string(),
+      harvest: v.union(
+        v.object({
+          id: v.id('harvestRecords'),
+          date: v.string(),
+          type: v.union(v.literal('partial'), v.literal('complete')),
+          total_weight_kg: v.number(),
+          fish_count: v.number(),
+          abw_g: v.number(),
+          withdrawal_override: v.union(
+            v.object({ reason: v.string(), until: v.string() }),
+            v.null(),
+          ),
+        }),
+        v.null(),
+      ),
+      batch: v.union(
+        v.object({
+          id: v.id('batches'),
+          batch_number: v.string(),
+          species: v.union(v.string(), v.null()),
+          origin: v.union(
+            v.literal('legacy'),
+            v.literal('hatchery'),
+            v.literal('merge'),
+            v.literal('stocking'),
+            v.literal('transfer_split'),
+            v.literal('grading_split'),
+          ),
+        }),
+        v.null(),
+      ),
+      withdrawal_clear_at_harvest: v.boolean(),
+      trace: v.union(
+        v.object({
+          batches: v.array(batchRow),
+          origins: v.array(originRow),
+          journey: v.array(journeyRow),
+          stays: v.array(stayRow),
+          treatments: v.array(treatmentRow2),
+          feed: v.array(feedRow),
+        }),
+        v.null(),
+      ),
+      dispatches: v.array(dispatchRow2),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { lotId }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const lot = await ctx.db.get(lotId)

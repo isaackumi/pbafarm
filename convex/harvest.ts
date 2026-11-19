@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -28,7 +28,7 @@ async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
   })
 }
 
-function toClientHarvestRecord(r: any) {
+function toClientHarvestRecord(r: Doc<'harvestRecords'>) {
   return {
     custom: r.custom ?? {},
     id: r._id,
@@ -50,7 +50,7 @@ function toClientHarvestRecord(r: any) {
   }
 }
 
-function toClientHarvestSampling(s: any) {
+function toClientHarvestSampling(s: Doc<'harvestSampling'>) {
   return {
     id: s._id,
     _id: s._id,
@@ -70,6 +70,28 @@ function toClientHarvestSampling(s: any) {
   }
 }
 
+const listItem = v.object({
+  cages: v.object({ name: v.string(), code: v.string() }),
+  cage: v.object({ name: v.string(), code: v.string() }),
+  custom: v.record(v.string(), v.any()),
+  id: v.id('harvestRecords'),
+  _id: v.id('harvestRecords'),
+  cage_id: v.id('cages'),
+  harvest_date: v.string(),
+  average_body_weight: v.number(),
+  total_weight: v.number(),
+  estimated_count: v.number(),
+  fcr: v.number(),
+  size_breakdown: v.optional(v.any()),
+  notes: v.optional(v.string()),
+  harvest_type: v.optional(v.union(v.literal('partial'), v.literal('complete'))),
+  source: v.union(v.string(), v.null()),
+  status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     cageId: v.optional(v.id('cages')),
@@ -77,6 +99,7 @@ export const list = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(listItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let records = args.cageId
@@ -110,6 +133,7 @@ export const listPage = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(listItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPageInRange(ctx, user, 'harvestRecords', args.paginationOpts, {
@@ -125,6 +149,28 @@ export const listPage = query({
 
 export const get = query({
   args: { id: v.id('harvestRecords') },
+  returns: v.union(
+    v.object({
+      custom: v.record(v.string(), v.any()),
+      id: v.id('harvestRecords'),
+      _id: v.id('harvestRecords'),
+      cage_id: v.id('cages'),
+      harvest_date: v.string(),
+      average_body_weight: v.number(),
+      total_weight: v.number(),
+      estimated_count: v.number(),
+      fcr: v.number(),
+      size_breakdown: v.optional(v.any()),
+      notes: v.optional(v.string()),
+      harvest_type: v.optional(v.union(v.literal('partial'), v.literal('complete'))),
+      source: v.union(v.string(), v.null()),
+      status: v.optional(v.union(v.literal('completed'), v.literal('in_progress'))),
+      company_id: v.optional(v.id('companies')),
+      created_by: v.optional(v.id('users')),
+      created_at: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)
@@ -474,7 +520,7 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id('harvestRecords') },
-  returns: v.object({ ok: v.boolean() }),
+  returns: v.object({ ok: v.boolean(), warnings: v.array(v.string()) }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.records.delete' })
     const existing = await ctx.db.get(id)
@@ -621,6 +667,25 @@ export const listSampling = query({
     harvestId: v.optional(v.id('harvestRecords')),
     cageId: v.optional(v.id('cages')),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('harvestSampling'),
+      _id: v.id('harvestSampling'),
+      harvest_id: v.optional(v.id('harvestRecords')),
+      cage_id: v.optional(v.id('cages')),
+      date: v.optional(v.string()),
+      weight: v.optional(v.number()),
+      fish_count: v.optional(v.number()),
+      crate_size: v.optional(v.number()),
+      samples: v.optional(v.any()),
+      size_breakdown: v.optional(v.any()),
+      doc: v.optional(v.number()),
+      abw: v.optional(v.number()),
+      company_id: v.optional(v.id('companies')),
+      created_by: v.optional(v.id('users')),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let samples = args.harvestId

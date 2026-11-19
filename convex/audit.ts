@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { internalMutation, mutation, query } from './_generated/server'
 import { internal } from './_generated/api'
 import type { MutationCtx } from './_generated/server'
@@ -100,7 +100,7 @@ async function collectAudit(
   return out
 }
 
-function toClient(a: any, userLabel?: string | null) {
+function toClient(a: Doc<'auditLogs'>, userLabel?: string | null) {
   return {
     id: a._id,
     _id: a._id,
@@ -123,6 +123,20 @@ async function labelForUser(ctx: QueryCtx, userId: Id<'users'> | undefined) {
   return u.name || u.email || String(userId)
 }
 
+const auditLogRow = v.object({
+  id: v.id('auditLogs'),
+  _id: v.id('auditLogs'),
+  user_id: v.optional(v.id('users')),
+  user_label: v.union(v.string(), v.null()),
+  action_type: v.string(),
+  table_name: v.string(),
+  record_id: v.optional(v.string()),
+  previous_values: v.optional(v.any()),
+  new_values: v.optional(v.any()),
+  company_id: v.optional(v.id('companies')),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     limit: v.optional(v.number()),
@@ -132,6 +146,7 @@ export const list = query({
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
   },
+  returns: v.array(auditLogRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
@@ -161,6 +176,7 @@ export const listPage = query({
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
   },
+  returns: paginationResultValidator(auditLogRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
     const { paginationOpts, ...filters } = args
@@ -182,6 +198,7 @@ export const getByTable = query({
     recordId: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
+  returns: v.array(auditLogRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
@@ -208,6 +225,7 @@ export const getByUser = query({
     userId: v.id('users'),
     limit: v.optional(v.number()),
   },
+  returns: v.array(auditLogRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
@@ -233,6 +251,15 @@ export const getSummary = query({
     dateFrom: v.optional(v.number()),
     dateTo: v.optional(v.number()),
   },
+  returns: v.object({
+    total_logs: v.number(),
+    date_range: v.object({ from: v.union(v.number(), v.null()), to: v.union(v.number(), v.null()) }),
+    action_types: v.record(v.string(), v.number()),
+    table_names: v.record(v.string(), v.number()),
+    top_users: v.array(
+      v.object({ userId: v.string(), count: v.number(), label: v.union(v.string(), v.null()) }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.audit.view' })
 
@@ -405,6 +432,26 @@ export const verifyChain = mutation({
 /** Chain length, the latest verification, and whether pre-chain rows exist. */
 export const chainStatus = query({
   args: {},
+  returns: v.union(
+    v.object({
+      chainLength: v.number(),
+      headHash: v.union(v.string(), v.null()),
+      unchainedCount: v.number(),
+      unchainedMore: v.boolean(),
+      latest: v.union(
+        v.object({
+          status: v.union(v.literal('ok'), v.literal('running'), v.literal('broken')),
+          checkedCount: v.number(),
+          brokenAtSeq: v.union(v.number(), v.null()),
+          reason: v.union(v.string(), v.null()),
+          startedAt: v.number(),
+          finishedAt: v.union(v.number(), v.null()),
+        }),
+        v.null(),
+      ),
+    }),
+    v.null(),
+  ),
   handler: async (ctx) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.audit.view' })
     if (!companyId) return null

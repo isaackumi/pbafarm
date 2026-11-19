@@ -46,6 +46,28 @@ export const listBiosecurity = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('biosecurityLogs'),
+      date: v.string(),
+      kind: v.union(
+        v.literal('other'),
+        v.literal('vehicle'),
+        v.literal('visitor'),
+        v.literal('disinfection'),
+      ),
+      location_id: v.id('farmLocations'),
+      site_name: v.string(),
+      person: v.union(v.string(), v.null()),
+      organisation: v.union(v.string(), v.null()),
+      vehicle: v.union(v.string(), v.null()),
+      purpose: v.union(v.string(), v.null()),
+      area: v.union(v.string(), v.null()),
+      disinfectant: v.union(v.string(), v.null()),
+      entry_controls_done: v.union(v.boolean(), v.null()),
+      notes: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -184,8 +206,19 @@ async function companyTemplates(ctx: QueryCtx | MutationCtx, companyId: Id<'comp
     .take(100)
 }
 
+const listTemplatesItem = v.object({
+  id: v.id('complianceTemplates'),
+  key: v.union(v.string(), v.null()),
+  name: v.string(),
+  description: v.union(v.string(), v.null()),
+  frequency: v.union(v.literal('daily'), v.literal('weekly'), v.literal('monthly')),
+  items: v.array(v.object({ required: v.boolean(), id: v.string(), label: v.string() })),
+  active: v.boolean(),
+})
+
 export const listTemplates = query({
   args: {},
+  returns: v.array(listTemplatesItem),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -281,6 +314,17 @@ async function recordFor(
 /** Each active checklist for a site: its current period and whether it is done. */
 export const due = query({
   args: { locationId: v.id('farmLocations'), today: v.string() },
+  returns: v.array(
+    v.object({
+      template: listTemplatesItem,
+      period: v.string(),
+      done: v.union(
+        v.object({ id: v.id('complianceRecords'), completed_on: v.string(), passed: v.boolean() }),
+        v.null(),
+      ),
+      last_completed_on: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, { locationId, today }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId || !DATE_RE.test(today)) return []
@@ -369,6 +413,22 @@ export const listRecords = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('complianceRecords'),
+      template_name: v.string(),
+      frequency: v.union(v.literal('daily'), v.literal('weekly'), v.literal('monthly'), v.null()),
+      site_name: v.string(),
+      period: v.string(),
+      completed_on: v.string(),
+      passed: v.boolean(),
+      completed_by: v.string(),
+      notes: v.union(v.string(), v.null()),
+      answers: v.array(
+        v.object({ label: v.string(), ok: v.boolean(), note: v.union(v.string(), v.null()) }),
+      ),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []

@@ -89,6 +89,18 @@ export function descendantIds(units: Doc<'businessUnits'>[], rootId: Id<'busines
 /** Units of the organization with their site counts (any member). */
 export const list = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.array(
+    v.object({
+      _id: v.id('businessUnits'),
+      name: v.string(),
+      code: v.union(v.string(), v.null()),
+      kind: v.union(v.literal('region'), v.literal('business_unit')),
+      parentId: v.union(v.id('businessUnits'), v.null()),
+      description: v.union(v.string(), v.null()),
+      active: v.boolean(),
+      siteCount: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.view' })
     if (!companyId) return []
@@ -247,6 +259,16 @@ export const assignSites = mutation({
   },
 })
 
+const unassignedRow = v.object({
+  activeUnits: v.number(),
+  fish: v.number(),
+  salesAmount: v.number(),
+  salesCount: v.number(),
+  harvestKg: v.number(),
+  expensesAmount: v.number(),
+  overdueMaintenance: v.number(),
+})
+
 /**
  * KPIs per site for `from`..`to`, optionally only the sites of one unit (and
  * the units below it). Members limited to some sites see only those.
@@ -257,6 +279,37 @@ export const siteReport = query({
     to: v.string(),
     businessUnitId: v.optional(v.id('businessUnits')),
   },
+  returns: v.union(
+    v.object({
+      currency: v.string(),
+      truncated: v.boolean(),
+      units: v.array(
+        v.object({
+          _id: v.id('businessUnits'),
+          name: v.string(),
+          kind: v.union(v.literal('region'), v.literal('business_unit')),
+          parentId: v.union(v.id('businessUnits'), v.null()),
+        }),
+      ),
+      sites: v.array(
+        v.object({
+          activeUnits: v.number(),
+          fish: v.number(),
+          salesAmount: v.number(),
+          salesCount: v.number(),
+          harvestKg: v.number(),
+          expensesAmount: v.number(),
+          overdueMaintenance: v.number(),
+          siteId: v.id('farmLocations'),
+          name: v.string(),
+          businessUnitId: v.union(v.id('businessUnits'), v.null()),
+        }),
+      ),
+      unassigned: unassignedRow,
+      totals: unassignedRow,
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'reports.view' })
     if (!m.companyId) return null

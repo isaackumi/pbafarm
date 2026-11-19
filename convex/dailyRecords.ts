@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
@@ -40,7 +40,7 @@ async function mortalityRuleEnabled(ctx: MutationCtx, companyId: Id<'companies'>
   return rules.some((r) => r.enabled)
 }
 
-function toClient(r: any) {
+function toClient(r: Doc<'dailyRecords'>) {
   return {
     custom: r.custom ?? {},
     id: r._id,
@@ -65,12 +65,12 @@ function toClient(r: any) {
 }
 
 async function deductDailyFeed(
-  ctx: any,
-  user: any,
+  ctx: MutationCtx,
+  user: Doc<'users'>,
   args: {
     dailyRecordId: Id<'dailyRecords'>
-    feedTypeId: any
-    cageId: any
+    feedTypeId: Id<'feedTypes'> | undefined
+    cageId: Id<'cages'>
     feedAmount: number
     date: string
     allowNegative?: boolean
@@ -94,7 +94,8 @@ async function deductDailyFeed(
       cageId: args.cageId,
       feedTypeId: args.feedTypeId,
       deltaKg: -fromBinKg,
-      companyId,
+      // Only reached when the cage already has a bin, which is always company-scoped.
+      companyId: companyId!,
       locationId: cage?.locationId,
     })
   }
@@ -134,18 +135,18 @@ async function deductDailyFeed(
  * movement per feed type from the ledger (usage is negative, reversals
  * positive), so it stays correct after any number of edits.
  */
-async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
+async function reverseDailyFeed(ctx: MutationCtx, user: Doc<'users'>, dailyRecord: Doc<'dailyRecords'>) {
   const ref = String(dailyRecord._id)
   const prior = await ctx.db
     .query('feedInventoryTransactions')
-    .withIndex('by_reference', (q: any) => q.eq('referenceId', ref))
+    .withIndex('by_reference', (q) => q.eq('referenceId', ref))
     .collect()
 
   // The usage rows that drive feed reports. Rows written since INV-003 carry
   // the record id; older rows are matched by cage, date and source.
   const usage = await ctx.db
     .query('feedUsage')
-    .withIndex('by_cage', (q: any) => q.eq('cageId', dailyRecord.cageId))
+    .withIndex('by_cage', (q) => q.eq('cageId', dailyRecord.cageId))
     .collect()
   let linked = false
   for (const u of usage) {
@@ -186,7 +187,7 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
     return
   }
 
-  const net = new Map<string, { feedTypeId: any; kg: number; bags: number }>()
+  const net = new Map<string, { feedTypeId: Id<'feedTypes'>; kg: number; bags: number }>()
   for (const t of prior) {
     const k = String(t.feedTypeId)
     const cur = net.get(k) ?? { feedTypeId: t.feedTypeId, kg: 0, bags: 0 }
@@ -210,6 +211,28 @@ async function reverseDailyFeed(ctx: any, user: any, dailyRecord: any) {
   }
 }
 
+const dailyRecordRow = v.object({
+  custom: v.record(v.string(), v.any()),
+  id: v.id('dailyRecords'),
+  _id: v.id('dailyRecords'),
+  cage_id: v.id('cages'),
+  date: v.string(),
+  feed_amount: v.number(),
+  feed_type_id: v.optional(v.id('feedTypes')),
+  feed_type: v.optional(v.string()),
+  feed_price: v.number(),
+  feed_cost: v.number(),
+  mortality: v.number(),
+  mortality_cause: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  dissolved_oxygen: v.optional(v.number()),
+  temperature_c: v.optional(v.number()),
+  secchi_cm: v.optional(v.number()),
+  location_id: v.optional(v.id('farmLocations')),
+  created_by: v.optional(v.id('users')),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     cageId: v.optional(v.id('cages')),
@@ -218,6 +241,7 @@ export const list = query({
     locationId: v.optional(v.id('farmLocations')),
     limit: v.optional(v.number()),
   },
+  returns: v.array(dailyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const limit = Math.min(Math.max(args.limit ?? 5000, 1), 5000)
@@ -261,6 +285,7 @@ export const listPage = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(dailyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const { dateFrom, dateTo } = args
@@ -343,6 +368,7 @@ export const listForDate = query({
 
 export const get = query({
   args: { id: v.id('dailyRecords') },
+  returns: v.union(dailyRecordRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)

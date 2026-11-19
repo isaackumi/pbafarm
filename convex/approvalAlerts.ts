@@ -275,6 +275,7 @@ export async function onApprovalDecided(
 /** Scheduled by onApprovalRequested; acts only if the request is still pending. */
 export const escalate = internalMutation({
   args: { kind: approvalKind, recordId: v.string(), afterHours: v.number() },
+  returns: v.object({ escalated: v.number() }),
   handler: async (ctx, { kind, recordId, afterHours }) => {
     const a = await loadApproval(ctx, kind, recordId)
     if (!a || !a.pending) return { escalated: 0 }
@@ -303,9 +304,48 @@ export const escalate = internalMutation({
 const CHANNEL_ORDER: NotifyChannel[] = ['in_app', 'sms', 'whatsapp', 'email']
 const cleanChannels = (c: NotifyChannel[]) => CHANNEL_ORDER.filter((x) => c.includes(x))
 
+const channelValues = v.union(
+  v.literal('email'),
+  v.literal('in_app'),
+  v.literal('sms'),
+  v.literal('whatsapp'),
+)
+
 /** Automations page: approval alert settings and the latest external sends. */
 export const settings = query({
   args: {},
+  returns: v.union(
+    v.object({
+      settings: v.object({
+        enabled: v.boolean(),
+        channels: v.array(channelValues),
+        escalateAfterHours: v.number(),
+        escalationChannels: v.array(channelValues),
+      }),
+      recent: v.array(
+        v.object({
+          id: v.id('notificationDispatches'),
+          source: v.string(),
+          title: v.string(),
+          status: v.union(
+            v.literal('succeeded'),
+            v.literal('failed'),
+            v.literal('partial'),
+            v.literal('running'),
+            v.literal('queued'),
+            v.literal('retrying'),
+            v.literal('skipped'),
+          ),
+          createdAt: v.number(),
+          sent: v.number(),
+          failed: v.number(),
+          skipped: v.number(),
+          error: v.union(v.string(), v.null()),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
   handler: async (ctx) => {
     const { companyId } = await requireMember(ctx, { permission: 'automation.manage' })
     if (!companyId) return null
@@ -339,6 +379,7 @@ export const updateSettings = mutation({
     escalateAfterHours: v.number(),
     escalationChannels: v.array(notifyChannel),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { companyId } = await requireMember(ctx, { permission: 'automation.manage' })
     if (!companyId) throw new Error('No organization')

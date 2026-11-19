@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -72,7 +72,7 @@ const stockingStatus = v.union(
   v.literal('rejected'),
 )
 
-function toClientStocking(s: any) {
+function toClientStocking(s: Doc<'stockingHistory'>) {
   return {
     custom: s.custom ?? {},
     id: s._id,
@@ -100,7 +100,7 @@ function toClientStocking(s: any) {
   }
 }
 
-function toClientTopup(t: any) {
+function toClientTopup(t: Doc<'topupHistory'>) {
   return {
     id: t._id,
     _id: t._id,
@@ -120,6 +120,129 @@ function toClientTopup(t: any) {
   }
 }
 
+const statusValues = v.union(
+  v.literal('rejected'),
+  v.literal('approved'),
+  v.literal('pending_approval'),
+)
+
+const topupRow = v.object({
+  type: v.literal('topup'),
+  id: v.id('topupHistory'),
+  batchNumber: v.string(),
+  cageName: v.string(),
+  date: v.string(),
+  count: v.number(),
+  abw: v.number(),
+  biomass: v.number(),
+  createdAt: v.number(),
+})
+
+const stockingRow = v.object({
+  type: v.literal('stocking'),
+  id: v.id('stockingHistory'),
+  batchNumber: v.string(),
+  cageName: v.string(),
+  date: v.string(),
+  count: v.number(),
+  abw: v.number(),
+  biomass: v.number(),
+  createdAt: v.number(),
+})
+
+const fishTransferRow = v.object({
+  type: v.literal('fish_transfer'),
+  id: v.id('fishTransfers'),
+  batchNumber: v.string(),
+  cageName: v.string(),
+  date: v.string(),
+  count: v.number(),
+  abw: v.number(),
+  biomass: v.number(),
+  createdAt: v.number(),
+})
+
+const cageValues = v.union(
+  v.object({
+    id: v.id('cages'),
+    name: v.string(),
+    status: v.union(
+      v.literal('active'),
+      v.literal('harvested'),
+      v.literal('harvesting'),
+      v.literal('maintenance'),
+      v.literal('fallow'),
+      v.literal('empty'),
+    ),
+    code: v.optional(v.string()),
+    location: v.optional(v.string()),
+  }),
+  v.null(),
+)
+
+const topupHistoryRow = v.object({
+  id: v.id('topupHistory'),
+  _id: v.id('topupHistory'),
+  stocking_id: v.id('stockingHistory'),
+  topup_date: v.string(),
+  fish_count: v.number(),
+  abw: v.number(),
+  source_location: v.optional(v.string()),
+  transfer_supervisor: v.optional(v.string()),
+  status: statusValues,
+  notes: v.optional(v.string()),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  approved_by: v.optional(v.id('users')),
+  approved_at: v.optional(v.number()),
+  created_at: v.number(),
+})
+
+const cageRow = v.object({
+  cage: v.union(
+    v.object({
+      id: v.id('cages'),
+      _id: v.id('cages'),
+      name: v.string(),
+      code: v.optional(v.string()),
+      status: v.union(
+        v.literal('active'),
+        v.literal('harvested'),
+        v.literal('harvesting'),
+        v.literal('maintenance'),
+        v.literal('fallow'),
+        v.literal('empty'),
+      ),
+      location: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
+  cage_name: v.union(v.string(), v.null()),
+  custom: v.record(v.string(), v.any()),
+  id: v.id('stockingHistory'),
+  _id: v.id('stockingHistory'),
+  cage_id: v.id('cages'),
+  batch_number: v.string(),
+  stocking_date: v.string(),
+  fish_count: v.number(),
+  initial_abw: v.number(),
+  initial_biomass: v.number(),
+  source_location: v.optional(v.string()),
+  source_cage: v.optional(v.string()),
+  transfer_supervisor: v.optional(v.string()),
+  sampling_supervisor: v.optional(v.string()),
+  status: statusValues,
+  notes: v.optional(v.string()),
+  species: v.optional(v.string()),
+  location_id: v.optional(v.id('farmLocations')),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  approved_by: v.optional(v.id('users')),
+  approved_at: v.optional(v.number()),
+  deleted_at: v.optional(v.number()),
+  created_at: v.number(),
+})
+
 // STOCKING HISTORY
 export const listStockingHistory = query({
   args: {
@@ -128,6 +251,7 @@ export const listStockingHistory = query({
     includeDeleted: v.optional(v.boolean()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(cageRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let stockings = args.cageId
@@ -183,6 +307,7 @@ export const listStockingHistoryPage = query({
     includeDeleted: v.optional(v.boolean()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(cageRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPage(ctx, user, 'stockingHistory', args.paginationOpts)
@@ -216,6 +341,37 @@ export const listStockingHistoryPage = query({
 
 export const getStocking = query({
   args: { id: v.id('stockingHistory') },
+  returns: v.union(
+    v.object({
+      transfer_id: v.union(v.id('fishTransfers'), v.null()),
+      cage: cageValues,
+      topups: v.array(topupHistoryRow),
+      custom: v.record(v.string(), v.any()),
+      id: v.id('stockingHistory'),
+      _id: v.id('stockingHistory'),
+      cage_id: v.id('cages'),
+      batch_number: v.string(),
+      stocking_date: v.string(),
+      fish_count: v.number(),
+      initial_abw: v.number(),
+      initial_biomass: v.number(),
+      source_location: v.optional(v.string()),
+      source_cage: v.optional(v.string()),
+      transfer_supervisor: v.optional(v.string()),
+      sampling_supervisor: v.optional(v.string()),
+      status: statusValues,
+      notes: v.optional(v.string()),
+      species: v.optional(v.string()),
+      location_id: v.optional(v.id('farmLocations')),
+      company_id: v.optional(v.id('companies')),
+      created_by: v.optional(v.id('users')),
+      approved_by: v.optional(v.id('users')),
+      approved_at: v.optional(v.number()),
+      deleted_at: v.optional(v.number()),
+      created_at: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const stocking = await ctx.db.get(id)
@@ -251,6 +407,39 @@ export const getStocking = query({
 
 export const getTopup = query({
   args: { id: v.id('topupHistory') },
+  returns: v.union(
+    v.object({
+      transfer_id: v.union(v.id('fishTransfers'), v.null()),
+      stocking: v.union(
+        v.object({
+          id: v.id('stockingHistory'),
+          batch_number: v.string(),
+          stocking_date: v.string(),
+          status: statusValues,
+          fish_count: v.number(),
+          initial_abw: v.number(),
+        }),
+        v.null(),
+      ),
+      cage: cageValues,
+      id: v.id('topupHistory'),
+      _id: v.id('topupHistory'),
+      stocking_id: v.id('stockingHistory'),
+      topup_date: v.string(),
+      fish_count: v.number(),
+      abw: v.number(),
+      source_location: v.optional(v.string()),
+      transfer_supervisor: v.optional(v.string()),
+      status: statusValues,
+      notes: v.optional(v.string()),
+      company_id: v.optional(v.id('companies')),
+      created_by: v.optional(v.id('users')),
+      approved_by: v.optional(v.id('users')),
+      approved_at: v.optional(v.number()),
+      created_at: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const topup = await ctx.db.get(id)
@@ -592,6 +781,7 @@ export const listTopupHistory = query({
     stockingId: v.optional(v.id('stockingHistory')),
     status: v.optional(stockingStatus),
   },
+  returns: v.array(topupHistoryRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let topups = args.stockingId
@@ -770,6 +960,12 @@ export const rejectTopup = mutation({
 /** Live pending stocking + top-up queue for the approvals page. */
 export const listPendingApprovals = query({
   args: {},
+  returns: v.object({
+    stockings: v.array(stockingRow),
+    topups: v.array(topupRow),
+    fishTransfers: v.array(fishTransferRow),
+    all: v.array(v.union(stockingRow, fishTransferRow, topupRow)),
+  }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
 

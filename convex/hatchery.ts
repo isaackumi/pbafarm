@@ -117,8 +117,110 @@ async function unitNames(ctx: Ctx, ids: Array<Id<'cages'> | undefined>) {
   return (id?: Id<'cages'>) => (id ? names.get(String(id)) ?? null : null)
 }
 
+const sexValues = v.union(
+  v.literal('mixed'),
+  v.literal('female'),
+  v.literal('male'),
+  v.literal('unknown'),
+)
+
+const originValues = v.union(
+  v.literal('hatchery'),
+  v.literal('other'),
+  v.literal('wild'),
+  v.literal('farm'),
+  v.literal('purchased'),
+)
+
+const statusValues = v.union(
+  v.literal('retired'),
+  v.literal('ready'),
+  v.literal('conditioning'),
+  v.literal('spent'),
+  v.literal('resting'),
+  v.literal('dead'),
+)
+
+const spawningRow = v.object({
+  id: v.id('spawningEvents'),
+  spawn_date: v.string(),
+  method: v.union(v.literal('natural'), v.literal('induced'), v.literal('stripped')),
+  hormone: v.union(v.string(), v.null()),
+  hormone_dose: v.union(v.string(), v.null()),
+  unit_id: v.union(v.id('cages'), v.null()),
+  unit_name: v.union(v.string(), v.null()),
+  species: v.union(v.string(), v.null()),
+  female_ids: v.array(v.id('broodstock')),
+  male_ids: v.array(v.id('broodstock')),
+  female_codes: v.array(v.string()),
+  male_codes: v.array(v.string()),
+  female_weight_kg: v.union(v.number(), v.null()),
+  eggs_collected: v.union(v.number(), v.null()),
+  egg_weight_g: v.union(v.number(), v.null()),
+  fertilization_pct: v.union(v.number(), v.null()),
+  collected_on: v.union(v.string(), v.null()),
+  status: v.union(
+    v.literal('failed'),
+    v.literal('spawned'),
+    v.literal('incubating'),
+    v.literal('hatched'),
+  ),
+  notes: v.union(v.string(), v.null()),
+  eggs_incubated: v.number(),
+  larvae: v.number(),
+  hatch_pct: v.union(v.number(), v.null()),
+  eggs_per_kg_female: v.union(v.number(), v.null()),
+  fry_per_kg_female: v.union(v.number(), v.null()),
+  lots: v.array(
+    v.object({
+      id: v.id('incubationLots'),
+      spawning_event_id: v.id('spawningEvents'),
+      unit_id: v.id('cages'),
+      unit_name: v.union(v.string(), v.null()),
+      started_on: v.string(),
+      eggs: v.number(),
+      temperature_c: v.union(v.number(), v.null()),
+      status: v.union(v.literal('failed'), v.literal('incubating'), v.literal('hatched')),
+      hatched_on: v.union(v.string(), v.null()),
+      larvae_count: v.union(v.number(), v.null()),
+      hatch_pct: v.union(v.number(), v.null()),
+      larval_unit_id: v.union(v.id('cages'), v.null()),
+      batch_id: v.union(v.id('batches'), v.null()),
+      batch_number: v.union(v.string(), v.null()),
+      notes: v.union(v.string(), v.null()),
+    }),
+  ),
+})
+
 export const listBroodstock = query({
   args: { status: v.optional(broodstockStatus), unitId: v.optional(v.id('cages')) },
+  returns: v.array(
+    v.object({
+      id: v.id('broodstock'),
+      code: v.string(),
+      kind: v.union(v.literal('individual'), v.literal('group')),
+      pit_tag: v.union(v.string(), v.null()),
+      species: v.union(v.string(), v.null()),
+      strain: v.union(v.string(), v.null()),
+      sex: sexValues,
+      count: v.number(),
+      weight_g: v.union(v.number(), v.null()),
+      total_kg: v.union(v.number(), v.null()),
+      length_cm: v.union(v.number(), v.null()),
+      origin: originValues,
+      origin_note: v.union(v.string(), v.null()),
+      origin_batch_id: v.union(v.id('batches'), v.null()),
+      acquired_on: v.union(v.string(), v.null()),
+      status: statusValues,
+      conditioning_started_on: v.union(v.string(), v.null()),
+      last_spawned_on: v.union(v.string(), v.null()),
+      spawn_count: v.number(),
+      notes: v.union(v.string(), v.null()),
+      unit_id: v.union(v.id('cages'), v.null()),
+      unit_name: v.union(v.string(), v.null()),
+      location_id: v.union(v.id('farmLocations'), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     let rows: Doc<'broodstock'>[]
@@ -147,6 +249,32 @@ export const listBroodstock = query({
 
 export const getBroodstock = query({
   args: { id: v.id('broodstock') },
+  returns: v.object({
+    spawnings: v.array(spawningRow),
+    id: v.id('broodstock'),
+    code: v.string(),
+    kind: v.union(v.literal('individual'), v.literal('group')),
+    pit_tag: v.union(v.string(), v.null()),
+    species: v.union(v.string(), v.null()),
+    strain: v.union(v.string(), v.null()),
+    sex: sexValues,
+    count: v.number(),
+    weight_g: v.union(v.number(), v.null()),
+    total_kg: v.union(v.number(), v.null()),
+    length_cm: v.union(v.number(), v.null()),
+    origin: originValues,
+    origin_note: v.union(v.string(), v.null()),
+    origin_batch_id: v.union(v.id('batches'), v.null()),
+    acquired_on: v.union(v.string(), v.null()),
+    status: statusValues,
+    conditioning_started_on: v.union(v.string(), v.null()),
+    last_spawned_on: v.union(v.string(), v.null()),
+    spawn_count: v.number(),
+    notes: v.union(v.string(), v.null()),
+    unit_id: v.union(v.id('cages'), v.null()),
+    unit_name: v.union(v.string(), v.null()),
+    location_id: v.union(v.id('farmLocations'), v.null()),
+  }),
   handler: async (ctx, { id }) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const b = ownDoc(m, await ctx.db.get(id), 'Broodstock')
@@ -388,6 +516,7 @@ async function spawningSummary(ctx: Ctx, s: Doc<'spawningEvents'>) {
 
 export const listSpawnings = query({
   args: { from: v.optional(v.string()), to: v.optional(v.string()), limit: v.optional(v.number()) },
+  returns: v.array(spawningRow),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const limit = Math.min(Math.max(1, Math.floor(args.limit ?? 100)), 200)
@@ -410,6 +539,7 @@ export const listSpawnings = query({
 
 export const getSpawning = query({
   args: { id: v.id('spawningEvents') },
+  returns: spawningRow,
   handler: async (ctx, { id }) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     return await spawningSummary(ctx, ownDoc(m, await ctx.db.get(id), 'Spawning'))
@@ -812,6 +942,28 @@ export const reverseHatch = mutation({
 /** Lots on the incubation board: incubating now, plus the latest hatched or failed. */
 export const incubationBoard = query({
   args: {},
+  returns: v.array(
+    v.object({
+      spawn_date: v.union(v.string(), v.null()),
+      species: v.union(v.string(), v.null()),
+      fertilization_pct: v.union(v.number(), v.null()),
+      id: v.id('incubationLots'),
+      spawning_event_id: v.id('spawningEvents'),
+      unit_id: v.id('cages'),
+      unit_name: v.union(v.string(), v.null()),
+      started_on: v.string(),
+      eggs: v.number(),
+      temperature_c: v.union(v.number(), v.null()),
+      status: v.union(v.literal('failed'), v.literal('incubating'), v.literal('hatched')),
+      hatched_on: v.union(v.string(), v.null()),
+      larvae_count: v.union(v.number(), v.null()),
+      hatch_pct: v.union(v.number(), v.null()),
+      larval_unit_id: v.union(v.id('cages'), v.null()),
+      batch_id: v.union(v.id('batches'), v.null()),
+      batch_number: v.union(v.string(), v.null()),
+      notes: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const byStatus = (status: Doc<'incubationLots'>['status'], n: number) =>
@@ -843,6 +995,19 @@ export const incubationBoard = query({
  */
 export const kpis = query({
   args: { from: v.optional(v.string()), to: v.optional(v.string()) },
+  returns: v.object({
+    spawnings: v.number(),
+    eggs_collected: v.number(),
+    fertilization_pct: v.union(v.number(), v.null()),
+    hatch_rate_pct: v.union(v.number(), v.null()),
+    larvae_hatched: v.number(),
+    fry_per_kg_female: v.union(v.number(), v.null()),
+    larval_survival_pct: v.union(v.number(), v.null()),
+    eggs_incubating: v.number(),
+    lots_incubating: v.number(),
+    broodstock_by_status: v.record(v.string(), v.number()),
+    broodstock_total: v.number(),
+  }),
   handler: async (ctx, args) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     const spawns = await ctx.db
@@ -918,6 +1083,15 @@ export const kpis = query({
 /** Where a hatched batch came from: spawning and broodstock (for batch and trace pages). */
 export const batchOrigin = query({
   args: { batchId: v.id('batches') },
+  returns: v.union(
+    v.object({
+      hatched_batch_id: v.id('batches'),
+      hatched_batch_number: v.string(),
+      generations: v.number(),
+      spawning: spawningRow,
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { batchId }) => {
     const m = await requireHatchery(ctx, 'hatchery.view')
     // Walk up the parents (bounded) to the nearest hatched ancestor.

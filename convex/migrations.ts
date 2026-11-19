@@ -129,9 +129,41 @@ async function countUnscoped(ctx: Ctx) {
   }
 }
 
+const channelValues = v.union(
+  v.literal('email'),
+  v.literal('in_app'),
+  v.literal('sms'),
+  v.literal('whatsapp'),
+)
+
+const usersRow = v.object({
+  companyless: v.number(),
+  companylessSuperAdmins: v.number(),
+  companylessInactive: v.number(),
+  ids: v.array(v.id('users')),
+})
+
+const companyValues = v.union(
+  v.object({
+    action: v.literal('reuse'),
+    companyId: v.id('companies'),
+    name: v.string(),
+    code: v.string(),
+  }),
+  v.object({ action: v.literal('create'), companyId: v.null(), name: v.string(), code: v.string() }),
+)
+
 /** Read-only M1 pre-flight: what has no companyId today. */
 export const preflightUnscoped = internalQuery({
   args: {},
+  returns: v.object({
+    tables: v.record(v.string(), v.number()),
+    totalRows: v.number(),
+    users: usersRow,
+    usersInNonApprovedCompanies: v.number(),
+    complete: v.boolean(),
+    incomplete: v.array(v.string()),
+  }),
   handler: async (ctx) => countUnscoped(ctx),
 })
 
@@ -146,6 +178,58 @@ export const assignUnscopedToCompany = internalMutation({
     code: v.string(),
     dryRun: v.optional(v.boolean()),
   },
+  returns: v.union(
+    v.object({
+      dryRun: v.boolean(),
+      company: companyValues,
+      wouldAssign: v.object({
+        tables: v.record(v.string(), v.number()),
+        totalRows: v.number(),
+        users: usersRow,
+      }),
+      usersInNonApprovedCompanies: v.number(),
+      complete: v.boolean(),
+      incomplete: v.array(v.string()),
+    }),
+    v.object({
+      dryRun: v.boolean(),
+      company: companyValues,
+      assigned: v.object({
+        tables: v.record(v.string(), v.number()),
+        totalRows: v.number(),
+        users: v.number(),
+        activeLocationFixed: v.number(),
+      }),
+      complete: v.boolean(),
+      incomplete: v.array(v.string()),
+    }),
+    v.object({
+      dryRun: v.boolean(),
+      company: v.union(
+        v.object({
+          companyId: v.id('companies'),
+          action: v.literal('reuse'),
+          name: v.string(),
+          code: v.string(),
+        }),
+        v.object({
+          companyId: v.id('companies'),
+          action: v.literal('create'),
+          name: v.string(),
+          code: v.string(),
+        }),
+      ),
+      assigned: v.object({
+        tables: v.record(v.string(), v.number()),
+        totalRows: v.number(),
+        users: v.number(),
+        userIds: v.array(v.id('users')),
+        activeLocationFixed: v.number(),
+      }),
+      complete: v.boolean(),
+      incomplete: v.array(v.string()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun !== false
     const name = args.name.trim()
@@ -286,6 +370,20 @@ export const assignUnscopedToCompany = internalMutation({
  */
 export const repairStaleCageWeight = internalMutation({
   args: { dryRun: v.optional(v.boolean()) },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    changes: v.array(
+      v.object({
+        cageId: v.string(),
+        cage: v.string(),
+        stockingDate: v.string(),
+        lastSampleDate: v.string(),
+        from: v.number(),
+        to: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, { dryRun = true }) => {
     const changes: Array<{
       cageId: string
@@ -355,6 +453,20 @@ export const repairStaleCageWeight = internalMutation({
  */
 export const tagSamplingPageHarvests = internalMutation({
   args: { dryRun: v.optional(v.boolean()) },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    samplingAbwFixed: v.number(),
+    changes: v.array(
+      v.object({
+        harvestId: v.string(),
+        cageId: v.string(),
+        harvestDate: v.string(),
+        totalWeight: v.number(),
+        estimatedCount: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, { dryRun = true }) => {
     const changes: Array<{
       harvestId: string
@@ -450,6 +562,21 @@ export const m2BackfillMemberships = internalMutation({
     cursor: v.optional(v.union(v.string(), v.null())),
     batchSize: v.optional(v.number()),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    created: v.number(),
+    skipped: v.number(),
+    rows: v.array(
+      v.object({
+        userId: v.id('users'),
+        companyId: v.id('companies'),
+        roleKey: v.string(),
+        status: v.string(),
+      }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
   handler: async (ctx, { dryRun = true, cursor = null, batchSize = 200 }) => {
     const page = await ctx.db
       .query('users')
@@ -550,6 +677,122 @@ export const m2VerifyMemberships = internalQuery({
  */
 export const m3CompanyProfileDefaults = internalMutation({
   args: { dryRun: v.optional(v.boolean()) },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    changes: v.array(
+      v.object({
+        companyId: v.id('companies'),
+        patch: v.object({
+          _id: v.optional(v.id('companies')),
+          _creationTime: v.optional(v.number()),
+          address: v.optional(v.string()),
+          timezone: v.optional(v.string()),
+          contactEmail: v.optional(v.string()),
+          contactPhone: v.optional(v.string()),
+          abbreviation: v.optional(v.string()),
+          logoStorageId: v.optional(v.id('_storage')),
+          submittedByUserId: v.optional(v.id('users')),
+          rejectionReason: v.optional(v.string()),
+          country: v.optional(v.string()),
+          unitSystem: v.optional(v.union(v.literal('metric'), v.literal('imperial'))),
+          defaultLocale: v.optional(v.string()),
+          terminology: v.optional(v.record(v.string(), v.string())),
+          settings: v.optional(
+            v.object({
+              updatedAt: v.optional(v.number()),
+              updatedBy: v.optional(v.id('users')),
+              locale: v.optional(v.object({ currency: v.optional(v.string()) })),
+              branding: v.optional(
+                v.object({
+                  displayName: v.optional(v.string()),
+                  accentHex: v.optional(v.string()),
+                  themeMode: v.optional(
+                    v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
+                  ),
+                }),
+              ),
+              farmRules: v.optional(
+                v.object({
+                  targetHarvestAbwG: v.optional(v.number()),
+                  targetFcr: v.optional(v.number()),
+                  harvestDocMinDays: v.optional(v.number()),
+                  harvestDocMaxDays: v.optional(v.number()),
+                  maxDensityFishPerM3: v.optional(v.number()),
+                  maxDensityFishPerM2: v.optional(v.number()),
+                  maxDensityTankFishPerM3: v.optional(v.number()),
+                  densityWarnPct: v.optional(v.number()),
+                  dailyMortalityAlertPct: v.optional(v.number()),
+                  cumulativeMortalityAlertPct: v.optional(v.number()),
+                  maxFcrAlert: v.optional(v.number()),
+                }),
+              ),
+              stockingRules: v.optional(
+                v.object({
+                  requireApprovalForFishTransfer: v.optional(v.boolean()),
+                  requireDifferentApprover: v.optional(v.boolean()),
+                  minInitialAbwG: v.optional(v.number()),
+                  maxInitialAbwG: v.optional(v.number()),
+                  minTopupAbwG: v.optional(v.number()),
+                  maxTopupAbwG: v.optional(v.number()),
+                  allowStockOnlyEmptyStatuses: v.optional(v.array(v.string())),
+                  requireApprovalForStocking: v.boolean(),
+                  requireApprovalForTopup: v.boolean(),
+                  enforceCageCapacity: v.boolean(),
+                }),
+              ),
+              feedRules: v.optional(
+                v.object({
+                  defaultBagSizeKg: v.optional(v.number()),
+                  defaultLocation: v.optional(v.string()),
+                  allowNegativeStock: v.optional(v.boolean()),
+                  trackLots: v.optional(v.boolean()),
+                  lowStockMultiplier: v.optional(v.number()),
+                  requireBatchOnPurchase: v.optional(v.boolean()),
+                }),
+              ),
+              defaultCountryCode: v.optional(v.string()),
+              messaging: v.optional(
+                v.object({
+                  usePlatformDefaultSms: v.optional(v.boolean()),
+                  usePlatformDefaultWhatsapp: v.optional(v.boolean()),
+                  usePlatformDefaultEmail: v.optional(v.boolean()),
+                }),
+              ),
+              approvalAlerts: v.optional(
+                v.object({
+                  enabled: v.optional(v.boolean()),
+                  channels: v.optional(v.array(channelValues)),
+                  escalateAfterHours: v.optional(v.number()),
+                  escalationChannels: v.optional(v.array(channelValues)),
+                }),
+              ),
+              security: v.optional(
+                v.object({
+                  updatedAt: v.optional(v.number()),
+                  updatedBy: v.optional(v.id('users')),
+                  allowPhoneLogin: v.optional(v.boolean()),
+                  phoneLoginChannel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
+                  require2fa: v.optional(v.boolean()),
+                  twoFactorChannel: v.optional(v.union(v.literal('sms'), v.literal('whatsapp'))),
+                  phoneLoginSatisfies2fa: v.optional(v.boolean()),
+                }),
+              ),
+              aiAssistantEnabled: v.boolean(),
+            }),
+          ),
+          approvedAt: v.optional(v.number()),
+          approvedBy: v.optional(v.id('users')),
+          name: v.optional(v.string()),
+          createdAt: v.optional(v.number()),
+          status: v.optional(
+            v.union(v.literal('pending'), v.literal('rejected'), v.literal('approved')),
+          ),
+          code: v.optional(v.string()),
+        }),
+      }),
+    ),
+  }),
   handler: async (ctx, { dryRun = true }) => {
     const companies = await ctx.db.query('companies').take(1000)
     const changes: Array<{ companyId: Id<'companies'>; patch: Partial<Doc<'companies'>> }> = []
@@ -581,6 +824,87 @@ export const m4BackfillUnitTypes = internalMutation({
     dryRun: v.optional(v.boolean()),
     cursor: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    changes: v.array(
+      v.object({
+        cageId: v.id('cages'),
+        patch: v.object({
+          _id: v.optional(v.id('cages')),
+          _creationTime: v.optional(v.number()),
+          companyId: v.optional(v.id('companies')),
+          createdBy: v.optional(v.id('users')),
+          locationId: v.optional(v.id('farmLocations')),
+          statusChangedAt: v.optional(v.number()),
+          species: v.optional(v.string()),
+          custom: v.optional(v.record(v.string(), v.any())),
+          code: v.optional(v.string()),
+          notes: v.optional(v.string()),
+          latitude: v.optional(v.number()),
+          longitude: v.optional(v.number()),
+          location: v.optional(v.string()),
+          size: v.optional(v.number()),
+          capacity: v.optional(v.number()),
+          dimensions: v.optional(v.string()),
+          material: v.optional(v.string()),
+          installationDate: v.optional(v.string()),
+          stockingDate: v.optional(v.string()),
+          initialCount: v.optional(v.number()),
+          currentCount: v.optional(v.number()),
+          initialAbw: v.optional(v.number()),
+          initialBiomass: v.optional(v.number()),
+          initialWeight: v.optional(v.number()),
+          currentWeight: v.optional(v.number()),
+          growthRate: v.optional(v.number()),
+          mortalityRate: v.optional(v.number()),
+          lastMaintenanceDate: v.optional(v.string()),
+          nextMaintenanceDate: v.optional(v.string()),
+          currentBatchId: v.optional(v.id('batches')),
+          unitType: v.optional(
+            v.union(
+              v.literal('cage'),
+              v.literal('pond'),
+              v.literal('tank'),
+              v.literal('raceway'),
+              v.literal('hatchery_tank'),
+              v.literal('incubator'),
+              v.literal('hapa'),
+            ),
+          ),
+          areaM2: v.optional(v.number()),
+          depthM: v.optional(v.number()),
+          volumeM3: v.optional(v.number()),
+          diameterM: v.optional(v.number()),
+          unitGroup: v.optional(v.string()),
+          unitGroupId: v.optional(v.id('unitGroups')),
+          waterBodyId: v.optional(v.id('waterBodies')),
+          netVolumeM3: v.optional(v.number()),
+          meshSizeMm: v.optional(v.number()),
+          lengthM: v.optional(v.number()),
+          widthM: v.optional(v.number()),
+          flowM3h: v.optional(v.number()),
+          waterSource: v.optional(v.string()),
+          maxDensity: v.optional(v.number()),
+          archivedAt: v.optional(v.number()),
+          name: v.optional(v.string()),
+          status: v.optional(
+            v.union(
+              v.literal('active'),
+              v.literal('harvested'),
+              v.literal('harvesting'),
+              v.literal('maintenance'),
+              v.literal('fallow'),
+              v.literal('empty'),
+            ),
+          ),
+          updatedAt: v.optional(v.number()),
+        }),
+      }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
   handler: async (ctx, { dryRun = true, cursor = null }) => {
     const page = await ctx.db.query('cages').paginate({ numItems: 300, cursor })
     const changes: Array<{ cageId: Id<'cages'>; patch: Partial<Doc<'cages'>> }> = []
@@ -619,6 +943,16 @@ export const m18DefaultHarvestLots = internalMutation({
     dryRun: v.optional(v.boolean()),
     cursor: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    skipped: v.number(),
+    created: v.array(
+      v.object({ harvestId: v.id('harvestRecords'), lotCode: v.string(), weightKg: v.number() }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
   handler: async (ctx, { dryRun = true, cursor = null }) => {
     const page = await ctx.db.query('harvestRecords').paginate({ numItems: 200, cursor })
     const created: Array<{ harvestId: Id<'harvestRecords'>; lotCode: string; weightKg: number }> = []

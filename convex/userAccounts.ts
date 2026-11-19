@@ -23,6 +23,13 @@ export const createWithPassword = action({
     role: v.optional(v.union(v.literal('user'), v.literal('admin'))),
     password: v.string(),
   },
+  returns: v.object({
+    status: v.literal('created'),
+    userId: v.id('users'),
+    email: v.string(),
+    mustChangePassword: v.boolean(),
+    message: v.string(),
+  }),
   handler: async (ctx, args) => {
     // Same refusals as every other function (inactive, temporary password,
     // company not approved).

@@ -33,9 +33,18 @@ type SiteJob = {
   timezone: string
 }
 
+const siteRow = v.object({
+  locationId: v.id('farmLocations'),
+  companyId: v.id('companies'),
+  latitude: v.number(),
+  longitude: v.number(),
+  timezone: v.string(),
+})
+
 /** Active sites with coordinates, after `cursor` (by _creationTime). */
 export const sitesToFetch = internalQuery({
   args: { cursor: v.optional(v.number()) },
+  returns: v.object({ sites: v.array(siteRow), nextCursor: v.union(v.number(), v.null()) }),
   handler: async (ctx, { cursor }): Promise<{ sites: SiteJob[]; nextCursor: number | null }> => {
     const rows = await ctx.db
       .query('farmLocations')
@@ -141,6 +150,7 @@ export const refreshAll = internalAction({
 /** Internal: the caller's site, if it has coordinates and was not just fetched. */
 export const siteForRefresh = internalQuery({
   args: { locationId: v.id('farmLocations'), now: v.number() },
+  returns: siteRow,
   handler: async (ctx, { locationId, now }): Promise<SiteJob> => {
     const { user } = await requireMember(ctx, { permission: 'org.sites.manage' })
     const loc = await ctx.db.get(locationId)
@@ -187,6 +197,27 @@ export const refreshSite = action({
  */
 export const forSites = query({
   args: { locationId: v.optional(v.id('farmLocations')), fromDate: v.string() },
+  returns: v.object({
+    sites: v.array(
+      v.object({
+        id: v.id('farmLocations'),
+        name: v.string(),
+        hasCoordinates: v.boolean(),
+        days: v.array(
+          v.object({
+            date: v.string(),
+            tempMaxC: v.union(v.number(), v.null()),
+            tempMinC: v.union(v.number(), v.null()),
+            precipitationMm: v.union(v.number(), v.null()),
+            windMaxKmh: v.union(v.number(), v.null()),
+            label: v.string(),
+            isForecast: v.boolean(),
+            fetchedAt: v.number(),
+          }),
+        ),
+      }),
+    ),
+  }),
   handler: async (ctx, { locationId, fromDate }) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     if (!user.companyId) return { sites: [] }

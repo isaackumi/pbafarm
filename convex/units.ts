@@ -15,6 +15,7 @@ import { scopedRows, tenantScope } from './lib/scope'
 import { densityStatus, mergeSettings, unitTypeOf } from './lib/farmRules'
 import { assertTransition, nextStatuses, STATUS_LABELS, type UnitStatus } from './lib/unitStatus'
 import { requireMember } from './lib/permissions'
+import { docFields, docValidator } from './lib/docValidators'
 
 export const unitGroupKind = v.union(
   v.literal('cage_group'),
@@ -85,6 +86,7 @@ async function companyWaterBodies(ctx: QueryCtx, user: Doc<'users'>) {
 
 export const listWaterBodies = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.array(docValidator('waterBodies')),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const rows = await companyWaterBodies(ctx, user)
@@ -165,6 +167,15 @@ export const listGroups = query({
     locationId: v.optional(v.id('farmLocations')),
     includeInactive: v.optional(v.boolean()),
   },
+  returns: v.array(
+    v.object({
+      ...docFields('unitGroups'),
+      waterBodyName: v.union(v.string(), v.null()),
+      unitCount: v.number(),
+      stockedCount: v.number(),
+      fishCount: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const [groups, units, bodies] = await Promise.all([
@@ -312,12 +323,107 @@ export const UNIT_PROFILE: Record<
   hapa: { noun: 'Hapa', groupNoun: 'Hapa line', densityNote: 'per m² of surface' },
 }
 
+const levelValues = v.union(
+  v.literal('ok'),
+  v.literal('unknown'),
+  v.literal('warn'),
+  v.literal('over'),
+)
+
+const kindValues2 = v.union(
+  v.literal('other'),
+  v.literal('cage_group'),
+  v.literal('pond_block'),
+  v.literal('ras_system'),
+  v.literal('raceway_line'),
+)
+
+const valueValues = v.union(
+  v.literal('active'),
+  v.literal('harvested'),
+  v.literal('harvesting'),
+  v.literal('maintenance'),
+  v.literal('fallow'),
+  v.literal('empty'),
+)
+
+const unitTypeValues = v.union(
+  v.literal('cage'),
+  v.literal('pond'),
+  v.literal('tank'),
+  v.literal('raceway'),
+  v.literal('hatchery_tank'),
+  v.literal('incubator'),
+  v.literal('hapa'),
+)
+
+const kindValues = v.union(
+  v.literal('lake'),
+  v.literal('reservoir'),
+  v.literal('river'),
+  v.literal('sea'),
+  v.literal('lagoon'),
+  v.literal('borehole'),
+  v.literal('canal'),
+  v.literal('other'),
+)
+
 /**
  * Everything the unit page header and profile need: the unit, its group and
  * water body, density against the farm rule, and the statuses it may move to.
  */
 export const workspace = query({
   args: { id: v.id('cages') },
+  returns: v.union(
+    v.object({
+      unit: docValidator('cages'),
+      unitType: unitTypeValues,
+      profile: v.optional(
+        v.object({ noun: v.string(), groupNoun: v.string(), densityNote: v.string() }),
+      ),
+      group: v.union(
+        v.object({ _id: v.id('unitGroups'), name: v.string(), kind: kindValues2 }),
+        v.null(),
+      ),
+      waterBody: v.union(
+        v.object({ _id: v.id('waterBodies'), name: v.string(), kind: kindValues }),
+        v.null(),
+      ),
+      site: v.union(
+        v.object({
+          _id: v.id('farmLocations'),
+          name: v.string(),
+          latitude: v.optional(v.number()),
+          longitude: v.optional(v.number()),
+        }),
+        v.null(),
+      ),
+      density: v.object({
+        density: v.union(v.number(), v.null()),
+        max: v.union(v.number(), v.null()),
+        unit: v.string(),
+        measure: v.union(v.literal('area'), v.literal('volume')),
+        sizeLabel: v.string(),
+        pctOfMax: v.union(v.number(), v.null()),
+        level: levelValues,
+      }),
+      status: v.object({
+        value: valueValues,
+        label: v.string(),
+        changedAt: v.union(v.number(), v.null()),
+      }),
+      nextStatuses: v.array(
+        v.object({
+          status: valueValues,
+          label: v.string(),
+          allowed: v.boolean(),
+          reason: v.union(v.string(), v.null()),
+        }),
+      ),
+      archived: v.boolean(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(id)
@@ -384,6 +490,45 @@ export const setStatus = mutation({
  */
 export const board = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    sections: v.array(
+      v.object({
+        groupId: v.union(v.id('unitGroups'), v.null()),
+        name: v.string(),
+        kind: v.string(),
+        latitude: v.union(v.number(), v.null()),
+        longitude: v.union(v.number(), v.null()),
+        units: v.array(
+          v.object({
+            _id: v.id('cages'),
+            name: v.string(),
+            code: v.optional(v.string()),
+            unitType: unitTypeValues,
+            status: valueValues,
+            statusLabel: v.string(),
+            fish: v.number(),
+            abwG: v.union(v.number(), v.null()),
+            species: v.union(v.string(), v.null()),
+            density: v.union(v.number(), v.null()),
+            densityUnit: v.string(),
+            densityLevel: levelValues,
+            densityPct: v.union(v.number(), v.null()),
+            nextMaintenanceDate: v.union(v.string(), v.null()),
+            latitude: v.union(v.number(), v.null()),
+            longitude: v.union(v.number(), v.null()),
+            locationId: v.union(v.id('farmLocations'), v.null()),
+          }),
+        ),
+      }),
+    ),
+    totals: v.object({
+      units: v.number(),
+      stocked: v.number(),
+      fish: v.number(),
+      overDensity: v.number(),
+      nearDensity: v.number(),
+    }),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const [units, groups] = await Promise.all([
@@ -465,6 +610,49 @@ export const board = query({
  */
 export const mapPoints = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    sites: v.array(
+      v.object({
+        _id: v.id('farmLocations'),
+        name: v.string(),
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
+    waterBodies: v.array(
+      v.object({
+        _id: v.id('waterBodies'),
+        name: v.string(),
+        kind: kindValues,
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
+    groups: v.array(
+      v.object({
+        _id: v.id('unitGroups'),
+        name: v.string(),
+        kind: kindValues2,
+        latitude: v.number(),
+        longitude: v.number(),
+        unitCount: v.number(),
+        stocked: v.number(),
+        unplaced: v.number(),
+      }),
+    ),
+    units: v.array(
+      v.object({
+        _id: v.id('cages'),
+        name: v.string(),
+        unitType: unitTypeValues,
+        status: valueValues,
+        statusLabel: v.string(),
+        fish: v.number(),
+        latitude: v.number(),
+        longitude: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const scope = tenantScope(user)

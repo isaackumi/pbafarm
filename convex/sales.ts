@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
@@ -18,7 +18,7 @@ import { assertUserCan, requireMember } from './lib/permissions'
 import { userError } from './lib/errors'
 import { amountPaidOf, statusFor } from './invoices'
 
-function toClientCustomer(c: any) {
+function toClientCustomer(c: Doc<'customers'>) {
   return {
     id: c._id,
     _id: c._id,
@@ -34,7 +34,7 @@ function toClientCustomer(c: any) {
   }
 }
 
-function toClientSale(s: any, extras: Record<string, unknown> = {}) {
+function toClientSale<E extends Record<string, unknown> = Record<never, never>>(s: Doc<'sales'>, extras: E = {} as E) {
   return {
     id: s._id,
     _id: s._id,
@@ -66,6 +66,21 @@ function toClientSale(s: any, extras: Record<string, unknown> = {}) {
 
 export const listCustomers = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.array(
+    v.object({
+      id: v.id('customers'),
+      _id: v.id('customers'),
+      name: v.string(),
+      contact_name: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      email: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      active: v.boolean(),
+      company_id: v.optional(v.id('companies')),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let rows = await scopedRows(ctx, user, 'customers')
@@ -153,6 +168,35 @@ export const updateCustomer = mutation({
   },
 })
 
+const saleRow = v.object({
+  id: v.id('sales'),
+  _id: v.id('sales'),
+  harvest_id: v.optional(v.id('harvestRecords')),
+  cage_id: v.optional(v.id('cages')),
+  customer_id: v.optional(v.id('customers')),
+  customer_name: v.optional(v.string()),
+  sale_date: v.string(),
+  weight_kg: v.number(),
+  price_per_kg: v.number(),
+  total_amount: v.number(),
+  unit_count: v.union(v.number(), v.null()),
+  price_per_unit: v.union(v.number(), v.null()),
+  batch_id: v.union(v.id('batches'), v.null()),
+  payment_status: v.union(v.literal('pending'), v.literal('partial'), v.literal('paid')),
+  amount_paid: v.number(),
+  balance: v.number(),
+  has_payments: v.boolean(),
+  invoice_id: v.union(v.id('invoices'), v.null()),
+  notes: v.optional(v.string()),
+  location_id: v.optional(v.id('farmLocations')),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  updated_at: v.number(),
+  created_at: v.number(),
+  cage_name: v.union(v.string(), v.null()),
+  invoice_number: v.union(v.string(), v.null()),
+})
+
 export const listSales = query({
   args: {
     harvestId: v.optional(v.id('harvestRecords')),
@@ -160,6 +204,7 @@ export const listSales = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(saleRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     let rows = args.harvestId
@@ -215,6 +260,7 @@ export const listSalesPage = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: paginationResultValidator(saleRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.view' })
     const result = await scopedPageInRange(ctx, user, 'sales', args.paginationOpts, {

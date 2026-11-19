@@ -46,6 +46,28 @@ async function companySpecies(ctx: MutationCtx, companyId: Id<'companies'>) {
 /** The organization's species, active first, then by name. */
 export const list = query({
   args: { includeArchived: v.optional(v.boolean()) },
+  returns: v.array(
+    v.object({
+      id: v.id('species'),
+      key: v.string(),
+      name: v.string(),
+      scientificName: v.union(v.string(), v.null()),
+      targetHarvestAbwG: v.union(v.number(), v.null()),
+      targetFcr: v.union(v.number(), v.null()),
+      expectedDailyGrowthG: v.union(v.number(), v.null()),
+      harvestGrades: v.array(
+        v.object({
+          range: v.string(),
+          minG: v.optional(v.number()),
+          maxG: v.optional(v.number()),
+          key: v.string(),
+          label: v.string(),
+        }),
+      ),
+      active: v.boolean(),
+      updatedAt: v.number(),
+    }),
+  ),
   handler: async (ctx, { includeArchived }) => {
     const { companyId } = await requireMember(ctx, { permission: 'production.view' })
     if (!companyId) return []

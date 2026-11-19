@@ -22,6 +22,15 @@ import {
 /** What I may do in my active organization; drives the UI (usePermission). */
 export const myPermissions = query({
   args: {},
+  returns: v.object({
+    companyId: v.union(v.id('companies'), v.null()),
+    roleKey: v.string(),
+    roleName: v.string(),
+    permissions: v.array(v.string()),
+    allSites: v.boolean(),
+    siteIds: v.array(v.id('farmLocations')),
+    isPlatformAdmin: v.boolean(),
+  }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     const m = await memberContext(ctx, user)
@@ -40,6 +49,37 @@ export const myPermissions = query({
 /** Templates and this organization's custom roles, with the permission catalog. */
 export const list = query({
   args: {},
+  returns: v.object({
+    catalog: v.array(
+      v.object({
+        group: v.string(),
+        permissions: v.array(v.object({ key: v.string(), label: v.string() })),
+      }),
+    ),
+    templates: v.array(
+      v.object({
+        key: v.union(
+          v.literal('admin'),
+          v.literal('owner'),
+          v.literal('manager'),
+          v.literal('field_staff'),
+          v.literal('viewer'),
+        ),
+        name: v.string(),
+        permissions: v.array(v.string()),
+      }),
+    ),
+    custom: v.array(
+      v.object({
+        id: v.id('roles'),
+        key: v.string(),
+        name: v.string(),
+        description: v.union(v.string(), v.null()),
+        basedOn: v.union(v.string(), v.null()),
+        permissions: v.array(v.string()),
+      }),
+    ),
+  }),
   handler: async (ctx) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.view' })
     const custom = companyId

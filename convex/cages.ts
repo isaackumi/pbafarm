@@ -114,7 +114,7 @@ const cageStatus = v.union(
   v.literal('empty'),
 )
 
-function toClient(cage: any) {
+function toClient(cage: Doc<'cages'>) {
   return {
     custom: cage.custom ?? {},
     id: cage._id,
@@ -175,6 +175,88 @@ function toClient(cage: any) {
   }
 }
 
+const cageRow = v.object({
+  custom: v.record(v.string(), v.any()),
+  id: v.id('cages'),
+  _id: v.id('cages'),
+  name: v.string(),
+  code: v.optional(v.string()),
+  location: v.optional(v.string()),
+  location_id: v.optional(v.id('farmLocations')),
+  size: v.optional(v.number()),
+  capacity: v.optional(v.number()),
+  dimensions: v.optional(v.string()),
+  material: v.optional(v.string()),
+  installation_date: v.optional(v.string()),
+  stocking_date: v.optional(v.string()),
+  initial_count: v.optional(v.number()),
+  current_count: v.optional(v.number()),
+  initial_abw: v.optional(v.number()),
+  initial_biomass: v.optional(v.number()),
+  initial_weight: v.optional(v.number()),
+  current_weight: v.optional(v.number()),
+  growth_rate: v.optional(v.number()),
+  mortality_rate: v.optional(v.number()),
+  last_maintenance_date: v.optional(v.string()),
+  next_maintenance_date: v.optional(v.string()),
+  status: v.union(
+    v.literal('active'),
+    v.literal('harvested'),
+    v.literal('harvesting'),
+    v.literal('maintenance'),
+    v.literal('fallow'),
+    v.literal('empty'),
+  ),
+  notes: v.optional(v.string()),
+  species: v.optional(v.string()),
+  unit_type: v.union(
+    v.literal('cage'),
+    v.literal('pond'),
+    v.literal('tank'),
+    v.literal('raceway'),
+    v.literal('hatchery_tank'),
+    v.literal('incubator'),
+    v.literal('hapa'),
+  ),
+  unitType: v.union(
+    v.literal('cage'),
+    v.literal('pond'),
+    v.literal('tank'),
+    v.literal('raceway'),
+    v.literal('hatchery_tank'),
+    v.literal('incubator'),
+    v.literal('hapa'),
+  ),
+  area_m2: v.optional(v.number()),
+  areaM2: v.optional(v.number()),
+  depth_m: v.optional(v.number()),
+  depthM: v.optional(v.number()),
+  volume_m3: v.optional(v.number()),
+  volumeM3: v.optional(v.number()),
+  diameter_m: v.optional(v.number()),
+  diameterM: v.optional(v.number()),
+  unit_group: v.optional(v.string()),
+  unitGroup: v.optional(v.string()),
+  unitGroupId: v.optional(v.id('unitGroups')),
+  waterBodyId: v.optional(v.id('waterBodies')),
+  latitude: v.optional(v.number()),
+  longitude: v.optional(v.number()),
+  netVolumeM3: v.optional(v.number()),
+  meshSizeMm: v.optional(v.number()),
+  lengthM: v.optional(v.number()),
+  widthM: v.optional(v.number()),
+  flowM3h: v.optional(v.number()),
+  waterSource: v.optional(v.string()),
+  maxDensity: v.optional(v.number()),
+  status_changed_at: v.optional(v.number()),
+  archived_at: v.optional(v.number()),
+  archivedAt: v.optional(v.number()),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  updated_at: v.number(),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     status: v.optional(cageStatus),
@@ -190,6 +272,7 @@ export const list = query({
       ),
     ),
   },
+  returns: v.array(cageRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let cages = await scopedRows(ctx, user, 'cages', { locationId: args.locationId })
@@ -217,6 +300,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id('cages') },
+  returns: v.union(cageRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(id)
@@ -229,6 +313,7 @@ export const get = query({
 
 export const getActive = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.array(cageRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cages = await activeCages(ctx, user, args.locationId)
@@ -243,6 +328,63 @@ export const growth = query({
     /** Client's today (YYYY-MM-DD); days of culture count to here. */
     asOf: v.optional(v.string()),
   },
+  returns: v.union(
+    v.object({
+      batch_id: v.null(),
+      source: v.literal('legacy'),
+      definitions_version: v.number(),
+      stocking_id: v.union(v.id('stockingHistory'), v.null()),
+      batch_number: v.union(v.string(), v.null()),
+      stocking_date: v.union(v.string(), v.null()),
+      cycle_closed: v.boolean(),
+      days_of_culture: v.union(v.number(), v.null()),
+      stocked_count: v.number(),
+      live_count: v.number(),
+      mortality: v.number(),
+      survival_pct: v.union(v.number(), v.null()),
+      initial_abw_g: v.union(v.number(), v.null()),
+      current_abw_g: v.union(v.number(), v.null()),
+      abw_measured_on: v.union(v.string(), v.null()),
+      initial_biomass_kg: v.union(v.number(), v.null()),
+      current_biomass_kg: v.union(v.number(), v.null()),
+      feed_kg: v.union(v.number(), v.null()),
+      feed_cost: v.union(v.number(), v.null()),
+      efcr: v.union(v.number(), v.null()),
+      sgr_pct_day: v.union(v.number(), v.null()),
+      adg_g_day: v.union(v.number(), v.null()),
+    }),
+    v.object({
+      stocking_id: v.union(v.id('stockingHistory'), v.null()),
+      batch_id: v.id('batches'),
+      batch_number: v.string(),
+      stocking_date: v.union(v.string(), v.null()),
+      cycle_closed: v.boolean(),
+      days_of_culture: v.union(v.number(), v.null()),
+      stocked_count: v.number(),
+      live_count: v.number(),
+      mortality: v.number(),
+      survival_pct: v.union(v.number(), v.null()),
+      mortality_pct: v.union(v.number(), v.null()),
+      harvested_count: v.number(),
+      harvested_kg: v.number(),
+      unaccounted: v.number(),
+      initial_abw_g: v.union(v.number(), v.null()),
+      current_abw_g: v.union(v.number(), v.null()),
+      abw_measured_on: v.union(v.string(), v.null()),
+      initial_biomass_kg: v.number(),
+      current_biomass_kg: v.number(),
+      gain_kg: v.number(),
+      feed_kg: v.number(),
+      feed_cost: v.number(),
+      efcr: v.union(v.number(), v.null()),
+      biological_fcr: v.union(v.number(), v.null()),
+      sgr_pct_day: v.union(v.number(), v.null()),
+      adg_g_day: v.union(v.number(), v.null()),
+      source: v.literal('ledger'),
+      definitions_version: v.number(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id, asOf }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(id)
@@ -263,6 +405,72 @@ export const growthAll = query({
     /** Client's today (YYYY-MM-DD); days of culture count to here. */
     asOf: v.optional(v.string()),
   },
+  returns: v.object({
+    cages: v.array(
+      v.union(
+        v.object({
+          batch_id: v.null(),
+          source: v.literal('legacy'),
+          definitions_version: v.number(),
+          stocking_id: v.union(v.id('stockingHistory'), v.null()),
+          batch_number: v.union(v.string(), v.null()),
+          stocking_date: v.union(v.string(), v.null()),
+          cycle_closed: v.boolean(),
+          days_of_culture: v.union(v.number(), v.null()),
+          stocked_count: v.number(),
+          live_count: v.number(),
+          mortality: v.number(),
+          survival_pct: v.union(v.number(), v.null()),
+          initial_abw_g: v.union(v.number(), v.null()),
+          current_abw_g: v.union(v.number(), v.null()),
+          abw_measured_on: v.union(v.string(), v.null()),
+          initial_biomass_kg: v.union(v.number(), v.null()),
+          current_biomass_kg: v.union(v.number(), v.null()),
+          feed_kg: v.union(v.number(), v.null()),
+          feed_cost: v.union(v.number(), v.null()),
+          efcr: v.union(v.number(), v.null()),
+          sgr_pct_day: v.union(v.number(), v.null()),
+          adg_g_day: v.union(v.number(), v.null()),
+          cage_id: v.id('cages'),
+          cage_name: v.string(),
+        }),
+        v.object({
+          stocking_id: v.union(v.id('stockingHistory'), v.null()),
+          batch_id: v.id('batches'),
+          batch_number: v.string(),
+          stocking_date: v.union(v.string(), v.null()),
+          cycle_closed: v.boolean(),
+          days_of_culture: v.union(v.number(), v.null()),
+          stocked_count: v.number(),
+          live_count: v.number(),
+          mortality: v.number(),
+          survival_pct: v.union(v.number(), v.null()),
+          mortality_pct: v.union(v.number(), v.null()),
+          harvested_count: v.number(),
+          harvested_kg: v.number(),
+          unaccounted: v.number(),
+          initial_abw_g: v.union(v.number(), v.null()),
+          current_abw_g: v.union(v.number(), v.null()),
+          abw_measured_on: v.union(v.string(), v.null()),
+          initial_biomass_kg: v.number(),
+          current_biomass_kg: v.number(),
+          gain_kg: v.number(),
+          feed_kg: v.number(),
+          feed_cost: v.number(),
+          efcr: v.union(v.number(), v.null()),
+          biological_fcr: v.union(v.number(), v.null()),
+          sgr_pct_day: v.union(v.number(), v.null()),
+          adg_g_day: v.union(v.number(), v.null()),
+          source: v.literal('ledger'),
+          definitions_version: v.number(),
+          cage_id: v.id('cages'),
+          cage_name: v.string(),
+        }),
+      ),
+    ),
+    farm_efcr: v.union(v.number(), v.null()),
+    farm_biomass_kg: v.number(),
+  }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     // Every active cage of the company (was the first 300 active cages of

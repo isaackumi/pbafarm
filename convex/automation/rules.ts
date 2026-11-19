@@ -19,6 +19,7 @@ import {
   type AutomationTrigger,
 } from './validators'
 import { requireMember } from '../lib/permissions'
+import { docValidator } from '../lib/docValidators'
 
 /**
  * Admin API for automation rules (AUTO-002, AUTO-006, AUTO-007). Everything
@@ -188,6 +189,44 @@ function memberLabel(u: Doc<'users'>) {
 
 export const overview = query({
   args: {},
+  returns: v.object({
+    timezone: v.string(),
+    onEngine: v.boolean(),
+    rules: v.array(docValidator('automationRules')),
+    templates: v.array(
+      v.object({
+        key: v.string(),
+        name: v.string(),
+        description: v.string(),
+        builtIn: v.boolean(),
+        triggerKind: v.union(v.literal('event'), v.literal('schedule')),
+        inUse: v.boolean(),
+      }),
+    ),
+    eventTypes: v.array(
+      v.object({ type: v.string(), label: v.string(), fields: v.array(v.string()) }),
+    ),
+    checks: v.array(
+      v.object({
+        key: v.string(),
+        label: v.string(),
+        description: v.string(),
+        fields: v.array(v.string()),
+        params: v.array(
+          v.object({ key: v.string(), label: v.string(), default: v.optional(v.number()) }),
+        ),
+      }),
+    ),
+    members: v.array(
+      v.object({
+        _id: v.id('users'),
+        name: v.string(),
+        role: v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin')),
+        hasPhone: v.boolean(),
+        hasEmail: v.boolean(),
+      }),
+    ),
+  }),
   handler: async (ctx) => {
     const { companyId } = await requireAdmin(ctx)
     const company = await ctx.db.get(companyId)
@@ -230,6 +269,7 @@ export const overview = query({
 
 export const runs = query({
   args: { ruleId: v.optional(v.id('automationRules')), limit: v.optional(v.number()) },
+  returns: v.array(docValidator('automationRuns')),
   handler: async (ctx, { ruleId, limit }) => {
     const { companyId } = await requireAdmin(ctx)
     const n = Math.max(1, Math.min(100, Math.floor(limit ?? 50)))

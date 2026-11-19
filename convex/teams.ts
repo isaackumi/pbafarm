@@ -79,6 +79,24 @@ function displayName(u: Doc<'users'> | null, showEmail: boolean) {
 /** Departments and teams with members and leads. */
 export const list = query({
   args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id('teams'),
+      name: v.string(),
+      kind: v.union(v.literal('department'), v.literal('team')),
+      parentId: v.union(v.id('teams'), v.null()),
+      locationId: v.union(v.id('farmLocations'), v.null()),
+      description: v.union(v.string(), v.null()),
+      active: v.boolean(),
+      members: v.array(
+        v.object({
+          userId: v.id('users'),
+          role: v.union(v.literal('lead'), v.literal('member')),
+          name: v.string(),
+        }),
+      ),
+    }),
+  ),
   handler: async (ctx) => {
     const m = await requireMember(ctx, { permission: 'workforce.view' })
     if (!m.companyId) return []
@@ -110,6 +128,14 @@ export const list = query({
 /** The caller's teams (any member): for tasks and team messages. */
 export const mine = query({
   args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id('teams'),
+      name: v.string(),
+      kind: v.union(v.literal('department'), v.literal('team')),
+      role: v.union(v.literal('lead'), v.literal('member')),
+    }),
+  ),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
     if (!user.companyId) return []

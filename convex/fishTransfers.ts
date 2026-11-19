@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { listForCompany, writeCompanyId, logAudit } from './lib/tenancy'
@@ -21,6 +21,7 @@ import {
 import { beginStockWrite, shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 import { assertDifferentApprover, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
+import { docFields } from './lib/docValidators'
 
 async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) {
   if (!companyId) return mergeSettings(undefined)
@@ -28,15 +29,15 @@ async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) 
   return mergeSettings(company?.settings)
 }
 
-async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
+async function findApprovedStockingForCage(ctx: QueryCtx, user: Doc<'users'>, cageId: Id<'cages'>) {
   let rows = await ctx.db
     .query('stockingHistory')
-    .withIndex('by_cage', (q: any) => q.eq('cageId', cageId))
+    .withIndex('by_cage', (q) => q.eq('cageId', cageId))
     .collect()
   rows = (await listForCompany(user, rows)).filter(
-    (s: any) => !s.deletedAt && s.status === 'approved',
+    (s) => !s.deletedAt && s.status === 'approved',
   )
-  rows.sort((a: any, b: any) => (b.stockingDate || '').localeCompare(a.stockingDate || ''))
+  rows.sort((a, b) => (b.stockingDate || '').localeCompare(a.stockingDate || ''))
   return rows[0] || null
 }
 
@@ -51,8 +52,8 @@ async function findApprovedStockingForCage(ctx: any, user: any, cageId: any) {
  * row means the transfer can no longer be approved.
  */
 async function applyFishTransfer(
-  ctx: any,
-  transfer: any,
+  ctx: MutationCtx,
+  transfer: Doc<'fishTransfers'>,
   opts: { linkedJustCreated?: boolean } = {},
 ) {
   const source = await ctx.db.get(transfer.sourceCageId)
@@ -78,13 +79,13 @@ async function applyFishTransfer(
     [stocking, 'stocking'],
     [topup, 'top-up'],
   ] as const) {
-    if (row?.status === 'rejected' || row?.deletedAt) {
+    if (row?.status === 'rejected' || (row && 'deletedAt' in row && row.deletedAt)) {
       throw new Error(
         `The ${label} linked to this transfer was rejected, so the transfer cannot be approved. Reject the transfer instead.`,
       )
     }
   }
-  const applies = (row: any) =>
+  const applies = (row: Doc<'stockingHistory'> | Doc<'topupHistory'>) =>
     opts.linkedJustCreated || row.status === 'pending_approval'
 
   // At approval time, re-check the destination as it is now: it may have been
@@ -163,6 +164,13 @@ async function applyFishTransfer(
   }
 }
 
+const listFishTransfersItem = v.object({
+  ...docFields('fishTransfers'),
+  sourceCageName: v.optional(v.string()),
+  destinationCageName: v.optional(v.string()),
+  id: v.id('fishTransfers'),
+})
+
 export const listFishTransfers = query({
   args: {
     status: v.optional(
@@ -176,6 +184,7 @@ export const listFishTransfers = query({
     destinationCageId: v.optional(v.id('cages')),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(listFishTransfersItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.status
@@ -240,6 +249,7 @@ export const listFishTransfersPage = query({
     destinationCageId: v.optional(v.id('cages')),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(listFishTransfersItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPage(ctx, user, 'fishTransfers', args.paginationOpts)
@@ -259,6 +269,7 @@ export const listFishTransfersPage = query({
 
 export const getFishTransfer = query({
   args: { id: v.id('fishTransfers') },
+  returns: v.union(listFishTransfersItem, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const row = await ctx.db.get(id)
