@@ -572,6 +572,26 @@
     "listEmptyHint": "Record a harvest when fish leave a cage.",
     "listAdd": "Record harvest"
   },
+  "gradingPage": {
+    "title": "Grading",
+    "eyebrow": "Production · Sort by size, split into cages",
+    "transfers": "Fish transfers",
+    "adminsOnly": "Admins only",
+    "adminsOnlyHint": "Ask a company admin to record a grading.",
+    "how": {
+      "title": "How grading works",
+      "body": "Sort a cage's fish by size into new batches, one per destination cage. The batch they came from is kept as their parent, and culls are logged as mortality."
+    },
+    "recent": {
+      "title": "Recent gradings",
+      "all": "All batches",
+      "empty": "No grading recorded yet.",
+      "batches": {
+        "one": "{count} batch",
+        "other": "{count} batches"
+      }
+    }
+  },
   "harvestPage": {
     "title": "Harvest",
     "eyebrow": "Production · Harvests, sizing and lots",

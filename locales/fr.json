@@ -572,6 +572,26 @@
     "listEmptyHint": "Enregistrez une récolte quand les poissons quittent une cage.",
     "listAdd": "Enregistrer une récolte"
   },
+  "gradingPage": {
+    "title": "Calibrage",
+    "eyebrow": "Production · Trier par taille, répartir en cages",
+    "transfers": "Transferts de poissons",
+    "adminsOnly": "Réservé aux administrateurs",
+    "adminsOnlyHint": "Demandez à un administrateur de l'entreprise d'enregistrer un calibrage.",
+    "how": {
+      "title": "Fonctionnement du calibrage",
+      "body": "Triez les poissons d'une cage par taille en nouveaux lots d'élevage, un par cage de destination. Le lot d'origine est conservé comme parent et les rebuts sont enregistrés comme mortalité."
+    },
+    "recent": {
+      "title": "Calibrages récents",
+      "all": "Tous les lots",
+      "empty": "Aucun calibrage enregistré pour l'instant.",
+      "batches": {
+        "one": "{count} lot",
+        "other": "{count} lots"
+      }
+    }
+  },
   "harvestPage": {
     "title": "Récolte",
     "eyebrow": "Production · Récoltes, calibrage et lots",
