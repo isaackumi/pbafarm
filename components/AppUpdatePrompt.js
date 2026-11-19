@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../lib/i18n/context'
-import { Button } from './ui'
 
 /**
  * Registers the service worker and offers a reload when a new build is ready
@@ -50,15 +49,29 @@ export default function AppUpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed inset-x-3 bottom-24 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-foam-deep bg-surface p-3 text-sm text-chart-ink shadow-lg md:bottom-6"
+      className="fixed inset-x-3 bottom-24 z-50 mx-auto flex max-w-[340px] flex-col gap-3 rounded-[20px] border border-line-strong bg-surface-2 px-5 py-[18px] text-text shadow-[0_24px_64px_rgb(0_0_0/0.4)] md:inset-x-auto md:bottom-6 md:right-6 md:w-[340px]"
     >
-      <p className="flex-1">{t('pwa.updateReady')}</p>
-      <Button variant="ghost" size="sm" onClick={() => setWaiting(null)}>
-        {t('pwa.later')}
-      </Button>
-      <Button size="sm" onClick={() => waiting.postMessage({ type: 'SKIP_WAITING' })}>
-        {t('pwa.reload')}
-      </Button>
+      <div className="flex items-center gap-2.5">
+        <span className="h-2 w-2 shrink-0 rounded-full bg-cyan" aria-hidden />
+        <p className="text-sm font-semibold leading-[18px]">{t('overlay.update.title')}</p>
+      </div>
+      <p className="text-sm leading-[18px] text-muted">{t('pwa.updateReady')}</p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => waiting.postMessage({ type: 'SKIP_WAITING' })}
+          className="rounded-pill bg-button px-4 py-2 text-sm font-semibold leading-[18px] text-button-text hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2"
+        >
+          {t('pwa.reload')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setWaiting(null)}
+          className="rounded-pill px-4 py-2 text-sm leading-[18px] text-muted hover:bg-surface hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          {t('pwa.later')}
+        </button>
+      </div>
     </div>
   )
 }

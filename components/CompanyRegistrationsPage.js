@@ -6,7 +6,12 @@ import { registrationArgs } from '../lib/companyRegistration'
 import { errorMessage } from '../lib/errorMessage'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
-import { Button, Field, Input, Textarea } from './ui'
+import { LoadingState } from './ui'
+import { GradientButton } from './ui/Buttons'
+import { useT } from '../lib/i18n/context'
+import { AuthAlert, AuthGhost, AuthStateCard } from './auth/AuthUi'
+import OnboardingLayout, { ONBOARDING_INPUT, OnboardingField } from './onboarding/OnboardingLayout'
+import { Hourglass } from 'lucide-react'
 import { useHumanCheck } from './HumanCheck'
 
 function suggestCode(name) {
@@ -28,6 +33,7 @@ function suggestCode(name) {
 
 const CompanyRegistrationsPage = () => {
   const router = useRouter()
+  const t = useT()
   const { user, loading: authLoading, signOut } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
@@ -58,7 +64,7 @@ const CompanyRegistrationsPage = () => {
     try {
       await requestToJoin({ inviteId })
     } catch (err) {
-      setError(err.message || 'Could not send the join request')
+      setError(err.message || t('onboarding.joinFailed'))
     } finally {
       setJoiningId(null)
     }
@@ -110,12 +116,12 @@ const CompanyRegistrationsPage = () => {
     setSuccess(false)
 
     if (!formData.name.trim()) {
-      setError('Company name is required')
+      setError(t('onboarding.nameRequired'))
       return
     }
     const code = (formData.code || suggestCode(formData.name)).trim()
     if (!code || code.length < 2) {
-      setError('Enter a short company code (at least 2 characters)')
+      setError(t('onboarding.codeTooShort'))
       return
     }
 
@@ -146,7 +152,7 @@ const CompanyRegistrationsPage = () => {
       setCodeTouched(false)
     } catch (err) {
       console.error('Error registering company:', err)
-      setError(errorMessage(err, 'Error registering company'))
+      setError(errorMessage(err, t('onboarding.registerFailed')))
     } finally {
       setLoading(false)
     }
@@ -154,255 +160,234 @@ const CompanyRegistrationsPage = () => {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-        <p className="text-sm text-muted">Checking your account…</p>
+      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+        <LoadingState label={t('onboarding.checking')} />
       </div>
     )
   }
 
-  if (registration?.status === 'pending' && !success) {
+  const awaiting = success || registration?.status === 'pending'
+  const steps = [
+    { id: 'account', label: t('onboarding.steps.account'), hint: user.email, state: 'done' },
+    {
+      id: 'company',
+      label: t('onboarding.steps.company'),
+      hint: awaiting && registration?.name ? `${registration.name} · ${registration.code}` : t('onboarding.steps.companyHint'),
+      state: awaiting ? 'done' : 'current',
+    },
+    {
+      id: 'approval',
+      label: t('onboarding.steps.approval'),
+      hint: t('onboarding.steps.approvalHint'),
+      state: awaiting ? 'current' : 'upcoming',
+    },
+    { id: 'units', label: t('onboarding.steps.units'), hint: t('onboarding.steps.unitsHint'), state: 'upcoming' },
+  ]
+
+  const leaveAction =
+    companyless && !isSuperAdmin ? (
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="rounded-pill px-1 text-sm leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      >
+        {t('common.signOut')}
+      </button>
+    ) : (
+      <Link
+        href="/dashboard"
+        className="rounded-pill px-1 text-sm leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      >
+        ← {t('onboarding.backToApp')}
+      </Link>
+    )
+
+  if (awaiting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-        <div className="max-w-md w-full text-center space-y-4">
-          <p className="font-display text-3xl text-lagoon-950 tracking-tight">
-            PBA Farm
-          </p>
-          <div className="bg-surface border border-foam-deep rounded-2xl px-6 py-8 shadow-sm space-y-3">
-            <h1 className="text-lg font-semibold text-chart-ink">
-              Registration awaiting approval
-            </h1>
-            <p className="text-sm text-muted">
-              {registration.name} ({registration.code}) was submitted for
-              approval. You get access as its admin once it is approved. This
-              page updates on its own.
-            </p>
+      <OnboardingLayout
+        steps={steps}
+        title={t('onboarding.pendingTitle')}
+        subtitle={t('onboarding.pendingSubtitle')}
+      >
+        <AuthStateCard
+          icon={<Hourglass />}
+          title={success && !registration?.name ? t('onboarding.submitted') : `${registration?.name || ''}${registration?.code ? ` · ${registration.code}` : ''}`}
+          body={t('onboarding.pendingBody')}
+        >
+          <div className="flex flex-col gap-2.5 sm:flex-row">
             {user.companyId ? (
-              <Button href="/dashboard" variant="secondary" className="w-full">
-                Back to the app
-              </Button>
+              <AuthGhost href="/dashboard" className="sm:w-auto">
+                {t('onboarding.backToApp')}
+              </AuthGhost>
             ) : (
-              <Button variant="secondary" className="w-full" onClick={handleSignOut}>
-                Sign out
-              </Button>
+              <AuthGhost onClick={handleSignOut} className="sm:w-auto">
+                {t('common.signOut')}
+              </AuthGhost>
             )}
           </div>
-        </div>
-      </div>
+        </AuthStateCard>
+      </OnboardingLayout>
     )
   }
 
   const openInvites = invites || []
 
   return (
-    <div className="min-h-screen bg-foam px-4 py-10 sm:py-14">
-      <div className="max-w-lg mx-auto">
-        <div className="text-center mb-8">
-          <Link
-            href="/dashboard"
-            className="font-display text-4xl text-chart-ink font-medium hover:opacity-90"
+    <OnboardingLayout
+      steps={steps}
+      pageTitle={t('onboarding.pageTitle')}
+      title={user.companyId ? t('onboarding.titleAnother') : t('onboarding.title')}
+      subtitle={user.companyId ? t('onboarding.subtitleAnother') : t('onboarding.subtitle')}
+      footer={
+        <>
+          {leaveAction}
+          {!(companyless && !isSuperAdmin) && (
+            <Link
+              href="/company-settings"
+              className="rounded-pill px-1 text-sm leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            >
+              {t('onboarding.companySettings')}
+            </Link>
+          )}
+          <GradientButton
+            type="submit"
+            form="register-company-form"
+            variant="solid"
+            className="ml-auto"
+            disabled={loading || !human.ready}
           >
-            PBA Farm
-          </Link>
-          <h1 className="text-xl font-semibold text-chart-ink">
-            {user.companyId ? 'Register another organization' : 'Register your company'}
-          </h1>
-          <p className="mt-1 text-sm text-muted max-w-sm mx-auto">
-            Submit farm details for approval. Once a super admin approves, you
-            become its owner{user.companyId ? ' and can switch to it from your profile menu' : ''}.
-            Invited by email? Open the link in the invite instead.
-          </p>
-        </div>
-
-        {openInvites.length > 0 && (
-          <div className="mb-6 bg-surface border border-foam-deep rounded-xl px-6 py-6 shadow-sm space-y-3">
-            <h2 className="text-base font-semibold text-chart-ink">
-              You have been invited
-            </h2>
-            <p className="text-sm text-muted">
-              Ask to join, and the company&apos;s admin will approve your request.
-            </p>
-            <ul className="space-y-2">
-              {openInvites.map((invite) => (
-                <li
-                  key={invite.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-foam-deep px-3 py-2"
-                >
-                  <div className="text-sm">
-                    <p className="font-medium text-chart-ink">{invite.companyName}</p>
-                    <p className="text-muted">
-                      As {invite.role === 'admin' ? 'an admin' : 'a user'}
-                    </p>
-                  </div>
-                  {invite.status === 'requested' ? (
-                    <span className="text-sm text-muted">Waiting for approval</span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      disabled={joiningId === invite.id}
-                      onClick={() => handleJoin(invite.id)}
-                    >
-                      {joiningId === invite.id ? 'Sending…' : 'Ask to join'}
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {loading ? t('onboarding.submitting') : t('onboarding.submit')}
+          </GradientButton>
+        </>
+      }
+    >
+      {openInvites.length > 0 && (
+        <section className="flex flex-col gap-3 rounded-card border border-line bg-surface p-5">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold leading-5 text-text">{t('onboarding.invitedTitle')}</h2>
+            <p className="text-sm leading-5 text-muted">{t('onboarding.invitedBody')}</p>
           </div>
-        )}
+          <ul className="flex flex-col gap-2">
+            {openInvites.map((invite) => (
+              <li
+                key={invite.id}
+                className="flex items-center justify-between gap-3 rounded-input border border-line px-4 py-3"
+              >
+                <div className="min-w-0 text-sm leading-[18px]">
+                  <p className="truncate font-medium text-text">{invite.companyName}</p>
+                  <p className="text-muted">
+                    {invite.role === 'admin' ? t('onboarding.asAdmin') : t('onboarding.asUser')}
+                  </p>
+                </div>
+                {invite.status === 'requested' ? (
+                  <span className="text-sm text-muted">{t('onboarding.waiting')}</span>
+                ) : (
+                  <GradientButton size="sm" disabled={joiningId === invite.id} onClick={() => handleJoin(invite.id)}>
+                    {joiningId === invite.id ? t('common.sending') : t('onboarding.askToJoin')}
+                  </GradientButton>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
-          {registration?.status === 'rejected' && !success && (
-            <div className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
-              Your registration of {registration.name} was not approved
-              {registration.rejectionReason
-                ? `: ${registration.rejectionReason}`
-                : '.'}{' '}
-              You can submit a new one.
-            </div>
-          )}
-          {error && (
-            <div role="alert" className="mb-5 bg-signal/10 text-signal border border-signal/20 p-3 rounded-xl text-sm">
-              {error}
-            </div>
-          )}
+      {registration?.status === 'rejected' && (
+        <AuthAlert>
+          {t('onboarding.rejected', { name: registration.name })}
+          {registration.rejectionReason ? ` ${registration.rejectionReason}` : ''}
+        </AuthAlert>
+      )}
+      {error && <AuthAlert>{error}</AuthAlert>}
 
-          {success && (
-            <div className="mb-5 bg-kelp/10 text-kelp border border-kelp/25 p-3 rounded-xl text-sm space-y-1">
-              <p className="font-semibold text-chart-ink">
-                Registration submitted
-              </p>
-              <p className="text-muted">
-                Awaiting super-admin approval. You’ll get access once it’s
-                approved.
-              </p>
-            </div>
-          )}
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <Field label="Company name" htmlFor="name" required>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g. Hei Tech Aquaculture"
-                required
-                autoComplete="organization"
-              />
-            </Field>
-
-            <Field
-              label="Short code"
-              htmlFor="code"
+      <form id="register-company-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_200px]">
+          <OnboardingField label={t('onboarding.name')} htmlFor="name" required>
+            <input
+              id="name"
+              name="name"
+              className={ONBOARDING_INPUT}
+              value={formData.name}
+              onChange={handleChange}
+              placeholder={t('onboarding.namePlaceholder')}
               required
-              hint="Unique ID used across the system (letters/numbers). Auto-suggested from the name."
-            >
-              <Input
-                id="code"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                placeholder={previewCode || 'e.g. HEI'}
-                required
-                className="font-data tabular-nums"
-                maxLength={12}
-              />
-            </Field>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <Field label="Contact email" htmlFor="contactEmail" required>
-                <Input
-                  id="contactEmail"
-                  name="contactEmail"
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={handleChange}
-                  required
-                  autoComplete="email"
-                />
-              </Field>
-              <Field label="Phone" htmlFor="contactPhone" required>
-                <Input
-                  id="contactPhone"
-                  name="contactPhone"
-                  type="tel"
-                  value={formData.contactPhone}
-                  onChange={handleChange}
-                  placeholder="0XX XXX XXXX"
-                  required
-                  autoComplete="tel"
-                />
-              </Field>
-            </div>
-
-            <Field label="Farm / office address" htmlFor="address" required>
-              <Textarea
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                rows={3}
-                required
-                placeholder="Street, town, region"
-              />
-            </Field>
-
-            <Field
-              label="Registration / tax ID"
-              htmlFor="registrationNumber"
-              hint="Optional business registration or tax number"
-            >
-              <Input
-                id="registrationNumber"
-                name="registrationNumber"
-                value={formData.registrationNumber}
-                onChange={handleChange}
-                placeholder="Optional"
-              />
-            </Field>
-
-            {human.widget}
-
-            <Button
-              type="submit"
-              disabled={loading || !human.ready}
-              className="w-full"
-              size="lg"
-            >
-              {loading ? 'Submitting…' : 'Submit for approval'}
-            </Button>
-          </form>
-
-          {companyless && !isSuperAdmin ? (
-            <p className="mt-6 text-center text-sm text-muted">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="font-medium text-lake hover:underline"
-              >
-                Sign out
-              </button>
-            </p>
-          ) : (
-            <p className="mt-6 text-center text-sm text-muted">
-              <Link
-                href="/dashboard"
-                className="font-medium text-lake hover:underline"
-              >
-                Back to dashboard
-              </Link>
-              {' · '}
-              <Link
-                href="/company-settings"
-                className="font-medium text-lake hover:underline"
-              >
-                Company settings
-              </Link>
-            </p>
-          )}
+              autoComplete="organization"
+            />
+          </OnboardingField>
+          <OnboardingField label={t('onboarding.code')} htmlFor="code" required hint={t('onboarding.codeHint')}>
+            <input
+              id="code"
+              name="code"
+              className={`${ONBOARDING_INPUT} font-mono tabular-nums`}
+              value={formData.code}
+              onChange={handleChange}
+              placeholder={previewCode || 'HEI'}
+              required
+              maxLength={12}
+            />
+          </OnboardingField>
         </div>
-      </div>
-    </div>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <OnboardingField label={t('onboarding.contactEmail')} htmlFor="contactEmail" required>
+            <input
+              id="contactEmail"
+              name="contactEmail"
+              type="email"
+              className={ONBOARDING_INPUT}
+              value={formData.contactEmail}
+              onChange={handleChange}
+              required
+              autoComplete="email"
+            />
+          </OnboardingField>
+          <OnboardingField label={t('onboarding.phone')} htmlFor="contactPhone" required>
+            <input
+              id="contactPhone"
+              name="contactPhone"
+              type="tel"
+              className={ONBOARDING_INPUT}
+              value={formData.contactPhone}
+              onChange={handleChange}
+              placeholder="0XX XXX XXXX"
+              required
+              autoComplete="tel"
+            />
+          </OnboardingField>
+        </div>
+
+        <OnboardingField label={t('onboarding.address')} htmlFor="address" required>
+          <textarea
+            id="address"
+            name="address"
+            className={`${ONBOARDING_INPUT} resize-y`}
+            value={formData.address}
+            onChange={handleChange}
+            rows={3}
+            required
+            placeholder={t('onboarding.addressPlaceholder')}
+          />
+        </OnboardingField>
+
+        <OnboardingField
+          label={t('onboarding.registrationNumber')}
+          htmlFor="registrationNumber"
+          hint={t('onboarding.registrationNumberHint')}
+        >
+          <input
+            id="registrationNumber"
+            name="registrationNumber"
+            className={ONBOARDING_INPUT}
+            value={formData.registrationNumber}
+            onChange={handleChange}
+            placeholder={t('onboarding.optional')}
+          />
+        </OnboardingField>
+
+        {human.widget}
+        <p className="text-sm leading-5 text-muted">{t('onboarding.inviteHint')}</p>
+      </form>
+    </OnboardingLayout>
   )
 }
 

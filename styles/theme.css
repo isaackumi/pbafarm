@@ -47,6 +47,22 @@
   --pill-red-border: #6b3a3a;
   --pill-red-text: #f87171;
 
+  /* Tinted fills for status badges and banners (Paper 62/63); derived so both themes follow */
+  --alert-tint-bg: color-mix(in srgb, var(--alert) 9%, var(--surface));
+  --alert-tint-border: color-mix(in srgb, var(--alert) 32%, var(--surface));
+  --warn-tint-bg: color-mix(in srgb, var(--warn) 9%, var(--surface));
+  --warn-tint-border: color-mix(in srgb, var(--warn) 32%, var(--surface));
+  --banner-pink-bg: color-mix(in srgb, var(--pink-fill) 7%, var(--bg));
+  --backdrop: rgb(0 0 0 / 0.66);
+  /* Auth lake scene (Paper 15 visual side) */
+  --scene-bg: #0d0f11;
+  --scene-sky-top: #14181c;
+  --scene-sky-mid: #3a2a35;
+  --scene-hills: #1a2125;
+  --scene-water-top: #2c3b40;
+  --scene-water-bottom: #0b0e10;
+  --scene-sun: #ffe1ec;
+
   /* Legacy names (pre-redesign), aliased to the tokens */
   --lagoon-950: #18181b;
   --lagoon-800: #27272a;
@@ -125,6 +141,14 @@ html[data-theme='light'] {
   --button: #0e1012;
   --button-text: #ffffff;
   --shadow-card: 0 1px 2px #1018281a;
+  --backdrop: rgb(16 24 40 / 0.3);
+  --scene-bg: #eef3f5;
+  --scene-sky-top: #eaf1f4;
+  --scene-sky-mid: #f4dce7;
+  --scene-hills: #c6d5d9;
+  --scene-water-top: #bcd7dc;
+  --scene-water-bottom: #dce9ec;
+  --scene-sun: #ffffff;
 
   --pill-neutral-border: #d5d9de;
   --pill-neutral-text: #4a5057;
@@ -684,15 +708,7 @@ html[data-theme='dark'] .border-amber-200 {
 
 /* Soft glass dim behind dialogs — light blur, not a hard blackout */
 .modal-backdrop {
-  background-color: color-mix(in srgb, var(--chart-ink) 42%, transparent);
-  backdrop-filter: blur(12px) saturate(1.15);
-  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  /* Paper 63 / P-MODAL: flat scrim, no blur */
+  background-color: var(--backdrop);
   isolation: isolate;
-}
-
-html.dark .modal-backdrop,
-html[data-theme='dark'] .modal-backdrop {
-  background-color: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
 }

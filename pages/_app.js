@@ -91,8 +91,11 @@ function AppWrapper({ Component, pageProps, router }) {
 
 /** Signed-out pages; a signed-in visitor is sent on to the app. */
 const PUBLIC_ROUTES = ['/login', '/signup', '/reset-password']
-/** Open to signed-in and signed-out visitors (an invite link shows who invited you). */
-const OPEN_ROUTES = ['/invite/[token]']
+/**
+ * Open to signed-in and signed-out visitors (an invite link shows who invited
+ * you; `/` is the landing page and sends signed-in visitors to the app).
+ */
+const OPEN_ROUTES = ['/', '/invite/[token]']
 
 /** Where each access state may go; everything else redirects to `home`. */
 const ACCESS_ROUTES = {
@@ -145,8 +148,9 @@ function OfflineSessionBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-40 bg-foam-deep px-4 py-2 text-center text-sm text-chart-ink print:hidden"
+      className="sticky top-0 z-40 flex items-center justify-center gap-2 border-b border-line bg-surface-2 px-4 py-2 text-center text-sm text-muted print:hidden"
     >
+      <span className="h-2 w-2 shrink-0 rounded-full bg-dot-warn" aria-hidden />
       {t('common.offlineSession')}
     </div>
   )

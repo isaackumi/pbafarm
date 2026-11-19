@@ -2,7 +2,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
-import { Button, Field, Input } from '../components/ui'
+import {
+  AUTH_LINK,
+  AuthAlert,
+  AuthHeading,
+  AuthLayout,
+  AuthSubmit,
+  OtpInput,
+} from '../components/auth/AuthUi'
 import { safeNextPath } from '../lib/safeRedirect'
 import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
@@ -49,57 +56,37 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">{t('auth.verifyEmail.title')}</h1>
-          {status?.email && <p className="mt-1 text-sm text-muted">{status.email}</p>}
-        </div>
+    <AuthLayout title={t('auth.verifyEmail.title')}>
+      <AuthHeading title={t('auth.verifyEmail.title')} subtitle={status?.email || undefined} />
 
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm space-y-5">
-          {error && (
-            <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+      {error && <AuthAlert>{error}</AuthAlert>}
 
-          {status?.verified ? (
-            <>
-              <p className="text-sm text-chart-ink">{t('auth.verifyEmail.verified')}</p>
-              <Button size="lg" className="w-full" onClick={() => router.push(next)}>
-                {t('common.continue')}
-              </Button>
-            </>
-          ) : !sent ? (
-            <>
-              <p className="text-sm text-muted">{t('auth.verifyEmail.intro')}</p>
-              <Button size="lg" className="w-full" disabled={busy || !status} onClick={send}>
-                {busy ? t('common.sending') : t('auth.verifyEmail.emailMe')}
-              </Button>
-            </>
-          ) : (
-            <form className="space-y-5" onSubmit={submit}>
-              <Field label={t('common.code')} htmlFor="code" hint={t('auth.verifyEmail.expires')}>
-                <Input
-                  id="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </Field>
-              <Button type="submit" size="lg" className="w-full" disabled={busy}>
-                {busy ? t('common.checking') : t('common.verify')}
-              </Button>
-              <button type="button" className="w-full text-sm text-lake hover:underline" onClick={send} disabled={busy}>
-                {t('common.sendNewCode')}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
+      {status?.verified ? (
+        <>
+          <AuthAlert tone="good">{t('auth.verifyEmail.verified')}</AuthAlert>
+          <AuthSubmit type="button" onClick={() => router.push(next)}>
+            {t('common.continue')}
+          </AuthSubmit>
+        </>
+      ) : !sent ? (
+        <>
+          <p className="text-sm leading-5 text-muted">{t('auth.verifyEmail.intro')}</p>
+          <AuthSubmit type="button" disabled={busy || !status} onClick={send}>
+            {busy ? t('common.sending') : t('auth.verifyEmail.emailMe')}
+          </AuthSubmit>
+        </>
+      ) : (
+        <form className="flex flex-col gap-[22px]" onSubmit={submit}>
+          <OtpInput id="code" label={t('common.code')} value={code} onChange={setCode} autoFocus />
+          <p className="text-xs leading-4 text-muted">{t('auth.verifyEmail.expires')}</p>
+          <AuthSubmit disabled={busy || code.length !== 6}>
+            {busy ? t('common.checking') : t('common.verify')}
+          </AuthSubmit>
+          <button type="button" className={`self-start text-sm leading-[18px] ${AUTH_LINK}`} onClick={send} disabled={busy}>
+            {t('common.sendNewCode')}
+          </button>
+        </form>
+      )}
+    </AuthLayout>
   )
 }

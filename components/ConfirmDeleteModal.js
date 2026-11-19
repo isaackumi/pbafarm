@@ -1,39 +1,43 @@
 import { AlertTriangle } from 'lucide-react'
 import { Button, Modal } from './ui'
+import { useT } from '../lib/i18n/context'
 
 /**
- * Shared destructive-action confirmation. Use for every permanent/soft delete.
+ * Shared destructive-action confirmation (Paper 63). Use for every
+ * permanent/soft delete.
  */
 export default function ConfirmDeleteModal({
   open,
-  title = 'Confirm delete',
-  message = 'This action cannot be undone.',
-  confirmLabel = 'Delete',
-  cancelLabel = 'Cancel',
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
   busy = false,
   onCancel,
   onConfirm,
 }) {
+  const t = useT()
   return (
     <Modal
       open={open}
       onClose={onCancel}
       dismissible={!busy}
       role="alertdialog"
-      title={title}
-      icon={<AlertTriangle className="h-6 w-6 text-signal" aria-hidden />}
+      tone="danger"
+      title={title || t('overlay.confirmDelete.title')}
+      icon={<AlertTriangle aria-hidden />}
       footer={
         <>
           <Button variant="secondary" disabled={busy} onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel || t('common.cancel')}
           </Button>
           <Button variant="danger" disabled={busy} onClick={onConfirm}>
-            {busy ? 'Deleting…' : confirmLabel}
+            {busy ? t('overlay.confirmDelete.deleting') : confirmLabel || t('overlay.confirmDelete.confirm')}
           </Button>
         </>
       }
     >
-      <div className="text-sm text-muted">{message}</div>
+      <div className="text-sm leading-5 text-muted">{message || t('overlay.confirmDelete.message')}</div>
     </Modal>
   )
 }

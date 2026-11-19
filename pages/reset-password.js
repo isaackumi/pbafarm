@@ -2,8 +2,19 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { Button, Field, Input } from '../components/ui'
 import { useHumanCheck } from '../components/HumanCheck'
+import { useT } from '../lib/i18n/context'
+import {
+  AUTH_LINK,
+  AuthAlert,
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthLayout,
+  AuthSubmit,
+  PasswordInput,
+  StrengthBar,
+} from '../components/auth/AuthUi'
 
 /**
  * Password reset by emailed code (SEC-005). Step 1 sends an 8-digit code;
@@ -20,6 +31,7 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const human = useHumanCheck('password_reset')
+  const t = useT()
 
   const sendCode = async (e) => {
     e.preventDefault()
@@ -37,10 +49,10 @@ export default function ResetPassword() {
       const raw = err?.data?.message || err?.message || ''
       setError(
         raw.includes('InvalidAccountId')
-          ? 'No account uses that email.'
+          ? t('authUi.reset.noAccount')
           : /human/i.test(raw)
             ? raw
-            : 'Could not send the code. Try again in a minute.',
+            : t('authUi.reset.couldNotSend'),
       )
     } finally {
       setBusy(false)
@@ -51,11 +63,11 @@ export default function ResetPassword() {
     e.preventDefault()
     setError('')
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      setError(t('authUi.signup.tooShort'))
       return
     }
     if (password !== confirm) {
-      setError('Passwords do not match')
+      setError(t('authUi.signup.mismatch'))
       return
     }
     setBusy(true)
@@ -68,105 +80,92 @@ export default function ResetPassword() {
       await signIn('password', form)
       router.push('/dashboard')
     } catch {
-      setError('That code is wrong or has expired. Ask for a new one.')
+      setError(t('authUi.reset.wrongCode'))
       setBusy(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">Reset your password</h1>
-          <p className="mt-1 text-sm text-muted">
-            {step === 'email'
-              ? 'We will email you a code.'
-              : `Enter the code sent to ${email} and choose a new password.`}
-          </p>
-        </div>
+    <AuthLayout title={t('authUi.reset.title')}>
+      <AuthHeading
+        title={step === 'email' ? t('authUi.reset.title') : t('authUi.reset.newTitle')}
+        subtitle={step === 'email' ? t('authUi.reset.emailIntro') : t('authUi.reset.codeIntro', { email })}
+      />
 
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
-          {error && (
-            <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+      {error && <AuthAlert>{error}</AuthAlert>}
 
-          {step === 'email' ? (
-            <form className="space-y-5" onSubmit={sendCode}>
-              <Field label="Email" htmlFor="email">
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </Field>
-              {human.widget}
-              <Button type="submit" disabled={busy || !human.ready} size="lg" className="w-full">
-                {busy ? 'Sending…' : 'Send code'}
-              </Button>
-            </form>
-          ) : (
-            <form className="space-y-5" onSubmit={setNewPassword}>
-              <Field label="Code" htmlFor="code">
-                <Input
-                  id="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </Field>
-              <Field label="New password" htmlFor="password">
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </Field>
-              <Field label="Confirm new password" htmlFor="confirm">
-                <Input
-                  id="confirm"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                />
-              </Field>
-              <Button type="submit" disabled={busy} size="lg" className="w-full">
-                {busy ? 'Saving…' : 'Set new password'}
-              </Button>
-              <button
-                type="button"
-                className="w-full text-sm text-lake hover:underline"
-                onClick={() => {
-                  setStep('email')
-                  setCode('')
-                  setError('')
-                }}
-              >
-                Send a new code
-              </button>
-            </form>
-          )}
+      {step === 'email' ? (
+        <form className="flex flex-col gap-[22px]" onSubmit={sendCode}>
+          <AuthField label={t('auth.login.email')} htmlFor="email">
+            <AuthInput
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </AuthField>
+          {human.widget}
+          <AuthSubmit disabled={busy || !human.ready}>
+            {busy ? t('common.sending') : t('common.sendCode')}
+          </AuthSubmit>
+        </form>
+      ) : (
+        <form className="flex flex-col gap-[18px]" onSubmit={setNewPassword}>
+          <AuthField label={t('common.code')} htmlFor="code">
+            <AuthInput
+              id="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              className="font-mono tracking-[0.2em]"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </AuthField>
+          <AuthField label={t('authUi.reset.newPassword')} htmlFor="password">
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <StrengthBar password={password} />
+          </AuthField>
+          <AuthField label={t('authUi.reset.confirm')} htmlFor="confirm">
+            <PasswordInput
+              id="confirm"
+              autoComplete="new-password"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </AuthField>
+          <AuthSubmit disabled={busy}>
+            {busy ? t('common.saving') : t('authUi.reset.submit')}
+          </AuthSubmit>
+          <button
+            type="button"
+            className={`self-start text-sm leading-[18px] ${AUTH_LINK}`}
+            onClick={() => {
+              setStep('email')
+              setCode('')
+              setError('')
+            }}
+          >
+            {t('common.sendNewCode')}
+          </button>
+        </form>
+      )}
 
-          <p className="mt-6 text-center text-sm text-muted">
-            Remembered it?{' '}
-            <Link href="/login" className="font-medium text-lake hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <p className="text-sm leading-[18px] text-muted">
+        {t('authUi.reset.remembered')}{' '}
+        <Link href="/login" className={AUTH_LINK}>
+          {t('auth.login.signIn')} →
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

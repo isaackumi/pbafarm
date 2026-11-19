@@ -3,17 +3,14 @@ import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
-import { Button } from '../../components/ui'
 import { errorMessage } from '../../lib/errorMessage'
 import { useHumanCheck } from '../../components/HumanCheck'
+import { useT, useLocale } from '../../lib/i18n/context'
+import { AuthAlert, AuthGhost, AuthLayout, AuthStateCard, AuthSubmit } from '../../components/auth/AuthUi'
+import { LoadingState } from '../../components/ui'
+import { Clock, Link2Off, MailCheck } from 'lucide-react'
 
-const ROLE_LABELS = {
-  owner: 'Owner',
-  admin: 'Admin',
-  manager: 'Manager',
-  field_staff: 'Field staff',
-  viewer: 'Viewer',
-}
+const ROLE_KEYS = ['owner', 'admin', 'manager', 'field_staff', 'viewer']
 
 /** Accept an organization invite from its emailed link (ORG-003). */
 export default function AcceptInvite() {
@@ -30,6 +27,9 @@ export default function AcceptInvite() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(null)
   const here = `/invite/${token}`
+  const t = useT()
+  const { locale } = useLocale()
+  const roleLabel = (k) => (ROLE_KEYS.includes(k) ? t(`authUi.invite.roles.${k}`) : k)
 
   const onAccept = async () => {
     setBusy(true)
@@ -39,7 +39,7 @@ export default function AcceptInvite() {
       const r = await accept(humanTicket ? { token, humanTicket } : { token })
       setDone(r)
     } catch (err) {
-      setError(errorMessage(err, 'Could not accept the invite'))
+      setError(errorMessage(err, t('authUi.invite.acceptFailed')))
     } finally {
       setBusy(false)
     }
@@ -51,7 +51,7 @@ export default function AcceptInvite() {
       await decline({ token })
       router.push('/dashboard')
     } catch (err) {
-      setError(errorMessage(err, 'Could not decline the invite'))
+      setError(errorMessage(err, t('authUi.invite.declineFailed')))
       setBusy(false)
     }
   }
@@ -62,93 +62,142 @@ export default function AcceptInvite() {
     router.push('/dashboard')
   }
 
+  const companyTile = info ? (
+    <span
+      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] bg-pink-fill text-lg font-semibold text-bg"
+      aria-hidden
+    >
+      {(info.companyName || '?').trim().charAt(0).toUpperCase()}
+    </span>
+  ) : null
+
+  const details = info ? (
+    <dl className="flex flex-col rounded-input border border-line text-sm leading-[18px]">
+      <div className="flex items-center justify-between gap-4 px-4 py-3">
+        <dt className="text-muted">{t('authUi.invite.email')}</dt>
+        <dd className="truncate text-text">{info.email}</dd>
+      </div>
+      <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3">
+        <dt className="text-muted">{t('authUi.invite.role')}</dt>
+        <dd className="text-text">{roleLabel(info.roleKey)}</dd>
+      </div>
+      {typeof info.expiresAt === 'number' && (
+        <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3">
+          <dt className="text-muted">{t('authUi.invite.expires')}</dt>
+          <dd className="text-text">
+            {new Date(info.expiresAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}
+          </dd>
+        </div>
+      )}
+    </dl>
+  ) : null
+
+  const invited = (children) => (
+    <AuthStateCard
+      eyebrow={t('authUi.invite.eyebrow')}
+      title={
+        <span className="flex items-center gap-4">
+          {companyTile}
+          <span>{t('authUi.invite.title', { company: info.companyName })}</span>
+        </span>
+      }
+      body={t('authUi.invite.joinAs', { role: roleLabel(info.roleKey) })}
+    >
+      {details}
+      {children}
+    </AuthStateCard>
+  )
+
   let body
   if (!token || info === undefined) {
-    body = <p className="text-sm text-muted">Loading invite…</p>
+    body = <LoadingState label={t('authUi.invite.loading')} />
   } else if (info === null) {
-    body = <p className="text-sm text-chart-ink">This invite link is not valid. Ask for a new one.</p>
+    body = (
+      <AuthStateCard icon={<Link2Off />} title={t('authUi.invite.invalidTitle')} body={t('authUi.invite.invalid')}>
+        <AuthGhost href="/login">{t('auth.login.signIn')}</AuthGhost>
+      </AuthStateCard>
+    )
   } else if (done) {
     body = (
-      <>
-        <p className="text-sm text-chart-ink">You joined {info.companyName}.</p>
-        <Button size="lg" className="w-full" onClick={openOrg}>
-          Open {info.companyName}
-        </Button>
-      </>
+      <AuthStateCard
+        icon={<MailCheck />}
+        title={t('authUi.invite.joinedTitle')}
+        body={t('authUi.invite.joined', { company: info.companyName })}
+      >
+        <AuthSubmit type="button" onClick={openOrg}>
+          {t('authUi.invite.open', { company: info.companyName })}
+        </AuthSubmit>
+      </AuthStateCard>
     )
   } else if (info.state === 'expired') {
-    body = <p className="text-sm text-chart-ink">This invite has expired. Ask {info.companyName} to send a new one.</p>
+    body = (
+      <AuthStateCard
+        icon={<Clock />}
+        title={t('authUi.invite.expiredTitle')}
+        body={t('authUi.invite.expired', { company: info.companyName })}
+      >
+        <AuthGhost href="/login">{t('auth.login.signIn')}</AuthGhost>
+      </AuthStateCard>
+    )
   } else if (info.state !== 'pending') {
-    body = <p className="text-sm text-chart-ink">This invite has already been used or withdrawn.</p>
+    body = (
+      <AuthStateCard icon={<Link2Off />} title={t('authUi.invite.usedTitle')} body={t('authUi.invite.used')}>
+        <AuthGhost href="/login">{t('auth.login.signIn')}</AuthGhost>
+      </AuthStateCard>
+    )
   } else if (!user) {
     const next = encodeURIComponent(here)
-    body = (
+    body = invited(
       <>
-        <p className="text-sm text-muted">
-          Sign in as <span className="font-medium text-chart-ink">{info.email}</span> to accept.
-          New here? Create an account with that email first.
+        <p className="text-sm leading-5 text-muted">
+          {t('authUi.invite.signInAs')} <span className="font-medium text-text">{info.email}</span>.{' '}
+          {t('authUi.invite.newHere')}
         </p>
-        <Button href={`/login?next=${next}`} size="lg" className="w-full">
-          Sign in
-        </Button>
-        <Button href={`/signup?next=${next}`} size="lg" variant="secondary" className="w-full">
-          Create account
-        </Button>
-      </>
+        <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+          <AuthSubmit type="button" onClick={() => router.push(`/login?next=${next}`)}>
+            {t('auth.login.signIn')}
+          </AuthSubmit>
+          <AuthGhost href={`/signup?next=${next}`}>{t('authUi.signup.create')}</AuthGhost>
+        </div>
+      </>,
     )
   } else if ((user.email || '').toLowerCase() !== info.email) {
-    body = (
-      <p className="text-sm text-chart-ink">
-        This invite is for {info.email}, but you are signed in as {user.email}. Sign out and
-        sign in with the invited email.
-      </p>
+    body = invited(
+      <AuthAlert tone="info">{t('authUi.invite.wrongAccount', { email: info.email, current: user.email })}</AuthAlert>,
     )
   } else if (verification && !verification.verified) {
-    body = (
+    body = invited(
       <>
-        <p className="text-sm text-muted">Confirm your email address before joining.</p>
-        <Button href={`/verify-email?next=${encodeURIComponent(here)}`} size="lg" className="w-full">
-          Verify email
-        </Button>
-      </>
+        <p className="text-sm leading-5 text-muted">{t('authUi.invite.verifyFirst')}</p>
+        <AuthSubmit type="button" onClick={() => router.push(`/verify-email?next=${encodeURIComponent(here)}`)}>
+          {t('authUi.invite.verifyEmail')}
+        </AuthSubmit>
+      </>,
     )
   } else {
-    body = (
+    body = invited(
       <>
         {human.widget}
-        <Button size="lg" className="w-full" disabled={busy || !human.ready} onClick={onAccept}>
-          {busy ? 'Joining…' : `Join ${info.companyName}`}
-        </Button>
-        <Button size="lg" variant="ghost" className="w-full" disabled={busy} onClick={onDecline}>
-          Decline
-        </Button>
-      </>
+        <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+          <AuthSubmit type="button" disabled={busy || !human.ready} onClick={onAccept}>
+            {busy ? t('authUi.invite.joining') : t('authUi.invite.accept')}
+          </AuthSubmit>
+          <AuthGhost disabled={busy} onClick={onDecline}>
+            {t('authUi.invite.decline')}
+          </AuthGhost>
+        </div>
+      </>,
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">
-            {info ? `Join ${info.companyName}` : 'Organization invite'}
-          </h1>
-          {info && (
-            <p className="mt-1 text-sm text-muted">
-              Role: {ROLE_LABELS[info.roleKey] || info.roleKey}
-            </p>
-          )}
-        </div>
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm space-y-4">
-          {error && (
-            <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          {body}
-        </div>
-      </div>
-    </div>
+    <AuthLayout
+      title={info ? t('authUi.invite.title', { company: info.companyName }) : t('authUi.invite.pageTitle')}
+      eyebrow={t('authUi.panel.inviteEyebrow')}
+      headline={t('authUi.panel.inviteHeadline')}
+    >
+      {error && <AuthAlert>{error}</AuthAlert>}
+      {body}
+    </AuthLayout>
   )
 }

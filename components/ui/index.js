@@ -1,12 +1,11 @@
 /** Shared UI primitives. Redesign primitives (Paper) live in sibling files and are re-exported here. */
-import { Children, cloneElement, isValidElement, useId, useRef } from 'react'
+import { Children, cloneElement, isValidElement, useRef } from 'react'
 import Link from 'next/link'
-import { X } from 'lucide-react'
 import { useT } from '../../lib/i18n/context'
 import { useTerm } from '../../hooks/useTerm'
 import { usePermission, usePermissions } from '../../hooks/usePermission'
-import { useDialogA11y } from '../../hooks/useDialogA11y'
 import { routePermission } from '../../lib/routePermissions'
+import { GradientButton } from './Buttons'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
@@ -21,7 +20,7 @@ const VARIANT = {
   secondary:
     'bg-surface text-text border border-line-strong hover:bg-surface-2',
   ghost: 'bg-transparent text-text hover:bg-surface-2 border border-transparent',
-  danger: 'bg-signal text-white hover:opacity-90 border border-transparent',
+  danger: 'bg-alert text-bg font-semibold hover:opacity-90 border border-transparent',
 }
 
 /** Renders children only when the member holds `permission` (UX-007). */
@@ -153,13 +152,42 @@ export function HealthMeter({ score, label }) {
   )
 }
 
+/** Dashed pond outline used by empty states (Paper 62). */
+function EmptyGlyph() {
+  return (
+    <svg width="64" height="40" viewBox="0 0 64 40" fill="none" aria-hidden className="text-line-strong">
+      <ellipse cx="32" cy="20" rx="29" ry="15" stroke="currentColor" strokeWidth="2" strokeDasharray="5 5" />
+      <ellipse cx="32" cy="20" rx="16" ry="7" className="fill-surface-2" />
+    </svg>
+  )
+}
+
 export function EmptyState({ title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-      <p className="font-semibold text-chart-ink">{title}</p>
-      {description && <p className="text-sm text-muted mt-1 max-w-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center justify-center gap-4 px-4 py-10 text-center">
+      <EmptyGlyph />
+      <div className="flex flex-col gap-1.5">
+        <p className="text-base font-semibold leading-5 text-text">{title}</p>
+        {description && <p className="mx-auto max-w-sm text-sm leading-5 text-muted">{description}</p>}
+      </div>
+      {action && <div className="mt-1">{action}</div>}
     </div>
+  )
+}
+
+/** 64px alert-tinted circle with a warning triangle (Paper 62 error card). */
+export function ErrorGlyph({ size = 64 }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center rounded-full border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] text-alert"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <svg viewBox="0 0 24 24" width={size * 0.44} height={size * 0.44} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        <path d="M12 9v4M12 17h.01" />
+      </svg>
+    </span>
   )
 }
 
@@ -172,18 +200,17 @@ export function ErrorState({ title, message, onRetry, retryLabel, className = ''
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center py-8 px-4 text-center ${className}`}
+      className={`flex flex-col items-center justify-center gap-[18px] px-4 py-8 text-center ${className}`}
     >
-      <svg viewBox="0 0 24 24" className="mb-3 h-8 w-8 text-signal" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-        <path d="M12 9v4M12 17h.01" />
-      </svg>
-      <p className="font-semibold text-chart-ink">{title || t('ui.loadFailed')}</p>
-      {message && <p className="mt-1 max-w-md text-sm text-muted">{message}</p>}
+      <ErrorGlyph size={56} />
+      <div className="flex flex-col gap-1.5">
+        <p className="text-lg font-semibold leading-6 tracking-[-0.01em] text-text">{title || t('ui.loadFailed')}</p>
+        {message && <p className="mx-auto max-w-md text-sm leading-5 text-muted">{message}</p>}
+      </div>
       {onRetry && (
-        <Button className="mt-5" onClick={onRetry}>
+        <GradientButton size="sm" onClick={onRetry}>
           {retryLabel || t('ui.tryAgain')}
-        </Button>
+        </GradientButton>
       )}
     </div>
   )
@@ -194,108 +221,8 @@ export function LoadingState({ label, className = '' }) {
   const t = useT()
   return (
     <div role="status" aria-live="polite" className={`flex items-center justify-center gap-3 py-8 text-sm text-muted ${className}`}>
-      <span className="h-5 w-5 animate-spin rounded-full border-2 border-lake border-t-transparent" aria-hidden />
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan border-t-transparent" aria-hidden />
       <span>{label || t('ui.loading')}</span>
-    </div>
-  )
-}
-
-const MODAL_SIZE = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  '2xl': 'max-w-2xl',
-  '4xl': 'max-w-4xl',
-}
-
-/**
- * Shared dialog (UX-901). Renders nothing while `open` is false. Backdrop
- * click and Escape call `onClose` unless `dismissible` is false (e.g. while
- * saving); `closeOnBackdrop={false}` keeps long forms open on a stray
- * click. Focus moves in, is trapped, and returns to the opener
- * (useDialogA11y). `footer` holds the actions; the body scrolls. Pass
- * `as="form"` plus `onSubmit` to make the whole panel a form.
- */
-export function Modal({
-  open = true,
-  onClose,
-  title,
-  description,
-  icon,
-  footer,
-  children,
-  size = 'md',
-  dismissible = true,
-  closeOnBackdrop = true,
-  showClose = false,
-  role = 'dialog',
-  as: Panel = 'div',
-  className = '',
-  bodyClassName = '',
-  layerClassName = 'z-[100]',
-  ...panelProps
-}) {
-  const t = useT()
-  const titleId = useId()
-  const descriptionId = useId()
-  const close = () => {
-    if (dismissible) onClose?.()
-  }
-  const panelRef = useDialogA11y({ open, onClose, canClose: dismissible })
-  if (!open) return null
-
-  return (
-    <div className={`fixed inset-0 flex items-center justify-center p-4 ${layerClassName}`}>
-      <div
-        className="absolute inset-0 modal-backdrop"
-        onClick={closeOnBackdrop ? close : undefined}
-        aria-hidden
-      />
-      <Panel
-        ref={panelRef}
-        role={role}
-        aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
-        aria-describedby={description ? descriptionId : undefined}
-        className={`relative flex max-h-[90vh] w-full flex-col gap-4 rounded-xl border border-foam-deep bg-surface p-6 text-chart-ink shadow-xl ${MODAL_SIZE[size] || MODAL_SIZE.md} ${className}`}
-        {...panelProps}
-      >
-        {(title || showClose) && (
-          <div className="flex items-start gap-3">
-            {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
-            <div className="min-w-0 flex-1">
-              {title && (
-                <h2 id={titleId} className="text-lg font-semibold text-chart-ink">
-                  {title}
-                </h2>
-              )}
-              {description && (
-                <p id={descriptionId} className="mt-1 text-sm text-muted">
-                  {description}
-                </p>
-              )}
-            </div>
-            {showClose && (
-              <button
-                type="button"
-                onClick={close}
-                disabled={!dismissible}
-                aria-label={t('common.close')}
-                className="-m-1 rounded-lg p-1 text-muted hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake disabled:opacity-50"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-            )}
-          </div>
-        )}
-        {children != null && children !== false && (
-          <div className={`-mx-1 min-h-0 flex-1 overflow-y-auto px-1 ${bodyClassName}`}>{children}</div>
-        )}
-        {footer && (
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">{footer}</div>
-        )}
-      </Panel>
     </div>
   )
 }
@@ -440,6 +367,7 @@ export function PageHeader({
   )
 }
 
+export { Modal, IconBadge } from './Modal'
 export { Pill, Badge } from './Pill'
 export { StatusDot } from './StatusDot'
 export { GradientButton, GhostButton, SolidButton } from './Buttons'
@@ -614,75 +542,56 @@ export function StickyActions({ children, className = '' }) {
 }
 
 export function Skeleton({ className = '' }) {
-  return (
-    <div
-      className={`animate-pulse rounded-xl bg-zinc-200/80 ${className}`}
-      aria-hidden
-    />
-  )
+  return <div className={`animate-pulse rounded-[14px] bg-surface-2 ${className}`} aria-hidden />
 }
 
-/** Full app chrome skeleton — sidebar + header + content placeholders. */
+/** Full app chrome skeleton — sidebar + header + content placeholders (Paper 62 loading). */
 export function AppShellSkeleton() {
   const t = useT()
   return (
-    <div
-      className="min-h-screen bg-foam"
-      aria-busy="true"
-      aria-label={t('ui.loadingApp')}
-    >
+    <div className="min-h-screen bg-bg" aria-busy="true" aria-label={t('ui.loadingApp')}>
       <aside
-        className="fixed top-0 left-0 h-screen w-64 border-r border-zinc-800 bg-zinc-900 p-3 space-y-4"
+        className="fixed left-0 top-0 hidden h-screen w-64 flex-col gap-4 border-r border-line bg-bg p-4 lg:flex"
         aria-hidden
       >
         <div className="flex items-center gap-2.5 px-2 py-3">
-          <Skeleton className="h-9 w-9 rounded-xl bg-zinc-700/80" />
-          <Skeleton className="h-5 w-28 bg-zinc-700/80" />
+          <Skeleton className="h-7 w-7 rounded-full" />
+          <Skeleton className="h-5 w-28" />
         </div>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="space-y-2 px-1">
-            <Skeleton className="h-9 w-full rounded-xl bg-zinc-700/70" />
-            <div className="ml-3 space-y-1.5 pl-2 border-l border-white/10">
-              <Skeleton className="h-8 w-[90%] rounded-lg bg-zinc-700/50" />
-              <Skeleton className="h-8 w-[75%] rounded-lg bg-zinc-700/50" />
-            </div>
-          </div>
+        <Skeleton className="h-16 w-full rounded-card" />
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-full rounded-pill" />
         ))}
       </aside>
 
-      <div className="ml-64 min-h-screen flex flex-col">
-        <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-sm border-b border-foam-deep px-5 sm:px-8 py-4">
+      <div className="flex min-h-screen flex-col lg:ml-64">
+        <header className="sticky top-0 z-20 border-b border-line bg-bg px-5 py-4 sm:px-8">
           <div className="flex items-center justify-between gap-4">
-            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-64 max-w-[50%] rounded-pill" />
             <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 rounded-xl" />
-              <Skeleton className="h-12 w-12 rounded-xl" />
-              <Skeleton className="h-12 w-36 rounded-xl" />
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <Skeleton className="h-10 w-10 rounded-full" />
             </div>
           </div>
         </header>
 
         <main className="flex-1 p-5 sm:p-8">
-          <div className="space-y-6 max-w-[1400px]">
-            <div className="space-y-3 max-w-md">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-9 w-64 max-w-full" />
-              <Skeleton className="h-4 w-44" />
+          <div className="max-w-[1400px] space-y-6">
+            <div className="max-w-md space-y-3">
+              <Skeleton className="h-[22px] w-64 max-w-full" />
+              <Skeleton className="h-3.5 w-44" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="min-h-[7rem] space-y-3">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-3 w-full" />
-                </Card>
+                <Skeleton key={i} className="h-16" />
               ))}
             </div>
-            <Card className="min-h-[18rem] space-y-4">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-56" />
-              <Skeleton className="h-52 w-full rounded-2xl" />
-            </Card>
+            <div className="space-y-3">
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-3.5 w-[85%]" />
+              <Skeleton className="h-3.5 w-[70%]" />
+            </div>
+            <Skeleton className="h-64 w-full" />
           </div>
         </main>
       </div>
@@ -705,8 +614,8 @@ export function DashboardSkeleton() {
           <Skeleton className="h-4 w-48" />
         </div>
         <div className="flex gap-3">
-          <Skeleton className="h-14 w-44 rounded-xl" />
-          <Skeleton className="h-14 w-40 rounded-xl" />
+          <Skeleton className="h-14 w-44" />
+          <Skeleton className="h-14 w-40" />
         </div>
       </div>
 
@@ -724,22 +633,22 @@ export function DashboardSkeleton() {
         <Card className="xl:col-span-2 min-h-[22rem] space-y-4">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full" />
         </Card>
         <Card className="min-h-[22rem] space-y-4">
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-4 w-44" />
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full" />
         </Card>
       </div>
 
       <Card padding={false}>
-        <div className="p-5 sm:p-6 border-b border-foam-deep flex justify-between gap-3">
+        <div className="p-5 sm:p-6 border-b border-line flex justify-between gap-3">
           <div className="space-y-2">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-52" />
           </div>
-          <Skeleton className="h-11 w-56 rounded-xl" />
+          <Skeleton className="h-11 w-56" />
         </div>
         <div className="p-5 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
