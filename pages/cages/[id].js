@@ -58,7 +58,7 @@ function WaterNow({ unitId }) {
   return (
     <section aria-labelledby="water-now-title" className={`flex flex-col gap-1 px-[26px] py-6 ${cardClass}`}>
       <div className="flex items-center justify-between gap-2 pb-[10px]">
-        <h2 id="water-now-title" className="text-base font-semibold leading-[18px] text-text">
+        <h2 id="water-now-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {t('cageDetail.waterNow')}
         </h2>
         {latest && (
@@ -105,9 +105,9 @@ function GrowthCard({ growth, samples }) {
     return rows.map((r) => ({ ...r, label: formatDate(r.date) }))
   }, [samples, growth])
   return (
-    <section aria-labelledby="growth-title" className={`flex min-w-0 flex-col gap-4 p-6 ${cardClass} lg:grow-[1.4] lg:basis-0`}>
+    <section aria-labelledby="growth-title" className={`flex min-w-0 flex-col gap-4 px-[26px] py-6 ${cardClass} lg:grow-[1.4] lg:basis-0`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="growth-title" className="text-base font-semibold leading-[18px] text-text">
+        <h2 id="growth-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {t('cageDetail.growth')}
         </h2>
         <span className="flex items-center gap-2 text-xs text-muted">
@@ -141,7 +141,7 @@ function CycleCard({ growth, cage }) {
   return (
     <section aria-labelledby="cycle-title" className={`flex flex-col gap-4 p-6 ${cardClass}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="cycle-title" className="text-base font-semibold leading-[18px] text-text">
+        <h2 id="cycle-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {growth.cycle_closed ? t('cageDetail.lastCycle') : t('cageDetail.currentCycle')}
         </h2>
         <span className="text-xs text-muted tabular-nums">

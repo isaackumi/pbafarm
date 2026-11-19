@@ -31,16 +31,16 @@ export const WIDGET_KEYS = Object.keys(WIDGET_CATALOG)
 export const DASHBOARD_KEYS = ['home'] as const
 export const MAX_WIDGETS = 30
 
-/** Today's dashboard. */
+/** Today's dashboard, in Paper 01 Home order: chart row, KPI strip, activity. */
 export const DEFAULT_DASHBOARD: DashboardWidget[] = [
+  { widget: 'chart.feedTrend', size: 'half' },
+  { widget: 'chart.mortality', size: 'half' },
   { widget: 'stat.activeUnits', size: 'sm' },
   { widget: 'stat.biomass', size: 'sm' },
   { widget: 'stat.fcr', size: 'sm' },
   { widget: 'stat.mortality', size: 'sm' },
   { widget: 'stat.health', size: 'md' },
-  { widget: 'insights', size: 'lg' },
-  { widget: 'chart.feedTrend', size: 'lg' },
-  { widget: 'chart.mortality', size: 'md' },
+  { widget: 'insights', size: 'full' },
   { widget: 'siteConditions', size: 'full' },
   { widget: 'recentActivity', size: 'full' },
 ]

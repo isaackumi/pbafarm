@@ -45,7 +45,7 @@ export default function UnitCard({ u, wq, today }) {
     <Link
       href={`/cages/${u._id}`}
       className={`flex w-full flex-col gap-[14px] rounded-[16px] border bg-surface p-[18px] transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:w-[266px] ${
-        signal.tone === 'alert' ? 'border-[var(--pill-red-border)]' : 'border-line'
+        signal.tone === 'alert' ? 'border-[var(--unit-alert-border)]' : 'border-line'
       } ${idle ? 'opacity-55' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">

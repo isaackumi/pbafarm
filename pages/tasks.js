@@ -61,7 +61,7 @@ function TaskRow({ task, onStatus, busy, today, t, locale }) {
         {sub && <span className="truncate text-xs leading-4 text-muted">{sub}</span>}
       </div>
       <TaskPill task={task} today={today} t={t} />
-      <span className="w-[72px] shrink-0 text-right text-sm text-muted">{open ? when : t('tasksUi.done')}</span>
+      <span className="min-w-[60px] shrink-0 whitespace-nowrap text-right text-[13px] leading-4 text-muted">{open ? when : t('tasksUi.done')}</span>
       {open && (
         <button
           type="button"
@@ -134,9 +134,8 @@ function Tasks() {
     >
       <div className="flex flex-col gap-7">
         <Tabs
-          variant="underline"
+          variant="page"
           label={t('tasksUi.tabsLabel')}
-          className="gap-7 border-b border-line"
           value={tab}
           onChange={setTab}
           tabs={[
@@ -147,7 +146,7 @@ function Tasks() {
         />
         <section
           aria-label={t(`tasksUi.tab.${tab}`)}
-          className="max-w-4xl rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
+          className="max-w-[640px] rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
         >
           {!data ? (
             <LoadingState />

@@ -63,7 +63,7 @@ export default function DashboardInsights({ locationId, aiEnabled, title, classN
     >
       <div className="flex items-center justify-between gap-3 pb-[10px]">
         <div>
-          <h2 id="dashboard-insights-title" className="text-base font-semibold leading-5 text-text">
+          <h2 id="dashboard-insights-title" className="text-[15px] font-semibold leading-[18px] text-text">
             {title || t('home.insightsTitle')}
           </h2>
           <p className="mt-1 text-xs leading-4 text-muted">{t('home.insightsSubtitle')}</p>

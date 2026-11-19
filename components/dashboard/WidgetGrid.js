@@ -24,10 +24,15 @@ export function visibleWidgets(widgets, can) {
 /** Props: widgets ([{ widget, size }]), nodes ({ widgetKey: node }). */
 export default function WidgetGrid({ widgets, nodes }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-5">
+    // Paper 01 Home: 20px between cards in a row, 28px between rows. A widget
+    // with nothing to show (no alerts, no site) leaves no gap behind.
+    <div className="grid grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-12">
       {widgets.map((w) =>
         nodes[w.widget] ? (
-          <div key={w.widget} className={`${SPAN[w.size] ?? SPAN.md} min-w-0 [&>*]:h-full`}>
+          <div
+            key={w.widget}
+            className={`${SPAN[w.size] ?? SPAN.md} min-w-0 empty:hidden [&:has(>:empty)]:hidden [&>*]:h-full`}
+          >
             {nodes[w.widget]}
           </div>
         ) : null,
