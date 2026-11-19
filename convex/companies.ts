@@ -111,8 +111,8 @@ const companyStatusValidator = v.union(v.literal('pending'), v.literal('approved
 
 /** Shape of toClient(). Computed parts (merged settings, profile, terms) stay v.any(). */
 const companyClientFields = {
-  profile: v.any(),
-  terminology: v.any(),
+  profile: v.optional(v.any()),
+  terminology: v.optional(v.any()),
   id: v.id('companies'),
   _id: v.id('companies'),
   name: v.string(),
@@ -128,11 +128,12 @@ const companyClientFields = {
   rejection_reason: v.optional(v.string()),
   settings: v.object({
     ai_assistant_enabled: v.boolean(),
-    branding: v.any(),
-    farm_rules: v.any(),
-    stocking_rules: v.any(),
-    feed_rules: v.any(),
-    updated_at: v.any(),
+    // Optional: v.any() rejects a missing field (never-published companies have no updatedAt).
+    branding: v.optional(v.any()),
+    farm_rules: v.optional(v.any()),
+    stocking_rules: v.optional(v.any()),
+    feed_rules: v.optional(v.any()),
+    updated_at: v.optional(v.any()),
   }),
   created_at: v.number(),
   approved_at: v.optional(v.number()),
