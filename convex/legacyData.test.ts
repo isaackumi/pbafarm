@@ -140,4 +140,21 @@ describe('M10 narrow verification', () => {
     expect(after.ready).toBe(true)
     expect(companyId).toBeTruthy()
   })
+
+  test('system migration audit rows do not block; tenant audit rows do', async () => {
+    const { t } = await setup()
+    await t.run(async (ctx) => {
+      await ctx.db.insert('auditLogs', { actionType: 'migration', tableName: 'stockEvents', newValues: { migration: 'M7' } })
+    })
+    const sys = await t.query(internal.legacyData.m10VerifyNarrowReady, {})
+    expect(sys.ready).toBe(true)
+    expect(sys.narrowTables).not.toContain('auditLogs')
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert('auditLogs', { actionType: 'update', tableName: 'cages' })
+    })
+    const tenant = await t.query(internal.legacyData.m10VerifyNarrowReady, {})
+    expect(tenant.ready).toBe(false)
+    expect(tenant.blockers).toEqual([expect.stringMatching(/^auditLogs/)])
+  })
 })

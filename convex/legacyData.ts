@@ -35,6 +35,12 @@ import { UNSCOPED_TABLES } from './migrations'
 /** Tables in UNSCOPED_TABLES without a `by_company` index (scanned instead). */
 const NO_COMPANY_INDEX = new Set<string>(['harvestSampling', 'notifications'])
 const SCAN_LIMIT = 5000
+/**
+ * Platform-level audit rows (system migrations such as M7) have no tenant and
+ * keep `companyId` unset, so `auditLogs.companyId` stays optional and is not
+ * narrowed. Only tenant audit rows without a company block M10.
+ */
+const SYSTEM_AUDIT_ACTIONS = new Set<string>(['migration'])
 /** Audit rows of `tableName: 'feedInventory'` read per M16 batch. */
 const AUDIT_SCAN_LIMIT = 5000
 const DEFAULT_BATCH = 200
@@ -77,6 +83,14 @@ export const m10VerifyNarrowReady = internalQuery({
         const truncated = rows.length > SCAN_LIMIT
         const unscoped = rows.slice(0, SCAN_LIMIT).filter((r) => !r.companyId).length
         tables.push({ table, unscoped, method: 'scan', truncated })
+      } else if (table === 'auditLogs') {
+        const rows: Array<{ actionType?: string }> = await db
+          .query(table)
+          .withIndex('by_company', (q: any) => q.eq('companyId', undefined))
+          .take(SCAN_LIMIT + 1)
+        const truncated = rows.length > SCAN_LIMIT
+        const unscoped = rows.slice(0, SCAN_LIMIT).filter((r) => !SYSTEM_AUDIT_ACTIONS.has(r.actionType ?? '')).length
+        tables.push({ table, unscoped, method: 'index', truncated })
       } else {
         const first = await db
           .query(table)
@@ -102,7 +116,7 @@ export const m10VerifyNarrowReady = internalQuery({
         companylessNonSuperAdmins: companyless.filter((u) => u.role !== 'super_admin').length,
         truncated: users.length > SCAN_LIMIT,
       },
-      narrowTables: [...UNSCOPED_TABLES],
+      narrowTables: UNSCOPED_TABLES.filter((t) => t !== 'auditLogs'),
     }
   },
 })
