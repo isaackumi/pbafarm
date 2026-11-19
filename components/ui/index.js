@@ -1,4 +1,4 @@
-/** Shared UI primitives — Harbor Soft light dashboard */
+/** Shared UI primitives. Redesign primitives (Paper) live in sibling files and are re-exported here. */
 import { Children, cloneElement, isValidElement, useId, useRef } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
@@ -17,10 +17,10 @@ const SIZE = {
 
 const VARIANT = {
   primary:
-    'bg-lagoon-950 text-white hover:bg-lagoon-800 shadow-sm border border-transparent dark:bg-[#e4e4e7] dark:text-[#18181b] dark:hover:bg-[#fafafa]',
+    'bg-button text-button-text hover:opacity-90 border border-transparent',
   secondary:
-    'bg-surface text-chart-ink border border-foam-deep hover:bg-foam hover:border-lagoon-700',
-  ghost: 'bg-transparent text-chart-ink hover:bg-foam border border-transparent',
+    'bg-surface text-text border border-line-strong hover:bg-surface-2',
+  ghost: 'bg-transparent text-text hover:bg-surface-2 border border-transparent',
   danger: 'bg-signal text-white hover:opacity-90 border border-transparent',
 }
 
@@ -50,7 +50,7 @@ function ButtonBase({
   type = 'button',
   ...props
 }) {
-  const classes = `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.primary} ${className}`
+  const classes = `inline-flex items-center justify-center gap-2 rounded-pill font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.primary} ${className}`
 
   if (href) {
     return (
@@ -67,11 +67,12 @@ function ButtonBase({
   )
 }
 
+/** Surface card (Paper: 20px radius, 1px line border, light-theme shadow). */
 export function Card({ children, className = '', padding = true }) {
   return (
     <div
-      className={`bg-surface text-chart-ink border border-foam-deep rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${
-        padding ? 'p-5 sm:p-6' : ''
+      className={`bg-surface text-text border border-line rounded-card shadow-[var(--shadow-card)] ${
+        padding ? 'p-5 sm:px-7 sm:pt-[26px] sm:pb-[22px]' : ''
       } ${className}`}
     >
       {children}
@@ -438,6 +439,22 @@ export function PageHeader({
     </div>
   )
 }
+
+export { Pill, Badge } from './Pill'
+export { StatusDot } from './StatusDot'
+export { GradientButton, GhostButton, SolidButton } from './Buttons'
+export { Toggle } from './Toggle'
+export { CheckCell, ScopeChip } from './CheckCell'
+export { Avatar, initials } from './Avatar'
+export { SearchField } from './SearchField'
+export { Segmented } from './Segmented'
+export { ProgressBar } from './ProgressBar'
+export { Sparkline, sparkPath } from './Sparkline'
+export { KpiStrip } from './KpiStrip'
+export { Tabs } from './Tabs'
+export { Table } from './Table'
+export { PageTitle } from './PageTitle'
+export { SummaryCard } from './SummaryCard'
 
 const FIELD_CLASS =
   // 16px text keeps iOS from zooming into fields on focus.

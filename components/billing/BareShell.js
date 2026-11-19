@@ -1,32 +1,53 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useAuth } from '../../contexts/AuthContext'
+import { useT } from '../../lib/i18n/context'
+
+const LINK =
+  'rounded-pill px-3 py-[6px] text-sm leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
 /**
  * Minimal page frame for a suspended organization: the app shell's queries
  * are refused while suspended, so these pages use none of them.
+ * `centered` drops the page title and centres the content (Paper 46).
  */
-export default function BareShell({ title, children }) {
+export default function BareShell({ title, children, centered = false }) {
+  const t = useT()
   const { signOut } = useAuth()
+  const { pathname } = useRouter()
+  const link = (href, label) => (
+    <Link
+      href={href}
+      aria-current={pathname === href ? 'page' : undefined}
+      className={`${LINK} ${pathname === href ? 'bg-surface-2 text-text' : 'text-muted hover:text-text'}`}
+    >
+      {label}
+    </Link>
+  )
   return (
-    <div className="min-h-screen bg-foam">
+    <div className="flex min-h-screen flex-col bg-bg text-text">
       <Head>
-        <title>{title} · PBA Farm</title>
+        <title>{`${title} · PBA Farm`}</title>
       </Head>
-      <header className="border-b border-foam-deep bg-surface">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
-          <span className="font-display text-lg">PBA Farm</span>
-          <Link href="/suspended" className="hover:underline">Status</Link>
-          <Link href="/billing" className="hover:underline">Billing</Link>
-          <button type="button" className="ml-auto underline" onClick={() => signOut()}>
-            Sign out
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
+          <span className="mr-4 text-[18px] font-extrabold leading-6 tracking-[-0.03em] text-text">PBA FARM</span>
+          {link('/suspended', t('suspended.navStatus'))}
+          {link('/billing', t('suspended.navBilling'))}
+          <button type="button" className={`${LINK} ml-auto text-muted hover:text-text`} onClick={() => signOut()}>
+            {t('suspended.signOut')}
           </button>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        <h1 className="font-display text-2xl font-medium mb-6">{title}</h1>
-        {children}
-      </main>
+      {centered ? (
+        <main className="flex flex-1 items-center justify-center px-4 py-10">{children}</main>
+      ) : (
+        <main className="mx-auto w-full max-w-5xl px-4 py-8">
+          <h1 className="mb-6 text-[30px] font-semibold leading-9 tracking-[-0.02em] text-text">{title}</h1>
+          {children}
+        </main>
+      )}
     </div>
   )
 }

@@ -158,6 +158,50 @@ export function templateReport(p: ReportPack, lang: Lang): string {
   return lines.join('\n')
 }
 
+/** The figures the app shows beside a report (Key figures card), read back from its stored pack. No costs. */
+export type ReportFigures = {
+  weekStart: string
+  units: number
+  feedKg: number
+  gainKg: number
+  fcr: number | null
+  previousFcr: number | null
+  mortality: number
+  mortalityPct: number | null
+  survivalPct: number | null
+  feedVsSuggestedPct: number | null
+  alertsRaised: number
+  alertsOpen: number
+}
+
+const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
+
+/** Key figures from a stored pack's JSON; null when the pack cannot be read. */
+export function reportFigures(packJson: string): ReportFigures | null {
+  let p: Partial<ReportPack>
+  try {
+    p = JSON.parse(packJson)
+  } catch {
+    return null
+  }
+  const w = p?.week
+  if (!w || typeof w !== 'object') return null
+  return {
+    weekStart: typeof p.weekStart === 'string' ? p.weekStart : '',
+    units: num(w.units) ?? 0,
+    feedKg: num(w.feed_kg) ?? 0,
+    gainKg: num(w.gain_kg) ?? 0,
+    fcr: num(w.fcr),
+    previousFcr: num(p.previous?.fcr),
+    mortality: num(w.mortality) ?? 0,
+    mortalityPct: num(w.mortality_pct),
+    survivalPct: num(w.survival_pct),
+    feedVsSuggestedPct: num(w.feed_vs_suggested_pct),
+    alertsRaised: num(p.alerts?.raised) ?? 0,
+    alertsOpen: num(p.alerts?.open) ?? 0,
+  }
+}
+
 /** The costs part, rendered by code only (finance.view). */
 export function financeText(f: FinancePack, lang: Lang): string {
   const fr = lang === 'fr'

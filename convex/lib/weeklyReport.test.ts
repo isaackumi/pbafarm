@@ -5,6 +5,7 @@ import {
   groundingProblems,
   numbersIn,
   packFigures,
+  reportFigures,
   templateReport,
   weekEndOn,
   weekStartOf,
@@ -86,5 +87,24 @@ describe('weekly report (AI-003)', () => {
     expect(weekEndOn('2026-03-08')).toBe('2026-03-08')
     expect(weekEndOn('2026-03-11')).toBe('2026-03-08')
     expect(weekStartOf('2026-03-08')).toBe('2026-03-02')
+  })
+
+  it('reads key figures back from a stored pack', () => {
+    expect(reportFigures(JSON.stringify(pack))).toEqual({
+      weekStart: '2026-03-02',
+      units: 4,
+      feedKg: 1450.2,
+      gainKg: 1204.5,
+      fcr: 1.2,
+      previousFcr: 1.25,
+      mortality: 312,
+      mortalityPct: 0.8,
+      survivalPct: 94.2,
+      feedVsSuggestedPct: 97,
+      alertsRaised: 2,
+      alertsOpen: 1,
+    })
+    expect(reportFigures('not json')).toBeNull()
+    expect(reportFigures('{}')).toBeNull()
   })
 })

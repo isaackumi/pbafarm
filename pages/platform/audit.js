@@ -6,6 +6,7 @@ import { api } from '../../convex/_generated/api'
 import PlatformLayout, { SimpleTable } from '../../components/platform/PlatformLayout'
 import { Button, Card, Field, Input, LoadingState } from '../../components/ui'
 import { formatDateTime } from '../../lib/billingFormat'
+import { useT } from '../../lib/i18n/context'
 
 function AuditLog() {
   const router = useRouter()
@@ -29,7 +30,7 @@ function AuditLog() {
           />
         </Field>
         {companyId && (
-          <Link className="text-sm text-lake hover:underline mb-3" href="/platform/audit">
+          <Link className="text-sm text-pearl-cyan hover:underline mb-3" href="/platform/audit">
             Clear tenant filter
           </Link>
         )}
@@ -50,7 +51,7 @@ function AuditLog() {
                 label: 'Tenant',
                 render: (r) =>
                   r.companyId ? (
-                    <Link className="text-lake hover:underline" href={`/platform/tenants/${r.companyId}`}>
+                    <Link className="text-pearl-cyan hover:underline" href={`/platform/tenants/${r.companyId}`}>
                       {r.companyName || 'Tenant'}
                     </Link>
                   ) : (
@@ -75,8 +76,9 @@ function AuditLog() {
 }
 
 export default function PlatformAuditPage() {
+  const t = useT()
   return (
-    <PlatformLayout title="Platform audit log">
+    <PlatformLayout title={t('platform.nav.audit')}>
       <AuditLog />
     </PlatformLayout>
   )

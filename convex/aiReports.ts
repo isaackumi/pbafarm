@@ -22,6 +22,7 @@ import {
   acceptReply,
   financeText,
   packFigures,
+  reportFigures,
   reportMessages,
   templateReport,
   weekEndOn,
@@ -64,6 +65,24 @@ const reportValidator = v.object({
   financeText: v.union(v.string(), v.null()),
   source: v.union(v.literal('llm'), v.literal('template')),
   createdAt: v.number(),
+  /** Key figures from the stored pack (no costs); null when unreadable. */
+  figures: v.union(
+    v.null(),
+    v.object({
+      weekStart: v.string(),
+      units: v.number(),
+      feedKg: v.number(),
+      gainKg: v.number(),
+      fcr: v.union(v.number(), v.null()),
+      previousFcr: v.union(v.number(), v.null()),
+      mortality: v.number(),
+      mortalityPct: v.union(v.number(), v.null()),
+      survivalPct: v.union(v.number(), v.null()),
+      feedVsSuggestedPct: v.union(v.number(), v.null()),
+      alertsRaised: v.number(),
+      alertsOpen: v.number(),
+    }),
+  ),
 })
 
 /** A report scope is visible to the member: their site, or company-wide for all-sites members. */
@@ -547,6 +566,7 @@ export const list = query({
         financeText: finance ? (r.financeText ?? null) : null,
         source: r.source,
         createdAt: r.createdAt,
+        figures: reportFigures(r.packJson),
       })
       if (out.length >= 30) break
     }

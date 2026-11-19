@@ -5,6 +5,7 @@ import PlatformLayout, { SimpleTable, StatusPill } from '../../components/platfo
 import { Button, Card, CardHeader, Field, Input, LoadingState } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
+import { useT } from '../../lib/i18n/context'
 
 function Admins() {
   const data = useQuery(api.platform.admins.list, {})
@@ -75,8 +76,9 @@ function Admins() {
 }
 
 export default function PlatformAdminsPage() {
+  const t = useT()
   return (
-    <PlatformLayout title="Platform admins">
+    <PlatformLayout title={t('platform.nav.staff')}>
       <Admins />
     </PlatformLayout>
   )

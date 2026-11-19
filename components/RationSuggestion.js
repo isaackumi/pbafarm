@@ -46,17 +46,20 @@ export default function RationSuggestion({ cageId, className = '', detailed = fa
   const why = rationWhy(data, locale)
   const f = data.countFlows
   return (
-    <div className={`text-sm text-muted ${className}`} role="note">
-      <p>
-        <span className="font-medium text-chart-ink">{t('feedingPlan.suggestedRation')}: </span>
-        {rationText(t, data.ration)}{' '}
-        <Link href="/feeding-plans" className="underline hover:text-chart-ink">
+    <div className={`flex flex-col gap-2 rounded-[12px] border border-line bg-surface-2 px-4 py-[14px] text-sm leading-[19px] text-muted ${className}`} role="note">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-[11px] uppercase leading-[14px] tracking-[0.08em] text-muted">{t('feedingPlan.suggestedRation')}</span>
+        <Link
+          href="/feeding-plans"
+          className="text-xs leading-4 text-muted underline-offset-2 hover:text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan rounded-sm"
+        >
           {t('feedingPlan.seePlan')}
         </Link>
-      </p>
+      </div>
+      <p className={data.ration?.ok ? 'font-medium text-pearl-cyan' : 'text-text'}>{rationText(t, data.ration)}</p>
       {why ? (
         <p>
-          <span className="font-medium text-chart-ink">{t('feedingPlan.why')}: </span>
+          <span className="font-medium text-text">{t('feedingPlan.why')}: </span>
           {why}
         </p>
       ) : null}
@@ -73,7 +76,7 @@ export default function RationSuggestion({ cageId, className = '', detailed = fa
           })}
         </p>
       ) : null}
-      {why ? <p className="text-xs">{t('feedingPlan.neverApplied')}</p> : null}
+      {why ? <p className="text-xs leading-4 text-faint">{t('feedingPlan.neverApplied')}</p> : null}
     </div>
   )
 }

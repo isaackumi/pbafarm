@@ -169,6 +169,9 @@ describe('weekly report (AI-003)', () => {
     expect(JSON.stringify(field)).not.toContain('SECRET')
     expect(field[0].financeText).toBeNull()
     expect(field[0].text).not.toMatch(/GHS|USD|cost/i)
+    // Key figures come from the stored pack, never costs.
+    expect(field[0].figures).toMatchObject({ weekStart: '2026-05-04', units: expect.any(Number), feedKg: expect.any(Number) })
+    expect(JSON.stringify(field[0].figures)).not.toMatch(/cost|SECRET/i)
 
     const viewer = await as(ids.viewerA).query(api.aiReports.list, {})
     expect(viewer).toHaveLength(1)
