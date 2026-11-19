@@ -6,6 +6,7 @@ Format: `date · artboard (node id) · change · status`
 
 ## 2026-11-19
 
+- 01 Home · Light theme page, "L · 01 Home — Sky & lake (proposal v2)" (INK-0, layer "Sky & lake panel") · optional "Sky & lake" header: each user picks Plain or Sky & lake under Account → Preferences (`dashboard.homeHeader`, default plain); night variant for dark theme · built in #3
 - ALL · **Platform rebrand: Anowa is the product; PBA Farm is a tenant** (one client farm on the platform) · every artboard:
   - Brand block (sidebar, top of every screen, sign-in, both landing pages): the pink fish icon becomes the **Pulse mark** (`docs/brand/anowa/logo/anowa-mark-*.svg`; Sand line on dark, Ink line on light, Coral dot always). The "PBA FARM" text becomes **"anowa"** in Geist Mono 500 at −0.02em. In code, use the outlined `anowa-horizontal-*.svg` (or mark plus wordmark) as a `<Logo variant>` component instead of live text.
   - Landing B9Q-0 and 3I0-0: copy now says Anowa ("Anowa is the operating system for fish farms", "Why Anowa", "© 2026 Anowa"). The giant footer wordmark CDT-0 reads "anowa" in Geist Mono. Customer logos and testimonials now feature **PBA Farm** as a client.

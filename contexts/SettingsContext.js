@@ -114,14 +114,21 @@ export function SettingsProvider({ children }) {
 
   const resetSettings = useCallback(() => updateSettings(DEFAULT_PREFERENCES), [updateSettings])
 
+  /** Change some dashboard preferences (e.g. `{ homeHeader: 'sky' }`), keeping the others. */
+  const updateDashboard = useCallback(
+    (patch) => updateSettings({ dashboard: { ...settingsRef.current.dashboard, ...patch } }),
+    [updateSettings],
+  )
+
   const value = useMemo(
     () => ({
       settings,
       loading: Boolean(online && live === undefined && !cached.prefs),
       updateSettings,
+      updateDashboard,
       resetSettings,
     }),
-    [settings, online, live, cached.prefs, updateSettings, resetSettings],
+    [settings, online, live, cached.prefs, updateSettings, updateDashboard, resetSettings],
   )
 
   return (

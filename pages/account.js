@@ -4,6 +4,7 @@ import { useAction } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import AccountDeletionCard from '../components/AccountDeletionCard'
@@ -301,7 +302,72 @@ function PreferencesCard() {
       <SettingsRow label={t('settingsUi.account.notifications')} helper={t('settingsUi.account.notificationsHelper')}>
         <GhostButton href="/notifications">{t('settingsUi.account.manage')}</GhostButton>
       </SettingsRow>
+      <HomeHeaderRow />
     </SettingsCard>
+  )
+}
+
+/** Plain title or the "Sky & lake" panel on Home (Paper L · 01 Home — Sky & lake). Saves on click. */
+function HomeHeaderRow() {
+  const t = useT()
+  const { showToast } = useToast()
+  const { settings, updateDashboard } = useSettings()
+  const value = settings.dashboard?.homeHeader === 'sky' ? 'sky' : 'plain'
+  const choose = async (next) => {
+    if (next === value) return
+    try {
+      await updateDashboard({ homeHeader: next })
+      showToast('success', t('settingsUi.account.homeHeaderSaved'))
+    } catch (err) {
+      showToast('error', err?.data?.message || t('settingsUi.account.homeHeaderFailed'))
+    }
+  }
+  const options = [
+    { value: 'plain', label: t('settingsUi.account.homeHeaderPlain') },
+    { value: 'sky', label: t('settingsUi.account.homeHeaderSky') },
+  ]
+  return (
+    <SettingsRow label={t('settingsUi.account.homeHeader')} helper={t('settingsUi.account.homeHeaderHelper')}>
+      <div role="radiogroup" aria-label={t('settingsUi.account.homeHeader')} className="flex gap-2">
+        {options.map((opt) => {
+          const active = opt.value === value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => choose(opt.value)}
+              className={`flex flex-col items-center gap-[6px] rounded-input border p-[6px] pb-2 text-[12px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                active ? 'border-text bg-surface-2 text-text' : 'border-line text-muted hover:text-text'
+              }`}
+            >
+              <HomeHeaderPreview kind={opt.value} />
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+    </SettingsRow>
+  )
+}
+
+/** Thumbnail of the Home header style: a greeting bar and two card tops. */
+function HomeHeaderPreview({ kind }) {
+  const sky = kind === 'sky'
+  return (
+    <span
+      aria-hidden
+      className={`relative block h-[46px] w-[76px] overflow-hidden rounded-[8px] border border-line bg-bg ${sky ? 'home-sky-thumb' : ''}`}
+    >
+      {sky && <span className="home-sky-thumb-panel absolute inset-x-[3px] top-[3px] h-[28px] rounded-[6px]" />}
+      <span className={`absolute left-[8px] top-[9px] h-[4px] w-[30px] rounded-pill ${sky ? 'bg-white' : 'bg-muted'}`} />
+      <span
+        className={`absolute right-[8px] top-[8px] h-[6px] w-[14px] rounded-pill ${sky ? 'bg-[#D7F75B]' : 'bg-line-strong'}`}
+      />
+      <span className="absolute bottom-[3px] left-[6px] h-[18px] w-[36px] rounded-[4px] border border-line bg-surface" />
+      <span className="absolute bottom-[3px] right-[6px] h-[18px] w-[24px] rounded-[4px] border border-line bg-surface" />
+    </span>
   )
 }
 

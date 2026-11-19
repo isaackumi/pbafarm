@@ -2464,6 +2464,8 @@ const schema = defineSchema({
         showCharts: v.boolean(),
         showMetrics: v.boolean(),
         showStockings: v.boolean(),
+        /** 'plain' | 'sky' (Home header style); absent = 'plain'. */
+        homeHeader: v.optional(v.string()),
       }),
     ),
     /** Routes pinned to the phone bottom bar, in order (at most 5). */

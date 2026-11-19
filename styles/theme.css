@@ -712,3 +712,108 @@ html[data-theme='dark'] .border-amber-200 {
   background-color: var(--backdrop);
   isolation: isolate;
 }
+
+/* ------------------------------------------------------------------ */
+/* Home "Sky & lake" header (dashboard.homeHeader = 'sky').            */
+/* Paper: Light theme / "L · 01 Home — Sky & lake (proposal v2)".      */
+/* Night (dark theme, the default) first, day under data-theme=light. */
+/* ------------------------------------------------------------------ */
+.home-sky-panel,
+.home-sky-thumb-panel {
+  --sky-glow: rgba(214, 228, 255, 0.1);
+  --sky-cloud: rgba(255, 255, 255, 0.12);
+  --sky-haze: rgba(150, 190, 240, 0.14);
+  --sky-ring: rgba(255, 255, 255, 0.18);
+  --sky-ripple: rgba(255, 255, 255, 0.14);
+  background-image: linear-gradient(
+    180deg,
+    #0b1b3a 0%,
+    #13305e 40%,
+    #1e4a86 70%,
+    #2c5d9c 76%,
+    #0a1a33 76.3%,
+    #050c1a 100%
+  );
+  background-image: linear-gradient(
+    in oklab 180deg,
+    #0b1b3a 0%,
+    #13305e 40%,
+    #1e4a86 70%,
+    #2c5d9c 76%,
+    #0a1a33 76.3%,
+    #050c1a 100%
+  );
+}
+html[data-theme='light'] .home-sky-panel,
+html[data-theme='light'] .home-sky-thumb-panel {
+  --sky-glow: rgba(255, 255, 255, 0.22);
+  --sky-cloud: #ffffff;
+  --sky-haze: rgba(255, 255, 255, 0.5);
+  --sky-ring: rgba(255, 255, 255, 0.35);
+  --sky-ripple: rgba(255, 255, 255, 0.25);
+  background-image: linear-gradient(
+    180deg,
+    #1562d6 0%,
+    #2f86ea 34%,
+    #6fb6f4 62%,
+    #b9ddf9 76%,
+    #1f6ac9 76.3%,
+    #174f9e 100%
+  );
+  background-image: linear-gradient(
+    in oklab 180deg,
+    #1562d6 0%,
+    #2f86ea 34%,
+    #6fb6f4 62%,
+    #b9ddf9 76%,
+    #1f6ac9 76.3%,
+    #174f9e 100%
+  );
+}
+.home-sky-glow {
+  background: var(--sky-glow);
+}
+/* Clouds carry their own opacity class; at night they fade to ~12%. */
+.home-sky-cloud {
+  background: var(--sky-cloud);
+}
+html:not([data-theme='light']) .home-sky-cloud {
+  opacity: 1;
+}
+.home-sky-haze {
+  background: var(--sky-haze);
+}
+.home-sky-ring {
+  stroke: var(--sky-ring);
+}
+.home-sky-ripple {
+  stroke: var(--sky-ripple);
+  stroke-width: 1;
+}
+/* Date line: 82% white at night; 92% by day so it stays >= 4.5:1 on the bright sky. */
+.home-sky-eyebrow {
+  color: rgba(255, 255, 255, 0.82);
+}
+html[data-theme='light'] .home-sky-eyebrow {
+  color: rgba(255, 255, 255, 0.92);
+}
+.home-sky-btn-lime {
+  background: #d7f75b;
+  color: #0b0d10;
+  box-shadow: 0 10px 24px -10px rgba(11, 13, 16, 0.45);
+}
+.home-sky-btn-glass {
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: rgba(9, 44, 104, 0.38);
+  color: #ffffff;
+}
+html:not([data-theme='light']) .home-sky-btn-glass {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(5, 12, 26, 0.45);
+}
+/* Phones: wrapped buttons sit lower, on the paler sky; a denser glass keeps white text >= 4.5:1. */
+@media (max-width: 639px) {
+  html[data-theme='light'] .home-sky-btn-glass {
+    background: rgba(9, 44, 104, 0.5);
+  }
+}
