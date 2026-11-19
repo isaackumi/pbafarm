@@ -130,9 +130,9 @@ export default function GradingForm({ initialCageId = '' }) {
         >
           <ul className="space-y-4">
             {grades.map((g, i) => (
-              <li key={g.key} className="rounded-lg border border-foam-deep p-4 space-y-3">
+              <li key={g.key} className="rounded-input border border-line p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-chart-ink">Grade {i + 1}</p>
+                  <p className="text-sm font-medium text-text">Grade {i + 1}</p>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -198,13 +198,13 @@ export default function GradingForm({ initialCageId = '' }) {
         </div>
 
         {source && (
-          <p className={`text-sm tabular-nums ${gap < 0 ? 'text-signal' : 'text-muted'}`}>
+          <p className={`text-sm tabular-nums ${gap < 0 ? 'text-alert' : 'text-muted'}`}>
             {graded.toLocaleString()} of {available.toLocaleString()} fish graded or culled
             {gap > 0 ? `; ${gap.toLocaleString()} will be recorded as unaccounted` : ''}
             {gap < 0 ? `; ${(-gap).toLocaleString()} more than on record` : ''}
           </p>
         )}
-        {error && <p className="text-sm text-signal" role="alert">{error}</p>}
+        {error && <p className="text-sm text-alert" role="alert">{error}</p>}
         <FormActions>
           <Button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Save grading'}

@@ -188,7 +188,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             type="text"
             value={batchCode}
             readOnly
-            className="font-data bg-foam"
+            className="font-data bg-surface-2"
           />
           <Button
             type="button"
@@ -253,17 +253,17 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
         {samplings.map((sampling, index) => (
           <div
             key={sampling.id}
-            className="rounded-xl border border-foam-deep bg-surface p-4 sm:p-5"
+            className="rounded-input border border-line bg-surface p-4 sm:p-5"
           >
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-semibold text-chart-ink">
+              <h4 className="text-sm font-semibold text-text">
                 Sample {index + 1}
               </h4>
               {samplings.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeSampling(index)}
-                  className="text-signal p-2.5 rounded-lg hover:bg-signal/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                  className="text-alert p-2.5 rounded-input hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                   title="Remove sample"
                   aria-label="Remove sample"
                 >
@@ -309,7 +309,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
                   type="number"
                   value={sampling.abw}
                   readOnly
-                  className="font-data bg-foam"
+                  className="font-data bg-surface-2"
                 />
               </Field>
             </div>
@@ -326,25 +326,25 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
       subtitle="Add one or more samples. ABW calculates from weight ÷ fish count."
     >
       {error && (
-        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3 flex items-start gap-2">
+        <div className="mb-5 text-sm text-alert border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] rounded-input p-3 flex items-start gap-2">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
       {success && (
-        <div className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3 flex items-start gap-2">
+        <div className="mb-5 text-sm text-good border border-[var(--pill-green-border)] bg-[color-mix(in_oklab,var(--good)_8%,transparent)] rounded-input p-3 flex items-start gap-2">
           <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <span>Bi-weekly records saved successfully</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-foam-deep bg-foam p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-input border border-line bg-bg p-4">
           <div>
             <p className="text-xs text-muted">
               Total fish
             </p>
-            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-text">
               {totalFish.toLocaleString()}
             </p>
           </div>
@@ -352,7 +352,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             <p className="text-xs text-muted">
               Total weight
             </p>
-            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-text">
               {totalWeight.toFixed(2)}g
             </p>
           </div>
@@ -360,7 +360,7 @@ const BiweeklyEntryForm = ({ cage, onComplete }) => {
             <p className="text-xs text-muted">
               Average ABW
             </p>
-            <p className="mt-1 text-2xl font-medium tabular-nums text-chart-ink">
+            <p className="mt-1 text-2xl font-medium tabular-nums text-text">
               {calculateAverageABW().toFixed(2)}g
             </p>
           </div>

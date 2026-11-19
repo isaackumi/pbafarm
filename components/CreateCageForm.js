@@ -200,7 +200,7 @@ const CreateCageForm = () => {
           name="code"
           value={cageCode}
           readOnly
-          className="bg-foam font-data"
+          className="bg-surface-2 font-data"
         />
       </Field>
     ),
@@ -219,7 +219,7 @@ const CreateCageForm = () => {
           onChange={handleChange}
           placeholder="e.g., Cage 1, North A"
           required
-          className={nameError ? 'border-signal' : ''}
+          className={nameError ? 'border-alert' : ''}
         />
       </Field>
     ),
@@ -330,12 +330,12 @@ const CreateCageForm = () => {
       subtitle="Register a cage, pond, tank or other unit. Stock it separately after creation."
     >
       {error && (
-        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+        <div className="mb-5 text-sm text-alert border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] rounded-input p-3">
           {error}
         </div>
       )}
       {message && (
-        <div className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3">
+        <div className="mb-5 text-sm text-good border border-[var(--pill-green-border)] bg-[color-mix(in_oklab,var(--good)_8%,transparent)] rounded-input p-3">
           {message}
         </div>
       )}

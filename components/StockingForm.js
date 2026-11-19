@@ -396,12 +396,12 @@ const StockingForm = ({ onSuccess, onCancel }) => {
       subtitle="Fill in batch and fish metrics for an available cage. Drafts survive a refresh."
     >
       {error && (
-        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+        <div className="mb-5 text-sm text-alert border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] rounded-input p-3">
           {error}
         </div>
       )}
       {warn.length > 0 && (
-        <div className="mb-5 text-sm text-amber-800 dark:text-amber-200 border border-amber-500/30 bg-amber-500/10 rounded-xl p-3 space-y-1">
+        <div className="mb-5 text-sm text-warn border border-[var(--pill-amber-border)] bg-[color-mix(in_oklab,var(--warn)_8%,transparent)] rounded-input p-3 space-y-1">
           {warn.map((w) => (
             <p key={w}>{w}</p>
           ))}

@@ -102,23 +102,23 @@ const SamplingForm = ({ harvestId, onComplete }) => {
         </Field>
 
         <div>
-          <p className="text-sm font-semibold text-chart-ink mb-2">Samples</p>
-          <div className="overflow-x-auto rounded-xl border border-foam-deep">
-            <table className="min-w-full divide-y divide-foam-deep">
-              <thead className="bg-foam">
+          <p className="mb-2 text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">Samples</p>
+          <div className="overflow-x-auto rounded-input border border-line">
+            <table className="min-w-full divide-y divide-line">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">Size</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">Range</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">
+                  <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Size</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Range</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">
                     Quantity per crate
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted">ABW (g)</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">ABW (g)</th>
                 </tr>
               </thead>
-              <tbody className="bg-surface divide-y divide-foam-deep">
+              <tbody className="divide-y divide-line">
                 {formData.samples.map((sample, index) => (
                   <tr key={sample.category}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text">
                       {sample.category}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-muted">

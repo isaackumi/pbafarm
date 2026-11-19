@@ -214,7 +214,13 @@
     "tempC": "Temp. (°C)",
     "secchiCm": "Secchi (cm)",
     "removeCage": "Retirer {name}",
-    "dashboard": "Tableau de bord"
+    "dashboard": "Tableau de bord",
+    "inspection": {
+      "title": "Saisie d’inspection",
+      "crumb": "Maintenance",
+      "online": "Inspections de filets, nettoyage et maintenance",
+      "offline": "Hors ligne : les saisies attendent sur cet appareil et partent à la reconnexion"
+    }
   },
   "daily": {
     "pageTitle": "Saisie quotidienne",
@@ -309,7 +315,74 @@
       "one": "Enregistrer {count} relevé",
       "other": "Enregistrer {count} relevés"
     },
-    "saveRecords": "Enregistrer les relevés"
+    "saveRecords": "Enregistrer les relevés",
+    "eyebrow": "Production · {date}",
+    "submitN": {
+      "one": "Envoyer {count} saisie",
+      "other": "Envoyer {count} saisies"
+    },
+    "uploadSheet": "Importer une feuille",
+    "round": {
+      "today": "Tournée du jour",
+      "forDate": "Tournée · {date}",
+      "ofCages": "sur {total} cages saisies",
+      "progressLabel": "Cages saisies pour cette date",
+      "inBatch": {
+        "one": "{count} cage dans ce lot",
+        "other": "{count} cages dans ce lot"
+      },
+      "open": {
+        "one": "{count} restante",
+        "other": "{count} restantes"
+      }
+    },
+    "status": {
+      "check": "À vérifier",
+      "pending": "En attente",
+      "ready": "Prêt"
+    },
+    "fishCount": "{count} poissons",
+    "keyboardHint": "Tab pour avancer · ⌘↵ ou Ctrl↵ pour envoyer",
+    "records": {
+      "title": "Relevés quotidiens",
+      "eyebrow": "Production · Tout ce qui a été saisi au quotidien",
+      "description": "Corrigez un chiffre ici ; le stock et les effectifs suivent.",
+      "newEntry": "Nouvelle saisie",
+      "exportCsv": "Exporter en CSV",
+      "dateRange": "Période",
+      "rangeDays": {
+        "one": "{count} jour",
+        "other": "{count} jours"
+      },
+      "allCages": "Toutes les cages",
+      "kpiRecords": "Relevés",
+      "kpiFeed": "Aliment distribué",
+      "kpiCost": "Coût de l’aliment",
+      "kpiMortality": "Mortalité",
+      "loading": "Chargement des relevés…",
+      "emptyTitle": {
+        "one": "Rien de saisi ce dernier jour",
+        "other": "Rien de saisi ces {count} derniers jours"
+      },
+      "emptyCage": "Essayez une autre cage ou une période plus longue.",
+      "emptyAll": "Les saisies quotidiennes apparaissent ici une fois enregistrées.",
+      "openEntry": "Ouvrir la saisie quotidienne",
+      "tableTitle": "Relevés",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colFeedType": "Type d’aliment",
+      "colFeedKg": "Aliment kg",
+      "colMortality": "Mortalité",
+      "colCause": "Cause",
+      "colDo": "OD",
+      "colTemp": "Temp.",
+      "colNotes": "Notes",
+      "colActions": "Actions",
+      "feed": "Aliment",
+      "water": "Eau",
+      "editAria": "Modifier {cage} du {date}",
+      "deleteAria": "Supprimer {cage} du {date}"
+    }
   },
   "biweekly": {
     "pageTitle": "Saisie bimensuelle",
@@ -351,7 +424,47 @@
       "one": "Enregistrer {count} échantillon",
       "other": "Enregistrer {count} échantillons"
     },
-    "saveSamples": "Enregistrer les échantillons"
+    "saveSamples": "Enregistrer les échantillons",
+    "records": {
+      "title": "Échantillonnage et croissance",
+      "eyebrow": "Production · Pesées bimensuelles",
+      "loading": "Chargement des échantillonnages…",
+      "newSampling": "Nouvel échantillonnage",
+      "export": "Exporter en CSV",
+      "kpiAvgAbw": "PMI moyen",
+      "kpiAdg": "Gain quotidien",
+      "gPerDay": "g/jour",
+      "kpiSampled14": "Échantillonnées · 14 jours",
+      "ofCages": "sur {total}",
+      "kpiFish": "Poissons comptés · cette page",
+      "abwByCage": "PMI par cage",
+      "abwByCageHint": "Dernier échantillonnage, en grammes",
+      "tableTitle": "Échantillonnages",
+      "rangeAll": "Tout",
+      "range30": "30 derniers jours",
+      "rangeMonth": "Ce mois-ci",
+      "searchPlaceholder": "Cage ou code de lot",
+      "allCages": "Toutes les cages",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colBatch": "Lot",
+      "colSample": "Échantillons",
+      "colTotal": "Poissons",
+      "colAbw": "PMI",
+      "colGain": "Gain",
+      "colActions": "Actions",
+      "unknownCage": "Cage inconnue",
+      "view": "Voir le relevé",
+      "edit": "Modifier le relevé",
+      "delete": "Supprimer le relevé",
+      "emptyTitle": "Aucun échantillonnage",
+      "emptyBody": "Les relevés apparaissent ici après une pesée.",
+      "noMatch": "Aucun échantillonnage ne correspond à ces filtres.",
+      "pageOf": "Page {page} sur {pages} · {total} relevés",
+      "previous": "Précédent",
+      "next": "Suivant"
+    },
+    "eyebrow": "Production · Échantillonnage bimensuel"
   },
   "wq": {
     "param": {
@@ -543,6 +656,50 @@
       "unknownFeedType": "aucun aliment nommé « {value} »",
       "feedTypeRequired": "feed_type est obligatoire quand feed_amount est supérieur à 0",
       "duplicateRow": "répète une ligne précédente ({value})"
+    },
+    "columnsLine": "Colonnes : {columns}",
+    "dropTitle": "Déposez un fichier CSV ici",
+    "fileMeta": "{size} · {rows} lignes",
+    "chooseFileButton": "Choisir un fichier",
+    "chooseAnother": "Choisir un autre fichier",
+    "readyCount": {
+      "one": "{count} ligne prête",
+      "other": "{count} lignes prêtes"
+    },
+    "skipCount": {
+      "one": "{count} ligne en erreur sera ignorée",
+      "other": "{count} lignes en erreur seront ignorées"
+    },
+    "importCount": {
+      "one": "Importer {count} ligne",
+      "other": "Importer {count} lignes"
+    },
+    "preview": {
+      "title": "Vérifier les lignes",
+      "tabAll": "Toutes {count}",
+      "tabOk": "OK {count}",
+      "tabErrors": "Erreurs {count}",
+      "note": "Les lignes en erreur sont ignorées ; corrigez-les dans la feuille puis réimportez",
+      "empty": "Aucune ligne dans cette vue",
+      "ok": "OK",
+      "error": "Erreur",
+      "colRow": "Ligne",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colFeed": "Aliment",
+      "colMortality": "Mortalité",
+      "colBatch": "Lot",
+      "colAbw": "PMI",
+      "colFish": "Poissons",
+      "colStatus": "Statut"
+    },
+    "page": {
+      "title": "Import en masse",
+      "eyebrow": "Production · Importer des relevés depuis un tableur",
+      "template": "Télécharger le modèle",
+      "kindLabel": "Type d’import",
+      "kindDaily": "Relevés quotidiens",
+      "kindBiweekly": "Échantillonnage bimensuel"
     }
   },
   "scan": {
@@ -2386,5 +2543,184 @@
     },
     "redirectApprovals": "Redirection vers les approbations…",
     "create": "Créer"
+  },
+  "cageAnalytics": {
+    "title": "Analyse des cages",
+    "eyebrow": "Production · Statut, taille et maturité de récolte",
+    "growthLink": "Croissance",
+    "backToCages": "Retour aux cages",
+    "empty": "Aucune donnée de cage disponible.",
+    "kpiTotal": "Cages au total",
+    "kpiActive": "Actives",
+    "kpiHarvested": "Récoltées",
+    "kpiMaintenance": "Maintenance",
+    "kpiFallow": "En jachère",
+    "kpiEmpty": "Vides",
+    "chart": {
+      "status": "Répartition par statut",
+      "size": "Répartition par taille",
+      "harvest": "Jours avant récolte",
+      "growth": "Tendances de croissance"
+    },
+    "growth": {
+      "title": "Analyse de croissance",
+      "eyebrow": "Production · Croissance et poids des cages actives",
+      "allAnalytics": "Toutes les analyses",
+      "rateChart": "Taux de croissance",
+      "weightChart": "Comparaison des poids",
+      "seriesRate": "Taux de croissance (%)",
+      "seriesDaily": "Croissance quotidienne (%)",
+      "seriesInitial": "Poids initial (g)",
+      "seriesCurrent": "Poids actuel (g)",
+      "tableTitle": "Croissance par cage",
+      "noData": "Aucune cage active n’a encore de date d’empoissonnement et deux poids.",
+      "colCage": "Cage",
+      "colDoc": "Jours d’élevage",
+      "colInitial": "Poids initial",
+      "colCurrent": "Poids actuel",
+      "colRate": "Croissance",
+      "colDaily": "Taux quotidien",
+      "days": "{value} jours"
+    }
+  },
+  "stocking": {
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "reverse": "Annuler le transfert",
+    "to": "vers",
+    "loadMore": "Afficher plus",
+    "filter": {
+      "all": "Tous"
+    },
+    "status": {
+      "approved": "Approuvé",
+      "pending_approval": "En attente d’approbation",
+      "rejected": "Refusé",
+      "reversed": "Annulé"
+    },
+    "type": {
+      "stocking": "Empoissonnement",
+      "transfer": "Transfert",
+      "topup": "Complément"
+    },
+    "col": {
+      "date": "Date",
+      "type": "Type",
+      "fromTo": "De → Vers",
+      "batch": "Lot",
+      "cage": "Cage",
+      "fish": "Poissons",
+      "abw": "PMI",
+      "biomass": "Biomasse",
+      "source": "Provenance",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "newStocking": {
+      "title": "Nouvel empoissonnement",
+      "eyebrow": "Production · Empoissonnements et transferts",
+      "description": "Empoissonnez une cage libre avec un nouveau lot. Les champs obligatoires portent un astérisque (*)."
+    },
+    "topup": {
+      "title": "Complément",
+      "eyebrow": "Production · Empoissonnements et transferts",
+      "description": "Ajoutez des poissons à une cage empoissonnée. Les compléments sont enregistrés à part et suivis avec le lot d’origine."
+    },
+    "transfers": {
+      "title": "Transferts de poissons",
+      "eyebrow": "Production · Empoissonnements et transferts",
+      "description": "Déplacez des poissons entre cages, en tout ou en partie. Une destination vide reçoit un empoissonnement ; une cage occupée, un complément.",
+      "allMovements": "Tous les mouvements",
+      "modeLabel": "Type de transfert",
+      "single": "Une destination",
+      "multi": "Plusieurs destinations",
+      "history": "Historique des transferts",
+      "filterStatus": "Filtrer par statut",
+      "empty": "Aucun transfert pour l’instant."
+    },
+    "mgmt": {
+      "title": "Empoissonnements et transferts",
+      "eyebrow": "Production · Mouvements et approbations",
+      "newStocking": "Nouvel empoissonnement",
+      "newTransfer": "Nouveau transfert",
+      "newTopup": "Nouveau complément",
+      "openTransfers": "Ouvrir les transferts",
+      "tabsLabel": "Mouvements",
+      "tabApprovals": "Approbations",
+      "tabApprovalsN": {
+        "one": "Approbations · {count}",
+        "other": "Approbations · {count}"
+      },
+      "tabStockings": "Empoissonnements",
+      "tabTransfers": "Transferts",
+      "tabTopups": "Compléments",
+      "noPending": "Rien en attente d’approbation",
+      "noPendingBody": "Les nouveaux empoissonnements, compléments et transferts apparaissent ici jusqu’à leur approbation.",
+      "requested": "Daté du {date} · envoyé le {when}",
+      "avgWeight": "Poids moyen",
+      "biomass": "Biomasse",
+      "viewDetails": "Voir le détail",
+      "history": "Historique des mouvements",
+      "searchHistory": "Cage ou lot",
+      "searchStockings": "Lot, cage ou provenance",
+      "noMovements": "Aucun mouvement pour l’instant.",
+      "loading": "Chargement des empoissonnements…",
+      "emptyTitle": "Aucun empoissonnement",
+      "emptyBody": "Les empoissonnements apparaissent ici dès qu’un lot est ajouté à une cage.",
+      "noMatch": "Aucun empoissonnement ne correspond à ces filtres.",
+      "year": "Année",
+      "allYears": "Toutes les années",
+      "allCages": "Toutes les cages",
+      "edit": "Modifier l’empoissonnement",
+      "delete": "Supprimer l’empoissonnement",
+      "approved": "Approuvé",
+      "approveFailed": "Approbation impossible",
+      "rejected": "Refusé",
+      "rejectFailed": "Refus impossible",
+      "reasonRequired": "Indiquez la raison du refus",
+      "rejectTitle": "Refuser {batch}",
+      "rejectReason": "Raison du refus"
+    },
+    "detail": {
+      "eyebrow": "Production · Empoissonnements et transferts",
+      "back": "Tous les mouvements",
+      "loading": "Chargement du détail…",
+      "notFound": "Introuvable",
+      "notFoundBody": "Cet enregistrement n’existe pas ou vous n’y avez pas accès.",
+      "stockingTitle": "Empoissonnement {batch}",
+      "topupTitle": "Complément · {batch}",
+      "stockingRequest": "Demande d’empoissonnement",
+      "topupRequest": "Demande de complément",
+      "requestedOn": "Demandé le {when}",
+      "stockingHeadline": "Mettre {fish} poissons dans {cage}",
+      "topupHeadline": "Ajouter {fish} poissons à {cage}",
+      "fromSource": "De · Provenance",
+      "toCage": "Vers · {cage}",
+      "stockingDate": "Date d’empoissonnement",
+      "topupDate": "Date du complément",
+      "parentBatch": "Lot d’origine",
+      "supervisor": "Responsable du transfert",
+      "notes": "Notes",
+      "linkedTransfer": "Un transfert de poissons a créé cet enregistrement. Approuvez ou refusez le transfert pour que les poissons quittent la cage source en même temps :",
+      "approvalsLink": "Approbations",
+      "relatedTopups": "Compléments liés",
+      "fishAbw": "{fish} poissons · {abw} g",
+      "note": "Note au demandeur (obligatoire pour refuser)",
+      "notePlaceholder": "Ajoutez une raison en cas de refus…",
+      "reasonRequired": "Indiquez une raison avant de refuser",
+      "auditHint": "Votre décision est enregistrée dans le journal d’audit",
+      "working": "En cours…",
+      "approveStocking": "Approuver l’empoissonnement",
+      "approveTopup": "Approuver le complément"
+    }
+  },
+  "dataTable": {
+    "search": "Rechercher…",
+    "filters": "Filtres",
+    "sortBy": "Trier par {column}",
+    "pageOf": "Page {page} sur {pages}",
+    "pagination": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant"
   }
 }

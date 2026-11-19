@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { FileSpreadsheet } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -10,9 +11,10 @@ import {
   toServerRecords,
 } from '../lib/csvImport'
 import { errorMessage } from '../lib/errorMessage'
-import { localToday } from '../lib/format'
+import { formatNumber, localToday } from '../lib/format'
 import { useT } from '../lib/i18n/context'
-import { Button, FormActions, FormSection, Field } from './ui'
+import { Card, GhostButton, GradientButton, Pill, StatusDot, Table } from './ui'
+import { ActionBar } from './ui/ActionBar'
 
 const KINDS = {
   daily: {
@@ -29,16 +31,38 @@ const KINDS = {
   },
 }
 
+/** Header row for each import, as a list (template download). */
+export const CSV_COLUMNS = Object.fromEntries(
+  Object.entries(KINDS).map(([kind, c]) => [kind, c.columns.split(',').map((s) => s.trim())]),
+)
+
+const cell = (values, ...names) => {
+  for (const n of names) {
+    const v = values?.[n]
+    if (v != null && v !== '') return v
+  }
+  return ''
+}
+
+const formatSize = (bytes) =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
 /**
- * Bulk CSV upload (MOBILE-009). The file is parsed in the browser with a real
- * CSV parser and checked with the same rules as interactive entry; every row
- * that is not sent is listed with its line number and reason.
+ * Bulk CSV upload (MOBILE-009, Paper 53 + P-UPLOAD). The file is parsed in
+ * the browser as soon as it is chosen and checked with the same rules as
+ * interactive entry; every row is listed with its status before anything is
+ * sent. Rows that fail a rule are skipped and named with their line number.
+ * `header` renders at the top of the upload card (the page's kind picker).
  */
-export default function CsvImportForm({ kind, onSuccess, onCancel }) {
+export default function CsvImportForm({ kind, onSuccess, onCancel, header = null }) {
   const t = useT()
   const config = KINDS[kind]
   const inputId = `${kind}-csv`
+  const inputRef = useRef(null)
   const [file, setFile] = useState(null)
+  const [text, setText] = useState(null)
+  const [dragging, setDragging] = useState(false)
+  const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
@@ -49,26 +73,51 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
   const lookupsReady = cages !== undefined && (!config.needsFeedTypes || feedTypes !== undefined)
   const createMany = useMutation(config.mutation)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const choose = async (next) => {
+    setFile(next || null)
+    setResult(null)
+    setError('')
+    setFilter('all')
+    setText(next ? await next.text() : null)
+  }
+
+  useEffect(() => {
+    if (inputRef.current && !file) inputRef.current.value = ''
+  }, [file])
+
+  // Parse and check on choose, so the rows can be reviewed before import.
+  const preview = useMemo(() => {
+    if (text == null || !lookupsReady) return null
+    let parsed
+    try {
+      parsed = parseCsv(text)
+    } catch (err) {
+      if (err.code === 'UNCLOSED_QUOTE') return { error: t('csvImport.unclosedQuote', { line: err.line }) }
+      if (err.code === 'EMPTY') return { error: t('csvImport.empty') }
+      return { error: errorMessage(err, t('csvImport.failed')) }
+    }
+    const lookups = config.needsFeedTypes ? { cages, feedTypes } : { cages }
+    const { records, skipped } = config.build(parsed.rows, { ...lookups, today: localToday() })
+    const skippedByLine = new Map(skipped.map((s) => [s.line, s]))
+    const rows = parsed.rows.map(({ line, values }) => ({
+      line,
+      values,
+      skip: skippedByLine.get(line) || null,
+    }))
+    return { parsed, records, skipped, rows }
+  }, [text, lookupsReady, cages, feedTypes, config, t])
+
+  const handleImport = async () => {
     if (!file) {
       setError(t('csvImport.chooseFile'))
       return
     }
+    if (!preview || preview.error) return
     setLoading(true)
     setError('')
     setResult(null)
     try {
-      let parsed
-      try {
-        parsed = parseCsv(await file.text())
-      } catch (err) {
-        if (err.code === 'UNCLOSED_QUOTE') throw new Error(t('csvImport.unclosedQuote', { line: err.line }))
-        if (err.code === 'EMPTY') throw new Error(t('csvImport.empty'))
-        throw err
-      }
-      const lookups = config.needsFeedTypes ? { cages, feedTypes } : { cages }
-      const { records, skipped } = config.build(parsed.rows, { ...lookups, today: localToday() })
+      const { records, skipped, parsed } = preview
       let inserted = 0
       if (records.length) {
         const ids = await createMany({ records: toServerRecords(records) })
@@ -80,6 +129,8 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
         existing: records.length - inserted,
         skipped,
       })
+      setFile(null)
+      setText(null)
       if (inserted > 0) onSuccess?.()
     } catch (err) {
       setError(errorMessage(err, t('csvImport.failed')))
@@ -88,48 +139,174 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
     }
   }
 
+  const cancel = () => {
+    choose(null)
+    onCancel?.()
+  }
+
+  const okCount = preview?.records?.length || 0
+  const errorCount = preview?.skipped?.length || 0
+  const totalCount = preview?.rows?.length || 0
+  const shown = (preview?.rows || []).filter((r) =>
+    filter === 'ok' ? !r.skip : filter === 'errors' ? Boolean(r.skip) : true,
+  )
+
+  const status = (r) =>
+    r.skip ? (
+      <span className="flex min-w-0 items-center gap-2.5">
+        <Pill tone="red">{t('csvImport.preview.error')}</Pill>
+        <span className="truncate text-xs text-muted">{t(r.skip.reason.key, r.skip.reason.params)}</span>
+      </span>
+    ) : (
+      <Pill tone="green">{t('csvImport.preview.ok')}</Pill>
+    )
+
+  const columns = [
+    {
+      key: 'line',
+      header: t('csvImport.preview.colRow'),
+      width: 56,
+      render: (r) => <span className="font-mono text-xs text-faint">{r.line}</span>,
+    },
+    { key: 'date', header: t('csvImport.preview.colDate'), width: 110, render: (r) => <span className="tabular-nums">{cell(r.values, 'date') || '—'}</span> },
+    { key: 'cage', header: t('csvImport.preview.colCage'), width: 100, render: (r) => cell(r.values, 'cage_name', 'cage') || '—' },
+    ...(kind === 'daily'
+      ? [
+          { key: 'feed', header: t('csvImport.preview.colFeed'), width: 90, align: 'right', render: (r) => cell(r.values, 'feed_amount', 'feed_kg', 'feed') || '—' },
+          { key: 'mort', header: t('csvImport.preview.colMortality'), width: 100, align: 'right', render: (r) => cell(r.values, 'mortality', 'dead') || '—' },
+        ]
+      : [
+          { key: 'batch', header: t('csvImport.preview.colBatch'), width: 130, render: (r) => cell(r.values, 'batch_code', 'batch') || '—' },
+          { key: 'abw', header: t('csvImport.preview.colAbw'), width: 90, align: 'right', render: (r) => cell(r.values, 'average_body_weight', 'abw') || '—' },
+          { key: 'fish', header: t('csvImport.preview.colFish'), width: 100, align: 'right', render: (r) => cell(r.values, 'total_fish_count', 'fish_count') || '—' },
+        ]),
+    { key: 'status', header: t('csvImport.preview.colStatus'), render: status },
+  ]
+
+  const onDrop = (e) => {
+    e.preventDefault()
+    setDragging(false)
+    const dropped = e.dataTransfer?.files?.[0]
+    if (dropped) choose(dropped)
+  }
+
   return (
-    <div>
-      <FormSection
-        title={t(`csvImport.title.${kind}`)}
-        description={t('csvImport.header', { columns: config.columns })}
-      >
+    <div className="flex flex-col gap-6">
+      <Card padding={false} className="flex flex-col gap-5 px-5 py-6 sm:px-[26px]">
+        {header}
+        <p className="text-sm text-muted">{t('csvImport.columnsLine', { columns: config.columns })}</p>
+
         {error && (
           <div
             role="alert"
-            className="mb-4 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3"
+            className="rounded-input border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] px-4 py-3 text-sm text-alert"
           >
             {error}
           </div>
         )}
-        {result && <CsvImportReport result={result} />}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Field
-            label={t('csvImport.file')}
-            htmlFor={inputId}
-            hint={t('csvImport.fileHint')}
-            required
+        {preview?.error && (
+          <div
+            role="alert"
+            className="rounded-input border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] px-4 py-3 text-sm text-alert"
           >
-            <input
-              id={inputId}
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm text-chart-ink file:mr-4 file:rounded-xl file:border-0 file:bg-foam file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-chart-ink hover:file:bg-zinc-200/80"
-            />
-          </Field>
-          <FormActions className="mt-4 pt-4">
-            <Button type="submit" disabled={loading || !lookupsReady} size="lg">
-              {loading ? t('csvImport.uploading') : t('csvImport.upload')}
-            </Button>
-            {onCancel && (
-              <Button type="button" variant="secondary" onClick={onCancel}>
-                {t('common.cancel')}
-              </Button>
-            )}
-          </FormActions>
-        </form>
-      </FormSection>
+            {preview.error}
+          </div>
+        )}
+        {result && <CsvImportReport result={result} />}
+
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={`flex flex-col gap-4 rounded-input border-[1.5px] border-dashed bg-bg p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-7 ${
+            dragging ? 'border-pearl-cyan' : 'border-line-strong'
+          }`}
+        >
+          <div className="flex size-[52px] shrink-0 items-center justify-center rounded-full bg-surface-2 text-pearl-cyan">
+            <FileSpreadsheet size={22} strokeWidth={2} aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold leading-5 text-text">
+              {file ? file.name : t('csvImport.dropTitle')}
+            </p>
+            <p className="mt-1 text-sm leading-[18px] text-muted tabular-nums">
+              {file
+                ? preview && !preview.error
+                  ? t('csvImport.fileMeta', { size: formatSize(file.size), rows: formatNumber(totalCount) })
+                  : formatSize(file.size)
+                : t('csvImport.fileHint')}
+            </p>
+          </div>
+          <label htmlFor={inputId} className="sr-only">
+            {t('csvImport.file')}
+          </label>
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => choose(e.target.files?.[0] || null)}
+            className="sr-only"
+          />
+          <GhostButton size="lg" onClick={() => inputRef.current?.click()}>
+            {file ? t('csvImport.chooseAnother') : t('csvImport.chooseFileButton')}
+          </GhostButton>
+        </div>
+        {file && !lookupsReady && <p className="text-sm text-muted">{t('common.loading')}</p>}
+      </Card>
+
+      {preview && !preview.error && (
+        <Table
+          title={t('csvImport.preview.title')}
+          tabsLabel={t('csvImport.preview.title')}
+          tabs={[
+            { value: 'all', label: t('csvImport.preview.tabAll', { count: totalCount }) },
+            { value: 'ok', label: t('csvImport.preview.tabOk', { count: okCount }) },
+            ...(errorCount
+              ? [
+                  {
+                    value: 'errors',
+                    label: <span className="text-alert">{t('csvImport.preview.tabErrors', { count: errorCount })}</span>,
+                  },
+                ]
+              : []),
+          ]}
+          tab={filter}
+          onTabChange={setFilter}
+          actions={<span className="text-xs text-muted">{t('csvImport.preview.note')}</span>}
+          columns={columns}
+          rows={shown}
+          rowKey={(r) => r.line}
+          empty={t('csvImport.preview.empty')}
+        />
+      )}
+
+      {file && preview && !preview.error && (
+        <ActionBar aria-live="polite">
+          <div className="mr-auto flex min-w-0 items-center gap-2.5">
+            <StatusDot tone={okCount ? 'good' : 'alert'} size={8} />
+            <p className="text-sm text-text tabular-nums">
+              <span className="font-semibold">{t('csvImport.readyCount', { count: okCount })}</span>
+              {errorCount > 0 && (
+                <span className="text-muted"> · {t('csvImport.skipCount', { count: errorCount })}</span>
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={cancel}
+            className="min-h-11 rounded-pill px-3 text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          >
+            {t('common.cancel')}
+          </button>
+          <GradientButton variant="solid" onClick={handleImport} disabled={loading || !okCount}>
+            {loading ? t('csvImport.uploading') : t('csvImport.importCount', { count: okCount })}
+          </GradientButton>
+        </ActionBar>
+      )}
     </div>
   )
 }
@@ -139,10 +316,10 @@ export function CsvImportReport({ result }) {
   const { rows, inserted, existing, skipped } = result
   const tone =
     inserted > 0 && skipped.length === 0
-      ? 'text-kelp border-kelp/20 bg-kelp/10'
-      : 'text-chart-ink border-amber-500/40 bg-amber-500/10'
+      ? 'text-good border-[var(--pill-green-border)] bg-[color-mix(in_oklab,var(--good)_8%,transparent)]'
+      : 'text-text border-[var(--pill-amber-border)] bg-[color-mix(in_oklab,var(--warn)_8%,transparent)]'
   return (
-    <div role="status" className={`mb-4 text-sm border rounded-xl p-3 space-y-2 ${tone}`}>
+    <div role="status" className={`text-sm border rounded-input px-4 py-3 space-y-2 ${tone}`}>
       <p className="font-semibold">{t('csvImport.summary', { inserted, rows })}</p>
       {existing > 0 && <p>{t('csvImport.existing', { count: existing })}</p>}
       {skipped.length > 0 && (

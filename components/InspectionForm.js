@@ -109,12 +109,12 @@ export default function InspectionForm({ unitType = 'cage', equipment = [], spar
 
       {form.checklist.length > 0 && (
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold text-chart-ink mb-1">Checklist</legend>
+          <legend className="mb-1 text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">Checklist</legend>
           {form.checklist.map((c, i) => (
-            <div key={c.item} className="rounded-lg border border-foam-deep p-2">
+            <div key={c.item} className="rounded-input border border-line p-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm">{c.item}</span>
-                <div className="flex shrink-0 rounded-lg border border-foam-deep overflow-hidden" role="group" aria-label={c.item}>
+                <div className="flex shrink-0 gap-[2px] rounded-pill border border-line bg-bg p-[3px]" role="group" aria-label={c.item}>
                   {[true, false].map((val) => (
                     <button
                       key={String(val)}
@@ -123,8 +123,8 @@ export default function InspectionForm({ unitType = 'cage', equipment = [], spar
                       onClick={() =>
                         setForm((f) => ({ ...f, checklist: f.checklist.map((x, j) => (j === i ? { ...x, ok: val } : x)) }))
                       }
-                      className={`px-3 min-h-11 sm:min-h-9 text-sm ${
-                        c.ok === val ? (val ? 'bg-kelp text-white' : 'bg-signal text-white') : 'bg-surface text-muted'
+                      className={`rounded-pill px-3 min-h-11 sm:min-h-8 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                        c.ok === val ? (val ? 'bg-good text-bg' : 'bg-alert text-bg') : 'text-muted hover:text-text'
                       }`}
                     >
                       {val ? 'OK' : 'Fault'}

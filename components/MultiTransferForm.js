@@ -165,7 +165,7 @@ export default function MultiTransferForm({ initialSourceId = '', onCreated }) {
               Add destination
             </Button>
             {source && (
-              <p className={`text-sm tabular-nums ${remaining < 0 ? 'text-signal' : 'text-muted'}`}>
+              <p className={`text-sm tabular-nums ${remaining < 0 ? 'text-alert' : 'text-muted'}`}>
                 {total.toLocaleString()} of {available.toLocaleString()} fish,{' '}
                 {remaining >= 0 ? `${remaining.toLocaleString()} stay in ${source.name}` : `${(-remaining).toLocaleString()} too many`}
               </p>
@@ -177,7 +177,7 @@ export default function MultiTransferForm({ initialSourceId = '', onCreated }) {
           <Textarea id="mt-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
 
-        {error && <p className="text-sm text-signal" role="alert">{error}</p>}
+        {error && <p className="text-sm text-alert" role="alert">{error}</p>}
         <FormActions>
           <Button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Save transfer'}

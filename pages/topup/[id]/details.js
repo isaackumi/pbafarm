@@ -4,27 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
-import { PageHeader, Button, Modal, Textarea } from '../../../components/ui'
+import { ArrowLeft } from 'lucide-react'
+import { Card, GradientButton, LoadingState } from '../../../components/ui'
+import MovementDetailPanel from '../../../components/MovementDetailPanel'
+import { formatDate, formatDateTime, formatNumber } from '../../../lib/format'
+import { useT } from '../../../lib/i18n/context'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useToast } from '../../../components/Toast'
 import { api } from '../../../convex/_generated/api'
 import { usePermission } from '../../../hooks/usePermission'
 
-function statusClass(status) {
-  if (status === 'approved') return 'bg-kelp/15 text-kelp'
-  if (status === 'rejected') return 'bg-signal/15 text-signal'
-  if (status === 'pending_approval') return 'bg-warn/10 text-warn'
-  return 'bg-foam-deep text-chart-ink'
-}
-
-function formatDate(value) {
-  if (value == null) return '—'
-  const d = typeof value === 'number' ? new Date(value) : new Date(String(value))
-  if (Number.isNaN(d.getTime())) return String(value)
-  return d.toLocaleDateString()
-}
-
 function TopupDetails() {
+  const t = useT()
   const router = useRouter()
   const { user, hasRole } = useAuth()
   const canOverride = usePermission('production.stocking.approve')
@@ -36,36 +27,26 @@ function TopupDetails() {
   const rejectTopup = useMutation(api.stocking.rejectTopup)
 
   const [processing, setProcessing] = useState(false)
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [reason, setReason] = useState('')
+  const back = (
+    <GradientButton reverse icon={ArrowLeft} href="/stocking-management">
+      {t('stocking.detail.back')}
+    </GradientButton>
+  )
 
   if (!id || topup === undefined) {
     return (
-      <Layout title="Top-up">
-        <div className="flex justify-center items-center h-64 text-muted">
-          Loading top-up details…
-        </div>
+      <Layout title={t('stocking.type.topup')} eyebrow={t('stocking.detail.eyebrow')} actions={back}>
+        <LoadingState label={t('stocking.detail.loading')} />
       </Layout>
     )
   }
 
   if (topup === null) {
     return (
-      <Layout title="Top-up">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Approvals', href: '/approvals' },
-            { label: 'Not found' },
-          ]}
-        />
-        <div className="text-center py-10">
-          <p className="text-signal font-semibold">Top-up not found</p>
-          <Button href="/approvals" className="mt-4">
-            Back to approvals
-          </Button>
-        </div>
+      <Layout title={t('stocking.detail.notFound')} eyebrow={t('stocking.detail.eyebrow')} actions={back}>
+        <Card>
+          <p className="text-sm text-muted">{t('stocking.detail.notFoundBody')}</p>
+        </Card>
       </Layout>
     )
   }
@@ -88,7 +69,7 @@ function TopupDetails() {
     }
   }
 
-  const onReject = async () => {
+  const onReject = async (reason) => {
     if (!reason.trim()) {
       showToast('error', 'Provide a rejection reason')
       return
@@ -97,8 +78,6 @@ function TopupDetails() {
     try {
       await rejectTopup({ id: topup.id, reason: reason.trim() })
       showToast('success', 'Top-up rejected')
-      setRejectOpen(false)
-      setReason('')
     } catch (err) {
       showToast('error', err.message || 'Failed to reject')
     } finally {
@@ -106,165 +85,63 @@ function TopupDetails() {
     }
   }
 
+  const cageName = topup.cage?.name || '—'
+  const batch = topup.stocking?.batch_number || '—'
   return (
-    <Layout title="Top-up details">
-      <div className="max-w-3xl space-y-6">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Approvals', href: '/approvals' },
-            { label: 'Top-up' },
+    <Layout title={t('stocking.detail.topupTitle', { batch })} eyebrow={t('stocking.detail.eyebrow')} actions={back}>
+      <div className="flex w-full max-w-4xl flex-col gap-6">
+        <MovementDetailPanel
+          kind={t('stocking.detail.topupRequest')}
+          kindTone="neutral"
+          meta={topup.created_at ? t('stocking.detail.requestedOn', { when: formatDateTime(topup.created_at) }) : null}
+          status={topup.status}
+          title={t('stocking.detail.topupHeadline', { fish: formatNumber(topup.fish_count || 0), cage: cageName })}
+          from={{
+            label: t('stocking.detail.fromSource'),
+            value: topup.source_location || '—',
+            sub: topup.transfer_supervisor || null,
+            subTone: 'text-muted',
+          }}
+          to={{
+            label: t('stocking.detail.toCage', { cage: cageName }),
+            value: `+${formatNumber(topup.fish_count || 0)}`,
+            sub: `${formatNumber(topup.abw || 0, { decimals: 1 })} g · ${formatNumber(biomass, { decimals: 2 })} kg`,
+          }}
+          facts={[
+            {
+              label: t('stocking.detail.parentBatch'),
+              value: topup.stocking?.id ? (
+                <Link
+                  href={`/stocking/${topup.stocking.id}/details`}
+                  className="text-pearl-cyan underline-offset-2 hover:underline"
+                >
+                  {batch}
+                </Link>
+              ) : (
+                '—'
+              ),
+            },
+            { label: t('stocking.detail.topupDate'), value: formatDate(topup.topup_date) },
+            { label: t('stocking.detail.supervisor'), value: topup.transfer_supervisor || '—' },
+            { label: t('stocking.detail.notes'), value: topup.notes || '—', wrap: true },
           ]}
-          description="Top-up request details"
-          related={[
-            { label: 'Approvals', href: '/approvals' },
-            topup.stocking?.id
-              ? {
-                  label: 'Parent stocking',
-                  href: `/stocking/${topup.stocking.id}/details`,
-                }
-              : null,
-          ].filter(Boolean)}
-          actions={
-            <Button href="/approvals" variant="secondary" size="sm">
-              Back
-            </Button>
+          notice={
+            linkedToTransfer && topup.status === 'pending_approval' ? (
+              <p className="rounded-input border border-[var(--pill-amber-border)] bg-[color-mix(in_oklab,var(--warn)_8%,transparent)] p-4 text-sm text-text">
+                {t('stocking.detail.linkedTransfer')}{' '}
+                <Link href="/approvals" className="text-pearl-cyan underline-offset-2 hover:underline">
+                  {t('stocking.detail.approvalsLink')}
+                </Link>
+              </p>
+            ) : null
           }
+          canModerate={canModerate}
+          processing={processing}
+          approveLabel={t('stocking.detail.approveTopup')}
+          onApprove={onApprove}
+          onReject={onReject}
         />
-
-        <div className="page-card p-6 space-y-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-xl font-medium text-chart-ink">
-              Top-up · {topup.stocking?.batch_number || 'Batch'}
-            </h2>
-            <span
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass(
-                topup.status,
-              )}`}
-            >
-              {String(topup.status || '').replace(/_/g, ' ')}
-            </span>
-          </div>
-
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-muted">Cage</dt>
-              <dd className="font-semibold text-chart-ink">
-                {topup.cage?.name || '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Parent batch</dt>
-              <dd className="text-chart-ink">
-                {topup.stocking?.id ? (
-                  <Link
-                    href={`/stocking/${topup.stocking.id}/details`}
-                    className="text-lake underline-offset-2 hover:underline"
-                  >
-                    {topup.stocking.batch_number}
-                  </Link>
-                ) : (
-                  '—'
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Top-up date</dt>
-              <dd className="font-data text-chart-ink">
-                {formatDate(topup.topup_date)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Fish to add</dt>
-              <dd className="font-data text-chart-ink">
-                {Number(topup.fish_count || 0).toLocaleString()}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">ABW</dt>
-              <dd className="font-data text-chart-ink">
-                {Number(topup.abw || 0).toFixed(1)} g
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Biomass to add</dt>
-              <dd className="font-data text-chart-ink">{biomass.toFixed(2)} kg</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Source location</dt>
-              <dd className="text-chart-ink">{topup.source_location || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Transfer supervisor</dt>
-              <dd className="text-chart-ink">
-                {topup.transfer_supervisor || '—'}
-              </dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-muted">Notes</dt>
-              <dd className="text-chart-ink whitespace-pre-wrap">
-                {topup.notes || '—'}
-              </dd>
-            </div>
-          </dl>
-
-          {linkedToTransfer && topup.status === 'pending_approval' && (
-            <p className="pt-2 border-t border-foam-deep text-sm text-muted">
-              This top-up was created by a fish transfer. Approve or reject the
-              transfer on the{' '}
-              <Link href="/approvals" className="text-lagoon-800 underline-offset-2 hover:underline">
-                Approvals
-              </Link>{' '}
-              page so the fish leave the source cage at the same time.
-            </p>
-          )}
-
-          {canModerate && (
-            <div className="flex flex-wrap gap-3 pt-2 border-t border-foam-deep">
-              <Button onClick={onApprove} disabled={processing}>
-                {processing ? 'Working…' : 'Approve top-up'}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setRejectOpen(true)}
-                disabled={processing}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-        </div>
       </div>
-
-      {rejectOpen && (
-        <Modal
-          onClose={() => setRejectOpen(false)}
-          dismissible={!processing}
-          title="Reject top-up"
-          footer={
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => setRejectOpen(false)}
-                disabled={processing}
-              >
-                Cancel
-              </Button>
-              <Button variant="danger" onClick={onReject} disabled={processing}>
-                Confirm reject
-              </Button>
-            </>
-          }
-        >
-          <Textarea
-            aria-label="Reason for rejection"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Reason for rejection"
-          />
-        </Modal>
-      )}
     </Layout>
   )
 }

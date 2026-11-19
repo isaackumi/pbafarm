@@ -303,9 +303,9 @@ const HarvestForm = ({ onComplete }) => {
     gradeTitle(grades.find((g) => g.category === size.category) || size)
 
   const previewRow = (label, value) => (
-    <div className="flex justify-between gap-4 py-2 border-b border-foam-deep text-sm">
+    <div className="flex justify-between gap-4 py-2 border-b border-line text-sm">
       <dt className="text-muted">{label}</dt>
-      <dd className="font-medium text-chart-ink tabular-nums text-right">{value}</dd>
+      <dd className="font-medium text-text tabular-nums text-right">{value}</dd>
     </div>
   )
 
@@ -415,7 +415,7 @@ const HarvestForm = ({ onComplete }) => {
         <output
           id="harvest-fcr"
           aria-live="polite"
-          className="block rounded-lg border border-foam-deep bg-foam px-3 py-2 text-sm font-semibold tabular-nums text-chart-ink"
+          className="block rounded-input border border-line bg-bg px-3 py-2 text-sm font-semibold tabular-nums text-text"
         >
           {fcrCalc?.fcr != null ? fcrCalc.fcr.toFixed(2) : '—'}
         </output>
@@ -496,7 +496,7 @@ const HarvestForm = ({ onComplete }) => {
           {withdrawal?.blocked && (
             <div
               role="alert"
-              className="rounded-lg border border-signal/40 bg-signal/10 px-4 py-3 text-sm text-chart-ink space-y-3"
+              className="rounded-input border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] px-4 py-3 text-sm text-text space-y-3"
             >
               <p>
                 <span className="font-medium">{t('harvest.withdrawalUntil', { until: withdrawal.until })}</span>{' '}
@@ -542,7 +542,7 @@ const HarvestForm = ({ onComplete }) => {
         </form>
       ) : (
         <div className="space-y-6">
-          <h3 className="font-display text-lg font-medium text-chart-ink">
+          <h3 className="text-[17px] leading-[22px] font-semibold text-text">
             {t('harvest.checkBeforeSaving')}
           </h3>
 
@@ -562,7 +562,7 @@ const HarvestForm = ({ onComplete }) => {
             {previewRow('FCR', fcrCalc?.fcr != null ? fcrCalc.fcr.toFixed(2) : '—')}
           </dl>
 
-          <p className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink tabular-nums">
+          <p className="rounded-input border border-line bg-bg p-3 text-sm text-text tabular-nums">
             {formData.harvestType === 'complete'
               ? t('harvest.previewComplete', { name: selectedCageObject?.name || t('harvest.thisCage') })
               : t('harvest.previewPartial', {
@@ -574,12 +574,12 @@ const HarvestForm = ({ onComplete }) => {
           </p>
 
           <div>
-            <h4 className="text-base font-medium text-chart-ink mb-3">{t('harvest.sizeBreakdown')}</h4>
+            <h4 className="text-base font-medium text-text mb-3">{t('harvest.sizeBreakdown')}</h4>
             <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {sizeBreakdown.map((size) => (
                 <li
                   key={size.category}
-                  className="rounded-lg border border-foam-deep bg-foam p-3 text-sm text-chart-ink"
+                  className="rounded-input border border-line bg-bg p-3 text-sm text-text"
                 >
                   <span className="text-muted">{gradeLabel(size)}</span>
                   <span className="block font-medium tabular-nums">
@@ -594,8 +594,8 @@ const HarvestForm = ({ onComplete }) => {
 
           {formData.notes && (
             <div>
-              <h4 className="text-base font-medium text-chart-ink mb-2">{t('common.notes')}</h4>
-              <p className="text-sm text-chart-ink bg-foam p-3 rounded-lg">
+              <h4 className="text-base font-medium text-text mb-2">{t('common.notes')}</h4>
+              <p className="text-sm text-text bg-bg p-3 rounded-input">
                 {formData.notes}
               </p>
             </div>

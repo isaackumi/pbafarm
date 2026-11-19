@@ -5,7 +5,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import WaterQualityForm from '../components/WaterQualityForm'
 import OutboxPanel from '../components/OutboxPanel'
-import { Card, Field, FormPage, PageHeader, Select } from '../components/ui'
+import { Card, Field, FormPage, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -69,13 +69,12 @@ function WaterEntry() {
   }
 
   return (
+    <Layout
+      title={t('wq.entry.title')}
+      eyebrow={`${t('wq.entry.crumbWq')} · ${online ? t('wq.entry.online') : t('wq.entry.offline')}`}
+    >
     <FormPage width="md">
-      <PageHeader
-        title={t('wq.entry.title')}
-        breadcrumbs={[{ label: t('wq.entry.crumbWq'), href: '/water-quality' }, { label: t('wq.entry.crumbEntry') }]}
-        description={online ? t('wq.entry.online') : t('wq.entry.offline')}
-      />
-      <Card className="space-y-4">
+      <Card className="space-y-5">
         <Field label={t('wq.entry.unit')} htmlFor="wq-unit" required>
           <Select id="wq-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
             <option value="">{units === undefined ? t('common.loading') : t('wq.entry.chooseUnit')}</option>
@@ -92,16 +91,14 @@ function WaterEntry() {
         <OutboxPanel compact kinds={['water-quality']} online={online} />
       </div>
     </FormPage>
+    </Layout>
   )
 }
 
 export default function WaterEntryPage() {
-  const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title={t('wq.entry.title')}>
-        <WaterEntry />
-      </Layout>
+      <WaterEntry />
     </ProtectedRoute>
   )
 }

@@ -1,50 +1,82 @@
 import { useState } from 'react'
+import { Download } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import BulkDailyUploadForm from '../components/BulkDailyUploadForm'
 import BulkBiweeklyUploadForm from '../components/BulkBiweeklyUploadForm'
+import { CSV_COLUMNS } from '../components/CsvImportForm'
 import { ToastProvider } from '../components/Toast'
-import { PageHeader, TabBar, FormPage, FormCard } from '../components/ui'
+import { GradientButton } from '../components/ui'
+import { useT } from '../lib/i18n/context'
+
+const KINDS = ['daily', 'biweekly']
+
+/** Header-only CSV for the chosen import, built in the browser. */
+function downloadTemplate(kind) {
+  const csv = `${CSV_COLUMNS[kind].join(',')}\n`
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${kind}-records-template.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Pill kind picker (Paper 53): the active option is the solid button colour. */
+function KindPicker({ value, onChange }) {
+  const t = useT()
+  const labels = { daily: t('csvImport.page.kindDaily'), biweekly: t('csvImport.page.kindBiweekly') }
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t('csvImport.page.kindLabel')}
+      className="inline-flex w-fit flex-wrap gap-[2px] rounded-pill border border-line bg-bg p-1"
+    >
+      {KINDS.map((k) => (
+        <button
+          key={k}
+          type="button"
+          role="radio"
+          aria-checked={value === k}
+          onClick={() => onChange(k)}
+          className={`min-h-11 rounded-pill px-4 text-sm leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:min-h-0 sm:py-2 ${
+            value === k ? 'bg-button font-medium text-button-text' : 'text-muted hover:text-text'
+          }`}
+        >
+          {labels[k]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function BulkUpload() {
+  const t = useT()
+  const [activeTab, setActiveTab] = useState('daily')
+  const picker = <KindPicker value={activeTab} onChange={setActiveTab} />
+  return (
+    <Layout
+      title={t('csvImport.page.title')}
+      eyebrow={t('csvImport.page.eyebrow')}
+      actions={
+        <GradientButton icon={Download} onClick={() => downloadTemplate(activeTab)}>
+          {t('csvImport.page.template')}
+        </GradientButton>
+      }
+    >
+      <div className="w-full max-w-5xl">
+        {activeTab === 'daily' && <BulkDailyUploadForm header={picker} />}
+        {activeTab === 'biweekly' && <BulkBiweeklyUploadForm header={picker} />}
+      </div>
+    </Layout>
+  )
+}
 
 export default function BulkUploadPage() {
-  const [activeTab, setActiveTab] = useState('daily')
-
   return (
     <ProtectedRoute permission="production.import">
       <ToastProvider>
-        <Layout title="Bulk Upload">
-          <FormPage>
-            <PageHeader
-              showTitle={false}
-              breadcrumbs={[
-                { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Operations' },
-                { label: 'Bulk upload' },
-              ]}
-              description="Upload multiple daily or bi-weekly records at once using CSV files."
-              related={[
-                { label: 'Daily entry', href: '/daily-entry' },
-                { label: 'Bi-weekly entry', href: '/biweekly-entry' },
-              ]}
-            />
-
-            <div className="mb-5">
-              <TabBar
-                tabs={[
-                  { id: 'daily', label: 'Daily records' },
-                  { id: 'biweekly', label: 'Bi-weekly ABW' },
-                ]}
-                active={activeTab}
-                onChange={setActiveTab}
-              />
-            </div>
-
-            <FormCard>
-              {activeTab === 'daily' && <BulkDailyUploadForm />}
-              {activeTab === 'biweekly' && <BulkBiweeklyUploadForm />}
-            </FormCard>
-          </FormPage>
-        </Layout>
+        <BulkUpload />
       </ToastProvider>
     </ProtectedRoute>
   )

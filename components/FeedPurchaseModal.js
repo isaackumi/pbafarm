@@ -265,17 +265,17 @@ export default function FeedPurchaseModal({
       </div>
 
       <div className="mb-6">
-        <h4 className="mb-3 text-sm font-medium text-chart-ink">
+        <h4 className="mb-3 text-sm font-medium text-text">
           Feed entries
         </h4>
         <div className="space-y-3">
           {purchaseData.feed_entries.map((entry, index) => (
             <div
               key={index}
-              className="flex items-center gap-4 rounded-lg border border-foam-deep bg-foam p-3"
+              className="flex items-center gap-4 rounded-input border border-line bg-bg p-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-chart-ink">
+                <p className="text-sm font-medium text-text">
                   {activeFeedTypes.find(
                     (ft) => (ft.id || ft._id) === entry.feed_type_id,
                   )?.name || 'Feed'}
@@ -293,7 +293,7 @@ export default function FeedPurchaseModal({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveFeedEntry(index)}
-                className="shrink-0 text-signal"
+                className="shrink-0 text-alert"
               >
                 Remove
               </Button>
@@ -307,8 +307,8 @@ export default function FeedPurchaseModal({
         </div>
       </div>
 
-      <div className="mb-6 rounded-lg border border-foam-deep p-4">
-        <h4 className="mb-3 text-sm font-medium text-chart-ink">
+      <div className="mb-6 rounded-input border border-line p-4">
+        <h4 className="mb-3 text-sm font-medium text-text">
           Add feed entry
         </h4>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -418,11 +418,11 @@ export default function FeedPurchaseModal({
       </Field>
 
       <div className="mb-6">
-        <div className="flex items-center justify-between rounded-lg border border-foam-deep bg-foam p-4">
-          <span className="text-sm font-medium text-chart-ink">
+        <div className="flex items-center justify-between rounded-input border border-line bg-bg p-4">
+          <span className="text-sm font-medium text-text">
             Total amount
           </span>
-          <span className="text-lg font-semibold text-chart-ink tabular-nums">
+          <span className="text-lg font-semibold text-text tabular-nums">
             {formatCurrency(purchaseData.total_amount)}
           </span>
         </div>

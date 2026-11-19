@@ -160,7 +160,7 @@ export default function FishTransferForm({ onCreated }) {
     <FormCard title="New fish transfer">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error ? (
-          <p className="text-sm text-signal bg-signal/10 border border-signal/30 rounded-lg px-3 py-2">
+          <p className="text-sm text-alert bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] border border-[var(--pill-red-border)] rounded-input px-3 py-2">
             {error}
           </p>
         ) : null}
@@ -252,11 +252,11 @@ export default function FishTransferForm({ onCreated }) {
                 disabled={formData.fullTransfer}
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm font-medium text-chart-ink min-h-11">
+            <label className="flex items-center gap-2 text-sm font-medium text-text min-h-11">
               <input
                 type="checkbox"
                 checked={!!formData.fullTransfer}
-                className="h-4 w-4 accent-lake"
+                className="h-4 w-4 accent-[var(--cyan)]"
                 onChange={onFullToggle}
                 disabled={!source}
               />
@@ -266,7 +266,7 @@ export default function FishTransferForm({ onCreated }) {
 
           <p className="text-sm text-muted">
             Biomass:{' '}
-            <span className="font-data text-chart-ink">
+            <span className="font-data text-text">
               {biomass ? `${biomass.toFixed(2)} kg` : '—'}
             </span>
             {source ? (
@@ -280,7 +280,7 @@ export default function FishTransferForm({ onCreated }) {
           </p>
 
           {(source || dest) && (
-            <p className="text-sm rounded-lg bg-foam-deep/60 px-3 py-2 text-chart-ink">
+            <p className="text-sm rounded-input bg-surface-2 px-3 py-2 text-text">
               {isFull
                 ? 'Full transfer → source will be emptied.'
                 : quantity > 0

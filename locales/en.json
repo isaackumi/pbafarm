@@ -214,7 +214,13 @@
     "tempC": "Temp (°C)",
     "secchiCm": "Secchi (cm)",
     "removeCage": "Remove {name}",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "inspection": {
+      "title": "Inspection entry",
+      "crumb": "Maintenance",
+      "online": "Net inspections, cleaning and maintenance jobs",
+      "offline": "Offline: entries wait on this device and send when you reconnect"
+    }
   },
   "daily": {
     "pageTitle": "Daily Entry",
@@ -309,7 +315,74 @@
       "one": "Save {count} record",
       "other": "Save {count} records"
     },
-    "saveRecords": "Save records"
+    "saveRecords": "Save records",
+    "eyebrow": "Production · {date}",
+    "submitN": {
+      "one": "Submit {count} entry",
+      "other": "Submit {count} entries"
+    },
+    "uploadSheet": "Upload sheet",
+    "round": {
+      "today": "Today's round",
+      "forDate": "Round · {date}",
+      "ofCages": "of {total} cages logged",
+      "progressLabel": "Cages logged for this date",
+      "inBatch": {
+        "one": "{count} cage in this batch",
+        "other": "{count} cages in this batch"
+      },
+      "open": {
+        "one": "{count} still open",
+        "other": "{count} still open"
+      }
+    },
+    "status": {
+      "check": "Check",
+      "pending": "Pending",
+      "ready": "Ready"
+    },
+    "fishCount": "{count} fish",
+    "keyboardHint": "Tab to move · ⌘↵ or Ctrl↵ to submit",
+    "records": {
+      "title": "Daily records",
+      "eyebrow": "Production · Everything logged through daily entry",
+      "description": "Fix a wrong number here; stock and fish counts follow.",
+      "newEntry": "New entry",
+      "exportCsv": "Export CSV",
+      "dateRange": "Date range",
+      "rangeDays": {
+        "one": "{count} day",
+        "other": "{count} days"
+      },
+      "allCages": "All cages",
+      "kpiRecords": "Records",
+      "kpiFeed": "Feed given",
+      "kpiCost": "Feed cost",
+      "kpiMortality": "Mortality",
+      "loading": "Loading records…",
+      "emptyTitle": {
+        "one": "Nothing logged in the last day",
+        "other": "Nothing logged in the last {count} days"
+      },
+      "emptyCage": "Try another cage or a longer range.",
+      "emptyAll": "Daily entries appear here once saved.",
+      "openEntry": "Open daily entry",
+      "tableTitle": "Records",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colFeedType": "Feed type",
+      "colFeedKg": "Feed kg",
+      "colMortality": "Mortality",
+      "colCause": "Cause",
+      "colDo": "DO",
+      "colTemp": "Temp",
+      "colNotes": "Notes",
+      "colActions": "Actions",
+      "feed": "Feed",
+      "water": "Water",
+      "editAria": "Edit {cage} on {date}",
+      "deleteAria": "Delete {cage} on {date}"
+    }
   },
   "biweekly": {
     "pageTitle": "Bi-weekly entry",
@@ -351,7 +424,47 @@
       "one": "Save {count} sample",
       "other": "Save {count} samples"
     },
-    "saveSamples": "Save samples"
+    "saveSamples": "Save samples",
+    "records": {
+      "title": "Sampling & growth",
+      "eyebrow": "Production · Bi-weekly weigh-ins",
+      "loading": "Loading sampling records…",
+      "newSampling": "New sampling",
+      "export": "Export CSV",
+      "kpiAvgAbw": "Average ABW",
+      "kpiAdg": "Daily gain",
+      "gPerDay": "g/day",
+      "kpiSampled14": "Sampled · 14 days",
+      "ofCages": "of {total}",
+      "kpiFish": "Fish counted · this page",
+      "abwByCage": "ABW by cage",
+      "abwByCageHint": "Latest sampling, grams",
+      "tableTitle": "Samplings",
+      "rangeAll": "All time",
+      "range30": "Last 30 days",
+      "rangeMonth": "This month",
+      "searchPlaceholder": "Cage or batch code",
+      "allCages": "All cages",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colBatch": "Batch",
+      "colSample": "Samples",
+      "colTotal": "Fish",
+      "colAbw": "ABW",
+      "colGain": "Gain",
+      "colActions": "Actions",
+      "unknownCage": "Unknown cage",
+      "view": "View record",
+      "edit": "Edit record",
+      "delete": "Delete record",
+      "emptyTitle": "No samplings yet",
+      "emptyBody": "Records appear here once you weigh a sample.",
+      "noMatch": "No samplings match these filters.",
+      "pageOf": "Page {page} of {pages} · {total} records",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "eyebrow": "Production · Bi-weekly sampling"
   },
   "wq": {
     "param": {
@@ -543,6 +656,50 @@
       "unknownFeedType": "no feed type named \"{value}\"",
       "feedTypeRequired": "feed_type is required when feed_amount is more than 0",
       "duplicateRow": "repeats an earlier row ({value})"
+    },
+    "columnsLine": "Columns: {columns}",
+    "dropTitle": "Drop a CSV file here",
+    "fileMeta": "{size} · {rows} rows",
+    "chooseFileButton": "Choose file",
+    "chooseAnother": "Choose another file",
+    "readyCount": {
+      "one": "{count} row ready",
+      "other": "{count} rows ready"
+    },
+    "skipCount": {
+      "one": "{count} row with errors will be skipped",
+      "other": "{count} rows with errors will be skipped"
+    },
+    "importCount": {
+      "one": "Import {count} row",
+      "other": "Import {count} rows"
+    },
+    "preview": {
+      "title": "Check rows",
+      "tabAll": "All {count}",
+      "tabOk": "OK {count}",
+      "tabErrors": "Errors {count}",
+      "note": "Rows with errors are skipped; fix them in the sheet and upload again",
+      "empty": "No rows in this view",
+      "ok": "OK",
+      "error": "Error",
+      "colRow": "Row",
+      "colDate": "Date",
+      "colCage": "Cage",
+      "colFeed": "Feed",
+      "colMortality": "Mortality",
+      "colBatch": "Batch",
+      "colAbw": "ABW",
+      "colFish": "Fish",
+      "colStatus": "Status"
+    },
+    "page": {
+      "title": "Bulk import",
+      "eyebrow": "Production · Upload records from a spreadsheet",
+      "template": "Download template",
+      "kindLabel": "What to import",
+      "kindDaily": "Daily records",
+      "kindBiweekly": "Bi-weekly sampling"
     }
   },
   "scan": {
@@ -2386,5 +2543,184 @@
     },
     "redirectApprovals": "Redirecting to approvals…",
     "create": "Create"
+  },
+  "cageAnalytics": {
+    "title": "Cage analytics",
+    "eyebrow": "Production · Status, size and harvest readiness",
+    "growthLink": "Growth",
+    "backToCages": "Back to cages",
+    "empty": "No cage data available.",
+    "kpiTotal": "Total cages",
+    "kpiActive": "Active",
+    "kpiHarvested": "Harvested",
+    "kpiMaintenance": "Maintenance",
+    "kpiFallow": "Fallow",
+    "kpiEmpty": "Empty",
+    "chart": {
+      "status": "Status distribution",
+      "size": "Size distribution",
+      "harvest": "Days to harvest",
+      "growth": "Growth trends"
+    },
+    "growth": {
+      "title": "Growth analytics",
+      "eyebrow": "Production · Growth rate and weight across active cages",
+      "allAnalytics": "All analytics",
+      "rateChart": "Growth rate",
+      "weightChart": "Weight comparison",
+      "seriesRate": "Growth rate (%)",
+      "seriesDaily": "Daily growth rate (%)",
+      "seriesInitial": "Initial weight (g)",
+      "seriesCurrent": "Current weight (g)",
+      "tableTitle": "Growth by cage",
+      "noData": "No active cage has a stocking date and both weights yet.",
+      "colCage": "Cage",
+      "colDoc": "Days in culture",
+      "colInitial": "Initial weight",
+      "colCurrent": "Current weight",
+      "colRate": "Growth rate",
+      "colDaily": "Daily rate",
+      "days": "{value} days"
+    }
+  },
+  "stocking": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "reverse": "Reverse",
+    "to": "to",
+    "loadMore": "Load more",
+    "filter": {
+      "all": "All"
+    },
+    "status": {
+      "approved": "Approved",
+      "pending_approval": "Awaiting approval",
+      "rejected": "Rejected",
+      "reversed": "Reversed"
+    },
+    "type": {
+      "stocking": "Stocking",
+      "transfer": "Transfer",
+      "topup": "Top-up"
+    },
+    "col": {
+      "date": "Date",
+      "type": "Type",
+      "fromTo": "From → To",
+      "batch": "Batch",
+      "cage": "Cage",
+      "fish": "Fish",
+      "abw": "ABW",
+      "biomass": "Biomass",
+      "source": "Source",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "newStocking": {
+      "title": "New stocking",
+      "eyebrow": "Production · Stocking & transfers",
+      "description": "Stock an available cage with a new batch. Required fields are marked with an asterisk (*)."
+    },
+    "topup": {
+      "title": "Top-up",
+      "eyebrow": "Production · Stocking & transfers",
+      "description": "Add fish to a stocked cage. Top-ups are recorded separately and tracked with the original batch."
+    },
+    "transfers": {
+      "title": "Fish transfers",
+      "eyebrow": "Production · Stocking & transfers",
+      "description": "Move fish between cages, in full or in part. An empty destination gets a new stocking; an occupied one gets a top-up.",
+      "allMovements": "All movements",
+      "modeLabel": "Transfer type",
+      "single": "One destination",
+      "multi": "Several destinations",
+      "history": "Transfer history",
+      "filterStatus": "Filter by status",
+      "empty": "No transfers yet."
+    },
+    "mgmt": {
+      "title": "Stocking & transfers",
+      "eyebrow": "Production · Movements and approvals",
+      "newStocking": "New stocking",
+      "newTransfer": "New transfer",
+      "newTopup": "New top-up",
+      "openTransfers": "Open transfers",
+      "tabsLabel": "Movements",
+      "tabApprovals": "Approvals",
+      "tabApprovalsN": {
+        "one": "Approvals · {count}",
+        "other": "Approvals · {count}"
+      },
+      "tabStockings": "Stockings",
+      "tabTransfers": "Transfers",
+      "tabTopups": "Top-ups",
+      "noPending": "Nothing waiting for approval",
+      "noPendingBody": "New stockings, top-ups and transfers appear here until someone approves them.",
+      "requested": "Dated {date} · sent {when}",
+      "avgWeight": "Avg weight",
+      "biomass": "Biomass",
+      "viewDetails": "View details",
+      "history": "Movement history",
+      "searchHistory": "Cage or batch",
+      "searchStockings": "Batch, cage or source",
+      "noMovements": "No movements yet.",
+      "loading": "Loading stockings…",
+      "emptyTitle": "No stockings yet",
+      "emptyBody": "Stockings appear here once a batch is added to a cage.",
+      "noMatch": "No stockings match these filters.",
+      "year": "Year",
+      "allYears": "All years",
+      "allCages": "All cages",
+      "edit": "Edit stocking",
+      "delete": "Delete stocking",
+      "approved": "Approved",
+      "approveFailed": "Could not approve",
+      "rejected": "Rejected",
+      "rejectFailed": "Could not reject",
+      "reasonRequired": "Give a reason for rejecting",
+      "rejectTitle": "Reject {batch}",
+      "rejectReason": "Reason for rejecting"
+    },
+    "detail": {
+      "eyebrow": "Production · Stocking & transfers",
+      "back": "All movements",
+      "loading": "Loading details…",
+      "notFound": "Not found",
+      "notFoundBody": "This record does not exist or you cannot see it.",
+      "stockingTitle": "Stocking {batch}",
+      "topupTitle": "Top-up · {batch}",
+      "stockingRequest": "Stocking request",
+      "topupRequest": "Top-up request",
+      "requestedOn": "Requested {when}",
+      "stockingHeadline": "Stock {fish} fish in {cage}",
+      "topupHeadline": "Add {fish} fish to {cage}",
+      "fromSource": "From · Source",
+      "toCage": "To · {cage}",
+      "stockingDate": "Stocking date",
+      "topupDate": "Top-up date",
+      "parentBatch": "Parent batch",
+      "supervisor": "Transfer supervisor",
+      "notes": "Notes",
+      "linkedTransfer": "A fish transfer created this record. Approve or reject the transfer so the fish leave the source cage at the same time:",
+      "approvalsLink": "Approvals",
+      "relatedTopups": "Related top-ups",
+      "fishAbw": "{fish} fish · {abw} g",
+      "note": "Note to requester (required to reject)",
+      "notePlaceholder": "Add a reason if rejecting…",
+      "reasonRequired": "Give a reason before rejecting",
+      "auditHint": "Your decision is logged to the audit trail",
+      "working": "Working…",
+      "approveStocking": "Approve stocking",
+      "approveTopup": "Approve top-up"
+    }
+  },
+  "dataTable": {
+    "search": "Search…",
+    "filters": "Filters",
+    "sortBy": "Sort by {column}",
+    "pageOf": "Page {page} of {pages}",
+    "pagination": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

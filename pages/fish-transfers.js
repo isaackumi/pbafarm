@@ -5,21 +5,19 @@ import Layout from '../components/Layout'
 import FishTransferForm from '../components/FishTransferForm'
 import MultiTransferForm from '../components/MultiTransferForm'
 import { useRouter } from 'next/router'
-import { PageHeader, FormPage, Button, Select, TabBar } from '../components/ui'
+import { GhostButton, GradientButton, LoadingState, Table, Tabs } from '../components/ui'
+import MovementStatus from '../components/MovementStatus'
+import { formatDate, formatNumber } from '../lib/format'
+import { useT } from '../lib/i18n/context'
+import { List } from 'lucide-react'
 import { errorMessage } from '../lib/errorMessage'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { usePermission } from '../hooks/usePermission'
 
-function statusBadge(status) {
-  if (status === 'approved') return 'bg-kelp/10 text-kelp'
-  if (status === 'pending_approval') return 'bg-warn/10 text-warn'
-  if (status === 'rejected') return 'bg-signal/10 text-signal'
-  return 'bg-foam-deep text-chart-ink'
-}
-
 function FishTransfersContent() {
+  const t = useT()
   const { user, hasRole } = useAuth()
   const { showToast } = useToast()
   const [statusFilter, setStatusFilter] = useState('')
@@ -90,33 +88,100 @@ function FishTransfersContent() {
     }
   }
 
-  return (
-    <FormPage data-tour="page-fish-transfers">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Stocking management', href: '/stocking-management' },
-          { label: 'Fish transfers' },
-        ]}
-        description="Move fish between cages (full or partial). Empty destinations get a new stocking; occupied cages get a top-up."
-        related={[
-          { label: 'Stocking management', href: '/stocking-management' },
-          { label: 'New stocking', href: '/stocking' },
-          { label: 'Approvals', href: '/approvals' },
-        ]}
-      />
+  const columns = [
+    {
+      key: 'date',
+      header: t('stocking.col.date'),
+      width: 110,
+      render: (row) => <span className="whitespace-nowrap tabular-nums">{formatDate(row.transferDate)}</span>,
+    },
+    {
+      key: 'route',
+      header: t('stocking.col.fromTo'),
+      render: (row) => (
+        <span className="whitespace-nowrap">
+          <span className="font-semibold">{row.sourceCageName || '—'}</span>
+          <span className="px-1.5 text-faint" aria-hidden>
+            →
+          </span>
+          <span className="sr-only">{t('stocking.to')}</span>
+          <span className="font-semibold">{row.destinationCageName || '—'}</span>
+        </span>
+      ),
+    },
+    { key: 'qty', header: t('stocking.col.fish'), align: 'right', render: (row) => formatNumber(row.quantity || 0) },
+    {
+      key: 'abw',
+      header: t('stocking.col.abw'),
+      align: 'right',
+      render: (row) => `${formatNumber(row.abw || 0, { decimals: 1 })} g`,
+    },
+    {
+      key: 'type',
+      header: t('stocking.col.type'),
+      render: (row) => <span className="capitalize text-muted">{row.transferType}</span>,
+    },
+    {
+      key: 'status',
+      header: t('stocking.col.status'),
+      render: (row) => <MovementStatus status={row.status} reversed={Boolean(row.reversedAt)} />,
+    },
+  ]
+  if (isAdmin) {
+    columns.push({
+      key: 'actions',
+      header: <span className="sr-only">{t('stocking.col.actions')}</span>,
+      align: 'right',
+      render: (row) =>
+        row.status === 'pending_approval' ? (
+          <div className="inline-flex gap-2">
+            <GhostButton size="sm" disabled={busyId === row.id} onClick={() => onReject(row.id)}>
+              {t('stocking.reject')}
+            </GhostButton>
+            <GradientButton
+              variant="solid"
+              size="sm"
+              disabled={busyId === row.id}
+              onClick={() => onApprove(row.id)}
+            >
+              {t('stocking.approve')}
+            </GradientButton>
+          </div>
+        ) : row.status === 'approved' && !row.reversedAt ? (
+          <GhostButton size="sm" disabled={busyId === row.id} onClick={() => onReverse(row)}>
+            {t('stocking.reverse')}
+          </GhostButton>
+        ) : (
+          <span className="text-faint">—</span>
+        ),
+    })
+  }
 
-      <div className="space-y-8">
+  return (
+    <Layout
+      title={t('stocking.transfers.title')}
+      eyebrow={t('stocking.transfers.eyebrow')}
+      actions={
+        <GradientButton reverse icon={List} href="/stocking-management">
+          {t('stocking.transfers.allMovements')}
+        </GradientButton>
+      }
+    >
+      <div className="flex w-full max-w-5xl flex-col gap-6 sm:gap-7" data-tour="page-fish-transfers">
+        <p className="max-w-2xl text-sm text-muted">{t('stocking.transfers.description')}</p>
         {isAdmin && (
-          <TabBar
-            tabs={[
-              { id: 'single', label: 'One destination' },
-              { id: 'multi', label: 'Several destinations' },
-            ]}
-            active={mode}
-            onChange={setMode}
-          />
+          <div className="inline-flex w-fit rounded-pill border border-line bg-bg p-1">
+            <Tabs
+              variant="chip"
+              label={t('stocking.transfers.modeLabel')}
+              tabs={[
+                { value: 'single', label: t('stocking.transfers.single') },
+                { value: 'multi', label: t('stocking.transfers.multi') },
+              ]}
+              value={mode}
+              onChange={setMode}
+            />
+          </div>
         )}
         {isAdmin && mode === 'multi' ? (
           <MultiTransferForm initialSourceId={sourceParam} onCreated={() => setRefreshKey((k) => k + 1)} />
@@ -124,142 +189,44 @@ function FishTransfersContent() {
           <FishTransferForm onCreated={() => setRefreshKey((k) => k + 1)} />
         )}
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="font-display text-lg font-medium text-chart-ink">
-              Transfer history
-            </h2>
-            <div className="w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter by status"
-              >
-                <option value="">All statuses</option>
-                <option value="pending_approval">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </Select>
-            </div>
+        {pageStatus === 'LoadingFirstPage' ? (
+          <LoadingState />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <Table
+              title={t('stocking.transfers.history')}
+              tabsLabel={t('stocking.transfers.filterStatus')}
+              tabs={[
+                { value: '', label: t('stocking.filter.all') },
+                { value: 'pending_approval', label: t('stocking.status.pending_approval') },
+                { value: 'approved', label: t('stocking.status.approved') },
+                { value: 'rejected', label: t('stocking.status.rejected') },
+              ]}
+              tab={statusFilter}
+              onTabChange={setStatusFilter}
+              columns={columns}
+              rows={rows}
+              rowKey={(row) => row.id}
+              empty={t('stocking.transfers.empty')}
+            />
+            {pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore' ? (
+              <div className="flex justify-center">
+                <GhostButton disabled={pageStatus === 'LoadingMore'} onClick={() => loadMore(50)}>
+                  {pageStatus === 'LoadingMore' ? t('common.loading') : t('stocking.loadMore')}
+                </GhostButton>
+              </div>
+            ) : null}
           </div>
-
-          {pageStatus === 'LoadingFirstPage' ? (
-            <p className="text-sm text-muted">Loading…</p>
-          ) : rows.length === 0 ? (
-            <p className="text-sm text-muted">No transfers yet.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-foam-deep bg-surface">
-              <table className="min-w-full divide-y divide-foam-deep text-sm">
-                <thead className="bg-foam text-muted">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Date</th>
-                    <th className="px-4 py-3 text-left font-medium">From → To</th>
-                    <th className="px-4 py-3 text-right font-medium">Qty</th>
-                    <th className="px-4 py-3 text-right font-medium">ABW</th>
-                    <th className="px-4 py-3 text-left font-medium">Type</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                    {isAdmin ? (
-                      <th className="px-4 py-3 text-right font-medium">Actions</th>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-foam-deep">
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td className="px-4 py-3 whitespace-nowrap font-data tabular-nums">
-                        {row.transferDate}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium">
-                          {row.sourceCageName || '—'}
-                        </span>
-                        {' → '}
-                        <span className="font-medium">
-                          {row.destinationCageName || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-data tabular-nums">
-                        {(row.quantity || 0).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right font-data tabular-nums">
-                        {(row.abw || 0).toFixed(1)}g
-                      </td>
-                      <td className="px-4 py-3 capitalize">{row.transferType}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(row.status)}`}
-                        >
-                          {row.reversedAt ? 'reversed' : row.status?.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      {isAdmin ? (
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          {row.status === 'pending_approval' ? (
-                            <div className="inline-flex gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={busyId === row.id}
-                                onClick={() => onApprove(row.id)}
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                disabled={busyId === row.id}
-                                onClick={() => onReject(row.id)}
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          ) : row.status === 'approved' && !row.reversedAt ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={busyId === row.id}
-                              onClick={() => onReverse(row)}
-                            >
-                              Reverse
-                            </Button>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {pageStatus === 'CanLoadMore' || pageStatus === 'LoadingMore' ? (
-                <div className="p-4 text-center border-t border-foam-deep">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={pageStatus === 'LoadingMore'}
-                    onClick={() => loadMore(50)}
-                  >
-                    {pageStatus === 'LoadingMore' ? 'Loading…' : 'Load more'}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </section>
+        )}
       </div>
-    </FormPage>
+    </Layout>
   )
 }
 
 export default function FishTransfersPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Fish transfers">
-        <FishTransfersContent />
-      </Layout>
+      <FishTransfersContent />
     </ProtectedRoute>
   )
 }

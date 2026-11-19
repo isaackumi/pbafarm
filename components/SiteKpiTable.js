@@ -1,5 +1,9 @@
+import { Table } from './ui'
 import { formatMoney, formatNumber } from '../lib/format'
 import { useT } from '../lib/i18n/context'
+
+/** Strips the Table card chrome: hosts already wrap this in a card. */
+const BARE = 'rounded-none! border-0! bg-transparent! shadow-none!'
 
 /**
  * KPI rows from convex/lib/siteKpis (regional and group reports). Each row
@@ -8,46 +12,62 @@ import { useT } from '../lib/i18n/context'
 export default function SiteKpiTable({ rows, currency, showSites = false, footer = null, onSelect = null }) {
   const t = useT()
   const money = (n, c) => formatMoney(n, { currency: c || currency || undefined, decimals: 0 })
+  const strong = (r, v) => (r.isFooter ? <span className="font-semibold">{v}</span> : v)
+  const columns = [
+    {
+      key: 'name',
+      header: t('ent.common.name'),
+      render: (r) => (
+        <span className="whitespace-nowrap">
+          {onSelect && r.selectable ? (
+            <button
+              type="button"
+              className="rounded-sm text-left font-medium text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              onClick={() => onSelect(r)}
+            >
+              {r.name}
+            </button>
+          ) : (
+            <span className="font-medium">{r.name}</span>
+          )}
+          {r.hint && <span className="text-muted"> · {r.hint}</span>}
+        </span>
+      ),
+    },
+    ...(showSites
+      ? [{ key: 'sites', header: t('ent.kpi.sites'), align: 'right', render: (r) => strong(r, formatNumber(r.sites)) }]
+      : []),
+    { key: 'activeUnits', header: t('ent.kpi.activeUnits'), align: 'right', render: (r) => strong(r, formatNumber(r.activeUnits)) },
+    { key: 'fish', header: t('ent.kpi.fish'), align: 'right', render: (r) => strong(r, formatNumber(r.fish)) },
+    { key: 'harvestKg', header: t('ent.kpi.harvestKg'), align: 'right', render: (r) => strong(r, formatNumber(r.harvestKg)) },
+    {
+      key: 'sales',
+      header: t('ent.kpi.sales'),
+      align: 'right',
+      render: (r) => <span className="whitespace-nowrap">{strong(r, money(r.salesAmount, r.currency))}</span>,
+    },
+    {
+      key: 'expenses',
+      header: t('ent.kpi.expenses'),
+      align: 'right',
+      render: (r) => <span className="whitespace-nowrap">{strong(r, money(r.expensesAmount, r.currency))}</span>,
+    },
+    {
+      key: 'overdue',
+      header: t('ent.kpi.overdueMaintenance'),
+      align: 'right',
+      render: (r) => (
+        <span className={r.overdueMaintenance ? 'text-alert' : ''}>{strong(r, formatNumber(r.overdueMaintenance))}</span>
+      ),
+    },
+  ]
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-muted border-b border-foam-deep">
-            <th className="px-4 py-2 font-medium">{t('ent.common.name')}</th>
-            {showSites && <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.sites')}</th>}
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.activeUnits')}</th>
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.fish')}</th>
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.harvestKg')}</th>
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.sales')}</th>
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.expenses')}</th>
-            <th className="px-4 py-2 font-medium text-right">{t('ent.kpi.overdueMaintenance')}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-foam-deep tabular-nums">
-          {[...rows, ...(footer ? [{ ...footer, isFooter: true }] : [])].map((r) => (
-            <tr key={r.key} className={r.isFooter ? 'font-medium border-t-2 border-foam-deep' : ''}>
-              <td className="px-4 py-2">
-                {onSelect && r.selectable ? (
-                  <button type="button" className="text-lake hover:underline font-medium text-left" onClick={() => onSelect(r)}>
-                    {r.name}
-                  </button>
-                ) : (
-                  <span className={r.isFooter ? '' : 'font-medium'}>{r.name}</span>
-                )}
-                {r.hint && <span className="text-muted"> · {r.hint}</span>}
-              </td>
-              {showSites && <td className="px-4 py-2 text-right">{formatNumber(r.sites)}</td>}
-              <td className="px-4 py-2 text-right">{formatNumber(r.activeUnits)}</td>
-              <td className="px-4 py-2 text-right">{formatNumber(r.fish)}</td>
-              <td className="px-4 py-2 text-right">{formatNumber(r.harvestKg)}</td>
-              <td className="px-4 py-2 text-right">{money(r.salesAmount, r.currency)}</td>
-              <td className="px-4 py-2 text-right">{money(r.expensesAmount, r.currency)}</td>
-              <td className={`px-4 py-2 text-right ${r.overdueMaintenance ? 'text-signal' : ''}`}>{formatNumber(r.overdueMaintenance)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table
+      className={BARE}
+      columns={columns}
+      rows={[...rows, ...(footer ? [{ ...footer, isFooter: true }] : [])]}
+      rowKey={(r) => r.key}
+    />
   )
 }
 

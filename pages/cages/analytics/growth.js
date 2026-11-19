@@ -2,7 +2,18 @@ import React from 'react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import Layout from '../../../components/Layout'
-import { PageHeader, Button, LoadingState, EmptyState } from '../../../components/ui'
+import { ArrowLeft } from 'lucide-react'
+import { Card, EmptyState, GradientButton, LoadingState, Table } from '../../../components/ui'
+import { formatNumber } from '../../../lib/format'
+import { useT } from '../../../lib/i18n/context'
+
+const TOOLTIP_STYLE = {
+  background: 'var(--surface-2)',
+  border: '1px solid var(--line-strong)',
+  borderRadius: 12,
+  color: 'var(--text)',
+}
+const CHART_TITLE = 'mb-4 text-[17px] font-semibold leading-[22px] text-text'
 import { api } from '../../../convex/_generated/api'
 import { useLocation } from '../../../contexts/LocationContext'
 import {
@@ -19,14 +30,13 @@ import {
 export default function GrowthAnalyticsPage() {
   return (
     <ProtectedRoute>
-      <Layout>
-        <GrowthAnalytics />
-      </Layout>
+      <GrowthAnalytics />
     </ProtectedRoute>
   )
 }
 
 function GrowthAnalytics() {
+  const t = useT()
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.getActive, locationArgs)
 
@@ -55,112 +65,85 @@ function GrowthAnalytics() {
       .sort((a, b) => b.growthRate - a.growthRate)
   }, [cages])
 
+  const shell = (children) => (
+    <Layout
+      title={t('cageAnalytics.growth.title')}
+      eyebrow={t('cageAnalytics.growth.eyebrow')}
+      actions={
+        <GradientButton reverse icon={ArrowLeft} href="/cages/analytics">
+          {t('cageAnalytics.growth.allAnalytics')}
+        </GradientButton>
+      }
+    >
+      {children}
+    </Layout>
+  )
+
   if (cages === undefined) {
-    return <LoadingState />
+    return shell(<LoadingState />)
   }
 
   if (!cages || cages.length === 0) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <EmptyState title="No cage data available." />
-        </div>
-      </div>
+    return shell(
+      <Card>
+        <EmptyState title={t('cageAnalytics.empty')} />
+      </Card>,
     )
   }
 
-  return (
-    <div className="w-full">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Cages', href: '/cages' },
-            { label: 'Analytics', href: '/cages/analytics' },
-            { label: 'Growth' },
-          ]}
-          description="Compare growth rate and weight progress across active cages."
-          related={[
-            { label: 'Cage analytics', href: '/cages/analytics' },
-            { label: 'Harvest analytics', href: '/cages/analytics/harvest' },
-          ]}
-          actions={
-            <Button href="/cages/analytics" variant="secondary" size="sm">
-              All analytics
-            </Button>
-          }
-        />
+  const tick = { fontSize: 12, fill: 'var(--muted)' }
+  const columns = [
+    { key: 'cage', header: t('cageAnalytics.growth.colCage'), render: (c) => <span className="font-semibold">{c.cageName}</span> },
+    { key: 'doc', header: t('cageAnalytics.growth.colDoc'), align: 'right', render: (c) => t('cageAnalytics.growth.days', { value: formatNumber(c.doc) }) },
+    { key: 'initial', header: t('cageAnalytics.growth.colInitial'), align: 'right', render: (c) => `${formatNumber(c.initialWeight, { decimals: 1 })} g` },
+    { key: 'current', header: t('cageAnalytics.growth.colCurrent'), align: 'right', render: (c) => `${formatNumber(c.currentWeight, { decimals: 1 })} g` },
+    { key: 'rate', header: t('cageAnalytics.growth.colRate'), align: 'right', render: (c) => <span className="text-good">{c.growthRate}%</span> },
+    { key: 'daily', header: t('cageAnalytics.growth.colDaily'), align: 'right', render: (c) => `${c.dailyGrowthRate}%` },
+  ]
 
-        <div className="grid grid-cols-1 gap-6">
-          {/* Growth Rate Chart */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth rate</h2>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="growthRate" name="Growth rate (%)" stroke="var(--lake)" />
-                  <Line type="monotone" dataKey="dailyGrowthRate" name="Daily growth rate (%)" stroke="var(--kelp)" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Weight Comparison Chart */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Weight comparison</h2>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="initialWeight" name="Initial weight (g)" stroke="var(--lake)" />
-                  <Line type="monotone" dataKey="currentWeight" name="Current weight (g)" stroke="var(--kelp)" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Growth Data Table */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth data</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-foam-deep">
-                <thead className="bg-foam">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Cage</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">DOC</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Initial weight</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Current weight</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Growth rate</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted">Daily growth rate</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-surface divide-y divide-foam-deep">
-                  {growthData.map((cage) => (
-                    <tr key={cage.cageId}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-chart-ink">{cage.cageName}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.doc} days</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.initialWeight} g</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.currentWeight} g</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.growthRate}%</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted tabular-nums">{cage.dailyGrowthRate}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+  return shell(
+    <div className="flex flex-col gap-6">
+      <Card className="min-w-0">
+        <h2 className={CHART_TITLE}>{t('cageAnalytics.growth.rateChart')}</h2>
+        <div className="h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={growthData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+              <XAxis dataKey="cageName" stroke="var(--line-strong)" tick={tick} />
+              <YAxis stroke="var(--line-strong)" tick={tick} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend />
+              <Line type="monotone" dataKey="growthRate" name={t('cageAnalytics.growth.seriesRate')} stroke="var(--cyan)" strokeWidth={2} />
+              <Line type="monotone" dataKey="dailyGrowthRate" name={t('cageAnalytics.growth.seriesDaily')} stroke="var(--pink)" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-    </div>
+      </Card>
+
+      <Card className="min-w-0">
+        <h2 className={CHART_TITLE}>{t('cageAnalytics.growth.weightChart')}</h2>
+        <div className="h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={growthData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+              <XAxis dataKey="cageName" stroke="var(--line-strong)" tick={tick} />
+              <YAxis stroke="var(--line-strong)" tick={tick} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend />
+              <Line type="monotone" dataKey="initialWeight" name={t('cageAnalytics.growth.seriesInitial')} stroke="var(--cyan)" strokeWidth={2} />
+              <Line type="monotone" dataKey="currentWeight" name={t('cageAnalytics.growth.seriesCurrent')} stroke="var(--pink)" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <Table
+        title={t('cageAnalytics.growth.tableTitle')}
+        columns={columns}
+        rows={growthData}
+        rowKey={(c) => c.cageId}
+        empty={t('cageAnalytics.growth.noData')}
+      />
+    </div>,
   )
-} 
+}
