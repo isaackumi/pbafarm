@@ -9,7 +9,7 @@
  *   (the token is 32 random bytes; only its hash is stored).
  */
 import { v } from 'convex/values'
-import { mutation, query } from '../_generated/server'
+import { internalMutation, mutation, query } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import { memberContextIn, requireAccount } from '../lib/permissions'
@@ -47,6 +47,20 @@ export async function revokeBindingsForUser(
   }
   return n
 }
+
+/** After a password reset, chat bots linked to the account stop working. */
+export const revokeAfterPasswordReset = internalMutation({
+  args: { email: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { email }) => {
+    const user = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', email))
+      .first()
+    if (user) await revokeBindingsForUser(ctx, user._id, 'password_reset')
+    return null
+  },
+})
 
 /**
  * The user's phone changed or lost its verification: WhatsApp bindings for

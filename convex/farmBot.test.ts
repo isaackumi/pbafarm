@@ -10,6 +10,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
 import { testHooks } from './bot/agent'
 import { DRAFT_TTL_MS } from './bot/pending'
+import { revokeUserSessions } from './lib/authz'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -301,6 +302,20 @@ describe('bindings', () => {
     })
     expect((await say(s, waText(PHONE, 'HELP')))[0]).toMatch(/no longer connected/)
     expect((await s.t.run(async (ctx) => await ctx.db.get(binding._id)))?.revokedReason).toBe('not_member')
+  })
+
+  test('signing out everywhere and a password reset revoke the binding', async () => {
+    const s = await setup()
+    const first = await bindWhatsApp(s)
+    await s.t.run(async (ctx) => {
+      await revokeUserSessions(ctx, s.staff)
+    })
+    expect((await s.t.run(async (ctx) => await ctx.db.get(first._id)))?.revokedReason).toBe('sessions_revoked')
+    expect((await say(s, waText(PHONE, 'HELP')))[0]).toMatch(/account page|LINK/i)
+
+    const second = await bindWhatsApp(s)
+    await s.t.mutation(internal.bot.bindings.revokeAfterPasswordReset, { email: 'staff@a.com' })
+    expect((await s.t.run(async (ctx) => await ctx.db.get(second._id)))?.revokedReason).toBe('password_reset')
   })
 
   test('rate limit per binding', async () => {
