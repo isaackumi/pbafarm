@@ -9,7 +9,7 @@ import { Card, CardHeader } from './ui'
 
 const SEVERITY = {
   critical: { icon: CircleAlert, label: 'Critical', className: 'text-signal' },
-  warning: { icon: TriangleAlert, label: 'Warning', className: 'text-amber-600 dark:text-amber-400' },
+  warning: { icon: TriangleAlert, label: 'Warning', className: 'text-warn' },
   info: { icon: Info, label: 'Note', className: 'text-lake' },
 }
 

@@ -11,6 +11,7 @@ import {
   Field,
   Select,
   Button,
+  LoadingState,
 } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { useToast } from '../components/Toast'
@@ -50,6 +51,8 @@ function GlobalSettings() {
   const saveDraft = useMutation(api.companies.saveSettingsDraft)
   const publish = useMutation(api.companies.publishSettings)
 
+  // Admins edit the published currency; until it loads, saving would overwrite it with the default.
+  const draftLoading = isAdmin && !!user?.companyId && draftQuery === undefined
   const liveCurrency =
     draftQuery?.draft?.locale?.currency ||
     draftQuery?.published?.locale?.currency ||
@@ -129,6 +132,9 @@ function GlobalSettings() {
           title={t('settings.currency.title')}
           subtitle={t('settings.currency.active', { currency: shortLabel, symbol, example: fmt(1250.5) })}
         >
+          {draftLoading ? (
+            <LoadingState label={t('settings.loading')} />
+          ) : (
           <FormSection>
             <Field
               label={t('settings.currency.farm')}
@@ -149,9 +155,10 @@ function GlobalSettings() {
             </Field>
             <p className="text-sm text-muted">{t('settings.currency.preview', { value: preview })}</p>
           </FormSection>
+          )}
           {isAdmin ? (
             <FormActions>
-              <Button type="button" disabled={saving} onClick={handleSaveFarmCurrency}>
+              <Button type="button" disabled={saving || draftLoading} onClick={handleSaveFarmCurrency}>
                 {saving ? t('settings.saving') : t('settings.currency.save')}
               </Button>
             </FormActions>

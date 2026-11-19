@@ -137,14 +137,14 @@ function HealthTreatments() {
       />
 
       {(withdrawals || []).length > 0 && (
-        <div className="page-card p-4 mb-6 border-amber-200 bg-amber-50">
+        <div className="page-card p-4 mb-6 border-warn/30 bg-warn/10">
           <div className="flex items-center gap-2 mb-2">
-            <HeartPulse size={18} className="text-amber-800" />
-            <h3 className="font-semibold text-amber-900">
+            <HeartPulse size={18} className="text-warn" />
+            <h3 className="font-semibold text-warn">
               Active withdrawal windows
             </h3>
           </div>
-          <ul className="space-y-1 text-sm text-amber-900">
+          <ul className="space-y-1 text-sm text-warn">
             {withdrawals.map((w) => (
               <li key={w.id || w._id}>
                 <span className="font-medium">{w.cage_name}</span> —{' '}

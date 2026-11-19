@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
-import { Button, Field, Input, Select, Textarea } from './ui'
+import { Button, Field, Input, Modal, Select, Textarea } from './ui'
 import PersonPicker from './PersonPicker'
-import { useDialogA11y } from '../hooks/useDialogA11y'
 import FarmLocationSelect from './FarmLocationSelect'
 import FeedTypeField from './FeedTypeField'
 import BagSizeField, {
@@ -30,43 +28,13 @@ function ModalShell({ title, subtitle, onClose, children }) {
       document.body.style.overflow = prevOverflow
     }
   }, [])
-  const panelRef = useDialogA11y({ open: mounted, onClose })
-
   if (!mounted) return null
 
   // Portal outside any parent <form> so submit/create actually works.
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="quick-create-title"
-      onClick={onClose}
-    >
-      <div
-        ref={panelRef}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-foam-deep bg-surface text-chart-ink shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-foam-deep px-5 py-4 sticky top-0 bg-surface z-10">
-          <div>
-            <h3 id="quick-create-title" className="text-lg font-semibold text-chart-ink">
-              {title}
-            </h3>
-            {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="-mr-2 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-foam hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-      </div>
-    </div>,
+    <Modal open onClose={onClose} title={title} description={subtitle} size="lg" showClose>
+      {children}
+    </Modal>,
     document.body,
   )
 }

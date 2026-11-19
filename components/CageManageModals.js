@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { AlertTriangle } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
-import { Button, Field, Input, Select, Textarea } from './ui'
+import { Button, Field, Input, Modal, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs, geometryFromUnit } from './UnitGeometryFields'
 import { usePermission } from '../hooks/usePermission'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from './FormLayout'
 import { MANUAL_TRANSITIONS, STATUS_LABELS } from '../convex/lib/unitStatus'
 
 const EMPTY_FORM = {
@@ -19,6 +20,7 @@ const EMPTY_FORM = {
   material: '',
   status: 'empty',
   notes: '',
+  custom: {},
   ...EMPTY_GEOMETRY,
 }
 
@@ -42,6 +44,7 @@ function formFromCage(cage) {
     material: cage.material || '',
     status: cage.status || 'empty',
     notes: cage.notes || '',
+    custom: cage.custom || {},
     ...geometryFromUnit(cage),
   }
 }
@@ -68,9 +71,12 @@ export default function CageManageModals({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmName, setConfirmName] = useState('')
+  const [customTouched, setCustomTouched] = useState(false)
+  const layout = useFormLayout('setup.cage')
 
   useEffect(() => {
     setForm(formFromCage(editCage))
+    setCustomTouched(false)
   }, [editCage])
 
   useEffect(() => {
@@ -79,6 +85,19 @@ export default function CageManageModals({
 
   const patchField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+  const setCustom = useCallback((custom) => {
+    setForm((prev) => ({ ...prev, custom }))
+    setCustomTouched(true)
+  }, [])
+  const coreValues = {
+    name: form.name,
+    locationId: form.locationId,
+    status: form.status,
+    unitType: form.unitType,
+    capacity: form.capacity,
+    material: form.material,
+    notes: form.notes,
   }
 
   const handleSave = async (e) => {
@@ -96,18 +115,19 @@ export default function CageManageModals({
       const locName = locationId
         ? (locations || []).find((l) => (l.id || l._id) === locationId)?.name
         : undefined
-      const patch = {
-        name: form.name.trim(),
-        status: form.status,
-        material: form.material.trim(),
-        notes: form.notes.trim(),
-      }
+      // Optional fields a layout condition hides are left as they are.
+      const hidden = hiddenCoreKeys(layout.sections, coreValues, form.custom)
+      const patch = { name: form.name.trim() }
+      if (!hidden.has('status')) patch.status = form.status
+      if (!hidden.has('material')) patch.material = form.material.trim()
+      if (!hidden.has('notes')) patch.notes = form.notes.trim()
+      if (customTouched) patch.custom = form.custom || {}
       if (locationId) {
         patch.locationId = locationId
         if (locName) patch.location = locName
       }
       Object.assign(patch, geometryArgs(form))
-      if (form.capacity !== '' && form.capacity != null) {
+      if (!hidden.has('capacity') && form.capacity !== '' && form.capacity != null) {
         const n = Number(form.capacity)
         if (!Number.isFinite(n) || n < 0) {
           throw new Error('Capacity must be a valid number')
@@ -147,107 +167,158 @@ export default function CageManageModals({
     }
   }
 
+  const layoutFields = {
+    code: null,
+    name: (
+      <Field label="Name">
+        <Input
+          value={form.name}
+          onChange={(e) => patchField('name', e.target.value)}
+          required
+        />
+      </Field>
+    ),
+    locationId: (
+      <Field
+        label="Farm location"
+        hint="Defaults to header location"
+      >
+        <FarmLocationSelect
+          value={form.locationId}
+          onChange={(e) => patchField('locationId', e.target.value)}
+          syncWithHeader={false}
+        />
+      </Field>
+    ),
+    status: (
+      <Field
+        label="Status"
+        hint={isAdmin ? undefined : 'Only an admin can change the status by hand'}
+      >
+        <Select
+          value={form.status}
+          disabled={!isAdmin}
+          onChange={(e) => patchField('status', e.target.value)}
+        >
+          {statusOptions(editCage?.status).map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s] || s}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    ),
+    unitType: <UnitGeometryFields value={form} idPrefix="edit-unit" onChange={patchField} />,
+    capacity: (
+      <Field label="Capacity (fish)">
+        <Input
+          type="number"
+          min="0"
+          className="font-data tabular-nums"
+          value={form.capacity}
+          onChange={(e) => patchField('capacity', e.target.value)}
+        />
+      </Field>
+    ),
+    dimensions: null,
+    material: (
+      <Field label="Material">
+        <Input
+          value={form.material}
+          onChange={(e) => patchField('material', e.target.value)}
+        />
+      </Field>
+    ),
+    installationDate: null,
+    notes: (
+      <Field label="Notes">
+        <Textarea
+          rows={3}
+          value={form.notes}
+          onChange={(e) => patchField('notes', e.target.value)}
+        />
+      </Field>
+    ),
+  }
+
   return (
     <>
-      {editCage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 modal-backdrop"
-            onClick={() => !saving && onCloseEdit?.()}
-          />
-          <div className="relative bg-surface rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto p-6">
-            <h3 className="text-lg font-semibold text-chart-ink mb-1">Edit cage</h3>
-            <p className="text-sm text-muted mb-4">
-              Update details for <span className="font-medium">{editCage.name}</span>.
-            </p>
-            <form onSubmit={handleSave} className="space-y-4">
-              <Field label="Name">
-                <Input
-                  value={form.name}
-                  onChange={(e) => patchField('name', e.target.value)}
-                  required
-                />
-              </Field>
-              <Field
-                label="Farm location"
-                hint="Defaults to header location"
-              >
-                <FarmLocationSelect
-                  value={form.locationId}
-                  onChange={(e) => patchField('locationId', e.target.value)}
-                  syncWithHeader={false}
-                />
-              </Field>
-              <UnitGeometryFields value={form} idPrefix="edit-unit" onChange={patchField} />
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Capacity (fish)">
-                  <Input
-                    type="number"
-                    min="0"
-                    className="font-data tabular-nums"
-                    value={form.capacity}
-                    onChange={(e) => patchField('capacity', e.target.value)}
-                  />
-                </Field>
-              </div>
-              <Field label="Material">
-                <Input
-                  value={form.material}
-                  onChange={(e) => patchField('material', e.target.value)}
-                />
-              </Field>
-              <Field
-                label="Status"
-                hint={isAdmin ? undefined : 'Only an admin can change the status by hand'}
-              >
-                <Select
-                  value={form.status}
-                  disabled={!isAdmin}
-                  onChange={(e) => patchField('status', e.target.value)}
-                >
-                  {statusOptions(editCage?.status).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABELS[s] || s}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Notes">
-                <Textarea
-                  rows={3}
-                  value={form.notes}
-                  onChange={(e) => patchField('notes', e.target.value)}
-                />
-              </Field>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={saving}
-                  onClick={onCloseEdit}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save changes'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!editCage}
+        onClose={onCloseEdit}
+        dismissible={!saving}
+        size="lg"
+        as="form"
+        onSubmit={handleSave}
+        title="Edit cage"
+        description={
+          <>
+            Update details for <span className="font-medium">{editCage?.name}</span>.
+          </>
+        }
+        bodyClassName="space-y-6"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={saving}
+              onClick={onCloseEdit}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </Button>
+          </>
+        }
+      >
+        <FormLayout
+          formKey="setup.cage"
+          layout={layout}
+          fields={layoutFields}
+          coreValues={coreValues}
+          custom={form.custom}
+          onCustomChange={setCustom}
+          locationId={form.locationId || activeLocationId}
+          core={{ unitType: form.unitType, status: form.status }}
+          idPrefix="edit-cage-cf"
+        />
+      </Modal>
 
-      {deleteCage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 modal-backdrop"
-            onClick={() => !deleting && onCloseDelete?.()}
-          />
-          <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-6 h-6 text-signal" />
-              <h3 className="text-lg font-semibold text-chart-ink">Archive unit</h3>
-            </div>
+      <Modal
+        open={!!deleteCage}
+        onClose={onCloseDelete}
+        dismissible={!deleting}
+        role="alertdialog"
+        title="Archive unit"
+        icon={<AlertTriangle className="w-6 h-6 text-signal" />}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={deleting}
+              onClick={onCloseDelete}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={
+                deleting ||
+                confirmName.trim() !== (deleteCage?.name || '').trim()
+              }
+              onClick={handleDelete}
+            >
+              {deleting ? 'Archiving…' : 'Archive unit'}
+            </Button>
+          </>
+        }
+      >
+        {deleteCage && (
+          <>
             <p className="text-sm text-muted mb-3">
               Archiving hides{' '}
               <span className="font-semibold text-chart-ink">{deleteCage.name}</span> from
@@ -262,30 +333,9 @@ export default function CageManageModals({
                 autoFocus
               />
             </Field>
-            <div className="flex justify-end gap-3 mt-5">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={deleting}
-                onClick={onCloseDelete}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                disabled={
-                  deleting ||
-                  confirmName.trim() !== (deleteCage.name || '').trim()
-                }
-                onClick={handleDelete}
-              >
-                {deleting ? 'Archiving…' : 'Archive unit'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </>
   )
 }

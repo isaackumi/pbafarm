@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
@@ -20,7 +20,8 @@ import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
-import CustomFields, { CustomFieldValues, customCell, customColumns, customPayload, useCustomFieldDefs } from '../components/CustomFields'
+import { CustomFieldValues, customCell, customColumns, customPayload, useCustomFieldDefs } from '../components/CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
 
 export default function ExpensesPage() {
   return (
@@ -90,7 +91,17 @@ function Expenses() {
     return (key) => map.get(key) || key
   }, [categories])
 
+  const layout = useFormLayout('finance.expense')
+  const setCustom = useCallback((custom) => setForm((f) => ({ ...f, custom })), [])
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const coreValues = {
+    amount: form.amount,
+    category: form.category,
+    expenseDate: form.date,
+    cageId: form.cageId,
+    supplierId: form.supplierId,
+    notes: form.notes,
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -99,6 +110,9 @@ function Expenses() {
       showToast('error', 'Enter an amount greater than zero')
       return
     }
+    // Optional fields a layout condition hides: not saved on create, left as they are on edit.
+    const hidden = hiddenCoreKeys(layout.sections, coreValues, form.custom)
+    const shown = (key, value) => (hidden.has(key) ? '' : value)
     setSaving(true)
     try {
       if (editingId) {
@@ -107,9 +121,9 @@ function Expenses() {
           amount,
           category: form.category,
           date: form.date,
-          cageId: form.cageId || null,
-          supplierId: form.supplierId || null,
-          notes: form.notes,
+          ...(hidden.has('cageId') ? {} : { cageId: form.cageId || null }),
+          ...(hidden.has('supplierId') ? {} : { supplierId: form.supplierId || null }),
+          ...(hidden.has('notes') ? {} : { notes: form.notes }),
           custom: form.custom || {},
         })
         showToast('success', 'Expense updated')
@@ -118,9 +132,9 @@ function Expenses() {
           amount,
           category: form.category,
           date: form.date,
-          ...(form.cageId ? { cageId: form.cageId } : activeLocationId ? { locationId: activeLocationId } : {}),
-          ...(form.supplierId ? { supplierId: form.supplierId } : {}),
-          ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+          ...(shown('cageId', form.cageId) ? { cageId: form.cageId } : activeLocationId ? { locationId: activeLocationId } : {}),
+          ...(shown('supplierId', form.supplierId) ? { supplierId: form.supplierId } : {}),
+          ...(shown('notes', form.notes).trim() ? { notes: form.notes.trim() } : {}),
           custom: customPayload(form.custom),
         })
         showToast('success', 'Expense saved')
@@ -236,65 +250,76 @@ function Expenses() {
             }
           />
           <form onSubmit={submit} className="space-y-4">
-            <Field label={`Amount (${symbol})`} htmlFor="exp-amount" required>
-              <Input
-                id="exp-amount"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={form.amount}
-                onChange={set('amount')}
-                className="text-lg font-data"
-                required
-              />
-            </Field>
-            <Field label="Category" htmlFor="exp-category" required>
-              <Select id="exp-category" value={form.category} onChange={set('category')}>
-                {activeCategories.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Date" htmlFor="exp-date" required>
-                <Input id="exp-date" type="date" value={form.date} onChange={set('date')} required />
-              </Field>
-              <Field label="Cage" htmlFor="exp-cage">
-                <Select id="exp-cage" value={form.cageId} onChange={set('cageId')}>
-                  <option value="">Whole site</option>
-                  {(cages || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-            <Field label="Supplier" htmlFor="exp-supplier">
-              <Select id="exp-supplier" value={form.supplierId} onChange={set('supplierId')}>
-                <option value="">None</option>
-                {(suppliers || []).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Notes" htmlFor="exp-notes">
-              <Input id="exp-notes" value={form.notes} onChange={set('notes')} placeholder="What it was for" />
-            </Field>
-            <CustomFields
-              key={editingId || 'new'}
-              entity="expenses"
-              value={form.custom}
-              onChange={(custom) => setForm((f) => ({ ...f, custom }))}
+            <FormLayout
+              formKey="finance.expense"
+              layout={layout}
+              fields={{
+                amount: (
+                  <Field label={`Amount (${symbol})`} htmlFor="exp-amount" required>
+                    <Input
+                      id="exp-amount"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={form.amount}
+                      onChange={set('amount')}
+                      className="text-lg font-data"
+                      required
+                    />
+                  </Field>
+                ),
+                category: (
+                  <Field label="Category" htmlFor="exp-category" required>
+                    <Select id="exp-category" value={form.category} onChange={set('category')}>
+                      {activeCategories.map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                ),
+                expenseDate: (
+                  <Field label="Date" htmlFor="exp-date" required>
+                    <Input id="exp-date" type="date" value={form.date} onChange={set('date')} required />
+                  </Field>
+                ),
+                cageId: (
+                  <Field label="Cage" htmlFor="exp-cage">
+                    <Select id="exp-cage" value={form.cageId} onChange={set('cageId')}>
+                      <option value="">Whole site</option>
+                      {(cages || []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                ),
+                supplierId: (
+                  <Field label="Supplier" htmlFor="exp-supplier">
+                    <Select id="exp-supplier" value={form.supplierId} onChange={set('supplierId')}>
+                      <option value="">None</option>
+                      {(suppliers || []).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                ),
+                notes: (
+                  <Field label="Notes" htmlFor="exp-notes">
+                    <Input id="exp-notes" value={form.notes} onChange={set('notes')} placeholder="What it was for" />
+                  </Field>
+                ),
+              }}
+              coreValues={coreValues}
+              custom={form.custom}
+              onCustomChange={setCustom}
               locationId={activeLocationId}
               core={{ category: form.category, amount: Number(form.amount) || 0 }}
-              columns={1}
-              applyDefaults={!editingId}
             />
             <Button type="submit" className="w-full" disabled={saving}>
               {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add expense'}

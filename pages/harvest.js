@@ -1,23 +1,41 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input } from '../components/ui'
+import { PageHeader, Button, Field, Input, EmptyState, LoadingState } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import HarvestForm from '../components/HarvestForm'
 import SamplingForm from '../components/SamplingForm'
-import { harvestRecordService } from '../lib/databaseService'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
+import { api } from '../convex/_generated/api'
+import { harvestPatchArgs } from '../lib/recordArgs'
+import { useT } from '../lib/i18n/context'
 import { PlusCircle } from 'lucide-react'
 import { localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 
-const HarvestPage = () => {
-  const { hasRole } = useAuth()
+const NO_RECORDS = []
+
+const HarvestPage = () => (
+  <ProtectedRoute>
+    <Layout title="Harvest">
+      <Harvest />
+    </Layout>
+  </ProtectedRoute>
+)
+
+const Harvest = () => {
+  const t = useT()
+  const { user } = useAuth()
+  const { locationArgs } = useLocation()
   const isAdmin = usePermission('production.records.delete')
-  const [harvestRecords, setHarvestRecords] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const harvestResult = useQuery(api.harvest.list, user ? locationArgs : 'skip')
+  const harvestRecords = harvestResult ?? NO_RECORDS
+  const loading = harvestResult === undefined
+  const updateHarvest = useMutation(api.harvest.update)
+  const removeHarvest = useMutation(api.harvest.remove)
   const [showHarvestForm, setShowHarvestForm] = useState(false)
   const [showSamplingForm, setShowSamplingForm] = useState(false)
   const [selectedHarvest, setSelectedHarvest] = useState(null)
@@ -39,25 +57,6 @@ const HarvestPage = () => {
   })
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const { showToast } = useToast()
-
-  useEffect(() => {
-    fetchHarvestRecords()
-  }, [])
-
-  const fetchHarvestRecords = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await harvestRecordService.getHarvestRecords()
-      if (error) throw error
-      setHarvestRecords(data || [])
-    } catch (error) {
-      console.error('Error fetching harvest records:', error)
-      setError('Failed to fetch harvest records')
-      showToast('Error fetching harvest records', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddHarvest = () => {
     setShowHarvestForm(true)
@@ -85,9 +84,10 @@ const HarvestPage = () => {
     e.preventDefault()
     if (!editingHarvest) return
     try {
-      const { error, warnings } = await harvestRecordService.updateHarvestRecord(
-        editingHarvest.id || editingHarvest._id,
-        {
+      const id = editingHarvest.id || editingHarvest._id
+      const result = await updateHarvest({
+        id,
+        patch: harvestPatchArgs({
           harvest_date: editForm.harvest_date,
           harvest_type: editForm.harvest_type,
           total_weight: Number(editForm.total_weight),
@@ -98,14 +98,13 @@ const HarvestPage = () => {
               : Number(editForm.estimated_count),
           notes: editForm.notes,
           status: editForm.status,
-        },
-      )
-      if (error) throw error
+        }),
+      })
+      const warnings = result?.warnings
       showToast('Harvest updated', 'success')
       if (warnings?.length) showToast(warnings.join('. '), 'warning')
       setShowEditModal(false)
       setEditingHarvest(null)
-      fetchHarvestRecords()
     } catch (err) {
       showToast(err.message || 'Update failed', 'error')
     }
@@ -119,20 +118,29 @@ const HarvestPage = () => {
 
   const handleHarvestComplete = () => {
     setShowHarvestForm(false)
-    fetchHarvestRecords()
   }
 
   const handleSamplingComplete = () => {
     setShowSamplingForm(false)
     setSelectedHarvest(null)
-    fetchHarvestRecords()
   }
 
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
-      const { data, error } = await harvestRecordService.exportHarvestRecords()
-      if (error) throw error
-      if (!data?.length) {
+      const data = harvestRecords.map((record) => ({
+        'Cage Name': record.cage?.name || 'Unknown',
+        'Cage Code': record.cage?.code || 'Unknown',
+        'Harvest Date': new Date(record.harvest_date).toLocaleDateString(),
+        'Harvest Type': record.harvest_type,
+        'Status': record.status,
+        'Total Weight (kg)': record.total_weight,
+        'Average Body Weight (g)': record.average_body_weight,
+        'Estimated Count': record.estimated_count,
+        'FCR': record.fcr,
+        'Size Breakdown': JSON.stringify(record.size_breakdown),
+        'Notes': record.notes,
+      }))
+      if (!data.length) {
         showToast('No harvest records to export', 'info')
         return
       }
@@ -163,14 +171,11 @@ const HarvestPage = () => {
   const handleDeleteHarvest = async () => {
     if (!deleteConfirm) return
     try {
-      const { error, warnings } = await harvestRecordService.deleteHarvestRecord(
-        deleteConfirm.id || deleteConfirm._id,
-      )
-      if (error) throw error
+      const result = await removeHarvest({ id: deleteConfirm.id || deleteConfirm._id })
+      const warnings = result?.warnings
       showToast('Harvest deleted', 'success')
       if (warnings?.length) showToast(warnings.join('. '), 'warning')
       setDeleteConfirm(null)
-      fetchHarvestRecords()
     } catch (err) {
       showToast(err.message || 'Delete failed', 'error')
     }
@@ -245,8 +250,7 @@ const HarvestPage = () => {
   ]
 
   return (
-    <ProtectedRoute>
-      <Layout title="Harvest">
+    <>
         <PageHeader
           showTitle={false}
           breadcrumbs={[
@@ -312,14 +316,7 @@ const HarvestPage = () => {
 
           {/* Content */}
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-lake border-t-transparent mx-auto"></div>
-              <p className="mt-4 text-muted">Loading harvest records…</p>
-            </div>
-          ) : error ? (
-            <div className="bg-signal/10 border border-signal/30 rounded-lg p-4">
-              <p className="text-signal">{error}</p>
-            </div>
+            <LoadingState label="Loading harvest records…" />
           ) : showHarvestForm ? (
             <HarvestForm onComplete={handleHarvestComplete} />
           ) : showSamplingForm ? (
@@ -327,6 +324,18 @@ const HarvestPage = () => {
               <SamplingForm
                 harvestId={selectedHarvest.id}
                 onComplete={handleSamplingComplete}
+              />
+            </div>
+          ) : filteredRecords.length === 0 ? (
+            <div className="page-card">
+              <EmptyState
+                title={harvestRecords.length ? t('harvest.listNoMatch') : t('harvest.listEmpty')}
+                description={harvestRecords.length ? t('harvest.listNoMatchHint') : t('harvest.listEmptyHint')}
+                action={
+                  harvestRecords.length ? null : (
+                    <Button onClick={handleAddHarvest}>{t('harvest.listAdd')}</Button>
+                  )
+                }
               />
             </div>
           ) : (
@@ -380,8 +389,7 @@ const HarvestPage = () => {
           onCancel={() => setDeleteConfirm(null)}
           onConfirm={handleDeleteHarvest}
         />
-      </Layout>
-    </ProtectedRoute>
+    </>
   )
 }
 

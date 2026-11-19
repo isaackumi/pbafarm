@@ -33,6 +33,7 @@ import {
   StatCard,
   TabBar,
   LoadingState,
+  Modal,
 } from '../components/ui'
 import FeedTypeField from '../components/FeedTypeField'
 import BagSizeField, {
@@ -1111,7 +1112,7 @@ function FeedPurchases() {
                 <span className="h-2 w-2 rounded-full bg-kelp" /> OK
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" /> Near min
+                <span className="h-2 w-2 rounded-full bg-warn" /> Near min
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-signal" /> Below min
@@ -1139,7 +1140,7 @@ function FeedPurchases() {
                       stock.status === 'critical'
                         ? 'bg-signal'
                         : stock.status === 'low'
-                          ? 'bg-amber-500 dark:bg-amber-400'
+                          ? 'bg-warn'
                           : stock.status === 'empty'
                             ? 'bg-muted/40'
                             : 'bg-kelp'
@@ -1218,7 +1219,7 @@ function FeedPurchases() {
                   {inventoryMetrics.reorderRecommendations.map((rec) => (
                     <li
                       key={rec.id || rec.name}
-                      className="rounded-lg border border-amber-500/30 bg-surface p-3"
+                      className="rounded-lg border border-warn/30 bg-surface p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -1361,7 +1362,7 @@ function FeedPurchases() {
                   </p>
                 )}
                 {supplierMetrics.unassigned ? (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                  <div className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-chart-ink">
@@ -1542,182 +1543,177 @@ function FeedPurchases() {
 
       {/* Edit Purchase Modal */}
       {showEditModal && editingPurchase && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowEditModal(false)}
-          ></div>
-          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit purchase
-            </h3>
+        <Modal
+          onClose={() => setShowEditModal(false)}
+          as="form"
+          onSubmit={handleSubmitEdit}
+          title="Edit purchase"
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save changes
+              </Button>
+            </>
+          }
+        >
+          {error && (
+            <div className="rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
+              {error}
+            </div>
+          )}
 
-            {error && (
-              <div className="mb-4 rounded-lg border border-signal/20 bg-signal/10 text-signal p-3 text-sm">
-                {error}
-              </div>
-            )}
+          {success && (
+            <div className="rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
+              {success}
+            </div>
+          )}
 
-            {success && (
-              <div className="mb-4 rounded-lg border border-kelp/20 bg-kelp/10 text-kelp p-3 text-sm">
-                {success}
-              </div>
-            )}
+          <FeedTypeField
+            id="edit-feed-type"
+            name="feed_type_id"
+            value={formData.feed_type_id}
+            onChange={handleChange}
+            feedTypes={feedTypes}
+            ready={!loading}
+            required
+            showStock={false}
+            offerPurchaseCreate={false}
+            hint="Catalog product this purchase adds stock to. Create one if the list is empty."
+            emptyMessage="Add a feed type before recording a purchase."
+            onCreated={(result) => {
+              if (result?.id) {
+                setFormData((prev) => ({
+                  ...prev,
+                  feed_type_id: result.id,
+                }))
+              }
+            }}
+          />
 
-            <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <FeedTypeField
-                id="edit-feed-type"
-                name="feed_type_id"
-                value={formData.feed_type_id}
+          <BagSizeField
+            id="edit-bag-size"
+            value={formData.bag_size_kg}
+            onChange={handleChange}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bags" htmlFor="fp-edit-bags">
+              <Input
+                id="fp-edit-bags"
+                type="number"
+                name="bags"
+                value={formData.bags}
                 onChange={handleChange}
-                feedTypes={feedTypes}
-                ready={!loading}
+                step="0.01"
+                min="0"
+                className="font-data tabular-nums"
+                placeholder="e.g. 40"
+              />
+            </Field>
+            <Field label="Quantity (kg)" htmlFor="fp-edit-quantity" required>
+              <Input
+                id="fp-edit-quantity"
+                type="number"
+                name="quantity"
+                value={formData.quantity}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                className="font-data tabular-nums"
                 required
-                showStock={false}
-                offerPurchaseCreate={false}
-                hint="Catalog product this purchase adds stock to. Create one if the list is empty."
-                emptyMessage="Add a feed type before recording a purchase."
-                onCreated={(result) => {
-                  if (result?.id) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      feed_type_id: result.id,
-                    }))
-                  }
-                }}
               />
-
-              <BagSizeField
-                id="edit-bag-size"
-                value={formData.bag_size_kg}
-                onChange={handleChange}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Bags" htmlFor="fp-edit-bags">
-                  <Input
-                    id="fp-edit-bags"
-                    type="number"
-                    name="bags"
-                    value={formData.bags}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="font-data tabular-nums"
-                    placeholder="e.g. 40"
-                  />
-                </Field>
-                <Field label="Quantity (kg)" htmlFor="fp-edit-quantity" required>
-                  <Input
-                    id="fp-edit-quantity"
-                    type="number"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    className="font-data tabular-nums"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-muted">
-                    At {bagSizeKg} kg/bag — enter bags or kg; the other updates.
-                  </p>
-                </Field>
-              </div>
-
-              <Field label="Price per kg (₵)" htmlFor="fp-edit-price-per-kg" required>
-                <Input
-                  id="fp-edit-price-per-kg"
-                  type="number"
-                  name="price_per_kg"
-                  value={formData.price_per_kg}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  required
-                />
-              </Field>
-
-              <Field label="Purchase date" htmlFor="fp-edit-purchase-date" required>
-                <Input
-                  id="fp-edit-purchase-date"
-                  type="date"
-                  name="purchase_date"
-                  value={formData.purchase_date}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-
-              <Field label="Supplier" htmlFor="fp-edit-supplier-id" required>
-                <Select
-                  id="fp-edit-supplier-id"
-                  name="supplier_id"
-                  value={formData.supplier_id || ''}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((supplier) => (
-                    <option
-                      key={supplier.id || supplier._id}
-                      value={supplier.id || supplier._id}
-                    >
-                      {supplier.name}
-                    </option>
-                  ))}
-                </Select>
-                {suppliers.length === 0 && (
-                  <p className="mt-1 text-xs text-muted">
-                    No suppliers yet — add one under Feed suppliers.
-                  </p>
-                )}
-              </Field>
-
-              <Field label="Batch number" htmlFor="fp-edit-batch-number">
-                <Input
-                  id="fp-edit-batch-number"
-                  type="text"
-                  name="batch_number"
-                  value={formData.batch_number}
-                  onChange={handleChange}
-                />
-              </Field>
-
-              <Field label="Expiry date" htmlFor="fp-edit-expiry-date">
-                <Input
-                  id="fp-edit-expiry-date"
-                  type="date"
-                  name="expiry_date"
-                  value={formData.expiry_date}
-                  onChange={handleChange}
-                />
-              </Field>
-
-              <Field label="Notes" htmlFor="fp-edit-notes">
-                <Textarea
-                  id="fp-edit-notes"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                />
-              </Field>
-
-              <div className="flex flex-wrap justify-end gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save changes
-                </Button>
-              </div>
-            </form>
+              <p className="mt-1 text-xs text-muted">
+                At {bagSizeKg} kg/bag — enter bags or kg; the other updates.
+              </p>
+            </Field>
           </div>
-        </div>
+
+          <Field label="Price per kg (₵)" htmlFor="fp-edit-price-per-kg" required>
+            <Input
+              id="fp-edit-price-per-kg"
+              type="number"
+              name="price_per_kg"
+              value={formData.price_per_kg}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              required
+            />
+          </Field>
+
+          <Field label="Purchase date" htmlFor="fp-edit-purchase-date" required>
+            <Input
+              id="fp-edit-purchase-date"
+              type="date"
+              name="purchase_date"
+              value={formData.purchase_date}
+              onChange={handleChange}
+              required
+            />
+          </Field>
+
+          <Field label="Supplier" htmlFor="fp-edit-supplier-id" required>
+            <Select
+              id="fp-edit-supplier-id"
+              name="supplier_id"
+              value={formData.supplier_id || ''}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select supplier</option>
+              {suppliers.map((supplier) => (
+                <option
+                  key={supplier.id || supplier._id}
+                  value={supplier.id || supplier._id}
+                >
+                  {supplier.name}
+                </option>
+              ))}
+            </Select>
+            {suppliers.length === 0 && (
+              <p className="mt-1 text-xs text-muted">
+                No suppliers yet — add one under Feed suppliers.
+              </p>
+            )}
+          </Field>
+
+          <Field label="Batch number" htmlFor="fp-edit-batch-number">
+            <Input
+              id="fp-edit-batch-number"
+              type="text"
+              name="batch_number"
+              value={formData.batch_number}
+              onChange={handleChange}
+            />
+          </Field>
+
+          <Field label="Expiry date" htmlFor="fp-edit-expiry-date">
+            <Input
+              id="fp-edit-expiry-date"
+              type="date"
+              name="expiry_date"
+              value={formData.expiry_date}
+              onChange={handleChange}
+            />
+          </Field>
+
+          <Field label="Notes" htmlFor="fp-edit-notes">
+            <Textarea
+              id="fp-edit-notes"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+            />
+          </Field>
+        </Modal>
       )}
 
       <ConfirmDeleteModal

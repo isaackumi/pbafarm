@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, Select, LoadingState } from '../components/ui'
+import { PageHeader, Button, Field, Input, Select, LoadingState, Modal } from '../components/ui'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -333,292 +333,282 @@ function FeedTypes() {
 
       {/* Add Feed Type Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowAddModal(false)}
-          ></div>
-          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Add feed type
-            </h3>
+        <Modal
+          onClose={() => setShowAddModal(false)}
+          as="form"
+          onSubmit={handleAdd}
+          title="Add feed type"
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save feed type
+              </Button>
+            </>
+          }
+        >
+          <Field label="Name" htmlFor="ft-add-name" required>
+            <Input
+              id="ft-add-name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-            <form onSubmit={handleAdd} className="space-y-4">
-              <Field label="Name" htmlFor="ft-add-name" required>
-                <Input
-                  id="ft-add-name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
+          <Field label={priceLabel} htmlFor="ft-add-price-per-kg">
+            <Input
+              id="ft-add-price-per-kg"
+              type="number"
+              name="price_per_kg"
+              value={formData.price_per_kg}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+            />
+          </Field>
 
-              <Field label={priceLabel} htmlFor="ft-add-price-per-kg">
-                <Input
-                  id="ft-add-price-per-kg"
-                  type="number"
-                  name="price_per_kg"
-                  value={formData.price_per_kg}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                />
-              </Field>
+          <Field label="Protein percentage (%)" htmlFor="ft-add-protein-percentage">
+            <Input
+              id="ft-add-protein-percentage"
+              type="number"
+              name="protein_percentage"
+              value={formData.protein_percentage}
+              onChange={handleChange}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </Field>
+          <Field label="Pellet size" htmlFor="ft-add-pellet-size">
+            <Input
+              id="ft-add-pellet-size"
+              type="text"
+              name="pellet_size"
+              value={formData.pellet_size}
+              onChange={handleChange}
+            />
+          </Field>
 
-              <Field label="Protein percentage (%)" htmlFor="ft-add-protein-percentage">
-                <Input
-                  id="ft-add-protein-percentage"
-                  type="number"
-                  name="protein_percentage"
-                  value={formData.protein_percentage}
-                  onChange={handleChange}
-                  step="0.1"
-                  min="0"
-                  max="100"
-                />
-              </Field>
-              <Field label="Pellet size" htmlFor="ft-add-pellet-size">
-                <Input
-                  id="ft-add-pellet-size"
-                  type="text"
-                  name="pellet_size"
-                  value={formData.pellet_size}
-                  onChange={handleChange}
-                />
-              </Field>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Minimum stock (kg)" htmlFor="ft-add-minimum-stock">
-                  <Input
-                    id="ft-add-minimum-stock"
-                    type="number"
-                    name="minimum_stock"
-                    value={formData.minimum_stock}
-                    onChange={handleChange}
-                    step="1"
-                    min="0"
-                    placeholder="e.g. 500"
-                    className="font-data tabular-nums"
-                  />
-                  <p className="mt-1 text-xs text-muted">
-                    Alert when stock falls to or below this.
-                  </p>
-                </Field>
-                <Field label="Bag size (kg)" htmlFor="ft-add-bag-size-kg">
-                  <Input
-                    id="ft-add-bag-size-kg"
-                    type="number"
-                    name="bag_size_kg"
-                    value={formData.bag_size_kg}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0.1"
-                    className="font-data tabular-nums"
-                  />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Supplier" htmlFor="ft-add-supplier-id">
-                  <Select
-                    id="ft-add-supplier-id"
-                    name="supplier_id"
-                    value={formData.supplier_id}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select supplier (optional)</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </Select>
-                  {suppliers.length === 0 && (
-                    <p className="mt-1 text-xs text-muted">
-                      No suppliers yet — you can save without one.
-                    </p>
-                  )}
-                </Field>
-              </div>
-
-              <div className="flex items-center min-h-11">
-                <input
-                  type="checkbox"
-                  id="active"
-                  name="active"
-                  checked={formData.active}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
-                />
-                <label
-                  htmlFor="active"
-                  className="ml-2 block text-sm text-chart-ink"
-                >
-                  Active
-                </label>
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save feed type
-                </Button>
-              </div>
-            </form>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Minimum stock (kg)" htmlFor="ft-add-minimum-stock">
+              <Input
+                id="ft-add-minimum-stock"
+                type="number"
+                name="minimum_stock"
+                value={formData.minimum_stock}
+                onChange={handleChange}
+                step="1"
+                min="0"
+                placeholder="e.g. 500"
+                className="font-data tabular-nums"
+              />
+              <p className="mt-1 text-xs text-muted">
+                Alert when stock falls to or below this.
+              </p>
+            </Field>
+            <Field label="Bag size (kg)" htmlFor="ft-add-bag-size-kg">
+              <Input
+                id="ft-add-bag-size-kg"
+                type="number"
+                name="bag_size_kg"
+                value={formData.bag_size_kg}
+                onChange={handleChange}
+                step="0.1"
+                min="0.1"
+                className="font-data tabular-nums"
+              />
+            </Field>
           </div>
-        </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Supplier" htmlFor="ft-add-supplier-id">
+              <Select
+                id="ft-add-supplier-id"
+                name="supplier_id"
+                value={formData.supplier_id}
+                onChange={handleChange}
+              >
+                <option value="">Select supplier (optional)</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </Select>
+              {suppliers.length === 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  No suppliers yet — you can save without one.
+                </p>
+              )}
+            </Field>
+          </div>
+
+          <div className="flex items-center min-h-11">
+            <input
+              type="checkbox"
+              id="active"
+              name="active"
+              checked={formData.active}
+              onChange={handleChange}
+              className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
+            />
+            <label
+              htmlFor="active"
+              className="ml-2 block text-sm text-chart-ink"
+            >
+              Active
+            </label>
+          </div>
+        </Modal>
       )}
 
       {/* Edit Feed Type Modal */}
       {showEditModal && editingType && (
-        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setShowEditModal(false)}
-          ></div>
-          <div className="relative page-card-xl rounded-xl max-w-md w-full mx-4 my-8 p-4 sm:p-6" role="dialog" aria-modal="true">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">
-              Edit feed type
-            </h3>
-
-            <form onSubmit={handleUpdate} className="space-y-4">
-              <Field label="Name" htmlFor="ft-edit-name" required>
-                <Input
-                  id="ft-edit-name"
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Field>
-
-              <Field
-                label={priceLabel}
-                htmlFor="ft-edit-price-per-kg"
-                hint={isAdmin ? undefined : 'Only an admin can change the price'}
+        <Modal
+          onClose={() => setShowEditModal(false)}
+          as="form"
+          onSubmit={handleUpdate}
+          title="Edit feed type"
+          bodyClassName="space-y-4"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowEditModal(false)}
               >
-                <Input
-                  id="ft-edit-price-per-kg"
-                  type="number"
-                  name="price_per_kg"
-                  value={formData.price_per_kg}
-                  disabled={!isAdmin}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                />
-              </Field>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save changes
+              </Button>
+            </>
+          }
+        >
+          <Field label="Name" htmlFor="ft-edit-name" required>
+            <Input
+              id="ft-edit-name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </Field>
 
-              <Field label="Protein percentage (%)" htmlFor="ft-edit-protein-percentage">
-                <Input
-                  id="ft-edit-protein-percentage"
-                  type="number"
-                  name="protein_percentage"
-                  value={formData.protein_percentage}
-                  onChange={handleChange}
-                  step="0.1"
-                  min="0"
-                  max="100"
-                />
-              </Field>
-              <Field label="Pellet size" htmlFor="ft-edit-pellet-size">
-                <Input
-                  id="ft-edit-pellet-size"
-                  type="text"
-                  name="pellet_size"
-                  value={formData.pellet_size}
-                  onChange={handleChange}
-                />
-              </Field>
+          <Field
+            label={priceLabel}
+            htmlFor="ft-edit-price-per-kg"
+            hint={isAdmin ? undefined : 'Only an admin can change the price'}
+          >
+            <Input
+              id="ft-edit-price-per-kg"
+              type="number"
+              name="price_per_kg"
+              value={formData.price_per_kg}
+              disabled={!isAdmin}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+            />
+          </Field>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Minimum stock (kg)" htmlFor="ft-edit-minimum-stock">
-                  <Input
-                    id="ft-edit-minimum-stock"
-                    type="number"
-                    name="minimum_stock"
-                    value={formData.minimum_stock}
-                    onChange={handleChange}
-                    step="1"
-                    min="0"
-                    placeholder="e.g. 500"
-                    className="font-data tabular-nums"
-                  />
-                  <p className="mt-1 text-xs text-muted">
-                    Alert when stock falls to or below this.
-                  </p>
-                </Field>
-                <Field label="Bag size (kg)" htmlFor="ft-edit-bag-size-kg">
-                  <Input
-                    id="ft-edit-bag-size-kg"
-                    type="number"
-                    name="bag_size_kg"
-                    value={formData.bag_size_kg}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0.1"
-                    className="font-data tabular-nums"
-                  />
-                </Field>
-              </div>
+          <Field label="Protein percentage (%)" htmlFor="ft-edit-protein-percentage">
+            <Input
+              id="ft-edit-protein-percentage"
+              type="number"
+              name="protein_percentage"
+              value={formData.protein_percentage}
+              onChange={handleChange}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </Field>
+          <Field label="Pellet size" htmlFor="ft-edit-pellet-size">
+            <Input
+              id="ft-edit-pellet-size"
+              type="text"
+              name="pellet_size"
+              value={formData.pellet_size}
+              onChange={handleChange}
+            />
+          </Field>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Supplier" htmlFor="ft-edit-supplier-id">
-                  <Select
-                    id="ft-edit-supplier-id"
-                    name="supplier_id"
-                    value={formData.supplier_id}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select supplier (optional)</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-
-              <div className="flex items-center min-h-11">
-                <input
-                  type="checkbox"
-                  id="edit-active"
-                  name="active"
-                  checked={formData.active}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
-                />
-                <label
-                  htmlFor="edit-active"
-                  className="ml-2 block text-sm text-chart-ink"
-                >
-                  Active
-                </label>
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save changes
-                </Button>
-              </div>
-            </form>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Minimum stock (kg)" htmlFor="ft-edit-minimum-stock">
+              <Input
+                id="ft-edit-minimum-stock"
+                type="number"
+                name="minimum_stock"
+                value={formData.minimum_stock}
+                onChange={handleChange}
+                step="1"
+                min="0"
+                placeholder="e.g. 500"
+                className="font-data tabular-nums"
+              />
+              <p className="mt-1 text-xs text-muted">
+                Alert when stock falls to or below this.
+              </p>
+            </Field>
+            <Field label="Bag size (kg)" htmlFor="ft-edit-bag-size-kg">
+              <Input
+                id="ft-edit-bag-size-kg"
+                type="number"
+                name="bag_size_kg"
+                value={formData.bag_size_kg}
+                onChange={handleChange}
+                step="0.1"
+                min="0.1"
+                className="font-data tabular-nums"
+              />
+            </Field>
           </div>
-        </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Supplier" htmlFor="ft-edit-supplier-id">
+              <Select
+                id="ft-edit-supplier-id"
+                name="supplier_id"
+                value={formData.supplier_id}
+                onChange={handleChange}
+              >
+                <option value="">Select supplier (optional)</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <div className="flex items-center min-h-11">
+            <input
+              type="checkbox"
+              id="edit-active"
+              name="active"
+              checked={formData.active}
+              onChange={handleChange}
+              className="h-4 w-4 rounded border-input-border accent-lake focus-visible:ring-2 focus-visible:ring-lake"
+            />
+            <label
+              htmlFor="edit-active"
+              className="ml-2 block text-sm text-chart-ink"
+            >
+              Active
+            </label>
+          </div>
+        </Modal>
       )}
 
       <ConfirmDeleteModal

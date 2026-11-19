@@ -3,9 +3,8 @@ import { useMutation, useQuery } from 'convex/react'
 import { ShieldAlert } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useDialogA11y } from '../hooks/useDialogA11y'
 import { errorMessage } from '../lib/errorMessage'
-import { Button, Field, Input, Textarea } from './ui'
+import { Button, Field, Input, Modal, Textarea } from './ui'
 
 function minutesLeft(expiresAt, now) {
   return Math.max(0, Math.ceil((expiresAt - now) / 60_000))
@@ -57,7 +56,6 @@ export function ActAsStartModal({ company, onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const open = Boolean(company)
-  const panelRef = useDialogA11y({ open, onClose, canClose: !busy })
   if (!open) return null
 
   const submit = async (e) => {
@@ -74,23 +72,26 @@ export function ActAsStartModal({ company, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 modal-backdrop" onClick={() => !busy && onClose()} aria-hidden />
-      <form
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="act-as-title"
-        onSubmit={submit}
-        className="relative w-full max-w-md space-y-4 rounded-xl border border-foam-deep bg-surface p-6 shadow-xl"
-      >
-        <h3 id="act-as-title" className="text-lg font-semibold text-chart-ink">
-          Support access: {company.name}
-        </h3>
-        <p className="text-sm text-muted">
-          You will see this organization as its admin until you end the session or it expires. Starting, ending and
-          every change are recorded in the organization&apos;s audit log under your name.
-        </p>
+    <Modal
+      open={open}
+      onClose={onClose}
+      dismissible={!busy}
+      as="form"
+      onSubmit={submit}
+      title={`Support access: ${company.name}`}
+      description="You will see this organization as its admin until you end the session or it expires. Starting, ending and every change are recorded in the organization's audit log under your name."
+      footer={
+        <>
+          <Button type="button" variant="secondary" disabled={busy} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={busy || reason.trim().length < 10}>
+            {busy ? 'Starting…' : 'Start support access'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
         {error && <p className="text-sm text-signal">{error}</p>}
         <Field label="Reason (ticket or request)" htmlFor="act-as-reason" required>
           <Textarea id="act-as-reason" required minLength={10} value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -109,15 +110,7 @@ export function ActAsStartModal({ company, onClose }) {
           <input type="checkbox" checked={allowWrites} onChange={(e) => setAllowWrites(e.target.checked)} />
           Allow changes (default is read-only)
         </label>
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={busy || reason.trim().length < 10}>
-            {busy ? 'Starting…' : 'Start support access'}
-          </Button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </Modal>
   )
 }

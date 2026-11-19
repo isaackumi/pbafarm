@@ -16,7 +16,8 @@ export type DefLite = { key: string; required: boolean; archived: boolean }
 
 type CoreField = { key: string; required?: boolean; width?: 'full' | 'half' }
 type FormSpec = {
-  entity: string
+  /** Custom-field entity (CUSTOM-001); forms without one arrange core fields only. */
+  entity?: string
   core: CoreField[]
   /** Today's form: section key → core field keys in order. Custom fields go to the last section. */
   sections: { key: string; fields: string[] }[]
@@ -64,6 +65,153 @@ export const FORM_CATALOG: Record<string, FormSpec> = {
       { key: 'fish', fields: ['fishCount', 'averageBodyWeight'] },
       { key: 'source', fields: ['sourceLocation', 'transferSupervisor', 'samplingSupervisor'] },
       { key: 'notes', fields: ['notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  'production.harvest': {
+    entity: 'harvestRecords',
+    core: [
+      { key: 'cageId', required: true },
+      { key: 'harvestDate', required: true },
+      { key: 'harvestType', required: true },
+      { key: 'totalWeight', required: true },
+      { key: 'averageBodyWeight', required: true },
+      { key: 'estimatedCount', required: true },
+      { key: 'fcr' },
+      { key: 'sizeBreakdown', width: 'full' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      { key: 'details', fields: ['cageId', 'harvestDate', 'harvestType', 'totalWeight', 'averageBodyWeight', 'estimatedCount', 'fcr'] },
+      { key: 'grades', fields: ['sizeBreakdown'] },
+      { key: 'notes', fields: ['notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  /** One cage's line in daily entry (the form repeats it per cage). */
+  'production.daily': {
+    entity: 'dailyRecords',
+    core: [
+      { key: 'feedQty' },
+      { key: 'feedTypeId', width: 'half' },
+      { key: 'mortality' },
+      { key: 'mortalityCause', width: 'half' },
+      { key: 'dissolvedOxygen' },
+      { key: 'temperatureC' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      { key: 'feed', fields: ['feedQty', 'feedTypeId'] },
+      { key: 'mortality', fields: ['mortality', 'mortalityCause'] },
+      { key: 'water', fields: ['dissolvedOxygen', 'temperatureC'] },
+      { key: 'notes', fields: ['notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  'inventory.feedIssue': {
+    core: [
+      { key: 'feedTypeId', required: true, width: 'full' },
+      { key: 'cageId' },
+      { key: 'usageDate', required: true },
+      { key: 'bags' },
+      { key: 'quantityKg' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      { key: 'what', fields: ['feedTypeId', 'cageId', 'usageDate'] },
+      { key: 'quantity', fields: ['bags', 'quantityKg'] },
+      { key: 'notes', fields: ['notes'] },
+    ],
+  },
+  /** Create and edit a unit (cage, pond, tank…). `unitType` is the type plus its geometry. */
+  'setup.cage': {
+    entity: 'cages',
+    core: [
+      { key: 'code', required: true },
+      { key: 'name', required: true },
+      { key: 'locationId', required: true },
+      { key: 'status' },
+      { key: 'unitType', required: true, width: 'full' },
+      { key: 'capacity' },
+      { key: 'dimensions' },
+      { key: 'material' },
+      { key: 'installationDate' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      { key: 'identity', fields: ['code', 'name', 'locationId', 'status'] },
+      { key: 'build', fields: ['unitType', 'capacity', 'dimensions', 'material', 'installationDate'] },
+      { key: 'notes', fields: ['notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  'finance.expense': {
+    entity: 'expenses',
+    core: [
+      { key: 'amount', required: true, width: 'full' },
+      { key: 'category', required: true, width: 'full' },
+      { key: 'expenseDate', required: true },
+      { key: 'cageId' },
+      { key: 'supplierId', width: 'full' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      { key: 'expense', fields: ['amount', 'category', 'expenseDate', 'cageId', 'supplierId', 'notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  'operations.equipment': {
+    entity: 'equipment',
+    core: [
+      { key: 'name', required: true },
+      { key: 'kind' },
+      { key: 'unitId' },
+      { key: 'unitGroupId' },
+      { key: 'locationId' },
+      { key: 'assetTag' },
+      { key: 'make' },
+      { key: 'model' },
+      { key: 'serialNumber' },
+      { key: 'rating' },
+      { key: 'installationDate' },
+      { key: 'purchasedOn' },
+      { key: 'purchaseCost' },
+      { key: 'supplier' },
+      { key: 'warrantyUntil' },
+      { key: 'maintenanceIntervalDays' },
+      { key: 'nextMaintenanceDue' },
+      { key: 'sparePartId' },
+      { key: 'notes', width: 'full' },
+    ],
+    sections: [
+      {
+        key: 'equipment',
+        fields: ['name', 'kind', 'unitId', 'unitGroupId', 'locationId', 'assetTag', 'make', 'model', 'serialNumber', 'rating'],
+      },
+      { key: 'purchase', fields: ['installationDate', 'purchasedOn', 'purchaseCost', 'supplier', 'warrantyUntil'] },
+      { key: 'service', fields: ['maintenanceIntervalDays', 'nextMaintenanceDue', 'sparePartId'] },
+      { key: 'notes', fields: ['notes'] },
+      { key: 'more', fields: [] },
+    ],
+  },
+  'setup.farmLocation': {
+    entity: 'farmLocations',
+    core: [
+      { key: 'name', required: true },
+      { key: 'code' },
+      { key: 'address', width: 'full' },
+      { key: 'siteType' },
+      { key: 'timezone' },
+      { key: 'latitude' },
+      { key: 'longitude' },
+      { key: 'waterBody', width: 'full' },
+      { key: 'notes', width: 'full' },
+      { key: 'active', width: 'full' },
+    ],
+    sections: [
+      { key: 'location', fields: ['name', 'code', 'address'] },
+      { key: 'site', fields: ['siteType', 'timezone', 'latitude', 'longitude', 'waterBody'] },
+      { key: 'notes', fields: ['notes', 'active'] },
       { key: 'more', fields: [] },
     ],
   },

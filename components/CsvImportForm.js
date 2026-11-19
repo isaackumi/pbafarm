@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
-import { cageService } from '../lib/cageService'
-import { feedTypeService } from '../lib/feedTypeService'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import {
   buildBiweeklyRecords,
   buildDailyRecords,
@@ -16,26 +17,14 @@ import { Button, FormActions, FormSection, Field } from './ui'
 const KINDS = {
   daily: {
     columns: 'cage_name, date, feed_amount, feed_type, feed_price, mortality, notes',
-    mutation: () => api.dailyRecords.createMany,
-    async lookups() {
-      const [cages, feedTypes] = await Promise.all([
-        cageService.getAllCages(),
-        feedTypeService.getAllFeedTypes(),
-      ])
-      if (cages.error) throw cages.error
-      if (feedTypes.error) throw feedTypes.error
-      return { cages: cages.data, feedTypes: feedTypes.data }
-    },
+    mutation: api.dailyRecords.createMany,
+    needsFeedTypes: true,
     build: buildDailyRecords,
   },
   biweekly: {
     columns: 'cage_name, date, batch_code, average_body_weight, total_fish_count, total_weight',
-    mutation: () => api.biweeklyRecords.createMany,
-    async lookups() {
-      const cages = await cageService.getAllCages()
-      if (cages.error) throw cages.error
-      return { cages: cages.data }
-    },
+    mutation: api.biweeklyRecords.createMany,
+    needsFeedTypes: false,
     build: buildBiweeklyRecords,
   },
 }
@@ -53,6 +42,12 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const { user } = useAuth()
+  const { locationArgs } = useLocation()
+  const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
+  const feedTypes = useQuery(api.feed.listFeedTypes, user && config.needsFeedTypes ? {} : 'skip')
+  const lookupsReady = cages !== undefined && (!config.needsFeedTypes || feedTypes !== undefined)
+  const createMany = useMutation(config.mutation)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -72,13 +67,11 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
         if (err.code === 'EMPTY') throw new Error(t('csvImport.empty'))
         throw err
       }
-      const lookups = await config.lookups()
+      const lookups = config.needsFeedTypes ? { cages, feedTypes } : { cages }
       const { records, skipped } = config.build(parsed.rows, { ...lookups, today: localToday() })
       let inserted = 0
       if (records.length) {
-        const ids = await getConvexHttpClient().mutation(config.mutation(), {
-          records: toServerRecords(records),
-        })
+        const ids = await createMany({ records: toServerRecords(records) })
         inserted = Array.isArray(ids) ? ids.length : 0
       }
       setResult({
@@ -126,7 +119,7 @@ export default function CsvImportForm({ kind, onSuccess, onCancel }) {
             />
           </Field>
           <FormActions className="mt-4 pt-4">
-            <Button type="submit" disabled={loading} size="lg">
+            <Button type="submit" disabled={loading || !lookupsReady} size="lg">
               {loading ? t('csvImport.uploading') : t('csvImport.upload')}
             </Button>
             {onCancel && (

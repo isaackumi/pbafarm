@@ -5,12 +5,11 @@ import Layout from '../components/Layout'
 import QrScanner from '../components/QrScanner'
 import { Button, FormCard, TabBar } from '../components/ui'
 import { useToast } from '../components/Toast'
-import { cageService } from '../lib/cageService'
 import { findCageByCode, parseCageScan, scanHref } from '../lib/qrTarget'
 import { useT } from '../lib/i18n/context'
-import { useAuth } from '../contexts/AuthContext'
-import { getActiveLocationId } from '../lib/locationScope'
-import { readReferenceList, saveReferenceData } from '../lib/referenceCache'
+import { api } from '../convex/_generated/api'
+import { useLocation } from '../contexts/LocationContext'
+import { useReferenceList } from '../hooks/useReferenceList'
 
 const TARGET_KEY = 'pbafarm:scan:target'
 
@@ -33,13 +32,11 @@ function Scan() {
   const router = useRouter()
   const { showToast } = useToast()
   const [open, setOpen] = useState(true)
-  const [cages, setCages] = useState(null)
-  const [cagesLoaded, setCagesLoaded] = useState(false)
   const handledCode = useRef(null)
   const t = useT()
   const [target, setTarget] = useState('daily')
-  const { user } = useAuth()
-  const userId = user?.id
+  const { locationArgs } = useLocation()
+  const { list: cages, ready: cagesLoaded } = useReferenceList('cages', api.cages.getActive, locationArgs)
 
   useEffect(() => {
     try {
@@ -48,16 +45,7 @@ function Scan() {
     } catch {
       // storage blocked
     }
-    cageService.getActiveCages().then((res) => {
-      if (!res.error) {
-        setCages(res.data || [])
-        saveReferenceData(userId, getActiveLocationId(), { cages: res.data || [] })
-      } else {
-        setCages(readReferenceList(userId, getActiveLocationId(), 'cages'))
-      }
-      setCagesLoaded(true)
-    })
-  }, [userId])
+  }, [])
 
   // A label opened by the phone's own camera: /scan?c=<short code>.
   const labelCode = router.isReady && typeof router.query.c === 'string' ? router.query.c : null

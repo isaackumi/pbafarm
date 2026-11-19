@@ -27,7 +27,7 @@ export default function BrandContrast({ hex, onUse }) {
           {t('branding.contrastPass', { ratio })}
         </p>
       ) : (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200 space-y-2">
+        <div className="rounded-xl border border-warn/30 bg-warn/10 p-3 text-sm text-warn space-y-2">
           <p className="flex items-start gap-2">
             <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
             <span>

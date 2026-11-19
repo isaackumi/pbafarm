@@ -25,7 +25,7 @@ import { sha256HexOfFile } from '../lib/fileHash'
 /** Active definitions of an entity (undefined while loading). */
 export function useCustomFieldDefs(entity, { includeArchived = false } = {}) {
   const { canUseApp } = useAuth()
-  return useQuery(api.customFields.defs, canUseApp ? { entity, includeArchived } : 'skip')
+  return useQuery(api.customFields.defs, canUseApp && entity ? { entity, includeArchived } : 'skip')
 }
 
 /**

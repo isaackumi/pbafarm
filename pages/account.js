@@ -92,7 +92,7 @@ export default function AccountPage() {
           />
 
           {forced && !done && (
-            <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="mb-5 rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn">
               An admin created your account with a temporary password. Choose a
               new password to continue using the app.
             </div>

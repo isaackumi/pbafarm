@@ -15,6 +15,7 @@
   --color-kelp-soft: var(--kelp-soft);
   --color-signal: var(--signal);
   --color-signal-soft: var(--signal-soft);
+  --color-warn: var(--warn);
   --color-chart-ink: var(--chart-ink);
   --color-muted: var(--muted);
   --color-surface: var(--surface);

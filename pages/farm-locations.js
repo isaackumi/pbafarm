@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import {
   MapPin,
@@ -9,7 +9,6 @@ import Layout from '../components/Layout'
 import {
   PageHeader,
   FormCard,
-  FormSection,
   FormActions,
   Field,
   Input,
@@ -45,7 +44,8 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { usePermission } from '../hooks/usePermission'
-import CustomFields, { CustomFieldValues, customPayload } from '../components/CustomFields'
+import { CustomFieldValues, customPayload } from '../components/CustomFields'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
 
 export default function FarmLocationsPage() {
   return (
@@ -74,6 +74,8 @@ function FarmLocations() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', code: '', address: '', notes: '', active: true, ...EMPTY_SITE })
   const [saving, setSaving] = useState(false)
+  const layout = useFormLayout('setup.farmLocation')
+  const setCustom = useCallback((custom) => setForm((p) => ({ ...p, custom })), [])
 
   useEffect(() => {
     if (!editing) return
@@ -102,34 +104,39 @@ function FarmLocations() {
   const submit = async (e) => {
     e.preventDefault()
     if (!isAdmin) return
+    // Optional fields a layout condition hides are not saved.
+    const hidden = hiddenCoreKeys(layout.sections, form, form.custom)
+    hidden.delete('active')
+    const values = { ...form }
+    for (const key of hidden) values[key] = ''
     setSaving(true)
     try {
       if (editing) {
         await updateLocation({
           id: editing.id || editing._id,
           patch: {
-            name: form.name,
-            code: form.code,
-            address: form.address,
-            notes: form.notes,
+            name: values.name,
+            code: values.code,
+            address: values.address,
+            notes: values.notes,
             active: form.active,
-            ...siteMeta(form),
+            ...siteMeta(values),
             custom: form.custom || {},
           },
         })
         showToast('success', 'Location updated')
       } else {
         const id = await createLocation({
-          name: form.name,
-          code: form.code || undefined,
-          address: form.address || undefined,
-          notes: form.notes || undefined,
+          name: values.name,
+          code: values.code || undefined,
+          address: values.address || undefined,
+          notes: values.notes || undefined,
           active: form.active,
-          ...siteMeta(form),
-          timezone: form.timezone || undefined,
-          latitude: numberOrNull(form.latitude) ?? undefined,
-          longitude: numberOrNull(form.longitude) ?? undefined,
-          waterBody: form.waterBody || undefined,
+          ...siteMeta(values),
+          timezone: values.timezone || undefined,
+          latitude: numberOrNull(values.latitude) ?? undefined,
+          longitude: numberOrNull(values.longitude) ?? undefined,
+          waterBody: values.waterBody || undefined,
           custom: customPayload(form.custom),
         })
         showToast('success', 'Location created')
@@ -174,12 +181,17 @@ function FarmLocations() {
       {showForm && isAdmin && (
         <FormCard className="mb-6">
           <form onSubmit={submit}>
-            <FormSection
-              title={editing ? 'Edit location' : 'New location'}
-              description="Name is required. Code is optional (e.g. VOLTA)."
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Name" htmlFor="loc-name" required>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-chart-ink">{editing ? 'Edit location' : 'New location'}</h3>
+              <p className="text-sm text-muted">Name is required. Code is optional (e.g. VOLTA).</p>
+            </div>
+            <FormLayout
+              key={editing ? editing.id || editing._id : 'new'}
+              formKey="setup.farmLocation"
+              layout={layout}
+              fields={{
+                name: (
+                  <Field label="Name" htmlFor="loc-name" required>
                   <Input
                     id="loc-name"
                     value={form.name}
@@ -189,7 +201,9 @@ function FarmLocations() {
                     required
                   />
                 </Field>
-                <Field label="Code" htmlFor="loc-code">
+                ),
+                code: (
+                  <Field label="Code" htmlFor="loc-code">
                   <Input
                     id="loc-code"
                     value={form.code}
@@ -199,8 +213,9 @@ function FarmLocations() {
                     placeholder="MAIN"
                   />
                 </Field>
-              </div>
-              <Field label="Address" htmlFor="loc-address">
+                ),
+                address: (
+                  <Field label="Address" htmlFor="loc-address">
                 <Input
                   id="loc-address"
                   value={form.address}
@@ -209,8 +224,9 @@ function FarmLocations() {
                   }
                 />
               </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Site type" htmlFor="loc-type">
+                ),
+                siteType: (
+                  <Field label="Site type" htmlFor="loc-type">
                   <Select
                     id="loc-type"
                     value={form.siteType}
@@ -224,7 +240,9 @@ function FarmLocations() {
                     ))}
                   </Select>
                 </Field>
-                <Field
+                ),
+                timezone: (
+                  <Field
                   label="Time zone"
                   htmlFor="loc-tz"
                   hint="Sets the date for entries and reminders at this site. Blank uses the organization's."
@@ -242,7 +260,9 @@ function FarmLocations() {
                     ))}
                   </datalist>
                 </Field>
-                <Field label="Latitude" htmlFor="loc-lat" hint="Decimal degrees, e.g. 6.2">
+                ),
+                latitude: (
+                  <Field label="Latitude" htmlFor="loc-lat" hint="Decimal degrees, e.g. 6.2">
                   <Input
                     id="loc-lat"
                     inputMode="decimal"
@@ -250,7 +270,9 @@ function FarmLocations() {
                     onChange={(e) => setForm((p) => ({ ...p, latitude: e.target.value }))}
                   />
                 </Field>
-                <Field label="Longitude" htmlFor="loc-lng" hint="Decimal degrees, e.g. 0.05">
+                ),
+                longitude: (
+                  <Field label="Longitude" htmlFor="loc-lng" hint="Decimal degrees, e.g. 0.05">
                   <Input
                     id="loc-lng"
                     inputMode="decimal"
@@ -258,15 +280,18 @@ function FarmLocations() {
                     onChange={(e) => setForm((p) => ({ ...p, longitude: e.target.value }))}
                   />
                 </Field>
-              </div>
-              <Field label="Water body" htmlFor="loc-water" hint="Lake, reservoir or river">
+                ),
+                waterBody: (
+                  <Field label="Water body" htmlFor="loc-water" hint="Lake, reservoir or river">
                 <Input
                   id="loc-water"
                   value={form.waterBody}
                   onChange={(e) => setForm((p) => ({ ...p, waterBody: e.target.value }))}
                 />
               </Field>
-              <Field label="Notes" htmlFor="loc-notes">
+                ),
+                notes: (
+                  <Field label="Notes" htmlFor="loc-notes">
                 <Textarea
                   id="loc-notes"
                   rows={2}
@@ -276,16 +301,9 @@ function FarmLocations() {
                   }
                 />
               </Field>
-              <CustomFields
-                key={editing ? editing.id || editing._id : 'new'}
-                entity="farmLocations"
-                value={form.custom}
-                onChange={(custom) => setForm((p) => ({ ...p, custom }))}
-                locationId={editing ? editing.id || editing._id : null}
-                core={{ siteType: form.siteType }}
-                applyDefaults={!editing}
-              />
-              {editing && (
+                ),
+                active: editing ? (
+                  
                 <label className="flex items-center gap-2 text-sm text-chart-ink">
                   <input
                     type="checkbox"
@@ -296,8 +314,15 @@ function FarmLocations() {
                   />
                   Active
                 </label>
-              )}
-            </FormSection>
+                ) : null,
+              }}
+              coreValues={form}
+              custom={form.custom}
+              onCustomChange={setCustom}
+              locationId={editing ? editing.id || editing._id : null}
+              core={{ siteType: form.siteType }}
+              idPrefix="loc-cf"
+            />
             <FormActions>
               <Button type="button" variant="secondary" onClick={reset}>
                 Cancel

@@ -407,7 +407,7 @@ const UserManagement = () => {
                         {user.active === false ? (
                           <span className="text-signal font-medium">Inactive</span>
                         ) : user.mustChangePassword ? (
-                          <span className="text-amber-700 dark:text-amber-300 font-medium">Must change password</span>
+                          <span className="text-warn font-medium">Must change password</span>
                         ) : (
                           <span className="text-kelp font-medium">Active</span>
                         )}

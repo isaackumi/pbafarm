@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { AlertCircle } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
-import stockingService from '../lib/stockingService'
+import { useLocation } from '../contexts/LocationContext'
+import { useOptionalQuery } from '../hooks/useOptionalQuery'
+import { topupCreateArgs } from '../lib/recordArgs'
 import { useToast } from './Toast'
 import DependencyEmpty from './DependencyEmpty'
 import PersonPicker from './PersonPicker'
@@ -32,6 +34,8 @@ const TOPUP_DEFAULTS = {
   notes: '',
 }
 
+const idOf = (x) => x?.id || x?._id
+
 const TopUpForm = ({ onComplete }) => {
   const router = useRouter()
   const { user } = useAuth()
@@ -39,55 +43,58 @@ const TopUpForm = ({ onComplete }) => {
   const settingsData = useQuery(api.companies.getEffectiveSettings)
   const rules = settingsData?.settings
 
+  const { locationArgs } = useLocation()
+  const stockingsResult = useQuery(api.stocking.listStockingHistory, user ? locationArgs : 'skip')
+  const cagesResult = useQuery(api.cages.list, user ? locationArgs : 'skip')
+  const createTopup = useMutation(api.stocking.createTopup)
+
   const [loading, setLoading] = useState(false)
-  const [fetchingData, setFetchingData] = useState(true)
-  const [activeStockings, setActiveStockings] = useState([])
   const [error, setError] = useState('')
-  const [selectedStocking, setSelectedStocking] = useState(null)
   const [warn, setWarn] = useState([])
   const { formData, handleChange, clear, setFormData } = usePersistedForm(
     'topup-create',
     TOPUP_DEFAULTS,
   )
+  const fetchingData = stockingsResult === undefined || cagesResult === undefined
 
-  useEffect(() => {
-    async function fetchStockings() {
-      setFetchingData(true)
-      try {
-        const { data, error: fetchError } = await stockingService.getActiveStockings()
-        if (fetchError) throw fetchError
-        setActiveStockings(data || [])
-      } catch (err) {
-        console.error('Error fetching active stockings:', err)
-        setError('Failed to load active stockings. Please try again.')
-        showToast('error', 'Failed to load active stockings')
-      } finally {
-        setFetchingData(false)
-      }
+  const cageById = useMemo(
+    () => new Map((cagesResult || []).map((c) => [idOf(c), c])),
+    [cagesResult],
+  )
+  const withCage = useCallback(
+    (s) => {
+      const cage = cageById.get(s.cage_id || s.cageId) || null
+      return { ...s, id: idOf(s), cage, cage_name: cage?.name }
+    },
+    [cageById],
+  )
+
+  // Approved batches in cages that are still active.
+  const activeStockings = useMemo(() => {
+    const activeCageIds = new Set(
+      (cagesResult || []).filter((c) => c.status === 'active').map(idOf),
+    )
+    return (stockingsResult || [])
+      .filter((s) => s.status === 'approved' && activeCageIds.has(s.cage_id || s.cageId))
+      .map(withCage)
+  }, [stockingsResult, cagesResult, withCage])
+
+  const topups = useOptionalQuery(
+    api.stocking.listTopupHistory,
+    formData.stocking_id ? { stockingId: formData.stocking_id } : 'skip',
+    [],
+  )
+  const selectedStocking = useMemo(() => {
+    if (!formData.stocking_id) return null
+    const stocking = (stockingsResult || []).find((s) => idOf(s) === formData.stocking_id)
+    if (!stocking) return null
+    return {
+      ...withCage(stocking),
+      topups: (topups || []).filter(
+        (t) => t.status === 'approved' || t.status === 'pending_approval',
+      ),
     }
-
-    fetchStockings()
-  }, [showToast])
-
-  useEffect(() => {
-    async function fetchStockingDetails(id) {
-      try {
-        const { data, error: fetchError } = await stockingService.getStockingById(id)
-        if (fetchError) throw fetchError
-        setSelectedStocking(data)
-      } catch (err) {
-        console.error('Error fetching stocking details:', err)
-        setError('Failed to load stocking details')
-        showToast('error', 'Failed to load stocking details')
-      }
-    }
-
-    if (formData.stocking_id) {
-      fetchStockingDetails(formData.stocking_id)
-    } else {
-      setSelectedStocking(null)
-    }
-  }, [formData.stocking_id, showToast])
+  }, [formData.stocking_id, stockingsResult, withCage, topups])
 
   useEffect(() => {
     if (!rules) return
@@ -135,8 +142,8 @@ const TopUpForm = ({ onComplete }) => {
         created_by: user?.id,
       }
 
-      const { data: result, error: createError } = await stockingService.createTopUp(data)
-      if (createError) throw createError
+      const id = await createTopup(topupCreateArgs(data))
+      const result = { id }
 
       showToast(
         'success',
@@ -215,28 +222,17 @@ const TopUpForm = ({ onComplete }) => {
                 createLabel="Create stocking"
                 secondaryHref="/approvals"
                 secondaryLabel="View approvals"
-                onCreated={async (result) => {
-                  setFetchingData(true)
-                  try {
-                    const { data, error: fetchError } =
-                      await stockingService.getActiveStockings()
-                    if (fetchError) throw fetchError
-                    setActiveStockings(data || [])
-                    if (result?.id) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        stocking_id: result.id,
-                      }))
-                    }
-                    showToast(
-                      'success',
-                      'Stocking created. If it needs approval, it will appear here after approval.',
-                    )
-                  } catch (err) {
-                    showToast('error', err.message || 'Failed to refresh batches')
-                  } finally {
-                    setFetchingData(false)
+                onCreated={(result) => {
+                  if (result?.id) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      stocking_id: result.id,
+                    }))
                   }
+                  showToast(
+                    'success',
+                    'Stocking created. If it needs approval, it will appear here after approval.',
+                  )
                 }}
               />
             )}

@@ -14,7 +14,7 @@ import { usePermission } from '../hooks/usePermission'
 
 function statusBadge(status) {
   if (status === 'approved') return 'bg-kelp/10 text-kelp'
-  if (status === 'pending_approval') return 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
+  if (status === 'pending_approval') return 'bg-warn/10 text-warn'
   if (status === 'rejected') return 'bg-signal/10 text-signal'
   return 'bg-foam-deep text-chart-ink'
 }

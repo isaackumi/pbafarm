@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import Link from 'next/link'
 import Layout from '../components/Layout'
 import ProtectedRoute from '../components/ProtectedRoute'
@@ -12,9 +13,11 @@ import {
   Input,
   Select,
   Button,
+  LoadingState,
 } from '../components/ui'
-import { cageService } from '../lib/cageService'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { api } from '../convex/_generated/api'
+import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import { localToday } from '../lib/format'
 
 const SIZE_CATEGORIES = [
@@ -28,9 +31,25 @@ const SIZE_CATEGORIES = [
   { category: 'Rej', range: '<200g' },
 ]
 
+const NO_CAGES = []
+
 function HarvestSamplingPage() {
-  const [cages, setCages] = useState([])
-  const [loading, setLoading] = useState(true)
+  return (
+    <ProtectedRoute>
+      <Layout title="Harvest Sampling">
+        <HarvestSampling />
+      </Layout>
+    </ProtectedRoute>
+  )
+}
+
+function HarvestSampling() {
+  const { user } = useAuth()
+  const { locationArgs } = useLocation()
+  const cagesResult = useQuery(api.cages.getActive, user ? locationArgs : 'skip')
+  const cages = cagesResult ?? NO_CAGES
+  const loading = cagesResult === undefined
+  const createFromSampling = useMutation(api.harvest.createFromSampling)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
@@ -43,13 +62,6 @@ function HarvestSamplingPage() {
   })
   const [doc, setDoc] = useState('')
   const [abw, setAbw] = useState('')
-
-  useEffect(() => {
-    cageService.getActiveCages().then(({ data }) => {
-      setCages(data || [])
-      setLoading(false)
-    })
-  }, [])
 
   useEffect(() => {
     const cage = cages.find((c) => (c.id || c._id) === form.cageId)
@@ -74,12 +86,11 @@ function HarvestSamplingPage() {
     setError('')
     setSaved('')
     try {
-      const client = getConvexHttpClient()
       const sizes = {}
       for (const [k, v] of Object.entries(form.sizes)) {
         if (v !== '' && v != null) sizes[k] = Number(v)
       }
-      await client.mutation(api.harvest.createFromSampling, {
+      await createFromSampling({
         cageId: form.cageId,
         date: form.date,
         weight: Number(form.weight),
@@ -108,169 +119,165 @@ function HarvestSamplingPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <Layout title="Harvest Sampling">
-        <FormPage width="full">
-          <PageHeader
-            showTitle={false}
-            breadcrumbs={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Harvest', href: '/harvest' },
-              { label: 'Sampling' },
-            ]}
-            description="Record a sample's weight and size mix before harvest. This does not record a harvest or change the cage's fish count. DOC and ABW calculate from the cage stocking date."
-            related={[
-              { label: 'Harvest', href: '/harvest' },
-              { label: 'Bi-weekly entry', href: '/biweekly-entry' },
-              { label: 'Cages', href: '/cages' },
-            ]}
-          />
+    <FormPage width="full">
+      <PageHeader
+        showTitle={false}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Harvest', href: '/harvest' },
+          { label: 'Sampling' },
+        ]}
+        description="Record a sample's weight and size mix before harvest. This does not record a harvest or change the cage's fish count. DOC and ABW calculate from the cage stocking date."
+        related={[
+          { label: 'Harvest', href: '/harvest' },
+          { label: 'Bi-weekly entry', href: '/biweekly-entry' },
+          { label: 'Cages', href: '/cages' },
+        ]}
+      />
 
-          {saved && (
-            <div
-              role="status"
-              className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3"
-            >
-              {saved}{' '}
-              <Link href="/harvest" className="font-medium underline-offset-2 hover:underline">
-                Go to Harvest
-              </Link>
-            </div>
-          )}
+      {saved && (
+        <div
+          role="status"
+          className="mb-5 text-sm text-kelp border border-kelp/20 bg-kelp/10 rounded-xl p-3"
+        >
+          {saved}{' '}
+          <Link href="/harvest" className="font-medium underline-offset-2 hover:underline">
+            Go to Harvest
+          </Link>
+        </div>
+      )}
 
-          {error && (
-            <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
-              {error}
-            </div>
-          )}
+      {error && (
+        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3">
+          {error}
+        </div>
+      )}
 
-          {loading ? (
-            <p className="text-muted font-data">Loading cages…</p>
-          ) : (
-            <FormCard
-              title="Sampling details"
-              subtitle="Enter sample totals, then optional size breakdown counts."
-            >
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <FormSection title="Cage & sample">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Field label="Cage" htmlFor="cageId" required>
-                      <Select
-                        id="cageId"
-                        required
-                        value={form.cageId}
-                        onChange={(e) =>
-                          setForm({ ...form, cageId: e.target.value })
-                        }
-                      >
-                        <option value="">Select cage</option>
-                        {cages.map((c) => (
-                          <option key={c.id || c._id} value={c.id || c._id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                    <Field label="Sample date" htmlFor="date" required>
-                      <Input
-                        id="date"
-                        type="date"
-                        required
-                        value={form.date}
-                        onChange={(e) =>
-                          setForm({ ...form, date: e.target.value })
-                        }
-                      />
-                    </Field>
-                    <Field label="Total weight (kg)" htmlFor="weight" required>
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="0.01"
-                        required
-                        value={form.weight}
-                        onChange={(e) =>
-                          setForm({ ...form, weight: e.target.value })
-                        }
-                        className="font-data"
-                      />
-                    </Field>
-                    <Field label="Fish count" htmlFor="fishCount" required>
-                      <Input
-                        id="fishCount"
-                        type="number"
-                        required
-                        value={form.fishCount}
-                        onChange={(e) =>
-                          setForm({ ...form, fishCount: e.target.value })
-                        }
-                        className="font-data"
-                      />
-                    </Field>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-6 rounded-xl bg-foam border border-foam-deep px-4 py-3 font-data text-sm">
-                    <div>
-                      <span className="text-muted">DOC</span>{' '}
-                      <span className="font-semibold text-lagoon-800">
-                        {doc || '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted">ABW (g)</span>{' '}
-                      <span className="font-semibold text-lagoon-800">
-                        {abw || '—'}
-                      </span>
-                    </div>
-                  </div>
-                </FormSection>
-
-                <FormSection
-                  title="Size breakdown"
-                  description="Optional counts per grade."
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {SIZE_CATEGORIES.map((s) => (
-                      <Field
-                        key={s.category}
-                        label={`${s.category}`}
-                        htmlFor={`size-${s.category}`}
-                        hint={s.range}
-                      >
-                        <Input
-                          id={`size-${s.category}`}
-                          type="number"
-                          value={form.sizes[s.category]}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              sizes: {
-                                ...form.sizes,
-                                [s.category]: e.target.value,
-                              },
-                            })
-                          }
-                          className="font-data"
-                        />
-                      </Field>
+      {loading ? (
+        <LoadingState label="Loading cages…" />
+      ) : (
+        <FormCard
+          title="Sampling details"
+          subtitle="Enter sample totals, then optional size breakdown counts."
+        >
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <FormSection title="Cage & sample">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="Cage" htmlFor="cageId" required>
+                  <Select
+                    id="cageId"
+                    required
+                    value={form.cageId}
+                    onChange={(e) =>
+                      setForm({ ...form, cageId: e.target.value })
+                    }
+                  >
+                    <option value="">Select cage</option>
+                    {cages.map((c) => (
+                      <option key={c.id || c._id} value={c.id || c._id}>
+                        {c.name}
+                      </option>
                     ))}
-                  </div>
-                </FormSection>
+                  </Select>
+                </Field>
+                <Field label="Sample date" htmlFor="date" required>
+                  <Input
+                    id="date"
+                    type="date"
+                    required
+                    value={form.date}
+                    onChange={(e) =>
+                      setForm({ ...form, date: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Total weight (kg)" htmlFor="weight" required>
+                  <Input
+                    id="weight"
+                    type="number"
+                    step="0.01"
+                    required
+                    value={form.weight}
+                    onChange={(e) =>
+                      setForm({ ...form, weight: e.target.value })
+                    }
+                    className="font-data"
+                  />
+                </Field>
+                <Field label="Fish count" htmlFor="fishCount" required>
+                  <Input
+                    id="fishCount"
+                    type="number"
+                    required
+                    value={form.fishCount}
+                    onChange={(e) =>
+                      setForm({ ...form, fishCount: e.target.value })
+                    }
+                    className="font-data"
+                  />
+                </Field>
+              </div>
 
-                <FormActions>
-                  <Button type="submit" disabled={saving} size="lg">
-                    {saving ? 'Saving…' : 'Save sampling'}
-                  </Button>
-                  <Button href="/harvest" variant="secondary">
-                    Cancel
-                  </Button>
-                </FormActions>
-              </form>
-            </FormCard>
-          )}
-        </FormPage>
-      </Layout>
-    </ProtectedRoute>
+              <div className="mt-5 flex flex-wrap gap-6 rounded-xl bg-foam border border-foam-deep px-4 py-3 font-data text-sm">
+                <div>
+                  <span className="text-muted">DOC</span>{' '}
+                  <span className="font-semibold text-lagoon-800">
+                    {doc || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted">ABW (g)</span>{' '}
+                  <span className="font-semibold text-lagoon-800">
+                    {abw || '—'}
+                  </span>
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Size breakdown"
+              description="Optional counts per grade."
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {SIZE_CATEGORIES.map((s) => (
+                  <Field
+                    key={s.category}
+                    label={`${s.category}`}
+                    htmlFor={`size-${s.category}`}
+                    hint={s.range}
+                  >
+                    <Input
+                      id={`size-${s.category}`}
+                      type="number"
+                      value={form.sizes[s.category]}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          sizes: {
+                            ...form.sizes,
+                            [s.category]: e.target.value,
+                          },
+                        })
+                      }
+                      className="font-data"
+                    />
+                  </Field>
+                ))}
+              </div>
+            </FormSection>
+
+            <FormActions>
+              <Button type="submit" disabled={saving} size="lg">
+                {saving ? 'Saving…' : 'Save sampling'}
+              </Button>
+              <Button href="/harvest" variant="secondary">
+                Cancel
+              </Button>
+            </FormActions>
+          </form>
+        </FormCard>
+      )}
+    </FormPage>
   )
 }
 

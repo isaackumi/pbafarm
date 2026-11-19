@@ -3,7 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, LoadingState } from '../components/ui'
+import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, LoadingState, Modal } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { errorMessage } from '../lib/errorMessage'
@@ -436,213 +436,182 @@ function BiweeklyRecordsBody() {
 
         {/* Details Modal */}
         {showDetails && selectedRecord && (
-          <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 modal-backdrop" onClick={() => setShowDetails(false)}></div>
-            <div className="relative bg-surface rounded-xl border border-foam-deep shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="px-4 py-3 border-b border-foam-deep">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display text-lg font-medium text-chart-ink">Record details</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowDetails(false)}
-                    aria-label="Close"
-                    className={ICON_BTN + ' text-muted hover:text-chart-ink'}
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+          <Modal onClose={() => setShowDetails(false)} title="Record details" size="4xl" showClose>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h4 className="text-sm font-semibold text-chart-ink mb-2">Record</h4>
+                <dl className="space-y-2">
+                  <div>
+                    <dt className="text-sm text-muted">Date</dt>
+                    <dd className="text-sm text-chart-ink">{format(new Date(selectedRecord.date), 'MMMM d, yyyy')}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted">Cage</dt>
+                    <dd className="text-sm text-chart-ink">{selectedRecord.cages?.name || 'Unknown'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted">Batch code</dt>
+                    <dd className="text-sm font-data text-chart-ink">{selectedRecord.batch_code}</dd>
+                  </div>
+                </dl>
               </div>
 
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h4 className="text-sm font-semibold text-chart-ink mb-2">Summary</h4>
+                <dl className="space-y-2">
                   <div>
-                    <h4 className="text-sm font-semibold text-chart-ink mb-2">Record</h4>
-                    <dl className="space-y-2">
-                      <div>
-                        <dt className="text-sm text-muted">Date</dt>
-                        <dd className="text-sm text-chart-ink">{format(new Date(selectedRecord.date), 'MMMM d, yyyy')}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-muted">Cage</dt>
-                        <dd className="text-sm text-chart-ink">{selectedRecord.cages?.name || 'Unknown'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-muted">Batch code</dt>
-                        <dd className="text-sm font-data text-chart-ink">{selectedRecord.batch_code}</dd>
-                      </div>
-                    </dl>
+                    <dt className="text-sm text-muted">Total fish count</dt>
+                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_fish_count.toLocaleString()}</dd>
                   </div>
-
                   <div>
-                    <h4 className="text-sm font-semibold text-chart-ink mb-2">Summary</h4>
-                    <dl className="space-y-2">
-                      <div>
-                        <dt className="text-sm text-muted">Total fish count</dt>
-                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_fish_count.toLocaleString()}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-muted">Total weight</dt>
-                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_weight.toFixed(2)}g</dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-muted">Average ABW</dt>
-                        <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
-                      </div>
-                    </dl>
+                    <dt className="text-sm text-muted">Total weight</dt>
+                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_weight.toFixed(2)}g</dd>
                   </div>
-                </div>
-
-                {selectedRecord.biweekly_sampling && selectedRecord.biweekly_sampling.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-chart-ink mb-3">Samples</h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-foam-deep">
-                        <thead className="bg-foam">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish count</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total weight</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted">Average ABW</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-surface divide-y divide-foam-deep">
-                          {selectedRecord.biweekly_sampling.map((sampling, index) => (
-                            <tr key={sampling.id}>
-                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.sampling_number}</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.fish_count}</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.total_weight.toFixed(2)}g</td>
-                              <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.average_body_weight.toFixed(2)}g</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <dt className="text-sm text-muted">Average ABW</dt>
+                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
                   </div>
-                )}
+                </dl>
               </div>
             </div>
-          </div>
+
+            {selectedRecord.biweekly_sampling && selectedRecord.biweekly_sampling.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-chart-ink mb-3">Samples</h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-foam-deep">
+                    <thead className="bg-foam">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish count</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total weight</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Average ABW</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-surface divide-y divide-foam-deep">
+                      {selectedRecord.biweekly_sampling.map((sampling, index) => (
+                        <tr key={sampling.id}>
+                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.sampling_number}</td>
+                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.fish_count}</td>
+                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.total_weight.toFixed(2)}g</td>
+                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.average_body_weight.toFixed(2)}g</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </Modal>
         )}
 
         {editRecord && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="absolute inset-0 modal-backdrop"
-              onClick={() => !saving && setEditRecord(null)}
-            />
-            <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
-              <h3 className="font-display text-lg font-medium text-chart-ink mb-4">
-                Edit bi-weekly record
-              </h3>
-              <form onSubmit={handleSaveEdit} className="space-y-3">
-                <Field label="Date" htmlFor="biweekly-date-2">
-                  <Input
-                    id="biweekly-date-2"
-                    type="date"
-                    required
-                    value={editForm.date}
-                    onChange={(e) =>
-                      setEditForm((p) => ({ ...p, date: e.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label="Batch code" htmlFor="biweekly-batch-code">
-                  <Input
-                    id="biweekly-batch-code"
-                    required
-                    value={editForm.batch_code}
-                    onChange={(e) =>
-                      setEditForm((p) => ({ ...p, batch_code: e.target.value }))
-                    }
-                    className="font-data"
-                  />
-                </Field>
-                <div className="grid grid-cols-3 gap-3">
-                  <Field label="ABW (g)" htmlFor="biweekly-abw-g">
-                    <Input
-                      id="biweekly-abw-g"
-                      type="number"
-                      step="any"
-                      required
-                      value={editForm.average_body_weight}
-                      onChange={(e) =>
-                        setEditForm((p) => ({
-                          ...p,
-                          average_body_weight: e.target.value,
-                        }))
-                      }
-                      className="tabular-nums"
-                    />
-                  </Field>
-                  <Field label="Fish" htmlFor="biweekly-fish">
-                    <Input
-                      id="biweekly-fish"
-                      type="number"
-                      required
-                      value={editForm.total_fish_count}
-                      onChange={(e) =>
-                        setEditForm((p) => ({
-                          ...p,
-                          total_fish_count: e.target.value,
-                        }))
-                      }
-                      className="tabular-nums"
-                    />
-                  </Field>
-                  <Field label="Weight" htmlFor="biweekly-weight">
-                    <Input
-                      id="biweekly-weight"
-                      type="number"
-                      step="any"
-                      required
-                      value={editForm.total_weight}
-                      onChange={(e) =>
-                        setEditForm((p) => ({
-                          ...p,
-                          total_weight: e.target.value,
-                        }))
-                      }
-                      className="tabular-nums"
-                    />
-                  </Field>
-                </div>
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={saving}
-                    onClick={() => setEditRecord(null)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? 'Saving…' : 'Save record'}
-                  </Button>
-                </div>
-              </form>
+          <Modal
+            onClose={() => setEditRecord(null)}
+            dismissible={!saving}
+            as="form"
+            onSubmit={handleSaveEdit}
+            title="Edit bi-weekly record"
+            bodyClassName="space-y-3"
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={saving}
+                  onClick={() => setEditRecord(null)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save record'}
+                </Button>
+              </>
+            }
+          >
+            <Field label="Date" htmlFor="biweekly-date-2">
+              <Input
+                id="biweekly-date-2"
+                type="date"
+                required
+                value={editForm.date}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, date: e.target.value }))
+                }
+              />
+            </Field>
+            <Field label="Batch code" htmlFor="biweekly-batch-code">
+              <Input
+                id="biweekly-batch-code"
+                required
+                value={editForm.batch_code}
+                onChange={(e) =>
+                  setEditForm((p) => ({ ...p, batch_code: e.target.value }))
+                }
+                className="font-data"
+              />
+            </Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="ABW (g)" htmlFor="biweekly-abw-g">
+                <Input
+                  id="biweekly-abw-g"
+                  type="number"
+                  step="any"
+                  required
+                  value={editForm.average_body_weight}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      average_body_weight: e.target.value,
+                    }))
+                  }
+                  className="tabular-nums"
+                />
+              </Field>
+              <Field label="Fish" htmlFor="biweekly-fish">
+                <Input
+                  id="biweekly-fish"
+                  type="number"
+                  required
+                  value={editForm.total_fish_count}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      total_fish_count: e.target.value,
+                    }))
+                  }
+                  className="tabular-nums"
+                />
+              </Field>
+              <Field label="Weight" htmlFor="biweekly-weight">
+                <Input
+                  id="biweekly-weight"
+                  type="number"
+                  step="any"
+                  required
+                  value={editForm.total_weight}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      total_weight: e.target.value,
+                    }))
+                  }
+                  className="tabular-nums"
+                />
+              </Field>
             </div>
-          </div>
+          </Modal>
         )}
 
         {deleteRecord && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="absolute inset-0 modal-backdrop"
-              onClick={() => !deleting && setDeleteRecord(null)}
-            />
-            <div className="relative bg-surface rounded-xl shadow-xl max-w-md w-full p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-6 h-6 text-signal" />
-                <h3 className="font-display text-lg font-medium text-chart-ink">Delete record</h3>
-              </div>
-              <p className="text-sm text-muted mb-5">
-                Delete batch{' '}
-                <span className="font-semibold text-chart-ink">{deleteRecord.batch_code}</span> from{' '}
-                {deleteRecord.date}? This cannot be undone.
-              </p>
-              <div className="flex justify-end gap-3">
+          <Modal
+            onClose={() => setDeleteRecord(null)}
+            dismissible={!deleting}
+            role="alertdialog"
+            title="Delete record"
+            icon={<AlertTriangle className="w-6 h-6 text-signal" />}
+            footer={
+              <>
                 <Button
                   type="button"
                   variant="secondary"
@@ -659,9 +628,15 @@ function BiweeklyRecordsBody() {
                 >
                   {deleting ? 'Deleting…' : 'Delete record'}
                 </Button>
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          >
+            <p className="text-sm text-muted mb-5">
+              Delete batch{' '}
+              <span className="font-semibold text-chart-ink">{deleteRecord.batch_code}</span> from{' '}
+              {deleteRecord.date}? This cannot be undone.
+            </p>
+          </Modal>
         )}
       </>
   )

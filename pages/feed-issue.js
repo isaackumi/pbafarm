@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
-import { getConvexHttpClient, api } from '../lib/convexBridge'
+import { api } from '../convex/_generated/api'
 import DependencyEmpty from '../components/DependencyEmpty'
 import FeedTypeField from '../components/FeedTypeField'
 import LocationMetaField from '../components/LocationMetaField'
@@ -13,7 +13,6 @@ import {
   FormPage,
   FormCard,
   FormActions,
-  FormSection,
   Field,
   Input,
   Select,
@@ -21,13 +20,14 @@ import {
 } from '../components/ui'
 import { useLocation } from '../contexts/LocationContext'
 import { getActiveLocationId } from '../lib/locationScope'
-import { readReferenceData } from '../lib/referenceCache'
 import { localToday } from '../lib/format'
 import { cleanError } from '../lib/offlineOutbox'
 import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
 import OutboxPanel from '../components/OutboxPanel'
 import { usePermission } from '../hooks/usePermission'
+import { useReferenceList } from '../hooks/useReferenceList'
+import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
 
 export default function FeedIssuePage() {
   return (
@@ -41,13 +41,17 @@ export default function FeedIssuePage() {
 
 function FeedIssue() {
   const { showToast } = useToast()
-  const { hasRole, user } = useAuth()
+  const { user } = useAuth()
   const canOverride = usePermission('inventory.adjust')
-  const { activeLocationId } = useLocation()
+  const { activeLocationId, locationArgs } = useLocation()
   const online = useOnline()
-  const [feedTypes, setFeedTypes] = useState([])
-  const [cages, setCages] = useState([])
-  const [lookupsReady, setLookupsReady] = useState(false)
+  const layout = useFormLayout('inventory.feedIssue')
+  // Live lists, kept on the device so feed can be issued with no signal (MOBILE-003).
+  const feedList = useReferenceList('feedTypes', api.feed.listFeedTypes, {})
+  const cageList = useReferenceList('cages', api.cages.getActive, locationArgs)
+  const feedTypes = feedList.list
+  const cages = cageList.list
+  const lookupsReady = feedList.ready && cageList.ready
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     feedTypeId: '',
@@ -59,31 +63,6 @@ function FeedIssue() {
     allowNegative: false,
     overrideReason: '',
   })
-
-  const loadLookups = async () => {
-    const client = getConvexHttpClient()
-    const [types, cageList] = await Promise.all([
-      client.query(api.feed.listFeedTypes, {}),
-      client.query(api.cages.getActive, {}),
-    ])
-    setFeedTypes(types || [])
-    setCages(cageList || [])
-    setLookupsReady(true)
-  }
-
-  useEffect(() => {
-    loadLookups().catch((e) => {
-      // No signal: the lists daily entry saved for this user last time.
-      const cached = readReferenceData(user?.id, getActiveLocationId())
-      if (cached) {
-        setFeedTypes(cached.feedTypes || [])
-        setCages(cached.cages || [])
-      } else {
-        showToast('error', cleanError(e))
-      }
-      setLookupsReady(true)
-    })
-  }, [showToast, user?.id])
 
   const selected = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)
   const bagSize = selected?.bag_size_kg || 25
@@ -111,13 +90,14 @@ function FeedIssue() {
     setSaving(true)
     try {
       if (!form.feedTypeId) throw new Error('Select a feed type')
+      const hidden = hiddenCoreKeys(layout.sections, form)
       const payload = {
         feedTypeId: form.feedTypeId,
-        cageId: form.cageId || undefined,
+        cageId: (!hidden.has('cageId') && form.cageId) || undefined,
         quantity: form.quantityKg ? Number(form.quantityKg) : undefined,
         bags: form.bags ? Number(form.bags) : undefined,
         usageDate: form.usageDate,
-        notes: form.notes || undefined,
+        notes: (!hidden.has('notes') && form.notes) || undefined,
         allowNegative: form.allowNegative || undefined,
         overrideReason: form.overrideReason || undefined,
         locationId:
@@ -155,6 +135,99 @@ function FeedIssue() {
     }
   }
 
+  const layoutFields = {
+    feedTypeId: (
+      <FeedTypeField
+        id="feedTypeId"
+        name="feedTypeId"
+        value={form.feedTypeId}
+        onChange={onChange}
+        feedTypes={feedTypes}
+        ready={lookupsReady}
+        required
+        emptyMessage="Issue feed needs at least one feed type on the catalog."
+        onCreated={(result) => {
+          if (result?.id) {
+            setForm((p) => ({ ...p, feedTypeId: result.id }))
+          }
+        }}
+      />
+    ),
+    cageId: (
+      <Field label="Cage (optional)" htmlFor="cageId">
+        <Select id="cageId" name="cageId" value={form.cageId} onChange={onChange}>
+          <option value="">None</option>
+          {cages.map((c) => (
+            <option key={c.id || c._id} value={c.id || c._id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+        {form.cageId && (
+          <p className="mt-2 text-sm text-chart-ink bg-foam border border-foam-deep rounded-lg px-3 py-2">
+            Issuing to a cage moves the feed from the store to that cage&apos;s feed bin. It is not
+            counted as eaten: the daily entry records what the fish ate, takes it from the bin
+            first, and only counts towards FCR.
+          </p>
+        )}
+        {cageList.ready && cages.length === 0 && (
+          <DependencyEmpty
+            message="No active cages yet — you can still issue without a cage, or stock one first."
+            createKind="stocking"
+            createLabel="Create stocking"
+            secondaryCreateKind="cage"
+            secondaryCreateLabel="Create a cage"
+          />
+        )}
+      </Field>
+    ),
+    usageDate: (
+      <Field label="Date" htmlFor="usageDate" required>
+        <Input
+          id="usageDate"
+          name="usageDate"
+          type="date"
+          value={form.usageDate}
+          onChange={onChange}
+          required
+        />
+      </Field>
+    ),
+    bags: (
+      <Field label="Bags" htmlFor="bags">
+        <Input
+          id="bags"
+          name="bags"
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.bags}
+          onChange={onChange}
+          className="font-data"
+        />
+      </Field>
+    ),
+    quantityKg: (
+      <Field label="Kilograms" htmlFor="quantityKg" hint={`Bag size: ${bagSize} kg`}>
+        <Input
+          id="quantityKg"
+          name="quantityKg"
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.quantityKg}
+          onChange={onChange}
+          className="font-data"
+        />
+      </Field>
+    ),
+    notes: (
+      <Field label="Optional notes" htmlFor="notes">
+        <Textarea id="notes" name="notes" value={form.notes} onChange={onChange} rows={2} />
+      </Field>
+    ),
+  }
+
   return (
     <FormPage data-tour="page-feed-issue">
       <PageHeader
@@ -178,129 +251,24 @@ function FeedIssue() {
       >
         <OutboxPanel compact online={online} kinds={['feed-issue']} />
         <form onSubmit={submit} className="space-y-8">
-          <FormSection title="What & where">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <LocationMetaField />
-              </div>
-              <FeedTypeField
-                id="feedTypeId"
-                name="feedTypeId"
-                value={form.feedTypeId}
-                onChange={onChange}
-                feedTypes={feedTypes}
-                ready={lookupsReady}
-                required
-                fieldClassName="md:col-span-2"
-                emptyMessage="Issue feed needs at least one feed type on the catalog."
-                onFeedTypesChanged={loadLookups}
-                onCreated={(result) => {
-                  loadLookups()
-                  if (result?.id) {
-                    setForm((p) => ({ ...p, feedTypeId: result.id }))
-                  }
-                }}
-              />
-              <Field label="Cage (optional)" htmlFor="cageId">
-                <Select
-                  id="cageId"
-                  name="cageId"
-                  value={form.cageId}
-                  onChange={onChange}
-                >
-                  <option value="">None</option>
-                  {cages.map((c) => (
-                    <option key={c.id || c._id} value={c.id || c._id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-                {form.cageId && (
-                  <p className="mt-2 text-sm text-sky-900 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
-                    Issuing to a cage moves the feed from the store to that
-                    cage&apos;s feed bin. It is not counted as eaten: the daily
-                    entry records what the fish ate, takes it from the bin
-                    first, and only counts towards FCR.
-                  </p>
-                )}
-                {lookupsReady && cages.length === 0 && (
-                  <DependencyEmpty
-                    message="No active cages yet — you can still issue without a cage, or stock one first."
-                    createKind="stocking"
-                    createLabel="Create stocking"
-                    secondaryCreateKind="cage"
-                    secondaryCreateLabel="Create a cage"
-                    onCreated={() => loadLookups()}
-                  />
-                )}
-              </Field>
-              <Field label="Date" htmlFor="usageDate" required>
-                <Input
-                  id="usageDate"
-                  name="usageDate"
-                  type="date"
-                  value={form.usageDate}
-                  onChange={onChange}
-                  required
-                />
-              </Field>
-            </div>
-          </FormSection>
-
-          <FormSection title="Quantity">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Field label="Bags" htmlFor="bags">
-                <Input
-                  id="bags"
-                  name="bags"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.bags}
-                  onChange={onChange}
-                  className="font-data"
-                />
-              </Field>
-              <Field
-                label="Kilograms"
-                htmlFor="quantityKg"
-                hint={`Bag size: ${bagSize} kg`}
-              >
-                <Input
-                  id="quantityKg"
-                  name="quantityKg"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.quantityKg}
-                  onChange={onChange}
-                  className="font-data"
-                />
-              </Field>
-            </div>
-          </FormSection>
-
-          <FormSection title="Notes">
-            <Field label="Optional notes" htmlFor="notes">
-              <Textarea
-                id="notes"
-                name="notes"
-                value={form.notes}
-                onChange={onChange}
-                rows={2}
-              />
-            </Field>
-          </FormSection>
+          <LocationMetaField />
+          <FormLayout
+            formKey="inventory.feedIssue"
+            layout={layout}
+            fields={layoutFields}
+            coreValues={form}
+            idPrefix="fi-cf"
+          />
 
           {canOverride && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <div className="rounded-xl border border-warn/30 bg-warn/10 p-4 space-y-3">
               <label className="flex items-center gap-2 text-sm font-medium text-chart-ink">
                 <input
                   type="checkbox"
                   name="allowNegative"
                   checked={form.allowNegative}
                   onChange={onChange}
-                  className="rounded border-zinc-300"
+                  className="rounded border-input-border"
                 />
                 Admin override (allow insufficient stock)
               </label>
