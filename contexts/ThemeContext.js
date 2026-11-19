@@ -5,7 +5,9 @@ const ThemeContext = createContext()
 export const CONTRAST_KEY = 'pbafarm:contrast'
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState('light')
+  // Dark is the default (Paper redesign); pages/_document.js applies the saved
+  // choice before paint so there is no flash.
+  const [theme, setTheme] = useState('dark')
   const [systemTheme, setSystemTheme] = useState('light')
   // Outdoor mode (UX-006): 'high' contrast for bright sun, kept per device.
   const [contrast, setContrastState] = useState('normal')
@@ -51,8 +53,13 @@ export function ThemeProvider({ children }) {
 
   // Load saved theme preference and apply to <html>
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    const next = savedTheme || systemTheme
+    let savedTheme = null
+    try {
+      savedTheme = localStorage.getItem('theme')
+    } catch {
+      // storage blocked
+    }
+    const next = savedTheme === 'light' ? 'light' : 'dark'
     setTheme(next)
     if (typeof document !== 'undefined') {
       const dark = next === 'dark'
@@ -60,17 +67,24 @@ export function ThemeProvider({ children }) {
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
       document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
     }
-  }, [systemTheme])
+  }, [])
 
   // Update theme — apply class immediately for user preference
   const updateTheme = (newTheme) => {
     setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
+    try {
+      localStorage.setItem('theme', newTheme)
+    } catch {
+      // storage blocked: applies for this visit only
+    }
     if (typeof document !== 'undefined') {
       const dark = newTheme === 'dark'
       document.documentElement.classList.toggle('dark', dark)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
       document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', dark ? '#0a0b0c' : '#f5f6f7')
     }
   }
 

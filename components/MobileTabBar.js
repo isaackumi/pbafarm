@@ -26,7 +26,7 @@ export default function MobileTabBar({ onOpenMenu }) {
   return (
     <nav
       aria-label={t('nav.quickNavigation')}
-      className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-foam-deep bg-surface pb-[env(safe-area-inset-bottom)]"
+      className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"
     >
       <ul
         className="grid"
@@ -40,13 +40,13 @@ export default function MobileTabBar({ onOpenMenu }) {
               <Link
                 href={path}
                 aria-current={active ? 'page' : undefined}
-                className={`flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors focus:outline-none focus-visible:bg-foam ${
-                  active ? 'text-chart-ink font-medium' : 'text-muted'
+                className={`flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors focus:outline-none focus-visible:bg-surface-2 ${
+                  active ? 'text-text font-medium' : 'text-muted'
                 }`}
               >
                 <span
-                  className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                    active ? 'bg-foam-deep' : ''
+                  className={`flex h-7 w-12 items-center justify-center rounded-pill transition-colors ${
+                    active ? 'bg-button text-button-text' : ''
                   }`}
                 >
                   <Icon size={18} aria-hidden />
@@ -60,7 +60,7 @@ export default function MobileTabBar({ onOpenMenu }) {
           <button
             type="button"
             onClick={onOpenMenu}
-            className="flex h-16 w-full flex-col items-center justify-center gap-1 text-xs text-muted focus:outline-none focus-visible:bg-foam"
+            className="flex h-16 w-full flex-col items-center justify-center gap-1 text-xs text-muted focus:outline-none focus-visible:bg-surface-2"
           >
             <span className="flex h-7 w-12 items-center justify-center">
               <Menu size={18} aria-hidden />
