@@ -630,6 +630,114 @@
       "rejectFailed": "Could not reject the request"
     }
   },
+  "compliancePage": {
+    "title": "Compliance",
+    "eyebrow": "Compliance · {site}",
+    "thisSite": "this site",
+    "startChecklist": "Start checklist",
+    "logEntry": "Log entry",
+    "noSite": "No site selected",
+    "noSiteHint": "Create or pick a farm site first.",
+    "kpi": {
+      "checklists": "Checklists due now",
+      "doneOf": "{done} of {total} done",
+      "findings": "Open findings",
+      "last30": "last 30 days",
+      "holds": "Withdrawal holds",
+      "cagesN": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "biosecurity": "Biosecurity entries"
+    },
+    "log": "Biosecurity log",
+    "logFilter": "Filter the log",
+    "tab": {
+      "all": "All",
+      "issues": "Issues",
+      "checklists": "Checklists",
+      "biosecurity": "Biosecurity"
+    },
+    "search": "Search checks or people",
+    "logEmpty": "Nothing logged at this site yet.",
+    "col": {
+      "when": "When",
+      "check": "Check",
+      "by": "By",
+      "result": "Result"
+    },
+    "passed": "Pass",
+    "issuesN": {
+      "one": "{count} issue",
+      "other": "{count} issues"
+    },
+    "logged": "Logged",
+    "controlsMissed": "Entry controls missed",
+    "findings": "Open findings",
+    "noFindings": "No failed checks in the last 30 days.",
+    "more": "+{n} more",
+    "holds": "Withdrawal holds",
+    "harvestBlocked": "Harvest blocked",
+    "noHolds": "No cage is in a withdrawal period.",
+    "clears": "Clears {date}",
+    "checklists": "Checklists",
+    "dueN": {
+      "one": "{count} due",
+      "other": "{count} due"
+    },
+    "allOff": "Every checklist is switched off.",
+    "noChecklists": "No checklists yet",
+    "noChecklistsHint": "Start with the standard ones: daily biosecurity, weekly net inspection and monthly water quality review.",
+    "addStandard": "Add standard checklists",
+    "added": {
+      "one": "{count} checklist added",
+      "other": "{count} checklists added"
+    },
+    "itemsN": {
+      "one": "{count} item",
+      "other": "{count} items"
+    },
+    "doneOn": "done {date}",
+    "lastDone": "last done {date}",
+    "done": "Done",
+    "doneIssues": "Done with issues",
+    "complete": "Complete",
+    "due": "Due",
+    "freq": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "pickTitle": "Which checklist?",
+    "saveChecklist": "Save checklist",
+    "saved": "Checklist saved",
+    "savedIssues": "Checklist saved with issues",
+    "saveFailed": "Could not save the checklist",
+    "date": "Date",
+    "items": "Items",
+    "ok": "OK",
+    "notOk": "Not OK",
+    "whatWrong": "What was wrong and what was done",
+    "whatWrongFor": "What was wrong: {item}",
+    "newEntry": "New biosecurity entry",
+    "entryLogged": "Entry logged",
+    "entryFailed": "Could not log the entry",
+    "type": "Type",
+    "kind": {
+      "visitor": "Visitor",
+      "vehicle": "Vehicle",
+      "disinfection": "Disinfection",
+      "other": "Other"
+    },
+    "driver": "Driver",
+    "name": "Name",
+    "organisation": "Organisation",
+    "vehicle": "Vehicle registration",
+    "purpose": "Purpose",
+    "area": "Area or equipment",
+    "disinfectant": "Disinfectant and strength",
+    "entryControls": "Footbath, wheel dip and hand wash done on entry"
+  },
   "gradingPage": {
     "title": "Grading",
     "eyebrow": "Production · Sort by size, split into cages",

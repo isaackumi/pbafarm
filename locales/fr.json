@@ -630,6 +630,114 @@
       "rejectFailed": "Impossible de refuser la demande"
     }
   },
+  "compliancePage": {
+    "title": "Conformité",
+    "eyebrow": "Conformité · {site}",
+    "thisSite": "ce site",
+    "startChecklist": "Démarrer une liste",
+    "logEntry": "Ajouter une entrée",
+    "noSite": "Aucun site sélectionné",
+    "noSiteHint": "Créez ou choisissez d'abord un site.",
+    "kpi": {
+      "checklists": "Listes à faire",
+      "doneOf": "{done} sur {total} faites",
+      "findings": "Constats ouverts",
+      "last30": "30 derniers jours",
+      "holds": "Délais d'attente",
+      "cagesN": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "biosecurity": "Entrées de biosécurité"
+    },
+    "log": "Registre de biosécurité",
+    "logFilter": "Filtrer le registre",
+    "tab": {
+      "all": "Tout",
+      "issues": "Problèmes",
+      "checklists": "Listes",
+      "biosecurity": "Biosécurité"
+    },
+    "search": "Rechercher un contrôle ou une personne",
+    "logEmpty": "Rien n'a encore été enregistré sur ce site.",
+    "col": {
+      "when": "Quand",
+      "check": "Contrôle",
+      "by": "Par",
+      "result": "Résultat"
+    },
+    "passed": "Conforme",
+    "issuesN": {
+      "one": "{count} problème",
+      "other": "{count} problèmes"
+    },
+    "logged": "Enregistré",
+    "controlsMissed": "Contrôles d'entrée manqués",
+    "findings": "Constats ouverts",
+    "noFindings": "Aucun contrôle non conforme ces 30 derniers jours.",
+    "more": "+{n} autres",
+    "holds": "Délais d'attente",
+    "harvestBlocked": "Récolte bloquée",
+    "noHolds": "Aucune cage en délai d'attente.",
+    "clears": "Levé le {date}",
+    "checklists": "Listes de contrôle",
+    "dueN": {
+      "one": "{count} à faire",
+      "other": "{count} à faire"
+    },
+    "allOff": "Toutes les listes sont désactivées.",
+    "noChecklists": "Aucune liste de contrôle",
+    "noChecklistsHint": "Commencez par les listes standard : biosécurité quotidienne, inspection hebdomadaire des filets et revue mensuelle de la qualité de l'eau.",
+    "addStandard": "Ajouter les listes standard",
+    "added": {
+      "one": "{count} liste ajoutée",
+      "other": "{count} listes ajoutées"
+    },
+    "itemsN": {
+      "one": "{count} point",
+      "other": "{count} points"
+    },
+    "doneOn": "faite le {date}",
+    "lastDone": "dernière le {date}",
+    "done": "Faite",
+    "doneIssues": "Faite avec problèmes",
+    "complete": "Remplir",
+    "due": "À faire",
+    "freq": {
+      "daily": "Quotidienne",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuelle"
+    },
+    "pickTitle": "Quelle liste ?",
+    "saveChecklist": "Enregistrer la liste",
+    "saved": "Liste enregistrée",
+    "savedIssues": "Liste enregistrée avec problèmes",
+    "saveFailed": "Impossible d'enregistrer la liste",
+    "date": "Date",
+    "items": "Points",
+    "ok": "OK",
+    "notOk": "Non conforme",
+    "whatWrong": "Ce qui n'allait pas et ce qui a été fait",
+    "whatWrongFor": "Ce qui n'allait pas : {item}",
+    "newEntry": "Nouvelle entrée de biosécurité",
+    "entryLogged": "Entrée enregistrée",
+    "entryFailed": "Impossible d'enregistrer l'entrée",
+    "type": "Type",
+    "kind": {
+      "visitor": "Visiteur",
+      "vehicle": "Véhicule",
+      "disinfection": "Désinfection",
+      "other": "Autre"
+    },
+    "driver": "Chauffeur",
+    "name": "Nom",
+    "organisation": "Organisation",
+    "vehicle": "Immatriculation",
+    "purpose": "Motif",
+    "area": "Zone ou équipement",
+    "disinfectant": "Désinfectant et dosage",
+    "entryControls": "Pédiluve, rotoluve et lavage des mains faits à l'entrée"
+  },
   "gradingPage": {
     "title": "Calibrage",
     "eyebrow": "Production · Trier par taille, répartir en cages",
