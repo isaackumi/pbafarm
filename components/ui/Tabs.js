@@ -5,6 +5,9 @@ import { useRef } from 'react'
  * variant 'text' (default): text-link tabs in table headers (Paper 24 Sales).
  * 'underline': cyan underline on the active tab (Paper 44 tenant detail).
  * 'chip': small pills, active on surface-2 (Paper 42/45 filters).
+ * 'page': page-level tabs under a title (Paper 03 Cage detail, 12 My tasks):
+ *   14/18 labels 28px apart on a hairline, 12px under the label, the active
+ *   one underlined in the button colour.
  * A tab may carry `controls` (the id of the panel it shows).
  */
 const VARIANT = {
@@ -17,6 +20,13 @@ const VARIANT = {
     tab: (on) =>
       `-mb-px border-b-2 py-[14px] text-[14px] leading-[18px] ${
         on ? 'border-pearl-cyan font-medium text-text' : 'border-transparent text-muted hover:text-text'
+      }`,
+  },
+  page: {
+    list: 'gap-7 overflow-x-auto border-b border-line',
+    tab: (on) =>
+      `-mb-px border-b-2 pb-3 text-[14px] leading-[18px] ${
+        on ? 'border-button font-medium text-text' : 'border-transparent text-muted hover:text-text'
       }`,
   },
   chip: {

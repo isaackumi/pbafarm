@@ -105,7 +105,7 @@ function DayCell({ cell, events, today, tall, t, first }) {
       className={`flex min-w-0 grow basis-0 flex-col gap-[6px] p-2 ${tall ? 'min-h-[320px]' : 'min-h-[118px]'} ${first ? '' : 'border-l border-line'} ${cell.inMonth ? '' : 'bg-bg'}`}
     >
       <span
-        className={`flex size-[26px] shrink-0 items-center justify-center rounded-pill text-sm ${
+        className={`flex size-[26px] shrink-0 items-center justify-center rounded-pill text-[13px] leading-4 ${
           isToday ? 'bg-button font-medium text-button-text' : cell.inMonth ? 'text-text' : 'text-faint'
         }`}
         aria-current={isToday ? 'date' : undefined}
@@ -155,7 +155,7 @@ function Calendar() {
         )
       }
     >
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-[14px]">
             <h2 className="text-[20px] font-semibold capitalize leading-6 text-text" aria-live="polite">
@@ -178,6 +178,7 @@ function Calendar() {
             </div>
           </div>
           <Segmented
+            size="md"
             label={t('calendarUi.viewLabel')}
             value={view}
             onChange={setView}
