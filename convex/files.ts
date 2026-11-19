@@ -37,6 +37,7 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
 import { assertOwns, logAudit } from './lib/tenancy'
+import { assertSiteFilterInScope, rowInSiteScope, siteScopeOf } from './lib/scope'
 import { userError } from './lib/errors'
 import { randomToken, sha256Hex } from './lib/tokens'
 import { fileEntityType } from './schema'
@@ -121,6 +122,53 @@ async function ownedEntity(ctx: Ctx, user: Doc<'users'>, entityType: EntityType,
   return { companyId: doc.companyId, locationId: doc.locationId }
 }
 
+/**
+ * Site a custom-field photo is uploaded for (PERM-004): the record's site the
+ * client sends, which must be one of the caller's; without one, a site-limited
+ * member's active site (else their first), so the photo never lands outside
+ * their sites. Undefined (company-wide) only for an all-sites member.
+ */
+async function photoSite(
+  ctx: Ctx,
+  user: Doc<'users'>,
+  companyId: Id<'companies'>,
+  locationId: Id<'farmLocations'> | undefined,
+): Promise<Id<'farmLocations'> | undefined> {
+  if (locationId) {
+    const site = await ctx.db.get(locationId)
+    if (!site || site.companyId !== companyId) throw userError('NOT_FOUND', 'Site not found')
+    assertSiteFilterInScope(user, locationId)
+    return locationId
+  }
+  const scope = siteScopeOf(user)
+  if (!scope) return undefined
+  const active = user.activeLocationId
+  return active && scope.has(active) ? active : user.locationIds?.[0]
+}
+
+/**
+ * Whether the caller's site scope (PERM-004) covers a file. A file carries its
+ * record's site. A row without one falls back to its record (rows written
+ * before files recorded the site), and a record without a site is
+ * company-level, visible to all, as in rowInSiteScope. A custom-field photo
+ * without a site has no record to fall back to (it hangs off the field
+ * definition), so a site-limited member does not get it: legacy photos stay
+ * hidden from them until migrations:stampCustomFieldPhotoSites records their site.
+ */
+async function fileInSiteScope(
+  ctx: Ctx,
+  user: Doc<'users'>,
+  file: Doc<'files'>,
+  parent?: { locationId?: Id<'farmLocations'> } | null,
+): Promise<boolean> {
+  const scope = siteScopeOf(user)
+  if (!scope) return true
+  if (file.locationId) return scope.has(file.locationId)
+  if (file.entityType === 'customFieldDefs') return false
+  const record = parent !== undefined ? parent : await loadEntity(ctx, file.entityType, file.entityId)
+  return rowInSiteScope(scope, record)
+}
+
 function fileRow(f: Doc<'files'>) {
   return {
     id: f._id,
@@ -172,11 +220,15 @@ export const generateUploadUrl = mutation({
     /** The file's type and name; R2 uploads sign the type in (falls back to the name's extension). */
     contentType: v.optional(v.string()),
     name: v.optional(v.string()),
+    /** Custom-field photos only: the site of the record the photo is for. */
+    locationId: v.optional(v.id('farmLocations')),
   },
   returns: uploadResult,
-  handler: async (ctx, { entityType, entityId, sha256, contentType, name }) => {
+  handler: async (ctx, { entityType, entityId, sha256, contentType, name, locationId }) => {
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const owner = await ownedEntity(ctx, user, entityType, entityId)
+    const site =
+      entityType === 'customFieldDefs' ? await photoSite(ctx, user, owner.companyId, locationId) : undefined
     if (!isSha256Hex(sha256)) throw userError('VALIDATION', 'Invalid file checksum')
     const signer = filesProvider() === 'r2' ? r2SignerLayer() : undefined
     let mime: string | undefined
@@ -201,6 +253,7 @@ export const generateUploadUrl = mutation({
       entityId,
       status: 'pending',
       sha256: sha256.toLowerCase(),
+      ...(site ? { locationId: site } : {}),
       createdAt: now,
       expiresAt: now + CLAIM_WINDOW_MS,
     })
@@ -323,9 +376,11 @@ async function registerFile(
   },
 ): Promise<Id<'files'>> {
   const name = f.name.trim().slice(0, 200) || 'file'
+  // The record's site; a custom-field photo's comes from its upload binding.
+  const locationId = owner.locationId ?? upload.locationId
   const id = await ctx.db.insert('files', {
     companyId: owner.companyId,
-    locationId: owner.locationId,
+    locationId,
     entityType: f.entityType,
     entityId: f.entityId,
     provider: f.r2Key ? 'r2' : 'convex',
@@ -343,7 +398,7 @@ async function registerFile(
     tableName: 'files',
     recordId: id,
     newValues: { entityType: f.entityType, entityId: f.entityId, name, mime: f.mime, size: f.size },
-    locationId: owner.locationId,
+    locationId,
   })
   return id
 }
@@ -494,6 +549,8 @@ export const list = query({
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     const doc = await loadEntity(ctx, entityType, entityId)
     if (!doc?.companyId || user.companyId !== doc.companyId) return []
+    // A record on a site outside the member's scope is as good as missing (PERM-004).
+    if (!rowInSiteScope(siteScopeOf(user), doc)) return []
     const companyId = doc.companyId
     const rows = await ctx.db
       .query('files')
@@ -501,11 +558,13 @@ export const list = query({
         q.eq('companyId', companyId).eq('entityType', entityType).eq('entityId', entityId),
       )
       .take(FILES_PER_RECORD)
-    return rows.map(fileRow)
+    const visible = []
+    for (const f of rows) if (await fileInSiteScope(ctx, user, f, doc)) visible.push(f)
+    return visible.map(fileRow)
   },
 })
 
-/** A download path valid for a few minutes, only for the owning company's members. */
+/** A download path valid for a few minutes, only for the owning company's members on the file's site. */
 export const requestDownload = mutation({
   args: { fileId: v.id('files') },
   returns: v.object({ path: v.string(), expiresAt: v.number() }),
@@ -516,6 +575,8 @@ export const requestDownload = mutation({
     if (!file || !user.companyId || file.companyId !== user.companyId) {
       throw userError('NOT_FOUND', 'File not found')
     }
+    // ...and only on the member's sites (PERM-004), like assertOwns.
+    if (!(await fileInSiteScope(ctx, user, file))) throw userError('NOT_FOUND', 'File not found')
     const token = randomToken()
     const expiresAt = Date.now() + DOWNLOAD_TTL_MS
     await ctx.db.insert('fileDownloadTokens', {
@@ -536,6 +597,7 @@ export const remove = mutation({
     const { user } = await requireMember(ctx, { permission: 'files.upload' })
     const file = await ctx.db.get(fileId)
     assertOwns(user, file, 'File')
+    if (!(await fileInSiteScope(ctx, user, file))) throw userError('NOT_FOUND', 'File not found')
     // Your own attachment, or anyone's with production.records.delete.
     if (file.uploadedBy !== user._id) await assertUserCan(ctx, user, 'production.records.delete')
     await deleteFileBlobs(ctx, file)

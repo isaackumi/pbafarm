@@ -182,3 +182,50 @@ describe('assistant queries', () => {
     expect(JSON.stringify(theirs)).not.toContain('B2')
   })
 })
+
+describe('assistant site scope (PERM-004, audit C)', () => {
+  test('site-A members get no site-B cycles in insights, the LLM context or rollup reports', async () => {
+    const t = convexTest(schema, modules)
+    const now = Date.now()
+    const ids = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert('companies', { name: 'Lake', code: 'LAKE', status: 'approved', createdAt: now, settings: { aiAssistantEnabled: true } })
+      const siteA = await ctx.db.insert('farmLocations', { companyId, name: 'A', active: true, updatedAt: now })
+      const siteB = await ctx.db.insert('farmLocations', { companyId, name: 'B', active: true, updatedAt: now })
+      const mk = async (email: string, roleKey: 'owner' | 'manager' | 'field_staff', scoped: boolean, active: typeof siteA) => {
+        const userId = await ctx.db.insert('users', { email, role: roleKey === 'owner' ? 'admin' : 'user', companyId, activeLocationId: active, ...(scoped ? { locationIds: [siteA] } : {}) })
+        await ctx.db.insert('memberships', { userId, companyId, roleKey, allLocations: !scoped, ...(scoped ? { locationIds: [siteA] } : {}), status: 'active', updatedAt: now })
+        return userId
+      }
+      const owner = await mk('o@x.com', 'owner', false, siteB)
+      const manager = await mk('m@x.com', 'manager', true, siteA)
+      const field = await mk('f@x.com', 'field_staff', true, siteA)
+      const feedTypeId = await ctx.db.insert('feedTypes', { name: 'Grower', currentStock: 1000, minimumStock: 0, pricePerKg: 2, active: true, companyId, updatedAt: now })
+      const cage = await ctx.db.insert('cages', { name: 'SECRET-B2', status: 'empty', currentCount: 0, capacity: 100000, companyId, locationId: siteB, updatedAt: now })
+      return { siteB, owner, manager, field, feedTypeId, cage }
+    })
+    const asOwner = t.withIdentity({ subject: `${ids.owner}|s` })
+    const id = await asOwner.mutation(api.stocking.createStocking, { cageId: ids.cage, stockingDate: '2026-05-04', fishCount: 1000, initialAbw: 10, initialBiomass: 10 })
+    await asOwner.mutation(api.stocking.approveStocking, { id })
+    for (const [date, dead] of [['2026-05-06', 1], ['2026-05-13', 1], ['2026-05-20', 1], ['2026-05-27', 40]] as const) {
+      await asOwner.mutation(api.dailyRecords.create, { cageId: ids.cage, date, feedAmount: 10, feedTypeId: ids.feedTypeId, feedPrice: 2, feedCost: 20, mortality: dead })
+    }
+    await t.mutation(internal.rollups.processDirty, {})
+    const asField = t.withIdentity({ subject: `${ids.field}|s` })
+    const asManager = t.withIdentity({ subject: `${ids.manager}|s` })
+
+    expect(await asField.query(api.assistant.forDashboard, { asOf: '2026-05-31' })).toEqual([])
+    await expect(
+      asField.query(api.assistant.forDashboard, { asOf: '2026-05-31', locationId: ids.siteB }),
+    ).rejects.toThrow(/access to this site/)
+    const c = await asManager.query(api.assistant.context, { asOf: '2026-05-31', days: 30 })
+    expect(c.open_cycles).toEqual([])
+    expect((c as any).last_30_days).toEqual([])
+    expect(JSON.stringify(c)).not.toContain('SECRET')
+    expect(await asManager.query(api.reports.dailySeries, { from: '2026-05-01', to: '2026-05-31' })).toEqual([])
+    expect(await asManager.query(api.reports.productionOverview, {})).toMatchObject({ occupancies: 0, live_fish: 0 })
+
+    // The all-sites owner still sees the site-B cycle.
+    expect((await asOwner.query(api.assistant.forDashboard, { asOf: '2026-05-31' })).map((i) => i.kind)).toContain('mortality_spike')
+    expect(await asOwner.query(api.reports.productionOverview, {})).toMatchObject({ occupancies: 1, live_fish: 1000 - 43 })
+  })
+})

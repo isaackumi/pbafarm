@@ -1,7 +1,15 @@
 import { v } from 'convex/values'
 import { query, type QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { scopedRows, scopedRowsInRange, tenantScope } from './lib/scope'
+import {
+  assertSiteFilterInScope,
+  inSiteScope,
+  rollupRowsInSiteScope,
+  scopedRows,
+  scopedRowsInRange,
+  siteScopeOf,
+  tenantScope,
+} from './lib/scope'
 import { mergeSettings } from './lib/farmRules'
 import { splitExpenses } from './lib/costing'
 import { addDays, isBusinessDate } from './lib/dates'
@@ -34,7 +42,10 @@ function assertDate(value: string, label: string) {
   if (!isBusinessDate(value)) throw userError('VALIDATION', `${label} must be a date (YYYY-MM-DD)`)
 }
 
-/** Occupancies of the caller's company with fish on or after `from`. */
+/**
+ * Occupancies of the caller's company with fish on or after `from`, limited
+ * to the caller's sites (PERM-004). A `locationId` outside them is refused.
+ */
 export async function occupanciesSince(
   ctx: QueryCtx,
   user: Doc<'users'>,
@@ -43,13 +54,18 @@ export async function occupanciesSince(
 ): Promise<Stats[]> {
   const scope = tenantScope(user)
   if (scope.kind !== 'company') return []
+  assertSiteFilterInScope(user, locationId)
   const rows = await ctx.db
     .query('batchStats')
     .withIndex('by_companyId_and_lastDate', (q) =>
       q.eq('companyId', scope.companyId).gte('lastDate', from),
     )
     .take(MAX_OCCUPANCIES)
-  return locationId ? rows.filter((r) => r.locationId === locationId) : rows
+  return await rollupRowsInSiteScope(
+    ctx,
+    user,
+    locationId ? rows.filter((r) => r.locationId === locationId) : rows,
+  )
 }
 
 /** Unit and site names of the company. */
@@ -203,6 +219,7 @@ export const comparison = query({
               .take(10_000)
           ).filter((e) => !e.deletedAt && (!args.locationId || e.locationId === args.locationId))
         : []
+    const scopedExpenses = inSiteScope(user, expenses)
     const sales = await scopedRowsInRange(ctx, user, 'sales', {
       from: args.from,
       to: args.to,
@@ -215,7 +232,7 @@ export const comparison = query({
     const farm = noCosts()
     const siteOf = (r: CostRow) =>
       r.locationId ? String(r.locationId) : r.cageId ? String(n.unit.get(String(r.cageId))?.locationId ?? '') : ''
-    for (const e of expenses) {
+    for (const e of scopedExpenses) {
       const split = splitExpenses([e])
       const apply = (c: CostInputs) => {
         c.fingerlingCost += split.fingerlings
@@ -495,12 +512,17 @@ export const cycles = query({
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
+    assertSiteFilterInScope(user, args.locationId)
     const rows = (
-      await ctx.db
-        .query('batchStats')
-        .withIndex('by_companyId_and_lastDate', (q) => q.eq('companyId', scope.companyId))
-        .order('desc')
-        .take(args.locationId ? 500 : 100)
+      await rollupRowsInSiteScope(
+        ctx,
+        user,
+        await ctx.db
+          .query('batchStats')
+          .withIndex('by_companyId_and_lastDate', (q) => q.eq('companyId', scope.companyId))
+          .order('desc')
+          .take(args.locationId || siteScopeOf(user) ? 500 : 100),
+      )
     )
       .filter((r) => !args.locationId || r.locationId === args.locationId)
       .slice(0, 100)

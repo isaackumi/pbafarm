@@ -13,7 +13,7 @@ Status: proposed. Binding decisions: D-005 (central `requireMember`, permission 
 | Privileged functions | `backfillLocations` public cross-tenant; `seed.seedDemo`, `notifications.create` public; invite takeover; unverified invite claim | High–Medium | doc 07 V2–V4, V7 | TD-004, TD-007–TD-010 |
 | Authorization granularity | Three global roles; money edits open to all members | High (product) | doc 07 V9 | TD-016 |
 | Client-side only checks | `mustChangePassword`, route guards, location restriction | Medium | doc 07 §5 | TD-011, TD-018 |
-| Browser hardening | No CSP or frame protection; open redirect after login | Medium / Low | doc 12 §5.5; doc 07 V16 | TD-014, TD-022 |
+| Browser hardening | Frame protection and baseline CSP enforced; full CSP report-only (§6); open redirect after login | Medium / Low | doc 12 §5.5; doc 07 V16 | TD-014, TD-022 |
 | Shared devices | Outbox, drafts, caches, LLM keys not per user, not cleared | High | doc 12 §5.2 | TD-026 |
 | LLM | No rate limit, role gate or model allow-list; browser keys in plaintext | Medium | doc 07 V10 | TD-020, TD-021 |
 | Abuse | No app-level rate limiting; account enumeration | Medium / Low | doc 07 §4.3 | TD-024, TD-025 |
@@ -100,15 +100,17 @@ Super-admins reach a tenant only through an explicit act-as session (`convex/act
 
 ## 6. Web application hardening
 
-`next.config.mjs` `headers()` for all routes (static export still served by Vercel with headers):
+`next.config.mjs` `headers()` for all routes (in place since audit C, 2026-11-19; TD-022 headers part):
 
-| Header | Value (initial) |
+| Header | Value |
 |---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site; img-src 'self' data: blob: https://*.convex.cloud; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` — start as `Content-Security-Policy-Report-Only`, tighten after a week; `'unsafe-inline'` for styles only because of runtime brand colours (`CompanySettingsContext`); fonts become self-hosted (`08` §8) |
+| `Content-Security-Policy` (enforced) | `frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'` |
+| `Content-Security-Policy-Report-Only` | `default-src 'self'`; scripts from self, Cloudflare Turnstile (`https://challenges.cloudflare.com`) and `https://vercel.live`; `connect-src` self, Convex (`https://*.convex.cloud wss://*.convex.cloud https://*.convex.site`), R2 (`https://*.r2.cloudflarestorage.com`) and Vercel; `img-src` self, `data:`, `blob:`, Convex, R2; `style-src 'self' 'unsafe-inline'` (runtime brand colours, `CompanySettingsContext`); `frame-src` Turnstile; plus the enforced directives. Move to the enforced header after a week of clean reports |
 | `X-Frame-Options` | `DENY` (legacy browsers) |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `camera=(self), geolocation=(self), microphone=()` (camera for the QR scanner, geolocation for site coordinates) |
 | `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` |
+| `Permissions-Policy` | `camera=(self), microphone=(), geolocation=(), payment=(), usb=()` (camera for the QR scanner; geolocation is not used today) |
 
 Other rules: notification links must be relative paths (validated on insert, checked again before `router.push`); no `dangerouslySetInnerHTML` with stored data (lint rule); the CSV importer replaced by a quoted-field parser; `xlsx` parsing stays out of the app (dead `BulkUploadModal` removed), export only.
 

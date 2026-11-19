@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query, type QueryCtx } from './_generated/server'
 import type { Doc } from './_generated/dataModel'
-import { scopedRows, tenantScope } from './lib/scope'
+import { rollupRowsInSiteScope, scopedRows, tenantScope } from './lib/scope'
 import { addDays, isBusinessDate } from './lib/dates'
 import { userError } from './lib/errors'
 import { forecast, targetAbw, weekEnds, weeklySeries, type Stats } from './lib/analytics'
@@ -18,8 +18,8 @@ import { requireMember } from './lib/permissions'
 
 /**
  * Grounded insights and the assistant's context (Phase 13, ANLY-005), both
- * from the rollups, both scoped to the caller's company. The assistant never
- * gets more than these queries return to the same user.
+ * from the rollups, both scoped to the caller's company and sites (PERM-004).
+ * The assistant never gets more than these queries return to the same user.
  */
 
 const INSIGHT_WEEKS = 6
@@ -200,12 +200,16 @@ export const context = query({
     const from = addDays(args.asOf, -(days - 1))
     const daily =
       scope.kind === 'company'
-        ? await ctx.db
-            .query('unitDailyStats')
-            .withIndex('by_companyId_and_date', (q) =>
-              q.eq('companyId', scope.companyId).gte('date', from).lte('date', args.asOf),
-            )
-            .take(5000)
+        ? await rollupRowsInSiteScope(
+            ctx,
+            user,
+            await ctx.db
+              .query('unitDailyStats')
+              .withIndex('by_companyId_and_date', (q) =>
+                q.eq('companyId', scope.companyId).gte('date', from).lte('date', args.asOf),
+              )
+              .take(5000),
+          )
         : []
     const byDate = new Map<string, { date: string; feed_kg: number; deaths: number }>()
     for (const r of daily) {

@@ -2,7 +2,15 @@ import { v } from 'convex/values'
 import { query } from './_generated/server'
 import { listForCompany } from './lib/tenancy'
 import { isRealHarvest } from './lib/cycles'
-import { asOfDate, daysBefore, scopedRows, scopedRowsInRange, tenantScope } from './lib/scope'
+import {
+  asOfDate,
+  assertSiteFilterInScope,
+  daysBefore,
+  rollupRowsInSiteScope,
+  scopedRows,
+  scopedRowsInRange,
+  tenantScope,
+} from './lib/scope'
 import {
   cageExpenses,
   feedCostFromLedger,
@@ -1161,11 +1169,16 @@ async function openOccupancies(
 ) {
   const scope = tenantScope(user)
   if (scope.kind !== 'company') return []
+  assertSiteFilterInScope(user, locationId)
   const rows = await ctx.db
     .query('batchStats')
     .withIndex('by_companyId_and_open', (q) => q.eq('companyId', scope.companyId).eq('open', true))
     .take(2000)
-  return locationId ? rows.filter((r) => r.locationId === locationId) : rows
+  return await rollupRowsInSiteScope(
+    ctx,
+    user,
+    locationId ? rows.filter((r) => r.locationId === locationId) : rows,
+  )
 }
 
 /**
@@ -1222,13 +1235,18 @@ export const dailySeries = query({
     const { user } = await requireMember(ctx, { permission: 'reports.view' })
     const scope = tenantScope(user)
     if (scope.kind !== 'company') return []
-    const rows = await ctx.db
-      .query('unitDailyStats')
-      .withIndex('by_companyId_and_date', (q) => {
-        const c = q.eq('companyId', scope.companyId).gte('date', args.from)
-        return args.to ? c.lte('date', args.to) : c
-      })
-      .take(10_000)
+    assertSiteFilterInScope(user, args.locationId)
+    const rows = await rollupRowsInSiteScope(
+      ctx,
+      user,
+      await ctx.db
+        .query('unitDailyStats')
+        .withIndex('by_companyId_and_date', (q) => {
+          const c = q.eq('companyId', scope.companyId).gte('date', args.from)
+          return args.to ? c.lte('date', args.to) : c
+        })
+        .take(10_000),
+    )
     const byDate = new Map<
       string,
       { date: string; feed_kg: number; feed_cost: number; mortality: number }

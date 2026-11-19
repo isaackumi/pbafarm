@@ -1,6 +1,7 @@
 import type { QueryCtx, MutationCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { PaginationOptions, PaginationResult } from 'convex/server'
+import { userError } from './errors'
 
 /**
  * Company-scoped reads (PLAT-001).
@@ -55,6 +56,41 @@ export function rowInSiteScope(scope: ReadonlySet<string> | null, row: any): boo
 export function inSiteScope<T>(user: Doc<'users'>, rows: T[]): T[] {
   const scope = siteScopeOf(user)
   return scope ? rows.filter((r) => rowInSiteScope(scope, r)) : rows
+}
+
+/** Throw FORBIDDEN when a requested site filter is outside the caller's site scope. */
+export function assertSiteFilterInScope(
+  user: Doc<'users'>,
+  locationId: Id<'farmLocations'> | null | undefined,
+) {
+  const scope = siteScopeOf(user)
+  if (locationId && scope && !scope.has(locationId)) {
+    throw userError('FORBIDDEN', 'You do not have access to this site', { reason: 'SITE_FORBIDDEN' })
+  }
+}
+
+/**
+ * Rollup rows (batchStats, unitDailyStats) in the caller's site scope. A row
+ * written before it carried a site falls back to its unit's site; a unit with
+ * no site stays visible, as in rowInSiteScope.
+ */
+export async function rollupRowsInSiteScope<
+  T extends { locationId?: Id<'farmLocations'>; unitId: Id<'cages'> },
+>(ctx: Ctx, user: Doc<'users'>, rows: T[]): Promise<T[]> {
+  const scope = siteScopeOf(user)
+  if (!scope) return rows
+  const unitSite = new Map<string, Id<'farmLocations'> | undefined>()
+  const out: T[] = []
+  for (const r of rows) {
+    let site = r.locationId
+    if (!site) {
+      const key = String(r.unitId)
+      if (!unitSite.has(key)) unitSite.set(key, (await ctx.db.get(r.unitId))?.locationId)
+      site = unitSite.get(key)
+    }
+    if (!site || scope.has(site)) out.push(r)
+  }
+  return out
 }
 
 /** Tables with a `by_company` index on `companyId`. */

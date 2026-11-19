@@ -24,6 +24,7 @@ import { MAX_SCOPED_LOCATIONS, legacyRoleFromKey, roleKeyFromLegacy } from './li
 import { ORG_PROFILE_DEFAULTS } from './lib/orgProfile'
 import { nextLotCode } from './lib/traceability'
 import { seedTemplatesFor } from './lib/compliance'
+import { customEntityValidator } from './schema'
 
 /** Every table whose schema has an optional `companyId` (users handled separately). */
 export const UNSCOPED_TABLES = [
@@ -1021,5 +1022,61 @@ export const seedComplianceTemplates = internalMutation({
       if (keys.length) added.push({ companyId: company._id, keys })
     }
     return { dryRun, count: added.length, added, isDone: page.isDone, continueCursor: page.continueCursor }
+  },
+})
+
+/**
+ * Audit C (PERM-004) — record the site on custom-field photos uploaded before
+ * files carried one. A photo hangs off its field definition, so the site comes
+ * from the record that holds it (the site itself for farmLocations). Until a
+ * photo has a site, site-limited members cannot list or download it
+ * (files.fileInSiteScope). Pages through one entity's records; dryRun
+ * (default true) only reports. Idempotent: stamped photos are skipped. Run per
+ * entity until isDone:
+ *   npx convex run migrations:stampCustomFieldPhotoSites '{"entity":"dailyRecords","dryRun":true}'
+ *   npx convex run migrations:stampCustomFieldPhotoSites '{"entity":"dailyRecords","dryRun":false}'
+ *   (repeat with '"cursor":"<continueCursor>"' while isDone is false)
+ */
+export const stampCustomFieldPhotoSites = internalMutation({
+  args: {
+    entity: customEntityValidator,
+    dryRun: v.optional(v.boolean()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    dryRun: v.boolean(),
+    stamped: v.number(),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
+  handler: async (ctx, { entity, dryRun = true, cursor = null, batchSize = 200 }) => {
+    const page = await ctx.db
+      .query(entity)
+      .paginate({ numItems: Math.min(Math.max(batchSize, 1), 500), cursor })
+    let stamped = 0
+    for (const row of page.page) {
+      const rec = row as {
+        _id: string
+        companyId?: Id<'companies'>
+        locationId?: Id<'farmLocations'>
+        homeLocationId?: Id<'farmLocations'>
+        custom?: Record<string, unknown>
+      }
+      const site =
+        entity === 'farmLocations' ? (rec._id as Id<'farmLocations'>) : (rec.locationId ?? rec.homeLocationId)
+      if (!site || !rec.companyId || !rec.custom) continue
+      for (const value of Object.values(rec.custom)) {
+        if (typeof value !== 'string') continue
+        const fileId = ctx.db.normalizeId('files', value)
+        const file = fileId ? await ctx.db.get(fileId) : null
+        if (!file || file.locationId || file.entityType !== 'customFieldDefs' || file.companyId !== rec.companyId) {
+          continue
+        }
+        stamped++
+        if (!dryRun) await ctx.db.patch(file._id, { locationId: site })
+      }
+    }
+    return { dryRun, stamped, isDone: page.isDone, continueCursor: page.continueCursor }
   },
 })

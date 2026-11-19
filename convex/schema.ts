@@ -2539,6 +2539,11 @@ const schema = defineSchema({
    */
   files: defineTable({
     companyId: v.id('companies'),
+    /**
+     * Site of the owning record (PERM-004): the record's site, or for a
+     * custom-field photo the site of the record it is for. Unset on
+     * company-level records and on rows written before it was recorded.
+     */
     locationId: v.optional(v.id('farmLocations')),
     entityType: fileEntityType,
     entityId: v.string(),
@@ -2591,6 +2596,8 @@ const schema = defineSchema({
     r2Key: v.optional(v.string()),
     /** Content type signed into the R2 PUT. */
     contentType: v.optional(v.string()),
+    /** Site a custom-field photo is for (PERM-004); copied to files.locationId. */
+    locationId: v.optional(v.id('farmLocations')),
     createdAt: v.number(),
     expiresAt: v.number(),
   })
