@@ -3948,6 +3948,13 @@
       "eyebrow": "Ce téléphone",
       "cardTitle": "En attente d'envoi",
       "description": "Saisies enregistrées sans réseau. Elles partent d'elles-mêmes quand le téléphone retrouve le réseau ; chacune n'est écrite qu'une fois, même si elle est renvoyée."
+    },
+    "ai": {
+      "crumb": "Le copilote IA de votre ferme",
+      "providerTitle": "Fournisseur de modèle",
+      "usageTitle": "Utilisation",
+      "last30": "30 derniers jours",
+      "calls": "appels"
     }
   },
   "country": {

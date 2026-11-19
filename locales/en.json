@@ -3948,6 +3948,13 @@
       "eyebrow": "This phone",
       "cardTitle": "Waiting to send",
       "description": "Entries saved without signal. They send by themselves when the phone is back online; each is written once even if it is sent again."
+    },
+    "ai": {
+      "crumb": "Your farm's AI co-pilot",
+      "providerTitle": "Model provider",
+      "usageTitle": "Usage",
+      "last30": "Last 30 days",
+      "calls": "calls"
     }
   },
   "country": {
