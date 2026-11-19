@@ -48,7 +48,7 @@ export function customPayload(values) {
   return Object.keys(out).length ? out : undefined
 }
 
-function PhotoInput({ def, value, onChange, id }) {
+function PhotoInput({ def, value, onChange, id, locationId }) {
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const attach = useMutation(api.files.attach)
   const attachR2 = useAction(api.files.attachR2)
@@ -68,6 +68,7 @@ function PhotoInput({ def, value, onChange, id }) {
         file,
         entityType: 'customFieldDefs',
         entityId: def._id,
+        locationId: locationId || undefined,
         fallbackType: 'image/jpeg',
         generateUploadUrl,
         attach,
@@ -106,7 +107,7 @@ function PhotoInput({ def, value, onChange, id }) {
   )
 }
 
-function FieldInput({ def, value, onChange, id, error }) {
+function FieldInput({ def, value, onChange, id, error, locationId }) {
   const common = { id, 'aria-invalid': error ? true : undefined }
   switch (def.type) {
     case 'long_text':
@@ -179,7 +180,7 @@ function FieldInput({ def, value, onChange, id, error }) {
       )
     }
     case 'photo':
-      return <PhotoInput def={def} value={value} onChange={onChange} id={id} />
+      return <PhotoInput def={def} value={value} onChange={onChange} id={id} locationId={locationId} />
     default:
       return (
         <Input
@@ -193,7 +194,7 @@ function FieldInput({ def, value, onChange, id, error }) {
 }
 
 /** One custom field with its label (the form-layout renderer places fields one by one). */
-export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', errorKey, className = '' }) {
+export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', errorKey, className = '', locationId }) {
   const id = `${idPrefix}-${def.key}`
   return (
     <Field
@@ -204,7 +205,7 @@ export function CustomFieldControl({ def, value, onChange, idPrefix = 'cf', erro
       error={errorKey === def.key ? 'Check this value' : undefined}
       className={className}
     >
-      <FieldInput def={def} value={value} onChange={onChange} id={id} error={errorKey === def.key} />
+      <FieldInput def={def} value={value} onChange={onChange} id={id} error={errorKey === def.key} locationId={locationId} />
     </Field>
   )
 }
@@ -259,7 +260,7 @@ export default function CustomFields({
               error={errorKey === def.key ? 'Check this value' : undefined}
               className={def.type === 'long_text' || def.type === 'multiselect' ? 'sm:col-span-2' : ''}
             >
-              <FieldInput def={def} value={values[def.key]} onChange={(v) => set(def.key, v)} id={id} error={errorKey === def.key} />
+              <FieldInput def={def} value={values[def.key]} onChange={(v) => set(def.key, v)} id={id} error={errorKey === def.key} locationId={locationId} />
             </Field>
           )
         })}

@@ -132,6 +132,15 @@ export async function validateCustom(
       file.entityId !== def._id
     ) {
       errors.push({ key: def.key, label: def.label, message: 'must be a photo uploaded for this field' })
+      continue
+    }
+    // The photo belongs to the record's site (PERM-004, files.fileInSiteScope).
+    const site = args.context?.locationId
+    if (!site) continue
+    if (file.locationId && file.locationId !== site) {
+      errors.push({ key: def.key, label: def.label, message: 'must be a photo uploaded for this site. Upload it again' })
+    } else if (!file.locationId && 'patch' in ctx.db) {
+      await (ctx as MutationCtx).db.patch(file._id, { locationId: site })
     }
   }
 

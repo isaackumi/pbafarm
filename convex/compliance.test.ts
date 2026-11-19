@@ -298,3 +298,93 @@ describe('document register', () => {
     })
   })
 })
+
+describe('document register site scope (PERM-004, audit C)', () => {
+  const hexSha = async (b: Uint8Array) =>
+    Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)), (x) => x.toString(16).padStart(2, '0')).join('')
+
+  async function sites() {
+    const t = convexTest(schema, modules)
+    rateLimiterTest.register(t)
+    const ids = await t.run(async (ctx) => {
+      const now = Date.now()
+      const companyId = await ctx.db.insert('companies', { name: 'Lake', code: 'LAKE', status: 'approved', createdAt: now })
+      const siteA = await ctx.db.insert('farmLocations', { companyId, name: 'A', active: true, updatedAt: now })
+      const siteB = await ctx.db.insert('farmLocations', { companyId, name: 'B', active: true, updatedAt: now })
+      const owner = await ctx.db.insert('users', { email: 'o@a.com', role: 'admin', companyId, activeLocationId: siteB })
+      await ctx.db.insert('memberships', { userId: owner, companyId, roleKey: 'owner', allLocations: true, status: 'active', updatedAt: now })
+      const field = await ctx.db.insert('users', { email: 'f@a.com', role: 'user', companyId, activeLocationId: siteA, locationIds: [siteA] })
+      await ctx.db.insert('memberships', { userId: field, companyId, roleKey: 'field_staff', allLocations: false, locationIds: [siteA], status: 'active', updatedAt: now })
+      const cageA = await ctx.db.insert('cages', { name: 'A1', status: 'active', companyId, locationId: siteA, updatedAt: now })
+      const cageB = await ctx.db.insert('cages', { name: 'B1', status: 'active', companyId, locationId: siteB, updatedAt: now })
+      const treatB = await ctx.db.insert('healthTreatments', { cageId: cageB, date: '2026-01-05', treatment: 'x', companyId, locationId: siteB, updatedAt: now })
+      const def = await ctx.db.insert('customFieldDefs', { companyId, entity: 'cages', key: 'net', label: 'Net photo', type: 'photo', required: false, sortOrder: 1, archived: false, updatedBy: owner, updatedAt: now })
+      const file = async (row: { locationId?: typeof siteA; entityType: 'customFieldDefs' | 'healthTreatments'; entityId: string }, body: string) =>
+        ctx.db.insert('files', { companyId, ...row, provider: 'convex', storageId: await ctx.storage.store(new Blob([body])), name: 'f', mime: 'image/jpeg', size: body.length, uploadedBy: owner, createdAt: now })
+      const photoA = await file({ locationId: siteA, entityType: 'customFieldDefs', entityId: def }, 'site-A photo')
+      const photoB = await file({ locationId: siteB, entityType: 'customFieldDefs', entityId: def }, 'site-B photo')
+      const legacyPhoto = await file({ entityType: 'customFieldDefs', entityId: def }, 'legacy photo')
+      const report = await file({ locationId: siteB, entityType: 'healthTreatments', entityId: treatB }, 'site-B vet report')
+      // Written before files recorded a site: falls back to the treatment's.
+      const legacyReport = await file({ entityType: 'healthTreatments', entityId: treatB }, 'legacy report')
+      return { companyId, siteA, siteB, owner, field, cageA, cageB, treatB, def, photoA, photoB, legacyPhoto, report, legacyReport }
+    })
+    return { t, ids, asOwner: t.withIdentity({ subject: `${ids.owner}|s` }), asField: t.withIdentity({ subject: `${ids.field}|s` }) }
+  }
+
+  test('a site-A member gets no site-B files from list or requestDownload', async () => {
+    const { t, ids, asOwner, asField } = await sites()
+    const photos = await asField.query(api.files.list, { entityType: 'customFieldDefs', entityId: ids.def })
+    expect(photos.map((p) => p.id)).toEqual([ids.photoA])
+    expect(await asField.query(api.files.list, { entityType: 'healthTreatments', entityId: ids.treatB })).toEqual([])
+    for (const fileId of [ids.photoB, ids.legacyPhoto, ids.report, ids.legacyReport]) {
+      expect(await errorOf(asField.mutation(api.files.requestDownload, { fileId }))).toMatchObject({ code: 'NOT_FOUND' })
+      await expect(asField.mutation(api.files.remove, { fileId })).rejects.toThrow(/not found/i)
+    }
+    const { path } = await asField.mutation(api.files.requestDownload, { fileId: ids.photoA })
+    expect(await (await t.fetch(path, { method: 'GET' })).text()).toBe('site-A photo')
+
+    // All-sites members are unaffected.
+    expect(await asOwner.query(api.files.list, { entityType: 'customFieldDefs', entityId: ids.def })).toHaveLength(3)
+    expect(await asOwner.query(api.files.list, { entityType: 'healthTreatments', entityId: ids.treatB })).toHaveLength(2)
+    const grant = await asOwner.mutation(api.files.requestDownload, { fileId: ids.report })
+    expect(await (await t.fetch(grant.path, { method: 'GET' })).text()).toBe('site-B vet report')
+  })
+
+  test('custom-field photos record the site they are uploaded for', async () => {
+    const { t, ids, asOwner, asField } = await sites()
+    const ref = { entityType: 'customFieldDefs' as const, entityId: ids.def }
+    const sha256 = await hexSha(new Uint8Array([1]))
+    await expect(
+      asField.mutation(api.files.generateUploadUrl, { ...ref, sha256, locationId: ids.siteB }),
+    ).rejects.toThrow(/access to this site/)
+    const upload = async (who: typeof asOwner, locationId?: typeof ids.siteA) =>
+      (await who.mutation(api.files.generateUploadUrl, { ...ref, sha256, ...(locationId ? { locationId } : {}) })).uploadId
+    const siteOf = async (uploadId: Awaited<ReturnType<typeof upload>>) => (await t.run((c) => c.db.get(uploadId)))?.locationId
+    expect(await siteOf(await upload(asField, ids.siteA))).toBe(ids.siteA)
+    // No site sent: a site-limited member's photo stays on their own site.
+    expect(await siteOf(await upload(asField))).toBe(ids.siteA)
+    expect(await siteOf(await upload(asOwner))).toBeUndefined()
+
+    // A photo stamped for site B cannot be put on a site-A record.
+    await expect(
+      asOwner.mutation(api.customFields.setValues, { entity: 'cages', id: ids.cageA, custom: { net: ids.photoB } }),
+    ).rejects.toThrow(/uploaded for this site/)
+    // An unstamped photo takes the site of the record it is saved on.
+    await asOwner.mutation(api.customFields.setValues, { entity: 'cages', id: ids.cageA, custom: { net: ids.legacyPhoto } })
+    expect((await t.run((c) => c.db.get(ids.legacyPhoto)))?.locationId).toBe(ids.siteA)
+    const { path } = await asField.mutation(api.files.requestDownload, { fileId: ids.legacyPhoto })
+    expect(await (await t.fetch(path, { method: 'GET' })).text()).toBe('legacy photo')
+  })
+
+  test('the migration stamps legacy photos with their record site', async () => {
+    const { t, ids, asField } = await sites()
+    await t.run((c) => c.db.patch(ids.cageB, { custom: { net: ids.legacyPhoto } }))
+    expect(await t.mutation(internal.migrations.stampCustomFieldPhotoSites, { entity: 'cages' })).toMatchObject({ dryRun: true, stamped: 1, isDone: true })
+    expect((await t.run((c) => c.db.get(ids.legacyPhoto)))?.locationId).toBeUndefined()
+    await t.mutation(internal.migrations.stampCustomFieldPhotoSites, { entity: 'cages', dryRun: false })
+    expect((await t.run((c) => c.db.get(ids.legacyPhoto)))?.locationId).toBe(ids.siteB)
+    expect(await errorOf(asField.mutation(api.files.requestDownload, { fileId: ids.legacyPhoto }))).toMatchObject({ code: 'NOT_FOUND' })
+    expect(await t.mutation(internal.migrations.stampCustomFieldPhotoSites, { entity: 'cages', dryRun: false })).toMatchObject({ stamped: 0 })
+  })
+})
