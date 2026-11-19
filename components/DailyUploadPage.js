@@ -639,7 +639,7 @@ const DailyUploadPage = () => {
       {/* Today's round (Paper 04): cages logged for the date, then quick actions. */}
       <section
         aria-labelledby="daily-round-title"
-        className="flex flex-col gap-4 rounded-card border border-line bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-6 lg:flex-row lg:items-center lg:gap-6"
+        className="flex flex-col gap-4 rounded-card border border-line bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-6 lg:flex-row lg:flex-wrap lg:items-center lg:gap-6"
       >
         <div className="shrink-0 lg:w-60">
           <p id="daily-round-title" className="text-[13px] leading-4 text-muted">
@@ -652,7 +652,7 @@ const DailyUploadPage = () => {
             </span>
           </p>
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="min-w-0 flex-1 space-y-2 lg:min-w-[240px]">
           <div
             role="progressbar"
             aria-label={t('daily.round.progressLabel')}
@@ -669,7 +669,7 @@ const DailyUploadPage = () => {
               }}
             />
           </div>
-          <div className="flex justify-between gap-3 text-xs leading-4 text-faint tabular-nums">
+          <div className="flex justify-between gap-3 whitespace-nowrap text-xs leading-4 text-faint tabular-nums">
             <span>{t('daily.round.inBatch', { count: lines.length })}</span>
             <span>{t('daily.round.open', { count: openCages.length })}</span>
           </div>

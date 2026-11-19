@@ -593,9 +593,7 @@ function StockingManagement() {
       }
     >
       <div className="flex flex-col gap-6 sm:gap-7">
-        <div className="-mt-[14px] overflow-x-auto border-b border-line">
-          <Tabs variant="underline" label={t('stocking.mgmt.tabsLabel')} tabs={tabs} value={activeTab} onChange={setTab} />
-        </div>
+        <Tabs variant="page" label={t('stocking.mgmt.tabsLabel')} tabs={tabs} value={activeTab} onChange={setTab} />
 
         {activeTab === 'approvals' && (
           <>
