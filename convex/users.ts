@@ -32,6 +32,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { isPermission, requireAccount, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
 import { assertAdminChange } from './memberships'
+import { assertPlanLimit } from './lib/planLimits'
 
 /** Invite rows written before `status` existed are pending. */
 function inviteStatus(invite: Doc<'userInvites'>) {
@@ -252,6 +253,8 @@ export const current = query({
         v.literal('missing'),
         v.null(),
       ),
+      /** Organization suspended by the platform or billing (PLAT-104): only /suspended and /billing open. */
+      companySuspended: v.boolean(),
       id: v.id('users'),
       _id: v.id('users'),
       name: v.optional(v.string()),
@@ -287,9 +290,11 @@ export const current = query({
     // Not requireUser: the client needs this even when access is refused, to
     // route to the password change, registration, or sign out with a reason.
     let companyStatus: Doc<'companies'>['status'] | 'missing' | null = null
+    let companySuspended = false
     if (user.companyId) {
       const company = await ctx.db.get(user.companyId)
       companyStatus = company?.status ?? 'missing'
+      companySuspended = company?.suspendedAt !== undefined
     }
     // Two-step verification for this session (SEC-007); the client routes
     // to /verify while mfaRequired is true.
@@ -300,6 +305,7 @@ export const current = query({
       ...toClient(user),
       role: user.role ?? 'user',
       companyStatus,
+      companySuspended,
       ...mfa,
       realRole: realUser.role ?? 'user',
       actingAs: actAs
@@ -567,6 +573,8 @@ export const invite = mutation({
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     if (!me.companyId) throw new Error('No company linked')
     const companyId = me.companyId
+    // Early, friendly refusal; accepting the invite checks again (lib/memberships).
+    await assertPlanLimit(ctx, companyId, 'users')
     const email = args.email.trim().toLowerCase()
     if (!email) throw new Error('Email is required')
     if (args.roleKey !== undefined && !isRoleKey(args.roleKey)) {

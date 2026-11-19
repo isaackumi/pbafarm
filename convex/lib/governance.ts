@@ -34,6 +34,14 @@ export type TenantTable = {
 }
 
 export const TENANT_TABLES: TenantTable[] = [
+  // Billing (PLAT-105): exported; kept on deletion as financial records.
+  { table: 'subscriptions', index: 'by_companyId', purge: 'keep' },
+  { table: 'billingInvoices', index: 'by_companyId_and_issuedAt', purge: 'keep' },
+  { table: 'billingPayments', index: 'by_companyId_and_receivedAt', purge: 'keep' },
+  { table: 'billingCreditGrants', index: 'by_companyId_and_createdAt', purge: 'keep' },
+  // Platform-staff notes and usage rollups: internal, not exported; deleted with the organization.
+  { table: 'tenantNotes', index: 'by_companyId_and_createdAt', export: false },
+  { table: 'platformUsageDaily', index: 'by_companyId_and_date', export: false },
   { table: 'users', index: 'by_companyId', purge: 'detach' },
   { table: 'memberships', index: 'by_companyId' },
   { table: 'roles', index: 'by_companyId_and_key' },
@@ -134,6 +142,7 @@ export const TENANT_TABLES: TenantTable[] = [
  */
 export const SKIPPED_TABLES: Record<string, string> = {
   dataRequests: 'the deletion record itself; kept as evidence',
+  platformEvents: 'platform audit log (PLAT-111); rows about the organization are also in its own auditLogs, which are exported',
   actAsSessions: 'platform support-access record (ENT-006); kept with the audit trail as evidence',
 }
 

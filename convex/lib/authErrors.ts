@@ -16,6 +16,7 @@ export const AUTH_ERROR_CODES = {
   NO_COMPANY: 'NO_COMPANY',
   NOT_A_MEMBER: 'NOT_A_MEMBER',
   MFA_REQUIRED: 'MFA_REQUIRED',
+  TENANT_SUSPENDED: 'TENANT_SUSPENDED',
 } as const
 
 export type AuthErrorCode = keyof typeof AUTH_ERROR_CODES
@@ -33,6 +34,8 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
     'NOT_A_MEMBER: Your access to this organization was suspended or removed. Ask its admin, or switch organization.',
   MFA_REQUIRED:
     'MFA_REQUIRED: Your company requires a verification code for this sign-in. Enter the code we send to your phone.',
+  TENANT_SUSPENDED:
+    'TENANT_SUSPENDED: Your organization\'s access to PBA Farm is suspended. Its owner can settle billing on the Billing page, or contact support.',
 }
 
 /** Codes that end the session: the client signs out and shows the message. */

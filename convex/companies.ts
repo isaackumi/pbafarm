@@ -1,3 +1,4 @@
+import { ensureTrialSubscription, recordPlatformEvent } from './billing/ops'
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
@@ -198,7 +199,7 @@ async function platformAudit(
   })
 }
 
-async function revokeMemberSessions(
+export async function revokeMemberSessions(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
   callerId: Id<'users'>,
@@ -624,6 +625,14 @@ export const approve = mutation({
       })
     }
 
+    // New organizations start a trial on the default plan (PLAT-105).
+    await ensureTrialSubscription(ctx, companyId)
+    await recordPlatformEvent(
+      ctx,
+      { actorId: user._id, action: 'tenant.approved', companyId, details: { promotedUserId: userId } },
+      { orgAudit: false },
+    )
+
     await platformAudit(ctx, user, companyId, {
       actionType: 'approve',
       newValues: {
@@ -673,6 +682,11 @@ export const reject = mutation({
         sessionsRevoked,
       },
     })
+    await recordPlatformEvent(
+      ctx,
+      { actorId: user._id, action: 'tenant.rejected', companyId, details: { reason, sessionsRevoked } },
+      { orgAudit: false },
+    )
   },
 })
 

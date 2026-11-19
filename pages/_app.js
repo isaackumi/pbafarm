@@ -99,6 +99,8 @@ const ACCESS_ROUTES = {
   PASSWORD_CHANGE_REQUIRED: { home: '/account?force=1', allowed: ['/account'] },
   // Company requires two-step verification and this session has not passed it.
   MFA_REQUIRED: { home: '/verify', allowed: ['/verify'] },
+  // Organization suspended (PLAT-104): owners can still reach billing.
+  TENANT_SUSPENDED: { home: '/suspended', allowed: ['/suspended', '/billing'] },
   NO_COMPANY: {
     home: '/register-company',
     allowed: ['/register-company', '/account', '/verify-email', '/invite/[token]'],
@@ -243,8 +245,12 @@ function AuthWrapper({ children }) {
     <AuthErrorBoundary
       key={currentPath}
       onAuthError={(code) =>
-        // Unverified session: verify, do not sign out.
-        code === 'MFA_REQUIRED' ? router.replace('/verify') : signOutWithReason(code)
+        // Unverified session: verify; suspended organization: explain. Neither signs out.
+        code === 'MFA_REQUIRED'
+          ? router.replace('/verify')
+          : code === 'TENANT_SUSPENDED'
+            ? router.replace('/suspended')
+            : signOutWithReason(code)
       }
     >
       {offlineMode && <OfflineSessionBanner />}

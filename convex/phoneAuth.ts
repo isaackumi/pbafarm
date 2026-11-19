@@ -9,6 +9,7 @@ import { DEFAULT_COUNTRY, isSupportedCountry, normalizePhone } from './lib/phone
 import { OTP_MAX_ATTEMPTS, OTP_TTL_MS, rateLimiter } from './lib/rateLimits'
 import { channelAvailable, deliverMessage } from './messaging/deliver'
 import { phoneLoginOffered, securityPolicy } from './messaging/policy'
+import { companyUsable } from './lib/tenantStatus'
 
 /**
  * Passwordless phone sign-in (SEC-006, doc 18 §7).
@@ -41,7 +42,7 @@ async function eligibleCompany(ctx: MutationCtx, user: Doc<'users'>) {
   if (user.active === false || !user.companyId) return null
   if (user.phoneVerificationTime === undefined) return null
   const company = await ctx.db.get(user.companyId)
-  if (!company || company.status !== 'approved') return null
+  if (!companyUsable(company)) return null
   const policy = securityPolicy(company)
   if (!phoneLoginOffered(policy)) return null
   return { company, policy }

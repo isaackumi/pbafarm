@@ -8,6 +8,7 @@
  */
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
+import { assertPlanLimit } from './planLimits'
 
 type Ctx = QueryCtx | MutationCtx
 
@@ -92,6 +93,15 @@ export async function upsertMembership(
 ): Promise<Id<'memberships'>> {
   const now = Date.now()
   const existing = await getMembership(ctx, args.userId, args.companyId)
+  // Plan limit on active members (PLAT-106): a new active member, or one
+  // coming back to active. Legacy backfill rows describe existing members.
+  const becomesActive = existing
+    ? args.status === 'active' && existing.status !== 'active'
+    : (args.status ?? 'active') === 'active' && !args.legacy
+  if (becomesActive) {
+    const member = await ctx.db.get(args.userId)
+    if ((member?.role ?? 'user') !== 'super_admin') await assertPlanLimit(ctx, args.companyId, 'users')
+  }
   let id: Id<'memberships'>
   if (existing) {
     const patch: Partial<Doc<'memberships'>> = { updatedAt: now }

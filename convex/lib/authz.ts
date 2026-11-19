@@ -26,6 +26,10 @@ type Ctx = QueryCtx | MutationCtx
  *   (pending, rejected, removed or missing); super_admin excepted
  *                                                     → COMPANY_NOT_APPROVED
  * - membership row for the active company not active   → NOT_A_MEMBER
+ * - company suspended by the platform or by billing
+ *   (companies.suspendedAt, PLAT-104); super_admin
+ *   excepted; `allowSuspended` lets the billing page
+ *   and users.current through                          → TENANT_SUSPENDED
  * - company requires two-step verification, the user
  *   turned on an authenticator app (ENT-003), or the
  *   user is a super_admin (with or without a company),
@@ -42,7 +46,12 @@ type Ctx = QueryCtx | MutationCtx
  */
 export async function requireUser(
   ctx: Ctx,
-  opts: { allowPendingMfa?: boolean; allowActAsReadOnly?: boolean; ignoreActAs?: boolean } = {},
+  opts: {
+    allowPendingMfa?: boolean
+    allowActAsReadOnly?: boolean
+    ignoreActAs?: boolean
+    allowSuspended?: boolean
+  } = {},
 ): Promise<Doc<'users'>> {
   const userId = await getAuthUserId(ctx)
   if (!userId) {
@@ -63,6 +72,9 @@ export async function requireUser(
     company = await ctx.db.get(user.companyId)
     if ((user.role ?? 'user') !== 'super_admin' && (!company || company.status !== 'approved')) {
       throw new Error(AUTH_ERROR_MESSAGES.COMPANY_NOT_APPROVED)
+    }
+    if ((user.role ?? 'user') !== 'super_admin' && company?.suspendedAt !== undefined && !opts.allowSuspended) {
+      throw new Error(AUTH_ERROR_MESSAGES.TENANT_SUSPENDED)
     }
     // Membership dual-read (M2): a row for the active organization must be
     // active; without a row, users.companyId + users.role still decide.
