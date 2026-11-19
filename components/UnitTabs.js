@@ -1,7 +1,10 @@
 import Link from 'next/link'
 import { useT } from '../lib/i18n/context'
 
-/** Workspace tabs for one unit (Paper 03 underline tabs): overview, water, maintenance. */
+/**
+ * Workspace tabs for one unit (Paper 03 underline tabs: 14/18 labels 28px
+ * apart, 12px under the label). Phones keep a 44px target.
+ */
 export default function UnitTabs({ unitId, active, unitType = 'cage' }) {
   const t = useT()
   const tabs = [
@@ -24,7 +27,7 @@ export default function UnitTabs({ unitId, active, unitType = 'cage' }) {
           key={tab.id}
           href={tab.href}
           aria-current={active === tab.id ? 'page' : undefined}
-          className={`-mb-px inline-flex min-h-11 items-center whitespace-nowrap border-b-2 pb-3 pt-2 text-[14px] leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+          className={`-mb-px inline-flex min-h-11 items-center whitespace-nowrap border-b-2 pb-3 pt-2 text-[14px] sm:min-h-0 sm:pt-0 leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
             active === tab.id
               ? 'border-button font-medium text-text'
               : 'border-transparent text-muted hover:text-text'
