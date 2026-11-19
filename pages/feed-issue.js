@@ -8,7 +8,6 @@ import DependencyEmpty from '../components/DependencyEmpty'
 import FeedTypeField from '../components/FeedTypeField'
 import LocationMetaField from '../components/LocationMetaField'
 import {
-  PageHeader,
   Button,
   FormPage,
   FormCard,
@@ -26,13 +25,15 @@ import { saveOrQueue } from '../lib/outboxSenders'
 import { useOnline } from '../hooks/useOutbox'
 import OutboxPanel from '../components/OutboxPanel'
 import { usePermission } from '../hooks/usePermission'
+import { useT } from '../lib/i18n/context'
 import { useReferenceList } from '../hooks/useReferenceList'
 import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
 
 export default function FeedIssuePage() {
+  const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title="Issue Feed">
+      <Layout title={t('ops.feed.issueFeed')} eyebrow={t('ops.feedIssue.eyebrow')}>
         <FeedIssue />
       </Layout>
     </ProtectedRoute>
@@ -40,6 +41,7 @@ export default function FeedIssuePage() {
 }
 
 function FeedIssue() {
+  const t = useT()
   const { showToast } = useToast()
   const { user } = useAuth()
   const canOverride = usePermission('inventory.adjust')
@@ -230,20 +232,7 @@ function FeedIssue() {
 
   return (
     <FormPage data-tour="page-feed-issue">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory', href: '/stock-levels' },
-          { label: 'Issue feed' },
-        ]}
-        description="Record when feed leaves the store. Deducts stock via the inventory ledger (bags or kg)."
-        related={[
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
-          { label: 'Daily entry', href: '/daily-entry' },
-        ]}
-      />
+      <p className="-mt-3 mb-6 max-w-2xl text-sm text-muted">{t('ops.feedIssue.intro')}</p>
 
       <FormCard
         title="Issue details"

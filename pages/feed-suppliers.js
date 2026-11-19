@@ -13,7 +13,10 @@ import {
 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, Field, Input, LoadingState, Modal } from '../components/ui'
+import { Button, Field, GradientButton, Input, Modal, Table } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { feedTabs } from '../lib/sectionTabs'
+import { useT } from '../lib/i18n/context'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -34,11 +37,18 @@ export default function FeedSuppliersPage() {
 function FeedSuppliers() {
   const { showToast } = useToast()
   const { hasRole } = useAuth()
+  const t = useT()
   const isAdmin = usePermission('inventory.prices.manage')
+  const canRecord = usePermission('inventory.purchase.record')
+  const [search, setSearch] = useState('')
 
   const suppliersResult = useQuery(api.feed.listSuppliers, {})
   const loading = suppliersResult === undefined
   const suppliers = suppliersResult || []
+  const q = search.trim().toLowerCase()
+  const shownSuppliers = q
+    ? suppliers.filter((sup) => [sup.name, sup.contact_person, sup.email, sup.phone].some((v) => String(v || '').toLowerCase().includes(q)))
+    : suppliers
   const createSupplier = useMutation(api.feed.createSupplier)
   const updateSupplier = useMutation(api.feed.updateSupplier)
   const softDeleteSupplier = useMutation(api.feed.softDeleteSupplier)
@@ -146,103 +156,93 @@ function FeedSuppliers() {
   }
 
   return (
-    <Layout title="Feed Suppliers">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Feed', href: '/feed-management/overview' },
-          { label: 'Suppliers' },
-        ]}
-        description="Manage feed suppliers and contact information in one place."
-        related={[
-          { label: 'Feed types', href: '/feed-types' },
-          { label: 'Feed purchases', href: '/feed-purchases' },
-          { label: 'Stock levels', href: '/stock-levels' },
-        ]}
-        actions={
-          <Button onClick={handleAddSupplier}>
-            <Plus className="w-4 h-4" aria-hidden />
-            Add supplier
-          </Button>
-        }
-      />
-
-        {/* Suppliers Grid */}
-        <div className="page-card overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-            <h2 className="font-medium text-chart-ink">Suppliers directory</h2>
-          </div>
-
-          {loading ? (
-            <LoadingState label="Loading suppliers..." />
-          ) : suppliers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
-              {suppliers.map((supplier) => (
-                <div
-                  key={supplier.id}
-                  className="border border-foam-deep rounded-lg shadow-sm hover:border-lake transition-colors overflow-hidden"
-                >
-                  <div className="px-4 py-5 sm:px-6 bg-foam border-b border-foam-deep">
-                    <h3 className="text-lg font-medium text-chart-ink truncate">
-                      {supplier.name}
-                    </h3>
-                  </div>
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="space-y-2">
-                      {supplier.website && (
-                        <div className="flex items-start">
-                          <Globe className="h-4 w-4 text-muted mr-2 mt-0.5 shrink-0" aria-hidden />
-                          <a
-                            href={supplier.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-lake hover:underline break-all"
-                          >
-                            {supplier.website.replace(/^https?:\/\//, '')}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-5 flex gap-1 justify-end border-t border-foam-deep pt-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditSupplier(supplier)}
-                        className="text-lake"
-                        title="Edit supplier"
-                        aria-label="Edit supplier"
-                      >
-                        <Edit className="w-4 h-4" aria-hidden />
-                      </Button>
-
-                      {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirm(supplier)}
-                          className="text-signal"
-                          title="Delete supplier"
-                          aria-label="Delete supplier"
-                        >
-                          <Trash className="w-4 h-4" aria-hidden />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-muted mx-auto" />
-              <p className="mt-3 text-muted">
-                No suppliers found. Add your first supplier to get started.
-              </p>
-            </div>
-          )}
-        </div>
+    <Layout
+      title={t('ops.suppliers.title')}
+      eyebrow={t('ops.suppliers.eyebrow')}
+      actions={
+        canRecord ? (
+          <GradientButton icon={Plus} onClick={handleAddSupplier}>
+            {t('ops.feed.addSupplier')}
+          </GradientButton>
+        ) : null
+      }
+    >
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+        <Table
+          title={t('ops.suppliers.directory')}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={t('ops.suppliers.search')}
+          columns={[
+            {
+              key: 'name',
+              header: t('ops.col.supplier'),
+              render: (sup) => sup.name,
+              sub: (sup) => sup.contact_person || undefined,
+            },
+            { key: 'phone', header: t('ops.suppliers.phone'), width: 160, render: (sup) => sup.phone || '—' },
+            {
+              key: 'email',
+              header: t('ops.suppliers.email'),
+              width: 220,
+              render: (sup) => <span className="break-all">{sup.email || '—'}</span>,
+            },
+            {
+              key: 'web',
+              header: t('ops.suppliers.website'),
+              width: 200,
+              render: (sup) =>
+                sup.website ? (
+                  <a
+                    href={sup.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-sm break-all text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  >
+                    {sup.website.replace(/^https?:\/\//, '')}
+                  </a>
+                ) : (
+                  '—'
+                ),
+            },
+            {
+              key: 'actions',
+              header: <span className="sr-only">{t('ops.col.actions')}</span>,
+              width: 110,
+              align: 'right',
+              render: (sup) => (
+                <span className="inline-flex gap-1">
+                  {canRecord && (
+                    <button
+                      type="button"
+                      onClick={() => handleEditSupplier(sup)}
+                      title={t('ops.suppliers.edit', { name: sup.name })}
+                      aria-label={t('ops.suppliers.edit', { name: sup.name })}
+                      className="rounded-pill p-2 text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                    >
+                      <Edit className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirm(sup)}
+                      title={t('ops.suppliers.delete', { name: sup.name })}
+                      aria-label={t('ops.suppliers.delete', { name: sup.name })}
+                      className="rounded-pill p-2 text-muted hover:bg-surface-2 hover:text-alert focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                    >
+                      <Trash className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
+                </span>
+              ),
+            },
+          ]}
+          rows={shownSuppliers}
+          empty={loading ? t('ops.common.loading') : t('ops.suppliers.empty')}
+        />
+      </div>
 
       {/* Add Supplier Modal */}
       {showAddModal && (

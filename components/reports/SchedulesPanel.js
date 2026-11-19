@@ -183,7 +183,7 @@ function ScheduleForm({ reports, schedule, onDone }) {
   )
 }
 
-function describe(t, s) {
+export function describeSchedule(t, s) {
   const time = s.localTime
   if (s.frequency === 'daily') return t('reportBuilder.schedules.everyDay', { time })
   if (s.frequency === 'weekly') return t('reportBuilder.schedules.everyWeek', { day: weekdayName(s.weekday ?? 1), time })
@@ -249,7 +249,7 @@ export default function SchedulesPanel() {
                   <div className="min-w-0">
                     <p className="font-medium text-chart-ink">{s.reportName}</p>
                     <p className="text-sm text-muted">
-                      {describe(t, s)} ({s.timezone}) · {t('reportBuilder.schedules.recipientCount', { count: s.recipients.length })}
+                      {describeSchedule(t, s)} ({s.timezone}) · {t('reportBuilder.schedules.recipientCount', { count: s.recipients.length })}
                     </p>
                     <p className="text-xs text-muted">
                       {s.enabled && s.nextRunAt

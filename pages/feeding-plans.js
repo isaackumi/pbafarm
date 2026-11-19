@@ -3,7 +3,9 @@ import { useMutation, useQuery } from 'convex/react'
 import { Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { feedTabs } from '../lib/sectionTabs'
+import { Button, Card, CardHeader, EmptyState, Field, Input, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { kg, rationText } from '../components/RationSuggestion'
 import { api } from '../convex/_generated/api'
@@ -23,7 +25,7 @@ export default function FeedingPlansPage() {
   const t = useT()
   return (
     <ProtectedRoute permission="production.view">
-      <Layout title={t('feedingPlan.title')}>
+      <Layout title={t('feedingPlan.title')} eyebrow={t('ops.feedingPlans.eyebrow')}>
         <FeedingPlans />
       </Layout>
     </ProtectedRoute>
@@ -41,12 +43,9 @@ function FeedingPlans() {
   const plans = useQuery(api.feedingPlans.list, canUseApp ? {} : 'skip')
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: t('nav.item.dashboard'), href: '/dashboard' }, { label: t('feedingPlan.title') }]}
-        description={t('feedingPlan.intro')}
-      />
+    <div className="flex flex-col gap-[28px]">
+      <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
+      <p className="max-w-2xl text-sm text-muted">{t('feedingPlan.intro')}</p>
       <Card padding={false}>
         <div className="p-5 sm:p-6">
           <CardHeader

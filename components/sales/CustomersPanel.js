@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Button, Field, Input, Textarea } from '../ui'
+import { Plus } from 'lucide-react'
+import { Field, GhostButton, GradientButton, Input, Table, Textarea } from '../ui'
 import { useToast } from '../Toast'
 import { useT } from '../../lib/i18n/context'
 import { errorMessage } from '../../lib/errorMessage'
@@ -79,24 +80,9 @@ export default function CustomersPanel({ canEdit }) {
   }
 
   return (
-    <div className="page-card overflow-hidden mb-6">
-      <div className="px-6 py-4 border-b border-foam-deep flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-medium text-chart-ink">{t('sales.customers')}</h3>
-        <div className="flex items-center gap-4">
-          <label className="text-sm text-muted inline-flex items-center gap-2">
-            <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
-            {t('sales.showInactive')}
-          </label>
-          {canEdit && (
-            <Button size="sm" onClick={() => open(null)}>
-              {t('sales.addCustomer')}
-            </Button>
-          )}
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-[20px]">
       {editing && canEdit && (
-        <form onSubmit={save} className="px-6 py-4 border-b border-foam-deep grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={save} className="grid grid-cols-1 gap-4 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px] md:grid-cols-2">
           <Field label={t('sales.customerName')} htmlFor="cust-edit-name" required>
             <Input
               id="cust-edit-name"
@@ -136,60 +122,73 @@ export default function CustomersPanel({ canEdit }) {
             />
           </Field>
           <div className="md:col-span-2 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditing(null)}>
+            <GhostButton size="sm" onClick={() => setEditing(null)}>
               {t('common.cancel')}
-            </Button>
-            <Button type="submit" disabled={busy}>
+            </GhostButton>
+            <GradientButton type="submit" variant="solid" size="sm" disabled={busy}>
               {busy ? t('common.saving') : t('common.save')}
-            </Button>
+            </GradientButton>
           </div>
         </form>
       )}
 
-      {customers === undefined ? (
-        <p className="px-6 py-6 text-sm text-muted">{t('common.loading')}</p>
-      ) : customers.length === 0 ? (
-        <p className="px-6 py-6 text-sm text-muted">{t('sales.noCustomers')}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-foam-deep text-sm">
-            <thead className="bg-foam-deep/40">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('sales.customerName')}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('sales.contactName')}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('sales.phone')}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('sales.email')}</th>
-                {canEdit && (
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted">{t('sales.actions')}</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-foam-deep">
-              {customers.map((c) => (
-                <tr key={c.id} className={c.active ? '' : 'text-muted'}>
-                  <td className="px-4 py-3">
-                    {c.name}
-                    {!c.active && <span className="ml-2 text-xs">({t('sales.inactive')})</span>}
-                  </td>
-                  <td className="px-4 py-3">{c.contact_name || '—'}</td>
-                  <td className="px-4 py-3">{c.phone || '—'}</td>
-                  <td className="px-4 py-3">{c.email || '—'}</td>
-                  {canEdit && (
-                    <td className="px-4 py-3 text-right space-x-3">
-                      <button type="button" className="text-lagoon-800 hover:underline" onClick={() => open(c)}>
+      <Table
+        title={t('sales.customers')}
+        actions={
+          <div className="flex items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                className="accent-[var(--cyan)]"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+              />
+              {t('sales.showInactive')}
+            </label>
+            {canEdit && (
+              <GhostButton size="sm" icon={Plus} onClick={() => open(null)}>
+                {t('sales.addCustomer')}
+              </GhostButton>
+            )}
+          </div>
+        }
+        columns={[
+          {
+            key: 'name',
+            header: t('sales.customerName'),
+            render: (c) => (
+              <span className={c.active ? '' : 'text-muted'}>
+                {c.name}
+                {!c.active && <span className="ml-2 text-xs">({t('sales.inactive')})</span>}
+              </span>
+            ),
+          },
+          { key: 'contact', header: t('sales.contactName'), render: (c) => c.contact_name || '—' },
+          { key: 'phone', header: t('sales.phone'), render: (c) => c.phone || '—' },
+          { key: 'email', header: t('sales.email'), render: (c) => c.email || '—' },
+          ...(canEdit
+            ? [
+                {
+                  key: 'actions',
+                  header: t('sales.actions'),
+                  align: 'right',
+                  render: (c) => (
+                    <span className="inline-flex gap-2">
+                      <GhostButton size="sm" onClick={() => open(c)}>
                         {t('common.edit')}
-                      </button>
-                      <button type="button" className="text-signal hover:underline" onClick={() => toggleActive(c)}>
+                      </GhostButton>
+                      <GhostButton size="sm" tone={c.active ? 'danger' : 'default'} onClick={() => toggleActive(c)}>
                         {c.active ? t('sales.deactivate') : t('sales.reactivate')}
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      </GhostButton>
+                    </span>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+        rows={customers || []}
+        empty={customers === undefined ? t('common.loading') : t('sales.noCustomers')}
+      />
     </div>
   )
 }

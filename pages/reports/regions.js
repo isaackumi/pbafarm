@@ -3,9 +3,11 @@ import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import SiteKpiTable, { monthToDate } from '../../components/SiteKpiTable'
-import { Card, EmptyState, Field, FormPage, Input, PageHeader, Select } from '../../components/ui'
+import { Field, Input, KpiStrip, Select } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
 import { api } from '../../convex/_generated/api'
-import { localToday } from '../../lib/format'
+import { formatMoney, formatNumber, localToday } from '../../lib/format'
+import { reportTabs } from '../../lib/sectionTabs'
 import { useT } from '../../lib/i18n/context'
 
 /** Per-site KPIs with a region / business unit filter (FARM-004). */
@@ -26,41 +28,55 @@ function RegionalReport() {
   }))
   const hasUnassigned = !unitId && data && Object.values(data.unassigned).some((n) => n > 0)
 
+  const totals = data?.totals
+
   return (
-    <FormPage width="full">
-      <PageHeader
-        title={t('ent.regions.title')}
-        breadcrumbs={[{ label: t('nav.item.dashboard'), href: '/dashboard' }, { label: t('ent.regions.title') }]}
-        description={t('ent.regions.description')}
-        related={[
-          { label: t('ent.structure.title'), href: '/organization-structure' },
-          { label: t('nav.item.report'), href: '/report' },
-        ]}
-      />
-      <div className="space-y-6">
-        <Card>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <Field label={t('ent.common.from')} htmlFor="rr-from">
-              <Input id="rr-from" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
-            </Field>
-            <Field label={t('ent.common.to')} htmlFor="rr-to">
-              <Input id="rr-to" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
-            </Field>
-            <Field label={t('ent.regions.unit')} htmlFor="rr-unit">
-              <Select id="rr-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-                <option value="">{t('ent.regions.allUnits')}</option>
-                {(data?.units || []).map((u) => (
-                  <option key={u._id} value={u._id}>{u.name}</option>
-                ))}
-              </Select>
-            </Field>
+    <Layout title={t('ent.regions.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
+        <p className="max-w-[720px] text-sm leading-5 text-muted">{t('ent.regions.description')}</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-[720px]">
+          <Field label={t('ent.common.from')} htmlFor="rr-from">
+            <Input id="rr-from" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
+          </Field>
+          <Field label={t('ent.common.to')} htmlFor="rr-to">
+            <Input id="rr-to" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
+          </Field>
+          <Field label={t('ent.regions.unit')} htmlFor="rr-unit">
+            <Select id="rr-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+              <option value="">{t('ent.regions.allUnits')}</option>
+              {(data?.units || []).map((u) => (
+                <option key={u._id} value={u._id}>
+                  {u.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <KpiStrip
+          items={[
+            { label: t('ent.kpi.activeUnits'), value: totals ? formatNumber(totals.activeUnits) : '—' },
+            { label: t('ent.kpi.fish'), value: totals ? formatNumber(totals.fish) : '—' },
+            { label: t('ent.kpi.harvestKg'), value: totals ? formatNumber(totals.harvestKg) : '—' },
+            {
+              label: t('ent.kpi.sales'),
+              value: totals ? formatMoney(totals.salesAmount, { currency: data.currency || undefined, decimals: 0 }) : '—',
+            },
+          ]}
+        />
+        <section
+          aria-labelledby="rr-sites"
+          className="flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
+            <h2 id="rr-sites" className="text-[17px] font-semibold leading-[22px] text-text">
+              {t('ops.reportsTab.bySite')}
+            </h2>
           </div>
-        </Card>
-        <Card padding={false}>
           {!data ? (
-            <p className="p-5 text-sm text-muted">{t('common.loading')}</p>
+            <p className="px-6 py-[14px] text-sm text-muted">{t('common.loading')}</p>
           ) : rows.length === 0 ? (
-            <EmptyState title={t('ent.regions.empty')} />
+            <p className="px-6 py-[14px] text-sm text-muted">{t('ent.regions.empty')}</p>
           ) : (
             <SiteKpiTable
               rows={hasUnassigned ? [...rows, { ...data.unassigned, key: 'none', name: t('ent.regions.noSite') }] : rows}
@@ -68,19 +84,17 @@ function RegionalReport() {
               footer={{ ...data.totals, key: 'total', name: t('ent.common.total') }}
             />
           )}
-          {data?.truncated && <p className="px-5 py-3 text-sm text-muted">{t('ent.common.truncated')}</p>}
-        </Card>
+          {data?.truncated && <p className="border-t border-line px-6 py-3 text-sm text-muted">{t('ent.common.truncated')}</p>}
+        </section>
       </div>
-    </FormPage>
+    </Layout>
   )
 }
 
 export default function RegionalReportPage() {
   return (
     <ProtectedRoute permission="reports.view">
-      <Layout title="Regional report">
-        <RegionalReport />
-      </Layout>
+      <RegionalReport />
     </ProtectedRoute>
   )
 }

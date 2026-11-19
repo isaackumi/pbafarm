@@ -1,13 +1,18 @@
 import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
-import {
-  Package,
-  BarChart2,
-  ShoppingCart,
-} from 'lucide-react'
+import Link from 'next/link'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard, Button } from '../../components/ui'
+import { KpiStrip, LoadingState, Table } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
+import { Panel, ListRow } from '../../components/ui/Panel'
+import InventoryActions from '../../components/inventory/InventoryActions'
+import { inventoryTabs } from '../../lib/sectionTabs'
+import { formatMass } from '../../lib/feedOverview'
+import { formatNumber } from '../../lib/format'
+import { SERIES, axisProps, gridProps, legendProps, tooltipProps } from '../../lib/chartTheme'
+import { useT } from '../../lib/i18n/context'
+import { usePermission } from '../../hooks/usePermission'
 import { useMoney } from '../../lib/money'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
@@ -83,12 +88,13 @@ function processTrendData(data) {
 
 function InventoryOverview() {
   const { user } = useAuth()
+  const t = useT()
   const money = useMoney()
-  const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
+  const canPurchase = usePermission('inventory.purchase.record')
   const dateFrom = useMemo(() => Date.now() - 30 * 24 * 60 * 60 * 1000, [])
 
   // The header site (FARM-003): stock and movements at that site.
-  const { locationArgs } = useLocation()
+  const { locationArgs, activeLocation } = useLocation()
   const inventoryItems = useQuery(
     api.inventory.listStockLevels,
     user ? locationArgs : 'skip',
@@ -140,230 +146,126 @@ function InventoryOverview() {
   )
 
   const lowStock = (inventoryItems || []).filter((item) => item.is_low_stock)
-  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   return (
-    <Layout title="Inventory Overview">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory' },
-          { label: 'Overview' },
-        ]}
-        description="Key inventory metrics, quick actions, and recent stock movement."
-        related={[
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Lots', href: '/inventory/lots' },
-          { label: 'Adjust / transfer', href: '/inventory/adjust' },
-          { label: 'Alerts', href: '/inventory-alerts' },
-          { label: 'Ledger', href: '/inventory-transactions' },
-        ]}
-      />
-
-      {loading ? (
-        <div className="py-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lake mx-auto" />
-          <p className="mt-3 text-muted">Loading inventory…</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Button href="/stock-levels" variant="secondary" className="w-full">
-              <Package className="w-4 h-4" aria-hidden />
-              Stock levels
-            </Button>
-            <Button href="/feed-types" variant="secondary" className="w-full">
-              <Package className="w-4 h-4" aria-hidden />
-              Feed types
-            </Button>
-            <Button href="/inventory/adjust" variant="secondary" className="w-full">
-              <ShoppingCart className="w-4 h-4" aria-hidden />
-              Adjust / transfer
-            </Button>
-            <Button href="/inventory/analytics" variant="secondary" className="w-full">
-              <BarChart2 className="w-4 h-4" aria-hidden />
-              Analytics
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <StatCard label="Feed on hand" value={kg(metrics.totalItems)} unit="kg" />
-            <StatCard label="Stock value" value={money(metrics.totalValue, { decimals: 0 })} />
-            <StatCard
-              label="Low stock"
-              value={metrics.lowStockItems}
-              unit={metrics.lowStockItems === 1 ? 'feed type' : 'feed types'}
-              tone={metrics.lowStockItems > 0 ? 'warn' : 'default'}
+    <Layout
+      title={t('ops.inventory.title')}
+      eyebrow={activeLocation?.name ? t('ops.feed.eyebrowAt', { site: activeLocation.name }) : t('ops.feed.title')}
+      actions={<InventoryActions />}
+    >
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
+        {loading ? (
+          <LoadingState label={t('ops.common.loading')} />
+        ) : (
+          <>
+            <KpiStrip
+              items={[
+                { label: t('ops.stock.value'), value: money(metrics.totalValue, { decimals: 0 }), suffix: formatMass(metrics.totalItems) },
+                {
+                  label: t('ops.feed.lowStock'),
+                  value: formatNumber(metrics.lowStockItems),
+                  valueTone: metrics.lowStockItems > 0 ? 'warn' : undefined,
+                },
+                { label: t('ops.feed.used30d'), value: formatMass(metrics.usedKg30) },
+                {
+                  label: t('ops.inventory.cover'),
+                  value: metrics.daysOfCover == null ? '—' : t('ops.feed.days', { count: metrics.daysOfCover }),
+                  valueTone: metrics.daysOfCover != null && metrics.daysOfCover < 14 ? 'warn' : undefined,
+                },
+                { label: t('ops.inventory.entries30d'), value: formatNumber(metrics.monthlyTransactions) },
+              ]}
             />
-            <StatCard label="Used, last 30 days" value={kg(metrics.usedKg30)} unit="kg" />
-            <StatCard
-              label="Days of cover"
-              value={metrics.daysOfCover == null ? '—' : metrics.daysOfCover}
-              unit={metrics.daysOfCover == null ? '' : 'days'}
-              hint="At the last 30 days' rate of use"
-              tone={metrics.daysOfCover != null && metrics.daysOfCover < 14 ? 'warn' : 'accent'}
-            />
-            <StatCard label="Ledger entries, 30 days" value={metrics.monthlyTransactions} />
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="page-card p-4 sm:p-6">
-              <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Transaction trend
-              </h3>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={transactionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="in"
-                      stackId="1"
-                      stroke="var(--lake)"
-                      fill="var(--lake)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="out"
-                      stackId="1"
-                      stroke="var(--kelp)"
-                      fill="var(--kelp)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <div className="grid grid-cols-1 gap-[20px] lg:grid-cols-2">
+              <Panel title={t('ops.inventory.movementTrend')} titleId="io-moves" meta={t('ops.trends.last30')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={transactionData}>
+                      <CartesianGrid {...gridProps} />
+                      <XAxis dataKey="date" {...axisProps} />
+                      <YAxis {...axisProps} width={44} />
+                      <Tooltip {...tooltipProps} />
+                      <Legend {...legendProps} />
+                      <Area type="monotone" dataKey="in" name={t('ops.inventory.in')} stackId="1" stroke="var(--cyan)" fill="var(--cyan-fill)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="out" name={t('ops.inventory.out')} stackId="1" stroke="var(--pink)" fill="var(--pink-fill)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
 
-            <div className="page-card p-4 sm:p-6">
-              <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Category distribution
-              </h3>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label={({ name, percent, value }) =>
-                        value > 0
-                          ? `${name} ${(percent * 100).toFixed(0)}%`
-                          : null
-                      }
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+              <Panel title={t('ops.trends.costSplit')} titleId="io-cats" meta={t('ops.trends.stockValue')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} stroke="var(--surface)">
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={SERIES[index % SERIES.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipProps} />
+                      <Legend {...legendProps} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
 
-            <div className="page-card p-4 sm:p-6">
-              <h3 className="text-lg font-medium text-chart-ink mb-4">Stock trend</h3>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="var(--lake)"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+              <Panel title={t('ops.inventory.stockTrend')} titleId="io-trend" meta={t('ops.trends.last30')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid {...gridProps} />
+                      <XAxis dataKey="date" {...axisProps} />
+                      <YAxis {...axisProps} width={44} />
+                      <Tooltip {...tooltipProps} />
+                      <Line type="monotone" dataKey="value" name={t('ops.col.kg')} stroke="var(--cyan)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
 
-            <div className="page-card p-4 sm:p-6">
-              <h3 className="text-lg font-medium text-chart-ink mb-4">
-                Low stock alerts
-              </h3>
-              <div className="space-y-4">
+              <Panel
+                title={t('ops.trends.lowStock')}
+                titleId="io-low"
+                action={canPurchase ? { label: t('ops.trends.orderNow'), href: '/procurement' } : undefined}
+              >
                 {lowStock.length === 0 ? (
-                  <p className="text-sm text-muted">No low-stock items.</p>
+                  <p className="border-t border-line py-3 text-sm text-muted">{t('ops.feed.nothingToReorder')}</p>
                 ) : (
                   lowStock.map((item) => (
-                    <div
+                    <ListRow
                       key={item.feed_type_id}
-                      className="flex items-center justify-between gap-4 p-4 rounded-xl border border-signal/25 bg-signal/10"
-                    >
-                      <div>
-                        <p className="font-medium text-chart-ink">
-                          {item.feed_type_name}
-                        </p>
-                        <p className="text-sm text-muted tabular-nums">
-                          Current: {item.current_stock} kg
-                          {item.current_stock_bags != null
-                            ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
-                            : ''}{' '}
-                          | Minimum: {item.minimum_stock} kg
-                        </p>
-                      </div>
-                      <Button
-                        href="/inventory-transactions"
-                        variant="ghost"
-                        size="sm"
-                        className="text-signal shrink-0"
-                      >
-                        Order now
-                      </Button>
-                    </div>
+                      dot="alert"
+                      dotLabel={t('ops.feed.lowStockShort')}
+                      title={item.feed_type_name}
+                      sub={t('ops.feed.minKg', { amount: formatMass(item.minimum_stock) })}
+                      value={formatMass(item.current_stock)}
+                      valueSub={item.current_stock_bags != null ? t('ops.inventory.bags', { count: Number(item.current_stock_bags).toFixed(1) }) : undefined}
+                    />
                   ))
                 )}
-              </div>
+              </Panel>
             </div>
-          </div>
 
-          <div className="page-card overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-              <h3 className="text-lg font-medium text-chart-ink">Feed types</h3>
-            </div>
-            <div className="divide-y divide-foam-deep">
-              {(inventoryItems || []).slice(0, 5).map((item) => (
-                <div key={item.feed_type_id} className="px-4 sm:px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-chart-ink">
-                        {item.feed_type_name}
-                      </p>
-                      <p className="text-sm text-muted tabular-nums">
-                        Stock: {item.current_stock} kg
-                        {item.current_stock_bags != null
-                          ? ` (${Number(item.current_stock_bags).toFixed(1)} bags)`
-                          : ''}{' '}
-                        | Price: {money(item.price_per_kg)}/kg
-                      </p>
-                    </div>
-                    <div className="text-sm text-muted tabular-nums shrink-0">
-                      Value: {money(item.stock_value || 0)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+            <Table
+              title={t('ops.feed.feedTypes')}
+              actions={
+                <Link href="/stock-levels" className="rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                  {t('ops.common.viewAll')}
+                </Link>
+              }
+              columns={[
+                { key: 'name', header: t('ops.col.name'), render: (item) => item.feed_type_name, sub: (item) => t('ops.feed.perKg', { amount: money(item.price_per_kg) }) },
+                { key: 'stock', header: t('ops.col.onHand'), width: 140, align: 'right', render: (item) => formatMass(item.current_stock) },
+                { key: 'value', header: t('ops.col.value'), width: 140, align: 'right', render: (item) => money(item.stock_value || 0) },
+              ]}
+              rows={(inventoryItems || []).slice(0, 8)}
+              rowKey={(item) => item.feed_type_id}
+              empty={t('ops.stock.none')}
+            />
+          </>
+        )}
+      </div>
     </Layout>
   )
 }

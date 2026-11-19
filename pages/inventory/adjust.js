@@ -4,8 +4,9 @@ import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import {
-  PageHeader,
   Button,
+  Segmented,
+  Table,
   FormCard,
   Field,
   Input,
@@ -17,6 +18,10 @@ import { useLocation } from '../../contexts/LocationContext'
 import { api } from '../../convex/_generated/api'
 import FarmLocationSelect from '../../components/FarmLocationSelect'
 import FeedTypeField from '../../components/FeedTypeField'
+import NavTabs from '../../components/ui/NavTabs'
+import { inventoryTabs } from '../../lib/sectionTabs'
+import { formatDate, formatNumber } from '../../lib/format'
+import { useT } from '../../lib/i18n/context'
 
 export default function InventoryAdjustPage() {
   return (
@@ -27,6 +32,7 @@ export default function InventoryAdjustPage() {
 }
 
 function InventoryAdjust() {
+  const t = useT()
   const { user } = useAuth()
   const { showToast } = useToast()
   const { locations: farmLocations, activeLocationId, activeLocation } =
@@ -113,61 +119,28 @@ function InventoryAdjust() {
   }
 
   return (
-    <Layout title="Adjust / Transfer Stock">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Inventory', href: '/inventory/overview' },
-          { label: 'Adjust' },
-        ]}
-        description="Correct on-hand stock at a site, or move lots between sites (an out row at the source and an in row at the destination, keeping batch and expiry)."
-        related={[
-          { label: 'Ledger', href: '/inventory-transactions' },
-          { label: 'Lots', href: '/inventory/lots' },
-          { label: 'Stock levels', href: '/stock-levels' },
-          { label: 'Farm locations', href: '/farm-locations' },
-        ]}
-        actions={
-          <Button href="/inventory-transactions" variant="secondary" size="sm">
-            Ledger
-          </Button>
-        }
-      />
-
+    <Layout title={t('ops.inventory.title')} eyebrow={t('ops.adjust.eyebrow')}>
+      <div className="flex flex-col gap-[28px]">
+      <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
+      <p className="max-w-2xl text-sm text-muted">{t('ops.adjust.intro')}</p>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <FormCard title="Stock action">
           <form onSubmit={submit} className="space-y-4">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMode('adjust')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                  mode === 'adjust'
-                    ? 'bg-lagoon-950 text-white'
-                    : 'bg-foam-deep text-chart-ink'
-                }`}
-              >
-                Adjustment
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('transfer')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                  mode === 'transfer'
-                    ? 'bg-lagoon-950 text-white'
-                    : 'bg-foam-deep text-chart-ink'
-                }`}
-              >
-                Transfer
-              </button>
-            </div>
+            <Segmented
+              label={t('ops.adjust.mode')}
+              options={[
+                { value: 'adjust', label: t('ops.adjust.adjustment') },
+                { value: 'transfer', label: t('ops.adjust.transfer') },
+              ]}
+              value={mode}
+              onChange={setMode}
+            />
 
             <FeedTypeField
               id="adjust-feed-type"
               value={feedTypeId}
               onChange={(e) => setFeedTypeId(e.target.value)}
-              feedTypes={(feedTypes || []).filter((t) => t.active !== false)}
+              feedTypes={(feedTypes || []).filter((ft) => ft.active !== false)}
               ready={feedTypes !== undefined}
               required
               hint="Stock lot to adjust or transfer. Create a type first if the catalog is empty."
@@ -260,55 +233,27 @@ function InventoryAdjust() {
           </form>
         </FormCard>
 
-        <FormCard title="Lots for selected type" subtitle="Live lot balances">
-          {lots === undefined ? (
-            <p className="text-sm text-muted">Loading lots…</p>
-          ) : relevantLots.length === 0 ? (
-            <p className="text-sm text-muted">
-              No lot rows yet. Purchases and inbound adjustments create them when
-              lot tracking is enabled.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted">
-                    <th className="py-2 pr-3">Type</th>
-                    <th className="py-2 pr-3">Location</th>
-                    <th className="py-2 pr-3">Batch</th>
-                    <th className="py-2 pr-3">Expiry</th>
-                    <th className="py-2 text-right">kg</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {relevantLots.map((lot) => (
-                    <tr key={lot.id} className="border-t border-foam-deep">
-                      <td className="py-2 pr-3">{lot.feed_type_name}</td>
-                      <td className="py-2 pr-3">{lot.location}</td>
-                      <td className="py-2 pr-3 font-data">
-                        {lot.batch_number || '—'}
-                      </td>
-                      <td className="py-2 pr-3 font-data">
-                        {lot.expiry_date || '—'}
-                      </td>
-                      <td className="py-2 text-right font-data">
-                        {lot.quantity_kg}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <FormCard title={t('ops.adjust.lotsTitle')} subtitle={t('ops.adjust.lotsSub')}>
+          <Table
+            columns={[
+              { key: 'feed', header: t('ops.col.feedType'), render: (lot) => lot.feed_type_name, sub: (lot) => lot.location },
+              { key: 'batch', header: t('ops.lots.batch'), width: 110, render: (lot) => <span className="font-data text-muted">{lot.batch_number || '—'}</span> },
+              { key: 'expiry', header: t('ops.lots.expires'), width: 120, render: (lot) => (lot.expiry_date ? formatDate(lot.expiry_date) : '—') },
+              { key: 'qty', header: t('ops.col.kg'), width: 90, align: 'right', render: (lot) => formatNumber(lot.quantity_kg, { decimals: 1 }) },
+            ]}
+            rows={relevantLots}
+            empty={lots === undefined ? t('ops.common.loading') : t('ops.adjust.noLots')}
+          />
           <p className="mt-3 text-sm">
             <Link
               href="/inventory/lots"
-              className="text-lagoon-800 hover:underline"
+              className="rounded-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             >
-              View all lots →
+              {t('ops.adjust.allLots')}
             </Link>
           </p>
         </FormCard>
+      </div>
       </div>
     </Layout>
   )

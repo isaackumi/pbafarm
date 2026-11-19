@@ -1,14 +1,15 @@
 import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
-import {
-  Package,
-  BarChart2,
-  ShoppingCart,
-  Scale,
-} from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, StatCard, Button, LoadingState } from '../../components/ui'
+import { KpiStrip, LoadingState, Table } from '../../components/ui'
+import NavTabs from '../../components/ui/NavTabs'
+import { Panel, ListRow } from '../../components/ui/Panel'
+import { feedTabs } from '../../lib/sectionTabs'
+import { formatMass, shortDate } from '../../lib/feedOverview'
+import { SERIES, axisProps, gridProps, legendProps, tooltipProps } from '../../lib/chartTheme'
+import { useT } from '../../lib/i18n/context'
+import { usePermission } from '../../hooks/usePermission'
 import { useMoney } from '../../lib/money'
 import { api } from '../../convex/_generated/api'
 import { useOptionalQuery } from '../../hooks/useOptionalQuery'
@@ -27,7 +28,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { localToday } from '../../lib/format'
+import { formatNumber, localToday } from '../../lib/format'
 import { useLocation } from '../../contexts/LocationContext'
 
 export default function FeedManagementOverviewPage() {
@@ -39,8 +40,9 @@ export default function FeedManagementOverviewPage() {
 }
 
 function FeedManagementOverview() {
+  const t = useT()
   const money = useMoney()
-  const kg = (n) => (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
+  const canPurchase = usePermission('inventory.purchase.record')
 
   // Stock, usage and FCR at the header site (FARM-003).
   const { activeLocationId, locationArgs } = useLocation()
@@ -148,7 +150,6 @@ function FeedManagementOverview() {
     }))
   }
 
-  const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
 
   const {
     feedTypes = [],
@@ -157,211 +158,128 @@ function FeedManagementOverview() {
     costData = [],
     supplierData = [],
   } = view || {}
+  const lowStock = feedTypes.filter((type) => type.current_stock <= type.minimum_stock * 1.2)
 
   return (
-    <Layout title="Feed Management Overview">
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Feed management' },
-          { label: 'Overview' },
-        ]}
-        description="Feed stock, purchases, and usage at a glance."
-        related={[
-          { label: 'Feed purchases', href: '/feed-purchases' },
-          { label: 'Feed types', href: '/feed-types' },
-          { label: 'Feed suppliers', href: '/feed-suppliers' },
-          { label: 'Stock levels', href: '/stock-levels' },
-        ]}
-      />
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Button href="/feed-purchases" variant="secondary" className="w-full">
-            <ShoppingCart className="w-4 h-4" aria-hidden />
-            Record purchase
-          </Button>
-          <Button href="/feed-issue" variant="secondary" className="w-full">
-            <Scale className="w-4 h-4" aria-hidden />
-            Issue feed
-          </Button>
-          <Button href="/feed-types" variant="secondary" className="w-full">
-            <Package className="w-4 h-4" aria-hidden />
-            Feed types
-          </Button>
-          <Button href="/feed-suppliers" variant="secondary" className="w-full">
-            <BarChart2 className="w-4 h-4" aria-hidden />
-            Suppliers
-          </Button>
-        </div>
-
+    <Layout title={t('ops.trends.title')} eyebrow={t('ops.trends.eyebrow')}>
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={feedTabs(t)} label={t('ops.tabs.feed')} />
         {loading ? (
-          <LoadingState label="Loading feed data..." />
+          <LoadingState label={t('ops.common.loading')} />
         ) : (
-        <>
-        {/* Key Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Feed in stock" value={kg(metrics.totalStock)} unit="kg" />
-          <StatCard label="Stock value" value={money(metrics.totalValue, { decimals: 0 })} />
-          <StatCard
-            label="Low stock"
-            value={metrics.lowStockItems}
-            unit={metrics.lowStockItems === 1 ? 'feed type' : 'feed types'}
-            tone={metrics.lowStockItems > 0 ? 'warn' : 'default'}
-          />
-          <StatCard label="Used, last 30 days" value={kg(metrics.monthlyUsage)} unit="kg" />
-          <StatCard
-            label="Farm eFCR"
-            value={metrics.averageFCR == null ? '—' : metrics.averageFCR.toFixed(2)}
-            hint={
-              metrics.averageFCR == null
-                ? 'Needs stocking, feed and a bi-weekly sample'
-                : 'Active cycles: feed ÷ biomass gained'
-            }
-            tone="accent"
-          />
-          <StatCard
-            label="Average price in stock"
-            value={metrics.feedCostPerKg == null ? '—' : money(metrics.feedCostPerKg)}
-            unit={metrics.feedCostPerKg == null ? '' : 'per kg'}
-          />
-        </div>
+          <>
+            <KpiStrip
+              items={[
+                { label: t('ops.feed.inStore'), value: formatMass(metrics.totalStock) },
+                { label: t('ops.stock.value'), value: money(metrics.totalValue, { decimals: 0 }) },
+                {
+                  label: t('ops.feed.lowStock'),
+                  value: formatNumber(metrics.lowStockItems),
+                  valueTone: metrics.lowStockItems > 0 ? 'warn' : undefined,
+                },
+                { label: t('ops.feed.used30d'), value: formatMass(metrics.monthlyUsage) },
+                {
+                  label: t('ops.trends.efcr'),
+                  value: metrics.averageFCR == null ? '—' : metrics.averageFCR.toFixed(2),
+                },
+                {
+                  label: t('ops.trends.avgPrice'),
+                  value: metrics.feedCostPerKg == null ? '—' : money(metrics.feedCostPerKg),
+                  suffix: metrics.feedCostPerKg == null ? undefined : '/ kg',
+                },
+              ]}
+            />
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Feed Usage Trend */}
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed usage trend</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={usageData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {feedTypes.map((type, index) => (
-                    <Line
-                      key={type.id}
-                      type="monotone"
-                      dataKey={type.name}
-                      stroke={COLORS[index % COLORS.length]}
-                      strokeWidth={2}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Feed Cost Distribution */}
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Feed cost distribution</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={costData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ name, percent, value }) =>
-                      value > 0
-                        ? `${name} ${(percent * 100).toFixed(0)}%`
-                        : null
-                    }
-                  >
-                    {costData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Supplier Distribution */}
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Supplier distribution</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={supplierData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="value" fill="var(--lake)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Low Stock Alerts */}
-          <div className="page-card p-4 sm:p-6">
-            <h3 className="text-lg font-medium text-chart-ink mb-4">Low stock alerts</h3>
-            <div className="space-y-4">
-              {feedTypes
-                .filter(type => type.current_stock <= type.minimum_stock * 1.2)
-                .map(type => (
-                  <div
-                    key={type.id}
-                    className="flex items-center justify-between gap-4 p-4 rounded-xl border border-signal/25 bg-signal/10"
-                  >
-                    <div>
-                      <p className="font-medium text-chart-ink">{type.name}</p>
-                      <p className="text-sm text-muted tabular-nums">
-                        Current: {type.current_stock.toFixed(2)} kg | Minimum:{' '}
-                        {type.minimum_stock.toFixed(2)} kg
-                      </p>
-                    </div>
-                    <Button
-                      href="/feed-purchases"
-                      variant="ghost"
-                      size="sm"
-                      className="text-signal shrink-0"
-                    >
-                      Order now
-                    </Button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="page-card overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 border-b border-foam-deep">
-            <h3 className="text-lg font-medium text-chart-ink">Recent activity</h3>
-          </div>
-          <div className="divide-y divide-foam-deep">
-            {feedTypes.slice(0, 5).map(type => (
-              <div key={type.id} className="px-4 sm:px-6 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-chart-ink">{type.name}</p>
-                    <p className="text-sm text-muted tabular-nums">
-                      Stock: {type.current_stock.toFixed(2)} kg | Price: {money(type.price_per_kg)}/kg
-                    </p>
-                  </div>
-                  <div className="text-sm text-muted">
-                    Last updated:{' '}
-                    {type.updated_at && !Number.isNaN(new Date(type.updated_at).getTime())
-                      ? new Date(type.updated_at).toLocaleDateString()
-                      : '—'}
-                  </div>
+            <div className="grid grid-cols-1 gap-[20px] lg:grid-cols-2">
+              <Panel title={t('ops.trends.usage')} titleId="fo-usage" meta={t('ops.trends.last30')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={usageData}>
+                      <CartesianGrid {...gridProps} />
+                      <XAxis dataKey="date" {...axisProps} />
+                      <YAxis {...axisProps} width={44} />
+                      <Tooltip {...tooltipProps} />
+                      <Legend {...legendProps} />
+                      {feedTypes.map((type, index) => (
+                        <Line key={type.id} type="monotone" dataKey={type.name} stroke={SERIES[index % SERIES.length]} strokeWidth={2} dot={false} />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        </>
+              </Panel>
+
+              <Panel title={t('ops.trends.costSplit')} titleId="fo-cost" meta={t('ops.trends.stockValue')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={costData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} stroke="var(--surface)">
+                        {costData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={SERIES[index % SERIES.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipProps} formatter={(v) => money(v, { decimals: 0 })} />
+                      <Legend {...legendProps} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
+
+              <Panel title={t('ops.trends.bySupplier')} titleId="fo-supplier" meta={t('ops.trends.kgInStock')}>
+                <div className="h-72 border-t border-line pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={supplierData}>
+                      <CartesianGrid {...gridProps} />
+                      <XAxis dataKey="name" {...axisProps} />
+                      <YAxis {...axisProps} width={44} />
+                      <Tooltip {...tooltipProps} />
+                      <Bar dataKey="value" name={t('ops.col.kg')} fill="var(--cyan)" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
+
+              <Panel
+                title={t('ops.trends.lowStock')}
+                titleId="fo-low"
+                action={canPurchase ? { label: t('ops.trends.orderNow'), href: '/feed-purchases' } : undefined}
+              >
+                {lowStock.length === 0 ? (
+                  <p className="border-t border-line py-3 text-sm text-muted">{t('ops.feed.nothingToReorder')}</p>
+                ) : (
+                  lowStock.map((type) => (
+                    <ListRow
+                      key={type.id}
+                      dot={type.current_stock <= type.minimum_stock * 0.5 ? 'alert' : 'warn'}
+                      dotLabel={t('ops.feed.lowStockShort')}
+                      title={type.name}
+                      sub={t('ops.feed.minKg', { amount: formatMass(type.minimum_stock) })}
+                      value={formatMass(type.current_stock)}
+                    />
+                  ))
+                )}
+              </Panel>
+            </div>
+
+            <Table
+              title={t('ops.feed.feedTypes')}
+              columns={[
+                { key: 'name', header: t('ops.col.name'), sub: (type) => type.supplier_name },
+                { key: 'stock', header: t('ops.col.onHand'), width: 130, align: 'right', render: (type) => formatMass(type.current_stock) },
+                { key: 'price', header: t('ops.col.pricePerKg'), width: 130, align: 'right', render: (type) => money(type.price_per_kg) },
+                {
+                  key: 'updated',
+                  header: t('ops.col.updated'),
+                  width: 130,
+                  align: 'right',
+                  render: (type) => <span className="text-muted">{type.updated_at && !Number.isNaN(new Date(type.updated_at).getTime()) ? shortDate(new Date(type.updated_at).getTime()) : '—'}</span>,
+                },
+              ]}
+              rows={feedTypes.slice(0, 8)}
+              empty={t('ops.feed.noFeedTypes')}
+            />
+          </>
         )}
+      </div>
     </Layout>
   )
-} 
+}

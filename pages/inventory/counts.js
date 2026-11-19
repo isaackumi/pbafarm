@@ -2,25 +2,29 @@ import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button, FormCard, FormSection, FormActions, Field, Input, Select, Textarea } from '../../components/ui'
+import { Button, Pill, Table, FormCard, FormSection, FormActions, Field, Input, Select, Textarea } from '../../components/ui'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
 import { usePermission } from '../../hooks/usePermission'
 import { useT } from '../../lib/i18n/context'
-import { localToday } from '../../lib/format'
+import { formatDate, localToday } from '../../lib/format'
+import NavTabs from '../../components/ui/NavTabs'
+import { inventoryTabs } from '../../lib/sectionTabs'
 import { errorMessage } from '../../lib/errorMessage'
 
 export default function StockCountsPage() {
   const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title={t('stockCount.title')}>
+      <Layout title={t('ops.inventory.title')} eyebrow={t('ops.counts.eyebrow')}>
         <StockCounts />
       </Layout>
     </ProtectedRoute>
   )
 }
+
+const COUNT_TONE = { draft: 'amber', posted: 'green', cancelled: 'neutral' }
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 3 }))
 
@@ -58,19 +62,12 @@ function StockCounts() {
   const hasDraft = (counts || []).some((c) => c.status === 'draft')
 
   return (
-    <div>
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[{ label: t('stockCount.inventory'), href: '/inventory/overview' }, { label: t('stockCount.title') }]}
-        description={t('stockCount.description', { site: activeLocation?.name || '—' })}
-        related={[
-          { label: t('stockCount.adjustTransfer'), href: '/inventory/adjust' },
-          { label: t('stockCount.transactions'), href: '/inventory-transactions' },
-        ]}
-      />
+    <div className="flex flex-col gap-[28px]">
+      <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
+      <p className="max-w-2xl text-sm text-muted">{t('stockCount.description', { site: activeLocation?.name || '—' })}</p>
 
       {canCount && !hasDraft && activeLocationId && (
-        <FormCard className="mb-6">
+        <FormCard>
           <form onSubmit={start}>
             <FormSection title={t('stockCount.newCount')}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -123,45 +120,43 @@ function StockCounts() {
         />
       )}
 
-      <div className="page-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-foam-deep">
-          <h3 className="text-lg font-medium text-chart-ink">{t('stockCount.history')}</h3>
-        </div>
-        {counts === undefined ? (
-          <p className="px-6 py-6 text-sm text-muted">{t('common.loading')}</p>
-        ) : counts.length === 0 ? (
-          <p className="px-6 py-6 text-sm text-muted">{t('stockCount.none')}</p>
-        ) : (
-          <table className="min-w-full divide-y divide-foam-deep text-sm">
-            <thead className="bg-foam-deep/40">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('stockCount.countDate')}</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted">{t('stockCount.status')}</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted">{t('stockCount.counted')}</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted">{t('stockCount.differences')}</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-foam-deep">
-              {counts.map((c) => (
-                <tr key={c.id}>
-                  <td className="px-4 py-3 font-data">{c.count_date}</td>
-                  <td className="px-4 py-3">{t(`stockCount.statuses.${c.status}`)}</td>
-                  <td className="px-4 py-3 text-right font-data">
-                    {c.counted_count}/{c.line_count}
-                  </td>
-                  <td className="px-4 py-3 text-right font-data">{c.difference_count}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button type="button" className="text-lagoon-800 hover:underline" onClick={() => setSelectedId(c.id)}>
-                      {t('stockCount.open')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <Table
+        title={t('stockCount.history')}
+        columns={[
+          { key: 'date', header: t('stockCount.countDate'), render: (c) => formatDate(c.count_date) },
+          {
+            key: 'status',
+            header: t('stockCount.status'),
+            width: 140,
+            render: (c) => <Pill tone={COUNT_TONE[c.status] || 'neutral'}>{t(`stockCount.statuses.${c.status}`)}</Pill>,
+          },
+          { key: 'counted', header: t('stockCount.counted'), width: 120, align: 'right', render: (c) => `${c.counted_count}/${c.line_count}` },
+          {
+            key: 'diff',
+            header: t('stockCount.differences'),
+            width: 120,
+            align: 'right',
+            render: (c) => <span className={c.difference_count ? 'text-warn' : ''}>{c.difference_count}</span>,
+          },
+          {
+            key: 'open',
+            header: <span className="sr-only">{t('stockCount.open')}</span>,
+            width: 90,
+            align: 'right',
+            render: (c) => (
+              <button
+                type="button"
+                className="rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                onClick={() => setSelectedId(c.id)}
+              >
+                {t('stockCount.open')}
+              </button>
+            ),
+          },
+        ]}
+        rows={counts || []}
+        empty={counts === undefined ? t('common.loading') : t('stockCount.none')}
+      />
     </div>
   )
 }

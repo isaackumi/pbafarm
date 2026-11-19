@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Button, Card, CardHeader, ErrorState, Field, FormPage, Input, PageHeader, Select, Skeleton, StatCard } from '../components/ui'
+import { Download } from 'lucide-react'
+import { ErrorState, Field, GradientButton, Input, KpiStrip, Select, Skeleton } from '../components/ui'
+import NavTabs from '../components/ui/NavTabs'
+import { ListRow, Panel } from '../components/ui/Panel'
+import { financeTabs } from '../lib/sectionTabs'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { downloadCsv } from '../lib/csv'
@@ -65,40 +69,56 @@ function AccountingExportPage() {
     downloadCsv(`accounting-${format}-${from}-to-${to}.csv`, table.header, table.rows)
   }
 
+  const truncatedSources = (data?.truncated || [])
+    .map((s) => t(SOURCE_KEYS[s === 'sales' ? 'sale' : s === 'payments' ? 'payment' : s === 'purchases' ? 'purchase' : 'expense']))
+    .join(', ')
+
   return (
-    <FormPage>
-      <PageHeader title={t('integ.acct.title')} description={t('integ.acct.description')} />
-      <div className="space-y-6">
-        <Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label={t('integ.acct.from')} htmlFor="acct-from">
-              <Input id="acct-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </Field>
-            <Field label={t('integ.acct.to')} htmlFor="acct-to">
-              <Input id="acct-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </Field>
-            <Field label={t('integ.acct.site')} htmlFor="acct-site">
-              <Select id="acct-site" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
-                <option value="">{t('integ.acct.allSites')}</option>
-                {locations.map((l) => (
-                  <option key={l._id || l.id} value={l._id || l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label={t('integ.acct.format')} htmlFor="acct-format">
-              <Select id="acct-format" value={format} onChange={(e) => setFormat(e.target.value)}>
-                {EXPORT_FORMATS.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {t(FORMAT_KEYS[f.id])}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          {!valid && <p className="mt-3 text-sm text-signal">{t('integ.acct.badRange')}</p>}
-        </Card>
+    <Layout
+      title={t('integ.acct.title')}
+      eyebrow={t('ops.acct.eyebrow')}
+      actions={
+        <GradientButton icon={Download} onClick={download} disabled={!data || !entries.length}>
+          {t('integ.acct.download')}
+        </GradientButton>
+      }
+    >
+      <div className="flex flex-col gap-[28px]">
+        <NavTabs tabs={financeTabs(t)} label={t('ops.tabs.finance')} />
+        <p className="max-w-[720px] text-sm leading-5 text-muted">{t('integ.acct.description')}</p>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label={t('integ.acct.from')} htmlFor="acct-from">
+            <Input id="acct-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </Field>
+          <Field label={t('integ.acct.to')} htmlFor="acct-to">
+            <Input id="acct-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </Field>
+          <Field label={t('integ.acct.site')} htmlFor="acct-site">
+            <Select id="acct-site" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+              <option value="">{t('integ.acct.allSites')}</option>
+              {locations.map((l) => (
+                <option key={l._id || l.id} value={l._id || l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t('integ.acct.format')} htmlFor="acct-format">
+            <Select id="acct-format" value={format} onChange={(e) => setFormat(e.target.value)}>
+              {EXPORT_FORMATS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {t(FORMAT_KEYS[f.id])}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        {!valid && (
+          <p role="alert" className="-mt-4 text-sm text-alert">
+            {t('integ.acct.badRange')}
+          </p>
+        )}
 
         {error ? (
           <ErrorState title={t('integ.acct.errorTitle')} message={errorMessage(error)} />
@@ -106,42 +126,39 @@ function AccountingExportPage() {
           <Skeleton className="h-40" />
         ) : data ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {Object.entries(SOURCE_KEYS).map(([k, key]) => (
-                <StatCard key={k} label={t(key)} value={money(totals.bySource[k] || 0, data.currency)} />
-              ))}
-            </div>
-            <Card>
-              <CardHeader
-                title={t('integ.acct.summaryTitle', { count: totals.count })}
-                subtitle={t('integ.acct.balanced', {
+            <KpiStrip
+              items={Object.entries(SOURCE_KEYS).map(([k, key]) => ({
+                label: t(key),
+                value: money(totals.bySource[k] || 0, data.currency),
+              }))}
+            />
+            <Panel title={t('integ.acct.summaryTitle', { count: totals.count })} titleId="acct-summary">
+              <ListRow dot="cyan" title={t('ops.acct.debit')} value={money(totals.debit, data.currency)} />
+              <ListRow dot="pink" title={t('ops.acct.credit')} value={money(totals.credit, data.currency)} />
+              <p className="border-t border-line py-[11px] text-sm text-muted">
+                {t('integ.acct.balanced', {
                   debit: money(totals.debit, data.currency),
                   credit: money(totals.credit, data.currency),
                 })}
-              />
+              </p>
               {data.truncated.length > 0 && (
-                <p className="mb-3 text-sm text-signal">
-                  {t('integ.acct.truncated', { sources: data.truncated.map((s) => t(SOURCE_KEYS[s === 'sales' ? 'sale' : s === 'payments' ? 'payment' : s === 'purchases' ? 'purchase' : 'expense'])).join(', ') })}
+                <p role="alert" className="border-t border-line py-[11px] text-sm text-alert">
+                  {t('integ.acct.truncated', { sources: truncatedSources })}
                 </p>
               )}
-              <Button onClick={download} disabled={!entries.length}>
-                {t('integ.acct.download')}
-              </Button>
-              <p className="mt-3 text-xs text-muted">{t('integ.acct.accountsHint')}</p>
-            </Card>
+              <p className="border-t border-line pt-[11px] text-xs leading-4 text-muted">{t('integ.acct.accountsHint')}</p>
+            </Panel>
           </>
         ) : null}
       </div>
-    </FormPage>
+    </Layout>
   )
 }
 
 export default function AccountingExport() {
   return (
     <ProtectedRoute permission="reports.export">
-      <Layout>
-        <AccountingExportPage />
-      </Layout>
+      <AccountingExportPage />
     </ProtectedRoute>
   )
 }
