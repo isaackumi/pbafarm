@@ -39,6 +39,8 @@ import {
   type WqValues,
 } from './lib/waterQuality'
 import { assertUserCan, requireMember } from './lib/permissions'
+import { worstValue, type Point } from './lib/sensorAnalytics'
+import { notifySensorBreaches } from './lib/sensorAlerts'
 
 const valueFields = {
   dissolvedOxygen: v.optional(v.number()),
@@ -56,7 +58,7 @@ const valueFields = {
 
 type Ctx = QueryCtx | MutationCtx
 
-async function overridesFor(ctx: Ctx, companyId: Id<'companies'>): Promise<ThresholdOverride[]> {
+export async function overridesFor(ctx: Ctx, companyId: Id<'companies'>): Promise<ThresholdOverride[]> {
   const rows = await ctx.db
     .query('waterQualityThresholds')
     .withIndex('by_companyId', (q) => q.eq('companyId', companyId))
@@ -223,19 +225,23 @@ export async function mirrorRecordReading(
 
 /**
  * Evaluate a batch of sensor readings against thresholds (INT-007 hook):
- * one breach event per unit, using the worst value of each parameter.
+ * one breach event per unit, using the worst value of each parameter, and
+ * a notification for DO, temperature, pH and ammonia breaches (ANLY-006,
+ * lib/sensorAlerts).
  */
 export async function evaluateSensorReadings(
   ctx: MutationCtx,
   companyId: Id<'companies'>,
   readings: { cageId?: Id<'cages'>; parameter: string; value: number; measuredAt: number }[],
 ) {
-  const byUnit = new Map<Id<'cages'>, { values: WqValues; measuredAt: number }>()
+  const byUnit = new Map<Id<'cages'>, { points: Map<WqParameter, Point[]>; measuredAt: number }>()
   for (const r of readings) {
     const field = SENSOR_TO_FIELD[r.parameter]
     if (!r.cageId || !field) continue
-    const entry = byUnit.get(r.cageId) ?? { values: {}, measuredAt: 0 }
-    entry.values[field] = r.value
+    const entry = byUnit.get(r.cageId) ?? { points: new Map(), measuredAt: 0 }
+    const list = entry.points.get(field) ?? []
+    list.push({ value: r.value, measuredAt: r.measuredAt })
+    entry.points.set(field, list)
     entry.measuredAt = Math.max(entry.measuredAt, r.measuredAt)
     byUnit.set(r.cageId, entry)
   }
@@ -245,7 +251,10 @@ export async function evaluateSensorReadings(
   for (const [unitId, entry] of byUnit) {
     const unit = await ctx.db.get(unitId)
     if (!unit || unit.companyId !== companyId) continue
-    const breaches = evaluateBreaches(entry.values, effectiveThresholds(unitTypeOf(unit), overrides))
+    const thresholds = effectiveThresholds(unitTypeOf(unit), overrides)
+    const values: WqValues = {}
+    for (const [field, points] of entry.points) values[field] = worstValue(points, thresholds[field])
+    const breaches = evaluateBreaches(values, thresholds)
     if (!breaches.length) continue
     const date = await todayFor(ctx, { locationId: unit.locationId, companyId }, entry.measuredAt)
     await emitDomainEvent(
@@ -258,7 +267,7 @@ export async function evaluateSensorReadings(
         unitType: unitTypeOf(unit),
         date,
         source: 'sensor',
-        ...pickValues(entry.values as any),
+        ...pickValues(values as any),
         breachCount: breaches.length,
         parameters: breaches.map((b) => b.parameter).join(', '),
         summary: breachSummary(breaches),
@@ -266,6 +275,7 @@ export async function evaluateSensorReadings(
       },
       { companyId, locationId: unit.locationId },
     )
+    await notifySensorBreaches(ctx, companyId, unit, breaches, entry.measuredAt)
     events += 1
   }
   return events

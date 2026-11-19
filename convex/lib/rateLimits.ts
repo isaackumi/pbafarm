@@ -24,6 +24,19 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   apiPerCompany: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 200 },
   /** Webhook test sends from the UI (INT-005), key = companyId. */
   webhookTestPerCompany: { kind: 'fixed window', rate: 20, period: HOUR },
+  /** Inbound webhook requests (INT-003), key = inbound webhook id. */
+  inboundPerWebhook: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 200 },
+  /** Rejected inbound requests written to the log, key = inbound webhook id. */
+  inboundRejectLogPerWebhook: { kind: 'fixed window', rate: 60, period: HOUR },
+  /** Assistant calls on the organization's own key (INT-009), key = userId. Same as the Next proxy. */
+  llmPerUserMinute: { kind: 'fixed window', rate: 10, period: MINUTE },
+  llmPerUserHour: { kind: 'fixed window', rate: 100, period: HOUR },
+  /** key = companyId. */
+  llmPerCompanyHour: { kind: 'fixed window', rate: 500, period: HOUR },
+  /** Usage rows reported by the Next proxy for server-key calls, key = userId. */
+  llmUsageReportPerUser: { kind: 'fixed window', rate: 150, period: HOUR },
+  /** Sensor threshold alerts (ANLY-006), key = `${unitId}:${parameter}`. */
+  sensorBreachAlertPerUnit: { kind: 'fixed window', rate: 1, period: HOUR },
 })
 
 /** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */

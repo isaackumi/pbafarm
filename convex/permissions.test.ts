@@ -32,6 +32,8 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireApiAdmin(ctx)': 'integrations.manage',
   'requireAdmin(ctx)': 'automation.manage',
   'requireWebhookAdmin(ctx)': 'integrations.manage',
+  'requireInboundAdmin(ctx)': 'integrations.manage',
+  'requireLlmAdmin(ctx)': 'integrations.manage',
 }
 
 /** Functions without an organization guard, and why. */
@@ -48,6 +50,10 @@ const ALLOWLIST: Record<string, string> = {
   'weather.refreshSite': 'action; guarded by requireMember(org.sites.manage) in internal.weather.siteForRefresh',
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
   'customFields.setValues': 'guarded by requireEntityEditor: the permission that edits that entity (ENTITY_EDIT_PERMISSION in customFields.ts) plus site scope',
+  'inboundWebhooks.create': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.createRow',
+  'inboundWebhooks.rotateSecret': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.owner',
+  'llmGateway.saveCredential': 'action; guarded by requireLlmAdmin in internal.llmGateway.upsertCredentialRow',
+  'llmGateway.chat': 'action; guarded by requireMember(ai.use) in internal.llmGateway.begin',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
   'actAs.start': 'super_admin only, checked on the real account (requireUser({ ignoreActAs })): support access is not a company permission',
   'actAs.stop': 'own act-as session; any signed-in account, ends only its own',

@@ -18,6 +18,8 @@ import { ADAPTERS, platformChannelFromEnv } from './messaging/providers'
 import * as channels from './messaging/channels'
 import * as deliver from './messaging/deliver'
 import * as webhooks from './webhooks'
+import * as inboundWebhooks from './inboundWebhooks'
+import * as llmGateway from './llmGateway'
 import * as governance from './governance'
 
 const modules = import.meta.glob('./**/*.ts')
@@ -493,12 +495,14 @@ describe('secrets stay server-side (doc 10 §10 meta-test)', () => {
       .map(([path]) => path)
       .sort()
     // governance.ts only deletes them, when an organization is purged (internal).
-    expect(users).toEqual(['./governance.ts', './messaging/channels.ts', './messaging/deliver.ts', './webhooks.ts'])
+    expect(users).toEqual(['./governance.ts', './inboundWebhooks.ts', './llmGateway.ts', './messaging/channels.ts', './messaging/deliver.ts', './webhooks.ts'])
     // Every function in those modules that returns secret material is internal.
     for (const fn of [
       channels.storeCredentials, channels.prepareTest, deliver.resolveRoute,
       webhooks.insertEndpoint, webhooks.loadForDelivery,
       governance.purgeCompanyBatch,
+      inboundWebhooks.storeSecret, inboundWebhooks.lookup,
+      llmGateway.storeCredentialSecret, llmGateway.begin,
     ] as any[]) {
       expect(fn.isInternal).toBe(true)
     }

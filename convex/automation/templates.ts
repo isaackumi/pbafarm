@@ -252,6 +252,11 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
     fields: ['date', 'lines', 'cageName', 'averageBodyWeight'],
   },
   {
+    type: 'inbound.webhook.received',
+    label: 'Inbound webhook received',
+    fields: ['webhookName', 'eventType', 'externalId'],
+  },
+  {
     type: 'sensor.readings.recorded',
     label: 'Sensor readings received',
     fields: ['readings', 'cageNames', 'minDissolvedOxygen', 'maxTemperatureC'],

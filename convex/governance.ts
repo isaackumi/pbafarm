@@ -611,6 +611,18 @@ async function deleteCascade(ctx: MutationCtx, table: string, row: any) {
       .withIndex('by_endpointId_and_createdAt', (q) => q.eq('endpointId', row._id))
       .take(500)
     for (const d of deliveries) await ctx.db.delete(d._id)
+  } else if (table === 'inboundWebhooks' || table === 'llmCredentials') {
+    const secrets =
+      table === 'inboundWebhooks'
+        ? await ctx.db
+            .query('integrationSecrets')
+            .withIndex('by_inboundWebhookId', (q) => q.eq('inboundWebhookId', row._id))
+            .take(20)
+        : await ctx.db
+            .query('integrationSecrets')
+            .withIndex('by_llmCredentialId', (q) => q.eq('llmCredentialId', row._id))
+            .take(20)
+    for (const s of secrets) await ctx.db.delete(s._id)
   } else if (table === 'apiKeys') {
     const keys = await ctx.db
       .query('apiIdempotencyKeys')

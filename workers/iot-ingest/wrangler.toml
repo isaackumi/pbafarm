@@ -1,0 +1,17 @@
+# CF-008 IoT ingestion Worker. Not deployed by CI; see README.md for steps.
+name = "pbafarm-iot-ingest"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+workers_dev = false
+
+# Device registry: key "device:<deviceId>" -> JSON DeviceRecord (src/devices.ts).
+[[kv_namespaces]]
+binding = "DEVICES"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+# Convex HTTP actions origin, e.g. https://<deployment>.convex.site
+CONVEX_SITE_URL = "https://REPLACE.convex.site"
+
+# Secrets (wrangler secret put):
+#   CONVEX_INGEST_KEY  an `ingest:write` API key created on the API keys page

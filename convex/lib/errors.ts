@@ -35,6 +35,8 @@ export const ERROR_CODES = [
   'RATE_LIMITED',
   /** Fish are inside a treatment withdrawal period (PROD-012). */
   'WITHDRAWAL_ACTIVE',
+  /** An external provider (LLM, messaging) failed or refused the request. */
+  'UPSTREAM',
 ] as const
 
 export type ErrorCode = (typeof ERROR_CODES)[number]

@@ -45,6 +45,7 @@ Research date for every external fact below: **2026-11-18**.
 - Automation engine runs (D-008): an action that runs a rule's steps with per-step timeout/retry and a typed outcome stored on `automationRuns`.
 - AI proxy (`pages/api/llm/chat.js`, and a future Convex action): provider calls with timeout/retry, Schema-validated request and response (PLAT-006).
 - IoT ingestion: decode and validate device batches; reject per reading with typed reasons.
+  As built: inbound signed webhooks (`convex/integrations/inboundHttp.ts`), the LLM gateway action (`convex/llmGateway.ts`, provider calls through `requestJson`) and the IoT Worker forwarder (`workers/iot-ingest/src/forward.ts`, same `requestJson` with an injected `Fetch` layer) follow §4 and §7.
 - Complex pure domain pipelines (KPI / production-engine calculations) **only if** it removes code; run them with `runEffectSync`.
 
 **Do not use Effect for:**

@@ -1526,6 +1526,10 @@ const schema = defineSchema({
     /** Owner: a messaging channel or (INT-005) a webhook endpoint's signing secret. */
     channelId: v.optional(v.id('messagingChannels')),
     webhookEndpointId: v.optional(v.id('webhookEndpoints')),
+    /** INT-003: an inbound webhook's verification secret. */
+    inboundWebhookId: v.optional(v.id('inboundWebhooks')),
+    /** INT-009: an organization's LLM provider key. */
+    llmCredentialId: v.optional(v.id('llmCredentials')),
     /** base64 AES-GCM ciphertext (with tag) of the JSON credentials. */
     ciphertext: v.string(),
     /** base64 12-byte IV, random per encryption. */
@@ -1534,7 +1538,9 @@ const schema = defineSchema({
     updatedAt: v.number(),
   })
     .index('by_channel', ['channelId'])
-    .index('by_webhookEndpointId', ['webhookEndpointId']),
+    .index('by_webhookEndpointId', ['webhookEndpointId'])
+    .index('by_inboundWebhookId', ['inboundWebhookId'])
+    .index('by_llmCredentialId', ['llmCredentialId']),
 
   /**
    * Pending phone sign-in codes (SEC-006). One row per phone; replaced on

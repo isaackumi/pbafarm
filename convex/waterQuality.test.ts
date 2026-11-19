@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
-import { describe, expect, test } from 'vitest'
+import rateLimiterTest from '@convex-dev/rate-limiter/test'
+import { describe, expect, onTestFinished, test, vi } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
 import { breachSummary, checkValues, effectiveThresholds, evaluateBreaches } from './lib/waterQuality'
@@ -9,6 +10,7 @@ const modules = import.meta.glob('./**/*.ts')
 
 async function setup() {
   const t = convexTest(schema, modules)
+  rateLimiterTest.register(t)
   const ids = await t.run(async (ctx) => {
     const now = Date.now()
     const companyId = await ctx.db.insert('companies', {
@@ -118,6 +120,11 @@ describe('water-quality log', () => {
   })
 
   test('sensor readings merge into the unit log and breaches emit an event', async () => {
+    // The breach alert schedules a notification send; keep it from running after the test.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
     const { admin, t, cage, companyId } = await setup()
     await t.run(async (ctx) => {
       const userId = (await ctx.db.query('users').first())!._id

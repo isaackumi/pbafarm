@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { decodeChatBody, runChat, type ChatOptions } from './llmProviders'
+import { decodeChatBody, runChat, runChatWithUsage, type ChatOptions } from './llmProviders'
 
 /** Scripted fetch: one response (or thrower) per call, recording requests. */
 function fake(steps: Array<(url: string, init?: RequestInit) => Response | Promise<Response>>) {
@@ -140,5 +140,24 @@ describe('llm providers (PLAT-006)', () => {
       error: 'Invalid request: provider, model and asOf must be text, temperature a number',
     })
     expect(decodeChatBody({ messages: [], temperature: 'hot' }).ok).toBe(false)
+  })
+
+  test('token usage from each provider (INT-009); absent counts stay undefined', async () => {
+    const openai = fake([json(200, { usage: { prompt_tokens: 120, completion_tokens: 30 }, choices: [{ message: { content: 'ok' } }] })])
+    expect(await runChatWithUsage(base(), openai.impl)).toEqual({ text: 'ok', usage: { inputTokens: 120, outputTokens: 30 } })
+    const gemini = fake([
+      json(200, { usageMetadata: { promptTokenCount: 50, candidatesTokenCount: 7 }, candidates: [{ content: { parts: [{ text: 'g' }] } }] }),
+    ])
+    expect((await runChatWithUsage(base({ kind: 'gemini', providerId: 'gemini', model: 'gemini-2.0-flash' }), gemini.impl)).usage).toEqual({
+      inputTokens: 50,
+      outputTokens: 7,
+    })
+    const claude = fake([json(200, { usage: { input_tokens: 9, output_tokens: 3 }, content: [{ type: 'text', text: 'c' }] })])
+    expect((await runChatWithUsage(base({ kind: 'anthropic', providerId: 'anthropic', model: 'claude-3-5-haiku-latest' }), claude.impl)).usage).toEqual({
+      inputTokens: 9,
+      outputTokens: 3,
+    })
+    const none = fake([json(200, { choices: [{ message: { content: 'x' } }] })])
+    expect((await runChatWithUsage(base(), none.impl)).usage).toEqual({ inputTokens: undefined, outputTokens: undefined })
   })
 })

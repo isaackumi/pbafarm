@@ -148,4 +148,97 @@ export const integrationTables = {
     .index('by_companyId_and_measuredAt', ['companyId', 'measuredAt'])
     .index('by_cageId_and_parameter_and_measuredAt', ['cageId', 'parameter', 'measuredAt'])
     .index('by_companyId_and_deviceId_and_measuredAt', ['companyId', 'deviceId', 'measuredAt']),
+
+  /**
+   * Inbound signed webhooks (INT-003, doc 09 §7). A partner POSTs to
+   * /webhooks/in/<publicId>, signed like our outbound webhooks
+   * (`X-PBA-Signature: t=…,v1=HMAC-SHA256(secret, "t.body")`). The secret is
+   * AES-GCM encrypted in integrationSecrets (inboundWebhookId), shown once.
+   */
+  inboundWebhooks: defineTable({
+    companyId: v.id('companies'),
+    name: v.string(),
+    /** Public id in the URL: `inw_<24 base62>`. Not a secret. */
+    publicId: v.string(),
+    status: v.union(v.literal('active'), v.literal('disabled')),
+    secretHint: v.optional(v.string()),
+    lastReceivedAt: v.optional(v.number()),
+    createdBy: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_publicId', ['publicId']),
+
+  /**
+   * One row per inbound delivery. Accepted rows are the replay guard:
+   * (webhook, externalId) is processed once; resends bump `duplicates`.
+   * Rejected rows (bad signature, stale timestamp) are logged, rate limited.
+   */
+  inboundWebhookEvents: defineTable({
+    companyId: v.id('companies'),
+    webhookId: v.id('inboundWebhooks'),
+    /** Sender's event id (X-PBA-Event-Id header or body `id`). */
+    externalId: v.optional(v.string()),
+    eventType: v.optional(v.string()),
+    status: v.union(v.literal('accepted'), v.literal('rejected')),
+    /** Why a request was rejected (never contains the secret). */
+    reason: v.optional(v.string()),
+    /** The JSON body of an accepted event (≤ 64 KB). */
+    payload: v.optional(v.string()),
+    payloadBytes: v.number(),
+    /** Signature timestamp (unix seconds). */
+    signedAt: v.optional(v.number()),
+    duplicates: v.optional(v.number()),
+    lastDuplicateAt: v.optional(v.number()),
+    domainEventId: v.optional(v.id('domainEvents')),
+    receivedAt: v.number(),
+  })
+    .index('by_webhookId_and_externalId', ['webhookId', 'externalId'])
+    .index('by_webhookId_and_receivedAt', ['webhookId', 'receivedAt'])
+    .index('by_companyId_and_receivedAt', ['companyId', 'receivedAt'])
+    .index('by_receivedAt', ['receivedAt']),
+
+  /**
+   * Organization LLM provider keys (INT-009). Non-secret settings only; the
+   * key is AES-GCM encrypted in integrationSecrets (llmCredentialId).
+   */
+  llmCredentials: defineTable({
+    companyId: v.id('companies'),
+    /** lib/llmClient.js LLM_PROVIDERS id (convex/lib/llmGateway.ts mirror). */
+    providerId: v.string(),
+    /** Default model for this key. */
+    model: v.string(),
+    /** Custom (OpenAI-compatible) provider only. */
+    baseUrl: v.optional(v.string()),
+    keyHint: v.optional(v.string()),
+    isDefault: v.boolean(),
+    enabled: v.boolean(),
+    updatedBy: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_providerId', ['companyId', 'providerId']),
+
+  /** One row per assistant model call (INT-009): who, which model, tokens, cost estimate. */
+  llmUsage: defineTable({
+    companyId: v.id('companies'),
+    userId: v.id('users'),
+    providerId: v.string(),
+    model: v.string(),
+    /** Whose key paid: the organization's or the platform's. */
+    source: v.union(v.literal('org_key'), v.literal('server_key')),
+    feature: v.union(v.literal('chat'), v.literal('insights')),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    /** USD estimate from convex/lib/llmGateway.ts MODEL_PRICES; absent when unknown. */
+    costUsd: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
 }
