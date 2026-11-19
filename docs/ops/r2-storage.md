@@ -71,7 +71,7 @@
 
 ## Owner setup (when the trigger fires)
 
-1. Cloudflare → R2 → create buckets `pbafarm-prod` and `pbafarm-staging`
+1. Cloudflare → R2 → create buckets `anowa-prod` and `anowa-staging`
    in the jurisdiction matching the Convex deployment.
 2. R2 → Manage API tokens → **Object Read & Write**, scoped to one bucket
    each. Store in the password manager.

@@ -1,4 +1,4 @@
-# Design System — PBA Farm (charcoal light)
+# Design System — Anowa (charcoal light)
 
 > Source: UI/UX Pro Max Soft UI + light dashboard guidance. Chrome uses zinc charcoal on white — not teal, not purple.
 

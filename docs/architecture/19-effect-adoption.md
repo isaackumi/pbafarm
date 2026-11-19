@@ -61,7 +61,7 @@ Research date for every external fact below: **2026-11-18**.
 4. **Retry only what is transient.** `Effect.retry({ schedule: Schedule.exponential(base).pipe(Schedule.jittered), times, while })`. Transient = network error, timeout, HTTP 5xx. Never 4xx (429 included unless the provider documents `Retry-After` and we honour it). Non-idempotent POSTs (send SMS, charge) do not retry timeouts unless the provider takes an idempotency key.
 5. **Every outbound call has a timeout.** Per attempt, via `requestJson` (`timeoutMs`) or `Effect.timeoutOrElse`. Keep total time (attempts × timeout + backoff) well under the caller's limit (Convex action 10 min; Vercel function limit for `pages/api`).
 6. **Validate what crosses a trust boundary with Schema.** Provider responses, webhook bodies, request bodies. Decode with `Schema.decodeUnknownEffect` (or `requestJsonAs`). Leave Convex argument validation to `v.*` validators.
-7. **Providers are services; implementations are Layers.** `class Sms extends Context.Service<Sms, { send: … }>()('pbafarm/Sms') {}` + `Layer.succeed(Sms, impl)` per vendor. Network access goes through the `Fetch` service (`convex/lib/effectHttp.ts`) so tests inject a fake with `fetchLayer`.
+7. **Providers are services; implementations are Layers.** `class Sms extends Context.Service<Sms, { send: … }>()('anowa/Sms') {}` + `Layer.succeed(Sms, impl)` per vendor. Network access goes through the `Fetch` service (`convex/lib/effectHttp.ts`) so tests inject a fake with `fetchLayer`.
 8. **Run at the edge of the handler, once.**
    ```ts
    import { runEffect } from './lib/effect'

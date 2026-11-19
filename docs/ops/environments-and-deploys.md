@@ -86,7 +86,7 @@ the same way when touched (AI proxy, webhooks, automation runs).
    (Settings → Backups) on production; fill in `backup-restore.md` §1.
 2. **Env vars on the new deployments**: copy from `vibrant-stork-860`
    (`npx convex env list --deployment vibrant-stork-860 --names-only`):
-   `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL` (the production/staging frontend URL),
+   `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL` (the production/staging frontend URL, prod `https://app.getanowa.com`),
    LLM keys, then `SENTRY_DSN` if used.
 3. **GitHub** → Settings → Environments:
    - `production`: required reviewers (owner), deployment branches = `main`.

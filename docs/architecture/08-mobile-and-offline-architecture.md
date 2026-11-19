@@ -12,7 +12,7 @@ Status: proposed. Binding decision D-010: generalize `lib/offlineOutbox.js` to a
 | Outbox | One global `localStorage` key `pbafarm:outbox:daily-batch`; no user scoping; no idempotency key; flush only while `/daily-entry` is open; regex network detection; no flush lock | doc 13 §16; `lib/offlineOutbox.js:8,51-58` |
 | Shared phones | Outbox, drafts (`pbafarm:form:*`), lookups cache, `persist:root`, LLM keys survive sign-out; next user flushes the previous user's queue | doc 12 §5.2; doc 10 §12 |
 | Service worker | `pbafarm-v1` never bumped or pruned; caches non-OK navigations; precaches only `/daily-entry`, `/dashboard` HTML; Google Fonts not cached | doc 11 §6; `public/sw.js` |
-| Manifest | SVG icons only; fixed "PBA Farm" name; `start_url: /daily-entry` | doc 13 §15 |
+| Manifest | SVG icons only; fixed "Anowa" name; `start_url: /daily-entry` | doc 13 §15 |
 | Dates | "Today" in UTC at 31 sites; drafts keep module-load dates | doc 11 §5.3; doc 10 §7.2 |
 | Weight | ~295 KB gz JS on Home and Cages tabs (recharts), tour engine and Redux in `_app` | doc 11 §9 |
 
@@ -26,7 +26,7 @@ flowchart TB
     SW["Service worker<br/>versioned per build, precache field routes + chunks"]
     SHELL["App shell<br/>online: Convex auth · offline: cached session snapshot"]
     FORMS["Field forms<br/>daily · sampling · harvest · stocking · transfer · feed issue · health · purchase"]
-    REF[("IndexedDB 'pbafarm'<br/>{userId}:{companyId}:ref:*")]
+    REF[("IndexedDB 'Anowa'<br/>{userId}:{companyId}:ref:*")]
     OB[("IndexedDB<br/>{userId}:{companyId}:outbox")]
     DRAFT[("drafts {userId}:form:*")]
     FLUSH["Flusher (single-flight lock)<br/>FIFO per user"]

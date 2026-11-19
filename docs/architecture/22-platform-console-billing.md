@@ -2,7 +2,7 @@
 
 Status: implemented (PLAT-101..113). Owner runbook: `docs/ops/platform-console-dns.md`.
 
-pbafarm is a multi-tenant SaaS: every organization (`companies` row) is a tenant. This doc covers the **platform console**, the operator's dashboard across all tenants, and the provider-agnostic **billing model** behind plans, limits, trials and suspension.
+Anowa is a multi-tenant SaaS: every organization (`companies` row) is a tenant. This doc covers the **platform console**, the operator's dashboard across all tenants, and the provider-agnostic **billing model** behind plans, limits, trials and suspension.
 
 ## 1. Who and where
 
@@ -10,7 +10,7 @@ pbafarm is a multi-tenant SaaS: every organization (`companies` row) is a tenant
 |---|---|
 | Operators | Users with role `super_admin` ("platform admins"). |
 | Gate | `requireConsoleAdmin` (`convex/platform/access.ts`) = `requirePlatformAdmin(ctx, { ignoreActAs: true })` + a verified two-step session (`sessionMfaVerified`). Every console function calls it first. Non-admins get `FORBIDDEN`; an admin without a verified session gets `MFA_REQUIRED`. |
-| Host | `console.heitechinc.com` (env `NEXT_PUBLIC_PLATFORM_CONSOLE_HOST`, comma-separated; default also allows `console.localhost` for dev). Same Vercel project and build as the tenant app. |
+| Host | `console.getanowa.com` (env `NEXT_PUBLIC_PLATFORM_CONSOLE_HOST`, comma-separated; default also allows `console.localhost` for dev). Same Vercel project and build as the tenant app. |
 | Audit | Every console mutation writes a `platformEvents` row (actor, action, tenant, target, details). Actions on a tenant also write the tenant's `auditLogs` (`platform.<action>`) so the organization sees what support did. |
 
 `ignoreActAs`: an admin in an act-as session still uses the console as themselves, and console reads are never scoped to the impersonated tenant.

@@ -226,9 +226,9 @@ Facts come from vendor pages fetched on 2026-11-19. "Pricing" means *publicly li
 | **Aquarech (Kenya)** ([site](https://www.aquarech.com/)) | Small/medium East African tilapia farmers | — | App with **feed purchase, selling harvest, training**; own feed brand | Marketplace-led, not deep farm records; Kenya/Swahili focus |
 | **Ghana / West Africa** | — | — | We found no dedicated Ghanaian aquaculture SaaS in this pass. Farmerline ([site](https://farmerline.co/)) is a Ghanaian agri platform, not aquaculture-specific | **Gap** (verify with field interviews; our web search was limited because search engines blocked scraping) |
 
-### 3.1 Gap analysis: pbafarm vs field
+### 3.1 Gap analysis: Anowa vs field
 
-**What pbafarm already has**
+**What Anowa already has**
 - Multi-tenant, site-scoped permissions.
 - Daily, feeding, mortality, harvest and sampling records.
 - Hatchery and nursery.
@@ -270,7 +270,7 @@ On features, that already matches or beats aquaManager-class tools for tilapia/c
 7. **Feed supplier marketplace (light).** Start with reorder-to-supplier over WhatsApp from inventory thresholds, then partner catalogues. Aquarech shows the model ([Aquarech](https://www.aquarech.com/)).
 8. **Anonymous benchmarks** (opt-in, AquaCloud-style): "your FCR vs similar cage farms in Volta Lake".
 
-**Recommendation (§3).** Position pbafarm as *"the WhatsApp-native farm record and finance-ready platform for African tilapia and catfish"*. Don't compete on camera hardware. Ship items 1, 2 and 5 first.
+**Recommendation (§3).** Position Anowa as *"the WhatsApp-native farm record and finance-ready platform for African tilapia and catfish"*. Don't compete on camera hardware. Ship items 1, 2 and 5 first.
 
 ---
 

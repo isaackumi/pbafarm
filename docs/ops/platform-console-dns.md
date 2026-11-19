@@ -2,20 +2,20 @@
 
 Runbook for PLAT-101..113 (architecture: `docs/architecture/22-platform-console-billing.md`).
 
-The platform console is the same Next.js deployment as the tenant app, served on its own hostname, `console.heitechinc.com`. `middleware.js` limits that host to `/platform/**`, sign-in pages and static files, and returns 404 for `/platform/**` on every other host. **The hostname is not the security boundary:** every console query and mutation requires a platform admin (`super_admin`) with a verified two-step session (`convex/platform/access.ts`).
+The platform console is the same Next.js deployment as the tenant app, served on its own hostname, `console.getanowa.com`. `middleware.js` limits that host to `/platform/**`, sign-in pages and static files, and returns 404 for `/platform/**` on every other host. **The hostname is not the security boundary:** every console query and mutation requires a platform admin (`super_admin`) with a verified two-step session (`convex/platform/access.ts`).
 
 ## 1. DNS (Cloudflare, owner)
 
-1. Cloudflare dashboard → `heitechinc.com` → DNS → Records → **Add record**.
+1. Cloudflare dashboard → `getanowa.com` → DNS → Records → **Add record**.
 2. Type `CNAME`, Name `console`, Target `cname.vercel-dns.com`, Proxy status **DNS only** (grey cloud), TTL Auto.
 3. Save. Vercel issues the TLS certificate itself; a proxied (orange) record breaks certificate issuance and adds a second TLS hop.
 
 ## 2. Vercel (owner)
 
-1. Vercel → the pbafarm project → Settings → **Domains** → Add `console.heitechinc.com` (production branch `main`).
+1. Vercel → the Anowa project → Settings → **Domains** → Add `console.getanowa.com` (production branch `main`).
 2. Wait for "Valid Configuration". If Vercel shows a different CNAME target for this project, use the one it shows in step 1.2.
 3. Settings → **Environment Variables** (Production, and Preview if you want previews to have a console):
-   - `NEXT_PUBLIC_PLATFORM_CONSOLE_HOST=console.heitechinc.com` (comma-separate more hosts; add a preview host if needed).
+   - `NEXT_PUBLIC_PLATFORM_CONSOLE_HOST=console.getanowa.com` (comma-separate more hosts; add a preview host if needed).
    - `NEXT_PUBLIC_TENANT_APP_URL=https://<tenant app host>`: optional, opened after "Read-only act-as".
 4. Redeploy: `NEXT_PUBLIC_*` values are baked in at build time.
 
@@ -26,7 +26,7 @@ npx convex env set BILLING_GRACE_DAYS 7
 npx convex env set BILLING_PAYMENT_INSTRUCTIONS "Pay by MoMo to 024XXXXXXX or bank transfer to … quoting the invoice number."
 ```
 
-If Turnstile is on (`TURNSTILE_ALLOWED_HOSTNAMES` set), add `console.heitechinc.com` to that list, or sign-in on the console fails the human check. SSO (OIDC) redirects to `SITE_URL`, the tenant app: platform admins sign in to the console with email + password and their authenticator app.
+If Turnstile is on (`TURNSTILE_ALLOWED_HOSTNAMES` set), add `console.getanowa.com` to that list, or sign-in on the console fails the human check. SSO (OIDC) redirects to `SITE_URL`, the tenant app: platform admins sign in to the console with email + password and their authenticator app.
 
 ## 4. Platform admins
 
@@ -55,7 +55,7 @@ A payment that settles a renewal invoice in full renews the period and lifts a *
 
 ## 7. Checks after go-live
 
-- `https://console.heitechinc.com/dashboard` redirects to `/platform`.
+- `https://console.getanowa.com/dashboard` redirects to `/platform`.
 - `https://<tenant host>/platform` returns 404.
 - A tenant admin signing in on the console sees "This console is for platform administrators" and every console call returns `FORBIDDEN`.
-- Security headers (CSP, `X-Frame-Options: DENY`) are present on console responses (`curl -sI https://console.heitechinc.com/platform`).
+- Security headers (CSP, `X-Frame-Options: DENY`) are present on console responses (`curl -sI https://console.getanowa.com/platform`).
