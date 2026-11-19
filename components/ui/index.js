@@ -546,53 +546,54 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse rounded-[14px] bg-surface-2 ${className}`} aria-hidden />
 }
 
-/** Full app chrome skeleton — sidebar + header + content placeholders (Paper 62 loading). */
+/** Full app chrome skeleton: the Paper shell (7Z-0) geometry with placeholders. */
 export function AppShellSkeleton() {
   const t = useT()
   return (
     <div className="min-h-screen bg-bg" aria-busy="true" aria-label={t('ui.loadingApp')}>
       <aside
-        className="fixed left-0 top-0 hidden h-screen w-64 flex-col gap-4 border-r border-line bg-bg p-4 lg:flex"
+        className="fixed left-0 top-0 hidden h-screen w-sidebar flex-col gap-7 border-r border-line bg-bg px-5 py-7 lg:flex"
         aria-hidden
       >
-        <div className="flex items-center gap-2.5 px-2 py-3">
-          <Skeleton className="h-7 w-7 rounded-full" />
-          <Skeleton className="h-5 w-28" />
+        <div className="flex h-6 items-center gap-2.5 px-1.5">
+          <Skeleton className="h-[22px] w-[37px] rounded-pill" />
+          <Skeleton className="h-4 w-16 rounded-pill" />
         </div>
-        <Skeleton className="h-16 w-full rounded-card" />
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full rounded-pill" />
-        ))}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5 px-1.5">
+            <Skeleton className="size-6 rounded-[6px]" />
+            <Skeleton className="h-[34px] grow rounded-[10px]" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-pill" />
+        </div>
+        <div className="flex flex-col gap-[2px]">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-pill" />
+          ))}
+        </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:ml-64">
-        <header className="sticky top-0 z-20 border-b border-line bg-bg px-5 py-4 sm:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <Skeleton className="h-10 w-64 max-w-[50%] rounded-pill" />
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <Skeleton className="h-10 w-10 rounded-full" />
-            </div>
+      <div className="flex min-h-screen flex-col lg:ml-sidebar">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-line bg-bg px-4 sm:px-6 lg:px-10">
+          <Skeleton className="h-9 w-[320px] max-w-[50%] rounded-pill" />
+          <div className="flex items-center gap-5">
+            <Skeleton className="size-5 rounded-full" />
+            <Skeleton className="size-8 rounded-full" />
           </div>
         </header>
 
-        <main className="flex-1 p-5 sm:p-8">
-          <div className="max-w-[1400px] space-y-6">
-            <div className="max-w-md space-y-3">
-              <Skeleton className="h-[22px] w-64 max-w-full" />
-              <Skeleton className="h-3.5 w-44" />
+        <main className="flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9 lg:pb-10">
+          <div className="flex max-w-[1400px] flex-col gap-7">
+            <div className="flex max-w-md flex-col gap-[6px]">
+              <Skeleton className="h-4 w-44 rounded-pill" />
+              <Skeleton className="h-9 w-72 max-w-full rounded-[10px]" />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16" />
-              ))}
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+              <Skeleton className="h-[340px] rounded-card xl:col-span-7" />
+              <Skeleton className="h-[340px] rounded-card xl:col-span-5" />
             </div>
-            <div className="space-y-3">
-              <Skeleton className="h-3.5 w-full" />
-              <Skeleton className="h-3.5 w-[85%]" />
-              <Skeleton className="h-3.5 w-[70%]" />
-            </div>
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-[72px] w-full rounded-card" />
+            <Skeleton className="h-64 w-full rounded-card" />
           </div>
         </main>
       </div>
