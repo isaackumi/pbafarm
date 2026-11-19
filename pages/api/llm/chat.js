@@ -7,7 +7,8 @@ import {
   validateMessages,
 } from '../../../lib/llmProxyGuard'
 import { assistantSystemPrompt, businessDateOr, resolveProvider } from '../../../lib/llmServer'
-import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
+import { decodeChatBody } from '../../../convex/lib/llmProviders'
+import { chatWithOrgKey, chatWithServerKey, gatewayError } from '../../../lib/llmGatewayRoute'
 
 /**
  * Server-side LLM proxy (PLAT-006, ANLY-005): spends the server's provider
@@ -26,6 +27,11 @@ import { decodeChatBody, runChat } from '../../../convex/lib/llmProviders'
  * (Effect: 30 s per attempt, transient-only retry, Schema-validated replies).
  *
  * Rate limits are in-memory per server instance (lib/llmProxyGuard.js).
+ *
+ * Keys (INT-009): the company's own provider key (llmGateway, encrypted in
+ * Convex, with Convex-side rate limits and the same ai.use/toggle checks) is
+ * used when set; otherwise the server key. Every call lands in the company's
+ * usage log.
  */
 const perMinute = createRateLimiter({ limit: 10, windowMs: 60_000 })
 const perHour = createRateLimiter({ limit: 100, windowMs: 60 * 60_000 })
@@ -80,9 +86,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'The last message must be a question' })
     }
 
-    const resolved = resolveProvider(body.value.provider, body.value.model)
-    if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
-
     let context
     try {
       context = await auth.client.query(api.assistant.context, {
@@ -93,14 +96,31 @@ export default async function handler(req, res) {
       context = { error: err?.data?.message || err?.message || 'Could not load farm context' }
     }
 
-    const text = await runChat({
-      ...resolved.chat,
-      messages: [{ role: 'system', content: assistantSystemPrompt(context) }, ...turns],
-      temperature: clampTemperature(body.value.temperature ?? undefined),
-      referer: req.headers.origin || undefined,
-    })
+    const messages = [{ role: 'system', content: assistantSystemPrompt(context) }, ...turns]
+    const temperature = clampTemperature(body.value.temperature ?? undefined)
+    const referer = req.headers.origin || undefined
 
-    return res.status(200).json({ text, provider: resolved.providerId })
+    let org
+    try {
+      org = await chatWithOrgKey(auth.client, {
+        feature: 'chat',
+        messages,
+        providerId: body.value.provider ?? undefined,
+        model: body.value.model ?? undefined,
+        temperature,
+        referer,
+      })
+    } catch (err) {
+      const failed = gatewayError(err)
+      return res.status(failed.status).json({ error: failed.error })
+    }
+    if (org.handled) return res.status(200).json({ text: org.text, provider: org.providerId, keySource: 'org' })
+
+    const resolved = resolveProvider(body.value.provider, body.value.model)
+    if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
+
+    const text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat')
+    return res.status(200).json({ text, provider: resolved.providerId, keySource: 'server' })
   } catch (err) {
     console.error('[api/llm/chat]', err?.message)
     return res.status(500).json({ error: err?.message || 'Assistant request failed' })

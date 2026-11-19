@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
 import rateLimiterTest from '@convex-dev/rate-limiter/test'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, onTestFinished, test, vi } from 'vitest'
 import * as Effect from 'effect/Effect'
 import schema from './schema'
 import { api, internal } from './_generated/api'
@@ -178,6 +178,11 @@ describe('sensor ingestion', () => {
   const recent = () => new Date(Date.now() - 60_000).toISOString()
 
   test('stores a batch, reports rejects, dedupes a resend, emits one event', async () => {
+    // The breach alert schedules a notification send; keep it from running after the test.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
     const s = await setup()
     const k = await key(s, ['ingest:write'])
     const at = recent()

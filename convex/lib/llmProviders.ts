@@ -71,7 +71,12 @@ export function decodeChatBody(
 
 const Text = Schema.optional(Schema.NullOr(Schema.String))
 
+const Count = Schema.optional(Schema.NullOr(Schema.Number))
+
 const OpenAiResponse = Schema.Struct({
+  usage: Schema.optional(
+    Schema.NullOr(Schema.Struct({ prompt_tokens: Count, completion_tokens: Count })),
+  ),
   choices: Schema.optional(
     Schema.Array(
       Schema.Struct({ message: Schema.optional(Schema.NullOr(Schema.Struct({ content: Text }))) }),
@@ -80,6 +85,9 @@ const OpenAiResponse = Schema.Struct({
 })
 
 const GeminiResponse = Schema.Struct({
+  usageMetadata: Schema.optional(
+    Schema.NullOr(Schema.Struct({ promptTokenCount: Count, candidatesTokenCount: Count })),
+  ),
   candidates: Schema.optional(
     Schema.Array(
       Schema.Struct({
@@ -96,6 +104,9 @@ const GeminiResponse = Schema.Struct({
 })
 
 const AnthropicResponse = Schema.Struct({
+  usage: Schema.optional(
+    Schema.NullOr(Schema.Struct({ input_tokens: Count, output_tokens: Count })),
+  ),
   content: Schema.optional(
     Schema.Array(Schema.Struct({ type: Schema.optional(Schema.String), text: Text })),
   ),
@@ -128,6 +139,13 @@ function post(
 function decode<S extends Schema.Decoder<unknown>>(schema: S, res: HttpResponse): S['Type'] | undefined {
   return Option.getOrUndefined(Schema.decodeUnknownOption(schema)(res.body))
 }
+
+/** Token counts as the provider reported them (INT-009 usage log). */
+export type ChatUsage = { inputTokens?: number; outputTokens?: number }
+export type ChatReply = { text: string; usage: ChatUsage }
+
+const count = (n: number | null | undefined) =>
+  typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
 
 export type ChatOptions = {
   kind: ProviderKind
@@ -166,9 +184,13 @@ function chatOpenAi(o: ChatOptions) {
         b?.error?.message || b?.error?.metadata?.raw || b?.message || `LLM request failed (${status})`,
       o.policy,
     )
-    const text = decode(OpenAiResponse, res)?.choices?.[0]?.message?.content?.trim()
+    const body = decode(OpenAiResponse, res)
+    const text = body?.choices?.[0]?.message?.content?.trim()
     if (!text) return yield* Effect.fail(new LlmError({ message: 'Empty response from model' }))
-    return text
+    return {
+      text,
+      usage: { inputTokens: count(body?.usage?.prompt_tokens), outputTokens: count(body?.usage?.completion_tokens) },
+    } satisfies ChatReply
   })
 }
 
@@ -193,12 +215,19 @@ function chatGemini(o: ChatOptions) {
       (status, b) => b?.error?.message || `Gemini request failed (${status})`,
       o.policy,
     )
-    const text = decode(GeminiResponse, res)
-      ?.candidates?.[0]?.content?.parts?.map((p) => p.text || '')
+    const body = decode(GeminiResponse, res)
+    const text = body?.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text || '')
       .join('')
       .trim()
     if (!text) return yield* Effect.fail(new LlmError({ message: 'Empty response from Gemini' }))
-    return text
+    return {
+      text,
+      usage: {
+        inputTokens: count(body?.usageMetadata?.promptTokenCount),
+        outputTokens: count(body?.usageMetadata?.candidatesTokenCount),
+      },
+    } satisfies ChatReply
   })
 }
 
@@ -220,18 +249,22 @@ function chatAnthropic(o: ChatOptions) {
       (status, b) => b?.error?.message || `Anthropic request failed (${status})`,
       o.policy,
     )
-    const text = decode(AnthropicResponse, res)
-      ?.content?.filter((b) => b.type === 'text')
+    const body = decode(AnthropicResponse, res)
+    const text = body?.content
+      ?.filter((b) => b.type === 'text')
       .map((b) => b.text || '')
       .join('')
       .trim()
     if (!text) return yield* Effect.fail(new LlmError({ message: 'Empty response from Claude' }))
-    return text
+    return {
+      text,
+      usage: { inputTokens: count(body?.usage?.input_tokens), outputTokens: count(body?.usage?.output_tokens) },
+    } satisfies ChatReply
   })
 }
 
-/** One chat completion. */
-export function chat(o: ChatOptions): Effect.Effect<string, LlmError, Fetch> {
+/** One chat completion with the provider's token counts. */
+export function chatWithUsage(o: ChatOptions): Effect.Effect<ChatReply, LlmError, Fetch> {
   if (!o.apiKey.trim()) return Effect.fail(new LlmError({ message: 'API key is required' }))
   if (!o.model.trim()) return Effect.fail(new LlmError({ message: 'Model is required' }))
   if (o.kind === 'gemini') return chatGemini(o)
@@ -239,20 +272,37 @@ export function chat(o: ChatOptions): Effect.Effect<string, LlmError, Fetch> {
   return chatOpenAi(o)
 }
 
+/** One chat completion. */
+export function chat(o: ChatOptions): Effect.Effect<string, LlmError, Fetch> {
+  return chatWithUsage(o).pipe(Effect.map((r) => r.text))
+}
+
+/**
+ * Run `chatWithUsage` at the route edge: text and token counts, or an Error
+ * with the user-facing message (and `status` when the provider answered).
+ */
+export async function runChatWithUsage(o: ChatOptions, fetchImpl?: FetchFn): Promise<ChatReply> {
+  const impl: FetchFn = fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
+  const exit = await Effect.runPromiseExit(chatWithUsage(o).pipe(Effect.provide(fetchLayer(impl))))
+  if (Exit.isSuccess(exit)) return exit.value
+  throw failureToError(exit.cause)
+}
+
 /**
  * Run `chat` at the route edge: the reply text, or an Error with the
  * user-facing message (and `status` when the provider answered).
  */
 export async function runChat(o: ChatOptions, fetchImpl?: FetchFn): Promise<string> {
-  const impl: FetchFn = fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
-  const exit = await Effect.runPromiseExit(chat(o).pipe(Effect.provide(fetchLayer(impl))))
-  if (Exit.isSuccess(exit)) return exit.value
-  const failure = Cause.findError(exit.cause)
+  return (await runChatWithUsage(o, fetchImpl)).text
+}
+
+function failureToError(cause: Cause.Cause<LlmError>): Error {
+  const failure = Cause.findError(cause)
   if (Result.isSuccess(failure)) {
     const err = new Error(failure.success.message) as Error & { status?: number }
     err.status = failure.success.status
-    throw err
+    return err
   }
-  const squashed = Cause.squash(exit.cause)
-  throw squashed instanceof Error ? squashed : new Error(String(squashed))
+  const squashed = Cause.squash(cause)
+  return squashed instanceof Error ? squashed : new Error(String(squashed))
 }

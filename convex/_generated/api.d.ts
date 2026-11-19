@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountingExport from "../accountingExport.js";
 import type * as actAs from "../actAs.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
@@ -53,8 +54,11 @@ import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as humanVerification from "../humanVerification.js";
 import type * as idempotency from "../idempotency.js";
+import type * as inboundWebhooks from "../inboundWebhooks.js";
 import type * as integrations_apiHttp from "../integrations/apiHttp.js";
 import type * as integrations_apiScopes from "../integrations/apiScopes.js";
+import type * as integrations_inboundHttp from "../integrations/inboundHttp.js";
+import type * as integrations_inboundLogic from "../integrations/inboundLogic.js";
 import type * as integrations_openapi from "../integrations/openapi.js";
 import type * as integrations_sensorLogic from "../integrations/sensorLogic.js";
 import type * as integrations_tables from "../integrations/tables.js";
@@ -64,6 +68,7 @@ import type * as inventory from "../inventory.js";
 import type * as inventoryItems from "../inventoryItems.js";
 import type * as invoices from "../invoices.js";
 import type * as legacyData from "../legacyData.js";
+import type * as lib_accountingExport from "../lib/accountingExport.js";
 import type * as lib_actAs from "../lib/actAs.js";
 import type * as lib_analytics from "../lib/analytics.js";
 import type * as lib_apiActor from "../lib/apiActor.js";
@@ -80,6 +85,7 @@ import type * as lib_customFields from "../lib/customFields.js";
 import type * as lib_contrast from "../lib/contrast.js";
 import type * as lib_dashboardLayout from "../lib/dashboardLayout.js";
 import type * as lib_formLayouts from "../lib/formLayouts.js";
+import type * as lib_llmGateway from "../lib/llmGateway.js";
 import type * as lib_ration from "../lib/ration.js";
 import type * as lib_cycles from "../lib/cycles.js";
 import type * as lib_dates from "../lib/dates.js";
@@ -116,6 +122,8 @@ import type * as lib_reportValidators from "../lib/reportValidators.js";
 import type * as lib_rollupSchema from "../lib/rollupSchema.js";
 import type * as lib_rollups from "../lib/rollups.js";
 import type * as lib_scope from "../lib/scope.js";
+import type * as lib_sensorAlerts from "../lib/sensorAlerts.js";
+import type * as lib_sensorAnalytics from "../lib/sensorAnalytics.js";
 import type * as lib_siteKpis from "../lib/siteKpis.js";
 import type * as lib_species from "../lib/species.js";
 import type * as lib_sso from "../lib/sso.js";
@@ -128,6 +136,7 @@ import type * as lib_turnstile from "../lib/turnstile.js";
 import type * as lib_unitStatus from "../lib/unitStatus.js";
 import type * as lib_waterQuality from "../lib/waterQuality.js";
 import type * as lib_zip from "../lib/zip.js";
+import type * as llmGateway from "../llmGateway.js";
 import type * as memberships from "../memberships.js";
 import type * as messaging_channels from "../messaging/channels.js";
 import type * as messaging_deliver from "../messaging/deliver.js";
@@ -163,6 +172,7 @@ import type * as rollups from "../rollups.js";
 import type * as sales from "../sales.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
+import type * as sensorAnalytics from "../sensorAnalytics.js";
 import type * as sensors from "../sensors.js";
 import type * as species from "../species.js";
 import type * as stockCounts from "../stockCounts.js";
@@ -186,6 +196,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountingExport: typeof accountingExport;
   actAs: typeof actAs;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
@@ -231,8 +242,11 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   humanVerification: typeof humanVerification;
   idempotency: typeof idempotency;
+  inboundWebhooks: typeof inboundWebhooks;
   "integrations/apiHttp": typeof integrations_apiHttp;
   "integrations/apiScopes": typeof integrations_apiScopes;
+  "integrations/inboundHttp": typeof integrations_inboundHttp;
+  "integrations/inboundLogic": typeof integrations_inboundLogic;
   "integrations/openapi": typeof integrations_openapi;
   "integrations/sensorLogic": typeof integrations_sensorLogic;
   "integrations/tables": typeof integrations_tables;
@@ -242,6 +256,7 @@ declare const fullApi: ApiFromModules<{
   inventoryItems: typeof inventoryItems;
   invoices: typeof invoices;
   legacyData: typeof legacyData;
+  "lib/accountingExport": typeof lib_accountingExport;
   "lib/actAs": typeof lib_actAs;
   "lib/analytics": typeof lib_analytics;
   "lib/apiActor": typeof lib_apiActor;
@@ -258,6 +273,7 @@ declare const fullApi: ApiFromModules<{
   "lib/contrast": typeof lib_contrast;
   "lib/dashboardLayout": typeof lib_dashboardLayout;
   "lib/formLayouts": typeof lib_formLayouts;
+  "lib/llmGateway": typeof lib_llmGateway;
   "lib/ration": typeof lib_ration;
   "lib/cycles": typeof lib_cycles;
   "lib/dates": typeof lib_dates;
@@ -294,6 +310,8 @@ declare const fullApi: ApiFromModules<{
   "lib/rollupSchema": typeof lib_rollupSchema;
   "lib/rollups": typeof lib_rollups;
   "lib/scope": typeof lib_scope;
+  "lib/sensorAlerts": typeof lib_sensorAlerts;
+  "lib/sensorAnalytics": typeof lib_sensorAnalytics;
   "lib/siteKpis": typeof lib_siteKpis;
   "lib/species": typeof lib_species;
   "lib/sso": typeof lib_sso;
@@ -306,6 +324,7 @@ declare const fullApi: ApiFromModules<{
   "lib/unitStatus": typeof lib_unitStatus;
   "lib/waterQuality": typeof lib_waterQuality;
   "lib/zip": typeof lib_zip;
+  llmGateway: typeof llmGateway;
   memberships: typeof memberships;
   "messaging/channels": typeof messaging_channels;
   "messaging/deliver": typeof messaging_deliver;
@@ -341,6 +360,7 @@ declare const fullApi: ApiFromModules<{
   sales: typeof sales;
   security: typeof security;
   seed: typeof seed;
+  sensorAnalytics: typeof sensorAnalytics;
   sensors: typeof sensors;
   species: typeof species;
   stockCounts: typeof stockCounts;

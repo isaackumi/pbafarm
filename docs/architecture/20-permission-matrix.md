@@ -6,6 +6,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 
 | Function | Permission | Owner | Admin | Manager | Field staff | Viewer |
 |---|---|---|---|---|---|---|
+| `accountingExport.entries` | `finance.view` | yes | yes | yes | no | yes |
 | `actAs.listForCompany` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.start` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.status` | `allowlisted` | see test | see test | see test | see test | see test |
@@ -219,6 +220,12 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `health.list` | `production.view` | yes | yes | yes | yes | yes |
 | `health.remove` | `production.records.delete` | yes | yes | no | no | no |
 | `humanVerification.verify` | `allowlisted` | see test | see test | see test | see test | see test |
+| `inboundWebhooks.create` | `allowlisted` | see test | see test | see test | see test | see test |
+| `inboundWebhooks.events` | `integrations.manage` | yes | yes | no | no | no |
+| `inboundWebhooks.overview` | `integrations.manage` | yes | yes | no | no | no |
+| `inboundWebhooks.remove` | `integrations.manage` | yes | yes | no | no | no |
+| `inboundWebhooks.rotateSecret` | `allowlisted` | see test | see test | see test | see test | see test |
+| `inboundWebhooks.update` | `integrations.manage` | yes | yes | no | no | no |
 | `inventory.createAdjustment` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.createTransfer` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.listAlerts` | `inventory.view` | yes | yes | yes | yes | yes |
@@ -245,6 +252,14 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `invoices.recordPayment` | `finance.sales.correct` | yes | yes | no | no | no |
 | `invoices.removePayment` | `finance.sales.correct` | yes | yes | no | no | no |
 | `invoices.voidInvoice` | `finance.sales.correct` | yes | yes | no | no | no |
+| `llmGateway.chat` | `allowlisted` | see test | see test | see test | see test | see test |
+| `llmGateway.orgKeyStatus` | `account` | self | self | self | self | self |
+| `llmGateway.overview` | `integrations.manage` | yes | yes | no | no | no |
+| `llmGateway.recordServerUsage` | `ai.use` | yes | yes | yes | no | no |
+| `llmGateway.removeCredential` | `integrations.manage` | yes | yes | no | no | no |
+| `llmGateway.saveCredential` | `allowlisted` | see test | see test | see test | see test | see test |
+| `llmGateway.updateCredential` | `integrations.manage` | yes | yes | no | no | no |
+| `llmGateway.usage` | `integrations.manage` | yes | yes | no | no | no |
 | `memberships.acceptInvite` | `account` | self | self | self | self | self |
 | `memberships.declineInvite` | `account` | self | self | self | self | self |
 | `memberships.inviteInfo` | `allowlisted` | see test | see test | see test | see test | see test |
@@ -344,6 +359,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `sales.updateSale` | `finance.sales.record` | yes | yes | yes | no | no |
 | `security.getPolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `security.updatePolicy` | `org.settings.manage` | yes | yes | no | no | no |
+| `sensorAnalytics.series` | `production.view` | yes | yes | yes | yes | yes |
+| `sensorAnalytics.summary` | `production.view` | yes | yes | yes | yes | yes |
 | `sensors.latest` | `production.view` | yes | yes | yes | yes | yes |
 | `species.archive` | `org.settings.manage` | yes | yes | no | no | no |
 | `species.ensureDefaults` | `org.settings.manage` | yes | yes | no | no | no |

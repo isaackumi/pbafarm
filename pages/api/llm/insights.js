@@ -3,7 +3,7 @@ import { api } from '../../../lib/convexBridge'
 import { assistantRefusal, createRateLimiter } from '../../../lib/llmProxyGuard'
 import { businessDateOr, resolveProvider } from '../../../lib/llmServer'
 import { applyPhrasing, phrasingMessages } from '../../../lib/insightPhrasing'
-import { runChat } from '../../../convex/lib/llmProviders'
+import { chatWithOrgKey, chatWithServerKey } from '../../../lib/llmGatewayRoute'
 
 /**
  * Dashboard insights with optional AI phrasing (Phase 13). The insights come
@@ -11,7 +11,8 @@ import { runChat } from '../../../convex/lib/llmProviders'
  * scoped). Only when the company has the assistant enabled and a server key
  * exists does a model reword them; any reworded line that is not grounded in
  * the insight's numbers is dropped (lib/insightPhrasing). Failures fall back
- * to the plain insights, never to an error.
+ * to the plain insights, never to an error. The company's own key (INT-009)
+ * is used when set, else the server key.
  */
 const perHour = createRateLimiter({ limit: 30, windowMs: 60 * 60_000 })
 
@@ -42,14 +43,17 @@ export default async function handler(req, res) {
     if (!perHour.check(String(auth.user._id || auth.user.id)).ok) {
       return res.status(200).json({ insights: plain, phrased: false })
     }
-    const resolved = resolveProvider(undefined, undefined)
-    if (resolved.error) return res.status(200).json({ insights: plain, phrased: false })
-    const reply = await runChat({
-      ...resolved.chat,
-      messages: phrasingMessages(insights),
-      temperature: 0.2,
-      referer: req.headers.origin || undefined,
-    })
+    const messages = phrasingMessages(insights)
+    const referer = req.headers.origin || undefined
+    const org = await chatWithOrgKey(auth.client, { feature: 'insights', messages, temperature: 0.2, referer })
+    let reply
+    if (org.handled) {
+      reply = org.text
+    } else {
+      const resolved = resolveProvider(undefined, undefined)
+      if (resolved.error) return res.status(200).json({ insights: plain, phrased: false })
+      reply = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature: 0.2, referer }, 'insights')
+    }
     const out = applyPhrasing(insights, reply)
     return res.status(200).json({ insights: out, phrased: out.some((i) => i.phrased) })
   } catch (err) {

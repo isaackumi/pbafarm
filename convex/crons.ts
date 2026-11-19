@@ -43,6 +43,12 @@ crons.cron('prune api idempotency keys', '30 3 * * *', internal.publicApi.pruneI
 // Webhook delivery log is kept 30 days (INT-005).
 crons.cron('prune webhook deliveries', '45 3 * * *', internal.webhooks.pruneDeliveries, {})
 
+// Inbound webhook event log is kept 30 days (INT-003).
+crons.cron('prune inbound webhook events', '50 3 * * *', internal.inboundWebhooks.pruneEvents, {})
+
+// LLM usage log is kept 400 days (INT-009).
+crons.cron('prune llm usage', '55 3 * * *', internal.llmGateway.pruneUsage, {})
+
 // 03:00 UTC: yesterday's weather and a short forecast for sites with
 // coordinates (INT-006). Open-Meteo, no key.
 crons.cron('fetch site weather', '0 3 * * *', internal.weather.refreshAll, {})

@@ -110,6 +110,8 @@ Partly implemented (CF-004): the existing `files` table gained an upload binding
 | Rollback | Devices point back to the Convex `/ingest/v1/readings` URL (keep it live). |
 | Cost | Workers Paid $5/month base; ingestion volumes in doc 09 fit the included 10M requests [S12]. |
 
+As built (code only, not deployed): `workers/iot-ingest` authenticates devices from a KV registry (HMAC or token), batches and forwards to `/ingest/v1/readings` with an `ingest:write` API key held as a Worker secret. It holds no Convex deploy key. Deploy only when the entry criteria above are met; steps in `workers/iot-ingest/README.md`, design in doc 09 §13.9.
+
 ### Stage 7 — WAF in front of Convex (CF-009)
 
 | Item | Detail |

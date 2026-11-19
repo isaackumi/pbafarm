@@ -3,8 +3,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
+  Activity,
   ArrowLeftRight,
   Building2,
+  Calculator,
   Calendar,
   ChartColumn,
   ChevronDown,
@@ -40,6 +42,7 @@ import {
   Scale,
   Settings,
   SlidersHorizontal,
+  Sparkles,
   ShieldCheck,
   ShoppingCart,
   TrendingUp,
@@ -109,6 +112,7 @@ const MENU_SECTIONS = {
       { title: 'Groups', path: '/units/groups', permission: 'production.view', icon: List },
       { title: 'Site map', path: '/units/map', permission: 'production.view', icon: Crosshair },
       { title: 'Water quality', path: '/water-quality', permission: 'production.view', icon: Waves },
+      { title: 'Sensors', path: '/sensors', permission: 'production.view', icon: Activity },
       { title: 'Maintenance', path: '/maintenance', permission: 'production.view', icon: Settings },
       { title: 'Analytics', path: '/cages/analytics', permission: 'production.view', icon: ChartColumn },
       { title: 'QR codes', path: '/cages/qr-codes', permission: 'production.view', icon: QrCode },
@@ -157,6 +161,7 @@ const MENU_SECTIONS = {
       { title: 'Regional Report', path: '/reports/regions', permission: 'reports.view', icon: MapPin },
       { title: 'Group Reports', path: '/group-reports', permission: 'group.reports.view', icon: Globe },
       { title: 'Export Data', path: '/export', permission: 'reports.export', icon: Download },
+      { title: 'Accounting export', path: '/accounting-export', permission: 'reports.export', icon: Calculator },
       {
         title: 'Audit Logs',
         path: '/audit-logs',
@@ -184,6 +189,8 @@ const MENU_SECTIONS = {
       { title: 'Automations', path: '/automations', permission: 'automation.manage', icon: Zap },
       { title: 'API keys', path: '/api-keys', permission: 'integrations.manage', icon: KeyRound },
       { title: 'Webhooks', path: '/webhooks', permission: 'integrations.manage', icon: Webhook },
+      { title: 'Inbound webhooks', path: '/inbound-webhooks', permission: 'integrations.manage', icon: Webhook },
+      { title: 'AI settings', path: '/ai-settings', permission: 'integrations.manage', icon: Sparkles },
       { title: 'Approvals', path: '/approvals', permission: 'production.stocking.approve', icon: CircleCheck, tourId: 'approvals' },
       { title: 'Bulk Upload', path: '/bulk-upload', permission: 'production.import', icon: Upload },
     ],
