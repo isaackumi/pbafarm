@@ -1,6 +1,6 @@
 /**
  * Report builder (ANLY-001): datasets, dimensions, measures, date ranges and
- * the aggregation of loaded rows. Pure and import-free, so the browser uses
+ * the aggregation of loaded rows. Pure (imports only pure helpers), so the browser uses
  * the same catalog (components/reports) and tests run without a database.
  *
  * Every dataset reads rollups or company-indexed tables (D-006); the loaders
@@ -12,6 +12,7 @@
  *   sales     → sales (by_company_and_saleDate)
  *   inventory → inventoryItemStock + feedInventory (stock now; no period)
  */
+import { csvCell } from './csvCell'
 
 export const DATASET_IDS = ['production', 'feed', 'mortality', 'harvest', 'sales', 'inventory'] as const
 export type DatasetId = (typeof DATASET_IDS)[number]
@@ -472,15 +473,8 @@ export function reportColumns(def: ReportDefinition): ReportColumn[] {
 
 /** RFC 4180 CSV with a header row of column labels. */
 export function reportCsv(columns: ReportColumn[], rows: Array<Record<string, unknown>>): string {
-  const cell = (value: unknown) => {
-    if (value === undefined || value === null) return ''
-    let text = String(value)
-    // Spreadsheet formula injection: a cell starting with = + - @ is text.
-    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = `'${text}`
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-  }
-  const lines = [columns.map((c) => cell(c.label)).join(',')]
-  for (const row of rows) lines.push(columns.map((c) => cell(row[c.id])).join(','))
+  const lines = [columns.map((c) => csvCell(c.label)).join(',')]
+  for (const row of rows) lines.push(columns.map((c) => csvCell(row[c.id])).join(','))
   return lines.join('\r\n') + '\r\n'
 }
 

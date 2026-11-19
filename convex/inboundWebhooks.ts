@@ -423,9 +423,10 @@ export const logRejected = internalMutation({
 export type RecordResult = { status: 'accepted' | 'duplicate' | 'disabled'; eventId?: Id<'inboundWebhookEvents'> }
 
 /**
- * Store a verified event once. A repeat of (webhook, event id) returns
- * `duplicate` and changes nothing but the counter: idempotent for senders
- * that retry.
+ * Store a verified event once. A repeat of (webhook, event id) or of
+ * (webhook, signed digest) returns `duplicate` and changes nothing but the
+ * counter: idempotent for senders that retry, and a captured request resent
+ * with a new (unsigned) event id header is still a duplicate.
  */
 export const record = internalMutation({
   args: {
@@ -435,6 +436,7 @@ export const record = internalMutation({
     payload: v.string(),
     payloadBytes: v.number(),
     signedAt: v.number(),
+    signedDigest: v.string(),
   },
   returns: v.object({
     status: v.union(v.literal('disabled'), v.literal('accepted'), v.literal('duplicate')),
@@ -445,10 +447,15 @@ export const record = internalMutation({
     if (!hook || hook.status !== 'active') return { status: 'disabled' }
     const now = Date.now()
     // Only accepted rows carry an externalId (unverified ids are never logged).
-    const seen = await ctx.db
-      .query('inboundWebhookEvents')
-      .withIndex('by_webhookId_and_externalId', (q) => q.eq('webhookId', args.webhookId).eq('externalId', args.externalId))
-      .first()
+    const seen =
+      (await ctx.db
+        .query('inboundWebhookEvents')
+        .withIndex('by_webhookId_and_externalId', (q) => q.eq('webhookId', args.webhookId).eq('externalId', args.externalId))
+        .first()) ??
+      (await ctx.db
+        .query('inboundWebhookEvents')
+        .withIndex('by_webhookId_and_signedDigest', (q) => q.eq('webhookId', args.webhookId).eq('signedDigest', args.signedDigest))
+        .first())
     if (seen) {
       await ctx.db.patch(seen._id, { duplicates: (seen.duplicates ?? 0) + 1, lastDuplicateAt: now })
       return { status: 'duplicate', eventId: seen._id }
@@ -462,6 +469,7 @@ export const record = internalMutation({
       payload: args.payload.length <= MAX_STORED_PAYLOAD ? args.payload : undefined,
       payloadBytes: args.payloadBytes,
       signedAt: args.signedAt,
+      signedDigest: args.signedDigest,
       receivedAt: now,
     })
     const domainEventId = await emitDomainEvent(

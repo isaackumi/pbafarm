@@ -3,7 +3,8 @@
  *
  * Order: size cap → webhook lookup → per-webhook rate limit → decrypt the
  * secret (here, never in a query result) → signature + timestamp → JSON +
- * event id → `record` (idempotent on the event id). Failures are an
+ * event id → `record` (idempotent on the event id and on the digest of the
+ * signed `${t}.${body}`, so a new unsigned event id header is no replay bypass). Failures are an
  * `ApiFailure` mapped to `{ error: { code, message } }` by runApi.
  *
  * Responses: 200 `{ received: true, duplicate }`, 400 bad body, 401 bad
@@ -108,6 +109,7 @@ export const inboundWebhookHandler = httpAction((ctx, req) =>
           payload: raw,
           payloadBytes: bytes,
           signedAt: check.signedAt,
+          signedDigest: check.signedDigest,
         }),
       )
       if (result.status === 'disabled') return yield* Effect.fail(notFound())
