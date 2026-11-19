@@ -23,34 +23,41 @@ import {
 import { terminologyOf } from './lib/terminology'
 import { can, memberContext, requireAccount, requireMember, requirePlatformAdmin } from './lib/permissions'
 import { assertHumanTicket } from './humanVerification'
+import { bindingUsableBy, blobMatchesBinding, isSha256Hex } from './lib/uploadBinding'
 
-/** A file must be claimed as a logo within this long of its upload. */
+/** A logo upload must be claimed within this long of asking for its URL. */
 const LOGO_CLAIM_WINDOW_MS = 60 * 60 * 1000
 
 /**
- * Record a just-uploaded file as this company's logo (doc 07 V11). Refuses a
- * file recorded for another company, and an unrecorded file older than the
- * claim window (it was not uploaded for this logo change), so an admin cannot
- * point their logo at another company's file and later delete it.
+ * Record a just-uploaded file as this company's logo (doc 07 V11, CF-004).
+ * Same binding check as files.attach: the caller's own pending
+ * logoUploadRequests row for this company, unexpired, and a blob uploaded in
+ * its window whose SHA-256 is the one declared with it. A storage id is
+ * claimed once, so an admin cannot point their logo at another company's file
+ * (and later delete it).
  */
 async function claimLogoUpload(
   ctx: MutationCtx,
   user: Doc<'users'>,
   companyId: Id<'companies'>,
   storageId: Id<'_storage'>,
+  uploadId: Id<'logoUploadRequests'>,
 ) {
+  const notFound = () => new Error('Logo file not found. Upload the logo again.')
+  const upload = await ctx.db.get(uploadId)
+  if (!bindingUsableBy(upload, { userId: user._id, companyId }, Date.now())) throw notFound()
   const recorded = await ctx.db
     .query('logoUploads')
     .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
     .unique()
-  if (recorded) {
-    if (recorded.companyId !== companyId) throw new Error('Logo file not found')
-    return
-  }
-  const file = await ctx.db.system.get(storageId)
-  if (!file || Date.now() - file._creationTime > LOGO_CLAIM_WINDOW_MS) {
-    throw new Error('Logo file not found. Upload the logo again.')
-  }
+  if (recorded) throw notFound()
+  const bound = await ctx.db
+    .query('logoUploadRequests')
+    .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
+    .first()
+  if (bound) throw notFound()
+  if (!blobMatchesBinding(await ctx.db.system.get(storageId), upload)) throw notFound()
+  await ctx.db.patch(uploadId, { status: 'attached', storageId })
   await ctx.db.insert('logoUploads', { companyId, storageId, uploadedBy: user._id })
 }
 
@@ -1048,19 +1055,36 @@ export const publishSettings = mutation({
 })
 
 export const generateLogoUploadUrl = mutation({
-  args: {},
-  returns: v.string(),
-  handler: async (ctx) => {
+  args: {
+    /** SHA-256 (hex) of the logo about to be uploaded (lib/fileHash.js). */
+    sha256: v.string(),
+  },
+  returns: v.object({ uploadUrl: v.string(), uploadId: v.id('logoUploadRequests') }),
+  handler: async (ctx, { sha256 }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
-    return await ctx.storage.generateUploadUrl()
+    if (!isSha256Hex(sha256)) throw new Error('Invalid file checksum')
+    const now = Date.now()
+    const uploadId = await ctx.db.insert('logoUploadRequests', {
+      companyId: user.companyId,
+      uploadedBy: user._id,
+      status: 'pending',
+      sha256: sha256.toLowerCase(),
+      createdAt: now,
+      expiresAt: now + LOGO_CLAIM_WINDOW_MS,
+    })
+    return { uploadUrl: await ctx.storage.generateUploadUrl(), uploadId }
   },
 })
 
 export const setLogo = mutation({
-  args: { storageId: v.id('_storage') },
+  args: {
+    storageId: v.id('_storage'),
+    /** The binding generateLogoUploadUrl returned with the upload URL. */
+    uploadId: v.id('logoUploadRequests'),
+  },
   returns: v.object({ logoUrl: v.union(v.string(), v.null()) }),
-  handler: async (ctx, { storageId }) => {
+  handler: async (ctx, { storageId, uploadId }) => {
     const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!user.companyId) throw new Error('No company linked')
     const company = await ctx.db.get(user.companyId)
@@ -1068,7 +1092,7 @@ export const setLogo = mutation({
     if (company.logoStorageId === storageId) {
       return { logoUrl: await logoUrl(ctx, storageId) }
     }
-    await claimLogoUpload(ctx, user, user.companyId, storageId)
+    await claimLogoUpload(ctx, user, user.companyId, storageId, uploadId)
     await deleteOldLogo(ctx, user.companyId, company.logoStorageId)
     await ctx.db.patch(user.companyId, { logoStorageId: storageId })
     await logAudit(ctx, {

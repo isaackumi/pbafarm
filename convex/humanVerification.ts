@@ -8,6 +8,10 @@
  * mutation (or the Password provider) then calls `assertHumanTicket`, which
  * consumes it. Only a SHA-256 of the ticket is stored.
  *
+ * A sign-up ticket stays reusable for the same email for a few minutes after
+ * use (a failed sign-up need not redo the widget), and password sign-in asks
+ * for a `signin` ticket after repeated failures (authGuard.ts).
+ *
  * With TURNSTILE_SECRET_KEY unset the whole check is off: `verify` returns
  * `{ ticket: null }` and `assertHumanTicket` accepts anything.
  */
@@ -20,6 +24,8 @@ import { runEffect } from './lib/effect'
 import { sha256Hex, toBase64 } from './lib/crypto'
 import { userError } from './lib/errors'
 import {
+  HUMAN_GRANT_MAX_USES,
+  HUMAN_GRANT_TTL_MS,
   HUMAN_PURPOSES,
   HUMAN_TICKET_TTL_MS,
   allowedHostnames,
@@ -87,11 +93,17 @@ export const storeTicket = internalMutation({
 /**
  * Refuse unless `ticket` is a live, unused ticket for `purpose`, and use it
  * up. No-op when Turnstile is not configured.
+ *
+ * `grantEmail` (sign-up): using the ticket also opens a short grant bound to
+ * that email, so if the sign-up then fails (validation, weak password) the
+ * browser can resend the same ticket for the same email instead of solving
+ * the widget again (HUMAN_GRANT_TTL_MS, at most HUMAN_GRANT_MAX_USES).
  */
 export async function assertHumanTicket(
   ctx: MutationCtx,
   ticket: string | undefined | null,
   purpose: HumanPurpose,
+  opts: { grantEmail?: string } = {},
 ): Promise<void> {
   if (!turnstileRequired()) return
   const refuse = () =>
@@ -102,16 +114,37 @@ export async function assertHumanTicket(
     .query('humanTickets')
     .withIndex('by_ticketHash', (q) => q.eq('ticketHash', hash))
     .unique()
-  if (!row || row.purpose !== purpose || row.usedAt !== undefined || row.expiresAt <= Date.now()) throw refuse()
-  await ctx.db.patch(row._id, { usedAt: Date.now() })
+  const now = Date.now()
+  if (!row || row.purpose !== purpose) throw refuse()
+  const grantEmail = opts.grantEmail?.trim().toLowerCase() || undefined
+  if (row.usedAt === undefined && row.expiresAt > now) {
+    if (!grantEmail) {
+      await ctx.db.patch(row._id, { usedAt: now })
+      return
+    }
+    const grantExpiresAt = now + HUMAN_GRANT_TTL_MS
+    // expiresAt follows the grant so the opportunistic prune keeps the row.
+    await ctx.db.patch(row._id, { usedAt: now, grantEmail, grantExpiresAt, grantUses: 0, expiresAt: grantExpiresAt })
+    return
+  }
+  if (
+    grantEmail &&
+    row.grantEmail === grantEmail &&
+    (row.grantExpiresAt ?? 0) > now &&
+    (row.grantUses ?? 0) < HUMAN_GRANT_MAX_USES
+  ) {
+    await ctx.db.patch(row._id, { grantUses: (row.grantUses ?? 0) + 1 })
+    return
+  }
+  throw refuse()
 }
 
 /** Used by the Password provider (an action ctx) for sign-up and reset. */
 export const consumeTicket = internalMutation({
-  args: { ticket: v.optional(v.string()), purpose: humanPurpose },
+  args: { ticket: v.optional(v.string()), purpose: humanPurpose, email: v.optional(v.string()) },
   returns: v.null(),
-  handler: async (ctx, { ticket, purpose }) => {
-    await assertHumanTicket(ctx, ticket, purpose)
+  handler: async (ctx, { ticket, purpose, email }) => {
+    await assertHumanTicket(ctx, ticket, purpose, { grantEmail: purpose === 'signup' ? email : undefined })
     return null
   },
 })

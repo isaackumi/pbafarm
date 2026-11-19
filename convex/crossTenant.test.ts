@@ -252,34 +252,78 @@ describe('SEC-002 (b) V14 referenced ids', () => {
   })
 })
 
-describe('SEC-002 (b) V11 logo storage ids', () => {
-  async function upload(t: ReturnType<typeof convexTest>) {
-    return t.run((ctx) => ctx.storage.store(new Blob(['logo'])))
+describe('SEC-002 (b) V11 / CF-004 logo upload binding', () => {
+  const hexSha = async (text: string) =>
+    Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))), (x) =>
+      x.toString(16).padStart(2, '0'),
+    ).join('')
+  type T = ReturnType<typeof convexTest>
+  /** generateLogoUploadUrl as `who`, then store the bytes (as the browser would). */
+  async function upload(t: T, who: ReturnType<T['withIdentity']>, text = 'logo') {
+    const { uploadId } = await who.mutation(api.companies.generateLogoUploadUrl, { sha256: await hexSha(text) })
+    const storageId = await t.run((ctx) => ctx.storage.store(new Blob([text])))
+    return { uploadId, storageId }
   }
 
-  test("setLogo refuses another company's uploaded logo and does not delete it", async () => {
+  test('happy path: own binding, matching bytes; a binding is used once', async () => {
+    const { t, as, adminA } = await setup()
+    const a = await upload(t, as(adminA))
+    expect((await as(adminA).mutation(api.companies.setLogo, a)).logoUrl).toEqual(expect.any(String))
+    const again = await t.run((ctx) => ctx.storage.store(new Blob(['logo'])))
+    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, { storageId: again, uploadId: a.uploadId })))
+      .toBe('Logo file not found. Upload the logo again.')
+  })
+
+  test("another company's binding or storage id is refused and its file kept", async () => {
     const { t, as, adminA, adminB } = await setup()
-    const logoB = await upload(t)
-    await as(adminB).mutation(api.companies.setLogo, { storageId: logoB })
+    const b = await upload(t, as(adminB))
+    await as(adminB).mutation(api.companies.setLogo, b)
+    // A's binding cannot claim B's (already claimed) storage id…
+    const a = await upload(t, as(adminA))
+    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, { storageId: b.storageId, uploadId: a.uploadId })))
+      .toBe('Logo file not found. Upload the logo again.')
+    // …and A cannot use B's pending binding.
+    const b2 = await upload(t, as(adminB), 'logo-2')
+    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, b2)))
+      .toBe('Logo file not found. Upload the logo again.')
 
-    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, { storageId: logoB })))
-      .toBe('Logo file not found')
-
-    // A's own fresh upload is accepted; replacing it later leaves B's file alone.
-    const logoA = await upload(t)
-    await as(adminA).mutation(api.companies.setLogo, { storageId: logoA })
+    await as(adminA).mutation(api.companies.setLogo, a)
     await as(adminA).mutation(api.companies.clearLogo, {})
-    expect(await t.run((ctx) => ctx.db.system.get(logoB))).not.toBeNull()
-    expect(await t.run((ctx) => ctx.db.system.get(logoA))).toBeNull()
+    expect(await t.run((ctx) => ctx.db.system.get(b.storageId))).not.toBeNull()
+    expect(await t.run((ctx) => ctx.db.system.get(a.storageId))).toBeNull()
+  })
+
+  test("another admin's binding in the same company is refused", async () => {
+    const { t, as, adminA } = await setup()
+    const otherAdmin = await t.run(async (ctx) => {
+      const me = await ctx.db.get(adminA)
+      return ctx.db.insert('users', { email: 'admin2@a.com', role: 'admin', companyId: me!.companyId } as any)
+    })
+    const a = await upload(t, as(adminA))
+    expect(await messageOf(as(otherAdmin).mutation(api.companies.setLogo, a)))
+      .toBe('Logo file not found. Upload the logo again.')
+  })
+
+  test('an expired binding or different bytes are refused', async () => {
+    const { t, as, adminA } = await setup()
+    const expired = await upload(t, as(adminA))
+    await t.run((ctx) => ctx.db.patch(expired.uploadId, { expiresAt: Date.now() - 1 }))
+    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, expired)))
+      .toBe('Logo file not found. Upload the logo again.')
+
+    const { uploadId } = await as(adminA).mutation(api.companies.generateLogoUploadUrl, { sha256: await hexSha('logo') })
+    const other = await t.run((ctx) => ctx.storage.store(new Blob(['not the declared bytes'])))
+    expect(await messageOf(as(adminA).mutation(api.companies.setLogo, { storageId: other, uploadId })))
+      .toBe('Logo file not found. Upload the logo again.')
   })
 
   test("publishSettings refuses another company's logo", async () => {
     const { t, as, adminA, adminB } = await setup()
-    const logoB = await upload(t)
-    await as(adminB).mutation(api.companies.setLogo, { storageId: logoB })
+    const b = await upload(t, as(adminB))
+    await as(adminB).mutation(api.companies.setLogo, b)
     const { draft } = (await as(adminA).query(api.companies.getSettingsDraft, {})) as any
     expect(await messageOf(as(adminA).mutation(api.companies.publishSettings, {
-      draft: { ...draft, logoStorageId: logoB },
+      draft: { ...draft, logoStorageId: b.storageId },
     }))).toBe('Logo file not found. Upload the logo again.')
   })
 })

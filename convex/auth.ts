@@ -9,6 +9,7 @@ import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
 import { authorizePhoneOtp } from './phoneAuth'
 import { internal } from './_generated/api'
 import { oidcProviderFromEnv } from './lib/sso'
+import { canonicalEmail } from './authGuard'
 
 /**
  * Password reset by emailed code (SEC-005): signIn('password', { email, flow: 'reset' })
@@ -32,9 +33,7 @@ const PasswordReset = Email({
 
 const BasePasswordProvider = Password<DataModel>({
   profile(params) {
-    const email = String(params.email || '')
-      .trim()
-      .toLowerCase()
+    const email = canonicalEmail(params.email)
     return {
       email,
       name: (params.name as string) || undefined,
@@ -52,7 +51,14 @@ const BasePasswordProvider = Password<DataModel>({
 /**
  * Human check (CF-003) before the two public password flows that create an
  * account or send an email: the browser passes `humanTicket` from
- * humanVerification.verify; a no-op when TURNSTILE_SECRET_KEY is unset.
+ * humanVerification.verify; a no-op when TURNSTILE_SECRET_KEY is unset. A
+ * sign-up ticket stays usable for the same email for a few minutes, so a
+ * sign-up that fails validation can be retried without a new check.
+ *
+ * Sign-in (CF-003 hardening, convex/authGuard.ts): failures are counted per
+ * email and rate limited; after three in a row the next attempt needs a
+ * `signin` ticket.
+ *
  * Wraps the provider's authorize because `profile` is synchronous.
  */
 type CredentialsOptions = {
@@ -64,13 +70,24 @@ export const PasswordProvider = {
   options: {
     ...passwordOptions,
     authorize: async (params: Record<string, unknown>, ctx: Parameters<CredentialsOptions['authorize']>[1]) => {
+      const actionCtx = ctx as unknown as GenericActionCtx<DataModel>
+      const ticket = typeof params.humanTicket === 'string' ? params.humanTicket : undefined
+      const email = canonicalEmail(params.email)
+      if (params.flow === 'signIn') {
+        await actionCtx.runMutation(internal.authGuard.beforePasswordSignIn, { email, humanTicket: ticket })
+        let result: unknown
+        try {
+          result = await passwordOptions.authorize(params, ctx)
+        } catch (err) {
+          await actionCtx.runMutation(internal.authGuard.recordPasswordSignIn, { email, ok: false })
+          throw err
+        }
+        await actionCtx.runMutation(internal.authGuard.recordPasswordSignIn, { email, ok: true })
+        return result
+      }
       const purpose = params.flow === 'signUp' ? 'signup' : params.flow === 'reset' ? 'password_reset' : null
       if (purpose) {
-        const ticket = typeof params.humanTicket === 'string' ? params.humanTicket : undefined
-        await (ctx as unknown as GenericActionCtx<DataModel>).runMutation(internal.humanVerification.consumeTicket, {
-          ticket,
-          purpose,
-        })
+        await actionCtx.runMutation(internal.humanVerification.consumeTicket, { ticket, purpose, email })
       }
       return await passwordOptions.authorize(params, ctx)
     },

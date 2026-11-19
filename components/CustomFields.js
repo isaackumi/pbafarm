@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { Camera } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -14,7 +14,7 @@ import {
   isEmpty,
   visibleDefs,
 } from '../convex/lib/customFieldRules'
-import { sha256HexOfFile } from '../lib/fileHash'
+import { uploadAndAttach } from '../lib/uploadFile'
 
 /**
  * Custom fields (D-007, CUSTOM-001): one renderer for every entity's forms and
@@ -51,6 +51,7 @@ export function customPayload(values) {
 function PhotoInput({ def, value, onChange, id }) {
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const attach = useMutation(api.files.attach)
+  const attachR2 = useAction(api.files.attachR2)
   const requestDownload = useMutation(api.files.requestDownload)
   const { showToast } = useToast()
   const input = useRef(null)
@@ -63,15 +64,15 @@ function PhotoInput({ def, value, onChange, id }) {
     if (file.size > 10 * 1024 * 1024) return showToast('error', 'Photos can be at most 10 MB')
     setBusy(true)
     try {
-      const { uploadUrl, uploadId } = await generateUploadUrl({
+      const out = await uploadAndAttach({
+        file,
         entityType: 'customFieldDefs',
         entityId: def._id,
-        sha256: await sha256HexOfFile(file),
+        fallbackType: 'image/jpeg',
+        generateUploadUrl,
+        attach,
+        attachR2,
       })
-      const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type || 'image/jpeg' }, body: file })
-      if (!res.ok) throw new Error('Upload failed. Try again.')
-      const { storageId } = await res.json()
-      const out = await attach({ entityType: 'customFieldDefs', entityId: def._id, uploadId, storageId, name: file.name })
       if (!out.ok) throw new Error(out.message)
       onChange(out.id)
     } catch (err) {

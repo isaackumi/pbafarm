@@ -617,6 +617,24 @@ const schema = defineSchema({
     uploadedBy: v.id('users'),
   }).index('by_storageId', ['storageId']),
 
+  /**
+   * Logo upload binding (CF-004, same check as fileUploads):
+   * companies.generateLogoUploadUrl records who may claim an upload, for which
+   * company, with which SHA-256, until when; setLogo needs the caller's own
+   * pending row and binds the storage id to it.
+   */
+  logoUploadRequests: defineTable({
+    companyId: v.id('companies'),
+    uploadedBy: v.id('users'),
+    status: v.union(v.literal('pending'), v.literal('attached')),
+    sha256: v.string(),
+    storageId: v.optional(v.id('_storage')),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_storageId', ['storageId'])
+    .index('by_expiresAt', ['expiresAt']),
+
   userInvites: defineTable({
     email: v.string(),
     role: v.union(v.literal('user'), v.literal('admin')),
@@ -1641,9 +1659,26 @@ const schema = defineSchema({
     purpose: v.string(),
     expiresAt: v.number(),
     usedAt: v.optional(v.number()),
+    /**
+     * Sign-up grant (CF-003): when a used ticket's sign-up then fails, the same
+     * ticket is accepted again for this email until grantExpiresAt.
+     */
+    grantEmail: v.optional(v.string()),
+    grantExpiresAt: v.optional(v.number()),
+    grantUses: v.optional(v.number()),
   })
     .index('by_ticketHash', ['ticketHash'])
     .index('by_expiresAt', ['expiresAt']),
+
+  /**
+   * Consecutive password sign-in failures per email (CF-003, authGuard.ts).
+   * Kept for unknown emails too; reset on a successful sign-in.
+   */
+  signInFailures: defineTable({
+    email: v.string(),
+    count: v.number(),
+    lastFailedAt: v.number(),
+  }).index('by_email', ['email']),
 
   notifications: defineTable({
     userId: v.id('users'),
@@ -2507,8 +2542,12 @@ const schema = defineSchema({
     locationId: v.optional(v.id('farmLocations')),
     entityType: fileEntityType,
     entityId: v.string(),
-    provider: v.literal('convex'),
-    storageId: v.id('_storage'),
+    /** Where the bytes live (CF-005): Convex storage, or R2 when the R2_* env vars are set. */
+    provider: v.union(v.literal('convex'), v.literal('r2')),
+    /** Convex blob; absent for R2-only rows, kept on backfilled rows for the grace period. */
+    storageId: v.optional(v.id('_storage')),
+    /** R2 object key for provider 'r2'. */
+    r2Key: v.optional(v.string()),
     name: v.string(),
     mime: v.string(),
     size: v.number(),
@@ -2546,6 +2585,12 @@ const schema = defineSchema({
     /** Set when attached. */
     storageId: v.optional(v.id('_storage')),
     fileId: v.optional(v.id('files')),
+    /** 'r2' when the upload was a presigned R2 PUT (absent = Convex storage). */
+    provider: v.optional(v.union(v.literal('convex'), v.literal('r2'))),
+    /** Server-chosen R2 object key, `files/<companyId>/<uploadId>`. */
+    r2Key: v.optional(v.string()),
+    /** Content type signed into the R2 PUT. */
+    contentType: v.optional(v.string()),
     createdAt: v.number(),
     expiresAt: v.number(),
   })

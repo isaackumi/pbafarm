@@ -1,12 +1,14 @@
 /**
  * Copy Convex-stored files to R2 and reconcile the two (CF-006).
  *
- * Internal actions that take Convex storage ids, so they work on whatever
- * table records the files (today convex/files.ts; CF-004 adds the `files`
- * table). Nothing schedules them yet: an operator (or, once wired, a driver
- * that pages through `files`) calls them in batches of at most 100 ids.
+ * Internal actions that take Convex storage ids, plus `backfillFilesToR2`,
+ * which pages through the `files` table, copies, reconciles and then points
+ * each verified row at R2 (provider 'r2', r2Key; the Convex blob is kept for
+ * the grace period). Nothing schedules them: an operator runs them by hand
+ * (docs/ops/r2-storage.md), in batches of at most 100.
  *   npx convex run r2Sync:copyToR2 '{"storageIds":["…"],"dryRun":true}'
  *   npx convex run r2Sync:reconcileR2 '{"storageIds":["…"]}'
+ *   npx convex run r2Sync:backfillFilesToR2 '{"dryRun":true}'
  *
  * Without the R2_* env vars both return `configured: false` and do nothing.
  * Object key = `files/<storageId>` (r2KeyFor); the SHA-256 Convex computed on
@@ -14,9 +16,10 @@
  * without downloading. Copy is idempotent: an object already present with the
  * same size and hash is skipped. Convex storage is never modified.
  */
+import { paginationOptsValidator } from 'convex/server'
 import { v } from 'convex/values'
 import * as Effect from 'effect/Effect'
-import { internalAction, internalQuery } from './_generated/server'
+import { internalAction, internalMutation, internalQuery } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
 import { runEffect } from './lib/effect'
@@ -204,5 +207,103 @@ export const reconcileR2 = internalAction({
     const items = args.storageIds.map((storageId, i) => ({ storageId, meta: metas[i] }))
     const results = await runEffect(reconcileObjects(items, { keyPrefix: args.keyPrefix }).pipe(Effect.provide(layer)))
     return { configured: true, counts: countBy(results), results }
+  }),
+})
+
+/** One page of `files` rows still served from Convex storage. */
+export const convexFilesPage = internalQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: v.object({
+    rows: v.array(v.object({ fileId: v.id('files'), storageId: v.id('_storage') })),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
+  handler: async (ctx, { paginationOpts }) => {
+    const page = await ctx.db.query('files').paginate(paginationOpts)
+    const rows: Array<{ fileId: Id<'files'>; storageId: Id<'_storage'> }> = []
+    for (const f of page.page) {
+      if (f.provider === 'convex' && f.storageId) rows.push({ fileId: f._id, storageId: f.storageId })
+    }
+    return { rows, continueCursor: page.continueCursor, isDone: page.isDone }
+  },
+})
+
+/** Point verified rows at their R2 copy. The Convex blob stays until the grace period ends. */
+export const markFilesOnR2 = internalMutation({
+  args: { rows: v.array(v.object({ fileId: v.id('files'), storageId: v.id('_storage'), r2Key: v.string() })) },
+  returns: v.number(),
+  handler: async (ctx, { rows }) => {
+    let marked = 0
+    for (const r of rows.slice(0, MAX_IDS)) {
+      const f = await ctx.db.get(r.fileId)
+      // Skip rows that changed since the page was read.
+      if (!f || f.provider !== 'convex' || f.storageId !== r.storageId) continue
+      await ctx.db.patch(r.fileId, { provider: 'r2', r2Key: r.r2Key })
+      marked++
+    }
+    return marked
+  },
+})
+
+/**
+ * CF-006 backfill, run by hand page by page: copy one page of Convex-stored
+ * `files` to R2, reconcile, and (unless dryRun, the default) switch the rows
+ * whose copy reconciled `ok` to provider 'r2'. Pass `continueCursor` back as
+ * `cursor` until `isDone`.
+ */
+export const backfillFilesToR2 = internalAction({
+  args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
+    numItems: v.optional(v.number()),
+    dryRun: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    configured: v.boolean(),
+    dryRun: v.boolean(),
+    copied: v.record(v.string(), v.number()),
+    reconciled: v.record(v.string(), v.number()),
+    marked: v.number(),
+    continueCursor: v.union(v.string(), v.null()),
+    isDone: v.boolean(),
+  }),
+  handler: (ctx, args) => withErrorReporting('r2Sync:backfillFilesToR2', async () => {
+    const dryRun = args.dryRun !== false
+    const layer = r2Live()
+    const configured = await runEffect(isConfigured.pipe(Effect.provide(layer)))
+    const empty = { dryRun, copied: {}, reconciled: {}, marked: 0 }
+    if (!configured) return { configured: false, ...empty, continueCursor: args.cursor ?? null, isDone: true }
+    const numItems = Math.max(1, Math.min(MAX_IDS, Math.floor(args.numItems ?? MAX_IDS)))
+    const page: {
+      rows: Array<{ fileId: Id<'files'>; storageId: Id<'_storage'> }>
+      continueCursor: string
+      isDone: boolean
+    } = await ctx.runQuery(internal.r2Sync.convexFilesPage, {
+      paginationOpts: { cursor: args.cursor ?? null, numItems },
+    })
+    if (page.rows.length === 0) return { configured: true, ...empty, continueCursor: page.continueCursor, isDone: page.isDone }
+    const storageIds = page.rows.map((r) => r.storageId)
+    const metas: Array<StorageMeta | null> = await ctx.runQuery(internal.r2Sync.storageMeta, { storageIds })
+    const items = storageIds.map((storageId, i) => ({ storageId, meta: metas[i] }))
+    const copied = await runEffect(
+      copyObjects(items, (id) => ctx.storage.get(id as Id<'_storage'>), { dryRun }).pipe(Effect.provide(layer)),
+    )
+    const reconciled = await runEffect(reconcileObjects(items, {}).pipe(Effect.provide(layer)))
+    let marked = 0
+    if (!dryRun) {
+      const ok = page.rows
+        .map((r, i) => ({ ...r, r2Key: reconciled[i].key, status: reconciled[i].status }))
+        .filter((r) => r.status === 'ok')
+        .map(({ fileId, storageId, r2Key }) => ({ fileId, storageId, r2Key }))
+      if (ok.length > 0) marked = await ctx.runMutation(internal.r2Sync.markFilesOnR2, { rows: ok })
+    }
+    return {
+      configured: true,
+      dryRun,
+      copied: countBy(copied),
+      reconciled: countBy(reconciled),
+      marked,
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    }
   }),
 })

@@ -88,5 +88,5 @@ export function useHumanCheck(purpose) {
     </div>
   ) : null
 
-  return { widget, getTicket, ready: !SITE_KEY || Boolean(token) }
+  return { widget, getTicket, ready: !SITE_KEY || Boolean(token), hasToken: Boolean(token) }
 }

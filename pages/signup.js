@@ -6,6 +6,9 @@ import { Button, Field, Input } from '../components/ui'
 import { safeNextPath } from '../lib/safeRedirect'
 import { useHumanCheck } from '../components/HumanCheck'
 
+/** Slightly under the server's sign-up grant (HUMAN_GRANT_TTL_MS, 5 minutes). */
+const KEEP_TICKET_MS = 4.5 * 60 * 1000
+
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -15,6 +18,7 @@ export default function SignUp() {
   const [error, setError] = useState('')
   const { signUpWithEmail, user } = useAuth()
   const human = useHumanCheck('signup')
+  const [keptTicket, setKeptTicket] = useState(null)
   const router = useRouter()
 
   if (user) {
@@ -39,9 +43,15 @@ export default function SignUp() {
       return
     }
 
+    // A ticket used by a sign-up that then failed stays valid for the same
+    // email for a few minutes (CF-003): resend it unless the widget has a new token.
+    const kept = keptTicket
     let humanTicket = null
     try {
-      humanTicket = await human.getTicket()
+      humanTicket =
+        kept && kept.email === email.trim().toLowerCase() && Date.now() - kept.at < KEEP_TICKET_MS && !human.hasToken
+          ? kept.ticket
+          : await human.getTicket()
     } catch (err) {
       setError(err?.data?.message || err.message || 'Human check failed')
       setLoading(false)
@@ -51,6 +61,14 @@ export default function SignUp() {
     const { error: signUpError } = await signUpWithEmail(email, password, fullName, humanTicket)
 
     if (signUpError) {
+      const reason = signUpError?.data?.details?.reason
+      if (humanTicket && reason !== 'HUMAN_CHECK_REQUIRED') {
+        if (!kept || kept.ticket !== humanTicket) {
+          setKeptTicket({ ticket: humanTicket, email: email.trim().toLowerCase(), at: Date.now() })
+        }
+      } else {
+        setKeptTicket(null)
+      }
       setError(signUpError.message || 'Sign up failed')
       setLoading(false)
       return
@@ -129,7 +147,7 @@ export default function SignUp() {
 
             {human.widget}
 
-            <Button type="submit" disabled={loading || !human.ready} size="lg" className="w-full">
+            <Button type="submit" disabled={loading || (!human.ready && !keptTicket)} size="lg" className="w-full">
               {loading ? 'Creating account…' : 'Create account'}
             </Button>
           </form>

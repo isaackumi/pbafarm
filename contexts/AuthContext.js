@@ -179,12 +179,13 @@ export function AuthProvider({ children }) {
     : isLoading || (isAuthenticated && convexUser === undefined)
   const initialized = offlineMode || !isLoading
 
-  const signInWithEmail = async (email, password) => {
+  const signInWithEmail = async (email, password, humanTicket) => {
     try {
       const formData = new FormData()
       formData.set('email', email)
       formData.set('password', password)
       formData.set('flow', 'signIn')
+      if (humanTicket) formData.set('humanTicket', humanTicket)
       await signIn('password', formData)
       return { data: { user: true }, error: null }
     } catch (error) {

@@ -31,6 +31,7 @@ import {
 import { buildZip, toCsv, type ZipEntry } from './lib/zip'
 import { deleteUserPreferences } from './userPreferences'
 import { docValidator } from './lib/docValidators'
+import { deleteFileBlobs } from './files'
 
 // ─── Organization export ────────────────────────────────────────────────────
 
@@ -702,7 +703,9 @@ async function deleteCascade(ctx: MutationCtx, table: string, row: any) {
       .withIndex('by_apiKeyId_and_key', (q) => q.eq('apiKeyId', row._id))
       .take(500)
     for (const k of keys) await ctx.db.delete(k._id)
-  } else if ((table === 'files' || table === 'dataExports') && row.storageId) {
+  } else if (table === 'files') {
+    await deleteFileBlobs(ctx, row)
+  } else if (table === 'dataExports' && row.storageId) {
     await ctx.storage.delete(row.storageId)
   }
 }
