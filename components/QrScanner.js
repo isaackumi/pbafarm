@@ -120,7 +120,8 @@ export default function QrScanner({ open, onClose, onResult, title }) {
 
       <div
         className="relative mx-4 flex-1 overflow-hidden rounded-[24px] bg-surface"
-        style={{ backgroundImage: 'radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cyan) 14%, transparent), transparent 70%)' }}
+        // Paper 54 viewfinder: a dark teal pool, the same in both themes (it sits behind the camera feed).
+        style={{ backgroundImage: 'radial-gradient(circle farthest-corner at 50% 40%, #1E3A3D 0%, #0F1A1C 55%, #070A0B 100%)' }}
       >
         <video
           ref={videoRef}
@@ -130,15 +131,15 @@ export default function QrScanner({ open, onClose, onResult, title }) {
         />
         {(status === 'scanning' || status === 'starting') && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5">
-            <ScanFrame className="h-60 w-60" />
-            <span className="inline-flex items-center gap-2 rounded-pill border border-line bg-bg px-4 py-2 text-[14px]">
+            <ScanFrame className="size-[190px]" />
+            <span className="inline-flex items-center gap-2 rounded-pill bg-[#0A0B0CCC] px-[14px] py-2 text-[13px] leading-4 text-[#F2F3F4]">
               <StatusDot tone={status === 'scanning' ? 'good' : 'neutral'} size={8} />
               {status === 'scanning' ? t('scan.pointAt') : t('scan.starting')}
             </span>
           </div>
         )}
         {status === 'fallback' && (
-          <p className="px-6 pt-8 text-[14px] leading-5 text-muted">{t(`scan.reason.${reason}`)}</p>
+          <p className="px-6 pt-8 text-[14px] leading-5 text-[#8B9097]">{t(`scan.reason.${reason}`)}</p>
         )}
       </div>
 
@@ -170,13 +171,14 @@ export default function QrScanner({ open, onClose, onResult, title }) {
 
 /** Corner brackets from 54 Mobile Scan: cyan on the left, pink on the right. */
 export function ScanFrame({ className = 'h-40 w-40' }) {
-  const corner = 'absolute h-[22%] w-[22%] border-[3px]'
+  // Paper H85-0: 36px corners, 3px strokes, 16px radius; cyan fades to pink clockwise.
+  const corner = 'absolute size-9 border-[3px]'
   return (
     <div className={`relative ${className}`} aria-hidden>
-      <span className={`${corner} left-0 top-0 rounded-tl-[18px] border-b-0 border-r-0 border-cyan`} />
-      <span className={`${corner} right-0 top-0 rounded-tr-[18px] border-b-0 border-l-0 border-pink`} />
-      <span className={`${corner} bottom-0 left-0 rounded-bl-[18px] border-r-0 border-t-0 border-cyan`} />
-      <span className={`${corner} bottom-0 right-0 rounded-br-[18px] border-l-0 border-t-0 border-pink`} />
+      <span className={`${corner} left-0 top-0 rounded-tl-[16px] border-b-0 border-r-0 border-cyan`} />
+      <span className={`${corner} right-0 top-0 rounded-tr-[16px] border-b-0 border-l-0 border-t-cyan border-r-pink`} />
+      <span className={`${corner} bottom-0 left-0 rounded-bl-[16px] border-r-0 border-t-0 border-l-cyan border-b-pink`} />
+      <span className={`${corner} bottom-0 right-0 rounded-br-[16px] border-l-0 border-t-0 border-pink`} />
     </div>
   )
 }

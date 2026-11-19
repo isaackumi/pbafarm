@@ -597,7 +597,7 @@ const DailyUploadPage = () => {
               form="daily-entry-form"
               icon={Check}
               disabled={submitDisabled}
-              className="hidden sm:inline-flex"
+              className="max-sm:hidden"
             >
               {submitLabel}
             </GradientButton>

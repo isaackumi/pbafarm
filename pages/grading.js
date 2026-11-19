@@ -126,7 +126,7 @@ function GradingActions() {
         {t('gradingPage.transfers')}
       </GhostButton>
       {canGrade && (
-        <GradientButton type="submit" form={FORM_ID} variant="solid" icon={Check} className="hidden sm:inline-flex">
+        <GradientButton type="submit" form={FORM_ID} variant="solid" icon={Check} className="max-sm:hidden">
           Confirm grading
         </GradientButton>
       )}
