@@ -25,7 +25,7 @@ const PasswordReset = Email({
   async sendVerificationRequest({ identifier, token }) {
     await pickEmailAdapter().send({
       to: identifier,
-      subject: 'Reset your PBA Farm password',
+      subject: 'Reset your Anowa password',
       text: `Your password reset code is ${token}. It expires in 15 minutes.\n\nIf you did not ask to reset your password, ignore this email.`,
     })
   },

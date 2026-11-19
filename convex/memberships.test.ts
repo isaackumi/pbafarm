@@ -220,7 +220,7 @@ describe('email verification', () => {
     expect(
       pickEmailAdapter({
         PLATFORM_EMAIL_PROVIDER: 'resend',
-        PLATFORM_EMAIL_SENDER: 'PBA <a@b.c>',
+        PLATFORM_EMAIL_SENDER: 'Anowa <a@b.c>',
         PLATFORM_RESEND_API_KEY: 'k',
       }).name,
     ).toBe('resend')

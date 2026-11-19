@@ -9,7 +9,7 @@ import { balanceDue } from '../lib/billingBalance'
 import { formatMinor } from '../lib/billingFormat'
 import { useT } from '../lib/i18n/context'
 
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || ''
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'hello@getanowa.com'
 
 /**
  * Where members of a suspended organization land (PLAT-104, Paper 46).

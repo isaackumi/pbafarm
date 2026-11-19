@@ -1,5 +1,5 @@
 /**
- * pbafarm IoT ingestion Worker (CF-008, doc 14 §IoT). Devices POST
+ * Anowa IoT ingestion Worker (CF-008, doc 14 §IoT). Devices POST
  * /v1/readings with their own credentials (src/devices.ts); the Worker checks
  * each reading with the same rules as Convex (checkReading), stamps the
  * device id and pinned unit/site, and forwards valid readings to Convex

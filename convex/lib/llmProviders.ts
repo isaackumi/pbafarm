@@ -174,7 +174,7 @@ function chatOpenAi(o: ChatOptions) {
     const headers: Record<string, string> = { Authorization: `Bearer ${o.apiKey}` }
     if (o.providerId === 'openrouter') {
       headers['HTTP-Referer'] = o.referer || 'https://localhost'
-      headers['X-Title'] = 'PBA Farm Assistant'
+      headers['X-Title'] = 'Anowa Assistant'
     }
     const res = yield* post(
       `${base}/chat/completions`,

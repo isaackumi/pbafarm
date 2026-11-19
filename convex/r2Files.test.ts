@@ -13,8 +13,8 @@ import { filesProvider, inspectUpload, presignDownload, presignUpload, r2ThumbKe
 /** R2 behind the `files` table (CF-005/CF-006), with an in-memory S3 behind a fake fetch. */
 const modules = import.meta.glob('./**/*.ts')
 
-const config: R2Config = { accountId: 'acct', accessKeyId: 'AK', secretAccessKey: 'SK', bucket: 'pba-files' }
-const R2_ENV = { R2_ACCOUNT_ID: 'acct', R2_ACCESS_KEY_ID: 'AK', R2_SECRET_ACCESS_KEY: 'SK', R2_BUCKET: 'pba-files' }
+const config: R2Config = { accountId: 'acct', accessKeyId: 'AK', secretAccessKey: 'SK', bucket: 'anowa-files' }
+const R2_ENV = { R2_ACCOUNT_ID: 'acct', R2_ACCESS_KEY_ID: 'AK', R2_SECRET_ACCESS_KEY: 'SK', R2_BUCKET: 'anowa-files' }
 
 type Stored = { bytes: Uint8Array; sha256?: string; contentType?: string }
 

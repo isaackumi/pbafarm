@@ -60,7 +60,7 @@ export type BillingProviderApi = {
   readonly verifyPayment: (providerRef: string) => Effect.Effect<VerifiedPayment, BillingProviderError>
 }
 
-export class BillingProvider extends Context.Service<BillingProvider, BillingProviderApi>()('pbafarm/BillingProvider') {}
+export class BillingProvider extends Context.Service<BillingProvider, BillingProviderApi>()('anowa/BillingProvider') {}
 
 export const MANUAL_INSTRUCTIONS =
   'Pay by bank transfer or mobile money using the invoice number as the reference. ' +

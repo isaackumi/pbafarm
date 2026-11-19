@@ -30,7 +30,7 @@ function isActive(router, href) {
 }
 
 /**
- * Shell for the platform console (console.heitechinc.com, PLAT-101). The
+ * Shell for the platform console (console.getanowa.com, PLAT-101). The
  * client check only picks what to draw: every console query and mutation
  * requires a platform admin with a verified two-step session on the server
  * (convex/platform/access.ts). No redirect to /dashboard: on the console

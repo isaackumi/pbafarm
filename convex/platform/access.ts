@@ -1,5 +1,5 @@
 /**
- * Platform console access (PLAT-101). The hostname (console.heitechinc.com,
+ * Platform console access (PLAT-101). The hostname (console.getanowa.com,
  * middleware.js) only decides which pages are served; this is the real gate:
  * a super_admin whose current sign-in session passed two-step verification.
  */

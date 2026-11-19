@@ -120,7 +120,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-bg text-text">
       <Head>
-        <title>{`PBA Farm · ${t('landing.metaTitle')}`}</title>
+        <title>{`Anowa · ${t('landing.metaTitle')}`}</title>
         <meta name="description" content={t('landing.heroBody')} />
       </Head>
 
@@ -270,7 +270,7 @@ export default function Landing() {
             </div>
           </nav>
         </div>
-        <div className={`${SECTION} border-t border-line py-6 text-xs leading-4 text-faint`}>© {year} PBA Farm</div>
+        <div className={`${SECTION} border-t border-line py-6 text-xs leading-4 text-faint`}>© {year} Anowa</div>
       </footer>
     </div>
   )

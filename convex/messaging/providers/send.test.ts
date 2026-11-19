@@ -29,7 +29,7 @@ const CASES: Case[] = [
     adapter: ADAPTERS.hubtel,
     input: sms,
     creds: { clientId: 'id', clientSecret: 'secret' },
-    config: { senderId: 'PBAFarm', settings: {} },
+    config: { senderId: 'Anowa', settings: {} },
     success: { status: 201, body: { messageId: 'h-1', status: 0 } },
     messageId: 'h-1',
     rejected: { status: 401, body: { message: 'Unauthorized' }, error: 'HTTP 401: {"message":"Unauthorized"}' },
@@ -68,7 +68,7 @@ const CASES: Case[] = [
     adapter: ADAPTERS.whatsapp_cloud,
     input: wa,
     creds: { accessToken: 'EAAG' },
-    config: { settings: { phoneNumberId: '1055', templateName: 'pba_login' } },
+    config: { settings: { phoneNumberId: '1055', templateName: 'anowa_login' } },
     success: { status: 200, body: { messages: [{ id: 'wamid.1' }] } },
     messageId: 'wamid.1',
     rejected: {

@@ -10,7 +10,7 @@ export function botLocale(value: string | undefined | null): BotLocale {
 
 const en = {
   onboarding: (appUrl: string) =>
-    `Hello! This is the PBA Farm assistant. To use it, open ${appUrl}/account, choose "Connect WhatsApp / Telegram" and follow the steps.`,
+    `Hello! This is the Anowa assistant. To use it, open ${appUrl}/account, choose "Connect WhatsApp / Telegram" and follow the steps.`,
   linkHowTo: 'Send the 6-digit code from your account page like this: LINK 123456',
   linkBadCode: 'That code is not valid or has expired. Create a new one on your account page.',
   linkPhoneMismatch:
@@ -68,7 +68,7 @@ type Strings = typeof en
 
 const fr: Strings = {
   onboarding: (appUrl: string) =>
-    `Bonjour ! Ici l'assistant PBA Farm. Pour l'utiliser, ouvrez ${appUrl}/account, choisissez « Connecter WhatsApp / Telegram » et suivez les étapes.`,
+    `Bonjour ! Ici l'assistant Anowa. Pour l'utiliser, ouvrez ${appUrl}/account, choisissez « Connecter WhatsApp / Telegram » et suivez les étapes.`,
   linkHowTo: 'Envoyez le code à 6 chiffres de votre page compte ainsi : LINK 123456',
   linkBadCode: "Ce code n'est pas valide ou a expiré. Créez-en un nouveau sur votre page compte.",
   linkPhoneMismatch:

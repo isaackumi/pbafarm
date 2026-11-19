@@ -72,7 +72,7 @@ function okResponse(body: unknown, status = 201) {
 async function hubtelChannel(s: Awaited<ReturnType<typeof setup>>) {
   const admin = s.as(s.adminA)
   const channelId = await admin.mutation(api.messaging.channels.saveChannel, {
-    channel: 'sms', provider: 'hubtel', senderId: 'PBAFarm',
+    channel: 'sms', provider: 'hubtel', senderId: 'Anowa',
   })
   await admin.action(api.messaging.channels.saveCredentials, {
     channelId, credentials: { clientId: 'client-id-123', clientSecret: SECRET },
@@ -143,7 +143,7 @@ describe('provider adapters build the documented requests', () => {
       okResponse({ messageId: 'm-1', status: 0, statusDescription: 'request submitted successfully' }),
     )
     const result = await ADAPTERS.hubtel.send(
-      sms, { clientId: 'id', clientSecret: 'secret' }, { senderId: 'PBAFarm', settings: {} },
+      sms, { clientId: 'id', clientSecret: 'secret' }, { senderId: 'Anowa', settings: {} },
       fetchMock as any,
     )
     expect(result).toEqual({ ok: true, providerMessageId: 'm-1' })
@@ -151,7 +151,7 @@ describe('provider adapters build the documented requests', () => {
     expect(url).toBe('https://sms.hubtel.com/v1/messages/send')
     expect(init.method).toBe('POST')
     expect(init.headers.Authorization).toBe(`Basic ${btoa('id:secret')}`)
-    expect(JSON.parse(init.body)).toEqual({ From: 'PBAFarm', To: '233244123456', Content: 'Hello' })
+    expect(JSON.parse(init.body)).toEqual({ From: 'Anowa', To: '233244123456', Content: 'Hello' })
   })
 
   test('Hubtel: non-zero status inside a 201 is a failure', async () => {
@@ -172,7 +172,7 @@ describe('provider adapters build the documented requests', () => {
       }),
     )
     const result = await ADAPTERS.africastalking.send(
-      sms, { apiKey: 'at-key' }, { senderId: 'PBA', settings: { username: 'farm' } }, fetchMock as any,
+      sms, { apiKey: 'at-key' }, { senderId: 'ANOWA', settings: { username: 'farm' } }, fetchMock as any,
     )
     expect(result).toEqual({ ok: true, providerMessageId: 'ATXid_1' })
     const [url, init] = fetchMock.mock.calls[0] as any
@@ -183,7 +183,7 @@ describe('provider adapters build the documented requests', () => {
     expect(form.get('username')).toBe('farm')
     expect(form.get('to')).toBe('+233244123456')
     expect(form.get('message')).toBe('Hello')
-    expect(form.get('from')).toBe('PBA')
+    expect(form.get('from')).toBe('ANOWA')
 
     const sandbox = vi.fn(async () =>
       okResponse({ SMSMessageData: { Recipients: [{ statusCode: 403, status: 'InvalidPhoneNumber' }] } }),
@@ -235,7 +235,7 @@ describe('provider adapters build the documented requests', () => {
     const result = await ADAPTERS.whatsapp_cloud.send(
       { to: '+233244123456', body: 'ignored', channel: 'whatsapp', otpCode: '654321' },
       { accessToken: 'EAAG' },
-      { settings: { phoneNumberId: '1055', templateName: 'pba_login', templateLanguage: 'en' } },
+      { settings: { phoneNumberId: '1055', templateName: 'anowa_login', templateLanguage: 'en' } },
       fetchMock as any,
     )
     expect(result).toEqual({ ok: true, providerMessageId: 'wamid.1' })
@@ -248,7 +248,7 @@ describe('provider adapters build the documented requests', () => {
       to: '+233244123456',
       type: 'template',
       template: {
-        name: 'pba_login',
+        name: 'anowa_login',
         language: { code: 'en' },
         components: [
           { type: 'body', parameters: [{ type: 'text', text: '654321' }] },
@@ -287,14 +287,14 @@ describe('platform default from the environment', () => {
   test('complete configuration resolves; incomplete is ignored', () => {
     const env = {
       PLATFORM_SMS_PROVIDER: 'hubtel',
-      PLATFORM_SMS_SENDER: 'PBAFarm',
+      PLATFORM_SMS_SENDER: 'Anowa',
       PLATFORM_HUBTEL_CLIENT_ID: 'id',
       PLATFORM_HUBTEL_CLIENT_SECRET: 'secret',
     }
     const resolved = platformChannelFromEnv('sms', env)
     expect(resolved?.adapter.id).toBe('hubtel')
     expect(resolved?.creds).toEqual({ clientId: 'id', clientSecret: 'secret' })
-    expect(resolved?.config.senderId).toBe('PBAFarm')
+    expect(resolved?.config.senderId).toBe('Anowa')
     expect(platformChannelFromEnv('sms', { ...env, PLATFORM_HUBTEL_CLIENT_SECRET: '' })).toBeNull()
     expect(platformChannelFromEnv('sms', { ...env, PLATFORM_SMS_PROVIDER: 'resend' })).toBeNull()
     expect(platformChannelFromEnv('whatsapp', env)).toBeNull()
@@ -367,7 +367,7 @@ describe('channel settings (admin only, own company only)', () => {
     const s = await setup()
     const admin = s.as(s.adminA)
     const channelId = await admin.mutation(api.messaging.channels.saveChannel, {
-      channel: 'sms', provider: 'hubtel', senderId: 'PBAFarm',
+      channel: 'sms', provider: 'hubtel', senderId: 'Anowa',
     })
     const overview = await admin.query(api.messaging.channels.overview, {})
     expect(overview.encryptionReady).toBe(false)
@@ -467,7 +467,7 @@ describe('routing: company channel, platform default, or none', () => {
     expect(await s.t.query(internal.messaging.deliver.resolveRoute, { companyId: s.companyA, channel: 'sms' })).toBeNull()
 
     vi.stubEnv('PLATFORM_SMS_PROVIDER', 'hubtel')
-    vi.stubEnv('PLATFORM_SMS_SENDER', 'PBAFarm')
+    vi.stubEnv('PLATFORM_SMS_SENDER', 'Anowa')
     vi.stubEnv('PLATFORM_HUBTEL_CLIENT_ID', 'pid')
     vi.stubEnv('PLATFORM_HUBTEL_CLIENT_SECRET', 'psecret')
     expect(await s.t.query(internal.messaging.deliver.resolveRoute, { companyId: s.companyA, channel: 'sms' }))

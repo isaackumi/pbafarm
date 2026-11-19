@@ -13,7 +13,7 @@ export default function Document() {
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#0a0b0c" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="PBA Farm" />
+        <meta name="apple-mobile-web-app-title" content="Anowa" />
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </Head>
       <body className="bg-bg text-text antialiased font-sans">
