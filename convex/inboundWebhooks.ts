@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -95,6 +95,27 @@ function eventToClient(row: Doc<'inboundWebhookEvents'>) {
 
 export const overview = query({
   args: {},
+  returns: v.object({
+    encryptionReady: v.boolean(),
+    webhooks: v.array(
+      v.object({
+        id: v.id('inboundWebhooks'),
+        name: v.string(),
+        publicId: v.string(),
+        path: v.string(),
+        status: v.union(v.literal('active'), v.literal('disabled')),
+        secretHint: v.union(v.string(), v.null()),
+        lastReceivedAt: v.union(v.number(), v.null()),
+        createdAt: v.number(),
+      }),
+    ),
+    signing: v.object({
+      signatureHeader: v.string(),
+      eventIdHeader: v.string(),
+      eventTypeHeader: v.string(),
+      toleranceSec: v.number(),
+    }),
+  }),
   handler: async (ctx) => {
     const { companyId } = await requireInboundAdmin(ctx)
     const rows = await ctx.db
@@ -117,6 +138,20 @@ export const overview = query({
 /** Delivery log for one inbound webhook, newest first. */
 export const events = query({
   args: { webhookId: v.id('inboundWebhooks'), paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(
+    v.object({
+      id: v.id('inboundWebhookEvents'),
+      externalId: v.union(v.string(), v.null()),
+      eventType: v.union(v.string(), v.null()),
+      status: v.union(v.literal('accepted'), v.literal('rejected')),
+      reason: v.union(v.string(), v.null()),
+      payloadBytes: v.number(),
+      payloadPreview: v.union(v.string(), v.null()),
+      duplicates: v.number(),
+      lastDuplicateAt: v.union(v.number(), v.null()),
+      receivedAt: v.number(),
+    }),
+  ),
   handler: async (ctx, { webhookId, paginationOpts }) => {
     const { companyId } = await requireInboundAdmin(ctx)
     await loadOwn(ctx, companyId, webhookId)
@@ -315,6 +350,18 @@ export type InboundLookup =
 /** The webhook and its encrypted secret by public id. Decrypted only in the httpAction. */
 export const lookup = internalQuery({
   args: { publicId: v.string() },
+  returns: v.union(
+    v.object({ found: v.literal(false) }),
+    v.object({
+      found: v.literal(true),
+      webhookId: v.id('inboundWebhooks'),
+      companyId: v.id('companies'),
+      active: v.boolean(),
+      ciphertext: v.union(v.string(), v.null()),
+      iv: v.union(v.string(), v.null()),
+      keyVersion: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx, { publicId }): Promise<InboundLookup> => {
     if (!PUBLIC_ID_RE.test(publicId)) return { found: false }
     const row = await ctx.db
@@ -389,6 +436,10 @@ export const record = internalMutation({
     payloadBytes: v.number(),
     signedAt: v.number(),
   },
+  returns: v.object({
+    status: v.union(v.literal('disabled'), v.literal('accepted'), v.literal('duplicate')),
+    eventId: v.optional(v.id('inboundWebhookEvents')),
+  }),
   handler: async (ctx, args): Promise<RecordResult> => {
     const hook = await ctx.db.get(args.webhookId)
     if (!hook || hook.status !== 'active') return { status: 'disabled' }

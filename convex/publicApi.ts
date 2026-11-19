@@ -63,6 +63,21 @@ async function loadUsableKey(
  */
 export const authorize = internalMutation({
   args: { prefix: v.string(), hash: v.string(), scope: v.string() },
+  returns: v.union(
+    v.object({
+      ok: v.literal(true),
+      apiKeyId: v.id('apiKeys'),
+      companyId: v.id('companies'),
+      locationIds: v.array(v.id('farmLocations')),
+    }),
+    v.object({
+      ok: v.literal(false),
+      status: v.number(),
+      code: v.string(),
+      message: v.string(),
+      retryAfterMs: v.optional(v.number()),
+    }),
+  ),
   handler: async (ctx, { prefix, hash, scope }): Promise<AuthResult> => {
     const now = Date.now()
     const loaded = await loadUsableKey(ctx, prefix, hash, now)
@@ -233,6 +248,12 @@ export const listResource = internalQuery({
     from: v.optional(v.string()),
     to: v.optional(v.string()),
   },
+  returns: v.object({
+    // Rows are serialised from whichever public resource table is requested.
+    data: v.array(v.record(v.string(), v.any())),
+    nextCursor: v.union(v.string(), v.null()),
+    hasMore: v.boolean(),
+  }),
   handler: async (ctx, a): Promise<PageOut> => {
     const opts = { numItems: Math.max(1, Math.min(200, Math.floor(a.limit))), cursor: a.cursor }
     const from = a.from ?? MIN_DATE
@@ -324,6 +345,8 @@ export const getResource = internalQuery({
     locationIds: v.array(v.id('farmLocations')),
     id: v.string(),
   },
+  // The row shape depends on the requested public resource table.
+  returns: v.union(v.record(v.string(), v.any()), v.null()),
   handler: async (ctx, a): Promise<Record<string, unknown> | null> => {
     const own = <T extends { companyId?: Id<'companies'>; locationId?: Id<'farmLocations'> }>(r: T | null) =>
       r && r.companyId === a.companyId && inSites(a.locationIds, r) ? r : null
@@ -457,6 +480,12 @@ const writeArgs = {
   date: v.string(),
 }
 
+const createDailyRecordsItem = v.object({
+  status: v.number(),
+  body: v.string(),
+  replayed: v.boolean(),
+})
+
 /**
  * POST /api/v1/daily-records: same rules as the daily entry screen
  * (dailyRecords.createBatch). A failure throws and writes nothing, so the
@@ -479,6 +508,7 @@ export const createDailyRecords = internalMutation({
       }),
     ),
   },
+  returns: createDailyRecordsItem,
   handler: async (ctx, a): Promise<WriteResult> => {
     const route = 'POST /api/v1/daily-records'
     const replay = await idempotentReplay(ctx, a.apiKeyId, a.idempotencyKey, route, a.requestHash)
@@ -523,6 +553,7 @@ export const createSampling = internalMutation({
       }),
     ),
   },
+  returns: createDailyRecordsItem,
   handler: async (ctx, a): Promise<WriteResult> => {
     const route = 'POST /api/v1/sampling'
     const replay = await idempotentReplay(ctx, a.apiKeyId, a.idempotencyKey, route, a.requestHash)

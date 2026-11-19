@@ -147,9 +147,16 @@ async function sendChallenge(
   return { ok: true, sentTo: maskPhone(target.to), error: null }
 }
 
+const startChallengeItem = v.object({
+  ok: v.boolean(),
+  sentTo: v.string(),
+  error: v.union(v.string(), v.null()),
+})
+
 /** Send a code to the user's phone for this sign-in. */
 export const startChallenge = action({
   args: { channel: phoneChannel },
+  returns: startChallengeItem,
   handler: async (ctx, { channel }): Promise<{ ok: boolean; sentTo: string; error: string | null }> =>
     sendChallenge(ctx, { purpose: 'verify', channel }),
 })
@@ -157,6 +164,7 @@ export const startChallenge = action({
 /** No phone on the account yet: send a code to a new number to enrol it. */
 export const startEnrolment = action({
   args: { phone: v.string(), channel: phoneChannel },
+  returns: startChallengeItem,
   handler: async (ctx, { phone, channel }): Promise<{ ok: boolean; sentTo: string; error: string | null }> =>
     sendChallenge(ctx, { purpose: 'enrol', channel, phone }),
 })

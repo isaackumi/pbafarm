@@ -20,6 +20,15 @@ const phoneChannel = v.union(v.literal('sms'), v.literal('whatsapp'))
 
 export const getPolicy = query({
   args: {},
+  returns: v.object({
+    channelAvailable: v.object({ sms: v.boolean(), whatsapp: v.boolean() }),
+    adminHasPhone: v.boolean(),
+    allowPhoneLogin: v.boolean(),
+    phoneLoginChannel: v.union(v.literal('sms'), v.literal('whatsapp')),
+    require2fa: v.boolean(),
+    twoFactorChannel: v.union(v.literal('sms'), v.literal('whatsapp')),
+    phoneLoginSatisfies2fa: v.boolean(),
+  }),
   handler: async (ctx) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!me.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)
@@ -43,6 +52,13 @@ export const updatePolicy = mutation({
     twoFactorChannel: v.optional(phoneChannel),
     phoneLoginSatisfies2fa: v.optional(v.boolean()),
   },
+  returns: v.object({
+    allowPhoneLogin: v.boolean(),
+    phoneLoginChannel: v.union(v.literal('sms'), v.literal('whatsapp')),
+    require2fa: v.boolean(),
+    twoFactorChannel: v.union(v.literal('sms'), v.literal('whatsapp')),
+    phoneLoginSatisfies2fa: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.settings.manage' })
     if (!me.companyId) throw new Error(AUTH_ERROR_MESSAGES.NO_COMPANY)

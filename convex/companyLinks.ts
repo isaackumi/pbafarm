@@ -57,9 +57,26 @@ async function notifyAdmins(ctx: MutationCtx, companyId: Id<'companies'>, title:
   })
 }
 
+const companyLinkRow = v.object({
+  name: v.string(),
+  code: v.string(),
+  _id: v.id('companyLinks'),
+  status: v.union(
+    v.literal('active'),
+    v.literal('pending'),
+    v.literal('declined'),
+    v.literal('ended'),
+  ),
+  shareReports: v.boolean(),
+  note: v.union(v.string(), v.null()),
+  requestedAt: v.number(),
+  respondedAt: v.union(v.number(), v.null()),
+})
+
 /** Links of the caller's organization, as parent and as subsidiary. */
 export const overview = query({
   args: {},
+  returns: v.object({ subsidiaries: v.array(companyLinkRow), parents: v.array(companyLinkRow) }),
   handler: async (ctx) => {
     const { companyId } = await requireMember(ctx, { permission: 'org.structure.manage' })
     if (!companyId) return { subsidiaries: [], parents: [] }

@@ -156,8 +156,73 @@ function toClient(u: Doc<'users'>) {
   }
 }
 
+const realRoleValues = v.union(v.literal('user'), v.literal('admin'), v.literal('super_admin'))
+
+const userRow = v.object({
+  id: v.id('users'),
+  _id: v.id('users'),
+  name: v.optional(v.string()),
+  email: v.optional(v.string()),
+  role: realRoleValues,
+  companyId: v.optional(v.id('companies')),
+  company_id: v.optional(v.id('companies')),
+  phone: v.optional(v.string()),
+  image: v.optional(v.string()),
+  active: v.boolean(),
+  mustChangePassword: v.boolean(),
+})
+
 export const current = query({
   args: {},
+  returns: v.union(
+    v.object({
+      realRole: realRoleValues,
+      actingAs: v.union(
+        v.object({
+          sessionId: v.id('actAsSessions'),
+          companyId: v.id('companies'),
+          allowWrites: v.boolean(),
+          expiresAt: v.number(),
+        }),
+        v.null(),
+      ),
+      hasPhone: v.boolean(),
+      maskedPhone: v.union(v.string(), v.null()),
+      mfaPolicy: v.boolean(),
+      mfaRequired: v.boolean(),
+      mfaChannels: v.array(v.string()),
+      mfaDefaultChannel: v.union(v.string(), v.null()),
+      mfaTotp: v.boolean(),
+      role: realRoleValues,
+      companyStatus: v.union(
+        v.literal('pending'),
+        v.literal('rejected'),
+        v.literal('approved'),
+        v.literal('missing'),
+        v.null(),
+      ),
+      id: v.id('users'),
+      _id: v.id('users'),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      companyId: v.optional(v.id('companies')),
+      company_id: v.optional(v.id('companies')),
+      phone: v.optional(v.string()),
+      image: v.optional(v.string()),
+      active: v.boolean(),
+      mustChangePassword: v.boolean(),
+      _creationTime: v.number(),
+      locationIds: v.optional(v.array(v.id('farmLocations'))),
+      emailVerificationTime: v.optional(v.number()),
+      phoneVerificationTime: v.optional(v.number()),
+      totpEnabledAt: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      activeLocationId: v.optional(v.id('farmLocations')),
+      deletedAt: v.optional(v.number()),
+      locale: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) return null
@@ -215,6 +280,7 @@ export const setLocale = mutation({
 
 export const get = query({
   args: { id: v.id('users') },
+  returns: v.union(userRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     const user = await ctx.db.get(id)
@@ -228,6 +294,7 @@ export const get = query({
 
 export const list = query({
   args: {},
+  returns: v.array(userRow),
   handler: async (ctx) => {
     const { user: me } = await requireMember(ctx, { permission: 'org.members.manage' })
     // Company admins read their company (by_companyId); super_admins keep the
@@ -279,6 +346,10 @@ export const listDirectory = query({
 /** Internal: email collision check for admin create-with-password. */
 export const emailExists = internalQuery({
   args: { email: v.string() },
+  returns: v.union(
+    v.object({ exists: v.boolean(), userId: v.id('users') }),
+    v.object({ exists: v.boolean() }),
+  ),
   handler: async (ctx, { email }) => {
     const existing = await ctx.db
       .query('users')
@@ -609,6 +680,15 @@ export const reactivate = mutation({
 /** Company-less user: invites addressed to my email that I can ask to accept. */
 export const myInvites = query({
   args: {},
+  returns: v.array(
+    v.object({
+      id: v.id('userInvites'),
+      companyId: v.id('companies'),
+      companyName: v.string(),
+      role: v.union(v.literal('user'), v.literal('admin')),
+      status: v.union(v.literal('pending'), v.literal('requested')),
+    }),
+  ),
   handler: async (ctx) => {
     const me = await requireAccount(ctx)
     if (me.companyId || !me.email) return []
@@ -643,6 +723,11 @@ export const myInvites = query({
  */
 export const claimInvite = mutation({
   args: { inviteId: v.optional(v.id('userInvites')) },
+  returns: v.union(
+    v.object({ claimed: v.boolean(), requested: v.boolean() }),
+    v.object({ claimed: v.boolean(), requested: v.boolean(), reason: v.string() }),
+    v.object({ claimed: v.boolean(), requested: v.boolean(), companyId: v.id('companies') }),
+  ),
   handler: async (ctx, args) => {
     const me = await requireAccount(ctx)
     if (!me.email) return { claimed: false, requested: false }

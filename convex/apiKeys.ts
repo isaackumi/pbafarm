@@ -55,6 +55,40 @@ function keyToClient(row: Doc<'apiKeys'>, creatorName: string | null, now: numbe
 /** API keys page: keys, the scope catalog and the company's sites. */
 export const overview = query({
   args: { now: v.optional(v.number()) },
+  returns: v.object({
+    keys: v.array(
+      v.object({
+        id: v.id('apiKeys'),
+        name: v.string(),
+        prefix: v.string(),
+        scopes: v.array(v.string()),
+        locationIds: v.array(v.id('farmLocations')),
+        createdAt: v.number(),
+        createdBy: v.union(v.string(), v.null()),
+        expiresAt: v.union(v.number(), v.null()),
+        revokedAt: v.union(v.number(), v.null()),
+        lastUsedAt: v.union(v.number(), v.null()),
+        status: v.string(),
+      }),
+    ),
+    scopes: v.array(
+      v.object({
+        id: v.string(),
+        label: v.union(
+          v.literal('Read cages'),
+          v.literal('Read daily records'),
+          v.literal('Create daily records'),
+          v.literal('Read sampling'),
+          v.literal('Create sampling'),
+          v.literal('Read harvests'),
+          v.literal('Read feed stock'),
+          v.literal('Read sales'),
+          v.literal('Send sensor readings'),
+        ),
+      }),
+    ),
+    sites: v.array(v.object({ id: v.id('farmLocations'), name: v.string() })),
+  }),
   handler: async (ctx, { now }) => {
     const { companyId } = await requireApiAdmin(ctx)
     const rows = await ctx.db

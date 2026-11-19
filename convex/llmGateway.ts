@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import * as Effect from 'effect/Effect'
 import * as Result from 'effect/Result'
 import { action, internalMutation, mutation, query } from './_generated/server'
@@ -116,6 +116,55 @@ function pickCredential(rows: Doc<'llmCredentials'>[], providerId?: string) {
 /** AI settings page: providers, the organization's keys (hints only) and a usage summary since `since`. */
 export const overview = query({
   args: { since: v.number() },
+  returns: v.object({
+    encryptionReady: v.boolean(),
+    providers: v.array(
+      v.object({
+        id: v.string(),
+        label: v.string(),
+        defaultModel: v.string(),
+        models: v.array(v.string()),
+      }),
+    ),
+    credentials: v.array(
+      v.object({
+        id: v.id('llmCredentials'),
+        providerId: v.string(),
+        providerLabel: v.string(),
+        model: v.string(),
+        baseUrl: v.union(v.string(), v.null()),
+        keyHint: v.union(v.string(), v.null()),
+        isDefault: v.boolean(),
+        enabled: v.boolean(),
+        updatedAt: v.number(),
+      }),
+    ),
+    usage: v.object({
+      calls: v.number(),
+      truncated: v.boolean(),
+      costUsd: v.number(),
+      byModel: v.array(
+        v.object({
+          providerId: v.string(),
+          model: v.string(),
+          calls: v.number(),
+          failed: v.number(),
+          inputTokens: v.number(),
+          outputTokens: v.number(),
+          costUsd: v.number(),
+          orgKeyCalls: v.number(),
+        }),
+      ),
+      byUser: v.array(
+        v.object({
+          name: v.string(),
+          userId: v.id('users'),
+          calls: v.number(),
+          costUsd: v.number(),
+        }),
+      ),
+    }),
+  }),
   handler: async (ctx, { since }) => {
     const { companyId } = await requireLlmAdmin(ctx)
     const credentials = await companyCredentials(ctx, companyId)
@@ -164,6 +213,23 @@ export const overview = query({
 /** Usage log, newest first. */
 export const usage = query({
   args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(
+    v.object({
+      id: v.id('llmUsage'),
+      user: v.string(),
+      providerId: v.string(),
+      model: v.string(),
+      source: v.union(v.literal('org_key'), v.literal('server_key')),
+      feature: v.union(v.literal('chat'), v.literal('insights')),
+      ok: v.boolean(),
+      error: v.union(v.string(), v.null()),
+      inputTokens: v.union(v.number(), v.null()),
+      outputTokens: v.union(v.number(), v.null()),
+      costUsd: v.union(v.number(), v.null()),
+      durationMs: v.union(v.number(), v.null()),
+      createdAt: v.number(),
+    }),
+  ),
   handler: async (ctx, { paginationOpts }) => {
     const { companyId } = await requireLlmAdmin(ctx)
     const res = await ctx.db
@@ -388,6 +454,20 @@ export type BeginResult =
  */
 export const begin = internalMutation({
   args: { providerId: v.optional(v.string()), model: v.optional(v.string()) },
+  returns: v.union(
+    v.object({ handled: v.literal(false) }),
+    v.object({
+      handled: v.literal(true),
+      companyId: v.id('companies'),
+      userId: v.id('users'),
+      credentialId: v.id('llmCredentials'),
+      providerId: v.string(),
+      model: v.string(),
+      baseUrl: v.union(v.string(), v.null()),
+      ciphertext: v.string(),
+      iv: v.string(),
+    }),
+  ),
   handler: async (ctx, args): Promise<BeginResult> => {
     const { user } = await requireMember(ctx, { permission: 'ai.use' })
     const companyId = user.companyId
@@ -511,6 +591,17 @@ export const chat = action({
     temperature: v.optional(v.number()),
     referer: v.optional(v.string()),
   },
+  returns: v.union(
+    v.object({ handled: v.literal(false) }),
+    v.object({
+      handled: v.literal(true),
+      text: v.string(),
+      providerId: v.string(),
+      model: v.string(),
+      inputTokens: v.union(v.number(), v.null()),
+      outputTokens: v.union(v.number(), v.null()),
+    }),
+  ),
   handler: async (ctx, args): Promise<GatewayReply> => {
     const problem = messagesProblem(args.messages)
     if (problem) throw userError('VALIDATION', problem)

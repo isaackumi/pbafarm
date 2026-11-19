@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import * as Effect from 'effect/Effect'
 import {
   action,
@@ -149,6 +149,25 @@ function deliveryToClient(row: Doc<'webhookDeliveries'>) {
 /** Webhooks page: endpoints and the event catalog. */
 export const overview = query({
   args: {},
+  returns: v.object({
+    encryptionReady: v.boolean(),
+    endpoints: v.array(
+      v.object({
+        id: v.id('webhookEndpoints'),
+        url: v.string(),
+        description: v.string(),
+        eventTypes: v.array(v.string()),
+        status: v.union(v.literal('active'), v.literal('disabled')),
+        consecutiveFailures: v.number(),
+        disabledReason: v.union(v.string(), v.null()),
+        secretHint: v.union(v.string(), v.null()),
+        lastSuccessAt: v.union(v.number(), v.null()),
+        lastFailureAt: v.union(v.number(), v.null()),
+        createdAt: v.number(),
+      }),
+    ),
+    events: v.array(v.object({ id: v.string(), label: v.string() })),
+  }),
   handler: async (ctx) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     const rows = await ctx.db
@@ -166,6 +185,22 @@ export const overview = query({
 /** Delivery log for one endpoint, newest first. */
 export const deliveries = query({
   args: { endpointId: v.id('webhookEndpoints'), paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(
+    v.object({
+      id: v.id('webhookDeliveries'),
+      eventId: v.union(v.id('domainEvents'), v.null()),
+      eventType: v.string(),
+      status: v.union(v.literal('pending'), v.literal('succeeded'), v.literal('failed')),
+      attempts: v.number(),
+      responseStatus: v.union(v.number(), v.null()),
+      lastError: v.union(v.string(), v.null()),
+      durationMs: v.union(v.number(), v.null()),
+      lastAttemptAt: v.union(v.number(), v.null()),
+      nextAttemptAt: v.union(v.number(), v.null()),
+      redelivery: v.boolean(),
+      createdAt: v.number(),
+    }),
+  ),
   handler: async (ctx, { endpointId, paginationOpts }) => {
     const { companyId } = await requireWebhookAdmin(ctx)
     await loadOwnEndpoint(ctx, companyId, endpointId)
@@ -562,6 +597,21 @@ export const redeliver = mutation({
 /** Internal: what `deliver` needs (ciphertext only; decrypted in the action). */
 export const loadForDelivery = internalQuery({
   args: { deliveryId: v.id('webhookDeliveries') },
+  returns: v.union(
+    v.object({ skip: v.literal('Endpoint is off or removed') }),
+    v.object({ skip: v.literal('Endpoint has no signing secret') }),
+    v.object({
+      companyId: v.id('companies'),
+      endpointId: v.id('webhookEndpoints'),
+      url: v.string(),
+      eventId: v.union(v.id('domainEvents'), v.null()),
+      eventType: v.string(),
+      payload: v.string(),
+      attempts: v.number(),
+      secret: v.object({ ciphertext: v.string(), iv: v.string() }),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { deliveryId }) => {
     const delivery = await ctx.db.get(deliveryId)
     if (!delivery || delivery.status !== 'pending') return null
