@@ -4,9 +4,18 @@ import { useAction } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
-import { Button, Field, Input, Select } from '../components/ui'
 import { useT } from '../lib/i18n/context'
-import LanguageSwitcher from '../components/LanguageSwitcher'
+import {
+  AUTH_INPUT,
+  AUTH_LINK,
+  AuthAlert,
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthLayout,
+  AuthSubmit,
+  OtpInput,
+} from '../components/auth/AuthUi'
 import { AuthenticatorEnrol, AuthenticatorVerify } from '../components/AuthenticatorApp'
 
 const CHANNEL_KEY = { sms: 'auth.verify.channelSms', whatsapp: 'auth.verify.channelWhatsapp' }
@@ -102,150 +111,109 @@ export default function VerifyPage() {
     }
   }
 
+  const title = enrolling ? t('auth.verify.titleEnrol') : t('auth.verify.titleConfirm')
   return (
-    <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">
-            {enrolling ? t('auth.verify.titleEnrol') : t('auth.verify.titleConfirm')}
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            {enrolling
-              ? t('auth.verify.introEnrol')
-              : t('auth.verify.introConfirm', { phone: user.maskedPhone })}
-          </p>
-        </div>
+    <AuthLayout title={title}>
+      <AuthHeading
+        title={title}
+        subtitle={enrolling ? t('auth.verify.introEnrol') : t('auth.verify.introConfirm', { phone: user.maskedPhone })}
+      />
 
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm space-y-5">
-          {error && (
-            <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-              {error}
-            </div>
+      {error && <AuthAlert>{error}</AuthAlert>}
+
+      {mode === 'app' ? (
+        user.mfaTotp ? (
+          <AuthenticatorVerify />
+        ) : (
+          <AuthenticatorEnrol onDone={() => router.replace('/dashboard')} />
+        )
+      ) : channels.length === 0 ? (
+        <AuthAlert tone="info">{t('auth.verify.noChannel')}</AuthAlert>
+      ) : !sentTo ? (
+        <form className="flex flex-col gap-[22px]" onSubmit={send}>
+          {enrolling && (
+            <AuthField label={t('common.mobileNumber')} htmlFor="enrol-phone" hint={t('auth.verify.phoneHint')}>
+              <AuthInput
+                id="enrol-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </AuthField>
           )}
-
-          {mode === 'app' ? (
-            user.mfaTotp ? (
-              <AuthenticatorVerify />
-            ) : (
-              <AuthenticatorEnrol onDone={() => router.replace('/dashboard')} />
-            )
-          ) : channels.length === 0 ? (
-            <p className="text-sm text-chart-ink">{t('auth.verify.noChannel')}</p>
-          ) : !sentTo ? (
-            <form className="space-y-5" onSubmit={send}>
-              {enrolling && (
-                <Field label={t('common.mobileNumber')} htmlFor="enrol-phone" hint={t('auth.verify.phoneHint')}>
-                  <Input
-                    id="enrol-phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </Field>
-              )}
-              {channels.length > 1 && (
-                <Field label={t('auth.verify.sendBy')} htmlFor="mfa-channel">
-                  <Select id="mfa-channel" value={channel} onChange={(e) => setChannel(e.target.value)}>
-                    {channels.map((c) => (
-                      <option key={c} value={c}>
-                        {channelLabel(c)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              )}
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                disabled={busy || !channel || (enrolling && phone.trim().length < 6)}
+          {channels.length > 1 && (
+            <AuthField label={t('auth.verify.sendBy')} htmlFor="mfa-channel">
+              <select
+                id="mfa-channel"
+                className={`${AUTH_INPUT} [&>option]:bg-surface`}
+                value={channel}
+                onChange={(e) => setChannel(e.target.value)}
               >
-                {busy ? t('common.sending') : t('common.sendCode')}
-              </Button>
-            </form>
-          ) : (
-            <form className="space-y-5" onSubmit={verify}>
-              <p className="text-sm text-muted">
-                {t('auth.verify.codeSent', { channel: channelLabel(channel), to: sentTo })}
-              </p>
-              <Field label={t('common.code')} htmlFor="mfa-code">
-                <Input
-                  id="mfa-code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="tracking-[0.4em] text-center text-lg"
-                />
-              </Field>
-              <Button type="submit" size="lg" className="w-full" disabled={busy || code.length !== 6}>
-                {busy ? t('common.checking') : t('common.verify')}
-              </Button>
-              <div className="flex justify-between text-sm">
-                <button
-                  type="button"
-                  className="text-lake hover:underline"
-                  onClick={() => {
-                    setSentTo(null)
-                    setCode('')
-                    setError('')
-                  }}
-                >
-                  {enrolling ? t('common.changeNumber') : t('auth.verify.chooseAnother')}
-                </button>
-                <button
-                  type="button"
-                  className="text-lake hover:underline disabled:text-muted disabled:no-underline"
-                  disabled={cooldown > 0 || busy}
-                  onClick={send}
-                >
-                  {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
-                </button>
-              </div>
-            </form>
+                {channels.map((c) => (
+                  <option key={c} value={c}>
+                    {channelLabel(c)}
+                  </option>
+                ))}
+              </select>
+            </AuthField>
           )}
-
-          {mode === 'app' && smsPossible && (
+          <AuthSubmit disabled={busy || !channel || (enrolling && phone.trim().length < 6)}>
+            {busy ? t('common.sending') : t('common.sendCode')}
+          </AuthSubmit>
+        </form>
+      ) : (
+        <form className="flex flex-col gap-[22px]" onSubmit={verify}>
+          <p className="text-sm leading-5 text-muted">
+            {t('auth.verify.codeSent', { channel: channelLabel(channel), to: sentTo })}
+          </p>
+          <OtpInput id="mfa-code" label={t('common.code')} value={code} onChange={setCode} autoFocus />
+          <div className="flex items-center justify-between gap-3 text-sm leading-[18px]">
             <button
               type="button"
-              className="w-full text-center text-sm text-lake hover:underline"
-              onClick={() => switchTo('sms')}
+              className={AUTH_LINK}
+              onClick={() => {
+                setSentTo(null)
+                setCode('')
+                setError('')
+              }}
             >
-              {t('auth.verify.useText')}
+              {enrolling ? t('common.changeNumber') : t('auth.verify.chooseAnother')}
             </button>
-          )}
-          {mode === 'sms' && (user.mfaTotp || enrolling || !smsPossible) && (
-            <button
-              type="button"
-              className="w-full text-center text-sm text-lake hover:underline"
-              onClick={() => switchTo('app')}
-            >
-              {user.mfaTotp ? t('auth.verify.useApp') : t('auth.verify.setUpApp')}
+            <button type="button" className={AUTH_LINK} disabled={cooldown > 0 || busy} onClick={send}>
+              {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
             </button>
-          )}
+          </div>
+          <AuthSubmit disabled={busy || code.length !== 6}>
+            {busy ? t('common.checking') : t('common.verify')}
+          </AuthSubmit>
+        </form>
+      )}
 
-          <button
-            type="button"
-            className="w-full text-center text-sm text-muted hover:text-chart-ink"
-            onClick={async () => {
-              await signOut({ force: true })
-              router.replace('/login')
-            }}
-          >
-            {t('common.signOut')}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm leading-[18px]">
+        {mode === 'app' && smsPossible && (
+          <button type="button" className={AUTH_LINK} onClick={() => switchTo('sms')}>
+            {t('auth.verify.useText')}
           </button>
-        </div>
-        <div className="mt-4 flex justify-center">
-          <LanguageSwitcher />
-        </div>
+        )}
+        {mode === 'sms' && (user.mfaTotp || enrolling || !smsPossible) && (
+          <button type="button" className={AUTH_LINK} onClick={() => switchTo('app')}>
+            {user.mfaTotp ? t('auth.verify.useApp') : t('auth.verify.setUpApp')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="ml-auto rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          onClick={async () => {
+            await signOut({ force: true })
+            router.replace('/login')
+          }}
+        >
+          {t('common.signOut')}
+        </button>
       </div>
-    </div>
+    </AuthLayout>
   )
 }

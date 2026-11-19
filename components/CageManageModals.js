@@ -5,6 +5,7 @@ import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
+import { useT } from '../lib/i18n/context'
 import { Button, Field, Input, Modal, Select, Textarea } from './ui'
 import FarmLocationSelect from './FarmLocationSelect'
 import UnitGeometryFields, { EMPTY_GEOMETRY, geometryArgs, geometryFromUnit } from './UnitGeometryFields'
@@ -60,6 +61,7 @@ export default function CageManageModals({
   onSaved,
   onDeleted,
 }) {
+  const t = useT()
   const { showToast } = useToast()
   const { locations, activeLocationId } = useLocation()
   const { hasRole } = useAuth()
@@ -250,12 +252,8 @@ export default function CageManageModals({
         size="lg"
         as="form"
         onSubmit={handleSave}
-        title="Edit cage"
-        description={
-          <>
-            Update details for <span className="font-medium">{editCage?.name}</span>.
-          </>
-        }
+        title={t('overlay.cage.editTitle')}
+        description={t('overlay.cage.editBody', { name: editCage?.name || '' })}
         bodyClassName="space-y-6"
         footer={
           <>
@@ -265,10 +263,10 @@ export default function CageManageModals({
               disabled={saving}
               onClick={onCloseEdit}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save changes'}
+              {saving ? t('common.saving') : t('overlay.cage.save')}
             </Button>
           </>
         }
@@ -291,8 +289,10 @@ export default function CageManageModals({
         onClose={onCloseDelete}
         dismissible={!deleting}
         role="alertdialog"
-        title="Archive unit"
-        icon={<AlertTriangle className="w-6 h-6 text-signal" />}
+        tone="danger"
+        title={t('overlay.cage.archiveTitle', { name: deleteCage?.name || '' })}
+        description={t('overlay.cage.archiveBody')}
+        icon={<AlertTriangle aria-hidden />}
         footer={
           <>
             <Button
@@ -301,7 +301,7 @@ export default function CageManageModals({
               disabled={deleting}
               onClick={onCloseDelete}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
@@ -312,28 +312,28 @@ export default function CageManageModals({
               }
               onClick={handleDelete}
             >
-              {deleting ? 'Archiving…' : 'Archive unit'}
+              {deleting ? t('overlay.cage.archiving') : t('overlay.cage.archive')}
             </Button>
           </>
         }
       >
         {deleteCage && (
-          <>
-            <p className="text-sm text-muted mb-3">
-              Archiving hides{' '}
-              <span className="font-semibold text-chart-ink">{deleteCage.name}</span> from
-              lists and pickers. Its records, batches and history stay. A unit that still
-              holds fish cannot be archived; an admin can restore it later.
-            </p>
-            <Field label={`Type “${deleteCage.name}” to confirm`}>
-              <Input
-                value={confirmName}
-                onChange={(e) => setConfirmName(e.target.value)}
-                placeholder={deleteCage.name}
-                autoFocus
-              />
-            </Field>
-          </>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="archive-unit-confirm" className="text-sm leading-[18px] text-muted">
+              {t('overlay.cage.typePrefix')}{' '}
+              <span className="font-mono text-text">{deleteCage.name}</span>{' '}
+              {t('overlay.cage.typeSuffix')}
+            </label>
+            <input
+              id="archive-unit-confirm"
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder={deleteCage.name}
+              autoComplete="off"
+              autoFocus
+              className="w-full rounded-input border border-line-strong bg-surface px-4 py-3 text-sm text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+            />
+          </div>
         )}
       </Modal>
     </>

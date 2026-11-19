@@ -1,24 +1,30 @@
 // components/LogoutConfirmationModal.js
-import React from 'react'
+import { LogOut } from 'lucide-react'
 import { Button, Modal } from './ui'
+import { useT } from '../lib/i18n/context'
 
-const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => (
-  <Modal
-    open={isOpen}
-    onClose={onClose}
-    title="Log out?"
-    description="You will need to sign in again to use the app."
-    footer={
-      <>
-        <Button variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="danger" onClick={onConfirm}>
-          Log out
-        </Button>
-      </>
-    }
-  />
-)
+const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
+  const t = useT()
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      tone="neutral"
+      icon={<LogOut aria-hidden />}
+      title={t('overlay.logout.title')}
+      description={t('overlay.logout.body')}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="danger" onClick={onConfirm}>
+            {t('overlay.logout.confirm')}
+          </Button>
+        </>
+      }
+    />
+  )
+}
 
 export default LogoutConfirmationModal

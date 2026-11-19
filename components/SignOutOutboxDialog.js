@@ -1,4 +1,6 @@
+import { CloudOff } from 'lucide-react'
 import { Button, Modal } from './ui'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Asked before sign-out when this user still has field entries saved on the
@@ -13,42 +15,40 @@ export default function SignOutOutboxDialog({
   onDiscard,
   onCancel,
 }) {
+  const t = useT()
   const online = typeof navigator === 'undefined' || navigator.onLine !== false
-
-  const batches = `${count} entr${count === 1 ? 'y' : 'ies'}`
 
   return (
     <Modal
       onClose={onCancel}
       dismissible={!sending}
       role="alertdialog"
+      tone="warn"
+      icon={<CloudOff aria-hidden />}
       layerClassName="z-[110]"
       closeOnBackdrop={false}
-      title={`${batches} not sent yet`}
+      title={t('overlay.outbox.title', { count })}
+      description={t('overlay.outbox.body')}
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel} disabled={sending}>
-            Cancel
+          <Button variant="secondary" onClick={onCancel} disabled={sending}>
+            {t('common.cancel')}
           </Button>
           <Button variant="danger" onClick={onDiscard} disabled={sending}>
-            Discard and sign out
+            {t('overlay.outbox.discard')}
           </Button>
           <Button onClick={onSend} disabled={sending || !online}>
-            {sending ? 'Sending…' : 'Send and sign out'}
+            {sending ? t('common.sending') : t('overlay.outbox.send')}
           </Button>
         </>
       }
     >
-      <div className="text-sm space-y-2">
-        <p>
-          Entries saved on this phone are removed when you sign out.
-          Send them now, or discard them if they are no longer needed.
-        </p>
-        {!online && (
-          <p className="text-signal">No connection. Connect to send them.</p>
-        )}
-        {note && <p className="text-signal">{note}</p>}
-      </div>
+      {(!online || note) && (
+        <div className="space-y-2 text-sm leading-5 text-alert">
+          {!online && <p>{t('overlay.outbox.offline')}</p>}
+          {note && <p>{note}</p>}
+        </div>
+      )}
     </Modal>
   )
 }

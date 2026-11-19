@@ -1,4 +1,42 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
+import { useT } from '../lib/i18n/context'
+
+const DOT = {
+  error: 'bg-dot-alert',
+  success: 'bg-dot-good',
+  warning: 'bg-dot-warn',
+  info: 'bg-cyan',
+}
+
+/** Paper 63 toast pill: status dot, message, close. The dot's meaning is also read out. */
+function ToastPill({ toast, onClose }) {
+  const t = useT()
+  const error = toast.type === 'error'
+  return (
+    <div
+      role={error ? 'alert' : 'status'}
+      className={`pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-[22px] border bg-surface-2 py-1 pl-[18px] pr-1 text-sm leading-[18px] text-text shadow-[0_12px_32px_rgb(0_0_0/0.25)] lg:w-auto lg:max-w-[400px] ${
+        error ? 'border-[color:var(--alert-tint-border)]' : 'border-line-strong'
+      }`}
+    >
+      <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[toast.type] || DOT.info}`} aria-hidden />
+      <p className="min-w-0 flex-1 py-2">
+        <span className="sr-only">{t(`overlay.toast.${toast.type in DOT ? toast.type : 'info'}`)}: </span>
+        {toast.message}
+      </p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      >
+        <span className="sr-only">{t('common.close')}</span>
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  )
+}
 
 const ToastContext = createContext(null)
 
@@ -34,47 +72,9 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Phones: top of the screen, clear of the tab bar and save bars. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 pt-[max(0.75rem,env(safe-area-inset-top))] px-3 space-y-2 z-[60] lg:inset-x-auto lg:top-auto lg:bottom-0 lg:right-0 lg:p-4">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2.5 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:inset-x-auto lg:bottom-0 lg:right-0 lg:top-auto lg:items-end lg:p-5">
         {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role={toast.type === 'error' ? 'alert' : 'status'}
-            className={`pointer-events-auto rounded-lg border p-4 shadow-md max-w-md mx-auto lg:mx-0 bg-surface transition-colors duration-300 ease-in-out ${
-              toast.type === 'error'
-                ? 'border-signal/40 text-signal'
-                : toast.type === 'success'
-                  ? 'border-kelp/40 text-kelp'
-                  : toast.type === 'warning'
-                    ? 'border-warn/40 text-warn'
-                    : 'border-foam-deep text-chart-ink'
-            }`}
-          >
-            <div className="flex items-start">
-              <div className="flex-1">
-                <p className="text-sm font-medium">{toast.message}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeToast(toast.id)}
-                className="ml-2 -my-2 -mr-2 h-11 w-11 inline-flex items-center justify-center shrink-0 rounded text-muted hover:text-chart-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
-              >
-                <span className="sr-only">Close</span>
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <ToastPill key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
         ))}
       </div>
     </ToastContext.Provider>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
 import { api } from '../convex/_generated/api'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Cloudflare Turnstile on public forms (CF-003). Shown only when
@@ -40,6 +41,7 @@ export const turnstileEnabled = Boolean(SITE_KEY)
  */
 export function useHumanCheck(purpose) {
   const verify = useAction(api.humanVerification.verify)
+  const t = useT()
   // Callback ref: the form holding the widget may mount after the page does.
   const [container, setContainer] = useState(null)
   const widgetIdRef = useRef(null)
@@ -55,6 +57,8 @@ export function useHumanCheck(purpose) {
         widgetIdRef.current = turnstile.render(container, {
           sitekey: SITE_KEY,
           action: purpose,
+          // Match the app theme (Paper dark default, light on request).
+          theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
           callback: (t) => setToken(t),
           'expired-callback': () => setToken(''),
           'error-callback': () => setToken(''),
@@ -70,7 +74,7 @@ export function useHumanCheck(purpose) {
 
   const getTicket = useCallback(async () => {
     if (!SITE_KEY) return null
-    if (!token) throw new Error('Please complete the human check first.')
+    if (!token) throw new Error(t('authUi.humanFirst'))
     try {
       const { ticket } = await verify({ token, purpose })
       return ticket
@@ -79,12 +83,13 @@ export function useHumanCheck(purpose) {
       setToken('')
       if (widgetIdRef.current !== null && window.turnstile) window.turnstile.reset(widgetIdRef.current)
     }
-  }, [token, purpose, verify])
+  }, [token, purpose, verify, t])
 
+  // Paper 60 human-check card: the Turnstile box sits on a bordered surface.
   const widget = SITE_KEY ? (
-    <div>
-      <div ref={setContainer} />
-      {loadError && <p className="mt-1 text-xs text-signal">{loadError}</p>}
+    <div className="flex flex-col gap-1.5 rounded-input border border-line-strong bg-surface p-2">
+      <div ref={setContainer} className="min-h-[65px]" />
+      {loadError && <p className="px-2 pb-1 text-xs text-alert">{loadError}</p>}
     </div>
   ) : null
 

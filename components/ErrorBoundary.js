@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { Button, Card } from './ui'
+import { ErrorCard, SystemPage } from './system/SystemState'
 import { captureException } from '../lib/monitoring'
 
 /**
@@ -42,27 +42,20 @@ export default class ErrorBoundary extends Component {
   }
 }
 
-export function ErrorFallback({
-  title = 'Something went wrong on this page',
-  description = 'Your saved data is safe. Reload the page to try again. If it keeps happening, tell your administrator what you were doing.',
-}) {
+/** In-app crash screen (Paper 62 _error card). */
+export function ErrorFallback({ title, description }) {
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4 py-10 bg-foam">
-      <Card className="max-w-md w-full text-center">
-        <h1 className="font-display text-xl font-medium text-chart-ink">{title}</h1>
-        <p className="text-sm text-muted mt-2">{description}</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button onClick={() => window.location.reload()}>Reload page</Button>
-          <Button variant="secondary" href="/dashboard">
-            Go to dashboard
-          </Button>
-        </div>
-      </Card>
-    </div>
+    <SystemPage className="min-h-[60vh]">
+      <ErrorCard title={title} description={description} />
+    </SystemPage>
   )
 }
 
-/** Dependency-free fallback for the outermost boundary in pages/_app.js. */
+/**
+ * Dependency-free fallback for the outermost boundary in pages/_app.js: no
+ * providers, so plain markup with the theme's CSS variables (system colours
+ * if even the stylesheet is missing).
+ */
 export function RootErrorFallback() {
   return (
     <div
@@ -73,21 +66,42 @@ export function RootErrorFallback() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
-        fontFamily: 'system-ui, sans-serif',
-        background: '#f5f8f9',
-        color: '#12323f',
+        fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+        background: 'var(--bg, Canvas)',
+        color: 'var(--text, CanvasText)',
       }}
     >
-      <div style={{ maxWidth: 420, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Something went wrong</h1>
-        <p style={{ fontSize: 14, marginTop: 8 }}>
+      <div
+        style={{
+          maxWidth: 440,
+          textAlign: 'center',
+          padding: 32,
+          borderRadius: 20,
+          border: '1px solid var(--line, GrayText)',
+          background: 'var(--surface, Canvas)',
+        }}
+      >
+        <h1 style={{ fontSize: 22, lineHeight: '28px', fontWeight: 600, letterSpacing: '-0.01em', margin: 0 }}>
+          Something went wrong
+        </h1>
+        <p style={{ fontSize: 14, lineHeight: '20px', marginTop: 8, color: 'var(--muted, GrayText)' }}>
           Your saved data is safe. Reload the page to try again. If it keeps happening, tell your administrator what you
           were doing.
         </p>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          style={{ marginTop: 16, padding: '8px 16px', borderRadius: 6, border: '1px solid #12323f', background: '#fff' }}
+          style={{
+            marginTop: 18,
+            padding: '11px 22px',
+            borderRadius: 999,
+            border: 0,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            background: 'var(--button, ButtonFace)',
+            color: 'var(--button-text, ButtonText)',
+          }}
         >
           Reload page
         </button>

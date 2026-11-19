@@ -2083,5 +2083,308 @@
     "contactSupport": "Contact support",
     "ownerNote": "Open Billing to see each invoice and how to pay.",
     "notOwner": "Not the owner? Ask your organization's owner to settle the balance, or contact our support team."
+  },
+  "authUi": {
+    "footerSecure": "Secured sign-in · your data stays with your company",
+    "show": "Show",
+    "hide": "Hide",
+    "or": "or",
+    "humanFailed": "Human check failed",
+    "strength": {
+      "weak": "Weak password",
+      "fair": "Fair password",
+      "good": "Good password",
+      "strong": "Strong password"
+    },
+    "panel": {
+      "loginEyebrow": "Farm operations",
+      "loginHeadline": "Every cage, pond and tank, in one calm place.",
+      "signupEyebrow": "New workspace",
+      "signupHeadline": "Set up your farm in an afternoon.",
+      "inviteEyebrow": "You're invited",
+      "inviteHeadline": "Your team already runs its farm here."
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your farm workspace.",
+      "tabPhoneCode": "Phone code",
+      "tabSso": "SSO",
+      "codeTitle": "Enter your code",
+      "verifyAndSignIn": "Verify and sign in",
+      "sharedPhoneTitle": "On a shared phone?",
+      "sharedPhoneBody": "Sign out when you finish so the next person can't see your farm.",
+      "useEmail": "Use email instead",
+      "ssoHint": "Sign in with your company account through {name}.",
+      "newHere": "New to PBA Farm?",
+      "createWorkspace": "Create a farm workspace"
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Start with email and password. Next, register your farm or accept your company's invite.",
+      "fullName": "Full name",
+      "confirm": "Confirm password",
+      "create": "Create account",
+      "creating": "Creating account…",
+      "haveAccount": "Already have an account?",
+      "mismatch": "Passwords do not match",
+      "tooShort": "Password must be at least 6 characters long",
+      "failed": "Sign up failed"
+    },
+    "reset": {
+      "title": "Reset your password",
+      "newTitle": "Set a new password",
+      "emailIntro": "We will email you a code.",
+      "codeIntro": "Enter the code sent to {email} and choose a new password.",
+      "newPassword": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Set new password",
+      "remembered": "Remembered it?",
+      "noAccount": "No account uses that email.",
+      "couldNotSend": "Could not send the code. Try again in a minute.",
+      "wrongCode": "That code is wrong or has expired. Ask for a new one."
+    },
+    "invite": {
+      "pageTitle": "Organization invite",
+      "eyebrow": "Invitation",
+      "title": "Join {company}",
+      "joinAs": "You'll join as {role}.",
+      "email": "Invited email",
+      "role": "Role",
+      "expires": "Expires",
+      "roles": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "manager": "Manager",
+        "field_staff": "Field staff",
+        "viewer": "Viewer"
+      },
+      "loading": "Loading invite…",
+      "invalidTitle": "Invite not valid",
+      "invalid": "This invite link is not valid. Ask for a new one.",
+      "joinedTitle": "You're in",
+      "joined": "You joined {company}.",
+      "open": "Open {company}",
+      "expiredTitle": "Invite expired",
+      "expired": "This invite has expired. Ask {company} to send a new one.",
+      "usedTitle": "Invite already used",
+      "used": "This invite has already been used or withdrawn.",
+      "signInAs": "Sign in as",
+      "newHere": "New here? Create an account with that email first.",
+      "wrongAccount": "This invite is for {email}, but you are signed in as {current}. Sign out and sign in with the invited email.",
+      "verifyFirst": "Confirm your email address before joining.",
+      "verifyEmail": "Verify email",
+      "accept": "Accept invite",
+      "joining": "Joining…",
+      "decline": "Decline",
+      "acceptFailed": "Could not accept the invite",
+      "declineFailed": "Could not decline the invite"
+    },
+    "humanFirst": "Please complete the human check first."
+  },
+  "landing": {
+    "metaTitle": "Fish farm management",
+    "navLabel": "Main",
+    "nav": {
+      "product": "Product",
+      "how": "How it works"
+    },
+    "newBadge": "New",
+    "newText": "Offline daily logging for field teams",
+    "heroTitle": "Run every cage like it's your only cage.",
+    "heroBody": "PBA Farm is the operating system for fish farms: stocking to harvest, feed to finance, across every site and every team.",
+    "heroNote": "Daily logging keeps working offline on phones",
+    "product": {
+      "eyebrow": "Product",
+      "title": "Everything between the fingerling and the invoice",
+      "body": "One system for the farm office and the jetty. No more photos of notebooks."
+    },
+    "features": {
+      "board": {
+        "title": "Unit board",
+        "body": "See every cage at a glance: biomass, density, last entry and alerts."
+      },
+      "entry": {
+        "title": "Fast daily entry",
+        "body": "Feed, mortality and water for a whole row on one screen. Works offline and syncs when back in signal."
+      },
+      "pnl": {
+        "title": "Cage-level P&L",
+        "body": "Feed, fingerlings and labour allocated to each cage, so you know which cages make money."
+      },
+      "feed": {
+        "title": "Feed that never runs out",
+        "body": "Stock levels per feed, reorder alerts and purchase records."
+      },
+      "multi": {
+        "title": "Multi-site, multi-company",
+        "body": "One login, many farms. Roles and data stay separate per company."
+      }
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "Live in a week, not a season",
+      "setupTitle": "Set up your farm",
+      "setupBody": "Add sites, cages and ponds. Import stocking history from a spreadsheet.",
+      "inviteTitle": "Invite your team",
+      "inviteBody": "Field staff get a simple daily-entry app; managers get the full picture.",
+      "runTitle": "Run the cycle",
+      "runBody": "Log, approve, harvest and sell. Reports and P&L build themselves."
+    },
+    "cta": {
+      "title": "Your next cycle starts on PBA Farm.",
+      "body": "Set up your workspace in an afternoon.",
+      "start": "Create a workspace"
+    },
+    "footer": {
+      "tagline": "The operating system for fish farms.",
+      "label": "Footer",
+      "features": "Features",
+      "account": "Account"
+    }
+  },
+  "onboarding": {
+    "eyebrow": "Set up your workspace",
+    "stepOf": "Step {n} of {total}",
+    "required": "required",
+    "state": {
+      "done": "done",
+      "current": "current step",
+      "upcoming": "not started"
+    },
+    "steps": {
+      "account": "Account",
+      "company": "Company",
+      "companyHint": "Name, code and contacts",
+      "approval": "Approval",
+      "approvalHint": "A PBA Farm admin reviews it",
+      "units": "First units",
+      "unitsHint": "Cages, ponds, tanks"
+    },
+    "pageTitle": "Register your company",
+    "title": "Register your company",
+    "titleAnother": "Register another organization",
+    "subtitle": "Submit your farm details for approval. Once approved, you become its owner.",
+    "subtitleAnother": "Submit its details for approval. Once approved, you become its owner and can switch to it from your profile menu.",
+    "inviteHint": "Invited by email? Open the link in the invite instead.",
+    "name": "Company name",
+    "namePlaceholder": "e.g. Hei Tech Aquaculture",
+    "code": "Short code",
+    "codeHint": "Unique ID across the system. Suggested from the name.",
+    "contactEmail": "Contact email",
+    "phone": "Phone",
+    "address": "Farm / office address",
+    "addressPlaceholder": "Street, town, region",
+    "registrationNumber": "Registration / tax ID",
+    "registrationNumberHint": "Optional business registration or tax number",
+    "optional": "Optional",
+    "submit": "Submit for approval",
+    "submitting": "Submitting…",
+    "backToApp": "Back to the app",
+    "companySettings": "Company settings",
+    "checking": "Checking your account…",
+    "invitedTitle": "You have been invited",
+    "invitedBody": "Ask to join, and the company's admin will approve your request.",
+    "asAdmin": "As an admin",
+    "asUser": "As a user",
+    "waiting": "Waiting for approval",
+    "askToJoin": "Ask to join",
+    "rejected": "Your registration of {name} was not approved. You can submit a new one.",
+    "pendingTitle": "Awaiting approval",
+    "pendingSubtitle": "Your registration is with a PBA Farm admin.",
+    "pendingBody": "You get access as its owner once it is approved. This page updates on its own.",
+    "submitted": "Registration submitted",
+    "nameRequired": "Company name is required",
+    "codeTooShort": "Enter a short company code (at least 2 characters)",
+    "registerFailed": "Error registering company",
+    "joinFailed": "Could not send the join request",
+    "cage": {
+      "title": "Create cage",
+      "subtitle": "Register a new physical cage. Stock it with fish in a separate step after creation.",
+      "dashboard": "Dashboard",
+      "cages": "Cages",
+      "allCages": "All cages",
+      "newStocking": "New stocking"
+    }
+  },
+  "overlay": {
+    "confirmDelete": {
+      "title": "Confirm delete",
+      "message": "This action cannot be undone.",
+      "confirm": "Delete",
+      "deleting": "Deleting…"
+    },
+    "logout": {
+      "title": "Log out?",
+      "body": "You will need to sign in again to use the app.",
+      "confirm": "Log out"
+    },
+    "outbox": {
+      "title": {
+        "one": "{count} entry not sent yet",
+        "other": "{count} entries not sent yet"
+      },
+      "body": "Entries saved on this phone are removed when you sign out. Send them now, or discard them if they are no longer needed.",
+      "discard": "Discard and sign out",
+      "send": "Send and sign out",
+      "offline": "No connection. Connect to send them.",
+      "sent": {
+        "one": "Sent {count} entry saved on this phone",
+        "other": "Sent {count} entries saved on this phone"
+      },
+      "failed": {
+        "one": "{count} saved entry needs attention. Open Outbox",
+        "other": "{count} saved entries need attention. Open Outbox"
+      }
+    },
+    "cage": {
+      "editTitle": "Edit cage",
+      "editBody": "Update details for {name}.",
+      "save": "Save changes",
+      "archiveTitle": "Archive {name}?",
+      "archiveBody": "Archiving hides this unit from lists and pickers. Its records, batches and history stay. A unit that still holds fish cannot be archived; an admin can restore it later.",
+      "typePrefix": "Type",
+      "typeSuffix": "to confirm",
+      "archive": "Archive unit",
+      "archiving": "Archiving…"
+    },
+    "actAs": {
+      "viewingAs": "Viewing as",
+      "readOnly": "read-only",
+      "writes": "changes allowed and audited",
+      "endsIn": "ends in {minutes} min",
+      "exit": "End support access",
+      "startTitle": "Support access: {name}",
+      "startBody": "You will see this organization as its admin until you end the session or it expires. Starting, ending and every change are recorded in the organization's audit log under your name.",
+      "start": "Start support access",
+      "starting": "Starting…",
+      "startFailed": "Could not start support access",
+      "reason": "Reason (ticket or request)",
+      "minutes": "Minutes (1–120)",
+      "allowWrites": "Allow changes (default is read-only)"
+    },
+    "toast": {
+      "error": "Error",
+      "success": "Done",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "update": {
+      "title": "Update available"
+    }
+  },
+  "system": {
+    "notFound": {
+      "title": "This cage drifted off",
+      "body": "The page you're after moved or never existed.",
+      "home": "Go home"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "titleCode": "Something went wrong (error {code})",
+      "body": "Your saved data is safe. Try again, and if it keeps happening tell your administrator what you were doing.",
+      "home": "Go to dashboard"
+    },
+    "redirectApprovals": "Redirecting to approvals…",
+    "create": "Create"
   }
 }

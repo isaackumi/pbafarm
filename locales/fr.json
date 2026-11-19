@@ -2083,5 +2083,308 @@
     "contactSupport": "Contacter le support",
     "ownerNote": "Ouvrez Facturation pour voir chaque facture et comment payer.",
     "notOwner": "Vous n'êtes pas le propriétaire ? Demandez au propriétaire de votre organisation de régler le solde, ou contactez notre support."
+  },
+  "authUi": {
+    "footerSecure": "Connexion sécurisée · vos données restent dans votre entreprise",
+    "show": "Afficher",
+    "hide": "Masquer",
+    "or": "ou",
+    "humanFailed": "La vérification humaine a échoué",
+    "strength": {
+      "weak": "Mot de passe faible",
+      "fair": "Mot de passe moyen",
+      "good": "Bon mot de passe",
+      "strong": "Mot de passe fort"
+    },
+    "panel": {
+      "loginEyebrow": "Opérations de la ferme",
+      "loginHeadline": "Chaque cage, étang et bassin, au même endroit, au calme.",
+      "signupEyebrow": "Nouvel espace",
+      "signupHeadline": "Configurez votre ferme en un après-midi.",
+      "inviteEyebrow": "Vous êtes invité",
+      "inviteHeadline": "Votre équipe gère déjà sa ferme ici."
+    },
+    "login": {
+      "title": "Bon retour",
+      "subtitle": "Connectez-vous à l'espace de votre ferme.",
+      "tabPhoneCode": "Code par téléphone",
+      "tabSso": "SSO",
+      "codeTitle": "Saisissez votre code",
+      "verifyAndSignIn": "Vérifier et se connecter",
+      "sharedPhoneTitle": "Téléphone partagé ?",
+      "sharedPhoneBody": "Déconnectez-vous à la fin pour que la personne suivante ne voie pas votre ferme.",
+      "useEmail": "Utiliser l'e-mail",
+      "ssoHint": "Connectez-vous avec le compte de votre entreprise via {name}.",
+      "newHere": "Nouveau sur PBA Farm ?",
+      "createWorkspace": "Créer un espace pour votre ferme"
+    },
+    "signup": {
+      "title": "Créez votre compte",
+      "subtitle": "Commencez par un e-mail et un mot de passe. Ensuite, enregistrez votre ferme ou acceptez l'invitation de votre entreprise.",
+      "fullName": "Nom complet",
+      "confirm": "Confirmer le mot de passe",
+      "create": "Créer un compte",
+      "creating": "Création du compte…",
+      "haveAccount": "Vous avez déjà un compte ?",
+      "mismatch": "Les mots de passe ne correspondent pas",
+      "tooShort": "Le mot de passe doit contenir au moins 6 caractères",
+      "failed": "L'inscription a échoué"
+    },
+    "reset": {
+      "title": "Réinitialiser votre mot de passe",
+      "newTitle": "Définir un nouveau mot de passe",
+      "emailIntro": "Nous vous enverrons un code par e-mail.",
+      "codeIntro": "Saisissez le code envoyé à {email} et choisissez un nouveau mot de passe.",
+      "newPassword": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "submit": "Définir le mot de passe",
+      "remembered": "Vous vous en souvenez ?",
+      "noAccount": "Aucun compte n'utilise cet e-mail.",
+      "couldNotSend": "Impossible d'envoyer le code. Réessayez dans une minute.",
+      "wrongCode": "Ce code est incorrect ou a expiré. Demandez-en un nouveau."
+    },
+    "invite": {
+      "pageTitle": "Invitation d'organisation",
+      "eyebrow": "Invitation",
+      "title": "Rejoindre {company}",
+      "joinAs": "Vous rejoindrez en tant que {role}.",
+      "email": "E-mail invité",
+      "role": "Rôle",
+      "expires": "Expire le",
+      "roles": {
+        "owner": "Propriétaire",
+        "admin": "Administrateur",
+        "manager": "Responsable",
+        "field_staff": "Personnel de terrain",
+        "viewer": "Lecteur"
+      },
+      "loading": "Chargement de l'invitation…",
+      "invalidTitle": "Invitation non valide",
+      "invalid": "Ce lien d'invitation n'est pas valide. Demandez-en un nouveau.",
+      "joinedTitle": "C'est fait",
+      "joined": "Vous avez rejoint {company}.",
+      "open": "Ouvrir {company}",
+      "expiredTitle": "Invitation expirée",
+      "expired": "Cette invitation a expiré. Demandez à {company} d'en envoyer une nouvelle.",
+      "usedTitle": "Invitation déjà utilisée",
+      "used": "Cette invitation a déjà été utilisée ou retirée.",
+      "signInAs": "Connectez-vous en tant que",
+      "newHere": "Nouveau ? Créez d'abord un compte avec cet e-mail.",
+      "wrongAccount": "Cette invitation est pour {email}, mais vous êtes connecté en tant que {current}. Déconnectez-vous et connectez-vous avec l'e-mail invité.",
+      "verifyFirst": "Confirmez votre adresse e-mail avant de rejoindre.",
+      "verifyEmail": "Vérifier l'e-mail",
+      "accept": "Accepter l'invitation",
+      "joining": "Adhésion…",
+      "decline": "Refuser",
+      "acceptFailed": "Impossible d'accepter l'invitation",
+      "declineFailed": "Impossible de refuser l'invitation"
+    },
+    "humanFirst": "Veuillez d'abord terminer la vérification humaine."
+  },
+  "landing": {
+    "metaTitle": "Gestion de fermes piscicoles",
+    "navLabel": "Principal",
+    "nav": {
+      "product": "Produit",
+      "how": "Fonctionnement"
+    },
+    "newBadge": "Nouveau",
+    "newText": "Saisie quotidienne hors ligne pour les équipes terrain",
+    "heroTitle": "Gérez chaque cage comme si c'était la seule.",
+    "heroBody": "PBA Farm est le système d'exploitation des fermes piscicoles : de l'empoissonnement à la récolte, de l'aliment aux finances, sur chaque site et pour chaque équipe.",
+    "heroNote": "La saisie quotidienne fonctionne hors ligne sur téléphone",
+    "product": {
+      "eyebrow": "Produit",
+      "title": "Tout, de l'alevin à la facture",
+      "body": "Un seul système pour le bureau et le ponton. Fini les photos de carnets."
+    },
+    "features": {
+      "board": {
+        "title": "Tableau des unités",
+        "body": "Voyez chaque cage d'un coup d'œil : biomasse, densité, dernière saisie et alertes."
+      },
+      "entry": {
+        "title": "Saisie quotidienne rapide",
+        "body": "Aliment, mortalité et eau pour toute une rangée sur un seul écran. Fonctionne hors ligne et se synchronise au retour du réseau."
+      },
+      "pnl": {
+        "title": "Compte de résultat par cage",
+        "body": "Aliment, alevins et main-d'œuvre répartis par cage, pour savoir lesquelles sont rentables."
+      },
+      "feed": {
+        "title": "Jamais à court d'aliment",
+        "body": "Stocks par aliment, alertes de réapprovisionnement et suivi des achats."
+      },
+      "multi": {
+        "title": "Multi-site, multi-entreprise",
+        "body": "Un seul identifiant, plusieurs fermes. Rôles et données restent séparés par entreprise."
+      }
+    },
+    "how": {
+      "eyebrow": "Fonctionnement",
+      "title": "Opérationnel en une semaine, pas en une saison",
+      "setupTitle": "Configurez votre ferme",
+      "setupBody": "Ajoutez sites, cages et étangs. Importez l'historique d'empoissonnement depuis un tableur.",
+      "inviteTitle": "Invitez votre équipe",
+      "inviteBody": "Le personnel de terrain a une saisie quotidienne simple ; les responsables ont la vue d'ensemble.",
+      "runTitle": "Pilotez le cycle",
+      "runBody": "Saisissez, approuvez, récoltez et vendez. Rapports et compte de résultat se construisent seuls."
+    },
+    "cta": {
+      "title": "Votre prochain cycle commence sur PBA Farm.",
+      "body": "Configurez votre espace en un après-midi.",
+      "start": "Créer un espace"
+    },
+    "footer": {
+      "tagline": "Le système d'exploitation des fermes piscicoles.",
+      "label": "Pied de page",
+      "features": "Fonctionnalités",
+      "account": "Compte"
+    }
+  },
+  "onboarding": {
+    "eyebrow": "Configurez votre espace",
+    "stepOf": "Étape {n} sur {total}",
+    "required": "obligatoire",
+    "state": {
+      "done": "terminé",
+      "current": "étape en cours",
+      "upcoming": "pas commencé"
+    },
+    "steps": {
+      "account": "Compte",
+      "company": "Entreprise",
+      "companyHint": "Nom, code et contacts",
+      "approval": "Approbation",
+      "approvalHint": "Un administrateur PBA Farm l'examine",
+      "units": "Premières unités",
+      "unitsHint": "Cages, étangs, bassins"
+    },
+    "pageTitle": "Enregistrer votre entreprise",
+    "title": "Enregistrez votre entreprise",
+    "titleAnother": "Enregistrer une autre organisation",
+    "subtitle": "Soumettez les informations de votre ferme pour approbation. Une fois approuvée, vous en devenez propriétaire.",
+    "subtitleAnother": "Soumettez ses informations pour approbation. Une fois approuvée, vous en devenez propriétaire et pouvez y basculer depuis le menu de votre profil.",
+    "inviteHint": "Invité par e-mail ? Ouvrez plutôt le lien de l'invitation.",
+    "name": "Nom de l'entreprise",
+    "namePlaceholder": "ex. Hei Tech Aquaculture",
+    "code": "Code court",
+    "codeHint": "Identifiant unique dans le système. Suggéré à partir du nom.",
+    "contactEmail": "E-mail de contact",
+    "phone": "Téléphone",
+    "address": "Adresse de la ferme / du bureau",
+    "addressPlaceholder": "Rue, ville, région",
+    "registrationNumber": "N° d'immatriculation / fiscal",
+    "registrationNumberHint": "Numéro d'immatriculation ou fiscal facultatif",
+    "optional": "Facultatif",
+    "submit": "Soumettre pour approbation",
+    "submitting": "Envoi…",
+    "backToApp": "Retour à l'application",
+    "companySettings": "Paramètres de l'entreprise",
+    "checking": "Vérification de votre compte…",
+    "invitedTitle": "Vous avez été invité",
+    "invitedBody": "Demandez à rejoindre, et l'administrateur de l'entreprise approuvera votre demande.",
+    "asAdmin": "En tant qu'administrateur",
+    "asUser": "En tant qu'utilisateur",
+    "waiting": "En attente d'approbation",
+    "askToJoin": "Demander à rejoindre",
+    "rejected": "Votre enregistrement de {name} n'a pas été approuvé. Vous pouvez en soumettre un nouveau.",
+    "pendingTitle": "En attente d'approbation",
+    "pendingSubtitle": "Votre enregistrement est entre les mains d'un administrateur PBA Farm.",
+    "pendingBody": "Vous y aurez accès en tant que propriétaire dès son approbation. Cette page se met à jour toute seule.",
+    "submitted": "Enregistrement soumis",
+    "nameRequired": "Le nom de l'entreprise est obligatoire",
+    "codeTooShort": "Saisissez un code court (au moins 2 caractères)",
+    "registerFailed": "Erreur lors de l'enregistrement de l'entreprise",
+    "joinFailed": "Impossible d'envoyer la demande",
+    "cage": {
+      "title": "Créer une cage",
+      "subtitle": "Enregistrez une nouvelle cage physique. Empoissonnez-la dans une étape séparée après sa création.",
+      "dashboard": "Tableau de bord",
+      "cages": "Cages",
+      "allCages": "Toutes les cages",
+      "newStocking": "Nouvel empoissonnement"
+    }
+  },
+  "overlay": {
+    "confirmDelete": {
+      "title": "Confirmer la suppression",
+      "message": "Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "deleting": "Suppression…"
+    },
+    "logout": {
+      "title": "Se déconnecter ?",
+      "body": "Vous devrez vous reconnecter pour utiliser l’application.",
+      "confirm": "Se déconnecter"
+    },
+    "outbox": {
+      "title": {
+        "one": "{count} saisie pas encore envoyée",
+        "other": "{count} saisies pas encore envoyées"
+      },
+      "body": "Les saisies enregistrées sur ce téléphone sont supprimées à la déconnexion. Envoyez-les maintenant, ou supprimez-les si elles ne servent plus.",
+      "discard": "Supprimer et se déconnecter",
+      "send": "Envoyer et se déconnecter",
+      "offline": "Pas de connexion. Connectez-vous pour les envoyer.",
+      "sent": {
+        "one": "{count} saisie enregistrée sur ce téléphone envoyée",
+        "other": "{count} saisies enregistrées sur ce téléphone envoyées"
+      },
+      "failed": {
+        "one": "{count} saisie enregistrée demande votre attention. Ouvrez la boîte d’envoi",
+        "other": "{count} saisies enregistrées demandent votre attention. Ouvrez la boîte d’envoi"
+      }
+    },
+    "cage": {
+      "editTitle": "Modifier la cage",
+      "editBody": "Mettez à jour les informations de {name}.",
+      "save": "Enregistrer",
+      "archiveTitle": "Archiver {name} ?",
+      "archiveBody": "L’archivage masque cette unité des listes et des sélecteurs. Ses relevés, lots et historique sont conservés. Une unité qui contient encore des poissons ne peut pas être archivée ; un administrateur peut la restaurer plus tard.",
+      "typePrefix": "Saisissez",
+      "typeSuffix": "pour confirmer",
+      "archive": "Archiver l’unité",
+      "archiving": "Archivage…"
+    },
+    "actAs": {
+      "viewingAs": "Vue en tant que",
+      "readOnly": "lecture seule",
+      "writes": "modifications autorisées et tracées",
+      "endsIn": "fin dans {minutes} min",
+      "exit": "Terminer l’accès support",
+      "startTitle": "Accès support : {name}",
+      "startBody": "Vous verrez cette organisation comme son administrateur jusqu’à la fin de la session ou son expiration. Le début, la fin et chaque modification sont inscrits à votre nom dans le journal d’audit de l’organisation.",
+      "start": "Démarrer l’accès support",
+      "starting": "Démarrage…",
+      "startFailed": "Impossible de démarrer l’accès support",
+      "reason": "Motif (ticket ou demande)",
+      "minutes": "Minutes (1–120)",
+      "allowWrites": "Autoriser les modifications (lecture seule par défaut)"
+    },
+    "toast": {
+      "error": "Erreur",
+      "success": "Terminé",
+      "warning": "Avertissement",
+      "info": "Info"
+    },
+    "update": {
+      "title": "Mise à jour disponible"
+    }
+  },
+  "system": {
+    "notFound": {
+      "title": "Cette cage a dérivé",
+      "body": "La page que vous cherchez a été déplacée ou n’a jamais existé.",
+      "home": "Retour à l’accueil"
+    },
+    "error": {
+      "title": "Une erreur s’est produite",
+      "titleCode": "Une erreur s’est produite (erreur {code})",
+      "body": "Vos données enregistrées sont en sécurité. Réessayez ; si le problème persiste, dites à votre administrateur ce que vous faisiez.",
+      "home": "Aller au tableau de bord"
+    },
+    "redirectApprovals": "Redirection vers les approbations…",
+    "create": "Créer"
   }
 }

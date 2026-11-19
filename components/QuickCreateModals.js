@@ -159,7 +159,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
       onClose={onClose}
     >
       {error && (
-        <div className="mb-3 rounded-xl border border-signal/20 bg-signal/10 px-3 py-2 text-sm text-signal">
+        <div role="alert" className="mb-3 rounded-input border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] px-4 py-3 text-sm leading-5 text-alert">
           {error}
         </div>
       )}
@@ -170,7 +170,7 @@ export function QuickCreateCageModal({ onClose, onCreated }) {
               id="qc-cage-code"
               value={form.code}
               readOnly
-              className="font-data bg-foam"
+              className="font-data"
             />
           </Field>
           <Field
@@ -357,7 +357,7 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
       onClose={onClose}
     >
       {error && (
-        <div className="mb-3 rounded-xl border border-signal/20 bg-signal/10 px-3 py-2 text-sm text-signal">
+        <div role="alert" className="mb-3 rounded-input border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] px-4 py-3 text-sm leading-5 text-alert">
           {error}
         </div>
       )}
@@ -451,12 +451,12 @@ export function QuickCreateFeedTypeModal({ onClose, onCreated }) {
             />
           </Field>
         </div>
-        <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-chart-ink cursor-pointer">
+        <label className="flex items-center gap-3 min-h-11 text-sm font-medium text-text cursor-pointer">
           <input
             type="checkbox"
             checked={form.active}
             onChange={setField('active')}
-            className="h-4 w-4 rounded accent-lake"
+            className="h-4 w-4 rounded accent-cyan"
           />
           Active
         </label>
@@ -601,7 +601,7 @@ export function QuickCreateStockingModal({ onClose, onCreated }) {
       onClose={onClose}
     >
       {error && (
-        <div className="mb-3 rounded-xl border border-signal/20 bg-signal/10 px-3 py-2 text-sm text-signal">
+        <div role="alert" className="mb-3 rounded-input border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] px-4 py-3 text-sm leading-5 text-alert">
           {error}
         </div>
       )}
@@ -935,7 +935,7 @@ export function QuickCreatePurchaseModal({
       onClose={onClose}
     >
       {error && (
-        <div className="mb-3 rounded-xl border border-signal/20 bg-signal/10 px-3 py-2 text-sm text-signal">
+        <div role="alert" className="mb-3 rounded-input border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] px-4 py-3 text-sm leading-5 text-alert">
           {error}
         </div>
       )}

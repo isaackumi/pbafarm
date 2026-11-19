@@ -57,12 +57,15 @@ export default function DependencyEmpty({
   return (
     <>
       <div
-        className={`mt-2 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2.5 text-sm text-warn ${className}`}
+        className={`mt-2 rounded-input border border-[color:var(--warn-tint-border)] bg-[color:var(--warn-tint-bg)] px-4 py-3 text-sm leading-5 text-text ${className}`}
         role="status"
       >
-        <p className="leading-snug">{message}</p>
-        {noAction && <p className="mt-1 text-warn">{t('ui.askAdmin')}</p>}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <p className="flex items-start gap-2.5">
+          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-dot-warn" aria-hidden />
+          <span>{message}</span>
+        </p>
+        {noAction && <p className="mt-1 pl-[18px] text-muted">{t('ui.askAdmin')}</p>}
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-[18px]">
           {primaryIsCreate && (
             <button
               type="button"
@@ -71,20 +74,20 @@ export default function DependencyEmpty({
                 e.stopPropagation()
                 setOpenKind(createKind)
               }}
-              className="inline-flex items-center gap-1 font-semibold text-lagoon-800 hover:text-lagoon-950 underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-pill border border-line-strong bg-surface px-3 py-[7px] text-xs font-medium leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             >
-              <Plus className="w-3.5 h-3.5" />
-              {createLabel || linkLabel || 'Create'}
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              {createLabel || linkLabel || t('system.create')}
             </button>
           )}
           {showPrimaryLink && (
             <Link
               href={href}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 font-semibold text-lagoon-800 hover:text-lagoon-950 underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-pill border border-line-strong bg-surface px-3 py-[7px] text-xs font-medium leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             >
               {linkLabel}
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           )}
 
@@ -96,20 +99,20 @@ export default function DependencyEmpty({
                 e.stopPropagation()
                 setOpenKind(secondaryCreateKind)
               }}
-              className="inline-flex items-center gap-1 font-medium text-chart-ink/80 hover:text-chart-ink underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-pill px-3 py-[7px] text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             >
-              <Plus className="w-3.5 h-3.5" />
-              {secondaryCreateLabel || secondaryLabel || 'Create'}
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              {secondaryCreateLabel || secondaryLabel || t('system.create')}
             </button>
           )}
           {showSecondaryLink && (
             <Link
               href={secondaryHref}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 font-medium text-chart-ink/80 hover:text-chart-ink underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-pill px-3 py-[7px] text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
             >
               {secondaryLabel}
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           )}
         </div>

@@ -8,9 +8,20 @@ import {
   SIGN_OUT_CODES,
   authErrorText,
 } from '../convex/lib/authErrors'
-import { Button, Field, Input } from '../components/ui'
 import { useT } from '../lib/i18n/context'
-import LanguageSwitcher from '../components/LanguageSwitcher'
+import {
+  AUTH_LINK,
+  AuthAlert,
+  AuthDivider,
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthLayout,
+  AuthSubmit,
+  MethodTabs,
+  OtpInput,
+  PasswordInput,
+} from '../components/auth/AuthUi'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useHumanCheck } from '../components/HumanCheck'
 
@@ -30,13 +41,11 @@ function errorData(err) {
 /** Enterprise SSO (ENT-003): shown when the deployment has an OIDC provider. */
 const SSO_NAME = process.env.NEXT_PUBLIC_AUTH_OIDC_NAME || ''
 
-/** Passwordless sign-in with a code sent to a registered phone (SEC-006). */
-function PhoneSignIn({ onSignedIn }) {
+/** Passwordless sign-in with a code sent to a registered phone (SEC-006, Paper 15b). */
+function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail }) {
   const { sendPhoneCode, verifyPhoneCode } = useAuth()
   const t = useT()
-  const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
-  const [step, setStep] = useState('phone')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [cooldown, setCooldown] = useState(0)
@@ -76,34 +85,16 @@ function PhoneSignIn({ onSignedIn }) {
 
   if (step === 'code') {
     return (
-      <form className="space-y-5" onSubmit={verify}>
-        <p className="text-sm text-muted">{t('auth.login.codeOnItsWay', { phone })}</p>
-        {error && (
-          <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-        <Field label={t('common.code')} htmlFor="otp">
-          <Input
-            id="otp"
-            name="otp"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9]{6}"
-            maxLength={6}
-            required
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            className="tracking-[0.4em] text-center text-lg"
-          />
-        </Field>
-        <Button type="submit" disabled={busy || code.length !== 6} size="lg" className="w-full">
-          {busy ? t('common.checking') : t('auth.login.signIn')}
-        </Button>
-        <div className="flex justify-between text-sm">
+      <form className="flex flex-col gap-[22px]" onSubmit={verify}>
+        {error && <AuthAlert>{error}</AuthAlert>}
+        <OtpInput id="otp" label={t('common.code')} value={code} onChange={setCode} autoFocus />
+        <div className="flex items-center justify-between gap-3 text-sm leading-[18px]">
+          <button type="button" className={AUTH_LINK} disabled={cooldown > 0 || busy} onClick={send}>
+            {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
+          </button>
           <button
             type="button"
-            className="text-lake hover:underline"
+            className={AUTH_LINK}
             onClick={() => {
               setStep('phone')
               setCode('')
@@ -112,32 +103,26 @@ function PhoneSignIn({ onSignedIn }) {
           >
             {t('common.changeNumber')}
           </button>
-          <button
-            type="button"
-            className="text-lake hover:underline disabled:text-muted disabled:no-underline"
-            disabled={cooldown > 0 || busy}
-            onClick={send}
-          >
-            {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
-          </button>
         </div>
+        <AuthSubmit disabled={busy || code.length !== 6}>
+          {busy ? t('common.checking') : t('authUi.login.verifyAndSignIn')}
+        </AuthSubmit>
+        <div className="flex flex-col gap-1 rounded-input border border-line bg-surface px-4 py-3.5">
+          <p className="text-sm font-semibold leading-[18px] text-text">{t('authUi.login.sharedPhoneTitle')}</p>
+          <p className="text-sm leading-5 text-muted">{t('authUi.login.sharedPhoneBody')}</p>
+        </div>
+        <button type="button" onClick={onUseEmail} className={`self-start text-sm leading-[18px] text-muted hover:text-text ${AUTH_LINK.replace('text-cyan ', '')}`}>
+          ← {t('authUi.login.useEmail')}
+        </button>
       </form>
     )
   }
 
   return (
-    <form className="space-y-5" onSubmit={send}>
-      {error && (
-        <div role="alert" className="bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
-      <Field
-        label={t('common.mobileNumber')}
-        htmlFor="phone"
-        hint={t('auth.login.phoneHint')}
-      >
-        <Input
+    <form className="flex flex-col gap-[22px]" onSubmit={send}>
+      {error && <AuthAlert>{error}</AuthAlert>}
+      <AuthField label={t('common.mobileNumber')} htmlFor="phone" hint={t('auth.login.phoneHint')}>
+        <AuthInput
           id="phone"
           name="phone"
           type="tel"
@@ -147,10 +132,10 @@ function PhoneSignIn({ onSignedIn }) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
-      </Field>
-      <Button type="submit" disabled={busy || phone.trim().length < 6} size="lg" className="w-full">
+      </AuthField>
+      <AuthSubmit disabled={busy || phone.trim().length < 6}>
         {busy ? t('common.sending') : t('common.sendCode')}
-      </Button>
+      </AuthSubmit>
     </form>
   )
 }
@@ -161,6 +146,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [method, setMethod] = useState('email')
+  const [phone, setPhone] = useState('')
+  const [phoneStep, setPhoneStep] = useState('phone')
   // CF-003: after repeated failures the server asks for the human check.
   const [needsHuman, setNeedsHuman] = useState(false)
   const human = useHumanCheck('signin')
@@ -221,120 +208,120 @@ export default function Login() {
     router.push(safeNextPath(router.query.next))
   }
 
+  const codeStep = method === 'phone' && phoneStep === 'code'
+  const tabs = [
+    { id: 'email', label: t('auth.login.tabEmail') },
+    { id: 'phone', label: t('authUi.login.tabPhoneCode') },
+    ...(SSO_NAME ? [{ id: 'sso', label: t('authUi.login.tabSso') }] : []),
+  ]
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-foam px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <p className="font-display text-4xl font-medium text-chart-ink mb-2">PBA Farm</p>
-          <h1 className="text-xl font-semibold text-chart-ink">{t('auth.login.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('auth.login.tagline')}</p>
+    <AuthLayout title={t('auth.login.title')}>
+      <AuthHeading
+        title={codeStep ? t('authUi.login.codeTitle') : t('authUi.login.title')}
+        subtitle={codeStep ? t('auth.login.codeOnItsWay', { phone }) : t('authUi.login.subtitle')}
+      />
+
+      {reason && !error && (
+        <AuthAlert>
+          {t('auth.login.signedOut')} {authErrorText(reason)}
+        </AuthAlert>
+      )}
+      {error && <AuthAlert>{error}</AuthAlert>}
+
+      {!codeStep && (
+        <MethodTabs
+          label={t('auth.login.method')}
+          tabs={tabs}
+          value={method}
+          onChange={(id) => {
+            setMethod(id)
+            setError('')
+          }}
+        />
+      )}
+
+      {method === 'phone' ? (
+        <PhoneSignIn
+          phone={phone}
+          setPhone={setPhone}
+          step={phoneStep}
+          setStep={setPhoneStep}
+          onSignedIn={() => router.push(safeNextPath(router.query.next))}
+          onUseEmail={() => {
+            setMethod('email')
+            setPhoneStep('phone')
+          }}
+        />
+      ) : method === 'sso' && SSO_NAME ? (
+        <div className="flex flex-col gap-[22px]">
+          <p className="text-sm leading-5 text-muted">{t('authUi.login.ssoHint', { name: SSO_NAME })}</p>
+          <AuthSubmit type="button" onClick={() => signIn('oidc', { redirectTo: safeNextPath(router.query.next) })}>
+            {t('auth.login.sso', { name: SSO_NAME })}
+          </AuthSubmit>
         </div>
+      ) : (
+        <form className="flex flex-col gap-[22px]" onSubmit={handleEmailLogin}>
+          <AuthField label={t('auth.login.email')} htmlFor="email">
+            <AuthInput
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </AuthField>
 
-        <div className="bg-surface border border-foam-deep rounded-xl px-6 py-8 shadow-sm">
-          {reason && !error && (
-            <div
-              role="alert"
-              className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm"
-            >
-              {t('auth.login.signedOut')} {authErrorText(reason)}
-            </div>
-          )}
-          {error && (
-            <div role="alert" className="mb-4 bg-signal/10 text-signal border border-signal/20 p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+          <AuthField
+            label={t('auth.login.password')}
+            htmlFor="password"
+            aside={
+              <Link href="/reset-password" className={`text-sm leading-[18px] ${AUTH_LINK}`}>
+                {t('auth.login.forgot')}
+              </Link>
+            }
+          >
+            <PasswordInput
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </AuthField>
 
-          <div role="tablist" aria-label={t('auth.login.method')} className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-foam p-1">
-            {[
-              ['email', t('auth.login.tabEmail')],
-              ['phone', t('auth.login.tabPhone')],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={method === id}
-                onClick={() => {
-                  setMethod(id)
-                  setError('')
-                }}
-                className={`min-h-10 rounded-md text-sm font-medium transition-colors ${
-                  method === id ? 'bg-surface text-chart-ink shadow-sm' : 'text-muted hover:text-chart-ink'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {needsHuman && human.widget}
 
-          {method === 'phone' ? (
-            <PhoneSignIn onSignedIn={() => router.push(safeNextPath(router.query.next))} />
-          ) : (
-          <form className="space-y-5" onSubmit={handleEmailLogin}>
-            <Field label={t('auth.login.email')} htmlFor="email">
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Field>
-
-            <Field
-              label={t('auth.login.password')}
-              htmlFor="password"
-              hint={
-                <Link href="/reset-password" className="text-lake hover:underline">
-                  {t('auth.login.forgot')}
-                </Link>
-              }
-            >
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-
-            {needsHuman && human.widget}
-
-            <Button type="submit" disabled={loading || (needsHuman && !human.ready)} size="lg" className="w-full">
-              {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
-            </Button>
-          </form>
-          )}
+          <AuthSubmit disabled={loading || (needsHuman && !human.ready)}>
+            {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
+          </AuthSubmit>
 
           {SSO_NAME && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              className="mt-4 w-full"
-              onClick={() => signIn('oidc', { redirectTo: safeNextPath(router.query.next) })}
-            >
-              {t('auth.login.sso', { name: SSO_NAME })}
-            </Button>
+            <>
+              <AuthDivider label={t('authUi.or')} />
+              <button
+                type="button"
+                onClick={() => setMethod('sso')}
+                className="w-full rounded-pill border border-line-strong py-[13px] text-sm font-medium leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              >
+                {t('auth.login.sso', { name: SSO_NAME })}
+              </button>
+            </>
           )}
+        </form>
+      )}
 
-          <p className="mt-6 text-center text-sm text-muted">
-            {t('auth.login.noAccount')}{' '}
-            <Link href="/signup" className="font-medium text-lake hover:underline">
-              {t('auth.login.createOne')}
-            </Link>
-          </p>
-        </div>
-        <div className="mt-4 flex justify-center">
-          <LanguageSwitcher />
-        </div>
-      </div>
-    </div>
+      {!codeStep && (
+        <p className="text-sm leading-[18px] text-muted">
+          {t('authUi.login.newHere')}{' '}
+          <Link href="/signup" className={AUTH_LINK}>
+            {t('authUi.login.createWorkspace')} →
+          </Link>
+        </p>
+      )}
+    </AuthLayout>
   )
 }

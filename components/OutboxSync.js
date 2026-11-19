@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useOutbox } from '../hooks/useOutbox'
 import { listOutbox, restoreOutbox } from '../lib/offlineOutbox'
 import { useToast } from './Toast'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Sends this user's queued field entries when the app opens online and
@@ -10,6 +11,7 @@ import { useToast } from './Toast'
 export default function OutboxSync() {
   const { send, userId } = useOutbox()
   const { showToast } = useToast()
+  const t = useT()
   useEffect(() => {
     if (!userId || typeof window === 'undefined') return undefined
     const run = async () => {
@@ -17,21 +19,18 @@ export default function OutboxSync() {
       await restoreOutbox(userId)
       if (navigator.onLine === false || listOutbox(userId).length === 0) return
       const { sent, failed } = await send()
-      if (sent) showToast(`Sent ${sent} entr${sent === 1 ? 'y' : 'ies'} saved on this phone`, 'success')
+      if (sent) showToast(t('overlay.outbox.sent', { count: sent }), 'success')
       if (failed) {
-        showToast(
-          `${failed} saved entr${failed === 1 ? 'y needs' : 'ies need'} attention. Open Outbox`,
-          'error',
-        )
+        showToast(t('overlay.outbox.failed', { count: failed }), 'error')
       }
     }
-    const t = setTimeout(run, 0)
+    const timer = setTimeout(run, 0)
     window.addEventListener('online', run)
     return () => {
-      clearTimeout(t)
+      clearTimeout(timer)
       window.removeEventListener('online', run)
     }
-  }, [userId, send, showToast])
+  }, [userId, send, showToast, t])
 
   return null
 }

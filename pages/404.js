@@ -1,18 +1,15 @@
-import Link from 'next/link'
-import { Fish } from 'lucide-react'
+import Head from 'next/head'
+import { NotFoundCard, SystemPage } from '../components/system/SystemState'
+import { useT } from '../lib/i18n/context'
 
 export default function Custom404() {
+  const t = useT()
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-foam px-4">
-      <Fish className="h-10 w-10 text-kelp mb-4" aria-hidden />
-      <p className="font-display text-3xl text-lagoon-950 tracking-tight">PBA Farm</p>
-      <h1 className="page-title mb-2">Page not found</h1>
-      <p className="page-subtitle mb-8 text-center max-w-sm">
-        That route doesn’t exist. Head back to the dashboard to keep working.
-      </p>
-      <Link href="/dashboard" className="btn-primary">
-        Back to dashboard
-      </Link>
-    </div>
+    <SystemPage>
+      <Head>
+        <title>{`${t('system.notFound.title')} · PBA Farm`}</title>
+      </Head>
+      <NotFoundCard />
+    </SystemPage>
   )
 }

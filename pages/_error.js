@@ -1,14 +1,14 @@
 import { ErrorFallback } from '../components/ErrorBoundary'
+import { useT } from '../lib/i18n/context'
 
 /**
  * Next.js error page: server errors and client errors the ErrorBoundary in
  * _app.js did not catch. 404s use pages/404.js.
  */
 function ErrorPage({ statusCode }) {
+  const t = useT()
   const title =
-    statusCode && statusCode !== 500
-      ? `Something went wrong (error ${statusCode})`
-      : 'Something went wrong'
+    statusCode && statusCode !== 500 ? t('system.error.titleCode', { code: statusCode }) : t('system.error.title')
   return <ErrorFallback title={title} />
 }
 

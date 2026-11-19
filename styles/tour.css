@@ -1,44 +1,43 @@
-/* Driver.js — Harbor Soft theme overrides */
+/* Driver.js tour popovers — Paper P-MODAL styling, token-driven so both themes follow */
 .pbafarm-tour-popover.driver-popover {
-  background: #ffffff;
-  color: #0f172a;
-  border: 1px solid rgba(15, 76, 92, 0.12);
-  border-radius: 1rem;
-  box-shadow: 0 18px 40px rgba(15, 76, 92, 0.18);
-  max-width: min(420px, calc(100vw - 2rem));
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.5);
+  max-width: min(380px, calc(100vw - 2rem));
   /* Arrow sits outside the box — never clip it */
   overflow: visible !important;
 }
 
 .pbafarm-tour-popover .driver-popover-title {
-  font-family: var(--font-display, ui-sans-serif, system-ui, sans-serif);
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #0b3d4a;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 .pbafarm-tour-popover .driver-popover-description {
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.65;
-  color: #1e293b;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .pbafarm-tour-popover .driver-popover-description strong,
 .pbafarm-tour-popover .driver-popover-description .tour-em {
-  font-weight: 700;
-  color: #0b3d3a;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .pbafarm-tour-popover .driver-popover-description mark,
 .pbafarm-tour-popover .driver-popover-description .tour-mark {
-  background: linear-gradient(
-    120deg,
-    rgba(15, 118, 110, 0.22) 0%,
-    rgba(21, 128, 61, 0.18) 100%
-  );
-  color: #0b3d3a;
-  font-weight: 700;
+  background: color-mix(in srgb, var(--cyan-fill) 16%, transparent);
+  color: var(--text);
+  font-weight: 600;
   padding: 0.08em 0.38em;
   border-radius: 0.35em;
   box-decoration-break: clone;
@@ -47,49 +46,73 @@
 
 .pbafarm-tour-popover .driver-popover-description .tour-flow {
   display: inline;
-  font-weight: 700;
-  color: #0f766e;
+  font-weight: 600;
+  color: var(--cyan);
   letter-spacing: 0.01em;
 }
 
+.pbafarm-tour-popover .driver-popover-footer {
+  margin-top: 16px;
+}
+
 .pbafarm-tour-popover .driver-popover-progress-text {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
 
 .pbafarm-tour-popover .driver-popover-navigation-btns {
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .pbafarm-tour-popover .driver-popover-next-btn,
-.pbafarm-tour-popover .driver-popover-prev-btn,
-.pbafarm-tour-popover .driver-popover-close-btn {
-  border-radius: 0.65rem;
+.pbafarm-tour-popover .driver-popover-prev-btn {
+  border-radius: 999px;
   text-shadow: none;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
+  font-size: 13px;
+  line-height: 16px;
+  padding: 8px 16px;
+  font-family: inherit;
 }
 
 .pbafarm-tour-popover .driver-popover-next-btn {
-  background: #0b3d4a;
-  color: #f8fafc;
-  border: 1px solid #0b3d4a;
+  background: var(--button);
+  color: var(--button-text);
+  border: 1px solid transparent;
+  font-weight: 600;
 }
 
-.pbafarm-tour-popover .driver-popover-next-btn:hover {
-  background: #072e38;
+.pbafarm-tour-popover .driver-popover-next-btn:hover,
+.pbafarm-tour-popover .driver-popover-next-btn:focus {
+  background: var(--button);
+  opacity: 0.9;
 }
 
 .pbafarm-tour-popover .driver-popover-prev-btn {
-  background: #f1f5f9;
-  color: #0f172a;
-  border: 1px solid #e2e8f0;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  font-weight: 500;
+}
+
+.pbafarm-tour-popover .driver-popover-prev-btn:hover,
+.pbafarm-tour-popover .driver-popover-prev-btn:focus {
+  background: var(--surface);
 }
 
 .pbafarm-tour-popover .driver-popover-close-btn {
-  color: #64748b;
+  color: var(--muted);
+  border-radius: 999px;
+}
+
+.pbafarm-tour-popover .driver-popover-close-btn:hover,
+.pbafarm-tour-popover .driver-popover-close-btn:focus {
+  color: var(--text);
+}
+
+.pbafarm-tour-popover :is(.driver-popover-next-btn, .driver-popover-prev-btn, .driver-popover-close-btn):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 /*
@@ -99,7 +122,7 @@
 .pbafarm-tour-popover .driver-popover-arrow {
   content: '';
   position: absolute;
-  border: 10px solid #ffffff !important;
+  border: 10px solid var(--surface-2) !important;
   display: block !important;
   z-index: 1;
 }
@@ -117,8 +140,7 @@
   border-top-color: transparent !important;
   border-left-color: transparent !important;
   border-right-color: transparent !important;
-  border-bottom-color: #ffffff !important;
-  filter: drop-shadow(0 -1px 0 rgba(15, 76, 92, 0.22));
+  border-bottom-color: var(--surface-2) !important;
 }
 
 /* Popover above the target → arrow on bottom edge, pointing down */
@@ -128,8 +150,7 @@
   border-bottom-color: transparent !important;
   border-left-color: transparent !important;
   border-right-color: transparent !important;
-  border-top-color: #ffffff !important;
-  filter: drop-shadow(0 1px 0 rgba(15, 76, 92, 0.22));
+  border-top-color: var(--surface-2) !important;
 }
 
 /* Popover to the right of target → arrow on left edge, pointing left */
@@ -139,8 +160,7 @@
   border-top-color: transparent !important;
   border-bottom-color: transparent !important;
   border-left-color: transparent !important;
-  border-right-color: #ffffff !important;
-  filter: drop-shadow(-1px 0 0 rgba(15, 76, 92, 0.22));
+  border-right-color: var(--surface-2) !important;
 }
 
 /* Popover to the left of target → arrow on right edge, pointing right */
@@ -150,83 +170,10 @@
   border-top-color: transparent !important;
   border-bottom-color: transparent !important;
   border-right-color: transparent !important;
-  border-left-color: #ffffff !important;
-  filter: drop-shadow(1px 0 0 rgba(15, 76, 92, 0.22));
-}
-
-.driver-overlay {
-  background: rgba(7, 46, 56, 0.55) !important;
+  border-left-color: var(--surface-2) !important;
 }
 
 .driver-active-element {
-  outline: 2px solid #ffffff !important;
+  outline: 2px solid var(--cyan) !important;
   outline-offset: 2px;
-}
-
-/* Keep tour card light even when the app is in dark mode */
-html.dark .pbafarm-tour-popover.driver-popover,
-html[data-theme='dark'] .pbafarm-tour-popover.driver-popover {
-  background: #ffffff !important;
-  color: #0f172a !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-title,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-title {
-  color: #0b3d4a !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-description,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description {
-  color: #1e293b !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-description .tour-em,
-html.dark .pbafarm-tour-popover .driver-popover-description strong,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description .tour-em,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description strong {
-  color: #0b3d3a !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-description .tour-mark,
-html.dark .pbafarm-tour-popover .driver-popover-description mark,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description .tour-mark,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-description mark {
-  background: linear-gradient(
-    120deg,
-    rgba(15, 118, 110, 0.22) 0%,
-    rgba(21, 128, 61, 0.18) 100%
-  ) !important;
-  color: #0b3d3a !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-arrow-side-bottom,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-bottom {
-  border-top-color: transparent !important;
-  border-left-color: transparent !important;
-  border-right-color: transparent !important;
-  border-bottom-color: #ffffff !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-arrow-side-top,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-top {
-  border-bottom-color: transparent !important;
-  border-left-color: transparent !important;
-  border-right-color: transparent !important;
-  border-top-color: #ffffff !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-arrow-side-right,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-right {
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-  border-left-color: transparent !important;
-  border-right-color: #ffffff !important;
-}
-
-html.dark .pbafarm-tour-popover .driver-popover-arrow-side-left,
-html[data-theme='dark'] .pbafarm-tour-popover .driver-popover-arrow-side-left {
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-  border-right-color: transparent !important;
-  border-left-color: #ffffff !important;
 }
