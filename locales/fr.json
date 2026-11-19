@@ -4146,6 +4146,208 @@
         "unchained": "{count} entrées plus anciennes non chaînées (écrites avant le contrôle d'intégrité)",
         "verify": "Vérifier maintenant"
       }
+    },
+    "auto": {
+      "title": "Automatisations",
+      "crumb": "Quand ceci arrive, faire cela",
+      "description": "Des règles qui surveillent votre ferme et préviennent des personnes, créent des tâches ou appellent des webhooks lors d'un événement ou selon un horaire.",
+      "newRule": "Nouvelle règle",
+      "editRule": "Modifier la règle",
+      "save": "Enregistrer la règle",
+      "saved": "Règle enregistrée",
+      "created": "Règle créée",
+      "rulesTab": "Règles",
+      "history": "Historique des exécutions",
+      "activeCount": {
+        "one": "{count} active",
+        "other": "{count} actives"
+      },
+      "noRules": "Aucune règle. Ajoutez-en une depuis un modèle ci-dessous ou créez la vôtre.",
+      "templates": "Modèles",
+      "templatesHint": "Partir d'une règle courante",
+      "add": "Ajouter",
+      "addAnother": "En ajouter une autre",
+      "addedLabel": "Ajoutée",
+      "added": "« {name} » ajoutée",
+      "builtIn": "Intégrée",
+      "nextRun": "Prochaine exécution {time}",
+      "enableRule": "Activer {name}",
+      "disableRule": "Désactiver {name}",
+      "ruleOn": "Règle activée",
+      "ruleOff": "Règle désactivée",
+      "edit": "Modifier",
+      "runNow": "Exécuter maintenant",
+      "runningNow": "Exécution en cours",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer la règle « {name} » ?",
+      "deleted": "Règle supprimée",
+      "noRuns": "Aucune exécution. Elles apparaissent ici quand une règle se déclenche.",
+      "member": "Membre",
+      "attempts": {
+        "one": "{count} tentative",
+        "other": "{count} tentatives"
+      },
+      "nextAttempt": "Prochaine tentative {time}",
+      "failedMessages": "Messages en échec",
+      "failedLine": "{channel} à {name} ({to}) : {error}",
+      "rerun": "Relancer",
+      "rerunning": "Relance en cours",
+      "parts": {
+        "inApp": {
+          "one": "{count} dans l'app",
+          "other": "{count} dans l'app"
+        },
+        "tasks": {
+          "one": "{count} tâche",
+          "other": "{count} tâches"
+        },
+        "sent": {
+          "one": "{count} envoyé",
+          "other": "{count} envoyés"
+        },
+        "failed": {
+          "one": "{count} en échec",
+          "other": "{count} en échec"
+        },
+        "skipped": {
+          "one": "{count} ignoré",
+          "other": "{count} ignorés"
+        }
+      },
+      "triggerKind": {
+        "event": "Événement",
+        "manual": "Exécution manuelle",
+        "schedule": "Horaire"
+      },
+      "run": {
+        "queued": "En attente",
+        "running": "En cours",
+        "retrying": "Nouvelle tentative",
+        "succeeded": "Réussie",
+        "partial": "Partielle",
+        "failed": "Échec",
+        "skipped": "Ignorée"
+      },
+      "tzLine": "Les horaires suivent l'heure de la ferme ({tz}).",
+      "tzLink": "Changer de fuseau",
+      "oldReminders": "Votre ferme utilise encore les anciens rappels intégrés. Convertissez-les en règles pour les modifier ici.",
+      "moveReminders": "Convertir les rappels en règles",
+      "movedReminders": "Rappels convertis en règles",
+      "kicker": {
+        "whenEvent": "Quand · événement",
+        "whenSchedule": "Quand · horaire",
+        "if": "Si · condition",
+        "then": "Alors · action",
+        "and": "Et · action"
+      },
+      "live": "Active",
+      "paused": "En pause",
+      "trigger": "Déclencheur",
+      "onEvent": "Quand quelque chose arrive",
+      "onSchedule": "Selon un horaire",
+      "event": "Événement",
+      "check": "Vérification",
+      "time": "Heure",
+      "timeHint": "Heure de la ferme ({tz})",
+      "farmTime": "{time} heure de la ferme · {tz}",
+      "daysLabel": "Jours (aucun = tous les jours)",
+      "everyDay": "tous les jours",
+      "days": {
+        "0": "Dim",
+        "1": "Lun",
+        "2": "Mar",
+        "3": "Mer",
+        "4": "Jeu",
+        "5": "Ven",
+        "6": "Sam"
+      },
+      "condCount": {
+        "one": "{count} condition",
+        "other": "{count} conditions"
+      },
+      "noConditions": "Aucune condition",
+      "condHintEvent": "Laissez vide pour exécuter à chaque événement.",
+      "condHintSchedule": "Appliquée à chaque élément trouvé par la vérification.",
+      "match": "Correspondance",
+      "matchAll": "Toutes",
+      "matchAny": "Au moins une",
+      "addCondition": "Ajouter une condition",
+      "addStep": "Ajouter une étape",
+      "cond": {
+        "field": "Champ",
+        "op": "Opérateur",
+        "value": "Valeur",
+        "compareWith": "Comparer avec",
+        "number": "Nombre",
+        "farmRule": "Règle de ferme",
+        "remove": "Retirer la condition"
+      },
+      "ops": {
+        "gt": "est supérieur à",
+        "gte": "est au moins",
+        "lt": "est inférieur à",
+        "lte": "est au plus",
+        "eq": "est égal à",
+        "neq": "n'est pas",
+        "is_set": "est renseigné",
+        "not_set": "est vide"
+      },
+      "farmRules": {
+        "dailyMortalityAlertPct": "Alerte mortalité journalière (%)",
+        "cumulativeMortalityAlertPct": "Alerte mortalité cumulée (%)",
+        "targetHarvestAbwG": "Poids de récolte visé (g)",
+        "maxFcrAlert": "Alerte IC max",
+        "targetFcr": "IC visé",
+        "maxDensityFishPerM3": "Densité max (poissons/m³)"
+      },
+      "choose": "Choisir…",
+      "remove": "Retirer",
+      "actionType": "Action",
+      "kind": {
+        "notify": "Envoyer une notification",
+        "create_task": "Créer une tâche",
+        "webhook": "Appeler un webhook"
+      },
+      "webhook": "Point de terminaison webhook",
+      "webhookHint": "Envoie la charge utile signée de l'événement à ce point de terminaison.",
+      "noEndpoints": "Aucun point de terminaison. Ajoutez-en un dans Intégrations.",
+      "chooseEndpoint": "Choisir un point de terminaison",
+      "channels": "Canaux",
+      "channelsHint": "SMS, WhatsApp et e-mail ne vont qu'aux personnes dont ces coordonnées sont enregistrées.",
+      "recipients": "Envoyer à",
+      "everyone": "Tout le monde",
+      "admins": "Admins",
+      "staff": "Personnel",
+      "people": "Personnes précises",
+      "titleLabel": "Titre",
+      "message": "Message",
+      "link": "Lien",
+      "linkHint": "Un chemin de l'app comme /cages",
+      "importance": "Importance",
+      "level": {
+        "info": "Info",
+        "warning": "Avertissement",
+        "error": "Urgent"
+      },
+      "details": "Détails",
+      "dueIn": "Échéance (heures)",
+      "placeholders": "Vous pouvez utiliser {list}",
+      "ruleCard": "Règle",
+      "name": "Nom",
+      "enabled": "Règle active",
+      "enabledHint": "Les règles en pause ne s'exécutent pas.",
+      "others": "Autres automatisations",
+      "noOthers": "Aucune autre règle.",
+      "sum": {
+        "event": "Quand {event}",
+        "schedule": "{days} à {time} : {check}",
+        "everyone": "tout le monde",
+        "admins": "les admins",
+        "staff": "le personnel",
+        "nobody": "personne",
+        "task": "Tâche pour {who}",
+        "notify": "{channels} à {who}"
+      }
     }
   },
   "country": {

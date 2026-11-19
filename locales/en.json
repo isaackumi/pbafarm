@@ -4146,6 +4146,208 @@
         "unchained": "{count} older entries unchained (written before the tamper check existed)",
         "verify": "Verify now"
       }
+    },
+    "auto": {
+      "title": "Automations",
+      "crumb": "When this happens, do that",
+      "description": "Rules that watch your farm and notify people, create tasks or call webhooks when something happens or on a schedule.",
+      "newRule": "New rule",
+      "editRule": "Edit rule",
+      "save": "Save rule",
+      "saved": "Rule saved",
+      "created": "Rule created",
+      "rulesTab": "Rules",
+      "history": "Run history",
+      "activeCount": {
+        "one": "{count} active",
+        "other": "{count} active"
+      },
+      "noRules": "No rules yet. Add one from a template below or create your own.",
+      "templates": "Templates",
+      "templatesHint": "Start from a common farm rule",
+      "add": "Add",
+      "addAnother": "Add another",
+      "addedLabel": "Added",
+      "added": "Added “{name}”",
+      "builtIn": "Built-in",
+      "nextRun": "Next run {time}",
+      "enableRule": "Turn on {name}",
+      "disableRule": "Turn off {name}",
+      "ruleOn": "Rule turned on",
+      "ruleOff": "Rule turned off",
+      "edit": "Edit",
+      "runNow": "Run now",
+      "runningNow": "Running now",
+      "delete": "Delete",
+      "deleteConfirm": "Delete the rule “{name}”?",
+      "deleted": "Rule deleted",
+      "noRuns": "No runs yet. Runs appear here when a rule fires.",
+      "member": "Member",
+      "attempts": {
+        "one": "{count} attempt",
+        "other": "{count} attempts"
+      },
+      "nextAttempt": "Next attempt {time}",
+      "failedMessages": "Failed messages",
+      "failedLine": "{channel} to {name} ({to}): {error}",
+      "rerun": "Run again",
+      "rerunning": "Running again",
+      "parts": {
+        "inApp": {
+          "one": "{count} in-app",
+          "other": "{count} in-app"
+        },
+        "tasks": {
+          "one": "{count} task",
+          "other": "{count} tasks"
+        },
+        "sent": {
+          "one": "{count} sent",
+          "other": "{count} sent"
+        },
+        "failed": {
+          "one": "{count} failed",
+          "other": "{count} failed"
+        },
+        "skipped": {
+          "one": "{count} skipped",
+          "other": "{count} skipped"
+        }
+      },
+      "triggerKind": {
+        "event": "Event",
+        "manual": "Manual run",
+        "schedule": "Schedule"
+      },
+      "run": {
+        "queued": "Queued",
+        "running": "Running",
+        "retrying": "Retrying",
+        "succeeded": "Succeeded",
+        "partial": "Partial",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "tzLine": "Schedules run in farm time ({tz}).",
+      "tzLink": "Change time zone",
+      "oldReminders": "Your farm still uses the old built-in reminders. Move them to rules so you can edit them here.",
+      "moveReminders": "Move reminders to rules",
+      "movedReminders": "Reminders moved to rules",
+      "kicker": {
+        "whenEvent": "When · event",
+        "whenSchedule": "When · schedule",
+        "if": "If · condition",
+        "then": "Then · action",
+        "and": "And · action"
+      },
+      "live": "Live",
+      "paused": "Paused",
+      "trigger": "Trigger",
+      "onEvent": "When something happens",
+      "onSchedule": "On a schedule",
+      "event": "Event",
+      "check": "Check",
+      "time": "Time",
+      "timeHint": "Farm time ({tz})",
+      "farmTime": "{time} farm time · {tz}",
+      "daysLabel": "Days (none = every day)",
+      "everyDay": "every day",
+      "days": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "condCount": {
+        "one": "{count} condition",
+        "other": "{count} conditions"
+      },
+      "noConditions": "No conditions",
+      "condHintEvent": "Leave empty to run every time the event happens.",
+      "condHintSchedule": "Applied to each item the check finds.",
+      "match": "Match",
+      "matchAll": "Match all",
+      "matchAny": "Match any",
+      "addCondition": "Add condition",
+      "addStep": "Add step",
+      "cond": {
+        "field": "Field",
+        "op": "Operator",
+        "value": "Value",
+        "compareWith": "Compare with",
+        "number": "Number",
+        "farmRule": "Farm rule",
+        "remove": "Remove condition"
+      },
+      "ops": {
+        "gt": "is above",
+        "gte": "is at least",
+        "lt": "is below",
+        "lte": "is at most",
+        "eq": "equals",
+        "neq": "is not",
+        "is_set": "is set",
+        "not_set": "is empty"
+      },
+      "farmRules": {
+        "dailyMortalityAlertPct": "Daily mortality alert (%)",
+        "cumulativeMortalityAlertPct": "Cumulative mortality alert (%)",
+        "targetHarvestAbwG": "Target harvest weight (g)",
+        "maxFcrAlert": "Max FCR alert",
+        "targetFcr": "Target FCR",
+        "maxDensityFishPerM3": "Max density (fish/m³)"
+      },
+      "choose": "Choose…",
+      "remove": "Remove",
+      "actionType": "Action",
+      "kind": {
+        "notify": "Send a notification",
+        "create_task": "Create a task",
+        "webhook": "Call a webhook"
+      },
+      "webhook": "Webhook endpoint",
+      "webhookHint": "Sends the event payload, signed, to this endpoint.",
+      "noEndpoints": "No endpoints yet. Add one under Integrations.",
+      "chooseEndpoint": "Choose an endpoint",
+      "channels": "Channels",
+      "channelsHint": "SMS, WhatsApp and email go only to people with those details on file.",
+      "recipients": "Send to",
+      "everyone": "Everyone",
+      "admins": "Admins",
+      "staff": "Staff",
+      "people": "Specific people",
+      "titleLabel": "Title",
+      "message": "Message",
+      "link": "Link",
+      "linkHint": "An app path such as /cages",
+      "importance": "Importance",
+      "level": {
+        "info": "Info",
+        "warning": "Warning",
+        "error": "Urgent"
+      },
+      "details": "Details",
+      "dueIn": "Due in (hours)",
+      "placeholders": "You can use {list}",
+      "ruleCard": "Rule",
+      "name": "Name",
+      "enabled": "Rule is on",
+      "enabledHint": "Paused rules don't run.",
+      "others": "Other automations",
+      "noOthers": "No other rules yet.",
+      "sum": {
+        "event": "When {event}",
+        "schedule": "{days} at {time}: {check}",
+        "everyone": "everyone",
+        "admins": "admins",
+        "staff": "staff",
+        "nobody": "nobody",
+        "task": "Task for {who}",
+        "notify": "{channels} to {who}"
+      }
     }
   },
   "country": {
