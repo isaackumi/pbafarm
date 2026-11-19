@@ -79,9 +79,94 @@ async function eventRows(ctx: QueryCtx, events: Doc<'stockEvents'>[]) {
 
 const newestFirst = (a: Doc<'stockEvents'>, b: Doc<'stockEvents'>) => engine.compareLedger(b, a)
 
+const ancestorRow = v.object({
+  id: v.id('batches'),
+  batch_number: v.string(),
+  depth: v.number(),
+  status: v.string(),
+})
+
+const originValues = v.union(
+  v.literal('legacy'),
+  v.literal('hatchery'),
+  v.literal('merge'),
+  v.literal('stocking'),
+  v.literal('transfer_split'),
+  v.literal('grading_split'),
+)
+
+const eventRow = v.object({
+  id: v.id('stockEvents'),
+  date: v.string(),
+  type: v.union(
+    v.literal('mortality'),
+    v.literal('reversal'),
+    v.literal('transfer_out'),
+    v.literal('transfer_in'),
+    v.literal('merge'),
+    v.literal('grading_split'),
+    v.literal('stock_in'),
+    v.literal('harvest'),
+    v.literal('count_adjustment'),
+  ),
+  label: v.string(),
+  qty: v.number(),
+  kg: v.union(v.number(), v.null()),
+  abw_g: v.union(v.number(), v.null()),
+  batch_id: v.id('batches'),
+  batch_number: v.union(v.string(), v.null()),
+  cage_id: v.id('cages'),
+  cage_name: v.union(v.string(), v.null()),
+  counterpart_cage: v.union(v.string(), v.null()),
+  counterpart_batch: v.union(v.string(), v.null()),
+  reason: v.union(v.string(), v.null()),
+  source: v.union(
+    v.literal('dailyRecords'),
+    v.literal('stockingHistory'),
+    v.literal('harvestRecords'),
+    v.literal('topupHistory'),
+    v.literal('fishTransfers'),
+    v.literal('stockOperations'),
+    v.literal('legacyBackfill'),
+    v.literal('incubationLots'),
+    v.literal('larvalLogs'),
+    v.literal('nurseryMovements'),
+  ),
+  reversed: v.boolean(),
+  recorded_at: v.number(),
+})
+
 /** A cage's batch history: events, occupancies and the count as of a date. */
 export const forCage = query({
   args: { cageId: v.id('cages'), asOf: v.optional(v.string()) },
+  returns: v.union(
+    v.object({
+      cage_count: v.number(),
+      ledger_count: v.number(),
+      in_step: v.boolean(),
+      has_ledger: v.boolean(),
+      as_of: v.union(
+        v.object({
+          date: v.optional(v.string()),
+          count: v.number(),
+          biomass_kg: v.union(v.number(), v.null()),
+          abw_g: v.union(v.number(), v.null()),
+        }),
+        v.null(),
+      ),
+      occupancies: v.array(
+        v.object({
+          batch_id: v.id('batches'),
+          batch_number: v.string(),
+          opened_on: v.string(),
+          closed_on: v.union(v.string(), v.null()),
+          count: v.number(),
+        }),
+      ),
+      events: v.array(eventRow),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { cageId, asOf }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(cageId)
@@ -128,6 +213,17 @@ export const forCage = query({
 /** Company batches, newest first. */
 export const list = query({
   args: { status: v.optional(v.union(v.literal('active'), v.literal('closed'))) },
+  returns: v.array(
+    v.object({
+      id: v.id('batches'),
+      batch_number: v.string(),
+      status: v.union(v.literal('active'), v.literal('closed')),
+      origin: originValues,
+      species: v.union(v.string(), v.null()),
+      opened_on: v.string(),
+      closed_on: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, { status }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -159,6 +255,68 @@ export const list = query({
 /** One batch: lineage, every occupancy with its KPIs, totals and recent events. */
 export const get = query({
   args: { id: v.id('batches'), asOf: v.optional(v.string()) },
+  returns: v.union(
+    v.object({
+      id: v.id('batches'),
+      batch_number: v.string(),
+      status: v.union(v.literal('active'), v.literal('closed')),
+      origin: originValues,
+      species: v.union(v.string(), v.null()),
+      opened_on: v.string(),
+      closed_on: v.union(v.string(), v.null()),
+      home_location_id: v.union(v.id('farmLocations'), v.null()),
+      custom: v.record(v.string(), v.any()),
+      stocking_id: v.union(v.id('stockingHistory'), v.null()),
+      parents: v.array(v.object({ id: v.id('batches'), batch_number: v.string() })),
+      ancestors: v.array(ancestorRow),
+      descendants: v.array(ancestorRow),
+      totals: v.object({
+        count: v.number(),
+        stocked: v.number(),
+        moved_in: v.number(),
+        moved_out: v.number(),
+        mortality: v.number(),
+        harvested: v.number(),
+        harvested_kg: v.union(v.number(), v.null()),
+        unaccounted: v.number(),
+        survival_pct: v.union(v.number(), v.null()),
+        mortality_pct: v.union(v.number(), v.null()),
+      }),
+      occupancies: v.array(
+        v.object({
+          opened_on: v.union(v.string(), v.null()),
+          closed_on: v.union(v.string(), v.null()),
+          days_of_culture: v.union(v.number(), v.null()),
+          count: v.number(),
+          stocked_count: v.number(),
+          in_count: v.number(),
+          out_count: v.number(),
+          harvested_count: v.number(),
+          harvested_kg: v.number(),
+          mortality: v.number(),
+          unaccounted: v.number(),
+          initial_abw_g: v.union(v.number(), v.null()),
+          current_abw_g: v.union(v.number(), v.null()),
+          abw_measured_on: v.union(v.string(), v.null()),
+          stocked_biomass_kg: v.number(),
+          current_biomass_kg: v.number(),
+          gain_kg: v.number(),
+          feed_kg: v.number(),
+          feed_cost: v.number(),
+          efcr: v.union(v.number(), v.null()),
+          biological_fcr: v.union(v.number(), v.null()),
+          survival_pct: v.union(v.number(), v.null()),
+          mortality_pct: v.union(v.number(), v.null()),
+          sgr_pct_day: v.union(v.number(), v.null()),
+          adg_g_day: v.union(v.number(), v.null()),
+          cage_id: v.id('cages'),
+          cage_name: v.string(),
+        }),
+      ),
+      events: v.array(eventRow),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, { id, asOf }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const batch = await ctx.db.get(id)

@@ -137,6 +137,25 @@ function resolveQuantityKg(
 // SUPPLIERS
 export const listSuppliers = query({
   args: { includeDeleted: v.optional(v.boolean()) },
+  returns: v.array(
+    v.object({
+      id: v.id('feedSuppliers'),
+      _id: v.id('feedSuppliers'),
+      name: v.string(),
+      abbreviation: v.optional(v.string()),
+      contact_info: v.optional(v.string()),
+      contact_person: v.string(),
+      phone: v.string(),
+      email: v.string(),
+      address: v.string(),
+      website: v.optional(v.string()),
+      active: v.boolean(),
+      company_id: v.optional(v.id('companies')),
+      deleted_at: v.optional(v.number()),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let suppliers = await scopedRows(ctx, user, 'feedSuppliers')
@@ -227,6 +246,28 @@ export const softDeleteSupplier = mutation({
 // FEED TYPES
 export const listFeedTypes = query({
   args: { includeDeleted: v.optional(v.boolean()) },
+  returns: v.array(
+    v.object({
+      id: v.id('feedTypes'),
+      _id: v.id('feedTypes'),
+      name: v.string(),
+      description: v.optional(v.string()),
+      protein_percentage: v.union(v.number(), v.null()),
+      protein_content: v.union(v.number(), v.null()),
+      pellet_size: v.string(),
+      current_stock: v.number(),
+      current_stock_bags: v.number(),
+      minimum_stock: v.number(),
+      price_per_kg: v.number(),
+      bag_size_kg: v.number(),
+      supplier_id: v.optional(v.id('feedSuppliers')),
+      active: v.boolean(),
+      company_id: v.optional(v.id('companies')),
+      deleted_at: v.optional(v.number()),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let feedTypes = await scopedRows(ctx, user, 'feedTypes')
@@ -364,6 +405,25 @@ export const listPurchases = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('feedPurchases'),
+      _id: v.id('feedPurchases'),
+      feed_type_id: v.id('feedTypes'),
+      quantity: v.number(),
+      bags: v.optional(v.number()),
+      price_per_kg: v.number(),
+      purchase_date: v.string(),
+      supplier_id: v.optional(v.id('feedSuppliers')),
+      batch_number: v.optional(v.string()),
+      expiry_date: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      company_id: v.optional(v.id('companies')),
+      deleted_at: v.optional(v.number()),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let purchases = args.feedTypeId
@@ -607,6 +667,23 @@ export const listUsage = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(
+    v.object({
+      id: v.id('feedUsage'),
+      _id: v.id('feedUsage'),
+      feed_type_id: v.id('feedTypes'),
+      cage_id: v.optional(v.id('cages')),
+      quantity: v.number(),
+      bags: v.optional(v.number()),
+      usage_date: v.string(),
+      source: v.optional(v.union(v.literal('issue'), v.literal('daily'), v.literal('usage'))),
+      notes: v.optional(v.string()),
+      company_id: v.optional(v.id('companies')),
+      deleted_at: v.optional(v.number()),
+      updated_at: v.number(),
+      created_at: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     let usage = []
@@ -733,6 +810,7 @@ export const createUsage = mutation({
     overrideReason: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.id('feedUsage'),
   handler: async (ctx, args) => {
     return await recordOutboundUsage(ctx, {
       ...args,

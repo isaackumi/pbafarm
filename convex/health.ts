@@ -40,6 +40,28 @@ function toClient(t: Doc<'healthTreatments'>, cageName?: string | null) {
   }
 }
 
+const healthTreatmentRow = v.object({
+  id: v.id('healthTreatments'),
+  _id: v.id('healthTreatments'),
+  cage_id: v.id('cages'),
+  cage_name: v.union(v.string(), v.null()),
+  date: v.string(),
+  diagnosis: v.optional(v.string()),
+  treatment: v.string(),
+  product_name: v.optional(v.string()),
+  dosage: v.optional(v.string()),
+  fish_affected: v.optional(v.number()),
+  withdrawal_days: v.optional(v.number()),
+  withdrawal_until: v.optional(v.string()),
+  administered_by: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  location_id: v.optional(v.id('farmLocations')),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  updated_at: v.number(),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     cageId: v.optional(v.id('cages')),
@@ -47,6 +69,7 @@ export const list = query({
     dateFrom: v.optional(v.string()),
     dateTo: v.optional(v.string()),
   },
+  returns: v.array(healthTreatmentRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.cageId
@@ -160,6 +183,7 @@ export const activeWithdrawals = query({
     locationId: v.optional(v.id('farmLocations')),
     asOf: v.optional(v.string()),
   },
+  returns: v.array(healthTreatmentRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const asOf = asOfDate(args.asOf)

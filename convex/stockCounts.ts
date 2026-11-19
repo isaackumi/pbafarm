@@ -65,8 +65,38 @@ function requireDraft(count: Doc<'stockCounts'>) {
   if (count.status !== 'draft') throw userError('CONFLICT', 'This count is already posted or cancelled')
 }
 
+const stockCountRow = v.object({
+  id: v.id('stockCounts'),
+  _id: v.id('stockCounts'),
+  location_id: v.id('farmLocations'),
+  site_name: v.union(v.string(), v.null()),
+  count_date: v.string(),
+  status: v.union(v.literal('draft'), v.literal('cancelled'), v.literal('posted')),
+  notes: v.union(v.string(), v.null()),
+  lines: v.array(
+    v.object({
+      index: v.number(),
+      kind: v.union(v.literal('item'), v.literal('feed')),
+      feed_type_id: v.union(v.id('feedTypes'), v.null()),
+      item_id: v.union(v.id('inventoryItems'), v.null()),
+      name: v.string(),
+      unit: v.string(),
+      expected: v.number(),
+      counted: v.union(v.number(), v.null()),
+      difference: v.union(v.number(), v.null()),
+      variance: v.union(v.number(), v.null()),
+    }),
+  ),
+  line_count: v.number(),
+  counted_count: v.number(),
+  difference_count: v.number(),
+  posted_at: v.union(v.number(), v.null()),
+  created_at: v.number(),
+})
+
 export const listCounts = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.array(stockCountRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     if (!user.companyId) return []
@@ -101,6 +131,7 @@ export const listCounts = query({
 
 export const getCount = query({
   args: { id: v.id('stockCounts') },
+  returns: v.union(stockCountRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.view' })
     const count = await ctx.db.get(id)
@@ -123,6 +154,7 @@ export const startCount = mutation({
     include: v.optional(v.union(v.literal('all'), v.literal('feed'), v.literal('items'))),
     notes: v.optional(v.string()),
   },
+  returns: v.id('stockCounts'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
     const companyId = await writeCompanyId(user)
@@ -189,6 +221,7 @@ export const updateCountLines = mutation({
     id: v.id('stockCounts'),
     lines: v.array(v.object({ index: v.number(), counted: v.union(v.number(), v.null()) })),
   },
+  returns: v.id('stockCounts'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.issue' })
     const count = await loadCount(ctx, user, args.id)
@@ -210,6 +243,7 @@ export const updateCountLines = mutation({
 /** Post the count: one site adjustment per counted line that differs. */
 export const postCount = mutation({
   args: { id: v.id('stockCounts') },
+  returns: v.object({ adjusted: v.number() }),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     const count = await loadCount(ctx, user, id)
@@ -276,6 +310,7 @@ export const postCount = mutation({
 
 export const cancelCount = mutation({
   args: { id: v.id('stockCounts') },
+  returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.adjust' })
     const count = await loadCount(ctx, user, id)

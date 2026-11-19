@@ -32,6 +32,11 @@ export type IngestResult = {
 /** Store already-checked readings for the key's company and sites. */
 export const ingest = internalMutation({
   args: { apiKeyId: v.id('apiKeys'), readings: v.array(readingValidator) },
+  returns: v.object({
+    accepted: v.number(),
+    duplicates: v.number(),
+    rejected: v.array(v.object({ index: v.number(), reason: v.string() })),
+  }),
   handler: async (ctx, { apiKeyId, readings }): Promise<IngestResult> => {
     const key = await ctx.db.get(apiKeyId)
     if (!key || key.revokedAt) throw new Error('Invalid or revoked API key')
@@ -129,6 +134,37 @@ export const ingest = internalMutation({
  */
 export const latest = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    readings: v.array(
+      v.object({
+        id: v.id('sensorReadings'),
+        source: v.string(),
+        parameter: v.string(),
+        label: v.union(
+          v.literal('Dissolved oxygen'),
+          v.literal('Water temperature'),
+          v.literal('pH'),
+          v.literal('Ammonia (TAN)'),
+          v.literal('Nitrite'),
+          v.literal('Salinity'),
+          v.literal('Turbidity'),
+          v.literal('Secchi depth'),
+          v.literal('Conductivity'),
+        ),
+        unit: v.union(
+          v.literal(''),
+          v.literal('mg/L'),
+          v.literal('°C'),
+          v.literal('ppt'),
+          v.literal('NTU'),
+          v.literal('cm'),
+          v.literal('µS/cm'),
+        ),
+        value: v.number(),
+        measuredAt: v.number(),
+      }),
+    ),
+  }),
   handler: async (ctx, { locationId }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return { readings: [] }

@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import { mirrorRecordReading } from './waterQuality'
@@ -39,6 +39,27 @@ function toClient(r: Doc<'biweeklyRecords'>) {
   }
 }
 
+const biweeklyRecordRow = v.object({
+  custom: v.record(v.string(), v.any()),
+  id: v.id('biweeklyRecords'),
+  _id: v.id('biweeklyRecords'),
+  cage_id: v.id('cages'),
+  date: v.string(),
+  batch_code: v.string(),
+  average_body_weight: v.number(),
+  total_fish_count: v.number(),
+  total_weight: v.number(),
+  dissolved_oxygen: v.optional(v.number()),
+  temperature_c: v.optional(v.number()),
+  secchi_cm: v.optional(v.number()),
+  location_id: v.optional(v.id('farmLocations')),
+  company_id: v.optional(v.id('companies')),
+  created_by: v.optional(v.id('users')),
+  updated_by: v.optional(v.id('users')),
+  updated_at: v.number(),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     cageId: v.optional(v.id('cages')),
@@ -46,6 +67,7 @@ export const list = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(biweeklyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.cageId
@@ -77,6 +99,7 @@ export const listPage = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(biweeklyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPageInRange(ctx, user, 'biweeklyRecords', args.paginationOpts, {
@@ -93,6 +116,7 @@ export const listPage = query({
 
 export const get = query({
   args: { id: v.id('biweeklyRecords') },
+  returns: v.union(biweeklyRecordRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)

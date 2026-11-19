@@ -60,6 +60,19 @@ export const m6Batches = internalMutation({
     companyId: v.optional(v.id('companies')),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    count: v.number(),
+    complete: v.boolean(),
+    items: v.array(
+      v.object({
+        stockingId: v.string(),
+        batchNumber: v.string(),
+        origin: v.union(v.literal('stocking'), v.literal('transfer_split')),
+        parentStockingId: v.union(v.string(), v.null()),
+      }),
+    ),
+  }),
   handler: async (ctx, { dryRun = true, companyId, limit = 500 }) => {
     const items: Array<{
       stockingId: string
@@ -387,6 +400,54 @@ export const m7StockEvents = internalMutation({
     chain: v.optional(v.boolean()),
     date: v.optional(v.string()),
   },
+  returns: v.object({
+    dryRun: v.boolean(),
+    phase: v.union(v.literal('events'), v.literal('closeouts'), v.literal('reconcile')),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+    scheduled: v.union(v.string(), v.null()),
+    cages: v.array(
+      v.union(
+        v.object({
+          cage: v.string(),
+          cageId: v.id('cages'),
+          planned: v.object({
+            stock_in: v.number(),
+            topup: v.number(),
+            transfer: v.number(),
+            mortality: v.number(),
+            harvest: v.number(),
+            skipped: v.number(),
+          }),
+          warnings: v.array(v.string()),
+        }),
+        v.object({
+          cage: v.string(),
+          cageId: v.id('cages'),
+          closeouts: v.array(
+            v.object({ harvestId: v.string(), date: v.string(), closeout: v.number() }),
+          ),
+        }),
+        v.object({
+          cage: v.string(),
+          cageId: v.id('cages'),
+          legacy: v.number(),
+          ledger: v.number(),
+          diff: v.number(),
+          changed: v.boolean(),
+          noBatch: v.boolean(),
+        }),
+        v.object({
+          cage: v.string(),
+          cageId: v.id('cages'),
+          legacy: v.number(),
+          ledger: v.number(),
+          diff: v.number(),
+          changed: v.boolean(),
+        }),
+      ),
+    ),
+  }),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun ?? true
     const phase: Phase = args.phase ?? 'events'
@@ -397,7 +458,11 @@ export const m7StockEvents = internalMutation({
       : ctx.db.query('cages')
     const page = await q.paginate({ cursor: args.cursor ?? null, numItems })
 
-    const cages: unknown[] = []
+    const cages: Array<
+      | ({ cage: string; cageId: Id<'cages'> } & Awaited<ReturnType<typeof backfillCageEvents>>)
+      | { cage: string; cageId: Id<'cages'>; closeouts: Awaited<ReturnType<typeof backfillCageCloseouts>> }
+      | NonNullable<Awaited<ReturnType<typeof reconcileCage>>>
+    > = []
     for (const cage of page.page) {
       if (phase === 'events') {
         const r = await backfillCageEvents(ctx, cage, dryRun)

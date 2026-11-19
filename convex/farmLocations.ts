@@ -81,8 +81,49 @@ function toClient(loc: Doc<'farmLocations'>) {
   }
 }
 
+const farmLocationRow = v.object({
+  custom: v.record(v.string(), v.any()),
+  id: v.id('farmLocations'),
+  _id: v.id('farmLocations'),
+  name: v.string(),
+  code: v.optional(v.string()),
+  address: v.optional(v.string()),
+  active: v.boolean(),
+  notes: v.optional(v.string()),
+  site_type: v.union(
+    v.literal('cage_farm'),
+    v.literal('pond_farm'),
+    v.literal('hatchery'),
+    v.literal('nursery'),
+    v.literal('ras_facility'),
+    v.literal('mixed'),
+    v.literal('store'),
+    v.null(),
+  ),
+  siteType: v.union(
+    v.literal('cage_farm'),
+    v.literal('pond_farm'),
+    v.literal('hatchery'),
+    v.literal('nursery'),
+    v.literal('ras_facility'),
+    v.literal('mixed'),
+    v.literal('store'),
+    v.null(),
+  ),
+  timezone: v.union(v.string(), v.null()),
+  latitude: v.union(v.number(), v.null()),
+  longitude: v.union(v.number(), v.null()),
+  water_body: v.union(v.string(), v.null()),
+  waterBody: v.union(v.string(), v.null()),
+  businessUnitId: v.union(v.id('businessUnits'), v.null()),
+  company_id: v.optional(v.id('companies')),
+  updated_at: v.number(),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: { includeInactive: v.optional(v.boolean()) },
+  returns: v.array(farmLocationRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     let rows = await scopedRows(ctx, user, 'farmLocations')
@@ -106,6 +147,7 @@ export const list = query({
 
 export const getActive = query({
   args: {},
+  returns: v.union(farmLocationRow, v.null()),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'org.view' })
     if (!user.activeLocationId) return null

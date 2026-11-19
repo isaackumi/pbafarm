@@ -41,6 +41,7 @@ import {
 import { assertUserCan, requireMember } from './lib/permissions'
 import { worstValue, type Point } from './lib/sensorAnalytics'
 import { notifySensorBreaches } from './lib/sensorAlerts'
+import { docValidator } from './lib/docValidators'
 
 const valueFields = {
   dissolvedOxygen: v.optional(v.number()),
@@ -358,6 +359,123 @@ type LogRow = {
   deviceId?: string
 }
 
+const sourceValues = v.union(
+  v.literal('manual'),
+  v.literal('sensor'),
+  v.literal('daily_record'),
+  v.literal('biweekly_record'),
+)
+
+const valuesRow = v.object({
+  dissolvedOxygen: v.optional(v.number()),
+  temperatureC: v.optional(v.number()),
+  ph: v.optional(v.number()),
+  ammonia: v.optional(v.number()),
+  nitrite: v.optional(v.number()),
+  nitrate: v.optional(v.number()),
+  salinity: v.optional(v.number()),
+  turbidityNtu: v.optional(v.number()),
+  secchiCm: v.optional(v.number()),
+  alkalinity: v.optional(v.number()),
+  co2: v.optional(v.number()),
+})
+
+const thresholdsRow = v.object({
+  dissolvedOxygen: v.optional(
+    v.object({ min: v.optional(v.number()), max: v.optional(v.number()) }),
+  ),
+  temperatureC: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  ph: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  ammonia: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  nitrite: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  nitrate: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  salinity: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  turbidityNtu: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  secchiCm: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  alkalinity: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+  co2: v.optional(v.object({ min: v.optional(v.number()), max: v.optional(v.number()) })),
+})
+
+const parametersRow = v.object({
+  dissolvedOxygen: v.object({
+    label: v.literal('Dissolved oxygen'),
+    short: v.literal('DO'),
+    unit: v.literal('mg/L'),
+    min: v.literal(0),
+    max: v.literal(30),
+  }),
+  temperatureC: v.object({
+    label: v.literal('Water temperature'),
+    short: v.literal('Temp'),
+    unit: v.literal('°C'),
+    min: v.literal(-5),
+    max: v.literal(50),
+  }),
+  ph: v.object({
+    label: v.literal('pH'),
+    short: v.literal('pH'),
+    unit: v.literal(''),
+    min: v.literal(0),
+    max: v.literal(14),
+  }),
+  ammonia: v.object({
+    label: v.literal('Ammonia (TAN)'),
+    short: v.literal('NH₃/NH₄'),
+    unit: v.literal('mg/L'),
+    min: v.literal(0),
+    max: v.literal(100),
+  }),
+  nitrite: v.object({
+    label: v.literal('Nitrite'),
+    short: v.literal('NO₂'),
+    unit: v.literal('mg/L'),
+    min: v.literal(0),
+    max: v.literal(100),
+  }),
+  nitrate: v.object({
+    label: v.literal('Nitrate'),
+    short: v.literal('NO₃'),
+    unit: v.literal('mg/L'),
+    min: v.literal(0),
+    max: v.literal(1000),
+  }),
+  salinity: v.object({
+    label: v.literal('Salinity'),
+    short: v.literal('Sal'),
+    unit: v.literal('ppt'),
+    min: v.literal(0),
+    max: v.literal(60),
+  }),
+  turbidityNtu: v.object({
+    label: v.literal('Turbidity'),
+    short: v.literal('Turb'),
+    unit: v.literal('NTU'),
+    min: v.literal(0),
+    max: v.literal(5000),
+  }),
+  secchiCm: v.object({
+    label: v.literal('Secchi depth'),
+    short: v.literal('Secchi'),
+    unit: v.literal('cm'),
+    min: v.literal(0),
+    max: v.literal(1000),
+  }),
+  alkalinity: v.object({
+    label: v.literal('Alkalinity'),
+    short: v.literal('Alk'),
+    unit: v.literal('mg/L CaCO₃'),
+    min: v.literal(0),
+    max: v.literal(1000),
+  }),
+  co2: v.object({
+    label: v.literal('Carbon dioxide'),
+    short: v.literal('CO₂'),
+    unit: v.literal('mg/L'),
+    min: v.literal(0),
+    max: v.literal(200),
+  }),
+})
+
 /**
  * A unit's water-quality log since `since` (epoch ms), newest first: logged
  * and mirrored readings plus sensor readings (grouped per device and
@@ -370,6 +488,53 @@ export const listForUnit = query({
     since: v.number(),
     limit: v.optional(v.number()),
   },
+  returns: v.union(
+    v.object({
+      unitType: v.union(
+        v.literal('cage'),
+        v.literal('pond'),
+        v.literal('tank'),
+        v.literal('raceway'),
+        v.literal('hatchery_tank'),
+        v.literal('incubator'),
+        v.literal('hapa'),
+      ),
+      thresholds: thresholdsRow,
+      parameters: parametersRow,
+      rows: v.array(
+        v.object({
+          id: v.string(),
+          measuredAt: v.number(),
+          date: v.union(v.string(), v.null()),
+          source: sourceValues,
+          values: valuesRow,
+          breaches: v.array(
+            v.object({
+              parameter: v.union(
+                v.literal('dissolvedOxygen'),
+                v.literal('temperatureC'),
+                v.literal('ph'),
+                v.literal('ammonia'),
+                v.literal('nitrite'),
+                v.literal('nitrate'),
+                v.literal('salinity'),
+                v.literal('turbidityNtu'),
+                v.literal('secchiCm'),
+                v.literal('alkalinity'),
+                v.literal('co2'),
+              ),
+              direction: v.union(v.literal('low'), v.literal('high')),
+              limit: v.number(),
+            }),
+          ),
+          notes: v.optional(v.string()),
+          sampleDepthM: v.optional(v.number()),
+          deviceId: v.optional(v.string()),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(args.unitId)
@@ -445,6 +610,16 @@ export const listForUnit = query({
  */
 export const latestByUnit = query({
   args: { locationId: v.optional(v.id('farmLocations')) },
+  returns: v.array(
+    v.object({
+      unitId: v.id('cages'),
+      measuredAt: v.number(),
+      date: v.string(),
+      source: sourceValues,
+      values: valuesRow,
+      breachCount: v.number(),
+    }),
+  ),
   handler: async (ctx, { locationId }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -480,6 +655,27 @@ const UNIT_TYPES: UnitType[] = ['cage', 'pond', 'tank', 'raceway', 'hatchery_tan
 /** Effective thresholds for every unit type, and the organization's overrides. */
 export const thresholds = query({
   args: {},
+  returns: v.object({
+    parameters: parametersRow,
+    overrides: v.array(
+      v.object({
+        unitType: v.union(
+          v.literal('cage'),
+          v.literal('pond'),
+          v.literal('tank'),
+          v.literal('raceway'),
+          v.literal('hatchery_tank'),
+          v.literal('incubator'),
+          v.literal('hapa'),
+          v.literal('all'),
+        ),
+        parameter: v.string(),
+        min: v.optional(v.union(v.number(), v.null())),
+        max: v.optional(v.union(v.number(), v.null())),
+      }),
+    ),
+    byUnitType: v.record(v.string(), thresholdsRow),
+  }),
   handler: async (ctx) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const overrides = user.companyId ? await overridesFor(ctx, user.companyId) : []
@@ -643,6 +839,7 @@ export const logWaterEvent = idempotentMutation('waterQuality.logWaterEvent', {
 /** A unit's water management events, newest first. */
 export const listWaterEvents = query({
   args: { unitId: v.id('cages'), limit: v.optional(v.number()) },
+  returns: v.array(docValidator('waterManagementLogs')),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const unit = await ctx.db.get(args.unitId)

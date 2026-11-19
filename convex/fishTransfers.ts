@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -21,6 +21,7 @@ import {
 import { beginStockWrite, shadowReverse, shadowTransfer } from './lib/productionDualWrite'
 import { assertDifferentApprover, requireMember } from './lib/permissions'
 import { onApprovalDecided, onApprovalRequested } from './approvalAlerts'
+import { docFields } from './lib/docValidators'
 
 async function loadRules(ctx: QueryCtx, companyId: Id<'companies'> | undefined) {
   if (!companyId) return mergeSettings(undefined)
@@ -163,6 +164,13 @@ async function applyFishTransfer(
   }
 }
 
+const listFishTransfersItem = v.object({
+  ...docFields('fishTransfers'),
+  sourceCageName: v.optional(v.string()),
+  destinationCageName: v.optional(v.string()),
+  id: v.id('fishTransfers'),
+})
+
 export const listFishTransfers = query({
   args: {
     status: v.optional(
@@ -176,6 +184,7 @@ export const listFishTransfers = query({
     destinationCageId: v.optional(v.id('cages')),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.array(listFishTransfersItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     let rows = args.status
@@ -240,6 +249,7 @@ export const listFishTransfersPage = query({
     destinationCageId: v.optional(v.id('cages')),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(listFishTransfersItem),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const result = await scopedPage(ctx, user, 'fishTransfers', args.paginationOpts)
@@ -259,6 +269,7 @@ export const listFishTransfersPage = query({
 
 export const getFishTransfer = query({
   args: { id: v.id('fishTransfers') },
+  returns: v.union(listFishTransfersItem, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const row = await ctx.db.get(id)

@@ -44,9 +44,57 @@ function rangeFor(unit: Doc<'cages'>, parameter: string, overrides: ThresholdOve
   return field ? effectiveThresholds(unitTypeOf(unit), overrides)[field] : undefined
 }
 
+const rangeValues = v.union(
+  v.object({ min: v.optional(v.number()), max: v.optional(v.number()) }),
+  v.null(),
+)
+
 /** One unit and parameter over a window, bucketed for a chart. */
 export const series = query({
   args: { unitId: v.id('cages'), parameter: v.string(), from: v.number(), to: v.number() },
+  returns: v.union(
+    v.object({
+      range: rangeValues,
+      bucketMs: v.number(),
+      buckets: v.array(
+        v.object({
+          t: v.number(),
+          min: v.number(),
+          max: v.number(),
+          avg: v.number(),
+          count: v.number(),
+        }),
+      ),
+      stats: v.union(
+        v.object({
+          count: v.number(),
+          min: v.number(),
+          max: v.number(),
+          avg: v.number(),
+          last: v.number(),
+          lastAt: v.number(),
+        }),
+        v.null(),
+      ),
+      breaches: v.object({ low: v.number(), high: v.number() }),
+      truncated: v.boolean(),
+      label: v.string(),
+      unit: v.string(),
+      unitId: v.id('cages'),
+      unitName: v.string(),
+      unitType: v.union(
+        v.literal('cage'),
+        v.literal('pond'),
+        v.literal('tank'),
+        v.literal('raceway'),
+        v.literal('hatchery_tank'),
+        v.literal('incubator'),
+        v.literal('hapa'),
+      ),
+      parameter: v.string(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'production.view' })
     checkWindow(args.from, args.to)
@@ -102,6 +150,31 @@ type SummaryRow = {
 /** Min/max/avg and breaches per unit and parameter for a window (optionally one site). */
 export const summary = query({
   args: { from: v.number(), to: v.number(), locationId: v.optional(v.id('farmLocations')) },
+  returns: v.object({
+    rows: v.array(
+      v.object({
+        unitId: v.id('cages'),
+        unitName: v.string(),
+        locationId: v.union(v.id('farmLocations'), v.null()),
+        parameter: v.string(),
+        label: v.string(),
+        unit: v.string(),
+        alert: v.boolean(),
+        count: v.number(),
+        min: v.number(),
+        max: v.number(),
+        avg: v.number(),
+        last: v.number(),
+        lastAt: v.number(),
+        range: rangeValues,
+        low: v.number(),
+        high: v.number(),
+      }),
+    ),
+    truncated: v.boolean(),
+    units: v.number(),
+    breachingUnits: v.number(),
+  }),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'production.view', locationId: args.locationId })
     checkWindow(args.from, args.to)

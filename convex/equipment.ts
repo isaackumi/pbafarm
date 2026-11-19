@@ -24,6 +24,7 @@ import { issueItem } from './inventoryItems'
 import { requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
+import { docFields } from './lib/docValidators'
 
 export const equipmentKind = v.union(
   v.literal('pump'),
@@ -140,6 +141,13 @@ export const list = query({
     locationId: v.optional(v.id('farmLocations')),
     includeRetired: v.optional(v.boolean()),
   },
+  returns: v.array(
+    v.object({
+      ...docFields('equipment'),
+      unitName: v.union(v.string(), v.null()),
+      groupName: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -431,6 +439,13 @@ export const listInspections = query({
     equipmentId: v.optional(v.id('equipment')),
     limit: v.optional(v.number()),
   },
+  returns: v.array(
+    v.object({
+      ...docFields('unitInspections'),
+      unitName: v.union(v.string(), v.null()),
+      equipmentName: v.union(v.string(), v.null()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return []
@@ -470,6 +485,16 @@ export const listInspections = query({
   },
 })
 
+const overdueRow = v.object({
+  kind: v.union(v.literal('equipment'), v.literal('unit')),
+  id: v.string(),
+  name: v.string(),
+  detail: v.string(),
+  due: v.string(),
+  unitId: v.union(v.id('cages'), v.null()),
+  equipmentId: v.union(v.id('equipment'), v.null()),
+})
+
 /**
  * Maintenance due on or before `asOf + days`, overdue first: equipment and
  * units with a next net inspection / maintenance date. Pass `asOf` (the
@@ -481,6 +506,7 @@ export const due = query({
     days: v.optional(v.number()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: v.object({ overdue: v.array(overdueRow), dueSoon: v.array(overdueRow) }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     if (!user.companyId) return { overdue: [], dueSoon: [] }

@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
+import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
 import { idempotentMutation } from './lib/idempotency'
 import type { Doc, Id } from './_generated/dataModel'
@@ -211,6 +211,28 @@ async function reverseDailyFeed(ctx: MutationCtx, user: Doc<'users'>, dailyRecor
   }
 }
 
+const dailyRecordRow = v.object({
+  custom: v.record(v.string(), v.any()),
+  id: v.id('dailyRecords'),
+  _id: v.id('dailyRecords'),
+  cage_id: v.id('cages'),
+  date: v.string(),
+  feed_amount: v.number(),
+  feed_type_id: v.optional(v.id('feedTypes')),
+  feed_type: v.optional(v.string()),
+  feed_price: v.number(),
+  feed_cost: v.number(),
+  mortality: v.number(),
+  mortality_cause: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  dissolved_oxygen: v.optional(v.number()),
+  temperature_c: v.optional(v.number()),
+  secchi_cm: v.optional(v.number()),
+  location_id: v.optional(v.id('farmLocations')),
+  created_by: v.optional(v.id('users')),
+  created_at: v.number(),
+})
+
 export const list = query({
   args: {
     cageId: v.optional(v.id('cages')),
@@ -219,6 +241,7 @@ export const list = query({
     locationId: v.optional(v.id('farmLocations')),
     limit: v.optional(v.number()),
   },
+  returns: v.array(dailyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const limit = Math.min(Math.max(args.limit ?? 5000, 1), 5000)
@@ -262,6 +285,7 @@ export const listPage = query({
     dateTo: v.optional(v.string()),
     locationId: v.optional(v.id('farmLocations')),
   },
+  returns: paginationResultValidator(dailyRecordRow),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const { dateFrom, dateTo } = args
@@ -344,6 +368,7 @@ export const listForDate = query({
 
 export const get = query({
   args: { id: v.id('dailyRecords') },
+  returns: v.union(dailyRecordRow, v.null()),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.view' })
     const record = await ctx.db.get(id)
