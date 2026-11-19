@@ -21,6 +21,16 @@ const NAV = [
   { href: '/platform/admins', key: 'staff' },
 ]
 
+/**
+ * Paper 40 console KPI strip: 11px muted caps label, 34/42 value, 8px gap.
+ * KpiStrip's home sizes (12px faint, 26/32) are overridden here only.
+ */
+export const CONSOLE_KPI =
+  'border-y border-line !px-0 py-[22px] [&>div]:gap-2 [&>div>div:first-child]:text-[11px] [&>div>div:first-child]:leading-[14px] [&>div>div:first-child]:tracking-[0.08em] [&>div>div:first-child]:text-muted [&>div>div:last-child]:text-[34px] [&>div>div:last-child]:leading-[42px]'
+/** Paper 40 tenant table: 16px radius, 20px side padding, 16px toolbar padding. */
+export const CONSOLE_TABLE =
+  '!rounded-[16px] [&>div:first-child]:!px-5 [&>div:first-child]:!py-4 [&_th:first-child]:!pl-5 [&_td:first-child]:!pl-5 [&_th:last-child]:!pr-5 [&_td:last-child]:!pr-5'
+
 function isActive(router, href) {
   const [path, query] = href.split('?')
   if (path === '/platform') return router.pathname === '/platform'

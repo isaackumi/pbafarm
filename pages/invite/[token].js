@@ -64,7 +64,7 @@ export default function AcceptInvite() {
 
   const companyTile = info ? (
     <span
-      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] bg-pink-fill text-lg font-semibold text-bg"
+      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] border-[3px] border-surface bg-pink-fill text-[15px] font-bold leading-5 text-bg"
       aria-hidden
     >
       {(info.companyName || '?').trim().charAt(0).toUpperCase()}
@@ -72,17 +72,17 @@ export default function AcceptInvite() {
   ) : null
 
   const details = info ? (
-    <dl className="flex flex-col rounded-input border border-line text-sm leading-[18px]">
-      <div className="flex items-center justify-between gap-4 px-4 py-3">
+    <dl className="flex flex-col border-t border-line text-[13px] leading-4">
+      <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
         <dt className="text-muted">{t('authUi.invite.email')}</dt>
         <dd className="truncate text-text">{info.email}</dd>
       </div>
-      <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3">
+      <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
         <dt className="text-muted">{t('authUi.invite.role')}</dt>
         <dd className="text-text">{roleLabel(info.roleKey)}</dd>
       </div>
       {typeof info.expiresAt === 'number' && (
-        <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3">
+        <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
           <dt className="text-muted">{t('authUi.invite.expires')}</dt>
           <dd className="text-text">
             {new Date(info.expiresAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}

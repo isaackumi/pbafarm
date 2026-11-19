@@ -3,7 +3,7 @@ import { usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { Avatar, GhostButton, Modal, Pill, Table } from '../components/ui'
-import { FIELD, SettingsCard, SettingsFrame, useSettingsEyebrow } from '../components/settings'
+import { SettingsCard, SettingsFrame, useSettingsEyebrow } from '../components/settings'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import AuditChainStatus from '../components/AuditChainStatus'
@@ -34,7 +34,9 @@ function category(table) {
   return { key: 'data', tone: 'neutral' }
 }
 
-const SELECT = `${FIELD} !w-auto !py-2 !text-[13px]`
+/** Pill dropdown from the Paper 47 table header ("Last 7 days", "Anyone"). */
+const SELECT =
+  'w-auto rounded-pill border border-line-strong bg-transparent py-[7px] pl-[14px] pr-8 text-[13px] leading-4 text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
 function useLabels() {
   const t = useT()
@@ -97,21 +99,22 @@ function AuditLogsContent() {
     {
       key: 'when',
       header: t('settingsUi.audit.col.when'),
-      width: '120px',
+      width: '128px',
       render: (log) => {
         const w = when(log.created_at)
-        return <span className="whitespace-nowrap font-data tabular-nums">{w.time}</span>
+        return <span className="whitespace-nowrap tabular-nums">{w.time}</span>
       },
       sub: (log) => when(log.created_at).day,
     },
     {
       key: 'actor',
       header: t('settingsUi.audit.col.actor'),
+      width: '194px',
       render: (log) => {
         const name = log.user_label || log.user_id || t('settingsUi.audit.unknownUser')
         return (
-          <span className="flex min-w-0 items-center gap-3">
-            <Avatar name={name} size={32} />
+          <span className="flex min-w-0 items-center gap-[10px]">
+            <Avatar name={name} size={28} />
             <span className="truncate">{name}</span>
           </span>
         )
@@ -134,7 +137,7 @@ function AuditLogsContent() {
     {
       key: 'category',
       header: t('settingsUi.audit.col.category'),
-      width: '140px',
+      width: '146px',
       render: (log) => {
         const c = category(log.table_name)
         return <Pill tone={c.tone}>{t(`settingsUi.audit.category.${c.key}`)}</Pill>
@@ -143,7 +146,7 @@ function AuditLogsContent() {
   ]
 
   const filtersUi = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-[10px]">
       <select aria-label={t('settingsUi.audit.range')} className={SELECT} value={days} onChange={(e) => setDays(Number(e.target.value))}>
         {RANGES.map((d) => (
           <option key={d} value={d}>

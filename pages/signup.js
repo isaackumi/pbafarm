@@ -155,9 +155,9 @@ export default function SignUp() {
         </AuthSubmit>
       </form>
 
-      <p className="text-sm leading-[18px] text-muted">
+      <p className="text-[13px] leading-4 text-muted">
         {t('authUi.signup.haveAccount')}{' '}
-        <Link href="/login" className={AUTH_LINK}>
+        <Link href="/login" className={`font-medium ${AUTH_LINK.replace('text-cyan', 'text-text')}`}>
           {t('auth.login.signIn')} →
         </Link>
       </p>

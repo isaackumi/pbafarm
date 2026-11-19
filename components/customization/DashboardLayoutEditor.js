@@ -41,14 +41,14 @@ export default function DashboardLayoutEditor() {
   }
 
   return (
-    <SettingsCard title={t('dashboardLayout.orgTitle')} className="space-y-4">
+    <SettingsCard title={t('dashboardLayout.orgTitle')}>
       <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('dashboardLayout.orgIntro')}</p>
       {draft === null ? (
-        <p className="text-sm text-muted">{t('common.loading')}</p>
+        <p className="border-t border-line py-3 text-[13px] leading-4 text-muted">{t('common.loading')}</p>
       ) : (
         <>
           <WidgetListEditor widgets={draft} onChange={setDraft} can={can} />
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <GradientButton disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}>
               <Save className="h-4 w-4" aria-hidden />
               {t('dashboardLayout.saveOrg')}

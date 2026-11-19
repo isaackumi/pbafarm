@@ -18,6 +18,13 @@ import { useLocale, useT } from '../lib/i18n/context'
  * the caller's sites with filters, plus today's suggested rations. Reads
  * farmAlerts.list and feedingPlans.rations; both require production.view.
  */
+/**
+ * Paper 42 "Today's feeding plan" panel: 12px radius, 16/20 header with a
+ * 15px title, 10px header cells and 12px rows of 13px text, 20px side padding.
+ */
+const PANEL_TABLE =
+  '!rounded-[12px] [&>div:first-child]:!px-5 [&>div:first-child]:!py-4 [&_h2]:!text-[15px] [&_h2]:!leading-[18px] [&_th]:!py-[10px] [&_td]:!py-3 [&_td]:!text-[13px] [&_td]:!leading-4 [&_th:first-child]:!pl-5 [&_td:first-child]:!pl-5 [&_th:last-child]:!pr-5 [&_td:last-child]:!pr-5'
+
 export default function AlertsPage() {
   const t = useT()
   const { locale } = useLocale()
@@ -144,18 +151,19 @@ function AlertsAndInsights({ args, rations }) {
       </section>
 
       <Table
+        className={PANEL_TABLE}
         title={t('alertsPage.feedingTitle')}
         actions={<span className="text-xs leading-4 text-muted">{t('alertsPage.feedingSub')}</span>}
         rowKey={(r) => r.cageId}
         rows={rations?.rows ?? []}
         empty={rations === undefined ? t('ui.loading') : t('feedingPlan.noUnits')}
         columns={[
-          { key: 'cageName', header: t('feedingPlan.col.unit'), width: 140, render: (r) => <span className="font-medium text-text">{r.cageName}</span> },
-          { key: 'abwG', header: t('feedingPlan.col.abw'), width: 110, render: (r) => (r.abwG == null ? '—' : `${kg(r.abwG)} g`) },
+          { key: 'cageName', header: t('feedingPlan.col.unit'), width: 152, render: (r) => <span className="font-medium text-text">{r.cageName}</span> },
+          { key: 'abwG', header: t('feedingPlan.col.abw'), width: 134, render: (r) => (r.abwG == null ? '—' : `${kg(r.abwG)} g`) },
           {
             key: 'suggested',
             header: t('alertsPage.suggested'),
-            width: 130,
+            width: 144,
             render: (r) =>
               r.ration.ok ? <span className="font-semibold text-pearl-cyan">{kg(r.ration.kgPerDay)} kg</span> : <span className="text-faint">—</span>,
           },

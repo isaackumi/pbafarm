@@ -221,7 +221,7 @@ export default function RolesPanel({ renderShell }) {
                 </p>
               </div>
               {roleMembers.length > 0 && (
-                <div className="flex -space-x-1" aria-hidden>
+                <div className="flex" aria-hidden>
                   {roleMembers.slice(0, 3).map((m) => (
                     <Avatar key={m.userId} name={m.name || m.email} size={32} />
                   ))}

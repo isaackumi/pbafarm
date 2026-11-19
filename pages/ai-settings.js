@@ -76,7 +76,7 @@ function AddKey({ providers, disabled }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4 border-t border-line pt-5">
       <div>
-        <h3 className="text-[15px] font-medium leading-5 text-text">{t('integ.ai.addTitle')}</h3>
+        <h3 className="text-[15px] font-semibold leading-[18px] text-text">{t('integ.ai.addTitle')}</h3>
         <p className="mt-1 text-[13px] leading-4 text-muted">{t('integ.ai.addHint')}</p>
       </div>
       <div role="radiogroup" aria-label={t('integ.ai.provider')} className="grid gap-3 sm:grid-cols-2">
@@ -89,17 +89,19 @@ function AddKey({ providers, disabled }) {
               role="radio"
               aria-checked={on}
               onClick={() => setProviderId(p.id)}
-              className={`flex items-center gap-3 rounded-[14px] border px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-                on ? 'border-cyan bg-surface-2' : 'border-line hover:bg-surface-2'
+              className={`flex min-w-0 rounded-[14px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                on ? 'bg-[image:var(--gradient-brand)] p-[1.5px]' : 'border border-line-strong hover:bg-surface-2'
               }`}
             >
-              <span
-                aria-hidden
-                className={`size-4 shrink-0 rounded-full border-2 ${on ? 'border-cyan bg-[radial-gradient(circle,var(--cyan)_35%,transparent_40%)]' : 'border-faint'}`}
-              />
-              <span className="min-w-0">
-                <span className="block text-[15px] leading-5 text-text">{p.label}</span>
-                {p.defaultModel && <span className="block truncate text-[13px] leading-4 text-muted">{p.defaultModel}</span>}
+              <span className={`flex min-w-0 grow flex-col gap-1 rounded-[13px] ${on ? 'bg-surface-2 px-[15px] py-[13px]' : 'px-4 py-[14px]'}`}>
+                <span className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={`size-[14px] shrink-0 rounded-full ${on ? 'border-4 border-cyan' : 'border-[1.5px] border-faint'}`}
+                  />
+                  <span className="text-[14px] leading-[18px] text-text">{p.label}</span>
+                </span>
+                {p.defaultModel && <span className="block truncate text-[12px] leading-4 text-muted">{p.defaultModel}</span>}
               </span>
             </button>
           )
@@ -157,17 +159,17 @@ function CredentialRow({ cred }) {
   }
   return (
     <li
-      className={`flex flex-col gap-3 rounded-[14px] border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
-        cred.isDefault ? 'border-cyan' : 'border-line'
+      className={`flex flex-col gap-3 rounded-[14px] border px-4 py-[14px] sm:flex-row sm:items-center sm:justify-between ${
+        cred.isDefault ? 'border-cyan' : 'border-line-strong'
       }`}
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[15px] font-medium leading-5 text-text">{cred.providerLabel}</span>
+          <span className="text-[14px] font-medium leading-[18px] text-text">{cred.providerLabel}</span>
           {cred.isDefault && <Pill tone="cyan">{t('integ.ai.default')}</Pill>}
           <Pill tone={cred.enabled ? 'green' : 'neutral'}>{cred.enabled ? t('integ.common.on') : t('integ.common.off')}</Pill>
         </div>
-        <p className="mt-1 font-mono text-[13px] leading-4 text-muted">
+        <p className="mt-1 font-mono text-[12px] leading-4 text-muted">
           {cred.model} · {t('integ.ai.keyEnding', { hint: cred.keyHint || '—' })}
           {cred.baseUrl ? ` · ${cred.baseUrl}` : ''}
         </p>
@@ -248,8 +250,8 @@ function UsageCard({ usage }) {
   return (
     <SettingsCard title={t('settingsUi.ai.usageTitle')} meta={t('settingsUi.ai.last30')}>
       <div className="flex items-baseline gap-2">
-        <span className="font-sans text-[56px] font-semibold leading-[60px] tracking-[-0.02em] text-text tabular-nums">{usage.calls}</span>
-        <span className="text-[15px] leading-5 text-muted">{t('settingsUi.ai.calls')}</span>
+        <span className="font-sans text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-text tabular-nums">{usage.calls}</span>
+        <span className="text-[13px] leading-4 text-muted">{t('settingsUi.ai.calls')}</span>
       </div>
       {usage.truncated && <p className="mt-1 text-[13px] leading-4 text-faint">{t('integ.ai.partial')}</p>}
       <dl className="mt-5 flex flex-col">
@@ -280,13 +282,13 @@ function AiSettingsPage() {
           {t('integ.common.encryptionMissing')}
         </Notice>
       )}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <SettingsCard title={t('settingsUi.ai.providerTitle')} meta={t('integ.ai.keysHint')}>
           <div className="flex flex-col gap-5">
             {data.credentials.length === 0 ? (
               <div className="rounded-[14px] border border-dashed border-line px-4 py-5">
-                <p className="text-[15px] leading-5 text-text">{t('integ.ai.noKeys')}</p>
-                <p className="mt-1 text-[13px] leading-4 text-muted">{t('integ.ai.noKeysHint')}</p>
+                <p className="text-[14px] leading-[18px] text-text">{t('integ.ai.noKeys')}</p>
+                <p className="mt-1 text-[12px] leading-4 text-muted">{t('integ.ai.noKeysHint')}</p>
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
@@ -304,8 +306,8 @@ function AiSettingsPage() {
         <SettingsCard title={t('integ.ai.topUsers')} meta={t('settingsUi.ai.last30')}>
           <ul className="flex flex-col">
             {data.usage.byUser.map((u) => (
-              <li key={u.userId} className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-0 first:pt-0">
-                <span className="text-[15px] leading-5 text-text">{u.name}</span>
+              <li key={u.userId} className="flex items-center justify-between gap-3 border-t border-line py-3">
+                <span className="text-[14px] leading-[18px] text-text">{u.name}</span>
                 <span className="text-[13px] leading-4 tabular-nums text-muted">
                   {t('integ.ai.callsCount', { count: u.calls })} · {usd(u.costUsd)}
                 </span>

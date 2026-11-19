@@ -170,7 +170,7 @@ export default function VerifyPage() {
             {t('auth.verify.codeSent', { channel: channelLabel(channel), to: sentTo })}
           </p>
           <OtpInput id="mfa-code" label={t('common.code')} value={code} onChange={setCode} autoFocus />
-          <div className="flex items-center justify-between gap-3 text-sm leading-[18px]">
+          <div className="flex items-center justify-between gap-3 text-[13px] leading-4">
             <button
               type="button"
               className={AUTH_LINK}
@@ -192,7 +192,7 @@ export default function VerifyPage() {
         </form>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm leading-[18px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] leading-4">
         {mode === 'app' && smsPossible && (
           <button type="button" className={AUTH_LINK} onClick={() => switchTo('sms')}>
             {t('auth.verify.useText')}

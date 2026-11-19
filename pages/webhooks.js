@@ -169,7 +169,7 @@ function EndpointCard({ ep, events, onSecret }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="break-all font-mono text-[14px] leading-[18px] text-text">{ep.url}</span>
+            <span className="break-all font-mono text-[13px] leading-4 text-text">{ep.url}</span>
             <Pill tone={!active ? 'neutral' : failing ? 'red' : 'green'}>
               {!active
                 ? t('integ.common.off')
@@ -186,7 +186,7 @@ function EndpointCard({ ep, events, onSecret }) {
               time: formatTime(ep.lastSuccessAt),
             })}
           </p>
-          {!editing && <p className="mt-2 text-[13px] leading-4 text-muted">{ep.eventTypes.map(label).join(' · ')}</p>}
+          {!editing && <p className="mt-2 text-[12px] leading-4 text-muted">{ep.eventTypes.map(label).join(' · ')}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {active ? (

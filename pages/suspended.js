@@ -48,27 +48,29 @@ export default function SuspendedPage() {
             />
           </svg>
         </div>
-        <h1 id="suspended-title" className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-text">
-          {billing?.companyName ? t('suspended.heading', { org: billing.companyName }) : t('suspended.headingGeneric')}
-        </h1>
-        <p className="text-sm leading-[21px] text-muted">{t('suspended.body')}</p>
-        {billing?.suspensionReason ? <p className="text-sm leading-[21px] text-muted">{billing.suspensionReason}</p> : null}
+        <div className="flex flex-col gap-2">
+          <h1 id="suspended-title" className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-text">
+            {billing?.companyName ? t('suspended.heading', { org: billing.companyName }) : t('suspended.headingGeneric')}
+          </h1>
+          <p className="text-[14px] leading-[21px] text-muted">{t('suspended.body')}</p>
+          {billing?.suspensionReason ? <p className="text-[14px] leading-[21px] text-muted">{billing.suspensionReason}</p> : null}
+        </div>
         {isOwner && due.length > 0 ? (
           <div className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-2 px-4 py-[14px]">
             <div className="flex flex-col gap-1">
-              <span className="text-sm leading-4 text-text">{t('suspended.balanceDue')}</span>
+              <span className="text-[13px] leading-4 text-muted">{t('suspended.balanceDue')}</span>
               <span className="text-xs leading-4 text-faint">{t('suspended.openInvoices', { count: open.length })}</span>
             </div>
-            <span className="text-base font-semibold leading-5 tabular-nums text-text">
+            <span className="text-[13px] font-semibold leading-4 tabular-nums text-text">
               {due.map(([currency, minor]) => formatMinor(minor, currency)).join(' + ')}
             </span>
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-[10px]">
           {/* Plain links: permission-aware buttons hide while the app's permission query is paused. */}
           {isOwner ? <GradientButton href="/billing">{t('suspended.pay')}</GradientButton> : null}
           {SUPPORT_EMAIL ? (
-            <GhostButton href={`mailto:${SUPPORT_EMAIL}`} className="h-[45px] px-5 text-[15px]">
+            <GhostButton size="lg" href={`mailto:${SUPPORT_EMAIL}`} className="!px-5">
               {t('suspended.contactSupport')}
             </GhostButton>
           ) : null}

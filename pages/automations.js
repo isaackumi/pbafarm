@@ -256,25 +256,25 @@ function FlowNode({ tone, kicker, title, meta, action, children, highlight = fal
   const color = NODE_COLOR[tone]
   return (
     <section
-      className={`relative w-full rounded-card border bg-surface px-5 py-5 shadow-[var(--shadow-card)] sm:px-6 ${highlight ? '' : 'border-line'}`}
+      className={`relative w-full rounded-[16px] border bg-surface px-4 py-4 shadow-[var(--shadow-card)] sm:px-[18px] ${highlight ? '' : 'border-line-strong'}`}
       style={highlight ? { borderColor: color } : undefined}
     >
-      <div className="flex items-start gap-4">
-        <span aria-hidden className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-surface-2">
-          <span className="size-3 rounded-[3px]" style={{ backgroundColor: color }} />
+      <div className="flex items-start gap-[14px]">
+        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-2">
+          <span className="size-[10px] rounded-[3px]" style={{ backgroundColor: color }} />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[12px] font-medium uppercase leading-4 tracking-[0.1em]" style={{ color }}>
+            <p className="text-[11px] uppercase leading-[14px] tracking-[0.08em]" style={{ color }}>
               {kicker}
             </p>
             {action}
           </div>
-          {title && <h2 className="mt-1 text-[17px] font-semibold leading-[22px] text-text">{title}</h2>}
-          {meta && <p className="mt-1 text-[13px] leading-4 text-muted">{meta}</p>}
+          {title && <h2 className="text-[14px] font-semibold leading-[18px] text-text">{title}</h2>}
+          {meta && <p className="text-[12px] leading-4 text-muted">{meta}</p>}
         </div>
       </div>
-      {children && <div className="mt-4 flex flex-col gap-4 sm:pl-14">{children}</div>}
+      {children && <div className="mt-4 flex flex-col gap-4 sm:pl-[50px]">{children}</div>}
     </section>
   )
 }
@@ -661,23 +661,23 @@ function OtherRules({ data, currentId, onEdit }) {
       ) : (
         <ul>
           {others.map((r) => (
-            <li key={r._id} className="flex items-center gap-3 border-t border-line py-3">
+            <li key={r._id} className="flex items-center gap-[14px] border-t border-line py-[11px]">
               <span
                 aria-hidden
-                className="size-2 shrink-0 rounded-full"
+                className="size-[7px] shrink-0 rounded-full"
                 style={{ backgroundColor: r.enabled ? 'var(--good)' : 'var(--faint)' }}
               />
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-[2px]">
                 <button
                   type="button"
                   onClick={() => onEdit(r)}
-                  className="truncate rounded text-left text-[15px] leading-5 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  className="max-w-full truncate rounded text-left text-[14px] leading-[18px] text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                 >
                   {r.name}
                 </button>
-                <p className="truncate text-[13px] leading-4 text-muted">{triggerSummary(r, data, t)}</p>
+                <p className="max-w-full truncate text-[12px] leading-4 text-muted">{triggerSummary(r, data, t)}</p>
               </div>
-              <span className="text-[14px] leading-[18px] text-text">{r.enabled ? t('integ.common.on') : t('integ.common.off')}</span>
+              <span className="text-[14px] font-medium leading-[18px] text-text">{r.enabled ? t('integ.common.on') : t('integ.common.off')}</span>
             </li>
           ))}
         </ul>
@@ -731,14 +731,15 @@ function RuleEditor({ data, initial, onClose, onSwitch }) {
     >
       <form id="rule-form" onSubmit={onSave} className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div
-          className="rounded-card border border-line px-4 py-6 sm:px-8"
+          className="rounded-card border border-line px-4 pb-8 pt-5 sm:px-7"
           style={{
-            backgroundImage: 'radial-gradient(var(--line-strong) 1px, transparent 1px)',
+            backgroundColor: 'color-mix(in oklab, var(--bg) 70%, var(--surface-2))',
+            backgroundImage: 'radial-gradient(circle, var(--line) 1px, transparent 1px)',
             backgroundSize: '22px 22px',
           }}
         >
           <div className="mx-auto flex max-w-2xl flex-col">
-            <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="mb-[22px] flex flex-wrap items-center gap-2">
               <Pill tone={draft.enabled ? 'green' : 'neutral'}>
                 <span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: draft.enabled ? 'var(--good)' : 'var(--faint)' }} />
                 {draft.enabled ? t('settingsUi.auto.live') : t('settingsUi.auto.paused')}
@@ -807,7 +808,7 @@ function RuleEditor({ data, initial, onClose, onSwitch }) {
                   <button
                     type="button"
                     onClick={() => set({ actions: [...draft.actions, blankNotify()] })}
-                    className="flex items-center gap-1.5 rounded-pill border border-dashed border-line-strong bg-bg px-5 py-2 text-[14px] leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                    className="flex items-center gap-1.5 rounded-pill border border-dashed border-line-strong bg-bg px-4 py-2 text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                   >
                     <Plus size={14} aria-hidden />
                     {t('settingsUi.auto.addStep')}
@@ -852,14 +853,14 @@ function RuleRow({ rule, data, onEdit }) {
 
   return (
     <li className="flex flex-col gap-3 border-t border-line py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-start gap-[14px]">
         <span
           aria-hidden
-          className="mt-1.5 size-2 shrink-0 rounded-full"
+          className="mt-[6px] size-[7px] shrink-0 rounded-full"
           style={{ backgroundColor: rule.enabled ? 'var(--good)' : 'var(--faint)' }}
         />
         <div className="min-w-0">
-          <p className="text-[15px] leading-5 text-text">
+          <p className="text-[14px] leading-[18px] text-text">
             {rule.name}
             {rule.builtIn && (
               <Pill tone="neutral" className="ml-2 align-middle">
@@ -867,8 +868,8 @@ function RuleRow({ rule, data, onEdit }) {
               </Pill>
             )}
           </p>
-          <p className="mt-1 text-[13px] leading-4 text-muted">{triggerSummary(rule, data, t)}</p>
-          <p className="mt-0.5 text-[13px] leading-4 text-muted">{rule.actions.map((a) => actionSummary(a, data.members, t)).join(' · ')}</p>
+          <p className="mt-[2px] text-[12px] leading-4 text-muted">{triggerSummary(rule, data, t)}</p>
+          <p className="mt-[2px] text-[12px] leading-4 text-muted">{rule.actions.map((a) => actionSummary(a, data.members, t)).join(' · ')}</p>
           {rule.enabled && rule.nextRunAt && (
             <p className="mt-1 text-[12px] leading-4 text-faint">{t('settingsUi.auto.nextRun', { time: fmtTime(rule.nextRunAt) })}</p>
           )}

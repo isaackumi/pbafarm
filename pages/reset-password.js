@@ -148,7 +148,7 @@ export default function ResetPassword() {
           </AuthSubmit>
           <button
             type="button"
-            className={`self-start text-sm leading-[18px] ${AUTH_LINK}`}
+            className={`self-start text-[13px] leading-4 ${AUTH_LINK}`}
             onClick={() => {
               setStep('email')
               setCode('')
@@ -160,7 +160,7 @@ export default function ResetPassword() {
         </form>
       )}
 
-      <p className="text-sm leading-[18px] text-muted">
+      <p className="text-[13px] leading-4 text-muted">
         {t('authUi.reset.remembered')}{' '}
         <Link href="/login" className={AUTH_LINK}>
           {t('auth.login.signIn')} →

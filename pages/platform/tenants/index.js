@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import PlatformLayout from '../../../components/platform/PlatformLayout'
+import PlatformLayout, { CONSOLE_KPI, CONSOLE_TABLE } from '../../../components/platform/PlatformLayout'
 import { GhostButton, KpiStrip, LoadingState, Select, StatusDot, Table } from '../../../components/ui'
 import { formatDate, formatMinor } from '../../../lib/billingFormat'
 import { useT } from '../../../lib/i18n/context'
@@ -28,7 +28,7 @@ function Kpis({ k }) {
   if (!k) return <LoadingState label={t('platform.tenants.loadingKpis')} />
   return (
     <KpiStrip
-      className="border-y border-line py-[22px]"
+      className={CONSOLE_KPI}
       items={[
         { key: 'mrr', label: t('platform.tenants.kpi.mrr'), value: moneyList(k.mrr) },
         {
@@ -89,6 +89,7 @@ function TenantList({ k }) {
     <div className="flex flex-col gap-3">
       <div id="tenant-rows" role="tabpanel">
         <Table
+          className={CONSOLE_TABLE}
           tabs={tabs}
           tab={tab}
           onTabChange={reset(setTab)}

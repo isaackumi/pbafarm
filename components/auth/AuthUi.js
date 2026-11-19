@@ -17,7 +17,7 @@ export function Brand({ href = '/' }) {
       href={href}
       className="inline-flex items-center gap-2.5 rounded-pill focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
     >
-      <AnowaLockup height={26} />
+      <AnowaLockup height={20} />
     </Link>
   )
 }
@@ -138,7 +138,7 @@ export function AuthHeading({ title, subtitle }) {
       <h1 className="text-[32px] font-semibold leading-10 tracking-[-0.03em] text-text sm:text-4xl sm:leading-[44px]">
         {title}
       </h1>
-      {subtitle && <p className="text-base leading-[22px] text-muted">{subtitle}</p>}
+      {subtitle && <p className="text-[15px] leading-[18px] text-muted">{subtitle}</p>}
     </div>
   )
 }
@@ -163,14 +163,14 @@ export function AuthAlert({ tone = 'alert', children }) {
 }
 
 export const AUTH_INPUT =
-  'w-full rounded-input border border-line-strong bg-surface px-[18px] py-3.5 text-base leading-5 text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30 disabled:opacity-60'
+  'w-full rounded-input border border-line-strong bg-surface px-[18px] py-3.5 text-[15px] leading-[18px] text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30 disabled:opacity-60'
 
 /** Label (14px muted) over a control; `aside` sits right of the label (e.g. "Forgot?"). */
 export function AuthField({ label, htmlFor, aside, hint, error, children }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
-        <label htmlFor={htmlFor} className="text-sm leading-[18px] text-muted">
+        <label htmlFor={htmlFor} className="text-[13px] leading-4 text-muted">
           {label}
         </label>
         {aside}
@@ -201,7 +201,7 @@ export function PasswordInput({ className = '', ...props }) {
         onClick={() => setShown((v) => !v)}
         aria-pressed={shown}
         aria-controls={props.id}
-        className="absolute inset-y-0 right-1.5 my-1.5 rounded-pill px-3 text-sm leading-[18px] text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        className="absolute inset-y-0 right-1.5 my-1.5 rounded-pill px-3 text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
       >
         {shown ? t('authUi.hide') : t('authUi.show')}
       </button>
@@ -218,7 +218,7 @@ export function AuthSubmit({ children, className = '', type = 'submit', ...props
       style={{ backgroundImage: 'var(--gradient-brand)' }}
       {...props}
     >
-      <span className="flex items-center justify-center gap-2 rounded-pill bg-button px-6 py-3.5 text-base font-semibold leading-5 text-button-text transition-opacity group-hover:opacity-90">
+      <span className="flex items-center justify-center gap-2 rounded-pill bg-button px-6 py-3.5 text-[15px] font-semibold leading-[18px] text-button-text transition-opacity group-hover:opacity-90">
         {children}
       </span>
     </button>
@@ -227,7 +227,7 @@ export function AuthSubmit({ children, className = '', type = 'submit', ...props
 
 /** Full-width outlined pill (secondary action on auth screens). */
 export function AuthGhost({ href, children, className = '', type = 'button', ...props }) {
-  const cls = `flex w-full items-center justify-center gap-2 rounded-pill border border-line-strong px-6 py-3 text-sm font-medium leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:cursor-not-allowed disabled:opacity-50 ${className}`
+  const cls = `flex w-full items-center justify-center gap-2 rounded-pill border border-line-strong px-5 py-3 text-sm leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:cursor-not-allowed disabled:opacity-50 ${className}`
   if (href) {
     return (
       <Link href={href} className={cls} {...props}>
@@ -244,7 +244,7 @@ export function AuthGhost({ href, children, className = '', type = 'button', ...
 
 export function AuthDivider({ label }) {
   return (
-    <div className="flex items-center gap-3 text-xs leading-4 text-faint" role="separator">
+    <div className="flex items-center gap-3.5 text-xs leading-4 text-faint" role="separator">
       <span className="h-px flex-1 bg-line" />
       {label}
       <span className="h-px flex-1 bg-line" />
@@ -286,7 +286,7 @@ export function MethodTabs({ label, tabs, value, onChange }) {
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`rounded-pill py-[9px] text-sm leading-[18px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+            className={`rounded-pill py-[9px] text-[13px] leading-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
               active ? 'bg-button font-semibold text-button-text' : 'text-muted hover:text-text'
             }`}
           >
@@ -329,8 +329,8 @@ export function OtpInput({ id, value, onChange, length = 6, label, autoFocus = f
         {Array.from({ length }).map((_, i) => (
           <div
             key={i}
-            className={`flex h-[60px] items-center justify-center rounded-input border bg-surface text-2xl font-semibold leading-7 text-text ${
-              focused && i === active ? 'border-cyan' : 'border-line-strong'
+            className={`flex h-[60px] items-center justify-center rounded-input bg-surface text-2xl font-semibold leading-[30px] text-text ${
+              focused && i === active ? 'border-[1.5px] border-cyan' : 'border border-line-strong'
             }`}
           >
             {digits[i] || ''}
@@ -358,19 +358,20 @@ export function StrengthBar({ password }) {
   if (!password) return null
   const score = passwordScore(password)
   const labels = ['', 'weak', 'fair', 'good', 'strong']
-  const fill = score >= 3 ? 'var(--gradient-bar)' : score === 2 ? 'var(--warn)' : 'var(--alert)'
+  const fill = score >= 3 ? 'var(--dot-good)' : score === 2 ? 'var(--warn)' : 'var(--alert)'
+  const tone = score >= 3 ? 'text-[color:var(--pill-green-text)]' : score === 2 ? 'text-warn' : 'text-alert'
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-4 gap-1.5" aria-hidden>
         {[1, 2, 3, 4].map((n) => (
           <span
             key={n}
-            className="h-1 rounded-pill bg-line"
+            className="h-1 rounded-pill bg-line-strong"
             style={n <= score ? { background: fill } : undefined}
           />
         ))}
       </div>
-      <p className="text-xs leading-4 text-muted">{t(`authUi.strength.${labels[score]}`)}</p>
+      <p className={`text-xs leading-4 ${tone}`}>{t(`authUi.strength.${labels[score]}`)}</p>
     </div>
   )
 }

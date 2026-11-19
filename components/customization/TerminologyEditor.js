@@ -64,25 +64,25 @@ export default function TerminologyEditor() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
-      <SettingsCard title="Your words" className="space-y-4">
+    <form onSubmit={submit} className="flex flex-col gap-5">
+      <SettingsCard title="Your words">
         {terms === undefined ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <p className="border-t border-line py-3 text-[13px] leading-4 text-muted">Loading…</p>
         ) : (
           <>
             {TERM_GROUPS.map((group) => (
-              <section key={group.id} className="space-y-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-text">{group.title}</h3>
-                  <p className="text-xs text-muted">{group.description}</p>
+              <section key={group.id} className="flex flex-col gap-3 border-t border-line pb-4 pt-[14px]">
+                <div className="flex flex-col gap-[2px]">
+                  <h3 className="text-[13px] font-semibold uppercase leading-4 tracking-[0.04em] text-muted">{group.title}</h3>
+                  <p className="text-[12px] leading-4 text-faint">{group.description}</p>
                 </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {group.fields.map((field) => (
                     <div
                       key={field.key}
-                      className="rounded-lg border border-line p-3"
+                      className="rounded-input border border-line bg-bg px-4 py-[14px]"
                     >
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                      <p className="mb-3 text-[14px] leading-[18px] text-text">
                         {field.label}
                       </p>
                       <div className="grid grid-cols-2 gap-3">
@@ -118,8 +118,8 @@ export default function TerminologyEditor() {
         )}
       </SettingsCard>
 
-      <SettingsCard title="Preview" className="space-y-2">
-        <p className="text-sm text-text">{applyTerms(PREVIEW, form)}</p>
+      <SettingsCard title="Preview">
+        <p className="border-t border-line py-3 text-[14px] leading-[18px] text-text">{applyTerms(PREVIEW, form)}</p>
       </SettingsCard>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -136,7 +136,7 @@ export default function TerminologyEditor() {
           <RotateCcw size={16} aria-hidden />
           Clear all
         </GhostButton>
-        {!dirty && canWrite && <span className="text-sm text-muted">No unsaved changes</span>}
+        {!dirty && canWrite && <span className="text-[13px] leading-4 text-muted">No unsaved changes</span>}
       </div>
     </form>
   )

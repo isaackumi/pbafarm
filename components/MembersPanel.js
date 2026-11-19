@@ -126,29 +126,25 @@ export default function MembersPanel() {
             href={`/users?member=${r.userId}`}
             className="flex min-w-0 items-center gap-3 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
           >
-            <Avatar name={r.name || r.email} size={28} />
             <span className="truncate hover:underline">
               {r.name || r.email}
-              {r.name && r.email ? <span className="text-muted"> · {r.email}</span> : null}
+              {r.name && r.email ? ` · ${r.email}` : null}
             </span>
           </Link>
         ) : (
-          <span className="flex min-w-0 items-center gap-3">
-            <Avatar name={r.email} size={28} />
-            <span className="truncate">{r.email}</span>
-          </span>
+          <span className="block min-w-0 truncate">{r.email}</span>
         ),
     },
     {
       key: 'role',
       header: t('settingsUi.team.col.role'),
-      width: 150,
+      width: 130,
       render: (r) => <Pill tone={ROLE_TONE[r.roleKey] || 'neutral'}>{roleLabel(r.roleKey, r.roleId)}</Pill>,
     },
     {
       key: 'sites',
       header: t('settingsUi.team.col.sites'),
-      width: 170,
+      width: 150,
       render: (r) => (r.kind === 'member' ? sitesText(r) : '—'),
     },
     {
@@ -342,16 +338,16 @@ export function MemberDetail({ userId, renderShell }) {
         <InlineError>{error}</InlineError>
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="flex min-w-0 flex-col gap-5">
-            <section className="flex flex-wrap items-center gap-5 rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]">
-              <Avatar name={label} size={64} />
+            <section className="flex flex-wrap items-center gap-[18px] rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]">
+              <Avatar name={label} size={56} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-[10px]">
                   <span className="text-[20px] font-semibold leading-6 text-text">{label}</span>
                   <Pill tone={member.status === 'active' ? 'green' : 'red'}>
                     {t(`settingsUi.team.status.${member.status === 'active' ? 'active' : 'suspended'}`)}
                   </Pill>
                 </div>
-                {member.email && <span className="truncate text-[14px] leading-[18px] text-muted">{member.email}</span>}
+                {member.email && <span className="truncate text-[13px] leading-4 text-muted">{member.email}</span>}
               </div>
               <div className="flex flex-col items-end gap-1 text-right">
                 <span className="text-[12px] leading-4 text-muted">{t('settingsUi.team.col.role')}</span>
@@ -405,12 +401,12 @@ export function MemberDetail({ userId, renderShell }) {
               ) : (locations || []).length === 0 ? (
                 <CardNote>{t('settingsUi.team.noLocations')}</CardNote>
               ) : (
-                <ul className="flex flex-col gap-3 pt-1">
+                <ul className="flex flex-col gap-[14px]">
                   {(locations || []).map((loc) => {
                     const id = loc.id || loc._id
                     const on = state.locationIds.includes(id)
                     return (
-                      <li key={id} className="flex items-center gap-4 rounded-input border border-line px-5 py-4">
+                      <li key={id} className="flex items-center gap-[10px] rounded-input border border-line bg-bg px-[14px] py-3">
                         <CheckCell
                           checked={on}
                           label={loc.name}
@@ -422,7 +418,7 @@ export function MemberDetail({ userId, renderShell }) {
                             })
                           }
                         />
-                        <span className="text-[15px] leading-[18px] text-text">{loc.name}</span>
+                        <span className="text-[14px] leading-[18px] text-text">{loc.name}</span>
                       </li>
                     )
                   })}

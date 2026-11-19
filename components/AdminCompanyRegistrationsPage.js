@@ -124,11 +124,11 @@ export default function AdminCompanyRegistrationsPage() {
             type="button"
             onClick={() => setSelectedId(c.id)}
             aria-pressed={selected?.id === c.id}
-            className="truncate rounded text-left text-[15px] leading-5 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            className="truncate rounded text-left text-[14px] leading-[18px] text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
           >
             {c.name}
           </button>
-          <p className="truncate text-[13px] leading-4 text-muted">{c.contact_email || c.contact_phone || c.code}</p>
+          <p className="mt-[2px] truncate text-[12px] leading-4 text-muted">{c.contact_email || c.contact_phone || c.code}</p>
         </div>
       ),
     },
@@ -191,20 +191,20 @@ export default function AdminCompanyRegistrationsPage() {
         {selected && (
           <section
             aria-labelledby="reg-detail-title"
-            className="flex h-fit flex-col gap-5 rounded-card border border-line bg-surface p-6 shadow-[var(--shadow-card)]"
+            className="flex h-fit flex-col gap-[18px] rounded-card border border-line bg-surface px-[26px] py-6 shadow-[var(--shadow-card)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[14px] leading-[18px] text-muted">
+                <p className="text-[13px] leading-4 text-muted">
                   <span className="font-data">{selected.code}</span> · {fmtDateTime(selected.created_at)}
                 </p>
-                <h2 id="reg-detail-title" className="mt-1 text-[22px] font-semibold leading-7 text-text">
+                <h2 id="reg-detail-title" className="mt-1 text-[20px] font-semibold leading-6 text-text">
                   {selected.name}
                 </h2>
               </div>
               <StatusPill status={selected.status} />
             </div>
-            <div className="rounded-input border border-line px-4 py-1">
+            <div className="rounded-input border border-line px-4 py-[6px] [&_dl>div]:py-[9px] [&_dl>div]:text-[13px] [&_dl>div]:leading-4">
               <DetailList
                 items={[
                   { label: t('settingsUi.admin.detail.email'), value: selected.contact_email },
@@ -221,7 +221,7 @@ export default function AdminCompanyRegistrationsPage() {
               <p className="text-[13px] leading-4 text-warn">{t('settingsUi.admin.noSubmitter')}</p>
             )}
             {selected.status === 'pending' && (
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-[10px]">
                 <GradientButton
                   variant="solid"
                   className="flex-1"

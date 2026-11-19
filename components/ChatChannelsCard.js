@@ -122,8 +122,8 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
 
       {pending ? (
         <div role="status" className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3 rounded-[10px] border border-dashed border-line-strong px-4 py-[14px]">
-            <span className="font-mono text-[22px] font-bold leading-[30px] tracking-[0.2em] text-pearl-cyan">
+          <div className="flex items-center justify-between gap-3 rounded-[8px] border border-dashed border-line-strong px-4 py-[14px]">
+            <span className="font-mono text-[24px] font-bold leading-[30px] tracking-[0.2em] text-pearl-cyan">
               {provider === 'whatsapp' ? `LINK ${pending.code}` : pending.code}
             </span>
             <span className="text-xs leading-4 text-muted">{t('chatChannels.minutesLeft', { count: minutesLeft })}</span>
@@ -206,7 +206,7 @@ function BindingRow({ binding }) {
 
   return (
     <form onSubmit={save} className="flex flex-col gap-3">
-      <dl className="flex flex-col gap-2 rounded-[10px] bg-surface-2 p-3">
+      <dl className="flex flex-col gap-2 rounded-[8px] bg-surface-2 p-3">
         {facts.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-3 text-xs leading-4">
             <dt className="text-muted">{label}</dt>

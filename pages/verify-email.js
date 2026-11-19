@@ -82,7 +82,7 @@ export default function VerifyEmail() {
           <AuthSubmit disabled={busy || code.length !== 6}>
             {busy ? t('common.checking') : t('common.verify')}
           </AuthSubmit>
-          <button type="button" className={`self-start text-sm leading-[18px] ${AUTH_LINK}`} onClick={send} disabled={busy}>
+          <button type="button" className={`self-start text-[13px] leading-4 ${AUTH_LINK}`} onClick={send} disabled={busy}>
             {t('common.sendNewCode')}
           </button>
         </form>
