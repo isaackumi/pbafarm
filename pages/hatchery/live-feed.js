@@ -147,54 +147,56 @@ function LiveFeed() {
         </IfPermitted>
       }
     >
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      {data?.balances?.length > 0 && (
-        <KpiStrip
-          items={data.balances.map((b) => ({
-            key: `${b.kind}-${b.unit}`,
-            label: t('hatcheryPage.feed.onHand', { feed: label(t, 'liveFeed', b.kind) }),
-            value: fmt(b.on_hand, 2),
-            valueTone: b.on_hand < 0 ? 'alert' : undefined,
-            suffix: `${label(t, 'unit', b.unit)} · ${t('hatcheryPage.feed.producedUsed', { produced: fmt(b.produced, 2), used: fmt(b.used, 2) })}`,
-          }))}
-        />
-      )}
-
-      <PaperCard title={t('hatcheryPage.feed.entries')} meta={data ? data.entries.length : undefined}>
-        {data === undefined ? (
-          <p className="text-[13px] leading-[18px] text-muted">{t('ui.loading')}</p>
-        ) : data.entries.length === 0 ? (
-          <EmptyState title={t('hatcheryPage.feed.empty')} description={t('hatcheryPage.feed.emptyHint')} />
-        ) : (
-          <ul className="flex flex-col">
-            {data.entries.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-[11px]">
-                <div className="flex min-w-0 flex-col gap-[2px]">
-                  <span className="text-[14px] leading-[18px] text-text">
-                    {formatDate(e.date, { locale })} · {fmt(e.quantity, 2)} {label(t, 'unit', e.unit)} {label(t, 'liveFeed', e.kind)}
-                  </span>
-                  <span className="text-xs leading-4 text-muted">
-                    {[e.culture, e.input_note, e.from_larval_log ? t('hatcheryPage.feed.fromLog') : null].filter(Boolean).join(' · ') || '—'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Pill tone={MOVEMENT_TONE[e.movement]}>{t(`hatcheryPage.feed.mv.${e.movement}`)}</Pill>
-                  {!e.from_larval_log && (
-                    <IfPermitted permission="hatchery.larval.record">
-                      <GhostButton size="sm" tone="danger" onClick={() => del(e.id)}>
-                        {t('hatcheryPage.feed.remove')}
-                      </GhostButton>
-                    </IfPermitted>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+        {data?.balances?.length > 0 && (
+          <KpiStrip
+            items={data.balances.map((b) => ({
+              key: `${b.kind}-${b.unit}`,
+              label: t('hatcheryPage.feed.onHand', { feed: label(t, 'liveFeed', b.kind) }),
+              value: fmt(b.on_hand, 2),
+              valueTone: b.on_hand < 0 ? 'alert' : undefined,
+              suffix: `${label(t, 'unit', b.unit)} · ${t('hatcheryPage.feed.producedUsed', { produced: fmt(b.produced, 2), used: fmt(b.used, 2) })}`,
+            }))}
+          />
         )}
-      </PaperCard>
 
-      {adding && <EntryModal onClose={() => setAdding(false)} />}
+        <PaperCard title={t('hatcheryPage.feed.entries')} meta={data ? data.entries.length : undefined}>
+          {data === undefined ? (
+            <p className="text-[13px] leading-[18px] text-muted">{t('ui.loading')}</p>
+          ) : data.entries.length === 0 ? (
+            <EmptyState title={t('hatcheryPage.feed.empty')} description={t('hatcheryPage.feed.emptyHint')} />
+          ) : (
+            <ul className="flex flex-col">
+              {data.entries.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-[11px]">
+                  <div className="flex min-w-0 flex-col gap-[2px]">
+                    <span className="text-[14px] leading-[18px] text-text">
+                      {formatDate(e.date, { locale })} · {fmt(e.quantity, 2)} {label(t, 'unit', e.unit)} {label(t, 'liveFeed', e.kind)}
+                    </span>
+                    <span className="text-xs leading-4 text-muted">
+                      {[e.culture, e.input_note, e.from_larval_log ? t('hatcheryPage.feed.fromLog') : null].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Pill tone={MOVEMENT_TONE[e.movement]}>{t(`hatcheryPage.feed.mv.${e.movement}`)}</Pill>
+                    {!e.from_larval_log && (
+                      <IfPermitted permission="hatchery.larval.record">
+                        <GhostButton size="sm" tone="danger" onClick={() => del(e.id)}>
+                          {t('hatcheryPage.feed.remove')}
+                        </GhostButton>
+                      </IfPermitted>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PaperCard>
+
+        {adding && <EntryModal onClose={() => setAdding(false)} />}
+      </div>
     </Layout>
   )
 }

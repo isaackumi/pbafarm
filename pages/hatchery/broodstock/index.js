@@ -210,55 +210,57 @@ function Broodstock() {
         </IfPermitted>
       }
     >
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      <KpiStrip
-        items={[
-          { key: 'fish', label: t('hatcheryPage.brood.kpiFish'), value: fmt(list.reduce((s, b) => s + b.count, 0)), suffix: t('hatcheryPage.brood.records', { count: list.length }) },
-          { key: 'ready', label: label(t, 'status', 'ready'), value: fmt(count('ready')), valueTone: 'good' },
-          { key: 'conditioning', label: label(t, 'status', 'conditioning'), value: fmt(count('conditioning')) },
-          { key: 'resting', label: label(t, 'status', 'resting'), value: fmt(count('resting')) },
-        ]}
-      />
+        <KpiStrip
+          items={[
+            { key: 'fish', label: t('hatcheryPage.brood.kpiFish'), value: fmt(list.reduce((s, b) => s + b.count, 0)), suffix: t('hatcheryPage.brood.records', { count: list.length }) },
+            { key: 'ready', label: label(t, 'status', 'ready'), value: fmt(count('ready')), valueTone: 'good' },
+            { key: 'conditioning', label: label(t, 'status', 'conditioning'), value: fmt(count('conditioning')) },
+            { key: 'resting', label: label(t, 'status', 'resting'), value: fmt(count('resting')) },
+          ]}
+        />
 
-      <Table
-        title={t('hatcheryPage.brood.listTitle')}
-        tabsLabel={t('hatcheryPage.brood.statusFilter')}
-        tabs={[{ value: '', label: t('hatcheryPage.all') }, ...Object.keys(STATUS_LABEL).map((k) => ({ value: k, label: label(t, 'status', k) }))]}
-        tab={status}
-        onTabChange={setStatus}
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder={t('hatcheryPage.brood.search')}
-        rows={shown}
-        rowKey={(b) => b.id}
-        onRowClick={(b) => router.push(`/hatchery/broodstock/${b.id}`)}
-        empty={rows === undefined ? t('hatcheryPage.brood.loading') : t('hatcheryPage.brood.empty')}
-        columns={[
-          {
-            key: 'code',
-            header: t('hatcheryPage.brood.tag'),
-            render: (b) => (
-              <Link href={`/hatchery/broodstock/${b.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-text hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
-                {b.code}
-              </Link>
-            ),
-            sub: (b) => (b.kind === 'group' ? t('hatcheryPage.brood.group') : b.pit_tag || null),
-          },
-          { key: 'sex', header: t('hatcheryPage.brood.sex'), render: (b) => label(t, 'sex', b.sex) },
-          { key: 'count', header: t('hatcheryPage.brood.fish'), align: 'right', render: (b) => fmt(b.count) },
-          { key: 'weight', header: t('hatcheryPage.brood.weight'), align: 'right', render: (b) => (b.weight_g ? fmt(b.weight_g) : '—') },
-          { key: 'tank', header: t('hatcheryPage.brood.tank'), render: (b) => b.unit_name || '—' },
-          {
-            key: 'spawned',
-            header: t('hatcheryPage.brood.lastSpawned'),
-            render: (b) => (b.last_spawned_on ? formatDate(b.last_spawned_on, { locale }) : <span className="text-muted">{t('hatcheryPage.brood.notSpawned')}</span>),
-          },
-          { key: 'status', header: t('hatcheryPage.brood.status'), render: (b) => <Pill tone={statusTone(b.status)}>{label(t, 'status', b.status)}</Pill> },
-        ]}
-      />
+        <Table
+          title={t('hatcheryPage.brood.listTitle')}
+          tabsLabel={t('hatcheryPage.brood.statusFilter')}
+          tabs={[{ value: '', label: t('hatcheryPage.all') }, ...Object.keys(STATUS_LABEL).map((k) => ({ value: k, label: label(t, 'status', k) }))]}
+          tab={status}
+          onTabChange={setStatus}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={t('hatcheryPage.brood.search')}
+          rows={shown}
+          rowKey={(b) => b.id}
+          onRowClick={(b) => router.push(`/hatchery/broodstock/${b.id}`)}
+          empty={rows === undefined ? t('hatcheryPage.brood.loading') : t('hatcheryPage.brood.empty')}
+          columns={[
+            {
+              key: 'code',
+              header: t('hatcheryPage.brood.tag'),
+              render: (b) => (
+                <Link href={`/hatchery/broodstock/${b.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-text hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                  {b.code}
+                </Link>
+              ),
+              sub: (b) => (b.kind === 'group' ? t('hatcheryPage.brood.group') : b.pit_tag || null),
+            },
+            { key: 'sex', header: t('hatcheryPage.brood.sex'), render: (b) => label(t, 'sex', b.sex) },
+            { key: 'count', header: t('hatcheryPage.brood.fish'), align: 'right', render: (b) => fmt(b.count) },
+            { key: 'weight', header: t('hatcheryPage.brood.weight'), align: 'right', render: (b) => (b.weight_g ? fmt(b.weight_g) : '—') },
+            { key: 'tank', header: t('hatcheryPage.brood.tank'), render: (b) => b.unit_name || '—' },
+            {
+              key: 'spawned',
+              header: t('hatcheryPage.brood.lastSpawned'),
+              render: (b) => (b.last_spawned_on ? formatDate(b.last_spawned_on, { locale }) : <span className="text-muted">{t('hatcheryPage.brood.notSpawned')}</span>),
+            },
+            { key: 'status', header: t('hatcheryPage.brood.status'), render: (b) => <Pill tone={statusTone(b.status)}>{label(t, 'status', b.status)}</Pill> },
+          ]}
+        />
 
-      {showForm && <AddBroodstockModal units={units} onClose={() => setShowForm(false)} />}
+        {showForm && <AddBroodstockModal units={units} onClose={() => setShowForm(false)} />}
+      </div>
     </Layout>
   )
 }

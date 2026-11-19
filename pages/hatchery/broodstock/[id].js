@@ -107,15 +107,17 @@ function BroodstockDetail() {
   if (b === undefined || b === null) {
     return (
       <Layout title={t('hatcheryPage.brood.title')} eyebrow={t('hatcheryPage.brood.eyebrow')}>
-        <HatcheryNav />
-        {b === undefined ? (
-          <p className="text-[14px] leading-[18px] text-muted">{t('ui.loading')}</p>
-        ) : (
-          <EmptyState
-            title={t('hatcheryPage.brood.notFound')}
-            action={<GhostButton href="/hatchery/broodstock">{t('hatcheryPage.brood.back')}</GhostButton>}
-          />
-        )}
+        <div className="flex flex-col gap-[28px]">
+          <HatcheryNav />
+          {b === undefined ? (
+            <p className="text-[14px] leading-[18px] text-muted">{t('ui.loading')}</p>
+          ) : (
+            <EmptyState
+              title={t('hatcheryPage.brood.notFound')}
+              action={<GhostButton href="/hatchery/broodstock">{t('hatcheryPage.brood.back')}</GhostButton>}
+            />
+          )}
+        </div>
       </Layout>
     )
   }
@@ -141,68 +143,70 @@ function BroodstockDetail() {
         </IfPermitted>
       }
     >
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      <KpiStrip
-        items={[
-          {
-            key: 'status',
-            label: t('hatcheryPage.brood.status'),
-            value: label(t, 'status', b.status),
-            valueTone: statusTone(b.status) === 'good' ? 'good' : statusTone(b.status) === 'warn' ? 'alert' : undefined,
-          },
-          {
-            key: 'weight',
-            label: group ? t('hatcheryPage.brood.meanWeight') : t('hatcheryPage.brood.weight'),
-            value: fmt(b.weight_g),
-            suffix: b.total_kg ? t('hatcheryPage.brood.totalKg', { kg: fmt(b.total_kg, 2) }) : undefined,
-          },
-          { key: 'spawnings', label: t('hatcheryPage.brood.spawnings'), value: fmt(b.spawn_count), suffix: b.last_spawned_on ? t('hatcheryPage.brood.lastOn', { date: d(b.last_spawned_on) }) : undefined },
-          {
-            key: 'tank',
-            label: t('hatcheryPage.brood.tank'),
-            value: b.unit_name || '—',
-            suffix: b.conditioning_started_on ? t('hatcheryPage.brood.conditioningSince', { date: d(b.conditioning_started_on) }) : undefined,
-          },
-        ]}
-      />
+        <KpiStrip
+          items={[
+            {
+              key: 'status',
+              label: t('hatcheryPage.brood.status'),
+              value: label(t, 'status', b.status),
+              valueTone: statusTone(b.status) === 'good' ? 'good' : statusTone(b.status) === 'warn' ? 'alert' : undefined,
+            },
+            {
+              key: 'weight',
+              label: group ? t('hatcheryPage.brood.meanWeight') : t('hatcheryPage.brood.weight'),
+              value: fmt(b.weight_g),
+              suffix: b.total_kg ? t('hatcheryPage.brood.totalKg', { kg: fmt(b.total_kg, 2) }) : undefined,
+            },
+            { key: 'spawnings', label: t('hatcheryPage.brood.spawnings'), value: fmt(b.spawn_count), suffix: b.last_spawned_on ? t('hatcheryPage.brood.lastOn', { date: d(b.last_spawned_on) }) : undefined },
+            {
+              key: 'tank',
+              label: t('hatcheryPage.brood.tank'),
+              value: b.unit_name || '—',
+              suffix: b.conditioning_started_on ? t('hatcheryPage.brood.conditioningSince', { date: d(b.conditioning_started_on) }) : undefined,
+            },
+          ]}
+        />
 
-      <PaperCard title={t('hatcheryPage.brood.history')} meta={b.spawnings.length}>
-        {b.spawnings.length === 0 ? (
-          <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('hatcheryPage.brood.noSpawnings')}</p>
-        ) : (
-          <ul className="flex flex-col">
-            {b.spawnings.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-3 border-t border-line py-[11px]">
-                <div className="flex min-w-0 flex-col gap-[2px]">
-                  <span className="text-[14px] leading-[18px] text-text">
-                    {d(s.spawn_date)} · {s.female_codes.join(', ')}
-                    {s.male_codes.length ? ` × ${s.male_codes.join(', ')}` : ''}
-                  </span>
-                  <span className="text-xs leading-4 text-muted">
-                    {[
-                      s.hormone ? `${s.hormone}${s.hormone_dose ? ` ${s.hormone_dose}` : ''}` : label(t, 'method', s.method),
-                      s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : null,
-                      s.larvae ? t('hatcheryPage.larvaeN', { n: fmt(s.larvae) }) : null,
-                      s.fry_per_kg_female != null ? t('hatcheryPage.fryPerKg', { n: fmt(s.fry_per_kg_female) }) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </div>
-                <Pill tone={statusTone(s.status)}>{label(t, 'status', s.status)}</Pill>
-              </li>
-            ))}
-          </ul>
-        )}
-      </PaperCard>
-      {b.notes && (
-        <PaperCard title={t('common.notes')}>
-          <p className="text-[14px] leading-[20px] text-muted">{b.notes}</p>
+        <PaperCard title={t('hatcheryPage.brood.history')} meta={b.spawnings.length}>
+          {b.spawnings.length === 0 ? (
+            <p className="border-t border-line py-[11px] text-[13px] leading-[18px] text-muted">{t('hatcheryPage.brood.noSpawnings')}</p>
+          ) : (
+            <ul className="flex flex-col">
+              {b.spawnings.map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-3 border-t border-line py-[11px]">
+                  <div className="flex min-w-0 flex-col gap-[2px]">
+                    <span className="text-[14px] leading-[18px] text-text">
+                      {d(s.spawn_date)} · {s.female_codes.join(', ')}
+                      {s.male_codes.length ? ` × ${s.male_codes.join(', ')}` : ''}
+                    </span>
+                    <span className="text-xs leading-4 text-muted">
+                      {[
+                        s.hormone ? `${s.hormone}${s.hormone_dose ? ` ${s.hormone_dose}` : ''}` : label(t, 'method', s.method),
+                        s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : null,
+                        s.larvae ? t('hatcheryPage.larvaeN', { n: fmt(s.larvae) }) : null,
+                        s.fry_per_kg_female != null ? t('hatcheryPage.fryPerKg', { n: fmt(s.fry_per_kg_female) }) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </div>
+                  <Pill tone={statusTone(s.status)}>{label(t, 'status', s.status)}</Pill>
+                </li>
+              ))}
+            </ul>
+          )}
         </PaperCard>
-      )}
+        {b.notes && (
+          <PaperCard title={t('common.notes')}>
+            <p className="text-[14px] leading-[20px] text-muted">{b.notes}</p>
+          </PaperCard>
+        )}
 
-      {editing && <EditModal b={b} units={units} onClose={() => setEditing(false)} />}
+        {editing && <EditModal b={b} units={units} onClose={() => setEditing(false)} />}
+      </div>
     </Layout>
   )
 }

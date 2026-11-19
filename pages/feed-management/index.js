@@ -318,9 +318,7 @@ const FeedManagement = () => {
               {
                 label: t('ops.feed.lowStock'),
                 value: statsLoading ? '—' : t('ops.feed.items', { count: overview.reorder.length }),
-                valueTone: overview.reorder.length ? 'alert' : undefined,
                 suffix: overview.reorder.length ? t('ops.feed.reorderNow') : undefined,
-                suffixTone: 'alert',
               },
             ]}
           />
@@ -350,7 +348,7 @@ const FeedManagement = () => {
                       tone={row.tone === 'good' ? 'brand' : row.tone}
                       label={t('ops.feed.coverOf', { name: row.name })}
                     />
-                    <span className={`w-[70px] shrink-0 text-right text-sm leading-[18px] ${row.tone === 'alert' ? 'text-alert' : 'text-muted'}`}>
+                    <span className={`w-[70px] shrink-0 text-right text-[13px] leading-4 ${row.tone === 'alert' ? 'text-alert' : 'text-muted'}`}>
                       {coverText(row.coverDays)}
                     </span>
                     <span className="w-[70px] shrink-0 text-right text-sm font-medium leading-[18px] tabular-nums text-text">

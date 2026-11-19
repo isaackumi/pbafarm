@@ -111,205 +111,209 @@ function SpawningWizard() {
   if (!permLoading && !can('hatchery.spawning.record')) {
     return (
       <Layout title={t('hatcheryPage.spawn.title')} eyebrow={t('hatcheryPage.spawn.eyebrow')}>
-        <HatcheryNav />
-        <EmptyState
-          title={t('hatcheryPage.spawn.noAccess')}
-          description={t('hatcheryPage.spawn.noAccessHint')}
-          action={<GhostButton href="/hatchery">{t('hatcheryPage.spawn.toBoard')}</GhostButton>}
-        />
+        <div className="flex flex-col gap-[28px]">
+          <HatcheryNav />
+          <EmptyState
+            title={t('hatcheryPage.spawn.noAccess')}
+            description={t('hatcheryPage.spawn.noAccessHint')}
+            action={<GhostButton href="/hatchery">{t('hatcheryPage.spawn.toBoard')}</GhostButton>}
+          />
+        </div>
       </Layout>
     )
   }
 
   return (
     <Layout title={t('hatcheryPage.spawn.title')} eyebrow={t('hatcheryPage.spawn.eyebrow')}>
-      <HatcheryNav />
+      <div className="flex flex-col gap-[28px]">
+        <HatcheryNav />
 
-      <ol className="flex flex-wrap gap-2" aria-label={t('hatcheryPage.spawn.steps')}>
-        {STEPS.map((s, i) => (
-          <li key={s}>
-            <button
-              type="button"
-              onClick={() => i < step && setStep(i)}
-              aria-current={i === step ? 'step' : undefined}
-              disabled={i > step}
-              className={`inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-                i === step
-                  ? 'border-pearl-cyan font-semibold text-text'
-                  : i < step
-                    ? 'border-line-strong text-text'
-                    : 'border-line text-faint'
-              }`}
-            >
-              <span className="font-mono tabular-nums">{i + 1}</span> {t(`hatcheryPage.spawn.step.${s}`)}
-            </button>
-          </li>
-        ))}
-      </ol>
+        <ol className="flex flex-wrap gap-2" aria-label={t('hatcheryPage.spawn.steps')}>
+          {STEPS.map((s, i) => (
+            <li key={s}>
+              <button
+                type="button"
+                onClick={() => i < step && setStep(i)}
+                aria-current={i === step ? 'step' : undefined}
+                disabled={i > step}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+                  i === step
+                    ? 'border-pearl-cyan font-semibold text-text'
+                    : i < step
+                      ? 'border-line-strong text-text'
+                      : 'border-line text-faint'
+                }`}
+              >
+                <span className="font-mono tabular-nums">{i + 1}</span> {t(`hatcheryPage.spawn.step.${s}`)}
+              </button>
+            </li>
+          ))}
+        </ol>
 
-      <div className="max-w-4xl">
-        {step === 0 && (
-          <PaperCard title={t('hatcheryPage.spawn.step.broodstock')} meta={t('hatcheryPage.spawn.broodHint')}>
-            {broodstock === undefined ? (
-              <p className="text-[14px] leading-[18px] text-muted">{t('ui.loading')}</p>
-            ) : available.length === 0 ? (
-              <EmptyState
-                title={t('hatcheryPage.spawn.noBrood')}
-                description={t('hatcheryPage.spawn.noBroodHint')}
-                action={<GhostButton href="/hatchery/broodstock">{t('hatcheryPage.brood.add')}</GhostButton>}
-              />
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2">
-                {[
-                  ['females', females, setFemales, (b) => b.sex !== 'male', males],
-                  ['males', males, setMales, (b) => b.sex !== 'female', females],
-                ].map(([key, list, setList, fits, other]) => (
-                  <fieldset key={key}>
-                    <legend className="mb-2 text-[13px] font-semibold leading-4 text-text">
-                      {t(`hatcheryPage.spawn.${key}`)}{' '}
-                      <span className="font-normal text-muted">{t('hatcheryPage.spawn.chosen', { n: list.length })}</span>
-                    </legend>
-                    <ul className="flex max-h-80 flex-col overflow-y-auto">
-                      {available.filter(fits).map((b) => (
-                        <li key={b.id} className="border-t border-line">
-                          <label className="flex min-h-11 cursor-pointer items-center gap-3 px-1 hover:bg-surface-2">
-                            <input
-                              type="checkbox"
-                              className="size-4 accent-[var(--cyan)]"
-                              checked={list.includes(b.id)}
-                              disabled={other.includes(b.id)}
-                              onChange={() => toggle(list, setList, b.id)}
-                            />
-                            <span className="font-mono text-[13px] text-text">{b.code}</span>
-                            <span className="text-xs leading-4 text-muted">
-                              {[
-                                label(t, 'sex', b.sex),
-                                b.kind === 'group' ? t('hatcheryPage.fishN', { n: fmt(b.count) }) : null,
-                                b.weight_g ? `${fmt(b.weight_g)} g` : null,
-                                label(t, 'status', b.status),
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </fieldset>
-                ))}
-              </div>
-            )}
-          </PaperCard>
-        )}
-
-        {step === 1 && (
-          <PaperCard title={t('hatcheryPage.spawn.step.spawning')}>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <Field label={t('hatcheryPage.date')} htmlFor="s-date" required>
-                <Input id="s-date" type="date" value={form.spawnDate} onChange={set('spawnDate')} />
-              </Field>
-              <Field label={t('hatcheryPage.spawn.method')} htmlFor="s-method">
-                <Select id="s-method" value={form.method} onChange={set('method')}>
-                  {Object.keys(METHOD_LABEL).map((k) => (
-                    <option key={k} value={k}>{label(t, 'method', k)}</option>
+        <div className="max-w-4xl">
+          {step === 0 && (
+            <PaperCard title={t('hatcheryPage.spawn.step.broodstock')} meta={t('hatcheryPage.spawn.broodHint')}>
+              {broodstock === undefined ? (
+                <p className="text-[14px] leading-[18px] text-muted">{t('ui.loading')}</p>
+              ) : available.length === 0 ? (
+                <EmptyState
+                  title={t('hatcheryPage.spawn.noBrood')}
+                  description={t('hatcheryPage.spawn.noBroodHint')}
+                  action={<GhostButton href="/hatchery/broodstock">{t('hatcheryPage.brood.add')}</GhostButton>}
+                />
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {[
+                    ['females', females, setFemales, (b) => b.sex !== 'male', males],
+                    ['males', males, setMales, (b) => b.sex !== 'female', females],
+                  ].map(([key, list, setList, fits, other]) => (
+                    <fieldset key={key}>
+                      <legend className="mb-2 text-[13px] font-semibold leading-4 text-text">
+                        {t(`hatcheryPage.spawn.${key}`)}{' '}
+                        <span className="font-normal text-muted">{t('hatcheryPage.spawn.chosen', { n: list.length })}</span>
+                      </legend>
+                      <ul className="flex max-h-80 flex-col overflow-y-auto">
+                        {available.filter(fits).map((b) => (
+                          <li key={b.id} className="border-t border-line">
+                            <label className="flex min-h-11 cursor-pointer items-center gap-3 px-1 hover:bg-surface-2">
+                              <input
+                                type="checkbox"
+                                className="size-4 accent-[var(--cyan)]"
+                                checked={list.includes(b.id)}
+                                disabled={other.includes(b.id)}
+                                onChange={() => toggle(list, setList, b.id)}
+                              />
+                              <span className="font-mono text-[13px] text-text">{b.code}</span>
+                              <span className="text-xs leading-4 text-muted">
+                                {[
+                                  label(t, 'sex', b.sex),
+                                  b.kind === 'group' ? t('hatcheryPage.fishN', { n: fmt(b.count) }) : null,
+                                  b.weight_g ? `${fmt(b.weight_g)} g` : null,
+                                  label(t, 'status', b.status),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    </fieldset>
                   ))}
-                </Select>
-              </Field>
-              {form.method !== 'natural' && (
-                <>
-                  <Field label={t('hatcheryPage.spawn.hormone')} htmlFor="s-h" required={form.method === 'induced'} hint={t('hatcheryPage.spawn.hormoneHint')}>
-                    <Input id="s-h" value={form.hormone} onChange={set('hormone')} />
-                  </Field>
-                  <Field label={t('hatcheryPage.spawn.dose')} htmlFor="s-d" hint={t('hatcheryPage.spawn.doseHint')}>
-                    <Input id="s-d" value={form.hormoneDose} onChange={set('hormoneDose')} />
-                  </Field>
-                </>
-              )}
-              <Field label={t('hatcheryPage.spawn.tank')} htmlFor="s-u">
-                <Select id="s-u" value={form.unitId} onChange={set('unitId')}>
-                  <option value="">{t('hatcheryPage.spawn.notRecorded')}</option>
-                  {(units || []).map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label={t('common.notes')} htmlFor="s-n" className="md:col-span-2">
-                <Textarea id="s-n" rows={2} value={form.notes} onChange={set('notes')} />
-              </Field>
-            </div>
-          </PaperCard>
-        )}
-
-        {step === 2 && (
-          <PaperCard title={t('hatcheryPage.spawn.eggCollection')} meta={t('hatcheryPage.spawn.eggHint')}>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-              <Field label={t('hatcheryPage.kpi.eggsCollected')} htmlFor="s-e">
-                <Input id="s-e" type="number" inputMode="numeric" value={form.eggsCollected} onChange={set('eggsCollected')} className="tabular-nums" />
-              </Field>
-              <Field label={t('hatcheryPage.spawn.eggWeight')} htmlFor="s-ew">
-                <Input id="s-ew" type="number" inputMode="decimal" value={form.eggWeightG} onChange={set('eggWeightG')} className="tabular-nums" />
-              </Field>
-              <Field label={t('hatcheryPage.spawn.fertilization')} htmlFor="s-f">
-                <Input id="s-f" type="number" inputMode="decimal" value={form.fertilizationPct} onChange={set('fertilizationPct')} className="tabular-nums" />
-              </Field>
-            </div>
-          </PaperCard>
-        )}
-
-        {step === 3 && (
-          <PaperCard
-            title={t('hatcheryPage.spawn.step.incubation')}
-            meta={
-              num(form.eggsCollected)
-                ? t('hatcheryPage.spawn.placed', { placed: fmt(eggsInLots), total: fmt(num(form.eggsCollected)) })
-                : t('hatcheryPage.spawn.incubationHint')
-            }
-          >
-            <div className="flex flex-col gap-4">
-              {lots.map((l, i) => (
-                <div key={i} className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3">
-                  <Field label={t('hatcheryPage.spawn.incubator')} htmlFor={`l-u-${i}`}>
-                    <Select id={`l-u-${i}`} value={l.unitId} onChange={setLot(i, 'unitId')}>
-                      <option value="">{t('hatcheryPage.choose')}</option>
-                      {incubators.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label={t('hatcheryPage.spawn.eggs')} htmlFor={`l-e-${i}`}>
-                    <Input id={`l-e-${i}`} type="number" inputMode="numeric" value={l.eggs} onChange={setLot(i, 'eggs')} className="tabular-nums" />
-                  </Field>
-                  <Field label={t('hatcheryPage.spawn.waterC')} htmlFor={`l-t-${i}`}>
-                    <Input id={`l-t-${i}`} type="number" inputMode="decimal" value={l.temperatureC} onChange={setLot(i, 'temperatureC')} />
-                  </Field>
-                </div>
-              ))}
-              {lots.length < 10 && (
-                <div>
-                  <GhostButton
-                    size="sm"
-                    icon={Plus}
-                    onClick={() => setLots((p) => [...p, { unitId: '', eggs: '', temperatureC: '' }])}
-                  >
-                    {t('hatcheryPage.spawn.addIncubator')}
-                  </GhostButton>
                 </div>
               )}
-            </div>
-          </PaperCard>
-        )}
-
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          {step > 0 && <GhostButton onClick={() => setStep(step - 1)}>{t('hatcheryPage.spawn.back')}</GhostButton>}
-          {step < STEPS.length - 1 ? (
-            <GradientButton variant="solid" onClick={() => setStep(step + 1)} disabled={!canNext}>
-              {t('hatcheryPage.spawn.next')}
-            </GradientButton>
-          ) : (
-            <GradientButton variant="solid" onClick={submit} disabled={saving || !females.length}>
-              {saving ? t('common.saving') : t('hatcheryPage.spawn.save')}
-            </GradientButton>
+            </PaperCard>
           )}
+
+          {step === 1 && (
+            <PaperCard title={t('hatcheryPage.spawn.step.spawning')}>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <Field label={t('hatcheryPage.date')} htmlFor="s-date" required>
+                  <Input id="s-date" type="date" value={form.spawnDate} onChange={set('spawnDate')} />
+                </Field>
+                <Field label={t('hatcheryPage.spawn.method')} htmlFor="s-method">
+                  <Select id="s-method" value={form.method} onChange={set('method')}>
+                    {Object.keys(METHOD_LABEL).map((k) => (
+                      <option key={k} value={k}>{label(t, 'method', k)}</option>
+                    ))}
+                  </Select>
+                </Field>
+                {form.method !== 'natural' && (
+                  <>
+                    <Field label={t('hatcheryPage.spawn.hormone')} htmlFor="s-h" required={form.method === 'induced'} hint={t('hatcheryPage.spawn.hormoneHint')}>
+                      <Input id="s-h" value={form.hormone} onChange={set('hormone')} />
+                    </Field>
+                    <Field label={t('hatcheryPage.spawn.dose')} htmlFor="s-d" hint={t('hatcheryPage.spawn.doseHint')}>
+                      <Input id="s-d" value={form.hormoneDose} onChange={set('hormoneDose')} />
+                    </Field>
+                  </>
+                )}
+                <Field label={t('hatcheryPage.spawn.tank')} htmlFor="s-u">
+                  <Select id="s-u" value={form.unitId} onChange={set('unitId')}>
+                    <option value="">{t('hatcheryPage.spawn.notRecorded')}</option>
+                    {(units || []).map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={t('common.notes')} htmlFor="s-n" className="md:col-span-2">
+                  <Textarea id="s-n" rows={2} value={form.notes} onChange={set('notes')} />
+                </Field>
+              </div>
+            </PaperCard>
+          )}
+
+          {step === 2 && (
+            <PaperCard title={t('hatcheryPage.spawn.eggCollection')} meta={t('hatcheryPage.spawn.eggHint')}>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <Field label={t('hatcheryPage.kpi.eggsCollected')} htmlFor="s-e">
+                  <Input id="s-e" type="number" inputMode="numeric" value={form.eggsCollected} onChange={set('eggsCollected')} className="tabular-nums" />
+                </Field>
+                <Field label={t('hatcheryPage.spawn.eggWeight')} htmlFor="s-ew">
+                  <Input id="s-ew" type="number" inputMode="decimal" value={form.eggWeightG} onChange={set('eggWeightG')} className="tabular-nums" />
+                </Field>
+                <Field label={t('hatcheryPage.spawn.fertilization')} htmlFor="s-f">
+                  <Input id="s-f" type="number" inputMode="decimal" value={form.fertilizationPct} onChange={set('fertilizationPct')} className="tabular-nums" />
+                </Field>
+              </div>
+            </PaperCard>
+          )}
+
+          {step === 3 && (
+            <PaperCard
+              title={t('hatcheryPage.spawn.step.incubation')}
+              meta={
+                num(form.eggsCollected)
+                  ? t('hatcheryPage.spawn.placed', { placed: fmt(eggsInLots), total: fmt(num(form.eggsCollected)) })
+                  : t('hatcheryPage.spawn.incubationHint')
+              }
+            >
+              <div className="flex flex-col gap-4">
+                {lots.map((l, i) => (
+                  <div key={i} className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3">
+                    <Field label={t('hatcheryPage.spawn.incubator')} htmlFor={`l-u-${i}`}>
+                      <Select id={`l-u-${i}`} value={l.unitId} onChange={setLot(i, 'unitId')}>
+                        <option value="">{t('hatcheryPage.choose')}</option>
+                        {incubators.map((u) => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label={t('hatcheryPage.spawn.eggs')} htmlFor={`l-e-${i}`}>
+                      <Input id={`l-e-${i}`} type="number" inputMode="numeric" value={l.eggs} onChange={setLot(i, 'eggs')} className="tabular-nums" />
+                    </Field>
+                    <Field label={t('hatcheryPage.spawn.waterC')} htmlFor={`l-t-${i}`}>
+                      <Input id={`l-t-${i}`} type="number" inputMode="decimal" value={l.temperatureC} onChange={setLot(i, 'temperatureC')} />
+                    </Field>
+                  </div>
+                ))}
+                {lots.length < 10 && (
+                  <div>
+                    <GhostButton
+                      size="sm"
+                      icon={Plus}
+                      onClick={() => setLots((p) => [...p, { unitId: '', eggs: '', temperatureC: '' }])}
+                    >
+                      {t('hatcheryPage.spawn.addIncubator')}
+                    </GhostButton>
+                  </div>
+                )}
+              </div>
+            </PaperCard>
+          )}
+
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            {step > 0 && <GhostButton onClick={() => setStep(step - 1)}>{t('hatcheryPage.spawn.back')}</GhostButton>}
+            {step < STEPS.length - 1 ? (
+              <GradientButton variant="solid" onClick={() => setStep(step + 1)} disabled={!canNext}>
+                {t('hatcheryPage.spawn.next')}
+              </GradientButton>
+            ) : (
+              <GradientButton variant="solid" onClick={submit} disabled={saving || !females.length}>
+                {saving ? t('common.saving') : t('hatcheryPage.spawn.save')}
+              </GradientButton>
+            )}
+          </div>
         </div>
       </div>
     </Layout>

@@ -121,7 +121,7 @@ function SiteMap() {
         {proj && (
           <ul className="flex flex-wrap items-center gap-[18px]" aria-label={t('mapUi.legendLabel')}>
             {legend.map((l) => (
-              <li key={l.tone} className="flex items-center gap-2 text-sm text-muted">
+              <li key={l.tone} className="flex items-center gap-2 text-[13px] leading-4 text-muted">
                 <span
                   aria-hidden
                   className="size-2 shrink-0 rounded-pill"
