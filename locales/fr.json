@@ -3684,6 +3684,163 @@
       "list": "Sites",
       "empty": "Aucun site. Créez-en un pour commencer.",
       "useInHeader": "Utiliser dans l'en-tête"
+    },
+    "company": {
+      "tab": {
+        "profile": "Profil",
+        "branding": "Image de marque et thème",
+        "farm": "Règles d'élevage",
+        "stocking": "Règles de mise en charge",
+        "feed": "Aliment et stock",
+        "data": "Données et confidentialité"
+      },
+      "toast": {
+        "saved": "Brouillon enregistré",
+        "saveFailed": "Impossible d'enregistrer le brouillon",
+        "published": "Paramètres publiés, actifs sur toute la ferme",
+        "publishFailed": "Échec de la publication",
+        "logoUploaded": "Logo importé (publiez pour le conserver)",
+        "logoFailed": "Échec de l'import du logo",
+        "logoRemoved": "Logo supprimé",
+        "logoRemoveFailed": "Impossible de supprimer le logo"
+      },
+      "noCompany": "Aucune entreprise n'est liée à votre compte.",
+      "noCompanyHelp": "Enregistrez une entreprise, ou demandez à un super admin d'approuver votre inscription et de vous ajouter comme admin. Les super admins de la plateforme sans entreprise gèrent les inscriptions depuis Admin.",
+      "register": "Enregistrer une entreprise",
+      "registrations": "Inscriptions des entreprises",
+      "title": "Paramètres de l'entreprise",
+      "rs": {
+        "stockApproval": "La mise en charge requiert une approbation",
+        "stockAuto": "Mise en charge approuvée automatiquement",
+        "topupApproval": "Les compléments requièrent une approbation",
+        "topupAuto": "Compléments approuvés automatiquement",
+        "transferApproval": "Les transferts de poissons requièrent une approbation",
+        "transferAuto": "Transferts de poissons approuvés automatiquement",
+        "capacityOn": "Capacité des cages appliquée",
+        "capacityOff": "Capacité des cages non appliquée",
+        "density": "Densité max {value} poissons/m³",
+        "harvest": "Récolte cible {abw} g · DOC {min}–{max} j",
+        "mortality": "Alertes mortalité {daily} %/jour · {cum} % cumulée"
+      },
+      "description": "Modifiez l'image de marque et les règles d'exploitation. Prévisualisez, enregistrez un brouillon, puis publiez pour les appliquer.",
+      "discard": "Annuler les modifications",
+      "saveDraft": "Enregistrer le brouillon",
+      "publish": "Publier",
+      "publishing": "Publication…",
+      "unpublished": "Modifications non publiées. Enregistrez un brouillon ou publiez pour les appliquer.",
+      "related": {
+        "messaging": "Messagerie (SMS, WhatsApp, e-mail)"
+      },
+      "preview": "Aperçu",
+      "farmName": "Nom de la ferme",
+      "primaryAction": "Action principale",
+      "mode": "Mode : {mode}",
+      "profile": {
+        "title": "Profil de l'entreprise"
+      },
+      "farm": {
+        "sub": "Sert aux conseils de récolte, contrôles de densité et alertes de mortalité."
+      },
+      "stocking": {
+        "sub": "Appliquées lors des mises en charge et compléments."
+      },
+      "feed": {
+        "sub": "Valeurs par défaut et règles des lots, achats et alertes de stock bas."
+      },
+      "cb": {
+        "ai": "Activer l'assistant IA pour cette entreprise",
+        "stock": "Exiger une approbation pour les nouvelles mises en charge",
+        "topup": "Exiger une approbation pour les compléments",
+        "transfer": "Exiger une approbation pour les transferts de poissons",
+        "differentApprover": "L'approbateur doit être différent du demandeur",
+        "capacity": "Appliquer la capacité des cages",
+        "trackLots": "Suivre les lots par lot / emplacement",
+        "batch": "Exiger un numéro de lot sur les achats",
+        "negative": "Autoriser le stock négatif (dérogation admin journalisée)"
+      },
+      "f": {
+        "name": "Nom de l'entreprise",
+        "abbr": "Abréviation",
+        "phone": "Téléphone",
+        "email": "E-mail de contact",
+        "address": "Adresse",
+        "logo": "Logo",
+        "displayName": "Nom affiché",
+        "accent": "Couleur d'accent",
+        "theme": "Mode du thème",
+        "minInitial": "PMI initial min (g)",
+        "maxInitial": "PMI initial max (g)",
+        "minTopup": "PMI complément min (g)",
+        "maxTopup": "PMI complément max (g)",
+        "statuses": "Statuts de cage autorisés pour la mise en charge",
+        "bag": "Taille de sac par défaut (kg)",
+        "lowStock": "Multiplicateur de stock bas",
+        "store": "Magasin par défaut"
+      },
+      "h": {
+        "displayName": "Affiché dans la barre latérale si défini",
+        "statuses": "Séparés par des virgules : empty, fallow, harvested",
+        "store": "Utilisé pour les nouveaux lots achetés"
+      },
+      "rule": {
+        "targetHarvestAbwG": "PMI cible à la récolte (g)",
+        "harvestDocMinDays": "DOC récolte min (jours)",
+        "harvestDocMaxDays": "DOC récolte max (jours)",
+        "maxDensityFishPerM3": "Densité max en cage (poissons/m³ de filet)",
+        "maxDensityFishPerM2": "Densité max en étang (poissons/m² de surface)",
+        "maxDensityTankFishPerM3": "Densité max bac et RAS (poissons/m³, 0 = comme les cages)",
+        "densityWarnPct": "Alerte de densité à % de la limite",
+        "dailyMortalityAlertPct": "Alerte mortalité journalière %",
+        "cumulativeMortalityAlertPct": "Alerte mortalité cumulée %",
+        "targetFcr": "IC cible",
+        "maxFcrAlert": "Alerte IC max"
+      },
+      "theme": {
+        "light": "Clair",
+        "dark": "Sombre",
+        "system": "Système (l'utilisateur peut basculer)"
+      },
+      "a": {
+        "pick": "Choisir la couleur d'accent",
+        "hex": "Code hex de la couleur d'accent",
+        "logo": "Logo de l'entreprise"
+      },
+      "uploading": "Import…",
+      "upload": "Importer",
+      "remove": "Supprimer"
+    },
+    "privacy": {
+      "title": "Données et confidentialité",
+      "subtitle": "Téléchargez tout ce que cette organisation a enregistré, ou demandez sa suppression.",
+      "exportTitle": "Exporter toutes les données",
+      "exportHelper": "Un zip avec un fichier JSON et un CSV par table. Mots de passe, clés et jetons exclus. Les liens restent valides 7 jours.",
+      "prepare": "Préparer l'export",
+      "exportsList": "Exports",
+      "truncated": "tronqué : {tables}",
+      "download": "Télécharger",
+      "deleteTitle": "Supprimer cette organisation",
+      "graceEnds": "Les données seront supprimées après le {date}",
+      "withdraw": "Retirer la demande",
+      "reason": "Motif (facultatif)",
+      "requestDeletion": "Demander la suppression",
+      "keep": "Conserver l'organisation",
+      "deleteHelper": "L'équipe de la plateforme examine la demande. Une fois approuvée, plus personne ne peut se connecter à cette organisation et, après 30 jours, ses données d'élevage sont supprimées. Le journal d'audit est conservé un an de plus, puis supprimé. Exportez vos données d'abord.",
+      "ask": "Demander la suppression de l'organisation",
+      "exportStatus": {
+        "queued": "En file",
+        "running": "En préparation",
+        "ready": "Prêt",
+        "failed": "Échec",
+        "expired": "Expiré"
+      },
+      "requestStatus": {
+        "requested": "En attente de la plateforme",
+        "approved": "Approuvée",
+        "in_progress": "Suppression en cours",
+        "completed": "Supprimée",
+        "rejected": "Refusée",
+        "cancelled": "Annulée"
+      }
     }
   },
   "country": {

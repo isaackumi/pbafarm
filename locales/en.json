@@ -3684,6 +3684,163 @@
       "list": "Sites",
       "empty": "No sites yet. Create one to get started.",
       "useInHeader": "Use in header"
+    },
+    "company": {
+      "tab": {
+        "profile": "Profile",
+        "branding": "Branding & theme",
+        "farm": "Farm rules",
+        "stocking": "Stocking rules",
+        "feed": "Feed & inventory",
+        "data": "Data and privacy"
+      },
+      "toast": {
+        "saved": "Draft saved",
+        "saveFailed": "Failed to save draft",
+        "published": "Settings published — now live across the farm",
+        "publishFailed": "Publish failed",
+        "logoUploaded": "Logo uploaded (publish to keep with draft sync)",
+        "logoFailed": "Logo upload failed",
+        "logoRemoved": "Logo removed",
+        "logoRemoveFailed": "Failed to remove logo"
+      },
+      "noCompany": "No company is linked to your account.",
+      "noCompanyHelp": "Register a company, or ask a super admin to approve your registration and attach you as admin. Platform super admins without a tenant company manage registrations from Admin instead.",
+      "register": "Register company",
+      "registrations": "Company registrations",
+      "title": "Company settings",
+      "rs": {
+        "stockApproval": "Stocking requires approval",
+        "stockAuto": "Stocking auto-approves",
+        "topupApproval": "Top-ups require approval",
+        "topupAuto": "Top-ups auto-approve",
+        "transferApproval": "Fish transfers require approval",
+        "transferAuto": "Fish transfers auto-approve",
+        "capacityOn": "Cage capacity enforced",
+        "capacityOff": "Cage capacity not enforced",
+        "density": "Max density {value} fish/m³",
+        "harvest": "Harvest target {abw}g · DOC {min}–{max}d",
+        "mortality": "Mortality alerts {daily}%/day · {cum}% cumulative"
+      },
+      "description": "Edit farm branding and operating rules. Preview changes, save a draft, then publish to make them live.",
+      "discard": "Discard",
+      "saveDraft": "Save draft",
+      "publish": "Publish",
+      "publishing": "Publishing…",
+      "unpublished": "Unpublished changes. Save a draft or publish to apply.",
+      "related": {
+        "messaging": "Messaging (SMS, WhatsApp, email)"
+      },
+      "preview": "Preview",
+      "farmName": "Farm name",
+      "primaryAction": "Primary action",
+      "mode": "Mode: {mode}",
+      "profile": {
+        "title": "Company profile"
+      },
+      "farm": {
+        "sub": "Used for harvest guidance, density checks, and mortality alerts."
+      },
+      "stocking": {
+        "sub": "Enforced when creating stockings and top-ups."
+      },
+      "feed": {
+        "sub": "Defaults and rules for stock lots, purchases, and low-stock alerts."
+      },
+      "cb": {
+        "ai": "Enable AI assistant for this company",
+        "stock": "Require approval for new stockings",
+        "topup": "Require approval for top-ups",
+        "transfer": "Require approval for fish transfers",
+        "differentApprover": "Approver must be someone other than the requester",
+        "capacity": "Enforce cage capacity",
+        "trackLots": "Track batch / location lots",
+        "batch": "Require batch number on purchases",
+        "negative": "Allow negative stock (admin override still logged)"
+      },
+      "f": {
+        "name": "Company name",
+        "abbr": "Abbreviation",
+        "phone": "Phone",
+        "email": "Contact email",
+        "address": "Address",
+        "logo": "Logo",
+        "displayName": "Display name",
+        "accent": "Accent color",
+        "theme": "Theme mode",
+        "minInitial": "Min initial ABW (g)",
+        "maxInitial": "Max initial ABW (g)",
+        "minTopup": "Min top-up ABW (g)",
+        "maxTopup": "Max top-up ABW (g)",
+        "statuses": "Allowed cage statuses for stocking",
+        "bag": "Default bag size (kg)",
+        "lowStock": "Low-stock multiplier",
+        "store": "Default store location"
+      },
+      "h": {
+        "displayName": "Shown in sidebar if set",
+        "statuses": "Comma-separated: empty, fallow, harvested",
+        "store": "Used for new purchase lots"
+      },
+      "rule": {
+        "targetHarvestAbwG": "Target harvest ABW (g)",
+        "harvestDocMinDays": "Harvest DOC min (days)",
+        "harvestDocMaxDays": "Harvest DOC max (days)",
+        "maxDensityFishPerM3": "Max cage density (fish/m³ of net)",
+        "maxDensityFishPerM2": "Max pond density (fish/m² of surface)",
+        "maxDensityTankFishPerM3": "Max tank and RAS density (fish/m³, 0 = same as cages)",
+        "densityWarnPct": "Density warning at % of limit",
+        "dailyMortalityAlertPct": "Daily mortality alert %",
+        "cumulativeMortalityAlertPct": "Cumulative mortality alert %",
+        "targetFcr": "Target FCR",
+        "maxFcrAlert": "Max FCR alert"
+      },
+      "theme": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System (user can toggle)"
+      },
+      "a": {
+        "pick": "Pick accent color",
+        "hex": "Accent color hex",
+        "logo": "Company logo"
+      },
+      "uploading": "Uploading…",
+      "upload": "Upload",
+      "remove": "Remove"
+    },
+    "privacy": {
+      "title": "Data and privacy",
+      "subtitle": "Download everything this organization has recorded, or ask for it to be deleted.",
+      "exportTitle": "Export all data",
+      "exportHelper": "A zip with a JSON and a CSV file per table. Passwords, keys and tokens are left out. Links work for 7 days.",
+      "prepare": "Prepare export",
+      "exportsList": "Exports",
+      "truncated": "cut short: {tables}",
+      "download": "Download",
+      "deleteTitle": "Delete this organization",
+      "graceEnds": "Data will be deleted after {date}",
+      "withdraw": "Withdraw request",
+      "reason": "Reason (optional)",
+      "requestDeletion": "Request deletion",
+      "keep": "Keep the organization",
+      "deleteHelper": "The platform team reviews the request. Once approved, nobody can sign in to this organization, and after 30 days its farm records are deleted. The audit log is kept for one more year, then deleted too. Export your data first.",
+      "ask": "Ask to delete the organization",
+      "exportStatus": {
+        "queued": "Queued",
+        "running": "Preparing",
+        "ready": "Ready",
+        "failed": "Failed",
+        "expired": "Expired"
+      },
+      "requestStatus": {
+        "requested": "Waiting for platform review",
+        "approved": "Approved",
+        "in_progress": "Deleting",
+        "completed": "Deleted",
+        "rejected": "Declined",
+        "cancelled": "Cancelled"
+      }
     }
   },
   "country": {
