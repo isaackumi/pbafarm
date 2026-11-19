@@ -3,13 +3,27 @@ import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, StatCard, Field, Input, Select, EmptyState, LoadingState, Modal } from '../components/ui'
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  EmptyState,
+  LoadingState,
+  Modal,
+  GradientButton,
+  GhostButton,
+  KpiStrip,
+  Table,
+} from '../components/ui'
+import { HeaderAction } from '../components/ui/HeaderAction'
+import { formatNumber } from '../lib/format'
+import { useT } from '../lib/i18n/context'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { errorMessage } from '../lib/errorMessage'
 import { biweeklyPatchArgs } from '../lib/biweeklyArgs'
 import {
-  Search,
   Eye,
   Download,
   Plus,
@@ -22,21 +36,21 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePermission } from '../hooks/usePermission'
 
 const ICON_BTN =
-  'inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-foam focus:outline-none focus-visible:ring-2 focus-visible:ring-lake'
+  'inline-flex items-center justify-center size-9 rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+const DAY_MS = 24 * 60 * 60 * 1000
 
 const PAGE_SIZE = 20
 
 export default function BiweeklyRecords() {
   return (
     <ProtectedRoute>
-      <Layout title="Bi-weekly records">
-        <BiweeklyRecordsBody />
-      </Layout>
+      <BiweeklyRecordsBody />
     </ProtectedRoute>
   )
 }
 
 function BiweeklyRecordsBody() {
+  const t = useT()
   const { showToast } = useToast()
   const { hasRole } = useAuth()
   const isAdmin = usePermission('production.records.delete')
@@ -86,6 +100,47 @@ function BiweeklyRecordsBody() {
       activeCages: new Set(records.map((record) => record.cage_id)).size,
     }
   }, [records])
+
+  // Growth from consecutive samplings of each cage (Paper 05: Gain, ADG, ABW by cage).
+  const growth = useMemo(() => {
+    const byCage = new Map()
+    for (const r of allRecords || []) {
+      if (!byCage.has(r.cage_id)) byCage.set(r.cage_id, [])
+      byCage.get(r.cage_id).push(r)
+    }
+    const byId = new Map()
+    const latest = []
+    const adgs = []
+    const cutoff = Date.now() - 14 * DAY_MS
+    let sampled14 = 0
+    for (const [cageId, list] of byCage) {
+      list.sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      for (let i = 1; i < list.length; i++) {
+        const prev = list[i - 1]
+        const cur = list[i]
+        const days = (new Date(cur.date) - new Date(prev.date)) / DAY_MS
+        const gain = (Number(cur.average_body_weight) || 0) - (Number(prev.average_body_weight) || 0)
+        byId.set(cur.id || cur._id, { gain, adg: days > 0 ? gain / days : null })
+      }
+      const last = list[list.length - 1]
+      const lastGrowth = byId.get(last.id || last._id)
+      if (lastGrowth?.adg != null) adgs.push(lastGrowth.adg)
+      if (new Date(last.date).getTime() >= cutoff) sampled14 += 1
+      latest.push({
+        cageId,
+        name: last.cages?.name || '—',
+        abw: Number(last.average_body_weight) || 0,
+      })
+    }
+    latest.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    return {
+      byId,
+      latest,
+      sampled14,
+      avgAbw: latest.length ? latest.reduce((s, l) => s + l.abw, 0) / latest.length : 0,
+      adg: adgs.length ? adgs.reduce((s, v) => s + v, 0) / adgs.length : null,
+    }
+  }, [allRecords])
 
   const filteredRecords = records.filter(record => {
     const matchesSearch = searchTerm === '' || 
@@ -179,297 +234,286 @@ function BiweeklyRecordsBody() {
 
   if (loading) {
     return (
-      <div className="page-card p-8">
-        <LoadingState label="Loading bi-weekly records…" />
-      </div>
+      <Layout title={t('biweekly.records.title')} eyebrow={t('biweekly.records.eyebrow')}>
+        <LoadingState label={t('biweekly.records.loading')} />
+      </Layout>
     )
   }
 
+  const idOf = (r) => r.id || r._id
+  const columns = [
+    {
+      key: 'date',
+      header: t('biweekly.records.colDate'),
+      width: 110,
+      render: (r) => <span className="whitespace-nowrap tabular-nums">{format(new Date(r.date), 'd MMM yyyy')}</span>,
+    },
+    {
+      key: 'cage',
+      header: t('biweekly.records.colCage'),
+      width: 100,
+      render: (r) => <span className="font-semibold whitespace-nowrap">{r.cages?.name || t('biweekly.records.unknownCage')}</span>,
+    },
+    { key: 'batch', header: t('biweekly.records.colBatch'), width: 140, render: (r) => <span className="text-muted">{r.batch_code}</span> },
+    {
+      key: 'sample',
+      header: t('biweekly.records.colSample'),
+      width: 90,
+      align: 'right',
+      render: (r) => formatNumber(r.biweekly_sampling?.length || 0),
+    },
+    { key: 'total', header: t('biweekly.records.colTotal'), width: 110, align: 'right', render: (r) => formatNumber(r.total_fish_count) },
+    {
+      key: 'abw',
+      header: t('biweekly.records.colAbw'),
+      width: 100,
+      align: 'right',
+      render: (r) => `${formatNumber(r.average_body_weight, { decimals: 1 })} g`,
+    },
+    {
+      key: 'gain',
+      header: t('biweekly.records.colGain'),
+      width: 100,
+      align: 'right',
+      render: (r) => {
+        const g = growth.byId.get(idOf(r))
+        if (!g) return <span className="text-faint">—</span>
+        return (
+          <span className={g.gain >= 0 ? 'text-good' : 'text-alert'}>
+            {g.gain >= 0 ? '+' : ''}
+            {formatNumber(g.gain, { decimals: 1 })} g
+          </span>
+        )
+      },
+    },
+    {
+      key: 'actions',
+      header: <span className="sr-only">{t('biweekly.records.colActions')}</span>,
+      width: 120,
+      align: 'right',
+      render: (record) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => handleViewDetails(record)}
+            className={ICON_BTN}
+            title={t('biweekly.records.view')}
+            aria-label={t('biweekly.records.view')}
+          >
+            <Eye className="w-4 h-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEditRecord(record)}
+            className={ICON_BTN}
+            title={t('biweekly.records.edit')}
+            aria-label={t('biweekly.records.edit')}
+          >
+            <Pencil className="w-4 h-4" aria-hidden />
+          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setDeleteRecord(record)}
+              className={`${ICON_BTN} hover:text-alert`}
+              title={t('biweekly.records.delete')}
+              aria-label={t('biweekly.records.delete')}
+            >
+              <Trash2 className="w-4 h-4" aria-hidden />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
+  const maxAbw = Math.max(1, ...growth.latest.map((l) => l.abw))
+
   return (
-      <>
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Bi-weekly records' },
-          ]}
-          description="View and manage all bi-weekly sampling records across your cages."
-          related={[
-            { label: 'New record', href: '/biweekly-entry' },
-            { label: 'Daily entry', href: '/daily-entry' },
-            { label: 'Harvest sampling', href: '/harvest-sampling' },
-          ]}
-          actions={
-            <>
-              <Button href="/biweekly-entry" size="sm">
-                <Plus className="w-4 h-4" aria-hidden />
-                New record
-              </Button>
-              <Button variant="secondary" size="sm" onClick={exportData}>
-                <Download className="w-4 h-4" aria-hidden />
-                Export
-              </Button>
-            </>
-          }
-        />
+    <Layout
+      title={t('biweekly.records.title')}
+      eyebrow={t('biweekly.records.eyebrow')}
+      actions={
+        <>
+          <HeaderAction icon={Plus} href="/biweekly-entry">
+            {t('biweekly.records.newSampling')}
+          </HeaderAction>
+          <GradientButton reverse icon={Download} onClick={exportData}>
+            {t('biweekly.records.export')}
+          </GradientButton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6 sm:gap-7">
+        <Card>
+          <KpiStrip
+            items={[
+              {
+                key: 'abw',
+                label: t('biweekly.records.kpiAvgAbw'),
+                value: growth.latest.length ? formatNumber(growth.avgAbw, { decimals: 1 }) : '—',
+                suffix: growth.latest.length ? 'g' : undefined,
+              },
+              {
+                key: 'adg',
+                label: t('biweekly.records.kpiAdg'),
+                value: growth.adg == null ? '—' : formatNumber(growth.adg, { decimals: 2 }),
+                suffix: growth.adg == null ? undefined : t('biweekly.records.gPerDay'),
+              },
+              {
+                key: 'sampled',
+                label: t('biweekly.records.kpiSampled14'),
+                value: formatNumber(growth.sampled14),
+                suffix: t('biweekly.records.ofCages', { total: cages.length }),
+              },
+              { key: 'fish', label: t('biweekly.records.kpiFish'), value: formatNumber(stats.totalFish) },
+            ]}
+          />
+        </Card>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-              <StatCard label="Total records" value={stats.totalRecords} />
-              <StatCard label="Total fish" value={stats.totalFish.toLocaleString()} />
-              <StatCard label="Total weight" value={(stats.totalWeight / 1000).toFixed(1)} unit="kg" />
-              <StatCard label="Average ABW" value={stats.averageABW.toFixed(1)} unit="g" />
-              <StatCard label="Active cages" value={stats.activeCages} />
+        {growth.latest.length > 0 && (
+          <Card padding={false} className="px-5 py-6 sm:px-[26px]">
+            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-[17px] font-semibold leading-[22px] text-text">{t('biweekly.records.abwByCage')}</h2>
+              <p className="text-xs text-faint">{t('biweekly.records.abwByCageHint')}</p>
             </div>
-
-            <div className="page-card p-4 sm:p-5 mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Field label="Search" htmlFor="biweekly-search">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" aria-hidden />
-                    <Input
-                      id="biweekly-search"
-                      type="text"
-                      placeholder="Cage or batch code"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+            <div className="overflow-x-auto">
+              <ul
+                className="flex h-[180px] min-w-full items-end gap-2.5"
+                aria-label={t('biweekly.records.abwByCage')}
+              >
+                {growth.latest.map((l) => (
+                  <li key={l.cageId} className="flex h-full min-w-9 flex-1 flex-col items-center justify-end gap-1.5">
+                    <span className="text-[11px] leading-[14px] text-muted tabular-nums">{formatNumber(l.abw, { decimals: 0 })}</span>
+                    <div
+                      className="w-full rounded-t-[6px] rounded-b-[2px]"
+                      style={{
+                        height: `${Math.max(4, (l.abw / maxAbw) * 130)}px`,
+                        backgroundImage: 'linear-gradient(180deg, var(--cyan), var(--pink))',
+                      }}
+                      aria-hidden
                     />
-                  </div>
-                </Field>
+                    <span className="max-w-full truncate text-[11px] leading-[14px] text-faint">{l.name}</span>
+                    <span className="sr-only">{`${l.name}: ${formatNumber(l.abw, { decimals: 1 })} g`}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+        )}
 
-                <Field label="Cage" htmlFor="biweekly-cage">
-                  <Select
+        {totalCount === 0 ? (
+          <Card>
+            <EmptyState
+              title={t('biweekly.records.emptyTitle')}
+              description={t('biweekly.records.emptyBody')}
+              action={
+                <Button href="/biweekly-entry">
+                  <Plus className="w-4 h-4" aria-hidden />
+                  {t('biweekly.records.newSampling')}
+                </Button>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <Table
+              title={t('biweekly.records.tableTitle')}
+              tabs={[
+                { value: 'all', label: t('biweekly.records.rangeAll') },
+                { value: 'recent', label: t('biweekly.records.range30') },
+                { value: 'month', label: t('biweekly.records.rangeMonth') },
+              ]}
+              tab={dateFilter}
+              onTabChange={setDateFilter}
+              search={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={t('biweekly.records.searchPlaceholder')}
+              actions={
+                <>
+                  <label htmlFor="biweekly-cage" className="sr-only">
+                    {t('biweekly.records.colCage')}
+                  </label>
+                  <select
                     id="biweekly-cage"
                     value={selectedCage}
                     onChange={(e) => setSelectedCage(e.target.value)}
+                    className="h-8 rounded-pill border border-line bg-surface px-3 text-[13px] leading-4 text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                   >
-                    <option value="all">All cages</option>
-                    {cages.map(cage => (
-                      <option key={cage.id} value={cage.id}>{cage.name}</option>
+                    <option value="all">{t('biweekly.records.allCages')}</option>
+                    {cages.map((cage) => (
+                      <option key={cage.id} value={cage.id}>
+                        {cage.name}
+                      </option>
                     ))}
-                  </Select>
-                </Field>
-
-                <Field label="Date" htmlFor="biweekly-date">
-                  <Select
-                    id="biweekly-date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
+                  </select>
+                </>
+              }
+              columns={columns}
+              rows={filteredRecords}
+              rowKey={(r) => idOf(r)}
+              empty={t('biweekly.records.noMatch')}
+            />
+            {totalPages > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                <p className="text-sm text-muted tabular-nums">
+                  {t('biweekly.records.pageOf', { page: currentPage, pages: totalPages, total: totalCount })}
+                </p>
+                <div className="flex gap-2">
+                  <GhostButton
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
                   >
-                    <option value="all">All time</option>
-                    <option value="recent">Last 30 days</option>
-                    <option value="month">This month</option>
-                  </Select>
-                </Field>
-              </div>
-            </div>
-
-            {/* Records Table */}
-            <div className="page-card overflow-hidden">
-              <div className="px-5 py-4 border-b border-foam-deep">
-                <h3 className="font-display text-lg font-medium text-chart-ink">
-                  Records <span className="text-muted font-normal tabular-nums">({filteredRecords.length})</span>
-                </h3>
-              </div>
-
-              {filteredRecords.length === 0 ? (
-                <EmptyState
-                  title="No bi-weekly records yet"
-                  description="Records appear here once you enter a bi-weekly sampling."
-                  action={
-                    <Button href="/biweekly-entry">
-                      <Plus className="w-4 h-4" aria-hidden />
-                      Create record
-                    </Button>
-                  }
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-foam-deep">
-                    <thead className="bg-foam">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Date
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Cage
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Batch code
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Total fish
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Total weight
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Average ABW
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Samples
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-surface divide-y divide-foam-deep">
-                      {filteredRecords.map((record) => (
-                        <tr key={record.id} className="hover:bg-foam">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              
-                              <span className="text-sm font-medium text-chart-ink">
-                                {format(new Date(record.date), 'MMM d, yyyy')}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-sm font-medium text-chart-ink">
-                              {record.cages?.name || 'Unknown cage'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-sm font-data text-chart-ink">
-                              {record.batch_code}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              
-                              <span className="text-sm text-chart-ink tabular-nums">
-                                {record.total_fish_count.toLocaleString()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              
-                              <span className="text-sm text-chart-ink tabular-nums">
-                                {record.total_weight.toFixed(2)}g
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              
-                              <span className="text-sm font-medium text-chart-ink tabular-nums">
-                                {record.average_body_weight.toFixed(2)}g
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-foam-deep text-chart-ink tabular-nums">
-                              {record.biweekly_sampling?.length || 0} samples
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleViewDetails(record)}
-                                className={ICON_BTN + ' text-lake'}
-                                title="View"
-                                aria-label="View record"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditRecord(record)}
-                                className={ICON_BTN + ' text-lake'}
-                                title="Edit"
-                                aria-label="Edit record"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              {isAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteRecord(record)}
-                                  className={ICON_BTN + ' text-signal hover:bg-signal/10'}
-                                  title="Delete"
-                                  aria-label="Delete record"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    {t('biweekly.records.previous')}
+                  </GhostButton>
+                  <GhostButton
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    {t('biweekly.records.next')}
+                  </GhostButton>
                 </div>
-              )}
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="px-4 py-3 border-t border-foam-deep">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm text-muted tabular-nums">
-                      Showing page {currentPage} of {totalPages} ({totalCount} total records)
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
         {/* Details Modal */}
         {showDetails && selectedRecord && (
           <Modal onClose={() => setShowDetails(false)} title="Record details" size="4xl" showClose>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <h4 className="text-sm font-semibold text-chart-ink mb-2">Record</h4>
+                <h4 className="text-sm font-semibold text-text mb-2">Record</h4>
                 <dl className="space-y-2">
                   <div>
                     <dt className="text-sm text-muted">Date</dt>
-                    <dd className="text-sm text-chart-ink">{format(new Date(selectedRecord.date), 'MMMM d, yyyy')}</dd>
+                    <dd className="text-sm text-text">{format(new Date(selectedRecord.date), 'MMMM d, yyyy')}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted">Cage</dt>
-                    <dd className="text-sm text-chart-ink">{selectedRecord.cages?.name || 'Unknown'}</dd>
+                    <dd className="text-sm text-text">{selectedRecord.cages?.name || 'Unknown'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted">Batch code</dt>
-                    <dd className="text-sm font-data text-chart-ink">{selectedRecord.batch_code}</dd>
+                    <dd className="text-sm font-data text-text">{selectedRecord.batch_code}</dd>
                   </div>
                 </dl>
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-chart-ink mb-2">Summary</h4>
+                <h4 className="text-sm font-semibold text-text mb-2">Summary</h4>
                 <dl className="space-y-2">
                   <div>
                     <dt className="text-sm text-muted">Total fish count</dt>
-                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_fish_count.toLocaleString()}</dd>
+                    <dd className="text-sm text-text tabular-nums">{selectedRecord.total_fish_count.toLocaleString()}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted">Total weight</dt>
-                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.total_weight.toFixed(2)}g</dd>
+                    <dd className="text-sm text-text tabular-nums">{selectedRecord.total_weight.toFixed(2)}g</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted">Average ABW</dt>
-                    <dd className="text-sm text-chart-ink tabular-nums">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
+                    <dd className="text-sm text-text tabular-nums">{selectedRecord.average_body_weight.toFixed(2)}g</dd>
                   </div>
                 </dl>
               </div>
@@ -477,24 +521,24 @@ function BiweeklyRecordsBody() {
 
             {selectedRecord.biweekly_sampling && selectedRecord.biweekly_sampling.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-chart-ink mb-3">Samples</h4>
+                <h4 className="text-sm font-semibold text-text mb-3">Samples</h4>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-foam-deep">
-                    <thead className="bg-foam">
+                  <table className="min-w-full divide-y divide-line">
+                    <thead>
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Sample</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Fish count</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Total weight</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted">Average ABW</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Sample</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Fish count</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Total weight</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-normal uppercase leading-[14px] tracking-[0.08em] text-faint">Average ABW</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-surface divide-y divide-foam-deep">
+                    <tbody className="bg-surface divide-y divide-line">
                       {selectedRecord.biweekly_sampling.map((sampling, index) => (
                         <tr key={sampling.id}>
-                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.sampling_number}</td>
-                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.fish_count}</td>
-                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.total_weight.toFixed(2)}g</td>
-                          <td className="px-4 py-3 text-sm text-chart-ink tabular-nums">{sampling.average_body_weight.toFixed(2)}g</td>
+                          <td className="px-4 py-3 text-sm text-text tabular-nums">{sampling.sampling_number}</td>
+                          <td className="px-4 py-3 text-sm text-text tabular-nums">{sampling.fish_count}</td>
+                          <td className="px-4 py-3 text-sm text-text tabular-nums">{sampling.total_weight.toFixed(2)}g</td>
+                          <td className="px-4 py-3 text-sm text-text tabular-nums">{sampling.average_body_weight.toFixed(2)}g</td>
                         </tr>
                       ))}
                     </tbody>
@@ -609,7 +653,7 @@ function BiweeklyRecordsBody() {
             dismissible={!deleting}
             role="alertdialog"
             title="Delete record"
-            icon={<AlertTriangle className="w-6 h-6 text-signal" />}
+            icon={<AlertTriangle className="w-6 h-6 text-alert" />}
             footer={
               <>
                 <Button
@@ -633,11 +677,11 @@ function BiweeklyRecordsBody() {
           >
             <p className="text-sm text-muted mb-5">
               Delete batch{' '}
-              <span className="font-semibold text-chart-ink">{deleteRecord.batch_code}</span> from{' '}
+              <span className="font-semibold text-text">{deleteRecord.batch_code}</span> from{' '}
               {deleteRecord.date}? This cannot be undone.
             </p>
           </Modal>
         )}
-      </>
+    </Layout>
   )
 } 

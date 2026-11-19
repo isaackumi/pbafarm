@@ -2,7 +2,8 @@ import { useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { PageHeader, Button, FormPage, LoadingState } from '../components/ui'
+import { ArrowLeft, List } from 'lucide-react'
+import { GradientButton, LoadingState } from '../components/ui'
 import BiweeklyEntryForm from '../components/BiweeklyEntryForm'
 import BiweeklyBatchEntry from '../components/BiweeklyBatchEntry'
 import { api } from '../convex/_generated/api'
@@ -28,43 +29,31 @@ function BiweeklyEntry() {
   const cageId = typeof router.query.cage === 'string' ? router.query.cage : null
 
   return (
-    <Layout title={t('biweekly.pageTitle')}>
-      <FormPage width="full">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: t('entry.dashboard'), href: '/dashboard' },
-            { label: t('biweekly.crumbRecords'), href: '/biweekly-records' },
-            { label: t('biweekly.crumbEntry') },
-          ]}
-          description={
-            detailed
-              ? t('biweekly.descDetailed')
-              : t('biweekly.descBatch')
-          }
-          related={[
-            { label: t('biweekly.relatedAll'), href: '/biweekly-records' },
-            { label: t('biweekly.relatedDaily'), href: '/daily-entry' },
-            { label: t('biweekly.relatedHarvest'), href: '/harvest-sampling' },
-          ]}
-          actions={
-            detailed ? (
-              <Button variant="secondary" size="sm" href="/biweekly-entry">
-                {t('biweekly.backToSampling')}
-              </Button>
-            ) : (
-              <Button href="/biweekly-records" variant="secondary" size="sm">
-                {t('biweekly.viewRecords')}
-              </Button>
-            )
-          }
-        />
+    <Layout
+      title={t('biweekly.pageTitle')}
+      eyebrow={t('biweekly.eyebrow')}
+      actions={
+        detailed ? (
+          <GradientButton reverse icon={ArrowLeft} href="/biweekly-entry">
+            {t('biweekly.backToSampling')}
+          </GradientButton>
+        ) : (
+          <GradientButton reverse icon={List} href="/biweekly-records">
+            {t('biweekly.viewRecords')}
+          </GradientButton>
+        )
+      }
+    >
+      <div className="flex w-full flex-col gap-4">
+        <p className="max-w-2xl text-sm text-muted">
+          {detailed ? t('biweekly.descDetailed') : t('biweekly.descBatch')}
+        </p>
         {detailed && cageId ? (
           <DetailedEntry cageId={cageId} onDone={() => router.push('/biweekly-entry')} />
         ) : (
           <BiweeklyBatchEntry />
         )}
-      </FormPage>
+      </div>
     </Layout>
   )
 }

@@ -176,13 +176,13 @@ const TopUpForm = ({ onComplete }) => {
       subtitle="Add fish to an existing active batch. Drafts survive a refresh."
     >
       {error && (
-        <div className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-xl p-3 flex items-start gap-2">
+        <div className="mb-5 text-sm text-alert border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] rounded-input p-3 flex items-start gap-2">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
       {warn.length > 0 && (
-        <div className="mb-5 text-sm text-amber-800 border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-1">
+        <div className="mb-5 text-sm text-warn border border-[var(--pill-amber-border)] bg-[color-mix(in_oklab,var(--warn)_8%,transparent)] rounded-input p-3 space-y-1">
           {warn.map((w) => (
             <p key={w}>{w}</p>
           ))}
@@ -194,7 +194,7 @@ const TopUpForm = ({ onComplete }) => {
           <Field label="Select batch to top-up" htmlFor="stocking_id" required>
             {fetchingData ? (
               <div className="flex items-center gap-2 min-h-12 text-sm text-muted">
-                <div className="w-4 h-4 border-2 border-lagoon-800 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 Loading batches…
               </div>
             ) : (
@@ -239,26 +239,26 @@ const TopUpForm = ({ onComplete }) => {
           </Field>
 
           {selectedStocking && (
-            <div className="mt-4 rounded-xl border border-foam-deep bg-foam p-4">
-              <h4 className="text-sm font-semibold text-chart-ink mb-3">
+            <div className="mt-4 rounded-input border border-line bg-bg p-4">
+              <h4 className="text-sm font-semibold text-text mb-3">
                 Current batch
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 <div>
                   <span className="text-muted">Count</span>
-                  <p className="font-data font-semibold text-chart-ink">
+                  <p className="font-data font-semibold text-text">
                     {selectedStocking.fish_count.toLocaleString()} fish
                   </p>
                 </div>
                 <div>
                   <span className="text-muted">Initial ABW</span>
-                  <p className="font-data font-semibold text-chart-ink">
+                  <p className="font-data font-semibold text-text">
                     {selectedStocking.initial_abw.toFixed(1)} g
                   </p>
                 </div>
                 <div>
                   <span className="text-muted">Initial biomass</span>
-                  <p className="font-data font-semibold text-chart-ink">
+                  <p className="font-data font-semibold text-text">
                     {selectedStocking.initial_biomass.toFixed(1)} kg
                   </p>
                 </div>
@@ -334,7 +334,7 @@ const TopUpForm = ({ onComplete }) => {
                 type="text"
                 value={calculateBiomass().toFixed(2)}
                 readOnly
-                className="font-data bg-foam"
+                className="font-data bg-surface-2"
               />
             </Field>
           </div>

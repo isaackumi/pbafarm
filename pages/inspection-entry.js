@@ -5,7 +5,8 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import InspectionForm, { INSPECTION_KINDS } from '../components/InspectionForm'
 import OutboxPanel from '../components/OutboxPanel'
-import { Card, Field, FormPage, PageHeader, Select } from '../components/ui'
+import { Card, Field, FormPage, Select } from '../components/ui'
+import { useT } from '../lib/i18n/context'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -20,6 +21,7 @@ function InspectionEntry() {
   const router = useRouter()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const t = useT()
   const online = useOnline()
   const { locationArgs } = useLocation()
   const units = useQuery(api.cages.list, user ? locationArgs : 'skip')
@@ -61,16 +63,15 @@ function InspectionEntry() {
   }
 
   return (
+    <Layout
+      title={t('entry.inspection.title')}
+      eyebrow={`${t('entry.inspection.crumb')} · ${online ? t('entry.inspection.online') : t('entry.inspection.offline')}`}
+    >
     <FormPage width="md">
-      <PageHeader
-        title="Inspection entry"
-        breadcrumbs={[{ label: 'Maintenance', href: '/maintenance' }, { label: 'Entry' }]}
-        description={online ? 'Net inspections, cleaning and maintenance jobs.' : 'Offline: entries wait on this device and send when you reconnect.'}
-      />
-      <Card className="space-y-4">
-        <Field label="Unit" htmlFor="insp-unit" required>
+      <Card className="space-y-5">
+        <Field label={t('wq.entry.unit')} htmlFor="insp-unit" required>
           <Select id="insp-unit" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            <option value="">{units === undefined ? 'Loading…' : 'Choose a unit'}</option>
+            <option value="">{units === undefined ? t('common.loading') : t('wq.entry.chooseUnit')}</option>
             {(units || []).map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name} · {unitLabel(u)}
@@ -86,15 +87,14 @@ function InspectionEntry() {
         <OutboxPanel compact kinds={['inspection']} online={online} />
       </div>
     </FormPage>
+    </Layout>
   )
 }
 
 export default function InspectionEntryPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Inspection entry">
-        <InspectionEntry />
-      </Layout>
+      <InspectionEntry />
     </ProtectedRoute>
   )
 }

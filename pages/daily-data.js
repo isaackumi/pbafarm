@@ -4,7 +4,22 @@ import { Download, Pencil, Plus, Trash2, X } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import { PageHeader, Button, Card, Field, Input, Select, EmptyState, LoadingState } from '../components/ui'
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  Select,
+  EmptyState,
+  LoadingState,
+  GradientButton,
+  KpiStrip,
+  Segmented,
+  Table,
+} from '../components/ui'
+import { HeaderAction } from '../components/ui/HeaderAction'
+import { formatNumber } from '../lib/format'
+import { useT } from '../lib/i18n/context'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -111,11 +126,11 @@ function EditSheet({ record, cages, feedTypes, onClose, onSaved }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-record-title"
-        className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-xl bg-surface p-5 sm:p-6 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+        className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-card sm:rounded-card border border-line bg-surface p-5 sm:p-6 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
       >
         <div className="flex items-start justify-between gap-3 mb-5">
           <div>
-            <h2 id="edit-record-title" className="font-display text-lg font-medium text-chart-ink">
+            <h2 id="edit-record-title" className="text-[17px] font-semibold leading-[22px] text-text">
               Edit {cageName}
             </h2>
             <p className="text-sm text-muted mt-1">
@@ -126,14 +141,14 @@ function EditSheet({ record, cages, feedTypes, onClose, onSaved }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="h-11 w-11 -mr-2 -mt-2 inline-flex items-center justify-center rounded-lg text-muted hover:bg-foam"
+            className="h-11 w-11 -mr-2 -mt-2 inline-flex items-center justify-center rounded-pill text-muted hover:bg-surface-2"
           >
             <X size={18} />
           </button>
         </div>
 
         {error && (
-          <p role="alert" className="mb-4 rounded-lg border border-signal/20 bg-signal/10 p-3 text-sm text-signal">
+          <p role="alert" className="mb-4 rounded-input border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] p-3 text-sm text-alert">
             {error}
           </p>
         )}
@@ -196,14 +211,13 @@ function EditSheet({ record, cages, feedTypes, onClose, onSaved }) {
 export default function DailyRecordsPage() {
   return (
     <ProtectedRoute>
-      <Layout title="Daily records">
-        <DailyRecords />
-      </Layout>
+      <DailyRecords />
     </ProtectedRoute>
   )
 }
 
 function DailyRecords() {
+  const t = useT()
   const { showToast } = useToast()
   const { user } = useAuth()
   const { locationArgs } = useLocation()
@@ -289,183 +303,150 @@ function DailyRecords() {
     setDeleting(null)
   }
 
+  const cageCell = (r) => cageName(r.cage_id)
+  const actionsCell = (r) => (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={() => setEditing(r)}
+        aria-label={t('daily.records.editAria', { cage: cageName(r.cage_id), date: r.date })}
+        className="inline-flex size-9 items-center justify-center rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+      >
+        <Pencil size={16} aria-hidden />
+      </button>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setDeleting(r)}
+          aria-label={t('daily.records.deleteAria', { cage: cageName(r.cage_id), date: r.date })}
+          className="inline-flex size-9 items-center justify-center rounded-pill text-muted hover:bg-surface-2 hover:text-alert focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+        >
+          <Trash2 size={16} aria-hidden />
+        </button>
+      )}
+    </div>
+  )
+  const columns = [
+    { key: 'date', header: t('daily.records.colDate'), width: 110, render: (r) => <span className="tabular-nums whitespace-nowrap">{r.date}</span> },
+    { key: 'cage', header: t('daily.records.colCage'), width: 120, render: (r) => <span className="font-semibold whitespace-nowrap">{cageCell(r)}</span> },
+    { key: 'feedType', header: t('daily.records.colFeedType'), render: (r) => <span className="text-muted">{feedName(r) || '—'}</span> },
+    { key: 'feed', header: t('daily.records.colFeedKg'), width: 100, align: 'right', render: (r) => fmtKg(r.feed_amount) },
+    { key: 'mort', header: t('daily.records.colMortality'), width: 100, align: 'right', render: (r) => <span className={r.mortality > 0 ? 'text-alert' : ''}>{r.mortality || 0}</span> },
+    { key: 'cause', header: t('daily.records.colCause'), render: (r) => <span className="text-muted">{r.mortality > 0 ? causeLabel(r.mortality_cause) : ''}</span> },
+    { key: 'do', header: t('daily.records.colDo'), width: 80, align: 'right', render: (r) => <span className="text-muted">{r.dissolved_oxygen ?? ''}</span> },
+    { key: 'temp', header: t('daily.records.colTemp'), width: 80, align: 'right', render: (r) => <span className="text-muted">{r.temperature_c ?? ''}</span> },
+    { key: 'notes', header: t('daily.records.colNotes'), render: (r) => <span className="block max-w-[16rem] truncate text-muted" title={r.notes || ''}>{r.notes || ''}</span> },
+    { key: 'actions', header: <span className="sr-only">{t('daily.records.colActions')}</span>, width: 96, align: 'right', render: actionsCell },
+  ]
+
   return (
-    <>
-      <PageHeader
-        showTitle={false}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Operations' },
-          { label: 'Daily records' },
-        ]}
-        description="Everything logged through daily entry. Fix a wrong number here; stock and fish counts follow."
-        actions={
-          <>
-            <Button variant="secondary" size="sm" onClick={exportCsv} disabled={!records.length}>
-              <Download size={16} aria-hidden />
-              Export CSV
-            </Button>
-            <Button size="sm" href="/daily-entry">
-              <Plus size={16} aria-hidden />
-              New entry
-            </Button>
-          </>
-        }
-      />
-
-      <div className="flex flex-wrap items-end gap-4 mb-6">
-        <div className="inline-flex rounded-lg bg-foam p-1 border border-foam-deep" role="group" aria-label="Date range">
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setRange(r.id)}
-              aria-pressed={range === r.id}
-              className={`px-3 min-h-9 text-sm font-medium rounded-md transition-colors ${
-                range === r.id ? 'bg-surface text-chart-ink shadow-sm' : 'text-muted hover:text-chart-ink'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+    <Layout
+      title={t('daily.records.title')}
+      eyebrow={t('daily.records.eyebrow')}
+      actions={
+        <>
+          <HeaderAction icon={Plus} href="/daily-entry">
+            {t('daily.records.newEntry')}
+          </HeaderAction>
+          <GradientButton reverse icon={Download} onClick={exportCsv} disabled={!records.length}>
+            {t('daily.records.exportCsv')}
+          </GradientButton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6">
+        <p className="text-sm text-muted">{t('daily.records.description')}</p>
+        <div className="flex flex-wrap items-end gap-4">
+          <Segmented
+            label={t('daily.records.dateRange')}
+            options={RANGES.map((r) => ({ value: r.id, label: t('daily.records.rangeDays', { count: Number(r.id) }) }))}
+            value={range}
+            onChange={setRange}
+          />
+          <Field label={t('daily.records.colCage')} htmlFor="filter-cage" className="w-full sm:w-56">
+            <Select id="filter-cage" value={cageId} onChange={(e) => setCageId(e.target.value)}>
+              <option value="">{t('daily.records.allCages')}</option>
+              {cages.map((c) => (
+                <option key={idOf(c)} value={idOf(c)}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
         </div>
-        <Field label="Cage" htmlFor="filter-cage" className="w-full sm:w-56">
-          <Select id="filter-cage" value={cageId} onChange={(e) => setCageId(e.target.value)}>
-            <option value="">All cages</option>
-            {cages.map((c) => (
-              <option key={idOf(c)} value={idOf(c)}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
-          <p className="text-sm text-muted">Records</p>
-          <p className="mt-3 text-[28px] leading-none font-medium tabular-nums">{records.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Feed given</p>
-          <p className="mt-3 text-[28px] leading-none font-medium tabular-nums">
-            {fmtKg(totals.feed)} <span className="text-sm font-normal text-muted">kg</span>
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Feed cost</p>
-          <p className="mt-3 text-[28px] leading-none font-medium tabular-nums">
-            {totals.cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Mortality</p>
-          <p className={`mt-3 text-[28px] leading-none font-medium tabular-nums ${totals.mort > 0 ? 'text-signal' : ''}`}>
-            {totals.mort.toLocaleString()}
-          </p>
-        </Card>
-      </div>
-
-      {loading ? (
-        <LoadingState label="Loading records…" />
-      ) : records.length === 0 ? (
-        <Card>
-          <EmptyState
-            title={`Nothing logged in the last ${range} days`}
-            description={cageId ? 'Try another cage or a longer range.' : 'Daily entries appear here once saved.'}
-            action={<Button href="/daily-entry">Open daily entry</Button>}
+          <KpiStrip
+            items={[
+              { key: 'records', label: t('daily.records.kpiRecords'), value: formatNumber(records.length) },
+              { key: 'feed', label: t('daily.records.kpiFeed'), value: fmtKg(totals.feed), suffix: 'kg' },
+              { key: 'cost', label: t('daily.records.kpiCost'), value: formatNumber(totals.cost) },
+              {
+                key: 'mort',
+                label: t('daily.records.kpiMortality'),
+                value: formatNumber(totals.mort),
+                valueTone: totals.mort > 0 ? 'alert' : undefined,
+              },
+            ]}
           />
         </Card>
-      ) : (
-        <>
-          {/* Phone: one card per record */}
-          <ul className="md:hidden space-y-3">
-            {records.map((r) => (
-              <li key={idOf(r)} className="rounded-xl border border-foam-deep bg-surface p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-chart-ink">{cageName(r.cage_id)}</p>
-                    <p className="text-sm text-muted tabular-nums">{r.date}</p>
-                  </div>
-                  <div className="flex -mr-2 -mt-2">
-                    <button type="button" onClick={() => setEditing(r)} aria-label="Edit record" className="h-11 w-11 inline-flex items-center justify-center rounded-lg text-muted hover:bg-foam">
-                      <Pencil size={16} />
-                    </button>
-                    {isAdmin && (
-                      <button type="button" onClick={() => setDeleting(r)} aria-label="Delete record" className="h-11 w-11 inline-flex items-center justify-center rounded-lg text-muted hover:bg-foam hover:text-signal">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <dl className="mt-3 grid grid-cols-2 gap-y-1 text-sm tabular-nums">
-                  <dt className="text-muted">Feed</dt>
-                  <dd className="text-right">{r.feed_amount > 0 ? `${fmtKg(r.feed_amount)} kg ${feedName(r)}` : 'None'}</dd>
-                  <dt className="text-muted">Mortality</dt>
-                  <dd className={`text-right ${r.mortality > 0 ? 'text-signal' : ''}`}>
-                    {r.mortality || 0}
-                    {r.mortality > 0 && r.mortality_cause ? `, ${causeLabel(r.mortality_cause)}` : ''}
-                  </dd>
-                  {(r.dissolved_oxygen != null || r.temperature_c != null) && (
-                    <>
-                      <dt className="text-muted">Water</dt>
-                      <dd className="text-right">
-                        {[r.dissolved_oxygen != null && `${r.dissolved_oxygen} mg/L`, r.temperature_c != null && `${r.temperature_c} °C`].filter(Boolean).join(', ')}
-                      </dd>
-                    </>
-                  )}
-                </dl>
-                {r.notes && <p className="mt-2 text-sm text-muted">{r.notes}</p>}
-              </li>
-            ))}
-          </ul>
 
-          {/* Tablet and up: table */}
-          <div className="hidden md:block page-card overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-foam-deep">
-                <tr className="text-left text-muted">
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Cage</th>
-                  <th className="px-4 py-3 font-medium">Feed type</th>
-                  <th className="px-4 py-3 font-medium text-right">Feed kg</th>
-                  <th className="px-4 py-3 font-medium text-right">Mortality</th>
-                  <th className="px-4 py-3 font-medium">Cause</th>
-                  <th className="px-4 py-3 font-medium text-right">DO</th>
-                  <th className="px-4 py-3 font-medium text-right">Temp</th>
-                  <th className="px-4 py-3 font-medium">Notes</th>
-                  <th className="px-4 py-3 font-medium sr-only">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foam-deep">
-                {records.map((r) => (
-                  <tr key={idOf(r)} className="hover:bg-foam/60">
-                    <td className="px-4 py-3 tabular-nums whitespace-nowrap">{r.date}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{cageName(r.cage_id)}</td>
-                    <td className="px-4 py-3 text-muted">{feedName(r) || '—'}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{fmtKg(r.feed_amount)}</td>
-                    <td className={`px-4 py-3 text-right tabular-nums ${r.mortality > 0 ? 'text-signal' : ''}`}>{r.mortality || 0}</td>
-                    <td className="px-4 py-3 text-muted">{r.mortality > 0 ? causeLabel(r.mortality_cause) : ''}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted">{r.dissolved_oxygen ?? ''}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted">{r.temperature_c ?? ''}</td>
-                    <td className="px-4 py-3 text-muted max-w-[16rem] truncate" title={r.notes || ''}>{r.notes || ''}</td>
-                    <td className="px-2 py-1 whitespace-nowrap text-right">
-                      <button type="button" onClick={() => setEditing(r)} aria-label={`Edit ${cageName(r.cage_id)} on ${r.date}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-muted hover:bg-foam hover:text-chart-ink">
-                        <Pencil size={16} />
-                      </button>
-                      {isAdmin && (
-                        <button type="button" onClick={() => setDeleting(r)} aria-label={`Delete ${cageName(r.cage_id)} on ${r.date}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-muted hover:bg-foam hover:text-signal">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+        {loading ? (
+          <LoadingState label={t('daily.records.loading')} />
+        ) : records.length === 0 ? (
+          <Card>
+            <EmptyState
+              title={t('daily.records.emptyTitle', { count: Number(range) })}
+              description={cageId ? t('daily.records.emptyCage') : t('daily.records.emptyAll')}
+              action={<Button href="/daily-entry">{t('daily.records.openEntry')}</Button>}
+            />
+          </Card>
+        ) : (
+          <>
+            {/* Phone: one card per record */}
+            <ul className="space-y-3 md:hidden">
+              {records.map((r) => (
+                <li key={idOf(r)} className="rounded-card border border-line bg-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-text">{cageName(r.cage_id)}</p>
+                      <p className="text-xs text-muted tabular-nums">{r.date}</p>
+                    </div>
+                    <div className="-mr-2 -mt-2">{actionsCell(r)}</div>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-y-1 text-sm tabular-nums">
+                    <dt className="text-muted">{t('daily.records.feed')}</dt>
+                    <dd className="text-right">{r.feed_amount > 0 ? `${fmtKg(r.feed_amount)} kg ${feedName(r)}` : t('daily.none')}</dd>
+                    <dt className="text-muted">{t('daily.records.colMortality')}</dt>
+                    <dd className={`text-right ${r.mortality > 0 ? 'text-alert' : ''}`}>
+                      {r.mortality || 0}
+                      {r.mortality > 0 && r.mortality_cause ? `, ${causeLabel(r.mortality_cause)}` : ''}
+                    </dd>
+                    {(r.dissolved_oxygen != null || r.temperature_c != null) && (
+                      <>
+                        <dt className="text-muted">{t('daily.records.water')}</dt>
+                        <dd className="text-right">
+                          {[r.dissolved_oxygen != null && `${r.dissolved_oxygen} mg/L`, r.temperature_c != null && `${r.temperature_c} °C`].filter(Boolean).join(', ')}
+                        </dd>
+                      </>
+                    )}
+                  </dl>
+                  {r.notes && <p className="mt-2 text-sm text-muted">{r.notes}</p>}
+                </li>
+              ))}
+            </ul>
+
+            {/* Tablet and up: table */}
+            <div className="hidden md:block">
+              <Table
+                title={t('daily.records.tableTitle')}
+                columns={columns}
+                rows={records}
+                rowKey={(r) => idOf(r)}
+              />
+            </div>
+          </>
+        )}
 
       {editing && (
         <EditSheet
@@ -489,6 +470,7 @@ function DailyRecords() {
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
-    </>
+      </div>
+    </Layout>
   )
 }

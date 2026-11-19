@@ -203,7 +203,7 @@ export default function BiweeklyBatchEntry() {
       {error && (
         <div
           role="alert"
-          className="mb-5 text-sm text-signal border border-signal/20 bg-signal/10 rounded-lg p-3"
+          className="mb-5 text-sm text-alert border border-[var(--pill-red-border)] bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] rounded-input p-3"
         >
           {error}
         </div>
@@ -223,13 +223,13 @@ export default function BiweeklyBatchEntry() {
                 required
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm text-chart-ink min-h-12 self-end">
+            <label className="flex items-center gap-2 text-sm text-text min-h-12 self-end">
               <input
                 type="checkbox"
                 name="showWater"
                 checked={Boolean(formData.showWater)}
                 onChange={handleChange}
-                className="h-5 w-5 rounded border-input-border"
+                className="h-5 w-5 rounded border-line-strong accent-[var(--cyan)]"
               />
               {t('biweekly.recordWater')}
             </label>
@@ -255,10 +255,10 @@ export default function BiweeklyBatchEntry() {
                       type="button"
                       onClick={() => toggleCage(id)}
                       aria-pressed={on}
-                      className={`min-h-12 min-w-[5.5rem] px-3 py-2 rounded-lg border text-left text-sm transition-colors ${
+                      className={`min-h-12 min-w-[5.5rem] px-4 py-2 rounded-[18px] border text-left text-sm transition-colors ${
                         on
-                          ? 'bg-lagoon-950 text-white border-transparent dark:bg-[#e4e4e7] dark:text-[#18181b]'
-                          : 'bg-surface text-chart-ink border-foam-deep hover:border-lake'
+                          ? 'bg-button text-button-text border-transparent'
+                          : 'bg-surface text-text border-line hover:border-line-strong'
                       }`}
                     >
                       <span className="block font-medium leading-5">{cage.name}</span>
@@ -304,18 +304,18 @@ export default function BiweeklyBatchEntry() {
                 return (
                   <div
                     key={line.key}
-                    className={`rounded-xl border p-3 sm:p-4 grid grid-cols-2 md:grid-cols-12 gap-x-3 gap-y-2 items-end ${
-                      errorLine === i ? 'border-signal bg-signal/5' : 'border-foam-deep'
+                    className={`rounded-input border p-3 sm:p-4 grid grid-cols-2 md:grid-cols-12 gap-x-3 gap-y-2 items-end ${
+                      errorLine === i ? 'border-alert bg-[color-mix(in_oklab,var(--alert)_6%,transparent)]' : 'border-line'
                     }`}
                   >
                     <div className="col-span-2 md:col-span-12 flex items-center gap-2 min-h-12">
-                      <p className="flex-1 min-w-0 truncate font-medium text-chart-ink">
+                      <p className="flex-1 min-w-0 truncate font-medium text-text">
                         <span className="text-muted tabular-nums mr-1.5">{i + 1}.</span>
                         {cageName(line.cageId)}
                       </p>
                       <p className="text-sm tabular-nums text-muted">
                         {abw != null ? (
-                          <span className="text-chart-ink font-medium">{t('biweekly.abw', { value: abw.toFixed(1) })}</span>
+                          <span className="text-text font-medium">{t('biweekly.abw', { value: abw.toFixed(1) })}</span>
                         ) : last != null ? (
                           t('biweekly.last', { value: last.toFixed(1) })
                         ) : null}
@@ -324,7 +324,7 @@ export default function BiweeklyBatchEntry() {
                         type="button"
                         onClick={() => setLines((ls) => ls.filter((l) => l.key !== line.key))}
                         aria-label={t('entry.removeCage', { name: cageName(line.cageId) })}
-                        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-signal/10 hover:text-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-lake"
+                        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-input text-muted hover:bg-surface-2 hover:text-alert focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                       >
                         <Trash2 size={18} aria-hidden />
                       </button>

@@ -386,7 +386,8 @@ export { SummaryCard } from './SummaryCard'
 
 const FIELD_CLASS =
   // 16px text keeps iOS from zooming into fields on focus.
-  'w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-base text-chart-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-lake-soft focus:border-lake transition-colors disabled:opacity-50 min-h-12 sm:min-h-11'
+  // 04 form pattern: 14px-radius field on the page background, cyan focus edge.
+  'w-full rounded-input border border-line-strong bg-bg px-3.5 py-2 text-base sm:text-sm text-text placeholder:text-faint focus:outline-none focus:border-pearl-cyan focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--cyan)_25%,transparent)] aria-[invalid=true]:border-alert transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-12 sm:min-h-11'
 
 /**
  * Label, hint and error for one control. With `htmlFor` and a single child
@@ -410,20 +411,20 @@ export function Field({ label, htmlFor, hint, error, required, children, classNa
       {label && (
         <label
           htmlFor={htmlFor}
-          className="block text-sm font-semibold text-chart-ink"
+          className="block text-[13px] leading-4 font-medium text-muted"
         >
           {label}
-          {required && <span className="text-signal ml-0.5">*</span>}
+          {required && <span className="text-alert ml-0.5">*</span>}
         </label>
       )}
       {control}
       {hint && !error && (
-        <p id={hintId} className="text-xs text-muted">
+        <p id={hintId} className="text-xs text-faint">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-xs text-signal">
+        <p id={errorId} className="text-xs text-alert">
           {error}
         </p>
       )}
@@ -472,14 +473,14 @@ export function FormSection({ title, description, children, className = '' }) {
   return (
     <section className={`space-y-4 ${className}`}>
       {(title || description) && (
-        <div className="pb-1 border-b border-foam-deep">
+        <div className="pb-1 border-b border-line">
           {title && (
-            <h3 className="text-base font-medium text-chart-ink">
+            <h3 className="text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">
               {title}
             </h3>
           )}
           {description && (
-            <p className="text-sm text-muted mt-1 mb-3">{description}</p>
+            <p className="text-sm text-muted mt-1.5 mb-3">{description}</p>
           )}
           {!description && title && <div className="mb-3" />}
         </div>
@@ -498,13 +499,13 @@ export function FormCard({
 }) {
   return (
     <Card
-      className={`${fullWidth ? 'w-full' : 'max-w-2xl'} p-5 sm:p-8 ${className}`}
+      className={`${fullWidth ? 'w-full' : 'max-w-2xl'} p-5 sm:py-6 sm:px-[26px] ${className}`}
       padding={false}
     >
       {(title || subtitle) && (
         <div className="mb-6">
           {title && (
-            <h3 className="font-display text-lg font-medium text-chart-ink">
+            <h3 className="text-[17px] font-semibold leading-[22px] text-text">
               {title}
             </h3>
           )}
@@ -519,7 +520,7 @@ export function FormCard({
 export function FormActions({ children, className = '' }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 pt-5 border-t border-foam-deep mt-8 ${className}`}
+      className={`flex flex-wrap items-center justify-end gap-3 pt-5 border-t border-line mt-8 ${className}`}
     >
       {children}
     </div>
@@ -534,7 +535,7 @@ export function FormActions({ children, className = '' }) {
 export function StickyActions({ children, className = '' }) {
   return (
     <div
-      className={`sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 mt-8 -mx-5 -mb-5 sm:-mx-8 sm:-mb-8 px-5 sm:px-8 py-3 rounded-b-xl border-t border-foam-deep bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex flex-wrap items-center gap-3 print:hidden ${className}`}
+      className={`sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 mt-8 -mx-5 -mb-5 sm:-mx-[26px] sm:-mb-6 px-5 sm:px-[26px] py-3.5 rounded-b-card border-t border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex flex-wrap items-center gap-3 print:hidden ${className}`}
     >
       {children}
     </div>

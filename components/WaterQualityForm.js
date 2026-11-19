@@ -86,7 +86,7 @@ export default function WaterQualityForm({ unitType = 'cage', onSave, idPrefix =
           )
         })}
       </div>
-      <button type="button" className="text-sm text-lake hover:underline" onClick={() => setMore((m) => !m)}>
+      <button type="button" className="text-sm text-pearl-cyan hover:underline" onClick={() => setMore((m) => !m)}>
         {more ? t('wq.fewer') : t('wq.more')}
       </button>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -102,7 +102,7 @@ export default function WaterQualityForm({ unitType = 'cage', onSave, idPrefix =
           <Textarea id={`${idPrefix}-notes`} rows={1} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
         </Field>
       </div>
-      {error && <p className="text-sm text-signal">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
       <Button type="submit" disabled={saving} className="w-full sm:w-auto">
         {saving ? t('common.saving') : t('wq.saveReading')}
       </Button>

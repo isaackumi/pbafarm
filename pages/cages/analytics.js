@@ -2,7 +2,9 @@ import React from 'react'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { PageHeader, Button, StatCard, LoadingState, EmptyState } from '../../components/ui'
+import { ArrowLeft, TrendingUp } from 'lucide-react'
+import { Card, EmptyState, GradientButton, KpiStrip, LoadingState } from '../../components/ui'
+import { useT } from '../../lib/i18n/context'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
 import {
@@ -19,19 +21,25 @@ import {
   Legend,
 } from 'recharts'
 
-const COLORS = ['var(--lake)', 'var(--kelp)', '#d97706', 'var(--signal)', 'var(--muted)']
+const COLORS = ['var(--cyan)', 'var(--pink)', 'var(--good)', 'var(--warn)', 'var(--alert)', 'var(--muted)']
+const TOOLTIP_STYLE = {
+  background: 'var(--surface-2)',
+  border: '1px solid var(--line-strong)',
+  borderRadius: 12,
+  color: 'var(--text)',
+}
+const CHART_TITLE = 'mb-4 text-[17px] font-semibold leading-[22px] text-text'
 
 export default function CageAnalyticsPage() {
   return (
     <ProtectedRoute>
-      <Layout>
-        <CageAnalytics />
-      </Layout>
+      <CageAnalytics />
     </ProtectedRoute>
   )
 }
 
 function CageAnalytics() {
+  const t = useT()
   const { locationArgs } = useLocation()
   const cages = useQuery(api.cages.list, locationArgs)
 
@@ -134,59 +142,59 @@ function CageAnalytics() {
     }
   }, [cages])
 
+  const shell = (children) => (
+    <Layout
+      title={t('cageAnalytics.title')}
+      eyebrow={t('cageAnalytics.eyebrow')}
+      actions={
+        <>
+          <GradientButton reverse icon={TrendingUp} href="/cages/analytics/growth">
+            {t('cageAnalytics.growthLink')}
+          </GradientButton>
+          <GradientButton reverse icon={ArrowLeft} href="/cages">
+            {t('cageAnalytics.backToCages')}
+          </GradientButton>
+        </>
+      }
+    >
+      {children}
+    </Layout>
+  )
+
   if (cages === undefined) {
-    return <LoadingState />
+    return shell(<LoadingState />)
   }
 
   if (!cages || cages.length === 0) {
-    return (
-      <div className="w-full">
-        <div className="max-w-7xl mx-auto">
-          <EmptyState title="No cage data available." />
-        </div>
-      </div>
+    return shell(
+      <Card>
+        <EmptyState title={t('cageAnalytics.empty')} />
+      </Card>,
     )
   }
 
-  return (
-    <div className="w-full">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader
-          showTitle={false}
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Cages', href: '/cages' },
-            { label: 'Analytics' },
-          ]}
-          description="Status mix, biomass, and harvest readiness across your cages."
-          related={[
-            { label: 'All cages', href: '/cages' },
-            { label: 'Growth', href: '/cages/analytics/growth' },
-            { label: 'Harvest analytics', href: '/cages/analytics/harvest' },
-          ]}
-          actions={
-            <Button href="/cages" variant="secondary" size="sm">
-              Back to cages
-            </Button>
-          }
-        />
-
+  return shell(
+      <div className="flex flex-col gap-6">
         {/* Summary Cards */}
         {analyticsData && (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-            <StatCard label="Total cages" value={analyticsData.totalCages} />
-            <StatCard label="Active" value={analyticsData.activeCages} tone="good" />
-            <StatCard label="Harvested" value={analyticsData.harvestedCages} />
-            <StatCard label="Maintenance" value={analyticsData.maintenanceCages} tone="warn" />
-            <StatCard label="Fallow" value={analyticsData.fallowCages} />
-            <StatCard label="Empty" value={analyticsData.emptyCages} />
-          </div>
+          <Card>
+            <KpiStrip
+              items={[
+                { key: 'total', label: t('cageAnalytics.kpiTotal'), value: analyticsData.totalCages },
+                { key: 'active', label: t('cageAnalytics.kpiActive'), value: analyticsData.activeCages, valueTone: 'good' },
+                { key: 'harvested', label: t('cageAnalytics.kpiHarvested'), value: analyticsData.harvestedCages },
+                { key: 'maint', label: t('cageAnalytics.kpiMaintenance'), value: analyticsData.maintenanceCages, valueTone: 'warn' },
+                { key: 'fallow', label: t('cageAnalytics.kpiFallow'), value: analyticsData.fallowCages },
+                { key: 'empty', label: t('cageAnalytics.kpiEmpty'), value: analyticsData.emptyCages },
+              ]}
+            />
+          </Card>
         )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Status Distribution */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Status distribution</h2>
+          <Card className="min-w-0">
+            <h2 className={CHART_TITLE}>{t('cageAnalytics.chart.status')}</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -196,7 +204,7 @@ function CageAnalytics() {
                     cy="50%"
                     labelLine={false}
                     outerRadius={80}
-                    fill="var(--lake)"
+                    fill="var(--cyan)"
                     dataKey="value"
                     label={({ name, percent, value }) =>
                       value > 0
@@ -208,16 +216,16 @@ function CageAnalytics() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
 
           {/* Size Distribution */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Size distribution</h2>
+          <Card className="min-w-0">
+            <h2 className={CHART_TITLE}>{t('cageAnalytics.chart.size')}</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -227,7 +235,7 @@ function CageAnalytics() {
                     cy="50%"
                     labelLine={false}
                     outerRadius={80}
-                    fill="var(--lake)"
+                    fill="var(--cyan)"
                     dataKey="value"
                     label={({ name, percent, value }) =>
                       value > 0
@@ -239,46 +247,45 @@ function CageAnalytics() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
 
           {/* Harvest Readiness */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Harvest readiness</h2>
+          <Card className="min-w-0">
+            <h2 className={CHART_TITLE}>{t('cageAnalytics.chart.harvest')}</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.harvestReadiness}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="daysToHarvest" fill="var(--lake)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                  <XAxis dataKey="cageName" stroke="var(--line-strong)" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                  <YAxis stroke="var(--line-strong)" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="daysToHarvest" fill="var(--cyan)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
 
           {/* Growth Trends */}
-          <div className="bg-surface border border-foam-deep p-5 sm:p-6 rounded-xl shadow-sm min-w-0">
-            <h2 className="font-display text-lg font-medium text-chart-ink mb-4">Growth trends</h2>
+          <Card className="min-w-0">
+            <h2 className={CHART_TITLE}>{t('cageAnalytics.chart.growth')}</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.growthTrends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foam-deep)" />
-                  <XAxis dataKey="cageName" stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="var(--muted)" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="growthRate" fill="var(--kelp)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                  <XAxis dataKey="cageName" stroke="var(--line-strong)" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                  <YAxis stroke="var(--line-strong)" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="growthRate" fill="var(--pink)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
-    </div>
+      </div>,
   )
 } 
