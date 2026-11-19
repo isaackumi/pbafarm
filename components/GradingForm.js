@@ -5,7 +5,7 @@ import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
-import { Button, Field, FormActions, FormCard, FormSection, Input, Select, Textarea } from './ui'
+import { Button, Field, FormActions, FormCard, FormSection, Input, LoadingState, Select, Textarea } from './ui'
 import { localToday } from '../lib/format'
 
 const today = () => localToday()
@@ -84,6 +84,14 @@ export default function GradingForm({ initialCageId = '' }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (cages === undefined) {
+    return (
+      <FormCard title="Grade a cage">
+        <LoadingState label="Loading cages…" />
+      </FormCard>
+    )
   }
 
   return (

@@ -1504,6 +1504,7 @@
       "useDefaults": "Utiliser les valeurs par défaut",
       "save": "Enregistrer la barre",
       "saved": "Barre d’onglets enregistrée"
-    }
+    },
+    "loading": "Chargement des paramètres…"
   }
 }

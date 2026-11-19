@@ -1504,6 +1504,7 @@
       "useDefaults": "Use defaults",
       "save": "Save tab bar",
       "saved": "Tab bar saved"
-    }
+    },
+    "loading": "Loading settings…"
   }
 }
