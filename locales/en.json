@@ -8437,5 +8437,146 @@
       "invalid": "Feed and deaths must be 0 or more.",
       "needFeedType": "Choose the feed type in the full daily entry the first time."
     }
+  },
+  "navSearch": {
+    "topbar": "Search cages, batches, lots",
+    "placeholder": "Search cages, batches, lots, people — or type an action",
+    "dialogLabel": "Search",
+    "results": {
+      "one": "{count} result",
+      "other": "{count} results"
+    },
+    "noResults": "Nothing matches \"{q}\".",
+    "noAccess": "You don't have access to any of these pages.",
+    "import": "Import",
+    "cageSettings": "Settings",
+    "cageName": "Cage {name}",
+    "dayOfCycle": "Day {day}",
+    "batchIn": "Batch in",
+    "fish": {
+      "one": "{n} fish",
+      "other": "{n} fish"
+    },
+    "abw": "ABW {g} g",
+    "lotFrom": "Harvest lot from",
+    "lot": "Harvest lot",
+    "askPrefix": "Ask Anowa:",
+    "askAboutCage": "What's going on with {name}?",
+    "section": {
+      "quick": "Quick actions",
+      "recent": "Recent",
+      "cage": "Cage",
+      "cages": "Cages",
+      "batches": "Batches & lots",
+      "people": "People",
+      "pages": "Pages",
+      "actions": "Actions",
+      "doIt": "Do it for {name}"
+    },
+    "kind": {
+      "cage": "Cage",
+      "batch": "Batch",
+      "lot": "Lot",
+      "page": "Page",
+      "person": "Person"
+    },
+    "action": {
+      "daily": "Log daily entry",
+      "water": "Log water",
+      "feed": "Issue feed",
+      "sampling": "Record sampling",
+      "transfer": "Transfer",
+      "stock": "Stock a new cage",
+      "import": "Import",
+      "createCage": "Create cage",
+      "ask": "Ask Anowa"
+    },
+    "hint": {
+      "notLogged": {
+        "one": "{count} cage not logged today",
+        "other": "{count} cages not logged today"
+      },
+      "inStore": "{tonnes} t in store",
+      "due": {
+        "one": "{count} cage due",
+        "other": "{count} cages due"
+      },
+      "ask": "Type a question, then Tab"
+    },
+    "doIt": {
+      "water": "Open water history for {name}",
+      "feed": "Issue feed to {name}"
+    },
+    "footer": {
+      "move": "move",
+      "open": "open",
+      "actions": "actions",
+      "try": "Try",
+      "tryFeed": "feed",
+      "tryAction": "log water"
+    },
+    "group": {
+      "units": "Units",
+      "equipment": "Equipment",
+      "record": "Record",
+      "watch": "Watch",
+      "review": "Review & plan",
+      "feed": "Feed",
+      "buying": "Buying",
+      "stock": "Stock",
+      "read": "Read",
+      "build": "Build",
+      "organization": "Organization",
+      "people": "People",
+      "setup": "Farm setup",
+      "connections": "Connections"
+    },
+    "item": {
+      "allCages": "All cages",
+      "alerts": "Alerts",
+      "records": "Records",
+      "harvestLots": "Harvest lots",
+      "issueFeed": "Issue feed",
+      "feedSetup": "Feed types + feeding plans",
+      "feedAnalytics": "Analytics (feed + stock)",
+      "purchaseOrders": "Purchase orders",
+      "stock": "Stock levels + alerts",
+      "catalog": "Items + lots",
+      "adjust": "Adjust / transfer",
+      "counts": "Stock counts",
+      "spawning": "Spawning",
+      "productionReport": "Production report",
+      "reportBuilder": "Report builder",
+      "regional": "Regional + group reports",
+      "exportData": "Export data",
+      "settings": "Company + global settings",
+      "farmLocations": "Farm locations",
+      "structure": "Structure",
+      "auditLog": "Audit log",
+      "people": "Users + roles",
+      "integrations": "API keys + webhooks",
+      "import": "Import",
+      "cageSettings": "Cage settings"
+    },
+    "tab": {
+      "daily": "Daily",
+      "sampling": "Sampling",
+      "stockings": "Stockings",
+      "transfers": "Transfers",
+      "feedTypes": "Feed types",
+      "feedingPlans": "Feeding plans",
+      "feed": "Feed",
+      "stock": "Stock",
+      "stockLevels": "Stock levels",
+      "alerts": "Alerts",
+      "items": "Items",
+      "lots": "Lots",
+      "regional": "Regional",
+      "group": "Group",
+      "company": "Company",
+      "global": "Global",
+      "users": "Users",
+      "roles": "Roles"
+    }
   }
 }

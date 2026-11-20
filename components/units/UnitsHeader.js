@@ -1,5 +1,6 @@
-import { Plus } from 'lucide-react'
+import { Plus, Settings, Upload } from 'lucide-react'
 import { GradientButton } from '../ui'
+import { HeaderAction } from '../ui/HeaderAction'
 import { usePermissions } from '../../hooks/usePermission'
 import { useT } from '../../lib/i18n/context'
 import { useLocation } from '../../contexts/LocationContext'
@@ -32,6 +33,13 @@ export function UnitsHeaderActions() {
       <GradientButton href="/cages/qr-codes" ring="sky" icon={PaperQrIcon}>
         {t('unitsUi.qrCodes')}
       </GradientButton>
+      {/* Paper 71b: Cages "Settings" and Bulk upload ("Import") left the sidebar for this header. */}
+      <HeaderAction href="/bulk-upload" ring="sky" icon={Upload}>
+        {t('navSearch.import')}
+      </HeaderAction>
+      <HeaderAction href="/cages/settings" ring="sky" icon={Settings}>
+        {t('navSearch.cageSettings')}
+      </HeaderAction>
     </>
   )
 }

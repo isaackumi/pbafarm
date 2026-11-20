@@ -4,6 +4,7 @@ import Layout from '../Layout'
 import { GhostButton, GradientButton } from '../ui'
 import { SettingsCard, SettingsFrame, useSettingsEyebrow } from '../settings'
 import { useLocale, useT } from '../../lib/i18n/context'
+import { useTabbedPage } from '../nav/tabbedContext'
 
 /**
  * Shared chrome for the integration routes (Paper 56 Integrations FIL-0):
@@ -19,7 +20,10 @@ const LINKS = [
 
 export function IntegrationsNav() {
   const t = useT()
+  const tabbed = useTabbedPage()
   const { pathname } = useRouter()
+  // Shown as tabs of "API keys + webhooks" (Paper 71b): those tabs replace these links.
+  if (tabbed) return null
   return (
     <nav aria-label={t('settingsUi.integ.navLabel')} className="mb-5 flex flex-wrap gap-x-7 border-b border-line">
       {LINKS.map((l) => {

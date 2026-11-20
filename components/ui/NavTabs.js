@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { usePermissions } from '../../hooks/usePermission'
 import { routePermission } from '../../lib/routePermissions'
+import { useTabbedPage } from '../nav/tabbedContext'
 
 /**
  * Route tabs under a page title (Paper 09 Feed, 10 Finance, 11 Reports,
@@ -14,8 +15,10 @@ import { routePermission } from '../../lib/routePermissions'
 export function NavTabs({ tabs = [], label, active, className = '' }) {
   const router = useRouter()
   const { can } = usePermissions()
+  // A page shown as a tab of a joined page (Paper 71b) uses that page's tabs.
+  const tabbed = useTabbedPage()
   const shown = tabs.filter((tab) => can(tab.permission ?? routePermission(tab.href)))
-  if (shown.length < 2) return null
+  if (tabbed || shown.length < 2) return null
   const path = router?.pathname
   const current = active ?? shown.find((tab) => tab.href === path)?.href
   return (

@@ -8437,5 +8437,146 @@
       "invalid": "L'aliment et les morts doivent être 0 ou plus.",
       "needFeedType": "Choisissez le type d'aliment dans la saisie complète la première fois."
     }
+  },
+  "navSearch": {
+    "topbar": "Rechercher cages, lots, récoltes",
+    "placeholder": "Rechercher cages, lots, récoltes, personnes — ou taper une action",
+    "dialogLabel": "Recherche",
+    "results": {
+      "one": "{count} résultat",
+      "other": "{count} résultats"
+    },
+    "noResults": "Aucun résultat pour « {q} ».",
+    "noAccess": "Vous n'avez accès à aucune de ces pages.",
+    "import": "Importer",
+    "cageSettings": "Paramètres",
+    "cageName": "Cage {name}",
+    "dayOfCycle": "Jour {day}",
+    "batchIn": "Lot dans",
+    "fish": {
+      "one": "{n} poisson",
+      "other": "{n} poissons"
+    },
+    "abw": "PMI {g} g",
+    "lotFrom": "Lot de récolte de",
+    "lot": "Lot de récolte",
+    "askPrefix": "Demander à Anowa :",
+    "askAboutCage": "Que se passe-t-il avec {name} ?",
+    "section": {
+      "quick": "Actions rapides",
+      "recent": "Récents",
+      "cage": "Cage",
+      "cages": "Cages",
+      "batches": "Lots et récoltes",
+      "people": "Personnes",
+      "pages": "Pages",
+      "actions": "Actions",
+      "doIt": "Le faire pour {name}"
+    },
+    "kind": {
+      "cage": "Cage",
+      "batch": "Lot",
+      "lot": "Récolte",
+      "page": "Page",
+      "person": "Personne"
+    },
+    "action": {
+      "daily": "Saisie quotidienne",
+      "water": "Relevé d'eau",
+      "feed": "Sortir de l'aliment",
+      "sampling": "Échantillonner",
+      "transfer": "Transférer",
+      "stock": "Empoissonner une cage",
+      "import": "Importer",
+      "createCage": "Créer une cage",
+      "ask": "Demander à Anowa"
+    },
+    "hint": {
+      "notLogged": {
+        "one": "{count} cage sans saisie aujourd'hui",
+        "other": "{count} cages sans saisie aujourd'hui"
+      },
+      "inStore": "{tonnes} t en stock",
+      "due": {
+        "one": "{count} cage à échantillonner",
+        "other": "{count} cages à échantillonner"
+      },
+      "ask": "Tapez une question, puis Tab"
+    },
+    "doIt": {
+      "water": "Historique de l'eau de {name}",
+      "feed": "Sortir de l'aliment pour {name}"
+    },
+    "footer": {
+      "move": "déplacer",
+      "open": "ouvrir",
+      "actions": "actions",
+      "try": "Essayez",
+      "tryFeed": "aliment",
+      "tryAction": "relevé d'eau"
+    },
+    "group": {
+      "units": "Unités",
+      "equipment": "Équipement",
+      "record": "Saisir",
+      "watch": "Surveiller",
+      "review": "Revoir et planifier",
+      "feed": "Aliment",
+      "buying": "Achats",
+      "stock": "Stock",
+      "read": "Lire",
+      "build": "Construire",
+      "organization": "Organisation",
+      "people": "Personnes",
+      "setup": "Configuration de la ferme",
+      "connections": "Connexions"
+    },
+    "item": {
+      "allCages": "Toutes les cages",
+      "alerts": "Alertes",
+      "records": "Registres",
+      "harvestLots": "Lots de récolte",
+      "issueFeed": "Sortie d'aliment",
+      "feedSetup": "Types d'aliment + plans d'alimentation",
+      "feedAnalytics": "Analyses (aliment + stock)",
+      "purchaseOrders": "Bons de commande",
+      "stock": "Niveaux de stock + alertes",
+      "catalog": "Articles + lots",
+      "adjust": "Ajuster / transférer",
+      "counts": "Inventaires",
+      "spawning": "Ponte",
+      "productionReport": "Rapport de production",
+      "reportBuilder": "Générateur de rapports",
+      "regional": "Rapports régionaux + de groupe",
+      "exportData": "Exporter les données",
+      "settings": "Paramètres de l'entreprise + généraux",
+      "farmLocations": "Sites de la ferme",
+      "structure": "Structure",
+      "auditLog": "Journal d'audit",
+      "people": "Utilisateurs + rôles",
+      "integrations": "Clés API + webhooks",
+      "import": "Importer",
+      "cageSettings": "Paramètres des cages"
+    },
+    "tab": {
+      "daily": "Quotidien",
+      "sampling": "Échantillonnage",
+      "stockings": "Empoissonnements",
+      "transfers": "Transferts",
+      "feedTypes": "Types d'aliment",
+      "feedingPlans": "Plans d'alimentation",
+      "feed": "Aliment",
+      "stock": "Stock",
+      "stockLevels": "Niveaux de stock",
+      "alerts": "Alertes",
+      "items": "Articles",
+      "lots": "Lots",
+      "regional": "Régional",
+      "group": "Groupe",
+      "company": "Entreprise",
+      "global": "Général",
+      "users": "Utilisateurs",
+      "roles": "Rôles"
+    }
   }
 }

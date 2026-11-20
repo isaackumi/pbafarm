@@ -8,6 +8,7 @@ import RolesPanel from '../components/RolesPanel'
 import { GradientButton } from '../components/ui'
 import { SettingsFrame, useSettingsEyebrow } from '../components/settings'
 import { useT } from '../lib/i18n/context'
+import { useGroupTab } from '../components/nav/tabbedContext'
 
 /**
  * Settings · Members (Paper 14 Team 38C-0), one member (23 Member access
@@ -17,7 +18,9 @@ export default function UsersPage() {
   const router = useRouter()
   const t = useT()
   const eyebrow = useSettingsEyebrow()
-  const view = router.query.view === 'roles' ? 'roles' : 'members'
+  // Also the Users / Roles tabs of "Users + roles" (/people, Paper 71b).
+  const groupTab = useGroupTab()
+  const view = (groupTab ?? router.query.view) === 'roles' ? 'roles' : 'members'
   const memberId = typeof router.query.member === 'string' ? router.query.member : null
 
   if (memberId) {

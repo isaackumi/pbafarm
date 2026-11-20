@@ -1,5 +1,6 @@
 // components/Layout.js — app shell (Paper Shell 7Z-0)
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Header from './Header'
@@ -11,6 +12,8 @@ import { PageTitle } from './ui/PageTitle'
 import { useActiveOrganization } from '../lib/useActiveOrganization'
 import { documentTitle } from '../lib/activeOrganization'
 import { getSidebarCollapsed, peekSidebarCollapsed, setSidebarCollapsed } from '../lib/sidebarState'
+import { legacyTabTarget } from '../lib/tabGroups'
+import { useTabbedPage } from './nav/tabbedContext'
 
 const TITLE_BY_PREFIX = [
   ['/admin/company-registrations', 'Company Registrations'],
@@ -65,7 +68,26 @@ const TITLE_BY_PREFIX = [
  * `eyebrow` and `actions` (up to two GradientButtons) fill the Paper page
  * header; `hideTitle` lets a page render its own.
  */
-const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = false }) => {
+const Layout = (props) => {
+  const tabbed = useTabbedPage()
+  return tabbed ? <TabBody {...props} slot={tabbed.slot} /> : <Shell {...props} />
+}
+
+/**
+ * Inside a tabbed page (components/nav/TabbedGroupPage) the shell is already
+ * drawn: the page's actions go to the tabbed page's header, its title gives
+ * way to the tab, and only the content renders.
+ */
+function TabBody({ children, actions, slot }) {
+  return (
+    <>
+      {actions && slot ? createPortal(actions, slot) : null}
+      {children}
+    </>
+  )
+}
+
+const Shell = ({ children, title: initialTitle, eyebrow, actions, hideTitle = false }) => {
   const router = useRouter()
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
   // Remembered across pages and reloads (lib/sidebarState): Layout remounts per page.
@@ -91,6 +113,14 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
     const match = TITLE_BY_PREFIX.find(([prefix]) => path.startsWith(prefix))
     setTitle(match ? match[1] : 'Anowa')
   }, [router.pathname, initialTitle])
+
+  // Pages joined into a tabbed page (Paper 71b) keep their old routes: they
+  // open the matching tab, with the rest of the query.
+  useEffect(() => {
+    if (!router.isReady) return
+    const target = legacyTabTarget(router.pathname, router.query)
+    if (target) router.replace(target)
+  }, [router, router.isReady, router.pathname, router.query])
 
   // Close the phone drawer whenever the route changes
   useEffect(() => {
