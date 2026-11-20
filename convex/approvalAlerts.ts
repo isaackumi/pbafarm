@@ -231,6 +231,7 @@ export async function onApprovalRequested(ctx: MutationCtx, kind: ApprovalKind, 
     link: KIND[kind].approverLink,
     dedupeKey: `approval:${kind}:${recordId}`,
     source: 'approval.requested',
+    email: { approval: { kind, requesterName, summary: a.subject } },
   })
   // Approve / Reject buttons in the approvers' bound chats (BOT-007).
   if (kind !== 'join_request') {
@@ -304,6 +305,7 @@ export const escalate = internalMutation({
       level: 'warning',
       dedupeKey: `approval-escalated:${kind}:${recordId}`,
       source: 'approval.escalated',
+      email: { approval: { kind, requesterName: await nameOf(ctx, a.requesterId), summary: a.subject, waitedHours: hours } },
     })
     return { escalated: notified + deliveries }
   },

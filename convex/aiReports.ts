@@ -27,6 +27,7 @@ import {
   templateReport,
   weekEndOn,
   weekStartOf,
+  weeklyEmailHighlights,
   type FinancePack,
   type Lang,
   type ReportPack,
@@ -479,6 +480,20 @@ export const deliver = internalMutation({
     const who = (await readers(ctx, r.companyId, r.locationId)).filter((x) => x.lang === r.lang)
     const fr = r.lang === 'fr'
     const title = `${fr ? 'Rapport hebdomadaire' : 'Weekly report'}${site ? ` — ${site.name}` : ''} (${r.weekEnd})`
+    // Highlights for the HTML email (Paper E6); facts from the stored pack only.
+    const h = weeklyEmailHighlights(r.packJson, r.lang)
+    const weeklyEmail = h
+      ? {
+          weekly: {
+            siteName: site?.name,
+            weekStart: weekStartOf(r.weekEnd),
+            weekEnd: r.weekEnd,
+            units: h.units,
+            goodNumber: h.goodNumber,
+            things: h.things,
+          },
+        }
+      : undefined
     let notified = 0
     for (const finance of [true, false]) {
       const users = who.filter((x) => x.finance === finance).map((x) => x.user)
@@ -493,6 +508,7 @@ export const deliver = internalMutation({
         level: 'info',
         dedupeKey: `weekly-report:${r._id}`,
         source: 'weekly_report',
+        email: weeklyEmail,
       })
       notified += res.notified
     }

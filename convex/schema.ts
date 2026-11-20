@@ -16,6 +16,7 @@ import {
   notifyChannel,
   quietHours,
   runDelivery,
+  dispatchEmail,
   runStatus,
 } from './automation/validators'
 import { CURRENCY_CODES } from './lib/currencies'
@@ -2469,6 +2470,8 @@ const schema = defineSchema({
     maxAttempts: v.number(),
     /** Bounded: at most 50. */
     deliveries: v.array(runDelivery),
+    /** Data for the HTML email of this notification (approvals, weekly report). */
+    email: v.optional(dispatchEmail),
     error: v.optional(v.string()),
     nextAttemptAt: v.optional(v.number()),
     finishedAt: v.optional(v.number()),

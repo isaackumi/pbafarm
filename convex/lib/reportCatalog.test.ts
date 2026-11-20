@@ -90,7 +90,8 @@ describe('CSV and email', () => {
     const email = reportEmail({
       name: 'Monthly sales: Ghana / Togo',
       dataset: 'sales',
-      link: 'https://app.example/reports?report=1',
+      path: '/reports?report=1',
+      env: { SITE_URL: 'https://app.example' },
       result: {
         columns: [{ id: 'customer', label: 'Customer', kind: 'dimension' }, { id: 'revenue', label: 'Revenue', kind: 'measure' }],
         rows: [{ customer: 'Ama', revenue: 12.5 }],
@@ -101,7 +102,9 @@ describe('CSV and email', () => {
         today: '2026-02-01',
       },
     })
-    expect(email.subject).toBe('Report: Monthly sales: Ghana / Togo (2026-01-01 to 2026-01-31)')
+    expect(email.subject).toBe('Report: Monthly sales: Ghana / Togo (1 to 31 Jan)')
+    expect(email.html).toContain('https://app.example/reports?report=1')
+    expect(email.body).toContain('https://app.example/reports?report=1')
     expect(email.filename).toBe('monthly-sales-ghana-togo-2026-01-31.csv')
     expect(email.attach).toBe(true)
     expect(email.body).toContain('Ama | 12.50')

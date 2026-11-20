@@ -23,6 +23,8 @@ import {
 } from './lib/memberships'
 import { randomToken, sha256Hex } from './lib/tokens'
 import { siteUrl } from './lib/email'
+import { emailContext, inviteEmail } from './lib/emailTemplates'
+import { TEMPLATE_LABELS, isTemplateKey } from './lib/permissionCatalog'
 import { userError } from './lib/errors'
 import { SUPPORTED_UI_LOCALES } from './lib/orgProfile'
 
@@ -644,14 +646,20 @@ export const invite = mutation({
 
     const company = await ctx.db.get(companyId)
     const inviteUrl = `${siteUrl()}/invite/${token}`
-    const orgName = company?.name ?? 'an organization'
+    const mail = inviteEmail(emailContext(existing?.locale ?? me.locale), {
+      inviterName: me.name || me.email || '',
+      orgName: company?.name ?? '',
+      roleKey,
+      roleLabel: isTemplateKey(roleKey) ? TEMPLATE_LABELS[roleKey] : roleKey,
+      email,
+      token,
+      expiresAt,
+    })
     await ctx.scheduler.runAfter(0, internal.emails.send, {
       to: email,
-      subject: `You are invited to ${orgName} on Anowa`,
-      text:
-        `${me.name || me.email || 'An admin'} invited you to join ${orgName} on Anowa.\n\n` +
-        `Open this link to accept (valid for 7 days, single use):\n${inviteUrl}\n\n` +
-        `If you do not have an account yet, sign up with ${email} first.`,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
     })
 
     await logAudit(ctx, {

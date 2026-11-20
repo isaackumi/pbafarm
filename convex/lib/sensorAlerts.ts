@@ -50,6 +50,14 @@ export async function notifySensorBreaches(
     level: urgent ? 'error' : 'warning',
     dedupeKey: `sensor-breach:${unit._id}:${params}:${Math.floor(measuredAt / HOUR)}`,
     source: 'sensor.threshold.breached',
+    unitName: unit.name,
+    reading: emailReading(alerting),
   })
   return result.notified
+}
+
+/** The most urgent breach for the alert email's reading band (low oxygen first). */
+function emailReading(breaches: Breach[]) {
+  const b = breaches.find((x) => x.parameter === 'dissolvedOxygen' && x.direction === 'low') ?? breaches[0]
+  return b ? { label: b.label, value: b.value, limit: b.limit, direction: b.direction, ...(b.unit ? { unit: b.unit } : {}) } : undefined
 }

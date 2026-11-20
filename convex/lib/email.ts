@@ -15,7 +15,10 @@ import { platformChannelFromEnv } from '../messaging/providers'
 export type EmailMessage = {
   to: string
   subject: string
+  /** Plain-text part (always sent). */
   text: string
+  /** HTML part from convex/lib/emailTemplates. */
+  html?: string
 }
 
 export interface EmailAdapter {
@@ -39,7 +42,7 @@ export function pickEmailAdapter(
     name: platform.adapter.id,
     async send(message) {
       const result = await platform.adapter.send(
-        { channel: 'email', to: message.to, subject: message.subject, body: message.text },
+        { channel: 'email', to: message.to, subject: message.subject, body: message.text, html: message.html },
         platform.creds,
         platform.config,
       )

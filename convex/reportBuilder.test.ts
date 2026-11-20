@@ -197,7 +197,8 @@ describe('scheduled report emails (ANLY-007)', () => {
       ['manager@a.com', 'skipped', 'Email turned off in notification preferences'],
     ])
     expect(bodies).toHaveLength(1)
-    expect(bodies[0]).toMatchObject({ to: ['viewer@a.com'], subject: 'Report: Daily sales (2026-03-01 to 2026-03-11)' })
+    expect(bodies[0]).toMatchObject({ to: ['viewer@a.com'], subject: 'Report: Daily sales (1 to 11 Mar)' })
+    expect(bodies[0].html).toContain('Daily sales,')
     const csv = new TextDecoder('utf-8', { ignoreBOM: true }).decode(Uint8Array.from(atob(bodies[0].attachments[0].content), (c) => c.charCodeAt(0)))
     expect(csv).toBe('\uFEFFSite,Customer,Revenue,Sales\r\nSite A,Ama,150,2\r\nSite B,Kofi,70,1\r\n')
     expect(bodies[0].attachments[0].filename).toBe('daily-sales-2026-03-11.csv')

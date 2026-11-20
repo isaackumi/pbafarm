@@ -8,6 +8,7 @@ import { deliverMessage } from './messaging/deliver'
 import { sendAll } from './automation/deliver'
 import { EVENT_RETENTION_DAYS, RETRY_BACKOFF_MIN } from './automation/engine'
 import type { RunDelivery } from './automation/validators'
+import { notificationEmailReader, renderNotificationEmail } from './lib/notificationEmail'
 
 /**
  * Sends the SMS/WhatsApp/email of a system notification (AUTO-003), queued
@@ -22,7 +23,10 @@ import type { RunDelivery } from './automation/validators'
 
 type Plan = {
   companyId: Id<'companies'>
-  pending: { index: number; input: { channel: RunDelivery['channel']; to: string; subject: string; body: string } }[]
+  pending: {
+    index: number
+    input: { channel: RunDelivery['channel']; to: string; subject: string; body: string; html?: string }
+  }[]
 }
 
 export const start = internalMutation({
@@ -38,6 +42,7 @@ export const start = internalMutation({
             to: v.string(),
             subject: v.string(),
             body: v.string(),
+            html: v.optional(v.string()),
           }),
         }),
       ),
@@ -47,10 +52,24 @@ export const start = internalMutation({
   handler: async (ctx, { dispatchId }): Promise<Plan | null> => {
     const d = await ctx.db.get(dispatchId)
     if (!d || !['queued', 'retrying'].includes(d.status)) return null
-    const pending = d.deliveries
-      .map((x, index) => ({ x, index }))
-      .filter(({ x }) => x.status === 'pending')
-      .map(({ x, index }) => ({ index, input: { channel: x.channel, to: x.to, subject: x.subject, body: x.body } }))
+    const reader = await notificationEmailReader(ctx, d.companyId)
+    const pending: Plan['pending'] = []
+    for (const [index, x] of d.deliveries.entries()) {
+      if (x.status !== 'pending') continue
+      if (x.channel !== 'email') {
+        pending.push({ index, input: { channel: x.channel, to: x.to, subject: x.subject, body: x.body } })
+        continue
+      }
+      // HTML email (E4/E5/E6); the text part is the plain alternative.
+      const mail = renderNotificationEmail({
+        locale: await reader.locale(x.userId),
+        orgName: reader.orgName,
+        source: d.source,
+        email: d.email,
+        delivery: x,
+      })
+      pending.push({ index, input: { channel: 'email', to: x.to, subject: mail.subject, body: mail.text, html: mail.html } })
+    }
     if (!pending.length) {
       await settle(ctx, d)
       return null

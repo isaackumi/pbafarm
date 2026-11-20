@@ -12,6 +12,7 @@ import { mutation, query } from './_generated/server'
 import { internal } from './_generated/api'
 import { randomDigits, sha256Hex } from './lib/tokens'
 import { requireAccount } from './lib/permissions'
+import { emailContext, verificationCodeEmail } from './lib/emailTemplates'
 
 const CODE_TTL_MS = 15 * 60 * 1000
 const RESEND_AFTER_MS = 60 * 1000
@@ -55,10 +56,16 @@ export const requestCode = mutation({
       expiresAt: now + CODE_TTL_MS,
       attempts: 0,
     })
+    const mail = verificationCodeEmail(emailContext(me.locale), {
+      name: me.name,
+      code,
+      minutes: CODE_TTL_MS / 60_000,
+    })
     await ctx.scheduler.runAfter(0, internal.emails.send, {
       to: me.email,
-      subject: 'Your Anowa verification code',
-      text: `Your verification code is ${code}. It expires in 15 minutes.\n\nIf you did not ask for it, ignore this email.`,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
     })
     return { alreadyVerified: false }
   },

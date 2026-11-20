@@ -78,7 +78,7 @@ async function lastEmailTo(t: Awaited<ReturnType<typeof setup>>['t'], to: string
 
 async function verifyEmail(t: Awaited<ReturnType<typeof setup>>['t'], as: (id: string) => any, userId: string, email: string) {
   await as(userId).mutation(api.emailVerification.requestCode, {})
-  const code = /code is (\d{6})/.exec(await lastEmailTo(t, email))![1]
+  const code = /Your code: (\d{6})/.exec(await lastEmailTo(t, email))![1]
   return as(userId).mutation(api.emailVerification.verify, { code })
 }
 
@@ -210,7 +210,7 @@ describe('email verification', () => {
     for (let i = 0; i < 5; i++) {
       expect(await as(loner).mutation(api.emailVerification.verify, { code: 'xxxxxx' })).toEqual({ verified: false })
     }
-    const code = /code is (\d{6})/.exec(await lastEmailTo(t, 'loner@x.com'))![1]
+    const code = /Your code: (\d{6})/.exec(await lastEmailTo(t, 'loner@x.com'))![1]
     expect(await codeOf(as(loner).mutation(api.emailVerification.verify, { code }))).toMatch(/Too many attempts/)
   })
 
