@@ -6,6 +6,7 @@ import { useTerm } from '../../hooks/useTerm'
 import { usePermission, usePermissions } from '../../hooks/usePermission'
 import { routePermission } from '../../lib/routePermissions'
 import { GradientButton } from './Buttons'
+import { ALERT_TINT } from './Modal'
 
 // Phones get 48px targets (wet or gloved hands); larger screens stay compact.
 const SIZE = {
@@ -152,17 +153,20 @@ export function HealthMeter({ score, label }) {
   )
 }
 
-/** Cage collar on still water: dashed outer ring, faint inner ring (Paper 62 empty). */
+/**
+ * Cage collar on still water: dashed outer ring, faint inner ring (Paper 62
+ * empty). Outer ring: line-strong on dark, faint on light (both artboards).
+ */
 function EmptyGlyph() {
   return (
-    <svg width="88" height="40" viewBox="0 0 88 40" fill="none" aria-hidden>
-      <ellipse cx="44" cy="22" rx="40" ry="12" className="stroke-line-strong" strokeWidth="2" strokeDasharray="4 5" />
+    <svg width="88" height="40" viewBox="0 0 88 40" fill="none" className="shrink-0" aria-hidden>
+      <ellipse cx="44" cy="22" rx="40" ry="12" className="stroke-line-strong [[data-theme=light]_&]:stroke-faint" strokeWidth="2" strokeDasharray="4 5" />
       <ellipse cx="44" cy="20" rx="30" ry="8" className="stroke-faint" strokeWidth="1.5" />
     </svg>
   )
 }
 
-/** Paper 62 empty state: glyph, 20/26 title, 14/20 body, action; 18px apart. */
+/** Paper 62 empty state: glyph, 20/26 title (-0.02em), 14/20 body, action; 18px apart. */
 export function EmptyState({ title, description, action }) {
   return (
     <div className="flex flex-col items-center justify-center gap-[18px] px-4 py-10 text-center">
@@ -176,17 +180,18 @@ export function EmptyState({ title, description, action }) {
   )
 }
 
-/** 64px alert-tinted circle with a warning triangle (Paper 62 error card). */
+/** 64px alert-tinted circle with a 28px warning triangle (Paper 62 error card). */
 export function ErrorGlyph({ size = 64 }) {
+  const icon = Math.round((size * 28) / 64)
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-[color:var(--alert-tint-border)] bg-[color:var(--alert-tint-bg)] text-alert"
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border ${ALERT_TINT}`}
       style={{ width: size, height: size }}
       aria-hidden
     >
-      <svg viewBox="0 0 24 24" width={size * 0.44} height={size * 0.44} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-        <path d="M12 9v4M12 17h.01" />
+      <svg viewBox="0 0 24 24" width={icon} height={icon} fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 4l9 16H3z" strokeLinejoin="round" />
+        <path d="M12 10v4M12 17h.01" strokeLinecap="round" />
       </svg>
     </span>
   )
@@ -194,7 +199,8 @@ export function ErrorGlyph({ size = 64 }) {
 
 /**
  * A load failed (UX-001). Never show an empty state for a failed load: say
- * what failed and offer a retry.
+ * what failed and offer a retry. Paper 62 _error card: 64px glyph, 22/28
+ * title, 14/20 body, "Try again" outline pill; 18px apart.
  */
 export function ErrorState({ title, message, onRetry, retryLabel, className = '' }) {
   const t = useT()
@@ -203,13 +209,13 @@ export function ErrorState({ title, message, onRetry, retryLabel, className = ''
       role="alert"
       className={`flex flex-col items-center justify-center gap-[18px] px-4 py-8 text-center ${className}`}
     >
-      <ErrorGlyph size={56} />
-      <div className="flex flex-col gap-1.5">
-        <p className="text-lg font-semibold leading-6 tracking-[-0.01em] text-text">{title || t('ui.loadFailed')}</p>
-        {message && <p className="mx-auto max-w-md text-sm leading-5 text-muted">{message}</p>}
+      <ErrorGlyph />
+      <div className="flex flex-col gap-2">
+        <p className="text-[22px] font-semibold leading-7 tracking-[-0.02em] text-text">{title || t('ui.loadFailed')}</p>
+        {message && <p className="mx-auto max-w-md text-[14px] leading-5 text-muted">{message}</p>}
       </div>
       {onRetry && (
-        <GradientButton size="sm" onClick={onRetry}>
+        <GradientButton size="cta" onClick={onRetry}>
           {retryLabel || t('ui.tryAgain')}
         </GradientButton>
       )}
@@ -371,7 +377,7 @@ export function PageHeader({
 export { Modal, IconBadge } from './Modal'
 export { Pill, Badge } from './Pill'
 export { StatusDot } from './StatusDot'
-export { GradientButton, GhostButton, SolidButton } from './Buttons'
+export { GradientButton, GhostButton, SolidButton, DangerButton } from './Buttons'
 export { Toggle } from './Toggle'
 export { CheckCell, ScopeChip } from './CheckCell'
 export { Avatar, initials } from './Avatar'

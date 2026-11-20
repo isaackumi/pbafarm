@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Languages } from 'lucide-react'
+import { Languages } from 'lucide-react'
 import { useLocale, useT } from '../lib/i18n/context'
 
 /**
@@ -46,7 +46,8 @@ export default function LanguageSwitcher({ tone = 'light', className = '' }) {
     )
   }
 
-  // Paper 15 language pill: "English ▾".
+  // Paper 15 language pill: "English ▾", 12/16 muted, 6×12 padding,
+  // line-strong border. The ▾ is text, a space after the name.
   return (
     <label className={`relative inline-flex items-center ${className}`}>
       <span className="sr-only">{t('common.language')}</span>
@@ -54,11 +55,13 @@ export default function LanguageSwitcher({ tone = 'light', className = '' }) {
         value={locale}
         disabled={busy}
         onChange={change}
-        className="cursor-pointer appearance-none rounded-pill border border-line-strong bg-transparent py-1.5 pl-3 pr-7 text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-60 [&>option]:bg-surface [&>option]:text-text"
+        className="cursor-pointer appearance-none rounded-pill border border-line-strong bg-transparent bg-none py-1.5 pl-3 pr-[25px] text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink disabled:opacity-60 [&>option]:bg-surface [&>option]:text-text"
       >
         {options}
       </select>
-      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 text-muted" aria-hidden />
+      <span className="pointer-events-none absolute right-3 text-xs leading-4 text-muted" aria-hidden>
+        ▾
+      </span>
     </label>
   )
 }

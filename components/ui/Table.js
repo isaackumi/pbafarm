@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { SearchIcon } from '../../lib/navIcons'
 import Tabs from './Tabs'
 
 /**
@@ -98,7 +98,7 @@ export function Table({
                   onClick={() => setSearchOpen(true)}
                   className="text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan rounded"
                 >
-                  <Search size={16} strokeWidth={2} aria-hidden />
+                  <SearchIcon size={16} strokeWidth={2} aria-hidden />
                 </button>
               ))}
             {actions}

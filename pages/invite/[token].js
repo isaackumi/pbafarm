@@ -6,11 +6,26 @@ import { useAuth } from '../../contexts/AuthContext'
 import { errorMessage } from '../../lib/errorMessage'
 import { useHumanCheck } from '../../components/HumanCheck'
 import { useT, useLocale } from '../../lib/i18n/context'
-import { AuthAlert, AuthGhost, AuthLayout, AuthStateCard, AuthSubmit } from '../../components/auth/AuthUi'
+import {
+  AuthAlert,
+  AuthGhost,
+  AuthLayout,
+  AuthStateCard,
+  AuthSubmit,
+  DarkEmphasis,
+} from '../../components/auth/AuthUi'
 import { LoadingState } from '../../components/ui'
 import { Clock, Link2Off, MailCheck } from 'lucide-react'
 
 const ROLE_KEYS = ['owner', 'admin', 'manager', 'field_staff', 'viewer']
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Two letters for the company tile (Paper 61 "PF" for PBA Farm Ltd). */
+function initials(name) {
+  const words = (name || '?').trim().split(/\s+/).filter(Boolean)
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '?').slice(0, 2)
+  return letters.toUpperCase()
+}
 
 /** Accept an organization invite from its emailed link (ORG-003). */
 export default function AcceptInvite() {
@@ -62,30 +77,41 @@ export default function AcceptInvite() {
     router.push('/dashboard')
   }
 
+  // Paper 61 company tile: 52px, 14px radius, 3px surface border, lime
+  // (#A8C93A on light), initials 16/20 bold in the page colour (white on light).
   const companyTile = info ? (
     <span
-      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] border-[3px] border-surface bg-pink-fill text-[15px] font-bold leading-5 text-bg"
+      className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border-[3px] border-surface bg-lime text-[16px] font-bold leading-5 text-bg [html[data-theme=light]_&]:bg-[#A8C93A] [html[data-theme=light]_&]:text-white"
       aria-hidden
     >
-      {(info.companyName || '?').trim().charAt(0).toUpperCase()}
+      {initials(info.companyName)}
     </span>
   ) : null
 
+  const expiresLabel = (at) => {
+    const days = Math.ceil((at - Date.now()) / DAY_MS)
+    if (days <= 0) return t('authUi.invite.expiresToday')
+    if (days === 1) return t('authUi.invite.expiresTomorrow')
+    return t('authUi.invite.expiresIn', { count: days })
+  }
+
+  // Paper 61 rows: 13/16, muted label, text value, 10px padding, line rules.
   const details = info ? (
     <dl className="flex flex-col border-t border-line text-[13px] leading-4">
       <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
         <dt className="text-muted">{t('authUi.invite.email')}</dt>
         <dd className="truncate text-text">{info.email}</dd>
       </div>
-      <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
-        <dt className="text-muted">{t('authUi.invite.role')}</dt>
-        <dd className="text-text">{roleLabel(info.roleKey)}</dd>
-      </div>
       {typeof info.expiresAt === 'number' && (
         <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
           <dt className="text-muted">{t('authUi.invite.expires')}</dt>
           <dd className="text-text">
-            {new Date(info.expiresAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}
+            <time
+              dateTime={new Date(info.expiresAt).toISOString()}
+              title={new Date(info.expiresAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}
+            >
+              {expiresLabel(info.expiresAt)}
+            </time>
           </dd>
         </div>
       )}
@@ -94,19 +120,21 @@ export default function AcceptInvite() {
 
   const invited = (children) => (
     <AuthStateCard
-      eyebrow={t('authUi.invite.eyebrow')}
-      title={
-        <span className="flex items-center gap-4">
-          {companyTile}
-          <span>{t('authUi.invite.title', { company: info.companyName })}</span>
-        </span>
+      media={companyTile}
+      title={t('authUi.invite.title', { company: info.companyName })}
+      body={
+        <>
+          {t('authUi.invite.joinAsBefore')} <DarkEmphasis>{roleLabel(info.roleKey)}</DarkEmphasis>.
+        </>
       }
-      body={t('authUi.invite.joinAs', { role: roleLabel(info.roleKey) })}
     >
       {details}
       {children}
     </AuthStateCard>
   )
+
+  // Paper 61 actions: Decline (outlined, hugs its label) then Accept (lime, fills the row), 10px apart.
+  const actions = (primary, secondary) => <div className="flex gap-2.5">{secondary}{primary}</div>
 
   let body
   if (!token || info === undefined) {
@@ -124,7 +152,7 @@ export default function AcceptInvite() {
         title={t('authUi.invite.joinedTitle')}
         body={t('authUi.invite.joined', { company: info.companyName })}
       >
-        <AuthSubmit type="button" onClick={openOrg}>
+        <AuthSubmit type="button" size="sm" onClick={openOrg}>
           {t('authUi.invite.open', { company: info.companyName })}
         </AuthSubmit>
       </AuthStateCard>
@@ -153,12 +181,14 @@ export default function AcceptInvite() {
           {t('authUi.invite.signInAs')} <span className="font-medium text-text">{info.email}</span>.{' '}
           {t('authUi.invite.newHere')}
         </p>
-        <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
-          <AuthSubmit type="button" onClick={() => router.push(`/login?next=${next}`)}>
+        {actions(
+          <AuthSubmit type="button" size="sm" onClick={() => router.push(`/login?next=${next}`)}>
             {t('auth.login.signIn')}
-          </AuthSubmit>
-          <AuthGhost href={`/signup?next=${next}`}>{t('authUi.signup.create')}</AuthGhost>
-        </div>
+          </AuthSubmit>,
+          <AuthGhost href={`/signup?next=${next}`} hug>
+            {t('authUi.signup.create')}
+          </AuthGhost>,
+        )}
       </>,
     )
   } else if ((user.email || '').toLowerCase() !== info.email) {
@@ -169,7 +199,7 @@ export default function AcceptInvite() {
     body = invited(
       <>
         <p className="text-sm leading-5 text-muted">{t('authUi.invite.verifyFirst')}</p>
-        <AuthSubmit type="button" onClick={() => router.push(`/verify-email?next=${encodeURIComponent(here)}`)}>
+        <AuthSubmit type="button" size="sm" onClick={() => router.push(`/verify-email?next=${encodeURIComponent(here)}`)}>
           {t('authUi.invite.verifyEmail')}
         </AuthSubmit>
       </>,
@@ -178,14 +208,14 @@ export default function AcceptInvite() {
     body = invited(
       <>
         {human.widget}
-        <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
-          <AuthSubmit type="button" disabled={busy || !human.ready} onClick={onAccept}>
+        {actions(
+          <AuthSubmit type="button" size="sm" disabled={busy || !human.ready} onClick={onAccept}>
             {busy ? t('authUi.invite.joining') : t('authUi.invite.accept')}
-          </AuthSubmit>
-          <AuthGhost disabled={busy} onClick={onDecline}>
+          </AuthSubmit>,
+          <AuthGhost disabled={busy} onClick={onDecline} hug>
             {t('authUi.invite.decline')}
-          </AuthGhost>
-        </div>
+          </AuthGhost>,
+        )}
       </>,
     )
   }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../lib/i18n/context'
+import { TOAST_SURFACE } from './Toast'
 
 /**
  * Registers the service worker and offers a reload when a new build is ready
@@ -46,14 +47,15 @@ export default function AppUpdatePrompt() {
   }, [])
 
   if (!waiting) return null
+  // Paper 63 "App update" card: 340 wide, 18/20 padding, 20px radius, 12px gaps; 32px from the corner.
   return (
     <div
       role="status"
-      className="fixed inset-x-3 bottom-24 z-50 mx-auto flex max-w-[340px] flex-col gap-3 rounded-[20px] border border-line-strong bg-surface-2 px-5 py-[18px] text-text shadow-[0_24px_64px_rgb(0_0_0/0.4)] md:inset-x-auto md:bottom-6 md:right-6 md:w-[340px]"
+      className={`fixed inset-x-3 bottom-24 z-50 mx-auto flex max-w-[340px] flex-col gap-3 rounded-[20px] border border-line-strong px-5 py-[18px] text-text md:inset-x-auto md:bottom-8 md:right-8 md:w-[340px] [[data-theme=light]_&]:border-line ${TOAST_SURFACE}`}
     >
       <div className="flex items-center gap-2.5">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-cyan" aria-hidden />
-        <p className="text-sm font-semibold leading-[18px]">{t('overlay.update.title')}</p>
+        <span className="size-2 shrink-0 rounded-full bg-sky-ink [[data-theme=light]_&]:bg-[#3D86E6]" aria-hidden />
+        <p className="text-[14px] font-semibold leading-[18px]">{t('overlay.update.title')}</p>
       </div>
       <p className="text-[13px] leading-[18px] text-muted">{t('pwa.updateReady')}</p>
       <div className="flex items-center gap-2">

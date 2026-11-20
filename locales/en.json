@@ -2381,7 +2381,7 @@
       "unit": "Unit",
       "batch": "Batch",
       "fish": "Fish",
-      "abw": "Stocked ABW",
+      "biomass": "Biomass",
       "status": "Status",
       "stocking": "Stocking",
       "empty": "No stockings yet. Create a stocking batch to track days of culture and biomass.",
@@ -5123,29 +5123,45 @@
     "notOwner": "Not the owner? Ask your organization's owner to settle the balance, or contact our support team."
   },
   "authUi": {
-    "footerSecure": "Secured sign-in · your data stays with your company",
+    "footerSecure": "🔒 Protected by 2-step verification",
     "show": "Show",
     "hide": "Hide",
     "or": "or",
     "humanFailed": "Human check failed",
     "strength": {
-      "weak": "Weak password",
-      "fair": "Fair password",
-      "good": "Good password",
-      "strong": "Strong password"
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong",
+      "hintStrong": "12+ characters",
+      "hintMore": "add a number or phrase"
     },
     "panel": {
-      "loginEyebrow": "Farm operations",
-      "loginHeadline": "Every cage, pond and tank, in one calm place.",
-      "signupEyebrow": "New workspace",
-      "signupHeadline": "Set up your farm in an afternoon.",
       "inviteEyebrow": "You're invited",
       "inviteHeadline": "Your team already runs its farm here.",
-      "cardAutomationLabel": "Automation resolved",
-      "cardAutomationTitle": "C-07 oxygen back to 6.0 mg/L",
-      "cardAutomationMeta": "Aerator task closed by Kofi A. · 06:31",
-      "cardOvernightLabel": "Overnight",
-      "cardOvernightMeta": "cages logged · 7 due by 09:00"
+      "login": {
+        "eyebrow": "Akosombo · 06:42 · 27 °C",
+        "headline": "Your farm kept working while you slept.",
+        "cardTopLabel": "Automation resolved",
+        "cardTopTitle": "C-07 oxygen back to 6.0 mg/L",
+        "cardTopMeta": "Aerator task closed by Kofi A. · 06:31",
+        "cardLeftLabel": "Overnight",
+        "cardLeftValue": "31 / 38",
+        "cardLeftMeta": "cages logged · 7 due by 09:00"
+      },
+      "signup": {
+        "eyebrow": "Week one · What you get",
+        "headline": "Every cage, every feed bag, one calm place.",
+        "cardTopLabel": "Free for 30 days",
+        "cardTopTitle": "Up to 10 cages · no card needed",
+        "cardTopMeta": "Invite your team after setup",
+        "cardLeftLabel": "Setup time",
+        "cardLeftValue": "~ 4 min",
+        "cardLeftMeta": "company · sites · first cages"
+      },
+      "quote": "“FCR went from 1.7 to 1.4 in one cycle.”",
+      "quoteBy": "Kwame Agyei · PBA Farm Ltd",
+      "reach": "40+ farms · 3 countries"
     },
     "login": {
       "title": "Welcome back",
@@ -5154,16 +5170,19 @@
       "tabSso": "SSO",
       "codeTitle": "Enter your code",
       "verifyAndSignIn": "Verify and sign in",
-      "sharedPhoneTitle": "On a shared phone?",
-      "sharedPhoneBody": "Sign out when you finish so the next person can't see your farm.",
+      "sharedPhoneTitle": "Field staff on a shared phone?",
+      "sharedPhoneBody": "Phone codes need no password. Sign out when you finish so the next person can't see your farm.",
       "useEmail": "Use email instead",
       "ssoHint": "Sign in with your company account through {name}.",
       "newHere": "New to Anowa?",
-      "createWorkspace": "Create a farm workspace"
+      "createWorkspace": "Create a farm workspace",
+      "workEmail": "Work email",
+      "forgot": "Forgot?",
+      "resendIn": "Resend in {time}"
     },
     "signup": {
       "title": "Create your account",
-      "subtitle": "Start with email and password. Next, register your farm or accept your company's invite.",
+      "subtitle": "Two minutes now. Your first cage tomorrow morning.",
       "fullName": "Full name",
       "confirm": "Confirm password",
       "create": "Create account",
@@ -5171,7 +5190,11 @@
       "haveAccount": "Already have an account?",
       "mismatch": "Passwords do not match",
       "tooShort": "Password must be at least 6 characters long",
-      "failed": "Sign up failed"
+      "failed": "Sign up failed",
+      "agreeBefore": "I agree to the",
+      "agreeTerms": "Terms",
+      "agreeAnd": "and",
+      "agreePrivacy": "Privacy policy"
     },
     "reset": {
       "title": "Reset your password",
@@ -5184,7 +5207,9 @@
       "remembered": "Remembered it?",
       "noAccount": "No account uses that email.",
       "couldNotSend": "Could not send the code. Try again in a minute.",
-      "wrongCode": "That code is wrong or has expired. Ask for a new one."
+      "wrongCode": "That code is wrong or has expired. Ask for a new one.",
+      "sessionsNote": "Other sessions will be signed out.",
+      "saveSignIn": "Save & sign in"
     },
     "invite": {
       "pageTitle": "Organization invite",
@@ -5220,9 +5245,40 @@
       "joining": "Joining…",
       "decline": "Decline",
       "acceptFailed": "Could not accept the invite",
-      "declineFailed": "Could not decline the invite"
+      "declineFailed": "Could not decline the invite",
+      "sites": "Sites",
+      "expiresIn": "in {count} days",
+      "expiresTomorrow": "in 1 day",
+      "expiresToday": "today",
+      "joinAsBefore": "You'll join as"
     },
-    "humanFirst": "Please complete the human check first."
+    "humanFirst": "Please complete the human check first.",
+    "footerPrivacy": "Privacy",
+    "footerTerms": "Terms",
+    "footerStatus": "Status",
+    "human": {
+      "title": "You're human",
+      "body": "Verified quietly · no puzzles",
+      "checking": "Checking you're human…",
+      "provider": "Turnstile"
+    },
+    "verifyEmail": {
+      "sentTitle": "Check your inbox",
+      "sentBefore": "We sent a code to",
+      "sentAfter": "It works for 15 minutes.",
+      "openGmail": "Open Gmail",
+      "resendIn": "Resend in {time}",
+      "resend": "Resend code"
+    },
+    "verify": {
+      "codeTitle": "Enter 6-digit code",
+      "sentBy": {
+        "sms": "Sent by SMS to",
+        "whatsapp": "Sent by WhatsApp to"
+      },
+      "resendIn": "resend {time}",
+      "resend": "resend"
+    }
   },
   "onboarding": {
     "eyebrow": "Set up your workspace",
@@ -5293,7 +5349,9 @@
       "title": "Confirm delete",
       "message": "This action cannot be undone.",
       "confirm": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "typePrefix": "Type",
+      "typeSuffix": "to confirm"
     },
     "logout": {
       "title": "Log out?",
@@ -5334,7 +5392,9 @@
       "readOnly": "read-only",
       "writes": "changes allowed and audited",
       "endsIn": "ends in {minutes} min",
-      "exit": "End support access",
+      "endsAt": "ends {time}",
+      "exit": "Exit",
+      "exitLabel": "End support access",
       "startTitle": "Support access: {name}",
       "startBody": "You will see this organization as its admin until you end the session or it expires. Starting, ending and every change are recorded in the organization's audit log under your name.",
       "start": "Start support access",
@@ -5351,19 +5411,23 @@
       "info": "Info"
     },
     "update": {
-      "title": "Update available"
+      "title": "New version ready"
     }
   },
   "system": {
     "notFound": {
       "title": "This cage drifted off",
       "body": "The page you're after moved or never existed.",
-      "home": "Go home"
+      "home": "Go home",
+      "search": "Search {shortcut}"
     },
     "error": {
       "title": "Something went wrong",
       "titleCode": "Something went wrong (error {code})",
-      "body": "Your saved data is safe. Try again, and if it keeps happening tell your administrator what you were doing.",
+      "body": "Your entries are safe offline.",
+      "notified": "We've been notified.",
+      "copyCode": "Copy error code {code}",
+      "codeCopied": "Error code copied",
       "home": "Go to dashboard"
     },
     "redirectApprovals": "Redirecting to approvals…",
@@ -6225,7 +6289,8 @@
     "active": "Active",
     "switching": "Switching…",
     "registerAnother": "Register another organization",
-    "menuLabel": "Your farms",
+    "menuLabel": "Switch farm",
+    "sites": "Sites",
     "current": "Current farm: {name} ({role})",
     "status": {
       "pending": "Awaiting approval",
@@ -6243,7 +6308,10 @@
     "continueTo": "Continue to {name}",
     "newFarm": "Starting a new farm?",
     "notYou": "Not you?",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "pending": "Waiting for approval · usually under a day",
+    "panelEyebrow": "One sign-in · every farm you run",
+    "panelHeadline": "Each farm keeps its own cages, people and books."
   },
   "forecast": {
     "title": "Growth forecast",

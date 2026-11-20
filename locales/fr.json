@@ -2381,7 +2381,7 @@
       "unit": "Unité",
       "batch": "Lot",
       "fish": "Poissons",
-      "abw": "PMI à l’empoissonnement",
+      "biomass": "Biomasse",
       "status": "Statut",
       "stocking": "Empoissonnement",
       "empty": "Aucun empoissonnement. Créez un lot pour suivre les jours d’élevage et la biomasse.",
@@ -5123,29 +5123,45 @@
     "notOwner": "Vous n'êtes pas le propriétaire ? Demandez au propriétaire de votre organisation de régler le solde, ou contactez notre support."
   },
   "authUi": {
-    "footerSecure": "Connexion sécurisée · vos données restent dans votre entreprise",
+    "footerSecure": "🔒 Protégé par la vérification en deux étapes",
     "show": "Afficher",
     "hide": "Masquer",
     "or": "ou",
     "humanFailed": "La vérification humaine a échoué",
     "strength": {
-      "weak": "Mot de passe faible",
-      "fair": "Mot de passe moyen",
-      "good": "Bon mot de passe",
-      "strong": "Mot de passe fort"
+      "weak": "Faible",
+      "fair": "Moyen",
+      "good": "Bon",
+      "strong": "Fort",
+      "hintStrong": "12 caractères ou plus",
+      "hintMore": "ajoutez un chiffre ou une phrase"
     },
     "panel": {
-      "loginEyebrow": "Opérations de la ferme",
-      "loginHeadline": "Chaque cage, étang et bassin, au même endroit, au calme.",
-      "signupEyebrow": "Nouvel espace",
-      "signupHeadline": "Configurez votre ferme en un après-midi.",
       "inviteEyebrow": "Vous êtes invité",
       "inviteHeadline": "Votre équipe gère déjà sa ferme ici.",
-      "cardAutomationLabel": "Automatisation résolue",
-      "cardAutomationTitle": "Oxygène de C-07 revenu à 6,0 mg/L",
-      "cardAutomationMeta": "Tâche aérateur close par Kofi A. · 06:31",
-      "cardOvernightLabel": "Cette nuit",
-      "cardOvernightMeta": "cages saisies · 7 à faire avant 09:00"
+      "login": {
+        "eyebrow": "Akosombo · 06:42 · 27 °C",
+        "headline": "Votre ferme a continué de tourner pendant votre sommeil.",
+        "cardTopLabel": "Automatisation résolue",
+        "cardTopTitle": "Oxygène de C-07 revenu à 6,0 mg/L",
+        "cardTopMeta": "Tâche aérateur close par Kofi A. · 06:31",
+        "cardLeftLabel": "Cette nuit",
+        "cardLeftValue": "31 / 38",
+        "cardLeftMeta": "cages saisies · 7 à faire avant 09:00"
+      },
+      "signup": {
+        "eyebrow": "Première semaine · Ce que vous obtenez",
+        "headline": "Chaque cage, chaque sac d'aliment, un seul endroit calme.",
+        "cardTopLabel": "Gratuit pendant 30 jours",
+        "cardTopTitle": "Jusqu'à 10 cages · sans carte bancaire",
+        "cardTopMeta": "Invitez votre équipe après la configuration",
+        "cardLeftLabel": "Temps de configuration",
+        "cardLeftValue": "~ 4 min",
+        "cardLeftMeta": "entreprise · sites · premières cages"
+      },
+      "quote": "« L'IC est passé de 1,7 à 1,4 en un cycle. »",
+      "quoteBy": "Kwame Agyei · PBA Farm Ltd",
+      "reach": "40+ fermes · 3 pays"
     },
     "login": {
       "title": "Bon retour",
@@ -5154,16 +5170,19 @@
       "tabSso": "SSO",
       "codeTitle": "Saisissez votre code",
       "verifyAndSignIn": "Vérifier et se connecter",
-      "sharedPhoneTitle": "Téléphone partagé ?",
-      "sharedPhoneBody": "Déconnectez-vous à la fin pour que la personne suivante ne voie pas votre ferme.",
+      "sharedPhoneTitle": "Personnel de terrain sur un téléphone partagé ?",
+      "sharedPhoneBody": "Les codes par téléphone ne demandent pas de mot de passe. Déconnectez-vous à la fin pour que la personne suivante ne voie pas votre ferme.",
       "useEmail": "Utiliser l'e-mail",
       "ssoHint": "Connectez-vous avec le compte de votre entreprise via {name}.",
       "newHere": "Nouveau sur Anowa ?",
-      "createWorkspace": "Créer un espace pour votre ferme"
+      "createWorkspace": "Créer un espace pour votre ferme",
+      "workEmail": "E-mail professionnel",
+      "forgot": "Oublié ?",
+      "resendIn": "Renvoyer dans {time}"
     },
     "signup": {
       "title": "Créez votre compte",
-      "subtitle": "Commencez par un e-mail et un mot de passe. Ensuite, enregistrez votre ferme ou acceptez l'invitation de votre entreprise.",
+      "subtitle": "Deux minutes maintenant. Votre première cage demain matin.",
       "fullName": "Nom complet",
       "confirm": "Confirmer le mot de passe",
       "create": "Créer un compte",
@@ -5171,7 +5190,11 @@
       "haveAccount": "Vous avez déjà un compte ?",
       "mismatch": "Les mots de passe ne correspondent pas",
       "tooShort": "Le mot de passe doit contenir au moins 6 caractères",
-      "failed": "L'inscription a échoué"
+      "failed": "L'inscription a échoué",
+      "agreeBefore": "J'accepte les",
+      "agreeTerms": "Conditions",
+      "agreeAnd": "et la",
+      "agreePrivacy": "Politique de confidentialité"
     },
     "reset": {
       "title": "Réinitialiser votre mot de passe",
@@ -5184,7 +5207,9 @@
       "remembered": "Vous vous en souvenez ?",
       "noAccount": "Aucun compte n'utilise cet e-mail.",
       "couldNotSend": "Impossible d'envoyer le code. Réessayez dans une minute.",
-      "wrongCode": "Ce code est incorrect ou a expiré. Demandez-en un nouveau."
+      "wrongCode": "Ce code est incorrect ou a expiré. Demandez-en un nouveau.",
+      "sessionsNote": "Les autres sessions seront déconnectées.",
+      "saveSignIn": "Enregistrer et se connecter"
     },
     "invite": {
       "pageTitle": "Invitation d'organisation",
@@ -5220,9 +5245,40 @@
       "joining": "Adhésion…",
       "decline": "Refuser",
       "acceptFailed": "Impossible d'accepter l'invitation",
-      "declineFailed": "Impossible de refuser l'invitation"
+      "declineFailed": "Impossible de refuser l'invitation",
+      "sites": "Sites",
+      "expiresIn": "dans {count} jours",
+      "expiresTomorrow": "dans 1 jour",
+      "expiresToday": "aujourd'hui",
+      "joinAsBefore": "Vous rejoindrez en tant que"
     },
-    "humanFirst": "Veuillez d'abord terminer la vérification humaine."
+    "humanFirst": "Veuillez d'abord terminer la vérification humaine.",
+    "footerPrivacy": "Confidentialité",
+    "footerTerms": "Conditions",
+    "footerStatus": "Statut",
+    "human": {
+      "title": "Vous êtes humain",
+      "body": "Vérifié discrètement · sans casse-tête",
+      "checking": "Vérification que vous êtes humain…",
+      "provider": "Turnstile"
+    },
+    "verifyEmail": {
+      "sentTitle": "Consultez votre boîte de réception",
+      "sentBefore": "Nous avons envoyé un code à",
+      "sentAfter": "Il est valable 15 minutes.",
+      "openGmail": "Ouvrir Gmail",
+      "resendIn": "Renvoyer dans {time}",
+      "resend": "Renvoyer le code"
+    },
+    "verify": {
+      "codeTitle": "Saisissez le code à 6 chiffres",
+      "sentBy": {
+        "sms": "Envoyé par SMS au",
+        "whatsapp": "Envoyé par WhatsApp au"
+      },
+      "resendIn": "renvoyer dans {time}",
+      "resend": "renvoyer"
+    }
   },
   "onboarding": {
     "eyebrow": "Configurez votre espace",
@@ -5293,7 +5349,9 @@
       "title": "Confirmer la suppression",
       "message": "Cette action est irréversible.",
       "confirm": "Supprimer",
-      "deleting": "Suppression…"
+      "deleting": "Suppression…",
+      "typePrefix": "Saisissez",
+      "typeSuffix": "pour confirmer"
     },
     "logout": {
       "title": "Se déconnecter ?",
@@ -5334,7 +5392,9 @@
       "readOnly": "lecture seule",
       "writes": "modifications autorisées et tracées",
       "endsIn": "fin dans {minutes} min",
-      "exit": "Terminer l’accès support",
+      "endsAt": "fin à {time}",
+      "exit": "Quitter",
+      "exitLabel": "Terminer l’accès support",
       "startTitle": "Accès support : {name}",
       "startBody": "Vous verrez cette organisation comme son administrateur jusqu’à la fin de la session ou son expiration. Le début, la fin et chaque modification sont inscrits à votre nom dans le journal d’audit de l’organisation.",
       "start": "Démarrer l’accès support",
@@ -5351,19 +5411,23 @@
       "info": "Info"
     },
     "update": {
-      "title": "Mise à jour disponible"
+      "title": "Nouvelle version prête"
     }
   },
   "system": {
     "notFound": {
       "title": "Cette cage a dérivé",
       "body": "La page que vous cherchez a été déplacée ou n’a jamais existé.",
-      "home": "Retour à l’accueil"
+      "home": "Retour à l’accueil",
+      "search": "Rechercher {shortcut}"
     },
     "error": {
       "title": "Une erreur s’est produite",
       "titleCode": "Une erreur s’est produite (erreur {code})",
-      "body": "Vos données enregistrées sont en sécurité. Réessayez ; si le problème persiste, dites à votre administrateur ce que vous faisiez.",
+      "body": "Vos saisies sont en sécurité hors ligne.",
+      "notified": "Nous avons été prévenus.",
+      "copyCode": "Copier le code d’erreur {code}",
+      "codeCopied": "Code d’erreur copié",
       "home": "Aller au tableau de bord"
     },
     "redirectApprovals": "Redirection vers les approbations…",
@@ -6225,7 +6289,8 @@
     "active": "Active",
     "switching": "Changement…",
     "registerAnother": "Enregistrer une autre organisation",
-    "menuLabel": "Vos fermes",
+    "menuLabel": "Changer de ferme",
+    "sites": "Sites",
     "current": "Ferme actuelle : {name} ({role})",
     "status": {
       "pending": "En attente d’approbation",
@@ -6243,7 +6308,10 @@
     "continueTo": "Continuer vers {name}",
     "newFarm": "Nouvelle ferme ?",
     "notYou": "Ce n’est pas vous ?",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "pending": "En attente d’approbation · généralement moins d’un jour",
+    "panelEyebrow": "Une connexion · toutes vos fermes",
+    "panelHeadline": "Chaque ferme garde ses propres cages, équipes et comptes."
   },
   "forecast": {
     "title": "Prévision de croissance",
