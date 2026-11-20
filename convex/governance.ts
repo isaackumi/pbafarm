@@ -617,6 +617,49 @@ export async function anonymizeUser(ctx: MutationCtx, userId: Id<'users'>) {
   })
 }
 
+/**
+ * Operator tool: run the same account deletion as an approved request
+ * (anonymizeUser), without the user having to ask. For support cases and
+ * cleaning up test accounts. CLI only (internal). `dryRun` (default true)
+ * reports what would happen.
+ *   npx convex run governance:anonymizeUserNow '{"userId":"…","reason":"…","dryRun":false}'
+ */
+export const anonymizeUserNow = internalMutation({
+  args: { userId: v.id('users'), reason: v.string(), dryRun: v.optional(v.boolean()) },
+  returns: v.object({
+    dryRun: v.boolean(),
+    found: v.boolean(),
+    email: v.optional(v.string()),
+    role: v.optional(v.string()),
+    alreadyDeleted: v.boolean(),
+  }),
+  handler: async (ctx, { userId, reason, dryRun = true }) => {
+    if (!reason.trim()) throw userError('VALIDATION', 'Give a reason')
+    const user = await ctx.db.get(userId)
+    if (!user) return { dryRun, found: false, alreadyDeleted: false }
+    const alreadyDeleted = Boolean(user.deletedAt)
+    const out = {
+      dryRun,
+      found: true,
+      email: user.email ?? undefined,
+      role: user.role ?? undefined,
+      alreadyDeleted,
+    }
+    if (dryRun || alreadyDeleted) return out
+    // A deleted account must not keep platform powers.
+    if (user.role === 'super_admin') await ctx.db.patch(userId, { role: 'user' })
+    await anonymizeUser(ctx, userId)
+    await insertAuditLog(ctx, {
+      companyId: user.companyId,
+      actionType: 'account_deleted',
+      tableName: 'users',
+      recordId: userId,
+      newValues: { by: 'operator', reason: reason.trim() },
+    })
+    return out
+  },
+})
+
 /** Daily: complete approved requests whose grace period ended; purge expired audit rows. */
 export const processDueRequests = internalMutation({
   args: {},
