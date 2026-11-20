@@ -87,6 +87,21 @@ objects first (keys are unchanged).
 
 **Billing and platform**: `BILLING_GRACE_DAYS`, `BILLING_PAYMENT_INSTRUCTIONS`.
 
+**Online billing (Paystack, PLAT-107, optional)**. Leave these unset and billing
+stays manual (staff record payments in the console); nothing else changes.
+
+| Variable | Value |
+|---|---|
+| `BILLING_PROVIDER` | `paystack` to turn on "Pay" on `/billing`. Any other value (or unset) = manual. |
+| `PAYSTACK_SECRET_KEY` | Paystack dashboard → Settings → API Keys & Webhooks → **Secret key** (`sk_live_…`; `sk_test_…` on staging). Used for API calls **and** to verify the webhook signature. Never put it in Vercel or `NEXT_PUBLIC_*`. |
+| `SITE_URL` | Already set (`https://app.getanowa.com`); the Paystack callback is `${SITE_URL}/billing?paystack=return`. |
+| `BILLING_FALLBACK_EMAIL_DOMAIN` | Optional. Paystack needs an email; owners who signed up by phone are sent as `billing+<orgId>@<domain>` (default `getanowa.com`). |
+
+`PAYSTACK_PUBLIC_KEY` is **not** used: checkout is Paystack's hosted page, started
+server-side. Both keys must be set (`BILLING_PROVIDER=paystack` **and** the secret)
+for the Pay button to appear. Invoices in a currency the Paystack account is not
+enabled for (Paystack: GHS, NGN, KES, ZAR, USD; XOF is not offered) stay manual.
+
 **Monitoring**: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`.
 
 **Rollout flags** (copy the old values; unset = default): `WRITE_PERMISSION_MATRIX`,
@@ -166,6 +181,10 @@ The webhook host is the new Convex HTTP origin (`https://<new deployment>.convex
   `CONVEX_SITE_URL` in `wrangler.toml` to the new `.convex.site`, create a new
   `ingest:write` API key in the new app, `wrangler secret put CONVEX_INGEST_KEY`,
   then deploy. The old `pbafarm-iot-ingest` Worker can be deleted afterwards.
+- **Paystack** (only if online billing is on): Paystack dashboard → Settings →
+  API Keys & Webhooks → **Webhook URL** = `https://<new>.convex.site/paystack/webhook`
+  (live and test modes each have their own URL and secret). Callback URL can stay
+  empty: each checkout sends its own (`https://app.getanowa.com/billing?paystack=return`).
 - **Partner integrations** (outbound webhooks, inbound webhooks, REST API
   `/api/v1/*`): partners must change the base URL to the new `.convex.site`.
   Signing headers stay `X-PBA-*`, so receivers need no code change.
@@ -202,3 +221,4 @@ switching.**
 - `https://console.getanowa.com/platform` works for a platform admin with MFA.
 - WhatsApp and Telegram bots reply ("This is the Anowa assistant").
 - PWA install shows the Anowa icon and name.
+- Billing (if Paystack is on): an owner sees **Pay** on an open invoice on `/billing`; a test-mode payment returns to `/billing` with "Payment received" and the invoice turns Paid.

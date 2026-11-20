@@ -7,11 +7,14 @@
  *
  *   - `manual` (now): platform staff record bank / mobile money / cash
  *     payments in the console. No network; checkout returns no URL.
- *   - `paystack`, `stripe`: TODO stubs. Provider choice is pending research
- *     (docs/architecture/22-platform-console-billing.md §6); a real adapter
- *     uses `requestJsonAs` from lib/effectHttp.ts through the `Fetch` service,
- *     and payment-creating calls use `retries: 0` unless the vendor
- *     de-duplicates by idempotency key.
+ *   - `paystack` (PLAT-107): hosted checkout for cards + mobile money
+ *     (convex/billing/paystack.ts). On when `BILLING_PROVIDER=paystack` and
+ *     `PAYSTACK_SECRET_KEY` are both set; otherwise manual stays the default.
+ *   - `stripe`: TODO stub.
+ *
+ * Adapters use `requestJsonAs` from lib/effectHttp.ts through the `Fetch`
+ * service; payment-creating calls use `retries: 0` unless the vendor
+ * de-duplicates by idempotency key.
  */
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
@@ -32,8 +35,12 @@ export type CheckoutRequest = {
   readonly currency: string
   readonly amountMinor: number
   readonly customerEmail?: string
-  /** Sent to the provider so a retried request cannot charge twice. */
+  /** Sent to the provider so a retried request cannot charge twice (Paystack: the transaction reference). */
   readonly idempotencyKey: string
+  /** Where the hosted page sends the payer afterwards. */
+  readonly callbackUrl?: string
+  /** Echoed back by the provider (no secrets). */
+  readonly metadata?: Record<string, string>
 }
 
 export type CheckoutSession = {
@@ -47,9 +54,12 @@ export type CheckoutSession = {
 export type VerifiedPayment = {
   readonly provider: BillingProviderId
   readonly providerRef: string
-  readonly status: 'succeeded' | 'failed'
+  readonly status: 'succeeded' | 'failed' | 'pending'
   readonly currency: string
   readonly amountMinor: number
+  /** Payment channel as the provider reports it (card, mobile_money, bank, ...). */
+  readonly channel?: string
+  readonly paidAt?: number
 }
 
 export type BillingProviderApi = {
@@ -96,29 +106,20 @@ function notConfigured(provider: BillingProviderId): BillingProviderApi {
 
 export const manualBillingLayer = Layer.succeed(BillingProvider, makeManualProvider())
 
-// TODO(PLAT-107): Paystack adapter (GHS/XOF mobile money + card): initialize
-// transaction, verify by reference, webhook signature check (HMAC-SHA512).
-export const paystackBillingLayer = Layer.succeed(BillingProvider, notConfigured('paystack'))
-
 // TODO(PLAT-107): Stripe adapter (USD card): Checkout Session, PaymentIntent
 // retrieve, webhook signature check (Stripe-Signature).
 export const stripeBillingLayer = Layer.succeed(BillingProvider, notConfigured('stripe'))
 
-export function billingLayerFor(provider: BillingProviderId) {
-  switch (provider) {
-    case 'manual':
-      return manualBillingLayer
-    case 'paystack':
-      return paystackBillingLayer
-    case 'stripe':
-      return stripeBillingLayer
-  }
+/**
+ * The provider that collects new payments on this deployment. Paystack only
+ * when explicitly selected AND its secret is set, so a half-configured
+ * deployment keeps manual billing.
+ */
+export function activeBillingProvider(env: Record<string, string | undefined> = process.env): BillingProviderId {
+  const choice = env.BILLING_PROVIDER?.trim().toLowerCase()
+  if (choice === 'paystack' && env.PAYSTACK_SECRET_KEY?.trim()) return 'paystack'
+  return 'manual'
 }
 
-/** The checkout for an invoice through its provider's layer. */
-export function checkoutFor(provider: BillingProviderId, req: CheckoutRequest) {
-  return Effect.gen(function* () {
-    const billing = yield* BillingProvider
-    return yield* billing.createCheckout(req)
-  }).pipe(Effect.provide(billingLayerFor(provider)))
-}
+/** A provider that is selected but not implemented (stripe). */
+export const unavailableProvider = notConfigured

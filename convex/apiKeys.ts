@@ -14,6 +14,7 @@ import {
   randomBase62,
 } from './integrations/apiScopes'
 import { requireMember } from './lib/permissions'
+import { assertFeature } from './lib/planLimits'
 
 /**
  * Organization API keys (INT-004, doc 09 §8). Admin-only.
@@ -126,6 +127,7 @@ export const insertKey = internalMutation({
   returns: v.id('apiKeys'),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireApiAdmin(ctx)
+    await assertFeature(ctx, companyId, 'public_api', 'The public API')
     const name = args.name.trim()
     if (!name) throw new Error('Give the key a name')
     if (name.length > MAX_NAME) throw new Error('Name is too long')

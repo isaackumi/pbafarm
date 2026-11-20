@@ -161,6 +161,44 @@ export const billingTables = {
     .index('by_invoiceId', ['invoiceId'])
     .index('by_receivedAt', ['receivedAt']),
 
+  /**
+   * One online payment attempt on an invoice (PLAT-107): the provider
+   * reference we generated, what we asked to collect, and how it ended.
+   * Webhooks and the return-verify look payments up here by reference, so a
+   * reference we never issued is ignored and the company always comes from
+   * our row, never from the provider payload.
+   */
+  billingCheckouts: defineTable({
+    companyId: v.id('companies'),
+    invoiceId: v.id('billingInvoices'),
+    provider: billingProviderId,
+    /** Deterministic per invoice attempt: ANW-<invoice number>-<attempt>. */
+    reference: v.string(),
+    attempt: v.number(),
+    currency: v.string(),
+    amountMinor: v.number(),
+    status: v.union(
+      v.literal('initializing'),
+      v.literal('pending'),
+      v.literal('succeeded'),
+      v.literal('failed'),
+      /** Provider reported a different amount or currency: not settled, flagged for staff. */
+      v.literal('mismatch'),
+    ),
+    /** Hosted page to send the payer to (absent until the provider answers). */
+    authorizationUrl: v.optional(v.string()),
+    paymentId: v.optional(v.id('billingPayments')),
+    /** What the provider reported, when it differed or failed. */
+    reportedAmountMinor: v.optional(v.number()),
+    reportedCurrency: v.optional(v.string()),
+    failureReason: v.optional(v.string()),
+    createdBy: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_reference', ['reference'])
+    .index('by_invoiceId', ['invoiceId']),
+
   /** Credits granted by the platform (AI credits, SMS credits): the ledger. */
   billingCreditGrants: defineTable({
     companyId: v.id('companies'),

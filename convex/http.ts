@@ -12,6 +12,7 @@ import { INBOUND_PREFIX, inboundWebhookHandler } from './integrations/inboundHtt
 import { API_RESOURCES } from './publicApi'
 import { download as fileDownload } from './files'
 import { telegramWebhook, whatsappVerify, whatsappWebhook } from './bot/http'
+import { paystackWebhook } from './billing/checkout'
 
 const http = httpRouter()
 
@@ -39,5 +40,8 @@ http.route({ path: '/files/download', method: 'GET', handler: fileDownload })
 http.route({ path: '/channels/whatsapp', method: 'GET', handler: whatsappVerify })
 http.route({ path: '/channels/whatsapp', method: 'POST', handler: whatsappWebhook })
 http.route({ path: '/channels/telegram', method: 'POST', handler: telegramWebhook })
+
+// Billing provider webhooks (PLAT-107): x-paystack-signature (HMAC-SHA512) verified on the raw body.
+http.route({ path: '/paystack/webhook', method: 'POST', handler: paystackWebhook })
 
 export default http

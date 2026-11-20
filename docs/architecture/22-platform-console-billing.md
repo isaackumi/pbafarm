@@ -65,7 +65,7 @@ All money is **integer minor units** per currency (`amountMinor`); XOF has no mi
 
 - `entitlements(ctx, companyId)` = the latest subscription's plan limits/features merged with the subscription's overrides. **No subscription = unlimited** (so nothing breaks before the backfill).
 - `assertPlanLimit(ctx, companyId, kind)` throws a user error (details `reason: PLAN_LIMIT`) with a friendly upgrade message ("Your Starter plan includes 1 site…"). Wired into `farmLocations.create` (sites), `cages.create` (units), and member creation/invites in `lib/memberships.ts` / `users.ts` (users = active memberships).
-- `hasFeature` / `assertFeature` read the effective flags. They are available but not yet wired into existing features (PLAT-107 remaining).
+- `hasFeature` / `assertFeature` read the effective flags (no subscription = every feature on). Wired (PLAT-107): `public_api` on API key creation (`apiKeys.insertKey`), `webhooks` on outgoing webhook endpoint creation (`webhooks.createEndpointRow`). Existing keys and endpoints keep working after a downgrade.
 
 ### Payments are idempotent
 
@@ -80,7 +80,16 @@ All money is **integer minor units** per currency (`amountMinor`); XOF has no mi
 
 ## 6. Provider boundary (`convex/billing/provider.ts`)
 
-`BillingProvider` is an Effect `Context.Service` (`createCheckout`, `verifyPayment`) with one `Layer` per provider (D-019). `manual` is implemented: no network, staff record payments. `paystack` and `stripe` are `TODO(PLAT-107)` stubs that fail with "not available yet". The provider choice is pending research (Paystack for GHS/XOF mobile money + card is the likely first adapter; Stripe for USD card). A real adapter must use `requestJsonAs` through the `Fetch` service, `retries: 0` for charge-creating calls unless the vendor de-duplicates on the idempotency key, and verify webhook signatures before calling `applyPayment`.
+`BillingProvider` is an Effect `Context.Service` (`createCheckout`, `verifyPayment`) with one `Layer` per provider (D-019). `manual`: no network, staff record payments. `stripe`: stub. `paystack` (PLAT-107, `convex/billing/paystack.ts`, `checkout.ts`) is on when `BILLING_PROVIDER=paystack` **and** `PAYSTACK_SECRET_KEY` are set (`activeBillingProvider`); otherwise manual stays the default.
+
+Paystack flow:
+
+1. Owner (`org.settings.manage`, allowed while suspended, not in read-only act-as) presses **Pay** on an open invoice → `billing/checkout:payInvoice`. `beginCheckout` checks the invoice belongs to the caller's organization (another tenant's invoice is `NOT_FOUND`), is open with a balance, and is in a Paystack currency (GHS, NGN, KES, ZAR, USD). It reuses a pending hosted page for the same balance from the last 30 minutes, otherwise inserts a `billingCheckouts` row with reference `ANW-<invoice number>-<attempt>` and the balance.
+2. `POST /transaction/initialize` (amount in minor units, currency, reference, `callback_url = SITE_URL/billing?paystack=return`), `retries: 0`: a timed-out initialize may have landed and Paystack refuses a reused reference, so the next click is a new attempt. The browser goes to `authorization_url`.
+3. Settlement, whichever comes first, both through the internal `settle` mutation: the **webhook** `POST /paystack/webhook` (`x-paystack-signature` = hex HMAC-SHA512 of the raw body with the secret key, constant-time compare, before parsing or any read; 401 otherwise; `charge.success` / `charge.failed` only), or the **return** `confirmReturn` (caller must own the checkout) → `GET /transaction/verify/:reference` (default transient retry).
+4. `settle` looks the reference up in `billingCheckouts` (unknown → ignored, 200), and the tenant always comes from our row. Amount or currency different from what we asked for → checkout `mismatch`, `platformEvents` `payment.mismatch`, invoice untouched. Otherwise `applyPayment` with key `paystack:<reference>` (replays are no-ops), which renews the subscription and lifts a billing suspension, plus `platformEvents` `payment.recorded`.
+
+Follow-up (not built): saved-card auto-renew with the Paystack `authorization_code` (`charge_authorization`), refunds/`charge.dispute` events, Paystack webhook IP allowlist.
 
 ## 7. Lifecycle (`convex/billing/lifecycle.ts`, `model.ts`)
 
@@ -103,8 +112,8 @@ New organizations get a trial on the default plan when approved (`companies.appr
 
 ## 9. Remaining
 
-- Paystack / Stripe adapters, checkout from `/billing`, webhooks (PLAT-107).
-- Wire `hasFeature` into feature entry points (AI assistant, WhatsApp, public API, webhooks, hatchery) once plans are priced.
+- Stripe adapter; Paystack saved-card auto-renew (`authorization_code`), refunds and disputes.
+- Wire `hasFeature` into the remaining entry points (AI assistant, WhatsApp, hatchery, multi-site reports) once plans are priced; decide whether a downgrade disables existing API keys/webhook endpoints.
 - AI credit and SMS allowance enforcement against `aiCredits` / `smsIncluded` (counted and shown; not yet blocking); link SMS top-ups (`pages/topup*`) to credit grants.
 - WhatsApp cost per message (counts only today).
 - Legacy users without a membership row are not counted toward the users limit.

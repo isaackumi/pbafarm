@@ -52,6 +52,8 @@ const ALLOWLIST: Record<string, string> = {
   'webhooks.rotateSecret': 'action; guarded by requireWebhookAdmin in internal.webhooks.endpointOwner',
   'weather.refreshSite': 'action; guarded by requireMember(org.sites.manage) in internal.weather.siteForRefresh',
   'apiKeys.create': 'action; guarded by requireApiAdmin in internal.apiKeys.insertKey',
+  'billing/checkout.payInvoice': 'action; guarded by requirePermission(org.settings.manage) + own invoice in internal.billing.checkout.beginCheckout',
+  'billing/checkout.confirmReturn': 'action; guarded by requirePermission(org.settings.manage) + own checkout in internal.billing.checkout.ownCheckout',
   'customFields.setValues': 'guarded by requireEntityEditor: the permission that edits that entity (ENTITY_EDIT_PERMISSION in customFields.ts) plus site scope',
   'inboundWebhooks.create': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.createRow',
   'inboundWebhooks.rotateSecret': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.owner',

@@ -1,6 +1,9 @@
-import { useQuery } from 'convex/react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
+import { useAction, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Badge, LoadingState, ProgressBar, Table } from '../ui'
+import { Badge, Button, LoadingState, ProgressBar, Table } from '../ui'
+import { errorMessage } from '../../lib/errorMessage'
 import { formatDate, formatMinor } from '../../lib/billingFormat'
 import { limitTone } from '../../lib/billingBalance'
 import { useT } from '../../lib/i18n/context'
@@ -32,10 +35,70 @@ function LimitRow({ limit }) {
   )
 }
 
+const RETURN_TONE = { settled: 'good', duplicate: 'good', pending: 'warn', failed: 'alert', mismatch: 'alert', unknown: 'alert' }
+
+/**
+ * Back from Paystack (`/billing?paystack=return&reference=…`): confirm the
+ * payment once, then drop the query so a refresh does not repeat it.
+ */
+function usePaystackReturn() {
+  const router = useRouter()
+  const confirm = useAction(api.billing.checkout.confirmReturn)
+  const [outcome, setOutcome] = useState(null)
+  const done = useRef(false)
+  const { paystack, reference, trxref } = router.query
+  const ref = typeof reference === 'string' ? reference : typeof trxref === 'string' ? trxref : null
+  useEffect(() => {
+    if (!router.isReady || paystack !== 'return' || !ref || done.current) return
+    done.current = true
+    setOutcome('checking')
+    confirm({ reference: ref })
+      .then((o) => setOutcome(o))
+      .catch(() => setOutcome('pending'))
+      .finally(() => router.replace('/billing', undefined, { shallow: true }))
+  }, [router, paystack, ref, confirm])
+  return outcome
+}
+
+function PayButton({ invoice }) {
+  const t = useT()
+  const pay = useAction(api.billing.checkout.payInvoice)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const onPay = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const r = await pay({ invoiceId: invoice.id })
+      if (r.kind === 'redirect') {
+        window.location.assign(r.url)
+        return
+      }
+      setError(r.instructions)
+    } catch (e) {
+      setError(errorMessage(e, t('billing.payFailed')))
+    }
+    setBusy(false)
+  }
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button size="sm" onClick={onPay} disabled={busy} aria-label={t('billing.payInvoiceNumber', { number: invoice.number })}>
+        {busy ? t('billing.paying') : t('billing.payInvoice')}
+      </Button>
+      {error ? (
+        <span role="alert" className="max-w-[240px] text-right text-xs text-alert">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
 /** Current plan, usage vs limits and invoices for the signed-in organization (PLAT-113, Paper 43). */
 export default function TenantBilling() {
   const t = useT()
   const b = useQuery(api.billing.tenant.myBilling, {})
+  const returned = usePaystackReturn()
   if (b === undefined) return <LoadingState label={t('billing.loading')} />
   if (b === null) return <p className="text-muted">{t('billing.noOrg')}</p>
   const open = b.invoices.filter((i) => i.status === 'open')
@@ -44,6 +107,15 @@ export default function TenantBilling() {
 
   return (
     <div className="flex flex-col gap-4">
+      {returned ? (
+        <div role="status" className="rounded-[12px] border border-line bg-surface p-4 text-sm">
+          {returned === 'checking' ? (
+            <span className="text-muted">{t('billing.return.checking')}</span>
+          ) : (
+            <Badge tone={RETURN_TONE[returned] || 'neutral'}>{t(`billing.return.${returned}`)}</Badge>
+          )}
+        </div>
+      ) : null}
       {b.suspended ? (
         <div role="alert" className="rounded-[12px] border border-alert bg-[color-mix(in_oklab,var(--alert)_8%,transparent)] p-5">
           <p className="font-medium text-alert">{t('billing.suspended')}</p>
@@ -108,6 +180,16 @@ export default function TenantBilling() {
                 header: t('billing.col.status'),
                 render: (r) => <Badge tone={INVOICE_TONE[r.status] || 'neutral'}>{t(`billing.invoiceStatus.${r.status}`)}</Badge>,
               },
+              ...(b.onlinePayment
+                ? [
+                    {
+                      key: 'pay',
+                      header: t('billing.col.pay'),
+                      align: 'right',
+                      render: (r) => (r.status === 'open' && r.totalMinor > r.paidMinor ? <PayButton invoice={r} /> : null),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>
@@ -121,6 +203,7 @@ export default function TenantBilling() {
           <p className="mt-3 whitespace-pre-wrap rounded-[10px] bg-surface-2 p-3 text-sm leading-5 text-text">{b.paymentInstructions}</p>
         </section>
       ) : null}
+      {open.length > 0 && b.onlinePayment ? <p className="text-xs leading-4 text-muted">{t('billing.payOnlineHint')}</p> : null}
     </div>
   )
 }

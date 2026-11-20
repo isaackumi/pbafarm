@@ -10,6 +10,7 @@ import { memberContext, requirePermission } from '../lib/permissions'
 import { countUsage, entitlements, LIMIT_LABELS, type LimitKind } from '../lib/planLimits'
 import { billingInterval, invoiceStatus, subscriptionStatus } from './tables'
 import { priceIn } from './model'
+import { activeBillingProvider } from './provider'
 
 export const myBilling = query({
   args: {},
@@ -49,6 +50,8 @@ export const myBilling = query({
         }),
       ),
       paymentInstructions: v.union(v.string(), v.null()),
+      /** Online checkout on this deployment (PLAT-107), or null for manual collection only. */
+      onlinePayment: v.union(v.null(), v.literal('paystack')),
     }),
   ),
   handler: async (ctx) => {
@@ -111,8 +114,9 @@ export const myBilling = query({
       limits,
       features: ent.features,
       invoices,
-      // Manual collection today (BillingProvider 'manual'): set BILLING_PAYMENT_INSTRUCTIONS on the deployment.
+      // Manual collection: BILLING_PAYMENT_INSTRUCTIONS. Online: BILLING_PROVIDER=paystack + PAYSTACK_SECRET_KEY.
       paymentInstructions: process.env.BILLING_PAYMENT_INSTRUCTIONS?.trim() || null,
+      onlinePayment: activeBillingProvider() === 'paystack' ? ('paystack' as const) : null,
     }
   },
 })

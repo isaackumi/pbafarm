@@ -40,6 +40,7 @@ import {
   webhookUrlProblem,
 } from './integrations/webhookLogic'
 import { requireMember } from './lib/permissions'
+import { assertFeature } from './lib/planLimits'
 
 /**
  * Outbound webhooks (INT-005, doc 09 §7).
@@ -261,6 +262,7 @@ export const createEndpointRow = internalMutation({
   returns: v.object({ id: v.id('webhookEndpoints'), companyId: v.id('companies') }),
   handler: async (ctx, args) => {
     const { user, companyId } = await requireWebhookAdmin(ctx)
+    await assertFeature(ctx, companyId, 'webhooks', 'Outgoing webhooks')
     const url = cleanUrl(args.url)
     const eventTypes = cleanEventTypes(args.eventTypes)
     const description = args.description?.trim() || undefined

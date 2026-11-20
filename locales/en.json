@@ -4658,7 +4658,8 @@
       "due": "Due",
       "total": "Total",
       "balance": "Balance",
-      "status": "Status"
+      "status": "Status",
+      "pay": "Payment"
     },
     "invoiceStatus": {
       "open": "Open",
@@ -4666,7 +4667,21 @@
       "void": "Void",
       "uncollectible": "Uncollectible"
     },
-    "howToPay": "How to pay"
+    "howToPay": "How to pay",
+    "payInvoice": "Pay",
+    "payInvoiceNumber": "Pay invoice {number}",
+    "paying": "Opening Paystack…",
+    "payFailed": "Could not start the payment. Try again.",
+    "payOnlineHint": "Pay open invoices by card or mobile money through Paystack. Access is restored as soon as the payment clears.",
+    "return": {
+      "checking": "Checking your payment…",
+      "settled": "Payment received. Thank you.",
+      "duplicate": "Payment received. Thank you.",
+      "pending": "Your payment is still being confirmed. This page updates when it clears.",
+      "failed": "The payment did not go through. You can try again.",
+      "mismatch": "The amount paid did not match the invoice. Our team will review it and contact you.",
+      "unknown": "We could not find that payment."
+    }
   },
   "chatChannels": {
     "title": "Connect WhatsApp / Telegram",

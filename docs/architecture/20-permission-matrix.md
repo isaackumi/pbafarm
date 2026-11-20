@@ -47,6 +47,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `batches.grade` | `production.transfer.approve` | yes | yes | no | no | no |
 | `batches.list` | `production.view` | yes | yes | yes | yes | yes |
 | `batches.transferGroup` | `production.transfer.approve` | yes | yes | no | no | no |
+| `billing/checkout.confirmReturn` | `allowlisted` | see test | see test | see test | see test | see test |
+| `billing/checkout.payInvoice` | `allowlisted` | see test | see test | see test | see test | see test |
 | `billing/tenant.myBilling` | `org.settings.manage` | yes | yes | no | no | no |
 | `biweeklyRecords.create` | `production.sampling.record` | yes | yes | yes | yes | no |
 | `biweeklyRecords.createBatch` | `production.sampling.record` | yes | yes | yes | yes | no |

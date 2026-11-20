@@ -43,6 +43,12 @@ If Turnstile is on (`TURNSTILE_ALLOWED_HOSTNAMES` set), add `console.getanowa.co
    ```
    Default: every approved organization without a subscription gets the default plan as `active` for one period. Pass `"status": "trialing"` to start trials instead, or `"planCode": "growth"` for another plan. It is idempotent: organizations that already have a subscription are skipped.
 3. From now on, newly approved organizations start a trial on the default plan automatically.
+4. **Online payment (optional, Paystack).** Manual collection works with nothing set. To let owners pay invoices by card or mobile money:
+   - Convex env: `BILLING_PROVIDER=paystack`, `PAYSTACK_SECRET_KEY=sk_live_…` (Paystack dashboard → Settings → API Keys & Webhooks). No public key is needed: checkout is Paystack's hosted page.
+   - Paystack dashboard → same page → **Webhook URL**: `https://<deployment>.convex.site/paystack/webhook`. The webhook is how a payment lands even if the owner closes the tab; the return to `/billing?paystack=return` verifies it too. Both are idempotent.
+   - The Paystack account must be enabled for each invoice currency (GHS for Ghana; USD on request). Other currencies keep the manual instructions.
+   - A payment whose amount or currency differs from the invoice is **not** applied: the console audit log shows `payment.mismatch` with both amounts. Reconcile it in Paystack (refund) or record it manually with **Record payment**.
+   - Test with `sk_test_…` on staging first: test card `4084 0840 8408 4081`, any future date, CVV `408`.
 
 ## 6. What runs daily
 

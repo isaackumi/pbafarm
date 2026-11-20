@@ -4658,7 +4658,8 @@
       "due": "Échéance",
       "total": "Total",
       "balance": "Solde",
-      "status": "Statut"
+      "status": "Statut",
+      "pay": "Paiement"
     },
     "invoiceStatus": {
       "open": "Ouverte",
@@ -4666,7 +4667,21 @@
       "void": "Annulée",
       "uncollectible": "Irrécouvrable"
     },
-    "howToPay": "Comment payer"
+    "howToPay": "Comment payer",
+    "payInvoice": "Payer",
+    "payInvoiceNumber": "Payer la facture {number}",
+    "paying": "Ouverture de Paystack…",
+    "payFailed": "Impossible de lancer le paiement. Réessayez.",
+    "payOnlineHint": "Réglez les factures ouvertes par carte ou mobile money via Paystack. L'accès est rétabli dès que le paiement est confirmé.",
+    "return": {
+      "checking": "Vérification de votre paiement…",
+      "settled": "Paiement reçu. Merci.",
+      "duplicate": "Paiement reçu. Merci.",
+      "pending": "Votre paiement est en cours de confirmation. Cette page se met à jour dès qu'il est validé.",
+      "failed": "Le paiement n'a pas abouti. Vous pouvez réessayer.",
+      "mismatch": "Le montant payé ne correspond pas à la facture. Notre équipe va l'examiner et vous contacter.",
+      "unknown": "Paiement introuvable."
+    }
   },
   "chatChannels": {
     "title": "Connecter WhatsApp / Telegram",
