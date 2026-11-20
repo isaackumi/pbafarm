@@ -43,6 +43,15 @@ import {
 } from '../bot/pending'
 import { farmDate, inScope, matchUnit, unitsInScope } from '../bot/scope'
 import { anowaCtx, assertNotSupportAccess, webMember, type WebMember } from './scope'
+import { addCostAs, addMilestoneAs, createProjectAs, removeCostAs, removeMilestoneAs, removeProjectAs } from '../projects'
+import {
+  buildProjectProposal,
+  isProjectKind,
+  projectCostInput,
+  projectCreateInput,
+  projectItemProblem,
+  projectMilestoneInput,
+} from './projects'
 
 /** Items one draft card may hold. */
 export const MAX_ITEMS_PER_DRAFT = 5
@@ -67,7 +76,14 @@ export const taskInput = v.object({
   notes: v.optional(v.string()),
 })
 
-export const webProposalInput = v.union(proposalInput, purchaseOrderInput, taskInput)
+export const webProposalInput = v.union(
+  proposalInput,
+  purchaseOrderInput,
+  taskInput,
+  projectCreateInput,
+  projectMilestoneInput,
+  projectCostInput,
+)
 export type WebProposalInput = Infer<typeof webProposalInput>
 
 type Payload = Doc<'pendingBotActions'>['payload']
@@ -87,6 +103,9 @@ export const PERMISSION: Record<Payload['kind'], Permission> = {
   feed_issue: 'inventory.issue',
   purchase_order: 'inventory.purchase.record',
   task: 'automation.manage',
+  project_create: 'projects.manage',
+  project_milestone: 'projects.manage',
+  project_cost: 'projects.manage',
 }
 
 const REFUSAL: Record<Payload['kind'], string> = {
@@ -94,6 +113,9 @@ const REFUSAL: Record<Payload['kind'], string> = {
   feed_issue: 'Your role cannot issue feed.',
   purchase_order: 'Your role cannot create purchase orders.',
   task: 'Your role cannot assign tasks.',
+  project_create: 'Your role cannot create projects.',
+  project_milestone: 'Your role cannot change projects.',
+  project_cost: 'Your role cannot log project costs.',
 }
 
 const trimTo = (s: string | undefined, n: number) => s?.trim().slice(0, n) || undefined
@@ -349,6 +371,8 @@ export const propose = internalMutation({
       built = await buildProposal(ctx, w, input, now)
     } else if (input.kind === 'purchase_order') {
       built = await buildPurchaseOrder(ctx, w, input)
+    } else if (input.kind === 'project_create' || input.kind === 'project_milestone' || input.kind === 'project_cost') {
+      built = await buildProjectProposal(ctx, w, input)
     } else {
       built = await buildTask(ctx, w, input)
     }
@@ -385,7 +409,8 @@ async function itemProblem(ctx: QueryCtx, w: WebMember, row: Doc<'pendingBotActi
   if (row.companyId !== w.binding.companyId) return 'Not in your organization.'
   if (!can(w.member, PERMISSION[p.kind])) return REFUSAL[p.kind]
   if (row.siteId && !inScope(w, row.siteId)) return 'That site is not in your access.'
-  const cageId = p.kind === 'purchase_order' ? undefined : p.cageId
+  if (isProjectKind(p.kind)) return await projectItemProblem(ctx, w, p)
+  const cageId = p.kind === 'daily_entry' || p.kind === 'feed_issue' || p.kind === 'task' ? p.cageId : undefined
   if (cageId) {
     const cage = await ctx.db.get(cageId)
     if (!cage || cage.companyId !== w.binding.companyId || cage.archivedAt || !inScope(w, cage.locationId)) {
@@ -516,7 +541,12 @@ export const confirm = mutation({
         .first()
       if (prior) continue
       const p = r.payload
-      const ids: Partial<Pick<Doc<'pendingBotActions'>, 'dailyRecordId' | 'feedUsageId' | 'purchaseOrderId' | 'taskId'>> = {}
+      const ids: Partial<
+        Pick<
+          Doc<'pendingBotActions'>,
+          'dailyRecordId' | 'feedUsageId' | 'purchaseOrderId' | 'taskId' | 'projectId' | 'projectMilestoneId' | 'projectCostId'
+        >
+      > = {}
       if (p.kind === 'daily_entry') {
         const [id] = await saveDailyBatch(wctx, w.actor, {
           date: r.date,
@@ -555,6 +585,24 @@ export const confirm = mutation({
             p.notes ??
             `Drafted with Anowa: ${p.needKg} kg needed for ${p.days} days over ${p.units} units, ${p.stockKg} kg on hand.`,
         })
+      } else if (p.kind === 'project_create') {
+        ids.projectId = await createProjectAs(wctx, w.member, {
+          name: p.name,
+          category: p.category as Parameters<typeof createProjectAs>[2]['category'],
+          ownerUserId: p.ownerUserId,
+          locationId: p.locationId,
+          startDate: p.startDate,
+          targetEndDate: p.targetEndDate,
+          budget: p.budget,
+        })
+      } else if (p.kind === 'project_milestone') {
+        ids.projectMilestoneId = await addMilestoneAs(wctx, w.member, p.projectId, {
+          title: p.title,
+          dueDate: p.dueDate,
+          progressPct: p.progressPct,
+        })
+      } else if (p.kind === 'project_cost') {
+        ids.projectCostId = await addCostAs(wctx, w.member, p.projectId, { amount: p.amount, date: r.date, note: p.note })
       } else {
         ids.taskId = await createTaskAs(wctx, w.actor, {
           title: p.title,
@@ -620,6 +668,19 @@ export const undo = mutation({
       } else if (p.kind === 'task') {
         const task = r.taskId ? await ctx.db.get(r.taskId) : null
         if (!task || task.status !== 'open') return { status: 'too_late' as const }
+      } else if (p.kind === 'project_create') {
+        // Only an untouched project can be undone (no milestones or costs since).
+        // Nothing changed since the confirm (no edit, milestone or cost by anyone).
+        const project = r.projectId ? await ctx.db.get(r.projectId) : null
+        if (!project || project.milestonesTotal > 0 || project.spent !== 0 || project.updatedAt > (r.committedAt ?? 0)) {
+          return { status: 'too_late' as const }
+        }
+      } else if (p.kind === 'project_milestone') {
+        const ms = r.projectMilestoneId ? await ctx.db.get(r.projectMilestoneId) : null
+        if (!ms || ms.updatedAt > (r.committedAt ?? 0)) return { status: 'too_late' as const }
+      } else if (p.kind === 'project_cost') {
+        const cost = r.projectCostId ? await ctx.db.get(r.projectCostId) : null
+        if (!cost || cost.updatedAt > (r.committedAt ?? 0)) return { status: 'too_late' as const }
       }
     }
     const wctx = anowaCtx(ctx, w, draftGroup)
@@ -645,6 +706,12 @@ export const undo = mutation({
           previousValues: po,
           locationId: po?.locationId,
         })
+      } else if (p.kind === 'project_create' && r.projectId) {
+        await removeProjectAs(wctx, w.member, r.projectId)
+      } else if (p.kind === 'project_milestone' && r.projectMilestoneId) {
+        await removeMilestoneAs(wctx, w.member, r.projectMilestoneId)
+      } else if (p.kind === 'project_cost' && r.projectCostId) {
+        await removeCostAs(wctx, w.member, r.projectCostId)
       } else if (p.kind === 'task' && r.taskId) {
         await ctx.db.patch(r.taskId, { status: 'cancelled', updatedAt: now })
         await logAudit(wctx, { actionType: 'update', tableName: 'tasks', recordId: r.taskId, newValues: { status: 'cancelled' } })

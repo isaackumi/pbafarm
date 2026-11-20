@@ -82,7 +82,8 @@
       "alerts": "Alertes et analyses",
       "calendar": "Calendrier",
       "assistant": "Anowa",
-      "cyclePlanner": "Planificateur de cycle"
+      "cyclePlanner": "Planificateur de cycle",
+      "projects": "Projets"
     },
     "section": {
       "anowa": "Demander à Anowa",
@@ -6451,6 +6452,19 @@
           "title": "Assigner une tâche",
           "meta": "Tâches",
           "metaUnit": "Tâches · {unit}"
+        },
+        "projectNew": {
+          "title": "Créer un projet",
+          "meta": "Projets · toute l’organisation",
+          "metaSite": "Projets · {site}"
+        },
+        "projectMilestone": {
+          "title": "Ajouter un jalon",
+          "meta": "Projet · {project}"
+        },
+        "projectCost": {
+          "title": "Enregistrer un coût de projet",
+          "meta": "Projet · {project}"
         }
       },
       "fields": {
@@ -6470,7 +6484,17 @@
         "task": "Tâche",
         "assignee": "Assignée à",
         "due": "Échéance",
-        "noDue": "Sans échéance"
+        "noDue": "Sans échéance",
+        "project": "Projet",
+        "budget": "Budget",
+        "dates": "Dates",
+        "owner": "Responsable",
+        "milestone": "Jalon",
+        "progress": "Avancement",
+        "amount": "Montant",
+        "spentAfter": "Dépensé après",
+        "ofBudget": "({pct} % du budget)",
+        "note": "Note"
       },
       "bar": {
         "label": "Pourquoi cette quantité",
@@ -6517,6 +6541,12 @@
       "failed": "Enregistrement impossible : {message}",
       "followUpLabel": "Suggestion",
       "notNow": "Pas maintenant"
+    },
+    "brief": {
+      "label": "Le point d’Anowa",
+      "from": "Anowa",
+      "loading": "Lecture de vos données…",
+      "ask": "Demander à Anowa"
     }
   },
   "marketing": {
@@ -7407,6 +7437,175 @@
       "none": "Enregistrez au moins deux plans pour voir le compromis entre eux.",
       "same": "{name} vend en premier et dégage la plus forte marge : il gagne sur les deux tableaux.",
       "tradeoff": "{fast} vend {weeks} semaines plus tôt, mais {best} dégage {gap} de marge en plus. Par mois en cage, {leader} rapporte plus, environ {perMonth}."
+    }
+  },
+  "projectsPage": {
+    "title": "Projets",
+    "eyebrow": "Projets · Investissements et améliorations",
+    "detailEyebrow": "Projets · {site}",
+    "new": "Nouveau projet",
+    "edit": "Modifier",
+    "back": "Tous les projets",
+    "notFound": "Ce projet n’existe pas ou n’est pas dans vos sites.",
+    "tabsLabel": "Vues des projets",
+    "tabs": {
+      "timeline": "Calendrier",
+      "board": "Tableau",
+      "budget": "Budget"
+    },
+    "companyWide": "Toute l’organisation",
+    "atRisk": "À surveiller",
+    "late": "En retard",
+    "dueSoon": "Bientôt dû",
+    "loadMore": "Afficher plus",
+    "loading": "Chargement…",
+    "units": {
+      "one": "{count} unité",
+      "other": "{count} unités"
+    },
+    "progress": "{pct} % fait",
+    "ownerIs": "Responsable : {name}",
+    "spentOf": "{spent} sur {budget}",
+    "noBudget": "Sans budget",
+    "noBudgets": "Aucun projet de cette page n’a encore de budget.",
+    "milestones": "Jalons",
+    "milestonesNeed": "Jalons à suivre",
+    "noMilestonesNeed": "Aucun jalon en retard ni dû dans les 14 prochains jours.",
+    "noMilestones": "Aucun jalon pour l’instant.",
+    "noCosts": "Aucun coût enregistré.",
+    "budgetVsActual": "Budget et réel",
+    "details": "Détails",
+    "cancelProject": "Annuler le projet",
+    "delete": "Supprimer le projet",
+    "deleteTitle": "Supprimer {name} ?",
+    "deleteBody": "Ses jalons sont aussi supprimés. Un projet avec des coûts ne peut pas être supprimé ; annulez-le plutôt.",
+    "status": {
+      "planned": "Prévu",
+      "active": "En cours",
+      "on_hold": "En pause",
+      "done": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "category": {
+      "infrastructure": "Infrastructure",
+      "equipment": "Équipement",
+      "expansion": "Extension",
+      "maintenance": "Entretien",
+      "certification": "Certification",
+      "other": "Autre"
+    },
+    "group": {
+      "none": "Sans regroupement",
+      "site": "Par site",
+      "owner": "Par responsable",
+      "status": "Par statut"
+    },
+    "filters": {
+      "search": "Rechercher un projet",
+      "site": "Site",
+      "allSites": "Tous les sites",
+      "status": "Statut",
+      "allStatuses": "Tous les statuts",
+      "owner": "Responsable",
+      "allOwners": "Tous les responsables",
+      "atRisk": "À risque seulement",
+      "group": "Regroupement"
+    },
+    "empty": {
+      "title": "Aucun projet pour l’instant",
+      "body": "Suivez constructions, équipements et certifications : dates, jalons et budget face au réel au même endroit.",
+      "noMatch": "Aucun projet ne correspond",
+      "noMatchBody": "Retirez un filtre ou cherchez un autre nom."
+    },
+    "brief": {
+      "lead": {
+        "one": "{count} projet vous attend",
+        "other": "{count} projets vous attendent"
+      },
+      "overBudget": "{name} dépasse le budget de {pct} %",
+      "late": "{title} sur {name} était dû le {date} et est fait à {pct} %",
+      "dueSoon": "{title}, dû le {date}, est fait à {pct} %",
+      "calm": "Rien ne vous attend : aucun projet ne dépasse son budget et aucun jalon n’est en retard.",
+      "question": "Quels projets demandent mon attention cette semaine, et pourquoi ?",
+      "leadSelf": "Ce projet vous attend",
+      "overBudgetSelf": "il dépasse le budget de {pct} %",
+      "lateSelf": "{title} était dû le {date} et est fait à {pct} %",
+      "pastEnd": "il a dépassé sa fin prévue ({date})",
+      "calmSelf": "Dans les temps : fait à {pct} %, dans le budget, aucun jalon en retard.",
+      "questionSelf": "Où en est {name} ?"
+    },
+    "timeline": {
+      "project": "Projet",
+      "earlier": "Mois précédents",
+      "later": "Mois suivants",
+      "bar": "Du {start} au {end}, fait à {pct} %",
+      "todayLine": "La ligne rouge marque aujourd’hui."
+    },
+    "table": {
+      "project": "Projet",
+      "site": "Site",
+      "budget": "Budget",
+      "spent": "Dépensé",
+      "used": "Budget utilisé"
+    },
+    "board": {
+      "empty": "Aucun"
+    },
+    "kpi": {
+      "budget": "Budget",
+      "spent": "Dépensé",
+      "used": "Budget utilisé",
+      "progress": "Avancement",
+      "milestones": "{done} jalons sur {count}"
+    },
+    "milestone": {
+      "title": "Jalon",
+      "due": "Échéance",
+      "add": "Ajouter un jalon",
+      "dueSub": "Dû le {date} · {pct} %",
+      "lateSub": "En retard : dû le {date} · {pct} %",
+      "done": "Fait le {date}",
+      "progress": "Avancement de {title}",
+      "markDone": "Marquer {title} comme fait",
+      "reopen": "Rouvrir {title}",
+      "remove": "Retirer {title}"
+    },
+    "cost": {
+      "amount": "Montant",
+      "date": "Date",
+      "note": "Pour quoi ?",
+      "add": "Enregistrer le coût",
+      "remove": "Retirer le coût",
+      "link": "Lier une dépense",
+      "linkTitle": "Lier une dépense ou une commande existante",
+      "linkHint": "Elle compte une seule fois pour ce projet, à son propre montant, et suit les modifications.",
+      "linkThis": "Lier",
+      "linked": "Liée. Elle compte désormais pour ce projet.",
+      "expenses": "Dépenses",
+      "orders": "Bons de commande",
+      "nothingToLink": "Rien à lier",
+      "needFinance": "Votre rôle ne peut pas voir les dépenses.",
+      "source": {
+        "manual": "Saisi ici",
+        "expense": "Dépense",
+        "purchase_order": "Bon de commande"
+      }
+    },
+    "form": {
+      "newTitle": "Nouveau projet",
+      "editTitle": "Modifier le projet",
+      "name": "Nom",
+      "category": "Catégorie",
+      "status": "Statut",
+      "site": "Site",
+      "owner": "Responsable",
+      "ownerMe": "Moi",
+      "start": "Début",
+      "end": "Fin prévue",
+      "budget": "Budget ({symbol})",
+      "notes": "Notes",
+      "created": "Projet créé",
+      "updated": "Projet enregistré"
     }
   }
 }

@@ -271,8 +271,13 @@ function DraftRow({ item, index, muted }) {
   const day = (d) =>
     d ? new Date(`${d}T12:00:00`).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' }) : t('askAnowa.draft.fields.noDue')
   const unitName = p.cageName || ''
-  const meta =
-    kind === 'issue' || kind === 'task'
+  const meta = p.kind === 'project_milestone' || p.kind === 'project_cost'
+    ? t(`askAnowa.draft.kinds.${kind}.meta`, { project: p.projectName })
+    : p.kind === 'project_create'
+      ? p.siteName
+        ? t('askAnowa.draft.kinds.projectNew.metaSite', { site: p.siteName })
+        : t('askAnowa.draft.kinds.projectNew.meta')
+      : kind === 'issue' || kind === 'task'
       ? unitName
         ? t(`askAnowa.draft.kinds.${kind}.metaUnit`, { unit: unitName })
         : t(`askAnowa.draft.kinds.${kind}.meta`)
@@ -322,9 +327,54 @@ function DraftRow({ item, index, muted }) {
         <Field label={t('askAnowa.draft.fields.supplier')}>{p.supplierName}</Field>
         {p.pricePerKg > 0 && (
           <Field label={t('askAnowa.draft.fields.cost')} mono>
-            {formatCurrency(p.quantityKg * p.pricePerKg, { maximumFractionDigits: 0 })}
+            {formatCurrency(p.quantityKg * p.pricePerKg, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Field>
         )}
+      </>
+    )
+  } else if (p.kind === 'project_create') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.project')}>{p.name}</Field>
+        <Field label={t('askAnowa.draft.fields.budget')} mono>
+          {formatCurrency(p.budget, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.dates')}>
+          {day(p.startDate)} - {day(p.targetEndDate)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.owner')}>{p.ownerName}</Field>
+      </>
+    )
+  } else if (p.kind === 'project_milestone') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.milestone')}>{p.title}</Field>
+        <Field label={t('askAnowa.draft.fields.due')}>{day(p.dueDate)}</Field>
+        {p.progressPct > 0 && (
+          <Field label={t('askAnowa.draft.fields.progress')} mono>
+            {num(p.progressPct, 0)}%
+          </Field>
+        )}
+      </>
+    )
+  } else if (p.kind === 'project_cost') {
+    const after = p.spentBefore + p.amount
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.amount')} mono>
+          {formatCurrency(p.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
+        <Field label={t('askAnowa.draft.fields.spentAfter')} mono>
+          {formatCurrency(after, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          {p.budget > 0 && (
+            <span className={`font-sans ${after > p.budget ? 'text-alert' : 'text-faint'}`}>
+              {' '}
+              {t('askAnowa.draft.fields.ofBudget', { pct: Math.round((after / p.budget) * 100) })}
+            </span>
+          )}
+        </Field>
+        {p.note && <Field label={t('askAnowa.draft.fields.note')}>{p.note}</Field>}
       </>
     )
   } else {

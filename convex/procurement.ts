@@ -7,6 +7,7 @@ import { tenantScope } from './lib/scope'
 import { applyStockChange, bagsFromKg } from './lib/feedLedger'
 import { mergeSettings } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
+import { syncPurchaseOrderLink } from './projects'
 
 /**
  * Feed purchase orders (INV-004).
@@ -271,6 +272,7 @@ export const cancel = mutation({
       ? `${po.notes ? `${po.notes}\n` : ''}Cancelled: ${args.reason.trim()}`
       : po.notes
     await ctx.db.patch(args.id, { status: 'cancelled', notes, updatedAt: Date.now() })
+    await syncPurchaseOrderLink(ctx, po)
     await logAudit(ctx, { actionType: 'po_cancelled', tableName: 'purchaseOrders', recordId: args.id, previousValues: { status: po.status }, newValues: { reason: args.reason } })
     return args.id
   },
@@ -385,6 +387,8 @@ export const receive = mutation({
       receivedBy: user._id,
       updatedAt: Date.now(),
     })
+    // A project cost linking this order now counts its received value (PROJ-001).
+    await syncPurchaseOrderLink(ctx, { _id: args.id, companyId: po.companyId })
     await logAudit(ctx, {
       actionType: 'po_received',
       tableName: 'purchaseOrders',

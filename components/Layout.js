@@ -37,6 +37,7 @@ const TITLE_BY_PREFIX = [
   ['/sales', 'Sales'],
   ['/health', 'Health & Treatments'],
   ['/pnl', 'Cage P&L'],
+  ['/projects', 'Projects'],
   ['/analytics', 'Analytics'],
   ['/expenses', 'Expenses'],
   ['/procurement', 'Purchase orders'],
