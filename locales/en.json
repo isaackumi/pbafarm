@@ -3363,7 +3363,7 @@
       "notificationsHelper": "Which events reach you, and on which channel",
       "manage": "Manage",
       "homeHeader": "Home header",
-      "homeHeaderHelper": "How the greeting at the top of Home looks. Only you see this. Until you choose, light theme shows Sky & lake and dark theme shows Plain.",
+      "homeHeaderHelper": "How the greeting at the top of Home looks. Only you see this. Sky & lake is the default.",
       "homeHeaderPlain": "Plain",
       "homeHeaderSky": "Sky & lake",
       "homeHeaderSaved": "Home header updated",

@@ -113,12 +113,12 @@ describe('preference helpers', () => {
     expect(p).toMatchObject({ dateFormat: 'MM/DD/YYYY', timeFormat: '24h', currency: 'GHS', mobileShortcuts: null })
   })
 
-  test('Home header defaults to plain, also for rows saved before it existed', () => {
-    // Unset = follow the theme: Sky & lake in light, plain in dark.
+  test('Home header defaults to Sky & lake, also for rows saved before it existed', () => {
+    // Unset = Sky & lake in both themes; an explicit choice wins.
     expect(DEFAULT_PREFERENCES.dashboard.homeHeader).toBeUndefined()
     expect(resolvePreferences(null).dashboard.homeHeader).toBeUndefined()
     expect(effectiveHomeHeader(undefined, 'light')).toBe('sky')
-    expect(effectiveHomeHeader(undefined, 'dark')).toBe('plain')
+    expect(effectiveHomeHeader(undefined, 'dark')).toBe('sky')
     expect(effectiveHomeHeader('plain', 'light')).toBe('plain')
     expect(effectiveHomeHeader('sky', 'dark')).toBe('sky')
     expect(effectiveHomeHeader('neon', 'light')).toBe('sky')
