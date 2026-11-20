@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from 'convex/server'
+import { aiPolicyValidator } from './lib/aiPolicyShared'
 import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
@@ -599,6 +600,8 @@ const schema = defineSchema({
             escalationChannels: v.optional(v.array(notifyChannel)),
           }),
         ),
+        /** Anowa AI policy (convex/lib/aiPolicyShared): drafts, daily cap. */
+        aiPolicy: v.optional(aiPolicyValidator),
         /** Sign-in policy (SEC-006, SEC-007, doc 18 §7–8). All default off. */
         security: v.optional(
           v.object({

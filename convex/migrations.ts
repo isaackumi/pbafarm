@@ -15,6 +15,7 @@
  * because each run only touches rows that still have no companyId.
  */
 import { insertAuditLog } from './lib/auditChain'
+import { aiPolicyValidator } from './lib/aiPolicyShared'
 import { v } from 'convex/values'
 import { internalMutation, internalQuery } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -768,6 +769,7 @@ export const m3CompanyProfileDefaults = internalMutation({
                   escalationChannels: v.optional(v.array(channelValues)),
                 }),
               ),
+              aiPolicy: v.optional(aiPolicyValidator),
               security: v.optional(
                 v.object({
                   updatedAt: v.optional(v.number()),

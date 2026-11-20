@@ -90,7 +90,7 @@ export function renderTemplate(text: string, ctx: RunContext): string {
   return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, path: string) => display(getPath(ctx, path)))
 }
 
-const MAX_CONDITIONS = 10
+export const MAX_CONDITIONS = 10
 const FIELD_RE = /^[A-Za-z][\w]*(\.[A-Za-z_][\w]*)*$/
 
 /** Reject a malformed condition list with a message an admin can act on. */

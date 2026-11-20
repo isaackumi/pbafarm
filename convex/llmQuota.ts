@@ -12,6 +12,7 @@ import { mutation } from './_generated/server'
 import { requireMember } from './lib/permissions'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { userError } from './lib/errors'
+import { spendDailyQuestion } from './lib/aiPolicy'
 
 export const consumeServerKeyQuota = mutation({
   args: {},
@@ -32,6 +33,8 @@ export const consumeServerKeyQuota = mutation({
         throw userError('RATE_LIMITED', `Too many assistant requests. ${retryAfterText(verdict.retryAfter)}`)
       }
     }
+    // Admin's daily cap per member (AI-POLICY); refuses before anything is spent.
+    await spendDailyQuestion(ctx, await ctx.db.get(companyId), user._id)
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
     return null
   },
