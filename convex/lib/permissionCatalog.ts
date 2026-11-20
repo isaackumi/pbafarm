@@ -48,6 +48,7 @@ export const PERMISSION_GROUPS = {
     'production.withdrawal.override': 'Harvest or sell during a withdrawal period, with a reason',
     'production.records.delete': 'Delete production records',
     'production.import': 'Bulk-import records',
+    'production.plan.manage': 'Plan cycles: see, save and compare stocking plans with costs and margins',
   },
   Hatchery: {
     'hatchery.view': 'See broodstock, spawnings, incubation and larval batches',

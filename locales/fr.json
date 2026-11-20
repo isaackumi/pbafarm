@@ -81,7 +81,8 @@
       "weeklyReport": "Rapport hebdomadaire",
       "alerts": "Alertes et analyses",
       "calendar": "Calendrier",
-      "assistant": "Anowa"
+      "assistant": "Anowa",
+      "cyclePlanner": "Planificateur de cycle"
     },
     "section": {
       "anowa": "Demander à Anowa",
@@ -7195,6 +7196,98 @@
     "meta": {
       "title": "Le système d’exploitation des fermes piscicoles",
       "description": "De l’empoissonnement à la récolte, de l’aliment aux finances. Anowa suit chaque cage, étang et bac d’écloserie : mesuré, nourri et traçable. Même hors ligne, même depuis WhatsApp."
+    }
+  },
+  "cyclePlanner": {
+    "title": "Planifier le prochain cycle",
+    "eyebrow": "Production · Planification",
+    "savePlan": "Enregistrer le plan",
+    "updatePlan": "Mettre à jour le plan",
+    "comparePlans": "Comparer les plans",
+    "saved": "Enregistré",
+    "draft": "Brouillon",
+    "deleted": "Plan supprimé",
+    "saveFailed": "Impossible d'enregistrer le plan",
+    "confirmDelete": "Supprimer le plan {name} ?",
+    "deletePlan": "Supprimer le plan {name}",
+    "planName": "Nom du plan",
+    "planNamePlaceholder": "Plan A · Rangée A printemps",
+    "stockShort": "Empoissonnement {date}",
+    "units": "Cages",
+    "unitCount": {
+      "one": "{count} cage",
+      "other": "{count} cages"
+    },
+    "pickUnits": "Choisissez les cages à planifier",
+    "selectAll": "Tout sélectionner",
+    "clear": "Effacer",
+    "noUnits": "Aucune cage à planifier pour l'instant",
+    "noUnitsBody": "Ajoutez d'abord des cages, puis planifiez leur prochain cycle ici.",
+    "unitsUnavailable": "Ces cages ne vous sont plus accessibles. Choisissez-en d'autres.",
+    "stockOn": "Empoissonner le",
+    "fishPerUnit": "Alevins par cage",
+    "stockAbw": "Poids des alevins (g)",
+    "harvestAt": "Récolter à",
+    "feedPricePerBag": "Prix de l'aliment / sac de {kg} kg",
+    "salePricePerKg": "Prix de vente / kg",
+    "fingerlingPrice": "Prix par alevin",
+    "bagKg": "Taille du sac (kg)",
+    "fromCycles": {
+      "one": "D'après votre dernier cycle",
+      "other": "D'après vos {count} derniers cycles"
+    },
+    "fromDefaults": "Valeurs par défaut de l'espèce (aucun cycle clos)",
+    "fromMixed": "Vos cycles et les valeurs par défaut de l'espèce",
+    "survival": "Survie",
+    "fcr": "IC",
+    "growth": "Courbe de croissance",
+    "growthWater": "Vos cycles, eau de {min} à {max} °C",
+    "growthTgc": "TGC {tgc} à {temp} °C",
+    "tgcHint": "Croissance en TGC : plus il est élevé, plus la croissance est rapide à température égale.",
+    "changeAssumptions": "Modifier les hypothèses",
+    "doneEditing": "Terminé",
+    "resetAssumptions": "Revenir à mes cycles",
+    "source": {
+      "history": "vos cycles",
+      "default": "par défaut",
+      "edited": "modifié"
+    },
+    "fixInputs": "Vérifiez les champs signalés pour voir le plan.",
+    "ifYouStock": "Si vous empoissonnez le {date}, vous récoltez vers le",
+    "notReached": "Pas avant {days} jours à cette croissance",
+    "fishAt": "{fish} poissons à {g} g · jour {day}",
+    "feedToBuy": "Aliment à acheter",
+    "bags": "{bags} sacs · {cost}",
+    "cashNeeded": "Trésorerie nécessaire",
+    "lowPoint": {
+      "early": "point bas début {month}",
+      "mid": "point bas mi-{month}",
+      "late": "point bas fin {month}"
+    },
+    "sales": "Ventes",
+    "atPrice": "à {price}/kg",
+    "marginBeforeLabour": "Marge avant main-d'œuvre",
+    "ofSales": "{pct} % des ventes",
+    "chartTitle": "L'aliment chaque mois et la croissance des poissons",
+    "feedT": "Aliment (t)",
+    "avgWeight": "Poids moyen (g)",
+    "harvest": "récolte",
+    "col": {
+      "plan": "Plan",
+      "harvest": "Récolte",
+      "tonnes": "Tonnes",
+      "cash": "Trésorerie",
+      "margin": "Marge",
+      "actions": "Actions"
+    },
+    "planLine": "{fish} par cage, jusqu'à {g} g",
+    "noPlans": "Enregistrez un plan pour le comparer aux autres ici.",
+    "alsoSaved": "Aussi enregistrés :",
+    "addPlan": "Ajouter un plan",
+    "note": {
+      "none": "Enregistrez au moins deux plans pour voir le compromis entre eux.",
+      "same": "{name} vend en premier et dégage la plus forte marge : il gagne sur les deux tableaux.",
+      "tradeoff": "{fast} vend {weeks} semaines plus tôt, mais {best} dégage {gap} de marge en plus. Par mois en cage, {leader} rapporte plus, environ {perMonth}."
     }
   }
 }
