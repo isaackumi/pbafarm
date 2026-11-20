@@ -327,7 +327,7 @@ function DraftRow({ item, index, muted }) {
         <Field label={t('askAnowa.draft.fields.supplier')}>{p.supplierName}</Field>
         {p.pricePerKg > 0 && (
           <Field label={t('askAnowa.draft.fields.cost')} mono>
-            {formatCurrency(p.quantityKg * p.pricePerKg, { maximumFractionDigits: 0 })}
+            {formatCurrency(p.quantityKg * p.pricePerKg, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Field>
         )}
       </>
@@ -337,7 +337,7 @@ function DraftRow({ item, index, muted }) {
       <>
         <Field label={t('askAnowa.draft.fields.project')}>{p.name}</Field>
         <Field label={t('askAnowa.draft.fields.budget')} mono>
-          {formatCurrency(p.budget, { maximumFractionDigits: 0 })}
+          {formatCurrency(p.budget, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </Field>
         <Field label={t('askAnowa.draft.fields.dates')}>
           {day(p.startDate)} - {day(p.targetEndDate)}
@@ -362,11 +362,11 @@ function DraftRow({ item, index, muted }) {
     fields = (
       <>
         <Field label={t('askAnowa.draft.fields.amount')} mono>
-          {formatCurrency(p.amount, { maximumFractionDigits: 0 })}
+          {formatCurrency(p.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </Field>
         <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
         <Field label={t('askAnowa.draft.fields.spentAfter')} mono>
-          {formatCurrency(after, { maximumFractionDigits: 0 })}
+          {formatCurrency(after, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           {p.budget > 0 && (
             <span className={`font-sans ${after > p.budget ? 'text-alert' : 'text-faint'}`}>
               {' '}

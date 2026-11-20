@@ -409,7 +409,7 @@ export const update = mutation({
 
     await ctx.db.patch(args.id, { ...next, ...(custom !== undefined ? { custom } : {}), updatedAt: Date.now() })
     // A project cost linking this expense follows its amount and date (PROJ-001).
-    await syncExpenseLink(ctx, { ...existing, ...next })
+    await syncExpenseLink(ctx, existing)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'expenses',
@@ -431,7 +431,7 @@ export const remove = mutation({
     assertOwns(user, existing, 'Expense')
     if (existing.deletedAt) return null
     await ctx.db.patch(args.id, { deletedAt: Date.now(), updatedAt: Date.now() })
-    await syncExpenseLink(ctx, { ...existing, deletedAt: Date.now() })
+    await syncExpenseLink(ctx, existing)
     await logAudit(ctx, {
       actionType: 'delete',
       tableName: 'expenses',

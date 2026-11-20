@@ -377,3 +377,85 @@ describe('Ask Anowa and projects', () => {
     expect(other).toMatchObject({ ok: false })
   })
 })
+
+describe('security review regressions', () => {
+  test('site-limited managers can read but not change company-wide projects', async () => {
+    const s = await setup()
+    const id = await project(s, { name: 'ASC certification', locationId: undefined })
+    expect((await s.as(s.northMgr).query(api.projects.get, { id, today: TODAY })).project.name).toBe('ASC certification')
+    await expect(s.as(s.northMgr).mutation(api.projects.update, { id, locationId: s.north })).rejects.toThrow(/company-wide/)
+    await expect(s.as(s.northMgr).mutation(api.projects.addCost, { projectId: id, amount: 5, date: TODAY })).rejects.toThrow(/company-wide/)
+    await expect(s.as(s.northMgr).mutation(api.projects.remove, { id })).rejects.toThrow(/company-wide/)
+  })
+
+  test('linked expense details are hidden from roles without finance.view', async () => {
+    const s = await setup()
+    const id = await project(s)
+    const expenseId = await s.as(s.owner).mutation(api.expenses.create, {
+      category: 'equipment', amount: 900, date: TODAY, locationId: s.north, notes: 'Private supplier deal',
+    })
+    await s.as(s.owner).mutation(api.projects.addCost, { projectId: id, expenseId })
+    const own = await s.as(s.owner).query(api.projects.listCosts, { projectId: id, paginationOpts: page })
+    expect(own.page[0].sourceLabel).toMatch(/Private supplier deal/)
+    const staff = await s.as(s.staff).query(api.projects.listCosts, { projectId: id, paginationOpts: page })
+    expect(staff.page[0]).toMatchObject({ amount: 900, source: 'expense', sourceLabel: null })
+  })
+
+  test('a cancelled purchase order stops counting towards the project', async () => {
+    const s = await setup()
+    const id = await project(s)
+    const poId = await s.t.run(async (ctx) => {
+      const supplierId = await ctx.db.insert('feedSuppliers', { name: 'Volta Feeds', companyId: s.companyA, updatedAt: 0 })
+      const feedTypeId = await ctx.db.insert('feedTypes', {
+        name: 'Grower', currentStock: 0, minimumStock: 0, pricePerKg: 10, active: true, companyId: s.companyA, updatedAt: 0,
+      } as never)
+      return await ctx.db.insert('purchaseOrders', {
+        companyId: s.companyA, poNumber: 'PO-1', supplierId, locationId: s.north, status: 'ordered',
+        lines: [{ feedTypeId, quantityKg: 100, pricePerKg: 10 }], orderedAt: Date.now(), updatedAt: 0,
+      })
+    })
+    await s.as(s.owner).mutation(api.projects.addCost, { projectId: id, purchaseOrderId: poId })
+    expect((await s.as(s.owner).query(api.projects.get, { id, today: TODAY })).project.spent).toBe(1000)
+    await s.as(s.owner).mutation(api.procurement.cancel, { id: poId })
+    expect((await s.as(s.owner).query(api.projects.get, { id, today: TODAY })).project.spent).toBe(0)
+  })
+
+  test('Anowa proposals on projects need projects.view; undo refuses after someone else edits', async () => {
+    const s = await setup()
+    const id = await project(s, { name: 'Secret pond build' })
+    await s.t.run(async (ctx) => {
+      const role = await ctx.db.insert('roles', {
+        companyId: s.companyA, key: 'asker', name: 'Asker', archived: false, updatedAt: 0, permissions: ['org.view', 'ai.use'],
+      })
+      const m = await ctx.db
+        .query('memberships')
+        .withIndex('by_companyId_and_userId', (q) => q.eq('companyId', s.companyA).eq('userId', s.staff))
+        .unique()
+      await ctx.db.patch(m!._id, { roleKey: 'asker', roleId: role })
+    })
+    testHooks.languageModel = mockModel({
+      contentSteps: [[toolCallOf('proposeProjectCost', { project: 'Secret', amount: 5 })], [{ type: 'text', text: 'ok' }]],
+    })
+    const res = await s.as(s.staff).action(api.anowa.agent.ask, { question: 'log 5 on secret', lang: 'en' })
+    expect(res.ok && res.draftGroup).toBeFalsy()
+    expect((await s.rows('pendingBotActions')).length).toBe(0)
+
+    // Undo after another member's edit: refused, the edit is kept.
+    testHooks.languageModel = mockModel({
+      contentSteps: [[toolCallOf('proposeMilestone', { project: 'Secret pond', title: 'Liner', dueInDays: 10 })], [{ type: 'text', text: 'ok' }]],
+    })
+    const r2 = await s.as(s.owner).action(api.anowa.agent.ask, { question: 'add milestone', lang: 'en' })
+    if (!r2.ok) throw new Error('ask failed')
+    await s.as(s.owner).mutation(api.anowa.drafts.confirm, { draftGroup: r2.draftGroup! })
+    const [ms] = await s.rows('projectMilestones')
+    vi.setSystemTime(new Date('2026-11-20T08:02:00Z'))
+    await s.as(s.manager).mutation(api.projects.updateMilestone, { id: ms._id, progressPct: 50 })
+    expect(await s.as(s.owner).mutation(api.anowa.drafts.undo, { draftGroup: r2.draftGroup! })).toEqual({ status: 'too_late' })
+    expect(await s.rows('projectMilestones')).toHaveLength(1)
+    void id
+  })
+})
+
+function toolCallOf(toolName: string, input: Record<string, unknown>, id = 'c1') {
+  return { type: 'tool-call' as const, toolCallId: id, toolName, input: JSON.stringify(input) }
+}

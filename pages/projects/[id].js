@@ -329,7 +329,7 @@ function Costs({ project: p, canManage, money, formatCurrency }) {
                 {c.source !== 'manual' && c.sourceLabel ? ` · ${c.sourceLabel}` : ''}
               </span>
             </div>
-            <span className="shrink-0 font-data text-[14px] tabular-nums text-text">{formatCurrency(c.amount, { maximumFractionDigits: 0 })}</span>
+            <span className="shrink-0 font-data text-[14px] tabular-nums text-text">{formatCurrency(c.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
             {canManage && (
               <IconAction
                 label={t('projectsPage.cost.remove')}
@@ -417,7 +417,7 @@ function LinkCost({ projectId, onClose, formatCurrency }) {
         <span className="truncate text-[14px] text-text">{title}</span>
         <span className="truncate text-xs text-muted">{sub}</span>
       </div>
-      <span className="shrink-0 font-data text-sm tabular-nums text-text">{formatCurrency(amount, { maximumFractionDigits: 0 })}</span>
+      <span className="shrink-0 font-data text-sm tabular-nums text-text">{formatCurrency(amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
       <GhostButton size="sm" onClick={onClick} disabled={busy}>
         {t('projectsPage.cost.linkThis')}
       </GhostButton>

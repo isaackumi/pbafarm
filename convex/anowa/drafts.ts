@@ -670,12 +670,17 @@ export const undo = mutation({
         if (!task || task.status !== 'open') return { status: 'too_late' as const }
       } else if (p.kind === 'project_create') {
         // Only an untouched project can be undone (no milestones or costs since).
+        // Nothing changed since the confirm (no edit, milestone or cost by anyone).
         const project = r.projectId ? await ctx.db.get(r.projectId) : null
-        if (!project || project.milestonesTotal > 0 || project.spent !== 0) return { status: 'too_late' as const }
+        if (!project || project.milestonesTotal > 0 || project.spent !== 0 || project.updatedAt > (r.committedAt ?? 0)) {
+          return { status: 'too_late' as const }
+        }
       } else if (p.kind === 'project_milestone') {
-        if (!r.projectMilestoneId || !(await ctx.db.get(r.projectMilestoneId))) return { status: 'too_late' as const }
+        const ms = r.projectMilestoneId ? await ctx.db.get(r.projectMilestoneId) : null
+        if (!ms || ms.updatedAt > (r.committedAt ?? 0)) return { status: 'too_late' as const }
       } else if (p.kind === 'project_cost') {
-        if (!r.projectCostId || !(await ctx.db.get(r.projectCostId))) return { status: 'too_late' as const }
+        const cost = r.projectCostId ? await ctx.db.get(r.projectCostId) : null
+        if (!cost || cost.updatedAt > (r.committedAt ?? 0)) return { status: 'too_late' as const }
       }
     }
     const wctx = anowaCtx(ctx, w, draftGroup)

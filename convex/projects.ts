@@ -65,6 +65,18 @@ export async function loadProject(ctx: Ctx, m: Actor, id: Id<'projects'>): Promi
   return p
 }
 
+/**
+ * A project the caller may change: loadProject, and a member limited to some
+ * sites cannot change a company-wide project (it spans sites they do not run).
+ */
+export async function loadProjectForWrite(ctx: Ctx, m: Actor, id: Id<'projects'>): Promise<Doc<'projects'>> {
+  const p = await loadProject(ctx, m, id)
+  if (!p.locationId && m.siteScope !== 'all') {
+    throw userError('FORBIDDEN', 'Only members with access to every site can change a company-wide project', { reason: 'SITE_FORBIDDEN' })
+  }
+  return p
+}
+
 function cleanText(s: string | undefined, max: number): string | undefined {
   const t = s?.trim().replace(/\s+/g, ' ')
   if (!t) return undefined
@@ -200,7 +212,7 @@ export async function createProjectAs(ctx: MutationCtx, m: Actor, input: CreateP
 export type MilestoneInput = { title: string; dueDate: string; progressPct?: number }
 
 export async function addMilestoneAs(ctx: MutationCtx, m: Actor, projectId: Id<'projects'>, input: MilestoneInput) {
-  const p = await loadProject(ctx, m, projectId)
+  const p = await loadProjectForWrite(ctx, m, projectId)
   const title = cleanText(input.title, L.milestoneTitle)
   if (!title) fail('Milestone title is required')
   const dueDate = validDate(input.dueDate, 'Due date')
@@ -256,7 +268,7 @@ async function linkedValue(ctx: Ctx, cost: Pick<Doc<'projectCosts'>, 'expenseId'
 }
 
 export async function addCostAs(ctx: MutationCtx, m: Actor, projectId: Id<'projects'>, input: CostInput) {
-  const p = await loadProject(ctx, m, projectId)
+  const p = await loadProjectForWrite(ctx, m, projectId)
   const sources = [input.amount !== undefined, !!input.expenseId, !!input.purchaseOrderId].filter(Boolean).length
   if (sources !== 1) fail('Enter an amount, or link one expense or purchase order')
   const count = await ctx.db
@@ -315,7 +327,7 @@ export async function addCostAs(ctx: MutationCtx, m: Actor, projectId: Id<'proje
 export async function removeCostAs(ctx: MutationCtx, m: Actor, costId: Id<'projectCosts'>) {
   const c = await ctx.db.get(costId)
   if (!c || c.companyId !== m.companyId) return notFound('Cost')
-  const p = await loadProject(ctx, m, c.projectId)
+  const p = await loadProjectForWrite(ctx, m, c.projectId)
   await ctx.db.delete(costId)
   await refreshSpent(ctx, c.projectId)
   await logAudit(ctx, { actionType: 'delete', tableName: 'projectCosts', recordId: costId, previousValues: c, locationId: p.locationId })
@@ -325,7 +337,7 @@ export async function removeCostAs(ctx: MutationCtx, m: Actor, costId: Id<'proje
 export async function removeMilestoneAs(ctx: MutationCtx, m: Actor, milestoneId: Id<'projectMilestones'>) {
   const ms = await ctx.db.get(milestoneId)
   if (!ms || ms.companyId !== m.companyId) return notFound('Milestone')
-  const p = await loadProject(ctx, m, ms.projectId)
+  const p = await loadProjectForWrite(ctx, m, ms.projectId)
   await ctx.db.delete(milestoneId)
   await refreshMilestones(ctx, ms.projectId)
   await logAudit(ctx, { actionType: 'delete', tableName: 'projectMilestones', recordId: milestoneId, previousValues: ms, locationId: p.locationId })
@@ -333,7 +345,7 @@ export async function removeMilestoneAs(ctx: MutationCtx, m: Actor, milestoneId:
 
 /** Delete a project with no costs, and its milestones (also Ask Anowa's Undo). */
 export async function removeProjectAs(ctx: MutationCtx, m: Actor, projectId: Id<'projects'>) {
-  const p = await loadProject(ctx, m, projectId)
+  const p = await loadProjectForWrite(ctx, m, projectId)
   const cost = await ctx.db
     .query('projectCosts')
     .withIndex('by_projectId_and_date', (q) => q.eq('projectId', projectId))
@@ -348,29 +360,47 @@ export async function removeProjectAs(ctx: MutationCtx, m: Actor, projectId: Id<
   await logAudit(ctx, { actionType: 'delete', tableName: 'projects', recordId: projectId, previousValues: p, locationId: p.locationId })
 }
 
-/**
- * Keep project costs that link this expense in step with it: the edited
- * amount and date, or removed when the expense is deleted. Called by
- * expenses.update / expenses.remove.
- */
-export async function syncExpenseLink(ctx: MutationCtx, expense: Doc<'expenses'>) {
-  const links = await ctx.db
-    .query('projectCosts')
-    .withIndex('by_company_and_expenseId', (q) => q.eq('companyId', expense.companyId).eq('expenseId', expense._id))
-    .take(5)
+async function syncLinks(ctx: MutationCtx, links: Doc<'projectCosts'>[], reason: string) {
   for (const c of links) {
     const value = await linkedValue(ctx, c)
     if (!value) {
       await ctx.db.delete(c._id)
-      await logAudit(ctx, { actionType: 'delete', tableName: 'projectCosts', recordId: c._id, previousValues: c, newValues: { reason: 'expense deleted' } })
-    } else if (value.amount !== c.amount || value.date !== c.date) {
-      await ctx.db.patch(c._id, { amount: value.amount, date: isDate(value.date) ? value.date : c.date, updatedAt: Date.now() })
-      await logAudit(ctx, { actionType: 'update', tableName: 'projectCosts', recordId: c._id, previousValues: c, newValues: value })
+      await logAudit(ctx, { actionType: 'delete', tableName: 'projectCosts', recordId: c._id, previousValues: c, newValues: { reason } })
+    } else if (value.amount !== c.amount || (isDate(value.date) && value.date !== c.date)) {
+      const next = { amount: value.amount, date: isDate(value.date) ? value.date : c.date }
+      await ctx.db.patch(c._id, { ...next, updatedAt: Date.now() })
+      await logAudit(ctx, { actionType: 'update', tableName: 'projectCosts', recordId: c._id, previousValues: c, newValues: next })
     } else {
       continue
     }
     await refreshSpent(ctx, c.projectId)
   }
+}
+
+/**
+ * Keep project costs that link this expense in step with it: the edited
+ * amount and date, or removed when the expense is deleted. Called by
+ * expenses.update / expenses.remove.
+ */
+export async function syncExpenseLink(ctx: MutationCtx, expense: Pick<Doc<'expenses'>, '_id' | 'companyId'>) {
+  const links = await ctx.db
+    .query('projectCosts')
+    .withIndex('by_company_and_expenseId', (q) => q.eq('companyId', expense.companyId).eq('expenseId', expense._id))
+    .take(5)
+  await syncLinks(ctx, links, 'expense deleted')
+}
+
+/**
+ * The same for a linked purchase order: a cancelled order stops counting and
+ * a received one counts at its received value. Called by procurement.cancel /
+ * procurement.receive.
+ */
+export async function syncPurchaseOrderLink(ctx: MutationCtx, po: Pick<Doc<'purchaseOrders'>, '_id' | 'companyId'>) {
+  const links = await ctx.db
+    .query('projectCosts')
+    .withIndex('by_company_and_purchaseOrderId', (q) => q.eq('companyId', po.companyId).eq('purchaseOrderId', po._id))
+    .take(5)
+  await syncLinks(ctx, links, 'purchase order cancelled')
 }
 
 // ---------------------------------------------------------------------------
@@ -711,11 +741,13 @@ export const listCosts = query({
     const rows = []
     for (const c of page.page) {
       let sourceLabel: string | null = null
-      if (c.expenseId) {
+      // The linked row's details only for members who may read that row.
+      if (c.expenseId && can(m, 'finance.view')) {
         const e = await ctx.db.get(c.expenseId)
-        sourceLabel = e ? `${e.category}${e.notes ? ` · ${e.notes.slice(0, 60)}` : ''}` : null
-      } else if (c.purchaseOrderId) {
-        sourceLabel = (await ctx.db.get(c.purchaseOrderId))?.poNumber ?? null
+        sourceLabel = e && siteVisible(m, e.locationId) ? `${e.category}${e.notes ? ` · ${e.notes.slice(0, 60)}` : ''}` : null
+      } else if (c.purchaseOrderId && can(m, 'inventory.view')) {
+        const po = await ctx.db.get(c.purchaseOrderId)
+        sourceLabel = po && siteVisible(m, po.locationId) ? po.poNumber : null
       }
       rows.push({
         id: c._id,
@@ -834,7 +866,7 @@ export const update = mutation({
   returns: v.id('projects'),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'projects.manage' })
-    const p = await loadProject(ctx, m, args.id)
+    const p = await loadProjectForWrite(ctx, m, args.id)
     const next: Partial<Doc<'projects'>> = { updatedAt: Date.now() }
     if (args.name !== undefined) next.name = validName(args.name)
     if (args.category !== undefined) next.category = args.category
@@ -895,7 +927,7 @@ export const updateMilestone = mutation({
     const m = await requireMember(ctx, { permission: 'projects.manage' })
     const ms = await ctx.db.get(args.id)
     if (!ms || ms.companyId !== m.companyId) return notFound('Milestone')
-    const p = await loadProject(ctx, m, ms.projectId)
+    const p = await loadProjectForWrite(ctx, m, ms.projectId)
     const next: Partial<Doc<'projectMilestones'>> = { updatedAt: Date.now() }
     if (args.title !== undefined) {
       const title = cleanText(args.title, L.milestoneTitle)

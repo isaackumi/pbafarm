@@ -197,6 +197,7 @@ async function buildCreate(ctx: MutationCtx, w: WebMember, input: Infer<typeof p
 }
 
 async function buildMilestone(ctx: MutationCtx, w: WebMember, input: Infer<typeof projectMilestoneInput>): Promise<ProjectBuilt | Failed> {
+  if (!can(w.member, 'projects.view')) return { ok: false, error: 'Your role cannot see projects.' }
   const m = await matchProject(ctx, w, input.project)
   if (!m.project) return projectError(input.project, m.candidates)
   const p = m.project
@@ -224,6 +225,7 @@ async function buildMilestone(ctx: MutationCtx, w: WebMember, input: Infer<typeo
 }
 
 async function buildCost(ctx: MutationCtx, w: WebMember, input: Infer<typeof projectCostInput>): Promise<ProjectBuilt | Failed> {
+  if (!can(w.member, 'projects.view')) return { ok: false, error: 'Your role cannot see projects.' }
   const m = await matchProject(ctx, w, input.project)
   if (!m.project) return projectError(input.project, m.candidates)
   const p = m.project
