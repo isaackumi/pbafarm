@@ -92,7 +92,7 @@ export function classifyLlmFailure(input: { status?: number | null; message?: st
     if (status === 429 || /rate.?limit|too many requests/.test(low)) return 'rate_limited'
     if (/did not answer within|timed? ?out|deadline/.test(low) || status === 408 || status === 504) return 'timeout'
     if (status === 401 || status === 403 || /api key|invalid key|unauthori[sz]ed|permission denied|api_key_invalid/.test(low)) return 'auth'
-    if (status === 404 || /model .*(not found|does not exist|not supported|deprecated|retired)|no such model|unknown model/.test(low)) {
+    if (status === 404 || /model .*(not found|does not exist|not supported|deprecated|retired)|no such model|unknown model|not enabled for models?\b|is deprecated for this model/.test(low)) {
       return 'model_unavailable'
     }
     if (/safety|blocked|content.?filter|policy violation|recitation|harm_category/.test(low)) return 'blocked'

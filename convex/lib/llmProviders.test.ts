@@ -78,6 +78,14 @@ describe('llm providers (PLAT-006)', () => {
     expect(f.calls[0].headers['x-api-key']).toBe('sk-test')
   })
 
+  test('Anthropic: no temperature (current models 400 on it) and room for thinking', async () => {
+    const f = fake([json(200, { content: [{ type: 'text', text: 'ok' }] })])
+    await runChat(base({ kind: 'anthropic', providerId: 'anthropic', model: 'claude-haiku-5-5', temperature: 0.3 }), f.impl)
+    expect(f.calls[0].body).not.toHaveProperty('temperature')
+    expect(f.calls[0].body.max_tokens).toBeGreaterThanOrEqual(16000)
+    expect(f.calls[0].body.system).toBe('Be brief')
+  })
+
   test('4xx: provider message, no retry', async () => {
     const f = fake([json(401, { error: { message: 'Incorrect API key provided' } })])
     const e = await failure(runChat(base(), f.impl))
