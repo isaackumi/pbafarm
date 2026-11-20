@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Calendar as CalendarIcon } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { EmptyState, GradientButton, LoadingState, Segmented } from '../components/ui'
@@ -12,13 +12,20 @@ import { routePermission } from '../lib/routePermissions'
 import { useLocale, useT } from '../lib/i18n/context'
 import { byDate, isoDate, monthGrid, shiftMonth } from '../lib/calendarGrid'
 
-/** Event kinds → legend colour (18 Calendar chips: border-l-2 in the tone). */
+/**
+ * Event kinds → legend colour (18 Calendar chips: border-l-2 in the tone).
+ * Paper 18 tones: sky #6AA8F5 (Feeding), lime (Sampling), good (Harvest),
+ * warn (Health), muted (Purchases). Tasks take sky, maintenance the neutral
+ * muted tone, harvests good, withdrawal ends (health) warn.
+ */
 const KINDS = {
-  task: { border: 'border-l-cyan', dot: 'bg-cyan' },
-  maintenance: { border: 'border-l-pink', dot: 'bg-pink' },
-  harvest: { border: 'border-l-good', dot: 'bg-good' },
-  withdrawal: { border: 'border-l-warn', dot: 'bg-warn' },
+  task: { border: 'border-l-sky-ink', dot: 'bg-sky-ink', text: 'text-sky-ink' },
+  maintenance: { border: 'border-l-muted', dot: 'bg-muted', text: 'text-muted' },
+  harvest: { border: 'border-l-good', dot: 'bg-good', text: 'text-good' },
+  withdrawal: { border: 'border-l-warn', dot: 'bg-warn', text: 'text-warn' },
 }
+/** Paper 18 days outside the month: #0E0F11, halfway between bg and surface. */
+const OUT_OF_MONTH = 'bg-[color-mix(in_srgb,var(--bg)_50%,var(--surface))]'
 const MAX_CHIPS = 3
 
 function useCalendarEvents(month, t) {
@@ -102,11 +109,11 @@ function DayCell({ cell, events, today, tall, t, first }) {
   const extra = events.length - MAX_CHIPS
   return (
     <div
-      className={`flex min-w-0 grow basis-0 flex-col gap-[6px] p-2 ${tall ? 'min-h-[320px]' : 'min-h-[118px]'} ${first ? '' : 'border-l border-line'} ${cell.inMonth ? '' : 'bg-bg'}`}
+      className={`flex min-w-0 grow basis-0 flex-col gap-[6px] p-2 ${tall ? 'min-h-[320px]' : 'min-h-[118px]'} ${first ? '' : 'border-l border-line'} ${cell.inMonth ? '' : OUT_OF_MONTH}`}
     >
       <span
         className={`flex size-[26px] shrink-0 items-center justify-center rounded-pill text-[13px] leading-4 ${
-          isToday ? 'bg-button font-medium text-button-text' : cell.inMonth ? 'text-text' : 'text-faint'
+          isToday ? 'bg-button font-semibold text-button-text' : cell.inMonth ? 'text-text' : 'text-faint'
         }`}
         aria-current={isToday ? 'date' : undefined}
       >
@@ -138,8 +145,7 @@ function Calendar() {
     .filter((e) => e.date.slice(0, 7) === isoDate(month).slice(0, 7))
     .sort((a, b) => a.date.localeCompare(b.date))
   const agendaDays = [...byDate(monthEvents).entries()]
-  const navBtn =
-    'inline-flex size-8 items-center justify-center rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+  const navBtn = 'rounded-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
   const canSchedule = can('automation.manage') && can(routePermission('/teams'))
   const card = 'overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
 
@@ -149,7 +155,7 @@ function Calendar() {
       eyebrow={t('calendarUi.eyebrow', { month: monthLabel })}
       actions={
         canSchedule && (
-          <GradientButton href="/teams" icon={Plus}>
+          <GradientButton variant="lime" href="/teams" icon={CalendarIcon}>
             {t('calendarUi.schedule')}
           </GradientButton>
         )
@@ -161,19 +167,16 @@ function Calendar() {
             <h2 className="text-[20px] font-semibold capitalize leading-6 text-text" aria-live="polite">
               {monthLabel}
             </h2>
-            <div className="flex items-center gap-1 text-[14px] text-muted">
+            {/* Paper 18: "‹ Today ›" as 14/18 muted text */}
+            <div className="flex items-center gap-1 text-[14px] leading-[18px] text-muted">
               <button type="button" className={navBtn} onClick={() => setMonth((m) => shiftMonth(m, -1))} aria-label={t('calendarUi.prev')}>
-                <ChevronLeft size={16} aria-hidden />
+                <span aria-hidden>‹</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setMonth(shiftMonth(new Date(), 0))}
-                className="rounded-pill px-2 py-1 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
-              >
+              <button type="button" onClick={() => setMonth(shiftMonth(new Date(), 0))} className={navBtn}>
                 {t('calendarUi.today')}
               </button>
               <button type="button" className={navBtn} onClick={() => setMonth((m) => shiftMonth(m, 1))} aria-label={t('calendarUi.next')}>
-                <ChevronRight size={16} aria-hidden />
+                <span aria-hidden>›</span>
               </button>
             </div>
           </div>
@@ -190,8 +193,10 @@ function Calendar() {
           />
           <ul className="flex flex-wrap gap-[14px]" aria-label={t('calendarUi.legend')}>
             {Object.entries(KINDS).map(([kind, k]) => (
-              <li key={kind} className="flex items-center gap-1.5 text-xs text-muted">
-                <span className={`size-[7px] rounded-full ${k.dot}`} aria-hidden />
+              <li key={kind} className="text-xs leading-4 text-muted">
+                <span className={k.text} aria-hidden>
+                  ●
+                </span>{' '}
                 {t(`calendarUi.kind.${kind}`)}
               </li>
             ))}

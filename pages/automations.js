@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useMutation, useQuery } from 'convex/react'
-import { Plus } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
@@ -249,23 +249,38 @@ function Chip({ on, onClick, disabled, children, ...rest }) {
 // Rule editor (Paper 21: flow canvas + side panel)
 // ---------------------------------------------------------------------------
 
-const NODE_COLOR = { when: 'var(--cyan)', if: 'var(--pink)', then: 'var(--good)', and: 'var(--warn)' }
+/** Step tones (the --flow-* colours are set on .flow-canvas in RuleEditor): kicker text, 10px marker, and the dotted line leaving the step. */
+const NODE_TONE = {
+  when: { text: 'var(--flow-when)', mark: 'var(--flow-when-mark)', line: 'var(--flow-when)', arrow: 'var(--flow-when)' },
+  if: { text: 'var(--flow-if)', mark: 'var(--flow-if-mark)', line: 'var(--flow-if-line)', arrow: 'var(--flow-if-line)' },
+  then: { text: 'var(--good)', mark: 'var(--dot-good)', line: 'var(--line-strong)', arrow: 'var(--faint)' },
+  and: { text: 'var(--warn)', mark: 'var(--dot-warn)', line: 'var(--line-strong)', arrow: 'var(--faint)' },
+}
 
-/** One step on the canvas: coloured marker, uppercase kicker, title, then its form. */
+/**
+ * One step on the canvas (Paper 21): 16px radius, 16/18 padding, a 36px tile
+ * with the 10px marker, 11/14 kicker (0.08em) in the step tone, 14/18
+ * semibold title, 12/16 muted meta. The selected step has a 1.5px sky border
+ * and a sky glow.
+ */
 function FlowNode({ tone, kicker, title, meta, action, children, highlight = false }) {
-  const color = NODE_COLOR[tone]
+  const c = NODE_TONE[tone]
   return (
     <section
-      className={`relative w-full rounded-[16px] border bg-surface px-4 py-4 shadow-[var(--shadow-card)] sm:px-[18px] ${highlight ? '' : 'border-line-strong'}`}
-      style={highlight ? { borderColor: color } : undefined}
+      className={`relative w-full rounded-[16px] bg-surface px-4 py-4 sm:px-[18px] ${highlight ? 'border-[1.5px]' : 'border'}`}
+      style={
+        highlight
+          ? { borderColor: 'var(--flow-focus)', boxShadow: 'var(--flow-focus-shadow)' }
+          : { borderColor: 'var(--flow-node-border)' }
+      }
     >
       <div className="flex items-start gap-[14px]">
-        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-2">
-          <span className="size-[10px] rounded-[3px]" style={{ backgroundColor: color }} />
+        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-[10px]" style={{ backgroundColor: 'var(--flow-tile)' }}>
+          <span className="size-[10px] rounded-[3px]" style={{ backgroundColor: c.mark }} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] uppercase leading-[14px] tracking-[0.08em]" style={{ color }}>
+            <p className="text-[11px] uppercase leading-[14px] tracking-[0.08em]" style={{ color: c.text }}>
               {kicker}
             </p>
             {action}
@@ -279,13 +294,15 @@ function FlowNode({ tone, kicker, title, meta, action, children, highlight = fal
   )
 }
 
-function Connector({ label }) {
+/** Paper 21 link between steps: a 2px dotted line (2 6) in the upstream tone, ending in an arrowhead. */
+function Connector({ from }) {
+  const c = NODE_TONE[from]
   return (
-    <div aria-hidden className="relative flex h-12 items-center justify-center">
-      <span className="absolute inset-y-0 left-1/2 border-l border-dashed border-line-strong" />
-      {label && (
-        <span className="relative rounded-pill border border-line bg-bg px-3 py-0.5 text-[12px] leading-4 text-muted">{label}</span>
-      )}
+    <div aria-hidden className="flex h-[52px] justify-center">
+      <svg width="12" height="52" viewBox="0 0 12 52" className="shrink-0">
+        <path d="M6 0V50" fill="none" stroke={c.line} strokeWidth="2" strokeLinecap="round" strokeDasharray="2 6" />
+        <path d="M1 44L6 50L11 44" fill="none" stroke={c.arrow} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </div>
   )
 }
@@ -723,30 +740,79 @@ function RuleEditor({ data, initial, onClose, onSwitch }) {
           <GhostButton size="lg" onClick={onClose}>
             {t('common.cancel')}
           </GhostButton>
-          <GradientButton type="submit" form="rule-form" disabled={busy === 'save'}>
+          <GradientButton type="submit" form="rule-form" ring="sky" icon={Check} disabled={busy === 'save'}>
             {busy === 'save' ? t('settingsUi.saving') : t('settingsUi.auto.save')}
           </GradientButton>
         </>
       }
     >
       <form id="rule-form" onSubmit={onSave} className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Paper 21 canvas colours: dark from artboard 21, light from "L · 21"; this screen only */}
+        <style jsx global>{`
+          .flow-canvas {
+            --flow-bg: #0d0e10;
+            --flow-dot: #1f2226;
+            --flow-border: #1f2226;
+            --flow-node-border: #2a2e33;
+            --flow-tile: #181a1d;
+            --flow-when: #6aa8f5;
+            --flow-when-mark: #6aa8f5;
+            --flow-if: #d7f75b;
+            --flow-if-mark: #d7f75b;
+            --flow-if-line: #d7f75b;
+            --flow-focus: #6aa8f5;
+            --flow-focus-shadow: 0 0 0 4px #6aa8f51f, 0 0 28px #6aa8f52e;
+            --flow-live-bg: #0f1f1a;
+            --flow-live-border: #1e4a36;
+            --flow-live-text: #86efac;
+          }
+          html[data-theme='light'] .flow-canvas {
+            --flow-bg: #eef3f9;
+            --flow-dot: #d3deeb;
+            --flow-border: #dfe6ef;
+            --flow-node-border: #cbd6e3;
+            --flow-tile: #eaf1fa;
+            --flow-when: #1562d6;
+            --flow-when-mark: #3d86e6;
+            --flow-if: #4f6b00;
+            --flow-if-mark: #a8c93a;
+            --flow-if-line: #7fa41f;
+            --flow-focus: #3d86e6;
+            --flow-focus-shadow: 0 0 0 4px #9fe3e61f, 0 0 28px #9fe3e62e;
+            --flow-live-bg: #e8f7ee;
+            --flow-live-border: #bde5ca;
+            --flow-live-text: #15803d;
+          }
+          `}</style>
         <div
-          className="rounded-card border border-line px-4 pb-8 pt-5 sm:px-7"
+          className="flow-canvas rounded-card border px-4 pb-8 pt-5 sm:px-7"
           style={{
-            backgroundColor: 'color-mix(in oklab, var(--bg) 70%, var(--surface-2))',
-            backgroundImage: 'radial-gradient(circle, var(--line) 1px, transparent 1px)',
+            borderColor: 'var(--flow-border)',
+            backgroundColor: 'var(--flow-bg)',
+            backgroundImage: 'radial-gradient(circle, var(--flow-dot) 1px, transparent 1px)',
             backgroundSize: '22px 22px',
           }}
         >
           <div className="mx-auto flex max-w-2xl flex-col">
             <div className="mb-[22px] flex flex-wrap items-center gap-2">
-              <Pill tone={draft.enabled ? 'green' : 'neutral'}>
-                <span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: draft.enabled ? 'var(--good)' : 'var(--faint)' }} />
-                {draft.enabled ? t('settingsUi.auto.live') : t('settingsUi.auto.paused')}
-              </Pill>
+              {draft.enabled ? (
+                /* Paper 21 "Live" pill: tinted green fill, 7px dot with an 8px glow */
+                <span
+                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-pill border px-3 py-[6px] text-[12px] leading-4"
+                  style={{ backgroundColor: 'var(--flow-live-bg)', borderColor: 'var(--flow-live-border)', color: 'var(--flow-live-text)' }}
+                >
+                  <span aria-hidden className="size-[7px] shrink-0 rounded-full" style={{ backgroundColor: 'var(--dot-good)', boxShadow: '0 0 8px var(--dot-good)' }} />
+                  {t('settingsUi.auto.live')}
+                </span>
+              ) : (
+                <Pill tone="neutral">
+                  <span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: 'var(--faint)' }} />
+                  {t('settingsUi.auto.paused')}
+                </Pill>
+              )}
             </div>
             <TriggerNode draft={draft} data={data} set={set} setTriggerKind={setTriggerKind} />
-            <Connector />
+            <Connector from="when" />
             <FlowNode
               tone="if"
               highlight
@@ -790,7 +856,7 @@ function RuleEditor({ data, initial, onClose, onSwitch }) {
             </FlowNode>
             {draft.actions.map((a, i) => (
               <div key={i}>
-                <Connector />
+                <Connector from={i === 0 ? 'if' : i === 1 ? 'then' : 'and'} />
                 <ActionNode
                   idx={i}
                   a={a}
@@ -802,19 +868,18 @@ function RuleEditor({ data, initial, onClose, onSwitch }) {
               </div>
             ))}
             {draft.actions.length < 5 && (
-              <>
-                <Connector />
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => set({ actions: [...draft.actions, blankNotify()] })}
-                    className="flex items-center gap-1.5 rounded-pill border border-dashed border-line-strong bg-bg px-4 py-2 text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
-                  >
-                    <Plus size={14} aria-hidden />
-                    {t('settingsUi.auto.addStep')}
-                  </button>
-                </div>
-              </>
+              <div className="flex flex-col items-center">
+                {/* Paper 21: a 22px dotted stub, then the dashed "+ Add step" pill */}
+                <span aria-hidden className="h-[22px] w-0.5 border-l-2 border-dotted" style={{ borderColor: 'var(--flow-node-border)' }} />
+                <button
+                  type="button"
+                  onClick={() => set({ actions: [...draft.actions, blankNotify()] })}
+                  className="rounded-pill border border-dashed px-4 py-2 text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  style={{ borderColor: 'var(--flow-node-border)' }}
+                >
+                  + {t('settingsUi.auto.addStep')}
+                </button>
+              </div>
             )}
           </div>
         </div>

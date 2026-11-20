@@ -17,20 +17,21 @@ export default function SiteKpiTable({ rows, currency, showSites = false, footer
     {
       key: 'name',
       header: t('ent.common.name'),
+      // Paper 68: 14/18 name over a 12/16 muted line; the total row is semibold.
       render: (r) => (
-        <span className="whitespace-nowrap">
+        <span className="flex flex-col gap-[2px] whitespace-nowrap">
           {onSelect && r.selectable ? (
             <button
               type="button"
-              className="rounded-sm text-left font-medium text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              className="self-start rounded-sm text-left text-text hover:text-sky-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
               onClick={() => onSelect(r)}
             >
               {r.name}
             </button>
           ) : (
-            <span className="font-medium">{r.name}</span>
+            <span className={r.isFooter ? 'font-semibold' : ''}>{r.name}</span>
           )}
-          {r.hint && <span className="text-muted"> · {r.hint}</span>}
+          {r.hint && <span className="text-xs leading-4 text-muted">{r.hint}</span>}
         </span>
       ),
     },

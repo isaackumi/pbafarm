@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { BarChart3, Boxes, Download, FileText, Globe2, Layers, LineChart, Plus, Wallet } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { GradientButton, Skeleton } from '../components/ui'
@@ -17,16 +17,19 @@ import { routePermission } from '../lib/routePermissions'
 
 /** Built-in report pages shown in the library next to saved reports. */
 const STANDARD = [
-  { href: '/report', icon: FileText, title: 'ops.reports.std.production', sub: 'ops.reports.std.productionSub' },
-  { href: '/pnl', icon: Wallet, title: 'ops.reports.std.pnl', sub: 'ops.reports.std.pnlSub' },
-  { href: '/analytics', icon: LineChart, title: 'ops.reports.std.analytics', sub: 'ops.reports.std.analyticsSub' },
-  { href: '/inventory/overview', icon: Boxes, title: 'ops.reports.std.inventory', sub: 'ops.reports.std.inventorySub' },
-  { href: '/reports/regions', icon: Globe2, title: 'ops.reports.std.regions', sub: 'ops.reports.std.regionsSub' },
-  { href: '/group-reports', icon: Layers, title: 'ops.reports.std.group', sub: 'ops.reports.std.groupSub' },
+  { href: '/report', title: 'ops.reports.std.production', sub: 'ops.reports.std.productionSub' },
+  { href: '/pnl', title: 'ops.reports.std.pnl', sub: 'ops.reports.std.pnlSub' },
+  { href: '/analytics', title: 'ops.reports.std.analytics', sub: 'ops.reports.std.analyticsSub' },
+  { href: '/inventory/overview', title: 'ops.reports.std.inventory', sub: 'ops.reports.std.inventorySub' },
+  { href: '/reports/regions', title: 'ops.reports.std.regions', sub: 'ops.reports.std.regionsSub' },
+  { href: '/group-reports', title: 'ops.reports.std.group', sub: 'ops.reports.std.groupSub' },
 ]
 
-/** Paper 11 library card: icon tile, title, muted sub, footer with cadence and Open →. */
-function ReportCard({ icon: Icon, title, sub, footer, href, onOpen, current }) {
+/**
+ * Paper 11 library card: 36px surface-2 tile with the sky (#6AA8F5) download
+ * arrow (the same on every card), title, muted sub, footer with cadence and Open →.
+ */
+function ReportCard({ title, sub, footer, href, onOpen, current }) {
   const t = useT()
   const openCls =
     'rounded-sm text-[13px] leading-4 text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
@@ -36,8 +39,8 @@ function ReportCard({ icon: Icon, title, sub, footer, href, onOpen, current }) {
         current ? 'border-line-strong' : 'border-line'
       }`}
     >
-      <span className="flex size-[36px] shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-pearl-cyan" aria-hidden>
-        <Icon size={16} strokeWidth={2} />
+      <span className="flex size-[36px] shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-sky-ink" aria-hidden>
+        <Download size={16} strokeWidth={2} />
       </span>
       <div className="flex min-w-0 flex-col gap-1">
         <h3 className="truncate text-[15px] font-semibold leading-[18px] text-text">{title}</h3>
@@ -80,14 +83,13 @@ function Library({ selected, onSelect }) {
     <div className="flex flex-col gap-[28px]">
       <ul className="grid gap-[20px] md:grid-cols-2 xl:grid-cols-3">
         {standard.map((s) => (
-          <ReportCard key={s.href} icon={s.icon} title={t(s.title)} sub={t(s.sub)} footer={t('ops.reports.onDemand')} href={s.href} />
+          <ReportCard key={s.href} title={t(s.title)} sub={t(s.sub)} footer={t('ops.reports.onDemand')} href={s.href} />
         ))}
         {reports.map((r) => {
           const schedule = scheduleFor(r._id)
           return (
             <ReportCard
               key={r._id}
-              icon={BarChart3}
               title={r.name}
               sub={`${datasetLabel(t, r.definition.dataset)} · ${
                 r.visibility === 'company' ? t('reportBuilder.visibility.company') : t('reportBuilder.visibility.private')
@@ -130,12 +132,12 @@ function ReportsPage() {
       actions={
         <>
           {canExport && (
-            <GradientButton href="/export" icon={Download}>
+            <GradientButton variant="lime" href="/export" icon={Download}>
               {t('ops.reports.export')}
             </GradientButton>
           )}
           {canManage && (
-            <GradientButton reverse icon={Plus} onClick={() => select('new')}>
+            <GradientButton ring="sky" icon={Plus} onClick={() => select('new')}>
               {t('ops.reports.newReport')}
             </GradientButton>
           )}

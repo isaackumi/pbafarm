@@ -11,7 +11,7 @@ import { useToast } from '../../components/Toast'
 import { errorMessage } from '../../lib/errorMessage'
 import { daysBetween, formatDate } from '../../lib/format'
 import { useLocale, useT } from '../../lib/i18n/context'
-import { HatcheryNav, PaperCard, Pill, fmt, label, num, statusTone, today } from '../../components/hatchery/common'
+import { HatcheryNav, PaperCard, Pill, compact, fmt, label, num, statusTone, today } from '../../components/hatchery/common'
 
 export default function HatcheryPage() {
   return (
@@ -41,7 +41,7 @@ function Item({ title, sub, meta, children }) {
     <li className={ITEM}>
       <span className="text-[14px] font-medium leading-[18px] text-text">{title}</span>
       {sub && <span className="text-xs leading-4 text-muted">{sub}</span>}
-      {meta && <span className="text-xs leading-4 text-pearl-cyan">{meta}</span>}
+      {meta && <span className="text-xs leading-4 text-sky-ink">{meta}</span>}
       {children}
     </li>
   )
@@ -72,12 +72,12 @@ function HatcheryOverview() {
       actions={
         <>
           <IfPermitted permission="hatchery.spawning.record">
-            <GradientButton icon={Plus} href="/hatchery/spawning">
+            <GradientButton variant="lime" icon={Plus} href="/hatchery/spawning">
               {t('hatcheryPage.newSpawning')}
             </GradientButton>
           </IfPermitted>
           <IfPermitted permission="hatchery.dispatch">
-            <GradientButton reverse icon={ArrowLeftRight} href="/hatchery/larval">
+            <GradientButton ring="sky" icon={ArrowLeftRight} href="/hatchery/larval">
               {t('hatcheryPage.moveToNursery')}
             </GradientButton>
           </IfPermitted>
@@ -92,17 +92,17 @@ function HatcheryOverview() {
             {
               key: 'brood',
               label: t('hatcheryPage.kpi.broodstock'),
-              value: fmt(k.broodstock_total),
+              value: compact(k.broodstock_total),
               suffix: k.broodstock_by_status ? t('hatcheryPage.readyN', { n: fmt(k.broodstock_by_status.ready || 0) }) : undefined,
             },
-            { key: 'eggs', label: t('hatcheryPage.kpi.eggs'), value: fmt(k.eggs_incubating), suffix: t('hatcheryPage.lotsN', { count: k.lots_incubating || 0 }) },
+            { key: 'eggs', label: t('hatcheryPage.kpi.eggs'), value: compact(k.eggs_incubating), suffix: t('hatcheryPage.lotsN', { count: k.lots_incubating || 0 }) },
             {
               key: 'larvae',
               label: t('hatcheryPage.kpi.larvae'),
-              value: fmt(sum(larvae)),
+              value: compact(sum(larvae)),
               suffix: k.larval_survival_pct != null ? t('hatcheryPage.survival', { pct: pct(k.larval_survival_pct) }) : undefined,
             },
-            { key: 'fingerlings', label: t('hatcheryPage.kpi.fingerlings'), value: fmt(sum(nursery)), suffix: t('hatcheryPage.batchesN', { count: nursery?.length || 0 }) },
+            { key: 'fingerlings', label: t('hatcheryPage.kpi.fingerlings'), value: compact(sum(nursery)), suffix: t('hatcheryPage.batchesN', { count: nursery?.length || 0 }) },
           ]}
         />
 
@@ -112,7 +112,7 @@ function HatcheryOverview() {
               <Item
                 key={s.id}
                 title={[s.female_codes.join(', '), s.male_codes.length ? s.male_codes.join(', ') : null].filter(Boolean).join(' × ')}
-                sub={[s.unit_name, s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: fmt(s.eggs_collected) }) : t('hatcheryPage.eggsNotCounted')].filter(Boolean).join(' · ')}
+                sub={[s.unit_name, s.eggs_collected != null ? t('hatcheryPage.eggsN', { n: compact(s.eggs_collected) }) : t('hatcheryPage.eggsNotCounted')].filter(Boolean).join(' · ')}
                 meta={d(s.spawn_date)}
               />
             ))}
@@ -126,8 +126,8 @@ function HatcheryOverview() {
             {larvae?.map((b) => (
               <Item
                 key={b.id}
-                title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
-                sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+                title={<Link href={`/batches/${b.id}`} className="hover:text-sky-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+                sub={[units(b), compact(b.count)].filter(Boolean).join(' · ')}
                 meta={[t('hatcheryPage.dayN', { n: b.days_since_hatch }), b.survival_pct != null ? pct(b.survival_pct) : null].filter(Boolean).join(' · ')}
               />
             ))}
@@ -136,8 +136,8 @@ function HatcheryOverview() {
             {nursery?.map((b) => (
               <Item
                 key={b.id}
-                title={<Link href={`/batches/${b.id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
-                sub={[units(b), fmt(b.count)].filter(Boolean).join(' · ')}
+                title={<Link href={`/batches/${b.id}`} className="hover:text-sky-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">{b.batch_number}</Link>}
+                sub={[units(b), compact(b.count)].filter(Boolean).join(' · ')}
                 meta={b.abw_g != null ? `${fmt(b.abw_g, 2)} g` : t('hatcheryPage.dayN', { n: b.days_since_hatch })}
               />
             ))}
@@ -171,7 +171,7 @@ function HatcheryOverview() {
                     <div className="flex min-w-0 flex-col gap-[2px]">
                       <span className="text-[14px] leading-[18px] text-text">
                         {l.batch_id ? (
-                          <Link href={`/batches/${l.batch_id}`} className="hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+                          <Link href={`/batches/${l.batch_id}`} className="hover:text-sky-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
                             {l.batch_number}
                           </Link>
                         ) : (
@@ -206,7 +206,7 @@ function IncubationItem({ lot }) {
   return (
     <Item
       title={lot.unit_name}
-      sub={[t('hatcheryPage.eggsN', { n: fmt(lot.eggs) }), lot.spawn_date ? t('hatcheryPage.spawnedOn', { date: formatDate(lot.spawn_date, { locale }) }) : null, lot.fertilization_pct != null ? t('hatcheryPage.fertilized', { pct: pct(lot.fertilization_pct) }) : null]
+      sub={[t('hatcheryPage.eggsN', { n: compact(lot.eggs) }), lot.spawn_date ? t('hatcheryPage.spawnedOn', { date: formatDate(lot.spawn_date, { locale }) }) : null, lot.fertilization_pct != null ? t('hatcheryPage.fertilized', { pct: pct(lot.fertilization_pct) }) : null]
         .filter(Boolean)
         .join(' · ')}
       meta={t('hatcheryPage.dayN', { n: days })}

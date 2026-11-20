@@ -252,7 +252,7 @@ const CompanyRegistrationsPage = () => {
           <GradientButton
             type="submit"
             form="register-company-form"
-            variant="solid"
+            variant="lime"
             className="ml-auto"
             disabled={loading || !human.ready}
           >

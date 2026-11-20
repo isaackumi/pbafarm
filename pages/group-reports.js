@@ -3,12 +3,14 @@ import { useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import SiteKpiTable, { monthToDate } from '../components/SiteKpiTable'
-import { Field, Input } from '../components/ui'
+import { Download, Plus } from 'lucide-react'
+import { Field, GradientButton, Input } from '../components/ui'
 import NavTabs from '../components/ui/NavTabs'
 import { api } from '../convex/_generated/api'
 import { localToday } from '../lib/format'
 import { reportTabs } from '../lib/sectionTabs'
 import { useT } from '../lib/i18n/context'
+import { usePermission } from '../hooks/usePermission'
 
 function GroupReports() {
   const t = useT()
@@ -27,9 +29,44 @@ function GroupReports() {
     selectable: !r.isSelf,
   }))
   const currencies = new Set(rows.map((r) => r.currency))
+  const canExport = usePermission('reports.export')
+  const canLink = usePermission('org.structure.manage')
+  // Paper 68 "Group total" row: only when every company reports in one currency.
+  const total =
+    rows.length > 1 && currencies.size === 1
+      ? {
+          key: 'total',
+          name: t('ent.group.total'),
+          hint: t('ent.group.totalSub', { count: rows.length }),
+          currency: rows[0].currency,
+          ...Object.fromEntries(
+            ['sites', 'activeUnits', 'fish', 'harvestKg', 'salesAmount', 'expensesAmount', 'overdueMaintenance'].map((k) => [
+              k,
+              rows.reduce((sum, r) => sum + (r[k] || 0), 0),
+            ]),
+          ),
+        }
+      : null
 
   return (
-    <Layout title={t('ent.group.title')} eyebrow={t('ops.reportsTab.eyebrow')}>
+    <Layout
+      title={t('ent.group.pageTitle')}
+      eyebrow={t('ent.group.eyebrow')}
+      actions={
+        <>
+          {canExport && (
+            <GradientButton variant="lime" href="/export" icon={Download}>
+              {t('ops.reports.export')}
+            </GradientButton>
+          )}
+          {canLink && (
+            <GradientButton ring="sky" href="/organization-structure" icon={Plus}>
+              {t('ent.group.linkCompany')}
+            </GradientButton>
+          )}
+        </>
+      }
+    >
       <div className="flex flex-col gap-[28px]">
         <NavTabs tabs={reportTabs(t)} label={t('ops.tabs.reports')} />
         <p className="max-w-[720px] text-[13px] leading-5 text-muted">{t('ent.group.description')}</p>
@@ -46,9 +83,12 @@ function GroupReports() {
           className="flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-5">
-            <h2 id="gr-companies" className="text-[17px] font-semibold leading-[22px] text-text">
-              {t('ent.group.title')}
-            </h2>
+            <div className="flex flex-wrap items-center gap-x-[20px] gap-y-1">
+              <h2 id="gr-companies" className="text-[17px] font-semibold leading-[22px] text-text">
+                {t('ent.group.comparison')}
+              </h2>
+              <p className="text-[13px] leading-4 text-muted">{t('ent.group.comparisonHint')}</p>
+            </div>
           </div>
           {!data ? (
             <p className="px-6 py-[14px] text-[13px] leading-5 text-muted">{t('common.loading')}</p>
@@ -61,7 +101,7 @@ function GroupReports() {
               </div>
             </>
           ) : (
-            <SiteKpiTable rows={rows} showSites onSelect={(r) => setSelected(r)} />
+            <SiteKpiTable rows={rows} showSites onSelect={(r) => setSelected(r)} footer={total} />
           )}
           {currencies.size > 1 && <p className="border-t border-line px-6 py-3 text-[13px] leading-5 text-muted">{t('ent.group.currencies')}</p>}
           {rows.some((r) => r.truncated) && <p className="border-t border-line px-6 py-3 text-[13px] leading-5 text-muted">{t('ent.common.truncated')}</p>}

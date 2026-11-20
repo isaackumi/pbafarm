@@ -920,7 +920,7 @@
       "board": "Tableau",
       "broodstock": "Géniteurs",
       "spawning": "Ponte",
-      "larval": "Larves et alevins",
+      "larval": "Larves et nurserie",
       "liveFeed": "Proies vivantes"
     },
     "kpi": {
@@ -939,7 +939,7 @@
       "one": "{count} lot",
       "other": "{count} lots"
     },
-    "survival": "{pct} de survie",
+    "survival": "survie {pct}",
     "batchesN": {
       "one": "{count} lot",
       "other": "{count} lots"
@@ -2053,7 +2053,17 @@
       "noSubsidiaries": "Aucune filiale ne partage encore ses rapports",
       "noSubsidiariesHint": "Liez une filiale dans Structure de l’organisation ; ses administrateurs acceptent et choisissent de partager leurs rapports.",
       "sitesOf": "Sites de {name}",
-      "yourOrg": "votre organisation"
+      "yourOrg": "votre organisation",
+      "pageTitle": "Groupe et régions",
+      "eyebrow": "Rapports · Consolidation des sociétés liées",
+      "linkCompany": "Lier une société",
+      "comparison": "Comparaison des sociétés",
+      "comparisonHint": "Seuls les indicateurs que chaque société partage avec le groupe",
+      "total": "Total du groupe",
+      "totalSub": {
+        "one": "{count} société",
+        "other": "{count} sociétés"
+      }
     },
     "regions": {
       "title": "Rapport régional",
@@ -2869,7 +2879,7 @@
   "calendarUi": {
     "title": "Calendrier",
     "eyebrow": "Opérations · {month}",
-    "schedule": "Planifier une tâche",
+    "schedule": "Planifier",
     "prev": "Mois précédent",
     "next": "Mois suivant",
     "today": "Aujourd’hui",
@@ -3202,7 +3212,9 @@
       "nextAttempt": "Nouvel essai {when}",
       "more": "Charger plus",
       "emptyTitle": "Aucun envoi pour l’instant",
-      "emptyBody": "Les rapports programmés et envoyés maintenant apparaissent ici."
+      "emptyBody": "Les rapports programmés et envoyés maintenant apparaissent ici.",
+      "title": "Exports récents",
+      "range": "Période"
     }
   },
   "integ": {
