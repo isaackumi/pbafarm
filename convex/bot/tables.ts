@@ -80,7 +80,53 @@ export const taskPayload = v.object({
   notes: v.optional(v.string()),
 })
 
-export const pendingPayload = v.union(dailyEntryPayload, feedIssuePayload, purchaseOrderPayload, taskPayload)
+/** A project drafted by Ask Anowa (web). Confirm creates it (projects.create). */
+export const projectCreatePayload = v.object({
+  kind: v.literal('project_create'),
+  name: v.string(),
+  category: v.string(),
+  budget: v.number(),
+  currency: v.string(),
+  startDate: v.string(),
+  targetEndDate: v.string(),
+  ownerUserId: v.id('users'),
+  ownerName: v.string(),
+  locationId: v.optional(v.id('farmLocations')),
+  siteName: v.optional(v.string()),
+})
+
+/** A project milestone drafted by Ask Anowa (web). */
+export const projectMilestonePayload = v.object({
+  kind: v.literal('project_milestone'),
+  projectId: v.id('projects'),
+  projectName: v.string(),
+  title: v.string(),
+  dueDate: v.string(),
+  progressPct: v.number(),
+})
+
+/** A project cost drafted by Ask Anowa (web): a typed amount, never a linked expense. */
+export const projectCostPayload = v.object({
+  kind: v.literal('project_cost'),
+  projectId: v.id('projects'),
+  projectName: v.string(),
+  amount: v.number(),
+  currency: v.string(),
+  note: v.optional(v.string()),
+  /** Spent and budget before this cost, for the card's before / after. */
+  spentBefore: v.number(),
+  budget: v.number(),
+})
+
+export const pendingPayload = v.union(
+  dailyEntryPayload,
+  feedIssuePayload,
+  purchaseOrderPayload,
+  taskPayload,
+  projectCreatePayload,
+  projectMilestonePayload,
+  projectCostPayload,
+)
 
 export const botTables = {
   /**
@@ -210,6 +256,9 @@ export const botTables = {
     refusal: v.optional(v.string()),
     purchaseOrderId: v.optional(v.id('purchaseOrders')),
     taskId: v.optional(v.id('tasks')),
+    projectId: v.optional(v.id('projects')),
+    projectMilestoneId: v.optional(v.id('projectMilestones')),
+    projectCostId: v.optional(v.id('projectCosts')),
   })
     .index('by_bindingId_and_status', ['bindingId', 'status'])
     .index('by_userId_and_draftGroup', ['userId', 'draftGroup'])

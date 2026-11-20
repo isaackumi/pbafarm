@@ -9,6 +9,7 @@ import { BUILT_IN_CATEGORY_KEYS, EXPENSE_CATEGORIES, categoryKey, splitExpenses 
 import { requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
+import { syncExpenseLink } from './projects'
 
 /**
  * Expenses (INV-007). Anyone in the company records an expense (field quick
@@ -407,6 +408,8 @@ export const update = mutation({
     })
 
     await ctx.db.patch(args.id, { ...next, ...(custom !== undefined ? { custom } : {}), updatedAt: Date.now() })
+    // A project cost linking this expense follows its amount and date (PROJ-001).
+    await syncExpenseLink(ctx, { ...existing, ...next })
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'expenses',
@@ -428,6 +431,7 @@ export const remove = mutation({
     assertOwns(user, existing, 'Expense')
     if (existing.deletedAt) return null
     await ctx.db.patch(args.id, { deletedAt: Date.now(), updatedAt: Date.now() })
+    await syncExpenseLink(ctx, { ...existing, deletedAt: Date.now() })
     await logAudit(ctx, {
       actionType: 'delete',
       tableName: 'expenses',

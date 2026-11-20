@@ -7,6 +7,7 @@ import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
 import { billingTables } from './billing/tables'
 import { botTables } from './bot/tables'
+import { projectTables } from './lib/projectTables'
 import {
   automationAction,
   automationCondition,
@@ -271,6 +272,7 @@ const schema = defineSchema({
   ...integrationTables,
   ...billingTables,
   ...botTables,
+  ...projectTables,
 
   users: defineTable({
     name: v.optional(v.string()),

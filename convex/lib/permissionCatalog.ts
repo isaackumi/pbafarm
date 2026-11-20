@@ -74,6 +74,10 @@ export const PERMISSION_GROUPS = {
     'finance.expenses.record': 'Record expenses',
     'finance.expenses.manage': 'Edit expenses and categories',
   },
+  Projects: {
+    'projects.view': 'See capex and farm-improvement projects, milestones and costs',
+    'projects.manage': 'Create and edit projects, milestones and project costs',
+  },
   Reports: {
     'reports.view': 'See dashboards and reports',
     'reports.export': 'Export data',
@@ -144,9 +148,10 @@ export const ROLE_TEMPLATES = {
     'hatchery.larval.record',
     'inventory.view',
     'inventory.issue',
+    'projects.view',
     'reports.view',
   ],
-  viewer: ['org.view', 'production.view', 'hatchery.view', 'inventory.view', 'finance.view', 'reports.view'],
+  viewer: ['org.view', 'production.view', 'hatchery.view', 'inventory.view', 'finance.view', 'projects.view', 'reports.view'],
 } as const satisfies Record<string, readonly Permission[]>
 
 export type TemplateKey = keyof typeof ROLE_TEMPLATES
