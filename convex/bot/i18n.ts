@@ -111,7 +111,7 @@ const en = {
   fieldMortality: 'Mortality',
   fieldIssue: 'Feed issue',
   fish: (n: number) => `${n} fish`,
-  notSaid: 'Not said, saved as blank',
+  notSaid: 'Not said, saved as 0',
   check: 'CHECK',
   checkNote: (heard: string | undefined, value: string, unit: string) =>
     heard
@@ -232,7 +232,7 @@ const fr: Strings = {
   fieldMortality: 'Mortalité',
   fieldIssue: "Sortie d'aliment",
   fish: (n) => `${n} poissons`,
-  notSaid: 'Non dit, enregistré vide',
+  notSaid: 'Non dit, enregistré comme 0',
   check: 'À VÉRIFIER',
   checkNote: (heard, value, unit) =>
     heard

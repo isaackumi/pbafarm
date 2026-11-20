@@ -275,7 +275,7 @@ describe('BOT-005 voice notes', () => {
     expect(msg).toContain('Feed: 25 kg Grower')
     expect(msg).toContain('Mortality: 3 fish')
     expect(msg).toContain('Feed: CHECK 30 kg Grower')
-    expect(msg).toContain('Mortality: Not said, saved as blank')
+    expect(msg).toContain('Mortality: Not said, saved as 0')
     expect(msg).toContain('I heard "thirty" (30 kg) for C10 but the line was noisy.')
     expect(msg).toMatch(/Saving for today, \d{4}-\d{2}-\d{2}\./)
     expect(msg).not.toMatch(/\u2014/)
@@ -362,7 +362,7 @@ describe('BOT-005 voice notes', () => {
     expect(draft.unitChoices!.map((c) => c.name)).toEqual(['C10', 'A1'])
     expect(replies).toHaveLength(2)
     expect(replies[0].text).toContain('Unit: CHECK C10')
-    expect(replies[0].text).toContain('Feed: Not said, saved as blank')
+    expect(replies[0].text).toContain('Feed: Not said, saved as 0')
     expect(replies[1]).toEqual({
       text: "I didn't catch the cage clearly. Which one had 3 dead fish?",
       buttons: [`vc:${draft._id}:0`, `vc:${draft._id}:1`],
@@ -447,7 +447,7 @@ describe('BOT-005 voice notes', () => {
     expect(speechCalls[0].language).toBe('fr')
     expect(reply.text).toContain('Entendu en français · anglais')
     expect(reply.text).toContain("Bien reçu. J'ai entendu 1 cage.")
-    expect(reply.text).toContain('Mortalité : Non dit, enregistré vide'.replace(' :', ':'))
+    expect(reply.text).toContain('Mortalité : Non dit, enregistré comme 0'.replace(' :', ':'))
   })
 
   test('audio is deleted after 30 days; the transcript stays', async () => {
