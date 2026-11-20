@@ -36,6 +36,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireLlmAdmin(ctx)': 'integrations.manage',
   'requireAssistantMember(ctx)': 'ai.use',
   'requireChatOwner(ctx': 'ai.use',
+  'loadAnowaDraft(ctx': 'ai.use',
 }
 
 /** Functions without an organization guard, and why. */
@@ -64,6 +65,7 @@ const ALLOWLIST: Record<string, string> = {
   'llmModels.preview': 'action; guarded by requireMember(integrations.manage) in internal.llmModels.beginPreview',
   'files.attachR2': 'action; guarded by requireMember(files.upload) + upload binding in internal.files.r2UploadForAttach / attachR2Object',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
+  'anowa/agent.ask': 'action; guarded by requireMember(ai.use) and the org assistant switch in internal.anowa.agent.prepare',
   'aiReports.generateNow': 'action; guarded by requireMember(reports.view) and the site scope in internal.aiReports.access',
   'actAs.start': 'super_admin only, checked on the real account (requireUser({ ignoreActAs })): support access is not a company permission',
   'actAs.stop': 'own act-as session; any signed-in account, ends only its own',

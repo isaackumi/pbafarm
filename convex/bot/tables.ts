@@ -30,6 +30,8 @@ export const dailyEntryPayload = v.object({
   /** Water readings read off a logbook page (BOT-006). */
   dissolvedOxygen: v.optional(v.number()),
   temperatureC: v.optional(v.number()),
+  /** Fish in the unit when drafted (Ask Anowa card: before / after). */
+  fishBefore: v.optional(v.number()),
 })
 
 /** Feed taken out of the store, optionally to a unit's bin. */
@@ -43,7 +45,42 @@ export const feedIssuePayload = v.object({
   notes: v.optional(v.string()),
 })
 
-export const pendingPayload = v.union(dailyEntryPayload, feedIssuePayload)
+/**
+ * A feed purchase order drafted by Ask Anowa (web): quantity = 14-day ration
+ * need over the units minus site stock, rounded up to whole bags
+ * (convex/lib/feedOrder.ts). Confirm creates a draft PO (procurement.create).
+ */
+export const purchaseOrderPayload = v.object({
+  kind: v.literal('purchase_order'),
+  feedTypeId: v.id('feedTypes'),
+  feedTypeName: v.string(),
+  supplierId: v.id('feedSuppliers'),
+  supplierName: v.string(),
+  quantityKg: v.number(),
+  bags: v.number(),
+  bagKg: v.number(),
+  pricePerKg: v.number(),
+  /** Why this amount: ration need, stock on hand, units counted. */
+  days: v.number(),
+  needKg: v.number(),
+  stockKg: v.number(),
+  units: v.number(),
+  notes: v.optional(v.string()),
+})
+
+/** A task drafted by Ask Anowa (web). Confirm creates it (tasks.create). */
+export const taskPayload = v.object({
+  kind: v.literal('task'),
+  title: v.string(),
+  assigneeUserId: v.id('users'),
+  assigneeName: v.string(),
+  dueDate: v.optional(v.string()),
+  cageId: v.optional(v.id('cages')),
+  cageName: v.optional(v.string()),
+  notes: v.optional(v.string()),
+})
+
+export const pendingPayload = v.union(dailyEntryPayload, feedIssuePayload, purchaseOrderPayload, taskPayload)
 
 export const botTables = {
   /**
@@ -126,11 +163,13 @@ export const botTables = {
    * Validated against the binding's scope at proposal and again at commit.
    */
   pendingBotActions: defineTable({
-    bindingId: v.id('channelBindings'),
+    /** Chat drafts only; web drafts (channel 'web') have no binding. */
+    bindingId: v.optional(v.id('channelBindings')),
     userId: v.id('users'),
     companyId: v.id('companies'),
     siteId: v.optional(v.id('farmLocations')),
-    provider: botProvider,
+    /** Chat drafts only. */
+    provider: v.optional(botProvider),
     payload: pendingPayload,
     /** Farm date of the entry: the message time in the site's timezone. */
     date: v.string(),
@@ -152,8 +191,16 @@ export const botTables = {
     error: v.optional(v.string()),
     /** The logbook photo this draft was read from (BOT-006). */
     scanId: v.optional(v.id('logbookScans')),
+    /** Ask Anowa in the web app: the items of one draft card share a draftGroup. */
+    channel: v.optional(v.literal('web')),
+    draftGroup: v.optional(v.string()),
+    /** Why this item may not be saved by this user (shown greyed on the card). */
+    refusal: v.optional(v.string()),
+    purchaseOrderId: v.optional(v.id('purchaseOrders')),
+    taskId: v.optional(v.id('tasks')),
   })
     .index('by_bindingId_and_status', ['bindingId', 'status'])
+    .index('by_userId_and_draftGroup', ['userId', 'draftGroup'])
     .index('by_scanId', ['scanId'])
     .index('by_bindingId_and_fingerprint', ['bindingId', 'fingerprint'])
     .index('by_status_and_expiresAt', ['status', 'expiresAt'])

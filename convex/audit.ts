@@ -113,6 +113,8 @@ function toClient(a: Doc<'auditLogs'>, userLabel?: string | null) {
     new_values: a.newValues,
     company_id: a.companyId,
     created_at: a._creationTime,
+    /** 'whatsapp' | 'telegram' (farm bot) or 'anowa' (confirmed from an Ask Anowa draft). */
+    channel: a.channel ?? null,
   }
 }
 
@@ -135,6 +137,7 @@ const auditLogRow = v.object({
   new_values: v.optional(v.any()),
   company_id: v.optional(v.id('companies')),
   created_at: v.number(),
+  channel: v.union(v.literal('whatsapp'), v.literal('telegram'), v.literal('anowa'), v.null()),
 })
 
 export const list = query({

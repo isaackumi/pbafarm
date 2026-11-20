@@ -4245,6 +4245,11 @@
         "head": "head hash",
         "unchained": "{count} older entries unchained (written before the tamper check existed)",
         "verify": "Verify now"
+      },
+      "via": {
+        "anowa": "via Anowa",
+        "whatsapp": "via WhatsApp",
+        "telegram": "via Telegram"
       }
     },
     "auto": {
@@ -6397,7 +6402,116 @@
     "savedTitle": "Saved answers",
     "savedEmpty": "Save an answer and it stays here, with the conversation it came from.",
     "openConversation": "Open conversation",
-    "historyNote": "Your conversations are private to you and kept for a year."
+    "historyNote": "Your conversations are private to you and kept for a year.",
+    "draft": {
+      "label": "Draft card",
+      "intro": "I've prepared the changes below. Nothing is saved until you confirm.",
+      "header": {
+        "one": "Draft · 1 change · not saved",
+        "other": "Draft · {count} changes · not saved"
+      },
+      "savedHeader": {
+        "one": "Saved · 1 change",
+        "other": "Saved · {count} changes"
+      },
+      "undoneHeader": "Undone · nothing kept",
+      "cancelledHeader": "Cancelled · nothing saved",
+      "expiredHeader": "Expired · nothing saved",
+      "expires": {
+        "one": "Expires in 1 h",
+        "other": "Expires in {count} h"
+      },
+      "loading": "Loading the draft…",
+      "missing": "This draft is no longer available.",
+      "kinds": {
+        "mortality": {
+          "title": "Record mortality",
+          "meta": "Daily record · {unit}"
+        },
+        "daily": {
+          "title": "Record a daily entry",
+          "meta": "Daily record · {unit}"
+        },
+        "issue": {
+          "title": "Issue feed",
+          "meta": "Feed store",
+          "metaUnit": "Feed store · {unit}"
+        },
+        "order": {
+          "title": "Draft a purchase order",
+          "meta": "Procurement · goes to approval"
+        },
+        "task": {
+          "title": "Assign a task",
+          "meta": "Tasks",
+          "metaUnit": "Tasks · {unit}"
+        }
+      },
+      "fields": {
+        "dead": "Dead fish",
+        "date": "Date",
+        "fishAfter": "Fish in unit after",
+        "from": "from {count}",
+        "feed": "Feed",
+        "feedGiven": "Feed given",
+        "quantity": "Quantity",
+        "bags": {
+          "one": "1 bag",
+          "other": "{count} bags"
+        },
+        "supplier": "Supplier",
+        "cost": "Est. cost",
+        "task": "Task",
+        "assignee": "Assignee",
+        "due": "Due",
+        "noDue": "No due date"
+      },
+      "bar": {
+        "label": "Why this amount",
+        "onHand": "{kg} on hand",
+        "needed": {
+          "one": "{kg} needed for {days} days (feeding plan, 1 unit)",
+          "other": "{kg} needed for {days} days (feeding plan, {count} units)"
+        },
+        "toOrder": "{kg} to order"
+      },
+      "notAllowed": "Not included: {reason}",
+      "role": {
+        "all": {
+          "one": "Your role can do this",
+          "other": "Your role can do all {count}"
+        },
+        "both": "Your role can do both",
+        "some": "Your role can do {allowed} of {count}",
+        "none": "Your role cannot do these changes",
+        "loggedAs": "logged as",
+        "you": "you, via Anowa"
+      },
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "editItem": "Edit {n}: {title}",
+      "editHint": "Opens the form with these values. This draft is closed.",
+      "confirm": "Confirm",
+      "confirmBoth": "Confirm both",
+      "confirmN": "Confirm {count}",
+      "saving": "Saving…",
+      "savedNote": "Saved via Anowa. Undo for {minutes} more min.",
+      "savedFinal": "Saved via Anowa. Find it in the app as usual.",
+      "skipped": {
+        "one": "1 change was not included.",
+        "other": "{count} changes were not included."
+      },
+      "undo": "Undo",
+      "undoneNote": "Undone. Nothing from this draft is kept.",
+      "tooLate": "Too late to undo: a saved record has changed since. Edit it in the app.",
+      "expiredNote": "This draft expired after 24 hours. Ask again to make a new one.",
+      "cancelledNote": "Cancelled. Nothing was saved.",
+      "nothingAllowed": "None of these changes are allowed for your role.",
+      "already": "Already saved.",
+      "failed": "Could not save: {message}",
+      "followUpLabel": "Suggested next step",
+      "notNow": "Not now"
+    }
   },
   "marketing": {
     "nav": {
