@@ -4493,7 +4493,14 @@
         "oldest": {
           "one": "la plus ancienne : {count} jour",
           "other": "la plus ancienne : {count} jours"
-        }
+        },
+        "thisMonth": "+{count} ce mois-ci"
+      },
+      "checks": {
+        "title": "Vérifications",
+        "noDuplicate": "Aucune entreprise du même nom",
+        "duplicate": "Une autre entreprise porte ce nom",
+        "emailDomain": "Domaine de l'e-mail : {domain}"
       },
       "queue": "File",
       "search": "Rechercher des entreprises",
@@ -4507,6 +4514,7 @@
       "col": {
         "company": "Entreprise",
         "code": "Code",
+        "country": "Pays",
         "sent": "Envoyée",
         "actions": "Actions",
         "contact": "Contact",
@@ -4625,9 +4633,11 @@
     "emptyBody": "Les rapports sont rédigés chaque lundi pour la semaine précédente, ou maintenant avec les boutons ci-dessus.",
     "weekOf": "Semaine se terminant le {date} · {scope}",
     "wholeCompany": "Toute l'entreprise",
+    "siteScope": "Site de {site}",
+    "weekNumber": "Semaine {week}",
     "sourceAi": "Formulé par l'assistant à partir de vos chiffres",
     "sourceTemplate": "Modèle standard",
-    "eyebrow": "Semaine du {start} au {end} · {scope}",
+    "eyebrow": "Semaine {week} · {range} · {scope}",
     "regenerate": "Régénérer",
     "regenerating": "Rédaction…",
     "generateSiteShort": "Rédiger le rapport de la semaine dernière pour ce site",
@@ -4647,9 +4657,9 @@
       "gain": "Gain estimé",
       "fcr": "IC",
       "fcrTrend": {
-        "better": "{fcr} ↓ {delta} (meilleur)",
-        "worse": "{fcr} ↑ {delta} (moins bon)",
-        "same": "{fcr} (inchangé)"
+        "better": "{fcr} ↓ {delta}",
+        "worse": "{fcr} ↑ {delta}",
+        "same": "{fcr}"
       },
       "mortality": "Mortalité",
       "survival": "Survie du cycle",
@@ -4660,6 +4670,7 @@
   "alertsPage": {
     "title": "Alertes et analyses",
     "allSites": "Tous les sites",
+    "site": "Site de {site}",
     "units": {
       "one": "{count} unité empoissonnée",
       "other": "{count} unités empoissonnées"
@@ -4688,7 +4699,7 @@
     "category": {
       "all": "Toutes",
       "mortality": "Mortalité",
-      "feed": "Aliment et croissance",
+      "feed": "Aliment",
       "water": "Eau",
       "missing": "Saisies manquantes"
     },
@@ -4777,6 +4788,8 @@
       "one": "{count} minute restante",
       "other": "{count} minutes restantes"
     },
+    "timeLeft": "{time} restantes",
+    "codeExpired": "Code expiré",
     "sendCode": "Envoyez ce message sur WhatsApp depuis votre numéro vérifié.",
     "tapStart": "Ouvrez Telegram et appuyez sur Démarrer.",
     "telegramNoBot": "Le nom du bot Telegram n'est pas configuré.",
@@ -4810,7 +4823,7 @@
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "navLabel": "Console de la plateforme",
-    "eyebrow": "console.getanowa.com · Administrateur plateforme",
+    "eyebrow": "console.getanowa.com · Super admin · MFA vérifiée",
     "loadError": "Impossible de charger cette page de la console",
     "nav": {
       "overview": "Vue d'ensemble",
@@ -4837,6 +4850,12 @@
       "bank": "Virement bancaire",
       "card": "Carte",
       "manual": "Autre / manuel"
+    },
+    "methodShort": {
+      "mobile_money": "MoMo",
+      "bank": "Virement",
+      "card": "Carte",
+      "manual": "Manuel"
     },
     "tenants": {
       "loadingKpis": "Chargement des chiffres de la plateforme…",
@@ -4902,7 +4921,12 @@
         "graceEnds": "Fin du délai de grâce le {date} · impayé"
       },
       "planMix": "Répartition des formules",
-      "noPlans": "Aucun abonnement en cours."
+      "noPlans": "Aucun abonnement en cours.",
+      "readOnly": "Lecture seule",
+      "trialLeft": {
+        "one": "Essai · {count} j restant",
+        "other": "Essai · {count} j restants"
+      }
     },
     "detail": {
       "title": "Client",
@@ -5029,7 +5053,7 @@
       "addNote": "Ajouter",
       "fullLog": "Journal complet",
       "noEvents": "Aucune action de la plateforme pour l'instant",
-      "system": "Système",
+      "system": "système",
       "fileUnavailable": "Le fichier n'est pas disponible",
       "contactEmail": "E-mail de contact",
       "phone": "Téléphone",
@@ -5042,7 +5066,11 @@
       "download": "Télécharger",
       "subscription": "Abonnement",
       "billingContact": "Contact facturation",
-      "recentActivity": "Activité récente de la console"
+      "recentActivity": "Activité récente de la console",
+      "perMonth": "{amount} / mois",
+      "perYear": "{amount} / an",
+      "paidVia": "Payée · {method} {date}",
+      "today": "Aujourd'hui {time}"
     },
     "modal": {
       "cancel": "Annuler",
@@ -5112,6 +5140,7 @@
     "heading": "{org} est en pause",
     "headingGeneric": "Votre organisation est en pause",
     "body": "L'accès à vos données d'élevage est suspendu jusqu'au paiement du solde. Rien n'a été supprimé : vos cages, saisies et rapports sont conservés, et l'accès revient dès que le paiement est enregistré.",
+    "bodyPastDue": "L'abonnement est en retard de paiement : l'accès aux données d'élevage est suspendu jusqu'au paiement du solde. Rien n'a été supprimé, et tout revient dès que le paiement est enregistré.",
     "balanceDue": "Solde dû",
     "openInvoices": {
       "one": "{count} facture ouverte",
@@ -5120,7 +5149,7 @@
     "pay": "Payer par MoMo ou carte",
     "contactSupport": "Contacter le support",
     "ownerNote": "Ouvrez Facturation pour voir chaque facture et comment payer.",
-    "notOwner": "Vous n'êtes pas le propriétaire ? Demandez au propriétaire de votre organisation de régler le solde, ou contactez notre support."
+    "notOwner": "Vous n'êtes pas le propriétaire ? Demandez au propriétaire de votre organisation de payer, ou passez à un autre espace de travail."
   },
   "authUi": {
     "footerSecure": "Connexion sécurisée · vos données restent dans votre entreprise",

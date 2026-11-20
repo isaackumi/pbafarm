@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
-import { CalendarDays, SlidersHorizontal } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { Avatar, GhostButton, GradientButton, Tabs } from '../../components/ui'
+import { GhostButton, GradientButton, Tabs } from '../../components/ui'
 import LimeButton from '../../components/keepers/LimeButton'
+import KeeperAvatar from '../../components/keepers/KeeperAvatar'
+import { BalanceIcon, CoverCalendarIcon } from '../../components/keepers/icons'
 import PlanCoverSheet from '../../components/keepers/PlanCoverSheet'
 import { useKeeperDraft } from '../../components/keepers/KeeperDraft'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
 import { localToday } from '../../lib/format'
 import { useLocale, useT } from '../../lib/i18n/context'
-import { clock, shortDate } from '../../lib/keepers'
+import { clock, nearDate, nearDay } from '../../lib/keepers'
 
 const FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
-const SHOWN = 4
+const SHOWN = 3
 
 /**
  * One row up close (Paper 54): a column per keeper for one site row, the
@@ -42,6 +43,7 @@ function RowBoard() {
   const rowParam = typeof router.query.row === 'string' ? router.query.row : null
   const row = rowParam ?? rows?.[0]?.row ?? null
   const data = useQuery(api.keepers.board.row, siteId && row !== null ? { siteId, row, asOf: localToday() } : 'skip')
+  const today = localToday()
   const { propose, busy, modal } = useKeeperDraft()
   const [moves, setMoves] = useState(() => new Map())
   const [dragging, setDragging] = useState(null)
@@ -90,10 +92,10 @@ function RowBoard() {
       eyebrow={data ? t('keepers.row.eyebrow', { site: data.site.name, count: data.stocked + data.unassigned.filter((x) => !x.stocked).length, keepers: data.columns.length }) : t('keepers.eyebrowShort')}
       actions={
         <>
-          <LimeButton icon={SlidersHorizontal} disabled={busy || !siteId} onClick={() => propose({ kind: 'keeper_rebalance', siteId, row: row || undefined }, siteId)}>
+          <LimeButton icon={BalanceIcon} disabled={busy || !siteId} onClick={() => propose({ kind: 'keeper_rebalance', siteId, row: row || undefined }, siteId)}>
             {t('keepers.row.autoBalance')}
           </LimeButton>
-          <GradientButton icon={CalendarDays} reverse onClick={() => setCover({ keeperId: null })}>
+          <GradientButton icon={CoverCalendarIcon} ring="sky" onClick={() => setCover({ keeperId: null })}>
             {t('keepers.planCover')}
           </GradientButton>
         </>
@@ -132,30 +134,30 @@ function RowBoard() {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className={`flex flex-col gap-3.5 rounded-2xl px-[18px] py-4 ${noneCount ? 'border border-alert/35' : 'border border-line bg-surface'}`}>
+              <div className={`flex items-center gap-[14px] rounded-2xl px-[18px] py-4 ${noneCount ? 'border border-alert/35' : 'border border-line bg-surface'}`}>
                 <span className={`text-[28px] font-semibold leading-8 ${noneCount ? 'text-alert' : 'text-text'}`}>{noneCount}</span>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text">{t('keepers.row.kpiNone')}</span>
-                  <span className="text-xs text-muted">{t('keepers.row.kpiNoneHint')}</span>
+                <span className="flex flex-col gap-[2px]">
+                  <span className="text-[14px] font-semibold leading-[18px] text-text">{t('keepers.row.kpiNone')}</span>
+                  <span className="text-xs leading-4 text-muted">{t('keepers.row.kpiNoneHint')}</span>
                 </span>
               </div>
-              <div className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface px-[18px] py-4">
+              <div className="flex items-center gap-[14px] rounded-2xl border border-line bg-surface px-[18px] py-4">
                 <span className="text-[28px] font-semibold leading-8 text-text">
                   {data.logged}
                   <span className="text-faint">/{data.stocked}</span>
                 </span>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text">{t('keepers.row.kpiLogged')}</span>
-                  <span className="text-xs text-muted">{t('keepers.row.kpiLoggedHint', { count: data.stocked - data.logged, deadline: data.deadline })}</span>
+                <span className="flex flex-col gap-[2px]">
+                  <span className="text-[14px] font-semibold leading-[18px] text-text">{t('keepers.row.kpiLogged')}</span>
+                  <span className="text-xs leading-4 text-muted">{t('keepers.row.kpiLoggedHint', { count: data.stocked - data.logged, deadline: data.deadline })}</span>
                 </span>
               </div>
-              <div className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface px-[18px] py-4">
+              <div className="flex items-center gap-[14px] rounded-2xl border border-line bg-surface px-[18px] py-4">
                 <span className="text-[28px] font-semibold leading-8 text-cover">{data.coversThisWeek.length}</span>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-text">{t('keepers.row.kpiCover')}</span>
-                  <span className="text-xs text-muted">
+                <span className="flex flex-col gap-[2px]">
+                  <span className="text-[14px] font-semibold leading-[18px] text-text">{t('keepers.row.kpiCover')}</span>
+                  <span className="text-xs leading-4 text-muted">
                     {weekCover
-                      ? t('keepers.row.kpiCoverHint', { cover: weekCover.cover, keeper: weekCover.keeper, from: shortDate(weekCover.fromDate, lang), to: shortDate(weekCover.toDate, lang) })
+                      ? t('keepers.row.kpiCoverHint', { cover: weekCover.cover, keeper: weekCover.keeper, from: nearDate(weekCover.fromDate, lang, today), to: nearDate(weekCover.toDate, lang, today) })
                       : t('keepers.row.kpiCoverNone')}
                   </span>
                 </span>
@@ -164,7 +166,7 @@ function RowBoard() {
 
             {moves.size > 0 && (
               <div className="flex flex-wrap items-center gap-2 rounded-[14px] bg-text py-2.5 pl-4 pr-3" role="status">
-                <span className="grow text-[13px] font-semibold text-bg">{t('keepers.row.staged', { count: moves.size })}</span>
+                <span className="grow text-[13px] font-semibold leading-4 text-bg">{t('keepers.row.staged', { count: moves.size })}</span>
                 <button type="button" onClick={() => setMoves(new Map())} className="rounded-pill border border-bg/25 px-3 py-[7px] text-xs font-medium text-bg">
                   {t('keepers.row.undoMoves')}
                 </button>
@@ -176,14 +178,14 @@ function RowBoard() {
 
             <div className="flex gap-3 overflow-x-auto pb-2 lg:items-start">
               <section className="flex w-[200px] shrink-0 flex-col gap-2 rounded-[18px] border-[1.5px] border-dashed border-alert/45 p-3" aria-label={t('keepers.list.noKeeper')}>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-text">{t('keepers.list.noKeeper')}</span>
-                  <span className="text-sm font-semibold text-alert">{unassigned.length}</span>
+                <div className="flex items-center justify-between px-1 pb-[6px] pt-[2px]">
+                  <span className="text-[14px] font-semibold leading-[18px] text-text">{t('keepers.list.noKeeper')}</span>
+                  <span className="text-xs leading-4 text-alert">{unassigned.length}</span>
                 </div>
                 {unassigned.map((c) => (
-                  <UnitCard key={c.id} card={c} columns={columns} onMove={stage} onDrag={setDragging} lang={lang} t={t} sub={c.stockingDate ? t('keepers.row.stocked', { date: shortDate(c.stockingDate, lang), count: c.fish ?? 0 }) : null} />
+                  <UnitCard key={c.id} card={c} columns={columns} onMove={stage} onDrag={setDragging} lang={lang} t={t} sub={c.stockingDate ? t('keepers.row.stocked', { date: nearDay(c.stockingDate, lang, today), count: (c.fish ?? 0).toLocaleString(lang) }) : null} />
                 ))}
-                <p className="text-xs leading-4 text-faint">{t('keepers.row.dragHint')}</p>
+                <p className="px-1 pt-[6px] text-xs leading-[17px] text-faint">{t('keepers.row.dragHint')}</p>
               </section>
 
               {columns.map((col) => {
@@ -203,27 +205,29 @@ function RowBoard() {
                       if (dragging) stage(dragging, col.keeperId)
                       setDragging(null)
                     }}
-                    className={`flex min-w-[260px] grow basis-0 flex-col gap-2 rounded-[18px] bg-surface p-3 ${away ? 'border-[1.5px] border-dashed border-cover/45' : 'border border-line'}`}
+                    className={`flex min-w-[260px] grow basis-0 flex-col gap-2 rounded-[18px] bg-surface p-3 ${away ? 'border border-dashed border-cover/45' : 'border border-line'}`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={col.name} size={34} />
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-sm font-semibold text-text">{col.name}</span>
-                        <span className={`truncate text-xs ${away ? 'text-cover' : 'text-muted'}`}>
+                    <div className="flex flex-col gap-[10px] px-1 pb-2 pt-1">
+                    <div className="flex items-center gap-[10px]">
+                      <KeeperAvatar name={col.name} size={34} />
+                      <div className="flex min-w-0 flex-col gap-[2px]">
+                        <span className="truncate text-[14px] font-semibold leading-[18px] text-text">{col.name}</span>
+                        <span className={`truncate text-xs leading-4 ${away ? 'text-cover' : 'text-muted'}`}>
                           {away
-                            ? t('keepers.row.away', { from: shortDate(away.fromDate, lang), to: shortDate(away.toDate, lang), name: away.coverName })
+                            ? t('keepers.row.away', { from: nearDate(away.fromDate, lang, today), to: nearDate(away.toDate, lang, today), name: away.coverName })
                             : t('keepers.row.colSub', { count: col.cards.length, fish: Math.round(col.fish / 1000), kg: col.kgPerDay ?? '–' })}
                         </span>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1.5 py-1">
-                      <div className="flex items-center justify-between text-xs">
+                    <div className="flex flex-col gap-[6px]">
+                      <div className="flex items-center justify-between text-xs leading-4">
                         <span className="text-muted">{t('keepers.row.today')}</span>
                         <span className={`font-semibold ${tone}`}>{away ? t('keepers.list.coverLogging', { name: away.coverName }) : t('keepers.list.loggedOf', { logged: col.logged, count: col.stocked })}</span>
                       </div>
                       <span className="h-1 overflow-hidden rounded-pill bg-line-strong" aria-hidden>
-                        <span className={`block h-full ${bar}`} style={{ width: `${away ? 100 : pct}%` }} />
+                        <span className={`block h-full rounded-pill ${bar}`} style={{ width: `${away ? 100 : pct}%` }} />
                       </span>
+                    </div>
                     </div>
                     {shown.map((c) => (
                       <UnitCard key={c.id} card={c} columns={columns} onMove={stage} onDrag={setDragging} lang={lang} t={t} home={col.keeperId} deadline={data.deadline} />
@@ -231,17 +235,17 @@ function RowBoard() {
                     <button
                       type="button"
                       onClick={() => setOpen((s) => new Set(expanded ? [...s].filter((x) => x !== col.keeperId) : [...s, col.keeperId]))}
-                      className={`self-start text-xs text-faint hover:text-text ${FOCUS}`}
+                      className={`self-start px-1 pt-1 text-left text-xs leading-4 text-faint hover:text-text ${FOCUS}`}
                     >
                       {[
                         col.cards.length > SHOWN ? (expanded ? t('keepers.row.less') : t('keepers.row.more', { count: col.cards.length - SHOWN })) : null,
-                        away ? t('keepers.row.backOn', { date: shortDate(away.toDate, lang) }) : col.backupName ? t('keepers.row.backup', { name: col.backupName }) : t('keepers.row.noBackup'),
+                        away ? t('keepers.row.backOn', { date: nearDate(away.toDate, lang, today) }) : col.backupName ? t('keepers.row.backup', { name: col.backupName }) : t('keepers.row.noBackup'),
                       ]
                         .filter(Boolean)
                         .join(' · ')}
                     </button>
                     {!away && (
-                      <button type="button" onClick={() => setCover({ keeperId: col.keeperId })} className={`self-start text-xs font-semibold text-cover hover:underline ${FOCUS}`}>
+                      <button type="button" onClick={() => setCover({ keeperId: col.keeperId })} className={`self-start px-1 text-xs font-semibold leading-4 text-cover hover:underline ${FOCUS}`}>
                         {t('keepers.row.planCoverFor', { name: col.name.split(' ')[0] })}
                       </button>
                     )}
@@ -251,40 +255,40 @@ function RowBoard() {
             </div>
 
             <section className="overflow-hidden rounded-[18px] border border-line bg-surface" aria-label={t('keepers.score.title')}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3.5">
-                <h2 className="text-[15px] font-semibold text-text">{t('keepers.score.title')}</h2>
-                <span className="text-xs text-muted">{t('keepers.score.subtitle')}</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-4">
+                <h2 className="text-[15px] font-semibold leading-5 text-text">{t('keepers.score.title')}</h2>
+                <span className="text-xs leading-4 text-muted">{t('keepers.score.subtitle')}</span>
               </div>
               {!data.farm ? (
-                <p className="px-[18px] py-4 text-sm text-muted">{t('keepers.score.pending')}</p>
+                <p className="px-5 py-4 text-sm text-muted">{t('keepers.score.pending')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[560px] text-left">
                     <thead>
-                      <tr className="text-xs text-faint">
-                        <th className="w-[220px] px-[18px] py-2.5 font-normal">{t('keepers.score.keeper')}</th>
-                        <th className="px-3 py-2.5 font-normal">{t('keepers.score.onTime')}</th>
-                        <th className="px-3 py-2.5 font-normal">{t('keepers.score.survival')}</th>
-                        <th className="px-3 py-2.5 font-normal">{t('keepers.score.fcr')}</th>
-                        <th className="px-3 py-2.5 font-normal">{t('keepers.score.samplings')}</th>
+                      <tr className="text-xs leading-4 text-faint">
+                        <th className="w-[240px] py-[10px] pl-5 pr-0 font-normal">{t('keepers.score.keeper')}</th>
+                        <th className="py-[10px] pr-3 font-normal">{t('keepers.score.onTime')}</th>
+                        <th className="py-[10px] pr-3 font-normal">{t('keepers.score.survival')}</th>
+                        <th className="py-[10px] pr-3 font-normal">{t('keepers.score.fcr')}</th>
+                        <th className="py-[10px] pr-5 font-normal">{t('keepers.score.samplings')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {columns.map((col) => {
                         const s = scoreFor(col.keeperId)
                         return (
-                          <tr key={col.keeperId} className="border-t border-line text-sm text-text">
-                            <td className="px-[18px] py-3 font-semibold">{col.name}</td>
-                            <td className="px-3 py-3">{s ? <Delta value={s.onTimePct} farm={data.farm.onTimePct} unit="%" t={t} /> : '–'}</td>
-                            <td className="px-3 py-3">{s ? <Delta value={s.survivalPct} farm={data.farm.survivalPct} unit="%" t={t} /> : '–'}</td>
-                            <td className="px-3 py-3">{s ? <Delta value={s.fcr} farm={data.farm.fcr} lowerBetter worst={s.worstFcrUnit} t={t} /> : '–'}</td>
-                            <td className="px-3 py-3">{s ? t('keepers.score.sampled', { done: s.sampled, count: s.stocked }) : '–'}</td>
+                          <tr key={col.keeperId} className="border-t border-line text-[14px] leading-[18px] text-text">
+                            <td className="py-3 pl-5 pr-0">{col.name}</td>
+                            <td className="py-3 pr-3">{s ? <Delta value={s.onTimePct} farm={data.farm.onTimePct} unit="%" t={t} /> : '–'}</td>
+                            <td className="py-3 pr-3">{s ? <Delta value={s.survivalPct} farm={data.farm.survivalPct} unit="%" t={t} /> : '–'}</td>
+                            <td className="py-3 pr-3">{s ? <Delta value={s.fcr} farm={data.farm.fcr} lowerBetter worst={s.worstFcrUnit} t={t} /> : '–'}</td>
+                            <td className="py-3 pr-5">{s ? t('keepers.score.sampled', { done: s.sampled, count: s.stocked }) : '–'}</td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
-                  <p className="px-[18px] pb-3 text-xs text-faint">{t('keepers.score.asOf', { date: shortDate(data.farm.asOf, lang) })}</p>
+                  <p className="border-t border-line px-5 py-3 text-xs leading-4 text-faint">{t('keepers.score.asOf', { date: nearDate(data.farm.asOf, lang, today) })}</p>
                 </div>
               )}
             </section>
@@ -340,14 +344,14 @@ function UnitCard({ card, columns, onMove, onDrag, lang, t, home, deadline, sub 
         onDrag(card.id)
       }}
       onDragEnd={() => onDrag(null)}
-      className={`flex cursor-grab items-center gap-2 rounded-md bg-bg px-3 py-[11px] active:cursor-grabbing ${late && home ? 'border border-warn/40' : 'border border-line'} ${card.staged ? 'ring-1 ring-cover' : ''}`}
+      className={`flex cursor-grab items-center gap-2 rounded-[12px] active:cursor-grabbing ${home ? 'bg-bg px-3 py-[11px]' : 'bg-surface p-3'} ${late && home ? 'border border-warn/40' : 'border border-line'} ${card.staged ? 'ring-1 ring-cover' : ''}`}
     >
-      <div className="flex min-w-0 grow flex-col">
-        <span className="text-sm font-semibold text-text">{card.name}</span>
-        <span className="truncate text-xs text-muted">{detail}</span>
+      <div className={`flex min-w-0 grow flex-col ${home ? 'gap-[2px]' : 'gap-1'}`}>
+        <span className="text-[14px] font-semibold leading-[18px] text-text">{card.name}</span>
+        <span className="truncate text-xs leading-4 text-muted">{detail}</span>
       </div>
       {home && card.stocked && (
-        <span className={`shrink-0 text-xs ${card.loggedAt ? 'text-good' : 'text-warn'}`}>
+        <span className={`shrink-0 text-xs leading-4 ${card.loggedAt ? 'text-good' : 'text-warn'}`}>
           {card.loggedAt ? clock(card.loggedAt, lang) : t('keepers.row.due', { deadline })}
         </span>
       )}

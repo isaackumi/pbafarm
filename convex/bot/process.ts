@@ -67,8 +67,12 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
           return [
             {
               kind: 'buttons',
-              text: s.savedUndo(Math.round(UNDO_WINDOW_MS / 60_000)),
-              buttons: [{ id: `un:${plan.pendingId}`, title: s.undo }],
+              // "Saved to C-07. 31 of 38 cages logged today. Still missing: A-03, B-12 +5." [Undo (10 min)] (artboard 41)
+              text: [
+                r.unit ? s.savedTo(r.unit) : s.saved,
+                ...(r.progress ? [s.progress(r.progress.logged, r.progress.total, r.progress.missing, r.progress.more)] : []),
+              ].join(' '),
+              buttons: [{ id: `un:${plan.pendingId}`, title: s.undoFor(Math.round(UNDO_WINDOW_MS / 60_000)).slice(0, 20) }],
             },
           ]
         case 'already':

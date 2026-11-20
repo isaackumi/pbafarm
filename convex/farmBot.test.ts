@@ -373,6 +373,8 @@ describe('BOT-002/003 agent, drafts and commits', () => {
     const replies = await say(s, waText(PHONE, 'A1 fed 12.5kg, 3 dead'))
     expect(replies[0]).toBe('Please confirm.')
     expect(replies[1]).toMatch(/A1/)
+    // Artboard 41: "Got it. Please check before I save:" then one field per line.
+    expect(replies[1]).toMatch(/^Got it\. Please check before I save:\nUnit: A1\nDate: [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}\nFeed: 12\.5 kg · .+\nMortality: 3 fish$/)
     const [draft] = await rows(s, 'pendingBotActions')
     expect(draft).toMatchObject({ status: 'pending', siteId: s.siteA1, companyId: s.companyA })
     expect(draft.payload).toMatchObject({ kind: 'daily_entry', cageId: s.cageA1, feedKg: 12.5, mortality: 3 })
@@ -385,7 +387,7 @@ describe('BOT-002/003 agent, drafts and commits', () => {
     ])
     expect(await rows(s, 'dailyRecords')).toHaveLength(0)
 
-    expect((await say(s, waButton(PHONE, `ok:${draft._id}`)))[0]).toMatch(/Saved/)
+    expect((await say(s, waButton(PHONE, `ok:${draft._id}`)))[0]).toMatch(/^Saved to A1\. \d+ of \d+ cages? logged today\./)
     expect((await say(s, waButton(PHONE, `ok:${draft._id}`)))[0]).toMatch(/already/i)
     const records = await rows(s, 'dailyRecords')
     expect(records).toHaveLength(1)

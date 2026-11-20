@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { PenLine, RefreshCw } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { EmptyState, GradientButton, LoadingState, Tabs } from '../components/ui'
@@ -11,7 +11,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import { errorMessage } from '../lib/errorMessage'
 import { useLocale, useT } from '../lib/i18n/context'
-import { COMPANY_SCOPE, defaultScope, fcrTrend, reportScopes, reportsForScope, showCosts } from '../lib/weeklyReportView'
+import { COMPANY_SCOPE, defaultScope, fcrTrend, isoWeek, reportScopes, reportsForScope, showCosts, weekRange } from '../lib/weeklyReportView'
 
 /**
  * Weekly farm report (AI-003, Paper 45): per site and company-wide, written
@@ -54,8 +54,13 @@ export default function WeeklyReportPage() {
 
   const scopeLabel = (value) =>
     value === COMPANY_SCOPE ? t('weeklyReport.wholeCompany') : (scopes.find((s) => s.value === value)?.label ?? '')
+  const eyebrowScope = current === COMPANY_SCOPE ? t('weeklyReport.wholeCompany') : t('weeklyReport.siteScope', { site: scopeLabel(current) })
   const eyebrow = report
-    ? t('weeklyReport.eyebrow', { start: report.figures?.weekStart || '—', end: report.weekEnd, scope: scopeLabel(current) })
+    ? t('weeklyReport.eyebrow', {
+        week: isoWeek(report.weekEnd) ?? '—',
+        range: weekRange(report.figures?.weekStart || report.weekEnd, report.weekEnd, lang === 'fr' ? 'fr-FR' : 'en-GB'),
+        scope: eyebrowScope,
+      })
     : t('weeklyReport.intro')
 
   return (
@@ -65,7 +70,7 @@ export default function WeeklyReportPage() {
         eyebrow={eyebrow}
         actions={
           report ? (
-            <GradientButton icon={RefreshCw} disabled={busy} onClick={() => run(current)}>
+            <GradientButton variant="lime" icon={PenLine} disabled={busy} onClick={() => run(current)}>
               {busy ? t('weeklyReport.regenerating') : t('weeklyReport.regenerate')}
             </GradientButton>
           ) : null
@@ -113,7 +118,7 @@ export default function WeeklyReportPage() {
                 className="flex flex-col gap-[14px] rounded-[12px] border border-line bg-surface p-6"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-pill bg-[color-mix(in_oklab,var(--cyan)_12%,transparent)] px-2 py-[3px] text-[11px] leading-[14px] text-pearl-cyan">
+                  <span className="rounded-pill bg-[color-mix(in_oklab,var(--cyan)_12%,transparent)] px-2 py-[3px] text-[11px] leading-[14px] text-sky-ink">
                     {report.source === 'llm' ? t('weeklyReport.aiSummary') : t('weeklyReport.sourceTemplate')}
                   </span>
                   <span className="text-xs leading-4 text-faint">
@@ -157,17 +162,20 @@ function WeekPicker({ weeks, index, onChange }) {
   const older = weeks[index + 1]
   const newer = index > 0 ? weeks[index - 1] : null
   const cls =
-    'inline-flex items-center gap-1 rounded-pill px-3 py-[6px] text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-40 disabled:cursor-not-allowed'
+    'rounded-pill px-3 py-[6px] text-xs leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+  if (!older && !newer) return null
   return (
     <div className="flex items-center gap-1" role="group" aria-label={t('weeklyReport.weekPicker')}>
-      <button type="button" className={cls} disabled={!older} onClick={() => onChange(index + 1)}>
-        <ChevronLeft size={14} aria-hidden />
-        {older ? t('weeklyReport.weekEnding', { date: older.weekEnd }) : t('weeklyReport.older')}
-      </button>
-      <button type="button" className={cls} disabled={!newer} onClick={() => onChange(index - 1)}>
-        {newer ? t('weeklyReport.weekEnding', { date: newer.weekEnd }) : t('weeklyReport.newer')}
-        <ChevronRight size={14} aria-hidden />
-      </button>
+      {older ? (
+        <button type="button" className={cls} title={t('weeklyReport.weekEnding', { date: older.weekEnd })} onClick={() => onChange(index + 1)}>
+          ‹ {t('weeklyReport.weekNumber', { week: isoWeek(older.weekEnd) ?? older.weekEnd })}
+        </button>
+      ) : null}
+      {newer ? (
+        <button type="button" className={cls} title={t('weeklyReport.weekEnding', { date: newer.weekEnd })} onClick={() => onChange(index - 1)}>
+          {t('weeklyReport.weekNumber', { week: isoWeek(newer.weekEnd) ?? newer.weekEnd })} ›
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -179,7 +187,6 @@ function KeyFigures({ figures: f, lang }) {
     x == null ? '—' : Number(x).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', { maximumFractionDigits: dp })
   const trend = fcrTrend(f)
   const rows = [
-    [t('weeklyReport.fig.units'), n(f.units, 0)],
     [t('weeklyReport.fig.feed'), `${n(f.feedKg)} kg`],
     [t('weeklyReport.fig.gain'), `${n(f.gainKg)} kg`],
     [
@@ -192,6 +199,7 @@ function KeyFigures({ figures: f, lang }) {
       trend?.direction === 'better' ? 'text-good' : trend?.direction === 'worse' ? 'text-warn' : 'text-text',
     ],
     [t('weeklyReport.fig.mortality'), `${f.mortalityPct == null ? '—' : `${n(f.mortalityPct, 2)}%`} · ${n(f.mortality, 0)}`],
+    [t('weeklyReport.fig.units'), n(f.units, 0)],
     [t('weeklyReport.fig.survival'), f.survivalPct == null ? '—' : `${n(f.survivalPct)}%`],
     [t('weeklyReport.fig.feedVsSuggested'), f.feedVsSuggestedPct == null ? '—' : `${n(f.feedVsSuggestedPct, 0)}%`],
     [t('weeklyReport.fig.alerts'), `${n(f.alertsRaised, 0)} / ${n(f.alertsOpen, 0)}`],

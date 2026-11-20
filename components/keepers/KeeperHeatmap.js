@@ -38,7 +38,7 @@ export default function KeeperHeatmap({ sites, deadline, names, selected, onSele
         return (
           <section key={site.id || 'none'} className="flex flex-col gap-2" aria-label={site.name || t('keepers.heatmap.noSite')}>
             <div className="flex items-baseline justify-between gap-3">
-              <h3 className="text-sm font-semibold leading-[18px] text-text">
+              <h3 className="text-[13px] font-semibold leading-4 text-text">
                 {site.name || t('keepers.heatmap.noSite')}
                 <span className="font-normal text-faint"> · {site.units.length.toLocaleString()}</span>
               </h3>
@@ -81,10 +81,10 @@ export default function KeeperHeatmap({ sites, deadline, names, selected, onSele
           </section>
         )
       })}
-      <ul className="flex flex-wrap gap-x-4 gap-y-2 pt-1 text-xs leading-4 text-muted" aria-label={t('keepers.heatmap.legend')}>
+      <ul className="flex flex-wrap gap-[14px] pt-[2px] text-xs leading-4 text-muted" aria-label={t('keepers.heatmap.legend')}>
         {['logged', 'due', 'none', 'cover', 'idle'].map((s) => (
-          <li key={s} className="flex items-center gap-1.5">
-            <span className={`size-[10px] rounded-[2px] ${s === 'none' ? 'ring-[1.5px] ring-inset ring-alert' : STATE_CLASS[s]}`} aria-hidden />
+          <li key={s} className="flex items-center gap-[6px]">
+            <span className={`size-[10px] rounded-[2px] ${s === 'none' ? 'border-[1.5px] border-alert' : STATE_CLASS[s]}`} aria-hidden />
             {t(`keepers.state.${s}`, { deadline })}
           </li>
         ))}

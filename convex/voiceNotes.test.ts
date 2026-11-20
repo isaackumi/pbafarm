@@ -273,20 +273,20 @@ describe('BOT-005 voice notes', () => {
 
     expect(replies).toHaveLength(1)
     const msg = replies[0].text
-    expect(msg).toMatch(/^"A1 fed 25 kg\. C10 30 kg"\nHeard in English\n/)
+    expect(msg).toMatch(/^“A1 fed 25 kg\. C10 30 kg”\nHeard in English\n/)
     expect(msg).toContain('Got it. I heard 2 cages. Please check before I save:')
-    expect(msg).toContain('Feed: 25 kg Grower')
+    expect(msg).toContain('Feed: 25 kg · Grower')
     expect(msg).toContain('Mortality: 3 fish')
-    expect(msg).toContain('Feed: CHECK 30 kg Grower')
+    expect(msg).toContain('Feed: CHECK 30 kg · Grower')
     expect(msg).toContain('Mortality: Not said, saved as 0')
-    expect(msg).toContain('I heard "thirty" (30 kg) for C10 but the line was noisy.')
-    expect(msg).toMatch(/Saving for today, \d{4}-\d{2}-\d{2}\./)
+    expect(msg).toContain('I heard “thirty” (30) for C10 but the line was noisy.')
+    expect(msg).toMatch(/Tap Edit if that’s wrong\. Saving for today, [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}\./)
     expect(msg).not.toMatch(/\u2014/)
     expect(replies[0].buttons).toEqual([`vsa:${note._id}`, `vse:${note._id}`, `vsx:${note._id}`])
 
     await postWhatsApp(s, waButton(`vsa:${note._id}`))
     const saved = await drain(s)
-    expect(saved[0].text).toMatch(/^Saved A1 and C10\. You can undo for 10 minutes\./)
+    expect(saved[0].text).toMatch(/^Saved A1 and C10\. \d+ of \d+ cages? logged today\./)
     expect(saved[0].buttons).toEqual([`vsu:${note._id}`])
     const records = await rows(s, 'dailyRecords')
     expect(records).toHaveLength(2)
@@ -318,7 +318,7 @@ describe('BOT-005 voice notes', () => {
     })
     await postWhatsApp(s, waVoice())
     const [reply] = await drain(s)
-    expect(reply.text).toContain('Feed: CHECK 30 kg Grower')
+    expect(reply.text).toContain('Feed: CHECK 30 kg · Grower')
     expect(reply.text).toContain('I am not sure of 30 kg for A1.')
     const [note] = await rows(s, 'voiceNotes')
     expect(reply.buttons[0]).toBe(`vsa:${note._id}`)
@@ -344,7 +344,7 @@ describe('BOT-005 voice notes', () => {
     await postTelegram(s, { voice: { file_id: 'AwAD-voice', mime_type: 'audio/ogg', file_size: OGG.length, duration: 4 } })
     const replies = await drain(s)
     expect(speechCalls).toEqual([{ url: 'https://khaya.test/asr/v1/transcribe?language=tw', language: 'tw' }])
-    expect(replies[0].text).toMatch(/^"C10 aduane kilo aduasa"\nHeard in Twi · English\nC10 was fed thirty kilos\.\n/)
+    expect(replies[0].text).toMatch(/^“C10 aduane kilo aduasa”\nHeard in Twi · English\nC10 was fed thirty kilos\.\n/)
     expect(replies[0].text).toContain('I heard 1 cage.')
     const [note] = await rows(s, 'voiceNotes')
     expect(note).toMatchObject({ language: 'tw', vendor: 'khaya', english: 'C10 was fed thirty kilos.' })
@@ -367,7 +367,7 @@ describe('BOT-005 voice notes', () => {
     expect(replies[0].text).toContain('Unit: CHECK C10')
     expect(replies[0].text).toContain('Feed: Not said, saved as 0')
     expect(replies[1]).toEqual({
-      text: "I didn't catch the cage clearly. Which one had 3 dead fish?",
+      text: 'I didn’t catch the cage clearly. Which one had 3 dead fish?',
       buttons: [`vc:${draft._id}:0`, `vc:${draft._id}:1`],
     })
 
@@ -522,7 +522,7 @@ describe('BOT-005 reply layout', () => {
       drafts,
     })
     const all = out.map((m) => ('text' in m ? m.text : '')).join('\n')
-    for (let i = 0; i < 5; i++) expect(all).toContain(`${i + 1}. Unit: Cage North Bank Long Name ${i}`)
+    for (let i = 0; i < 5; i++) expect(all).toContain(`Unit: Cage North Bank Long Name ${i}\n`)
     expect(all.split('A similar entry was sent a few minutes ago.').length - 1).toBe(5)
     const buttons = out.find((m) => m.kind === 'buttons')!
     expect(buttons.kind === 'buttons' && buttons.text.length).toBeLessThanOrEqual(1024)

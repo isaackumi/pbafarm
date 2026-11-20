@@ -39,10 +39,18 @@ const en = {
   edit: 'Edit',
   cancel: 'Cancel',
   undo: 'Undo',
-  confirmPrompt: 'Save this?',
+  // Typed entries (artboard 41): "Got it. Please check before I save:" then one field per line
+  checkBeforeSave: 'Got it. Please check before I save:',
+  fieldDate: 'Date',
+  fieldNotes: 'Notes',
+  undoFor: (mins: number) => `Undo (${mins} min)`,
+  savedTo: (unit: string) => `Saved to ${unit}.`,
+  progress: (logged: number, total: number, missing: string[], more: number) =>
+    `${logged} of ${total} ${total === 1 ? 'cage' : 'cages'} logged today.${
+      missing.length ? ` Still missing: ${missing.join(', ')}${more > 0 ? ` +${more}` : ''}.` : ''
+    }`,
   duplicateWarning: 'A similar entry was sent a few minutes ago.',
   saved: 'Saved.',
-  savedUndo: (mins: number) => `Saved. You can undo for ${mins} minutes.`,
   alreadySaved: 'This entry was already saved.',
   cancelled: 'Cancelled. Nothing was saved.',
   editPrompt: 'OK, send the corrected entry.',
@@ -117,19 +125,19 @@ const en = {
   check: 'CHECK',
   checkNote: (heard: string | undefined, value: string, unit: string) =>
     heard
-      ? `I heard "${heard}" (${value}) for ${unit} but the line was noisy. Tap Edit if that's wrong.`
-      : `I am not sure of ${value} for ${unit}. Tap Edit if that's wrong.`,
+      ? `I heard “${heard}” (${value}) for ${unit} but the line was noisy. Tap Edit if that’s wrong.`
+      : `I am not sure of ${value} for ${unit}. Tap Edit if that’s wrong.`,
   savingFor: (date: string, isToday: boolean) => (isToday ? `Saving for today, ${date}.` : `Saving for ${date}.`),
   saveGroup: (n: number) => (n === 1 ? 'Save' : n === 2 ? 'Save both' : `Save all ${n}`),
   whichCage: (what: string | null) =>
-    what ? `I didn't catch the cage clearly. Which one had ${what}?` : "I didn't catch the cage clearly. Which one was it?",
+    what ? `I didn’t catch the cage clearly. Which one had ${what}?` : 'I didn’t catch the cage clearly. Which one was it?',
   whatDead: (n: number) => (n === 1 ? '1 dead fish' : `${n} dead fish`),
   whatFeed: (kg: string) => `${kg} of feed`,
   another: 'Another',
   pickFromList: 'Which cage? If it is not here, tap Cancel and send the note again with the cage name.',
   cagePicked: (name: string) => `OK, ${name}.`,
   pickCageFirst: 'Pick the cage first, then tap Save.',
-  voiceSaved: (names: string, mins: number) => `Saved ${names}. You can undo for ${mins} minutes.`,
+  voiceSaved: (names: string) => `Saved ${names}.`,
   voiceUndoAll: (n: number) => (n === 1 ? 'Undone. The entry was removed.' : `Undone. ${n} entries were removed.`),
   voiceLanguageSet: (lang: string) => `Voice notes: I will listen for ${lang}.`,
   voiceLanguageHelp: 'Send VOICE TWI, VOICE EWE, VOICE GA, VOICE EN or VOICE FR to set the language of your voice notes.',
@@ -168,10 +176,17 @@ const fr: Strings = {
   edit: 'Modifier',
   cancel: 'Annuler',
   undo: 'Annuler la saisie',
-  confirmPrompt: 'Enregistrer ?',
+  checkBeforeSave: "Bien reçu. Vérifiez avant que j'enregistre :",
+  fieldDate: 'Date',
+  fieldNotes: 'Notes',
+  undoFor: (mins) => `Annuler (${mins} min)`,
+  savedTo: (unit) => `Enregistré pour ${unit}.`,
+  progress: (logged, total, missing, more) =>
+    `${logged} sur ${total} ${total === 1 ? 'cage saisie' : 'cages saisies'} aujourd'hui.${
+      missing.length ? ` Il manque encore : ${missing.join(', ')}${more > 0 ? ` +${more}` : ''}.` : ''
+    }`,
   duplicateWarning: 'Une saisie semblable a été envoyée il y a quelques minutes.',
   saved: 'Enregistré.',
-  savedUndo: (mins: number) => `Enregistré. Vous pouvez annuler pendant ${mins} minutes.`,
   alreadySaved: 'Cette saisie est déjà enregistrée.',
   cancelled: "Annulé. Rien n'a été enregistré.",
   editPrompt: 'Entendu, envoyez la saisie corrigée.',
@@ -252,7 +267,7 @@ const fr: Strings = {
   pickFromList: "Quelle cage ? Si elle n'est pas ici, touchez Annuler et renvoyez la note avec le nom de la cage.",
   cagePicked: (name) => `Entendu, ${name}.`,
   pickCageFirst: "Choisissez d'abord la cage, puis touchez Enregistrer.",
-  voiceSaved: (names, mins) => `${names} enregistré. Vous pouvez annuler pendant ${mins} minutes.`,
+  voiceSaved: (names) => `${names} enregistré.`,
   voiceUndoAll: (n) => (n === 1 ? 'Annulé. La saisie a été supprimée.' : `Annulé. ${n} saisies ont été supprimées.`),
   voiceLanguageSet: (lang) => `Notes vocales : j'écoute en ${lang}.`,
   voiceLanguageHelp: 'Envoyez VOICE TWI, VOICE EWE, VOICE GA, VOICE EN ou VOICE FR pour choisir la langue de vos notes vocales.',

@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { Settings2 } from 'lucide-react'
+import { PenLine } from 'lucide-react'
 import AdminCompanyRegistrationsPage from '../../components/AdminCompanyRegistrationsPage'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
@@ -17,7 +17,8 @@ function RegistrationsScreen() {
         title={t('settingsUi.admin.regTitle')}
         eyebrow={t('settingsUi.admin.regCrumb')}
         actions={
-          <GradientButton icon={Settings2} href="/global-settings">
+          // Paper 59: pen icon, 1.5px sky ring (#1562D6 → #B9DDF9) around the surface fill.
+          <GradientButton icon={PenLine} ring="sky" href="/global-settings">
             {t('settingsUi.admin.globalSettings')}
           </GradientButton>
         }

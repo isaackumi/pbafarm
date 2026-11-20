@@ -143,12 +143,12 @@ export default function DraftCard({ draftGroup }) {
   return (
     <section
       aria-label={t('askAnowa.draft.label')}
-      className="mt-4 flex flex-col overflow-hidden rounded-lg border border-line-strong bg-surface text-left"
+      className="mt-4 flex flex-col overflow-hidden rounded-card border border-line-strong bg-surface text-left"
     >
       <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-[14px]">
         <div className="flex min-w-0 items-center gap-2">
           <span className={`size-[7px] shrink-0 rounded-pill ${dot}`} aria-hidden />
-          <span className="truncate font-geist text-xs uppercase leading-4 tracking-wide text-muted">{header}</span>
+          <span className="truncate font-geist text-xs uppercase leading-4 tracking-[0.06em] text-muted">{header}</span>
         </div>
         {state === 'pending' && (
           <span className="shrink-0 text-xs leading-4 text-faint">{t('askAnowa.draft.expires', { count: hoursLeft(card.expiresAt, now) })}</span>
@@ -162,10 +162,10 @@ export default function DraftCard({ draftGroup }) {
       </ol>
 
       <footer className="flex flex-col gap-3 bg-surface-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2 text-sm leading-[18px] text-muted" role={note ? 'status' : undefined}>
+        <div className="flex min-w-0 items-start gap-2 text-[13px] leading-[18px] text-muted" role={note ? 'status' : undefined}>
           {state === 'pending' && !note && (
             <>
-              <ShieldCheck size={16} className={`mt-px shrink-0 ${allowed.length ? 'text-good' : 'text-faint'}`} aria-hidden />
+              <ShieldCheck size={16} strokeWidth={1.7} className={`mt-px shrink-0 ${allowed.length ? 'text-good' : 'text-faint'}`} aria-hidden />
               <span>
                 {roleText} · {t('askAnowa.draft.role.loggedAs')} <span className="text-text">{t('askAnowa.draft.role.you')}</span>
               </span>
@@ -256,7 +256,7 @@ function Field({ label, children, mono = false }) {
   return (
     <div className="flex min-w-0 flex-col gap-[3px]">
       <span className="text-xs leading-4 text-faint">{label}</span>
-      <span className={`text-base leading-5 text-text ${mono ? 'font-geist' : ''}`}>{children}</span>
+      <span className={`text-[15px] leading-5 text-text ${mono ? 'font-geist' : ''}`}>{children}</span>
     </div>
   )
 }
@@ -582,13 +582,13 @@ function DraftRow({ item, index, muted }) {
   const note = p.kind === 'keeper_cover' ? p.note : p.kind === 'keeper_assign' && p.unplaced ? t('askAnowa.draft.fields.unplaced', { count: p.unplaced }) : null
   return (
     <li className={`flex gap-4 border-b border-line p-5 ${muted ? 'opacity-60' : ''}`}>
-      <span className="w-[22px] shrink-0 font-geist text-sm leading-[22px] text-faint" aria-hidden>
+      <span className="w-[22px] shrink-0 font-geist text-[13px] leading-[22px] text-faint" aria-hidden>
         {rowNumber(index)}
       </span>
-      <div className="flex min-w-0 grow flex-col gap-3">
+      <div className={`flex min-w-0 grow flex-col ${bar ? 'gap-3' : 'gap-[10px]'}`}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
           <h3 className="text-base font-semibold leading-[22px] text-text">{t(`askAnowa.draft.kinds.${kind}.title`)}</h3>
-          <span className="text-sm leading-4 text-muted">{meta}</span>
+          <span className="text-[13px] leading-4 text-muted">{meta}</span>
         </div>
         <div className="flex flex-wrap gap-x-8 gap-y-3">{fields}</div>
         {bar && (
@@ -597,10 +597,10 @@ function DraftRow({ item, index, muted }) {
               {bar.stockPct > 0 && <div className="bg-muted" style={{ width: `${bar.stockPct}%` }} />}
               <div className="grow bg-lime" />
             </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm leading-4 text-muted">
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] leading-4 text-muted">
               <span>{renderKg(t('askAnowa.draft.bar.onHand', { kg: '\u0000' }), kg(p.stockKg))}</span>
               <span>{renderKg(t('askAnowa.draft.bar.needed', { kg: '\u0000', days: p.days, count: p.units }), kg(p.needKg))}</span>
-              <span>{renderKg(t('askAnowa.draft.bar.toOrder', { kg: '\u0000' }), kg(p.quantityKg), 'font-semibold text-good dark:text-lime')}</span>
+              <span>{renderKg(t('askAnowa.draft.bar.toOrder', { kg: '\u0000' }), kg(p.quantityKg), 'text-good dark:text-lime-ink')}</span>
             </div>
           </div>
         )}

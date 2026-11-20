@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAction, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Badge, Button, LoadingState, ProgressBar, Table } from '../ui'
+import { Badge, Button, LoadingState, Table } from '../ui'
 import { errorMessage } from '../../lib/errorMessage'
 import { formatDate, formatMinor } from '../../lib/billingFormat'
 import { limitTone } from '../../lib/billingBalance'
@@ -10,7 +10,8 @@ import { useT } from '../../lib/i18n/context'
 
 export const INVOICE_TONE = { paid: 'good', open: 'warn', void: 'neutral', uncollectible: 'alert' }
 const STATUS_TONE = { trialing: 'cyan', active: 'good', past_due: 'warn', suspended: 'alert', cancelled: 'neutral', none: 'neutral' }
-const BAR_TONE = { alert: 'alert', warn: 'warn', ok: 'cyan' }
+/** Usage bar fills (Paper 43): sky by default, lime for AI credits, warn/alert near and at the limit. */
+const BAR_FILL = { alert: 'bg-alert', warn: 'bg-warn', ok: 'bg-sky-ink' }
 
 function LimitRow({ limit }) {
   const t = useT()
@@ -22,14 +23,26 @@ function LimitRow({ limit }) {
   return (
     <div className="flex flex-col gap-[6px]">
       <div className="flex justify-between gap-3 text-xs leading-4">
-        <span className="text-muted">{limit.label}</span>
+        <span className="text-muted">{limit.label.charAt(0).toUpperCase() + limit.label.slice(1)}</span>
         <span className={tone === 'alert' ? 'text-alert' : tone === 'warn' ? 'text-warn' : 'text-text'}>
           {value}
           {tone === 'alert' ? ` · ${t('billing.atLimit')}` : tone === 'warn' ? ` · ${t('billing.nearLimit')}` : ''}
         </span>
       </div>
       {limit.max !== null ? (
-        <ProgressBar value={Math.min(limit.used, limit.max)} max={limit.max || 1} tone={BAR_TONE[tone]} label={limit.label} className="h-[6px] bg-surface-2" />
+        <div
+          role="progressbar"
+          aria-label={limit.label}
+          aria-valuemin={0}
+          aria-valuemax={limit.max}
+          aria-valuenow={Math.min(limit.used, limit.max)}
+          className="h-[6px] w-full overflow-hidden rounded-pill bg-surface-2"
+        >
+          <div
+            className={`h-[6px] rounded-pill ${tone === 'ok' && limit.kind === 'aiCredits' ? 'bg-lime' : BAR_FILL[tone] || BAR_FILL.ok}`}
+            style={{ width: `${Math.max(0, Math.min(100, (Math.min(limit.used, limit.max) / (limit.max || 1)) * 100))}%` }}
+          />
+        </div>
       ) : null}
     </div>
   )

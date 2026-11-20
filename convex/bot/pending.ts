@@ -16,6 +16,8 @@ import { reverseTransactionAs } from '../inventory'
 import { botCtx, checkBinding, farmDate, inScope, matchUnit, unitsInScope, type BoundMember, type MemberScope } from './scope'
 import { t, type BotLocale } from './i18n'
 import { CHECK_CONFIDENCE, fuzzyMatchUnit, rankUnits } from './unitMatch'
+import { missingToday } from './reads'
+import { ownUnitIds } from '../keepers/escalation'
 import type { ChatMessageValue } from './validators'
 
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
@@ -90,14 +92,79 @@ export function draftButtons(locale: BotLocale, pendingId: Id<'pendingBotActions
   }
 }
 
-/** The confirm message for a draft: summary, duplicate warning, [Save] [Edit] [Cancel]. */
-export function draftMessage(locale: BotLocale, draft: Doc<'pendingBotActions'>): ChatMessageValue {
+/** "Thu 19 Nov" (fr: "jeu. 19 nov.") for a YYYY-MM-DD farm date (artboards 41, 49). */
+export function fmtDay(locale: BotLocale, date: string): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return date
+  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(d)
+}
+
+/** "42 kg · Raanan 4mm" (artboards 41, 49). */
+export function feedLine(kg: number, feedType?: string | null): string {
+  return feedType ? `${fmtKg(kg)} · ${feedType}` : fmtKg(kg)
+}
+
+/**
+ * The confirm text for a typed draft (artboard 41): "Got it. Please check
+ * before I save:" then one "Field: value" line each, from the stored payload.
+ */
+export function draftCard(locale: BotLocale, draft: Pick<Doc<'pendingBotActions'>, 'payload' | 'date' | 'summary' | 'duplicateOf'>): string {
   const s = t(locale)
-  const lines = [draft.summary]
+  const p = draft.payload
+  const lines = [s.checkBeforeSave]
+  if (p.kind === 'daily_entry') {
+    lines.push(`${s.fieldUnit}: ${p.cageName}`, `${s.fieldDate}: ${fmtDay(locale, draft.date)}`)
+    lines.push(`${s.fieldFeed}: ${p.feedKg > 0 ? feedLine(p.feedKg, p.feedTypeName) : fmtKg(0)}`)
+    lines.push(`${s.fieldMortality}: ${s.fish(p.mortality)}`)
+    if (p.dissolvedOxygen !== undefined) lines.push(`DO: ${p.dissolvedOxygen} mg/L`)
+    if (p.temperatureC !== undefined) lines.push(`${p.temperatureC} °C`)
+    if (p.notes) lines.push(`${s.fieldNotes}: ${p.notes}`)
+  } else if (p.kind === 'feed_issue') {
+    lines.push(`${s.fieldIssue}: ${feedLine(p.quantityKg, p.feedTypeName)}`)
+    if (p.cageName) lines.push(`${s.fieldUnit}: ${p.cageName}`)
+    lines.push(`${s.fieldDate}: ${fmtDay(locale, draft.date)}`)
+  } else {
+    return [draft.summary, ...(draft.duplicateOf ? [s.duplicateWarning] : [])].join('\n')
+  }
   if (draft.duplicateOf) lines.push(s.duplicateWarning)
-  lines.push(s.confirmPrompt)
+  return lines.join('\n')
+}
+
+/** The confirm message for a draft: the field card, duplicate warning, [Save] [Edit] [Cancel]. */
+export function draftMessage(locale: BotLocale, draft: Doc<'pendingBotActions'>): ChatMessageValue {
   const b = draftButtons(locale, draft._id, !!draft.duplicateOf)
-  return b.kind === 'buttons' ? { ...b, text: lines.join('\n') } : b
+  return b.kind === 'buttons' ? { ...b, text: draftCard(locale, draft) } : b
+}
+
+/** "31 of 38 cages logged today. Still missing: A-03, B-12 +5." (artboards 41, 49); keepers see their own cages. */
+export const SHOWN_MISSING = 2
+export const progressValue = v.object({
+  logged: v.number(),
+  total: v.number(),
+  missing: v.array(v.string()),
+  more: v.number(),
+})
+export type Progress = Infer<typeof progressValue>
+
+async function progressFor(ctx: MutationCtx, bound: BoundMember): Promise<Progress | undefined> {
+  if (!can(bound.member, 'production.view')) return undefined
+  const today = await missingToday(ctx, bound, Date.now())
+  // A cage keeper counts their own units only (cover included), like the reminder.
+  const own = today.date ? await ownUnitIds(ctx, bound.binding.companyId, bound.binding.userId, today.date) : null
+  const total = own ? today.units.filter((u) => own.has(u._id)).length : today.active
+  const missing = own ? today.missing.filter((u) => own.has(u._id)) : today.missing
+  if (!total) return undefined
+  return {
+    logged: Math.max(0, total - missing.length),
+    total,
+    missing: missing.slice(0, SHOWN_MISSING).map((u) => u.name),
+    more: Math.max(0, missing.length - SHOWN_MISSING),
+  }
 }
 
 type ProposeResult = { ok: true; pendingId: Id<'pendingBotActions'>; summary: string } | { ok: false; error: string }
@@ -331,7 +398,13 @@ export async function proposeFor(
 }
 
 const commitResult = v.union(
-  v.object({ status: v.literal('saved'), undoUntil: v.number() }),
+  v.object({
+    status: v.literal('saved'),
+    undoUntil: v.number(),
+    /** Daily entries: the unit and today's logging progress, for "Saved to C-07. 31 of 38 …". */
+    unit: v.optional(v.string()),
+    progress: v.optional(progressValue),
+  }),
   v.object({ status: v.literal('already') }),
   v.object({ status: v.literal('expired') }),
   v.object({ status: v.literal('not_pending') }),
@@ -453,7 +526,9 @@ export const commit = internalMutation({
       result: { dailyRecordId: dailyRecordId ?? null, feedUsageId: feedUsageId ?? null },
       createdAt: now,
     })
-    return { status: 'saved', undoUntil }
+    if (p.kind !== 'daily_entry') return { status: 'saved', undoUntil }
+    const progress = await progressFor(ctx, bound)
+    return { status: 'saved', undoUntil, unit: p.cageName, ...(progress ? { progress } : {}) }
   },
 })
 

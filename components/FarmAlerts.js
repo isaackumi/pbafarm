@@ -72,7 +72,7 @@ export function AlertRow({ alert: a, lang, canAct, actions, compact = false }) {
         {text.actions.length ? (
           <ul className="flex flex-wrap gap-2" aria-label={t('farmAlerts.suggestedActions')}>
             {text.actions.map((x) => (
-              <li key={x} className="rounded-[8px] bg-surface-2 px-[10px] py-[6px] text-xs leading-4 text-pearl-cyan">
+              <li key={x} className="rounded-[8px] bg-surface-2 px-[10px] py-[6px] text-xs leading-4 text-sky-ink">
                 {x}
               </li>
             ))}

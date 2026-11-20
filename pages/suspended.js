@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import BareShell from '../components/billing/BareShell'
-import { GradientButton, GhostButton } from '../components/ui'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useOptionalQuery } from '../hooks/useOptionalQuery'
@@ -52,27 +52,40 @@ export default function SuspendedPage() {
           <h1 id="suspended-title" className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-text">
             {billing?.companyName ? t('suspended.heading', { org: billing.companyName }) : t('suspended.headingGeneric')}
           </h1>
-          <p className="text-[14px] leading-[21px] text-muted">{t('suspended.body')}</p>
+          <p className="text-[14px] leading-[21px] text-muted">{due.length > 0 ? t('suspended.bodyPastDue') : t('suspended.body')}</p>
           {billing?.suspensionReason ? <p className="text-[14px] leading-[21px] text-muted">{billing.suspensionReason}</p> : null}
         </div>
         {isOwner && due.length > 0 ? (
           <div className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-2 px-4 py-[14px]">
             <div className="flex flex-col gap-1">
               <span className="text-[13px] leading-4 text-muted">{t('suspended.balanceDue')}</span>
-              <span className="text-xs leading-4 text-faint">{t('suspended.openInvoices', { count: open.length })}</span>
+              {open.length > 1 ? <span className="text-xs leading-4 text-faint">{t('suspended.openInvoices', { count: open.length })}</span> : null}
             </div>
             <span className="text-[13px] font-semibold leading-4 tabular-nums text-text">
               {due.map(([currency, minor]) => formatMinor(minor, currency)).join(' + ')}
+              {open.length === 1 ? ` · ${open[0].number}` : ''}
             </span>
           </div>
         ) : null}
         <div className="flex flex-wrap gap-[10px]">
           {/* Plain links: permission-aware buttons hide while the app's permission query is paused. */}
-          {isOwner ? <GradientButton href="/billing">{t('suspended.pay')}</GradientButton> : null}
+          {isOwner ? (
+            <Link
+              href="/billing"
+              className="inline-flex shrink-0 rounded-pill bg-lime p-[1.5px] hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            >
+              <span className="whitespace-nowrap rounded-pill bg-lime px-5 py-[10px] text-[14px] font-semibold leading-[18px] text-ink">
+                {t('suspended.pay')}
+              </span>
+            </Link>
+          ) : null}
           {SUPPORT_EMAIL ? (
-            <GhostButton size="lg" href={`mailto:${SUPPORT_EMAIL}`} className="px-5">
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="inline-flex shrink-0 whitespace-nowrap rounded-pill border border-line-strong px-5 py-[11px] text-[14px] leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+            >
               {t('suspended.contactSupport')}
-            </GhostButton>
+            </a>
           ) : null}
         </div>
         <p className="text-xs leading-4 text-faint">{isOwner ? t('suspended.ownerNote') : t('suspended.notOwner')}</p>

@@ -54,7 +54,7 @@ import {
 } from '../lib/speech'
 import { checkBinding, botCtx, inScope, type BoundMember } from './scope'
 import { agentTurn } from './agent'
-import { closeDraft, UNDO_WINDOW_MS, UNIT_UNCONFIRMED } from './pending'
+import { closeDraft, feedLine, fmtDay, UNDO_WINDOW_MS, UNIT_UNCONFIRMED, type Progress } from './pending'
 import { fetchTelegramAudio, fetchWhatsAppAudio, MAX_AUDIO_BYTES, type Audio } from './media'
 import { deliver, telegramBotToken, whatsappBotConfig } from './outbound'
 import { botLocale, t, type BotLocale } from './i18n'
@@ -316,15 +316,19 @@ export type VoiceView = {
   drafts: Array<Pick<ChatDraft, '_id' | 'payload' | 'date' | 'needsCheck' | 'checkHeard' | 'notSaid' | 'unitChoices' | 'duplicateOf'>>
 }
 
+function fmtNum(n: number) {
+  return String(Math.round(n * 100) / 100)
+}
+
 function fmtKg(kg: number) {
-  return `${Math.round(kg * 100) / 100} kg`
+  return `${fmtNum(kg)} kg`
 }
 
 /** Transcript, English line, numbered drafts with CHECK / blank marks, [Save both] [Edit] [Cancel], then cage pickers. */
 export function voiceMessages(locale: BotLocale, voiceNoteId: Id<'voiceNotes'>, view: VoiceView): ChatMessageValue[] {
   const s = t(locale)
   const shown = view.transcript.length > SHOWN_TRANSCRIPT_CHARS ? `${view.transcript.slice(0, SHOWN_TRANSCRIPT_CHARS)}...` : view.transcript
-  const header = [`"${shown}"`]
+  const header = [`“${shown}”`]
   const translated = view.language !== 'en' && !!view.english
   header.push(s.heardIn(s.languageNames[view.language], translated))
   if (translated && view.english) header.push(view.english.slice(0, SHOWN_TRANSCRIPT_CHARS))
@@ -337,31 +341,34 @@ export function voiceMessages(locale: BotLocale, voiceNoteId: Id<'voiceNotes'>, 
   const notes: string[] = []
   const allCages = view.drafts.every((d) => d.payload.kind === 'daily_entry')
   lines.push(s.heardCount(view.drafts.length, allCages))
+  // One "Field: value" block per draft, a blank line between drafts (artboard 49).
+  // The heard word's figure is bare ("“aduasa” (30)"), the unsure figure keeps its unit.
   view.drafts.forEach((d, i) => {
     const p = d.payload
     const unit = p.cageName ?? ''
+    if (i > 0) lines.push('')
     if (p.kind === 'daily_entry') {
-      lines.push(`${i + 1}. ${s.fieldUnit}: ${check(d, 'unit', unit)}`)
-      const feed = blank(d, 'feedKg') ? s.notSaid : check(d, 'feedKg', `${fmtKg(p.feedKg)}${p.feedTypeName ? ` ${p.feedTypeName}` : ''}`)
+      lines.push(`${s.fieldUnit}: ${check(d, 'unit', unit)}`)
+      const feed = blank(d, 'feedKg') ? s.notSaid : check(d, 'feedKg', feedLine(p.feedKg, p.feedTypeName))
       const dead = blank(d, 'mortality') ? s.notSaid : check(d, 'mortality', s.fish(p.mortality))
       lines.push(`${s.fieldFeed}: ${feed}`, `${s.fieldMortality}: ${dead}`)
       if (p.notes) lines.push(p.notes.slice(0, 120))
       const field = d.needsCheck?.find((f) => f === 'feedKg' || f === 'mortality')
-      if (field) notes.push(s.checkNote(d.checkHeard, field === 'feedKg' ? fmtKg(p.feedKg) : String(p.mortality), unit))
+      if (field) notes.push(s.checkNote(d.checkHeard, field === 'feedKg' ? (d.checkHeard ? fmtNum : fmtKg)(p.feedKg) : String(p.mortality), unit))
     } else {
       const to = unit ? ` > ${check(d, 'unit', unit)}` : ''
-      lines.push(`${i + 1}. ${s.fieldIssue}: ${check(d, 'quantityKg', `${fmtKg(p.quantityKg)} ${p.feedTypeName}`)}${to}`)
-      if (d.needsCheck?.includes('quantityKg')) notes.push(s.checkNote(d.checkHeard, fmtKg(p.quantityKg), unit || p.feedTypeName))
+      lines.push(`${s.fieldIssue}: ${check(d, 'quantityKg', feedLine(p.quantityKg, p.feedTypeName))}${to}`)
+      if (d.needsCheck?.includes('quantityKg')) notes.push(s.checkNote(d.checkHeard, (d.checkHeard ? fmtNum : fmtKg)(p.quantityKg), unit || p.feedTypeName))
     }
     if (d.duplicateOf) lines.push(s.duplicateWarning)
   })
   const date = view.drafts[0].date
-  notes.push(s.savingFor(date, date === view.today))
+  notes.push(s.savingFor(fmtDay(locale, date), date === view.today))
 
   // Every draft line must be visible before Save: never cut one off. When
   // the whole reply does not fit WhatsApp's button body, the transcript goes
   // first as its own message, then (if still too long) the drafts too.
-  const draftText = [...lines, '', ...notes].join('\n')
+  const draftText = [...lines, '', notes.join(' ')].join('\n')
   const full = [...header, '', draftText].join('\n')
   const out: ChatMessageValue[] = []
   let buttonText = full
@@ -889,6 +896,8 @@ export async function commitVoice(ctx: ActionCtx, plan: CommitPlan): Promise<Cha
   if (drafts.some((d) => d.unitUnconfirmed)) return [text(s.pickCageFirst)]
   const saved: string[] = []
   const failed: string[] = []
+  // Today's progress after the last daily-entry save ("33 of 38 cages logged today …", artboard 49).
+  let progress: Progress | undefined
   for (const d of drafts) {
     try {
       const r = await ctx.runMutation(internal.bot.pending.commit, {
@@ -897,8 +906,10 @@ export async function commitVoice(ctx: ActionCtx, plan: CommitPlan): Promise<Cha
         sourceMessageId: plan.sourceMessageId,
         confirmDuplicate: true,
       })
-      if (r.status === 'saved' || r.status === 'already') saved.push(d.name)
-      else if (r.status === 'refused' && r.message === UNIT_UNCONFIRMED) failed.push(`- ${d.name}: ${s.pickCageFirst}`)
+      if (r.status === 'saved' || r.status === 'already') {
+        saved.push(d.name)
+        if (r.status === 'saved' && r.progress) progress = r.progress
+      } else if (r.status === 'refused' && r.message === UNIT_UNCONFIRMED) failed.push(`- ${d.name}: ${s.pickCageFirst}`)
       else if (r.status === 'refused') failed.push(`- ${d.name}: ${r.message}`)
       else if (r.status === 'expired') failed.push(`- ${d.name}: ${s.expired}`)
       else failed.push(`- ${d.name}: ${s.notPending}`)
@@ -912,8 +923,11 @@ export async function commitVoice(ctx: ActionCtx, plan: CommitPlan): Promise<Cha
   if (saved.length) {
     out.push({
       kind: 'buttons',
-      text: s.voiceSaved(joinNames(saved, plan.locale), Math.round(UNDO_WINDOW_MS / 60_000)),
-      buttons: [{ id: `${VOICE_VERBS.undo}:${plan.voiceNoteId}`, title: s.undo }],
+      text: [
+        s.voiceSaved(joinNames(saved, plan.locale)),
+        ...(progress ? [s.progress(progress.logged, progress.total, progress.missing, progress.more)] : []),
+      ].join(' '),
+      buttons: [{ id: `${VOICE_VERBS.undo}:${plan.voiceNoteId}`, title: s.undoFor(Math.round(UNDO_WINDOW_MS / 60_000)).slice(0, 20) }],
     })
   }
   if (failed.length) out.push(text(failed.slice(0, 10).map((f) => s.commitFailed(f.replace(/^- /, ''))).join('\n')))
