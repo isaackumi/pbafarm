@@ -49,7 +49,7 @@ export function CompanySettingsProvider({ children }) {
   const { user: authUser, canUseApp } = useAuth()
   // Tenant data only once access is confirmed (password changed, company approved).
   const user = canUseApp ? authUser : null
-  const { theme, systemTheme } = useTheme()
+  const { theme, systemTheme, explicitTheme, adoptDefaultTheme } = useTheme()
   const data = useQuery(
     api.companies.getEffectiveSettings,
     user ? {} : 'skip',
@@ -59,23 +59,22 @@ export function CompanySettingsProvider({ children }) {
   const company = data?.company
 
   const companyMode = settings?.branding?.themeMode || 'light'
+  // One source of truth for what is on screen: the user's toggle when they
+  // have used it in this browser, otherwise the company default (or the
+  // system setting when the company chose "system"). The theme context is
+  // told about the default so the toggle never shows dark over a light page.
   const resolvedMode = useMemo(() => {
-    // Prefer the user's header toggle when company theme is "system"
-    // or when the user has explicitly chosen light/dark in this browser.
-    if (companyMode === 'system') {
-      return theme === 'dark' || theme === 'light' ? theme : systemTheme
-    }
-    // If the user toggled theme this session, respect it over company default.
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme')
-      if (saved === 'dark' || saved === 'light') return saved
-    }
-    return companyMode
-  }, [companyMode, theme, systemTheme])
+    if (explicitTheme) return theme
+    if (companyMode === 'system') return systemTheme
+    return companyMode === 'dark' ? 'dark' : 'light'
+  }, [explicitTheme, theme, companyMode, systemTheme])
 
   useEffect(() => {
     if (!settings?.branding) return
+    adoptDefaultTheme(resolvedMode)
     applyBrandToDocument(settings.branding, resolvedMode)
+    // adoptDefaultTheme is recreated each render; resolvedMode carries the change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.branding, resolvedMode])
 
   const value = useMemo(

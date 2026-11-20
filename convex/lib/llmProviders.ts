@@ -244,8 +244,10 @@ function chatAnthropic(o: ChatOptions) {
       { 'x-api-key': o.apiKey, 'anthropic-version': '2023-06-01' },
       {
         model: o.model,
-        max_tokens: 2048,
-        temperature: o.temperature ?? 0.3,
+        // Current Claude models think before answering, and thinking counts
+        // toward max_tokens, so leave room for it. No temperature: current
+        // models reject sampling parameters with a 400.
+        max_tokens: 16000,
         system: system || undefined,
         messages: o.messages
           .filter((m) => m.role !== 'system')

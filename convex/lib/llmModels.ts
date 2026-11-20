@@ -78,7 +78,7 @@ const ANTHROPIC_VERSION = '2023-06-01'
  * safety classifiers. Used where the provider gives no capability metadata.
  */
 const NOT_CHAT =
-  /(embed|tts|whisper|transcri|speech|dall-e|gpt-image|imagen|image-generation|-image\b|-image-|moderation|davinci|babbage|(^|[-/])ada\b|audio|realtime|native-audio|-live\b|-live-|rerank|guard|aqa|veo|sora|lyria|computer-use|robotics|playai|orpheus|instruct-v0|search-preview)/i
+  /(embed|tts|whisper|transcri|speech|dall-e|gpt-image|imagen|image-generation|-image\b|-image-|moderation|davinci|babbage|(^|[-/])ada\b|audio|realtime|native-audio|-live\b|-live-|rerank|guard|aqa|veo|sora|lyria|computer-use|antigravity|robotics|playai|orpheus|instruct-v0|search-preview)/i
 
 /** OpenAI: chat-completions models only (no Responses-only pro/codex/deep-research). */
 const OPENAI_CHAT = /^(gpt-|o\d|chatgpt-)/i

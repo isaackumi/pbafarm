@@ -3,11 +3,28 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 const ThemeContext = createContext()
 
 export const CONTRAST_KEY = 'pbafarm:contrast'
+// The company's default theme, remembered so pages/_document.js can apply it
+// before paint for someone who has never used the toggle.
+export const THEME_DEFAULT_KEY = 'pbafarm:theme-default'
+
+function applyThemeToDocument(mode) {
+  if (typeof document === 'undefined') return
+  const dark = mode === 'dark'
+  document.documentElement.classList.toggle('dark', dark)
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', dark ? '#0a0b0c' : '#f5f6f7')
+}
 
 export function ThemeProvider({ children }) {
   // Dark is the default (Paper redesign); pages/_document.js applies the saved
   // choice before paint so there is no flash.
   const [theme, setTheme] = useState('dark')
+  // True once this browser has a theme the user picked with the toggle; until
+  // then the company's default (CompanySettingsContext) decides.
+  const [explicit, setExplicit] = useState(false)
   const [systemTheme, setSystemTheme] = useState('light')
   // Outdoor mode (UX-006): 'high' contrast for bright sun, kept per device.
   const [contrast, setContrastState] = useState('normal')
@@ -54,38 +71,44 @@ export function ThemeProvider({ children }) {
   // Load saved theme preference and apply to <html>
   useEffect(() => {
     let savedTheme = null
+    let fallback = null
     try {
       savedTheme = localStorage.getItem('theme')
+      fallback = localStorage.getItem(THEME_DEFAULT_KEY)
     } catch {
       // storage blocked
     }
-    const next = savedTheme === 'light' ? 'light' : 'dark'
+    const picked = savedTheme === 'light' || savedTheme === 'dark'
+    const next = picked ? savedTheme : fallback === 'light' ? 'light' : 'dark'
+    setExplicit(picked)
     setTheme(next)
-    if (typeof document !== 'undefined') {
-      const dark = next === 'dark'
-      document.documentElement.classList.toggle('dark', dark)
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
-    }
+    applyThemeToDocument(next)
   }, [])
 
-  // Update theme — apply class immediately for user preference
+  // The user's own choice: saved in this browser and wins over the company default.
   const updateTheme = (newTheme) => {
     setTheme(newTheme)
+    setExplicit(true)
     try {
       localStorage.setItem('theme', newTheme)
     } catch {
       // storage blocked: applies for this visit only
     }
-    if (typeof document !== 'undefined') {
-      const dark = newTheme === 'dark'
-      document.documentElement.classList.toggle('dark', dark)
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
-      document
-        .querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', dark ? '#0a0b0c' : '#f5f6f7')
+    applyThemeToDocument(newTheme)
+  }
+
+  // The company's default, used only while the user has not picked one, so
+  // the toggle always shows the theme that is actually on screen.
+  const adoptDefaultTheme = (mode) => {
+    if (explicit || (mode !== 'light' && mode !== 'dark')) return
+    try {
+      localStorage.setItem(THEME_DEFAULT_KEY, mode)
+    } catch {
+      // storage blocked
     }
+    if (mode === theme) return
+    setTheme(mode)
+    applyThemeToDocument(mode)
   }
 
   // Toggle between light and dark
@@ -101,7 +124,9 @@ export function ThemeProvider({ children }) {
   const value = {
     theme,
     systemTheme,
+    explicitTheme: explicit,
     updateTheme,
+    adoptDefaultTheme,
     toggleTheme,
     useSystemTheme,
     contrast,
