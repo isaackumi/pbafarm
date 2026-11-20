@@ -8,7 +8,9 @@ import {
 } from '../../../lib/llmProxyGuard'
 import { assistantSystemPrompt, businessDateOr, chatScope, resolveProvider } from '../../../lib/llmServer'
 import { decodeChatBody } from '../../../convex/lib/llmProviders'
-import { chatWithOrgKey, chatWithServerKey, gatewayError } from '../../../lib/llmGatewayRoute'
+import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError } from '../../../lib/llmGatewayRoute'
+import { sanitizeAnswer } from '../../../convex/lib/llmAnswer'
+import { LLM_FAILURE_TEXT } from '../../../convex/lib/llmErrors'
 
 /**
  * Server-side LLM proxy (PLAT-006, ANLY-005): spends the server's provider
@@ -106,7 +108,7 @@ export default async function handler(req, res) {
       context = { error: err?.data?.message || err?.message || 'Could not load farm context' }
     }
 
-    const messages = [{ role: 'system', content: assistantSystemPrompt(context, { deep: scope.deep }) }, ...turns]
+    const messages = [{ role: 'system', content: assistantSystemPrompt(context, { deep: scope.deep, lang: body.value.lang }) }, ...turns]
     const temperature = clampTemperature(body.value.temperature ?? undefined)
     const referer = req.headers.origin || undefined
 
@@ -122,12 +124,14 @@ export default async function handler(req, res) {
       })
     } catch (err) {
       const failed = gatewayError(err)
-      return res.status(failed.status).json({ error: failed.error })
+      return res.status(failed.status).json(failureBody(failed))
     }
     // `model` is what was actually used; `fallback` tells the browser its saved choice is gone (D-022).
     if (org.handled) {
+      const text = sanitizeAnswer(org.text)
+      if (!text) return res.status(502).json({ error: LLM_FAILURE_TEXT.empty, code: 'empty', retryAfterSec: null })
       return res.status(200).json({
-        text: org.text,
+        text,
         provider: org.providerId,
         model: org.model,
         fallback: org.fallback,
@@ -137,16 +141,27 @@ export default async function handler(req, res) {
     }
 
     const resolved = await resolveProvider(body.value.provider, body.value.model)
-    if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
+    if (resolved.error) {
+      // No server key (400): an admin adds one; the env var name is for the log, not the member.
+      if (resolved.status === 400) {
+        console.warn('[api/llm/chat]', resolved.error)
+        return res.status(503).json({ error: LLM_FAILURE_TEXT.auth, code: 'not_configured', retryAfterSec: null })
+      }
+      const failed = gatewayError({ status: resolved.status, message: resolved.error })
+      return res.status(failed.status).json(failureBody(failed))
+    }
 
     let text
     try {
-      text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat', resolved.price)
+      text = sanitizeAnswer(
+        await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat', resolved.price),
+      )
     } catch (err) {
-      if (!err?.data) throw err
+      // Provider text (quota metrics, URLs, project ids) is logged, never returned (llmErrors).
       const failed = gatewayError(err)
-      return res.status(failed.status).json({ error: failed.error })
+      return res.status(failed.status).json(failureBody(failed))
     }
+    if (!text) return res.status(502).json({ error: LLM_FAILURE_TEXT.empty, code: 'empty', retryAfterSec: null })
     return res.status(200).json({
       text,
       provider: resolved.providerId,
@@ -157,6 +172,6 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('[api/llm/chat]', err?.message)
-    return res.status(500).json({ error: err?.message || 'Assistant request failed' })
+    return res.status(500).json({ error: LLM_FAILURE_TEXT.unknown, code: 'unknown', retryAfterSec: null })
   }
 }

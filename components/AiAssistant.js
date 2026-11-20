@@ -17,7 +17,9 @@ import { Field, GhostButton, GradientButton, Pill, Select } from './ui'
 import { isAutomationRequest } from '../lib/anowaIntent'
 import { describeDraft } from '../lib/anowaDraft'
 import { localToday } from '../lib/format'
-import { useT } from '../lib/i18n/context'
+import { useLocale, useT } from '../lib/i18n/context'
+import { assistantErrorText } from '../lib/assistantErrors'
+import AnswerText from './AnswerText'
 
 /** Field entry screens with a save bar at the bottom: no floating button on phones. */
 const FIELD_ROUTES = ['/daily-entry', '/biweekly-entry', '/scan']
@@ -38,6 +40,8 @@ export function useAssistantAccess() {
     canDraft: aiStatus?.canDraftAutomations === true,
     /** Company switch is off but this member can turn it on (Company settings). */
     canTurnOn: !!user && aiStatus?.enabled === false && aiStatus.canManage === true,
+    /** Can change AI settings: failed answers also say how to fix them. */
+    canManage: aiStatus?.canManage === true,
   }
 }
 
@@ -50,8 +54,9 @@ export function useAssistantAccess() {
  * The model line shows the model the server actually used, and a saved
  * choice the provider no longer offers is replaced by the server's default.
  */
-function useAssistantChat(active, { canDraft = false } = {}) {
+function useAssistantChat(active, { canDraft = false, canManage = false } = {}) {
   const t = useT()
+  const { locale } = useLocale()
   const welcome = useCallback(() => [{ role: 'assistant', content: t('assistantUi.welcome') }], [t])
   const [settings, setSettings] = useState(() => loadLlmSettings())
   const [catalog, setCatalog] = useState(null)
@@ -128,10 +133,7 @@ function useAssistantChat(active, { canDraft = false } = {}) {
           },
         ])
       } catch (err) {
-        setMessages((m) => [
-          ...m,
-          { role: 'assistant', content: t('assistantUi.failed', { message: String(err?.message || err) }) },
-        ])
+        setMessages((m) => [...m, { role: 'assistant', failed: true, content: assistantErrorText(t, err, { canManage }) }])
       } finally {
         setBusy(false)
       }
@@ -140,7 +142,7 @@ function useAssistantChat(active, { canDraft = false } = {}) {
     try {
       const history = messages
         .slice(1)
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.failed)
         .slice(-8)
         .map((m) => ({ role: m.role, content: m.content }))
       const reply = await chatCompletion({
@@ -148,6 +150,7 @@ function useAssistantChat(active, { canDraft = false } = {}) {
         model,
         temperature: 0.3,
         asOf: localToday(),
+        lang: locale,
         messages: [...history, { role: 'user', content: question }],
       })
       setMessages((m) => [...m, { role: 'assistant', content: reply.text }])
@@ -157,14 +160,8 @@ function useAssistantChat(active, { canDraft = false } = {}) {
         if (reply.fallback) rememberModel(reply.provider || providerId, reply.model)
       }
     } catch (err) {
-      const msg = String(err?.message || err)
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          content: /no api key/i.test(msg) ? t('assistantUi.noKeyReply') : t('assistantUi.failed', { message: msg }),
-        },
-      ])
+      // Never the raw error: the server sends a kind, shown as a sentence (lib/assistantErrors).
+      setMessages((m) => [...m, { role: 'assistant', failed: true, content: assistantErrorText(t, err, { canManage }) }])
     } finally {
       setBusy(false)
     }
@@ -380,9 +377,9 @@ export function Thread({ chat, compact = false, renderActions }) {
         ) : (
           <div key={i} className={`flex ${compact ? 'gap-3' : 'gap-[14px]'}`}>
             <Avatar size={compact ? 'size-7' : 'size-8'} />
-            <div className={`min-w-0 grow basis-0 whitespace-pre-wrap pt-1 text-text ${text}`}>
+            <div className={`min-w-0 grow basis-0 pt-1 ${m.failed ? 'text-muted' : 'text-text'} ${text}`} role={m.failed ? 'alert' : undefined}>
               {i > 0 && <span className="sr-only">{t('assistantUi.srAssistant')} </span>}
-              {m.content}
+              {m.failed ? <p className="whitespace-pre-wrap">{m.content}</p> : <AnswerText text={m.content} compact={compact} />}
               {m.kind === 'draft' && <DraftCard message={m} compact={compact} />}
               {renderActions && renderActions(m)}
             </div>
@@ -510,10 +507,10 @@ export default function AiAssistant() {
   const router = useRouter()
   const pathname = router?.pathname
   const onFieldRoute = FIELD_ROUTES.includes(pathname)
-  const { allowed, canDraft } = useAssistantAccess()
+  const { allowed, canDraft, canManage } = useAssistantAccess()
   const [open, setOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const chat = useAssistantChat(open, { canDraft })
+  const chat = useAssistantChat(open, { canDraft, canManage })
   const inputRef = useRef(null)
 
   useEffect(() => {

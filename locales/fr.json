@@ -2824,7 +2824,38 @@
     "modelsRetry": "Réessayer",
     "modelUnavailable": "aucun modèle disponible",
     "vision": "lit les photos",
-    "defaultModel": "par défaut"
+    "defaultModel": "par défaut",
+    "errors": {
+      "quota": "Anowa a épuisé son quota d’IA pour le moment.",
+      "rate_limited": "Anowa reçoit beaucoup de questions en ce moment.",
+      "unavailable": "Le service d’IA ne répond pas pour le moment. Réessayez dans quelques minutes.",
+      "timeout": "La réponse a pris trop de temps. Posez une question plus courte, choisissez un site ou une période plus courte.",
+      "auth": "Anowa ne parvient pas à joindre son service d’IA. Un administrateur doit vérifier les paramètres IA.",
+      "not_configured": "Anowa n’est pas encore relié à un service d’IA. Un administrateur peut le configurer dans les paramètres IA.",
+      "model_unavailable": "Le modèle choisi n’est plus disponible. Choisissez Auto dans le menu des modèles et reposez la question.",
+      "blocked": "Le service d’IA a refusé de répondre. Essayez de formuler la question autrement.",
+      "too_long": "Il y a trop de données pour une seule réponse. Choisissez un site ou une période plus courte.",
+      "empty": "Anowa n’a pas reçu de réponse. Réessayez.",
+      "forbidden": "Vous n’avez pas accès à cela.",
+      "invalid": "Anowa n’a pas pu lire cette demande. Réessayez.",
+      "offline": "Vous semblez hors ligne. La question n’a pas été envoyée ; réessayez quand vous aurez du réseau.",
+      "unknown": "Anowa n’a pas pu répondre pour l’instant. Réessayez dans un moment.",
+      "retryHours": {
+        "one": "Réessayez dans environ une heure.",
+        "other": "Réessayez dans environ {count} heures."
+      },
+      "retryMinutes": {
+        "one": "Réessayez dans une minute.",
+        "other": "Réessayez dans {count} minutes."
+      },
+      "retrySoon": "Réessayez dans un moment.",
+      "fix": {
+        "quota": "Pour continuer tout de suite, choisissez un autre modèle dans le menu des modèles, ou activez la facturation chez votre fournisseur d’IA dans les paramètres IA.",
+        "auth": "Ouvrez les paramètres IA pour vérifier ou remplacer la clé du fournisseur.",
+        "not_configured": "Ouvrez les paramètres IA pour ajouter une clé de fournisseur.",
+        "model_unavailable": "Les paramètres IA indiquent les modèles que votre clé peut utiliser."
+      }
+    }
   },
   "calendarUi": {
     "title": "Calendrier",

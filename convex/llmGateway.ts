@@ -12,6 +12,7 @@ import { spendDailyQuestion } from './lib/aiPolicy'
 import { requireAccount, requireMember } from './lib/permissions'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { userError } from './lib/errors'
+import { LLM_FAILURE_TEXT, classifyLlmFailure } from './lib/llmErrors'
 import { runEffect } from './lib/effect'
 import { FetchLive } from './lib/effectHttp'
 import { MISSING_KEY_MESSAGE, decryptJson, encryptJson, encryptionConfigured, readEncryptionKey, secretHint } from './lib/crypto'
@@ -118,6 +119,20 @@ export function pickCredential(rows: Doc<'llmCredentials'>[], providerId?: strin
 // ---------------------------------------------------------------------------
 
 /** AI settings page: providers, the organization's keys (hints only) and a usage summary since `since`. */
+/**
+ * A provider failure as a ConvexError members may see: the message for its
+ * kind (quota, rate limit, key, model…), never the provider's own text, which
+ * stays in the server log and the usage log (llmUsage.error) for admins.
+ */
+function upstreamError(raw: string, status?: number) {
+  const f = classifyLlmFailure({ status, message: raw })
+  return userError('UPSTREAM', LLM_FAILURE_TEXT[f.kind], {
+    kind: f.kind,
+    status: status ?? null,
+    retryAfterSec: f.retryAfterSec,
+  })
+}
+
 export const overview = query({
   args: { since: v.number() },
   returns: v.object({
@@ -779,7 +794,11 @@ export const chat = action({
       requested: begun.requestedModel,
       saved: begun.savedModel,
     })
-    if (!choice.ok) throw userError('UPSTREAM', choice.error)
+    if (!choice.ok) {
+      // Raw provider text stays in the log; members get the kind's message (llmErrors).
+      console.warn(`[llm gateway] model choice: ${choice.error}`)
+      throw upstreamError(choice.error)
+    }
     const model = choice.model
     const price: Price | undefined = listedPrice(models, model)
     const temperature =
@@ -821,7 +840,10 @@ export const chat = action({
       return outcome.success
     }).pipe(Effect.provide(FetchLive))
     const reply = await runEffect(program, {
-      toUserError: (e: LlmError) => userError('UPSTREAM', e.message, e.status ? { status: e.status } : undefined),
+      toUserError: (e: LlmError) => {
+        console.warn(`[llm gateway] ${begun.providerId}/${model}: ${e.status ?? '-'} ${e.message}`)
+        return upstreamError(e.message, e.status)
+      },
     })
     return {
       handled: true,

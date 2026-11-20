@@ -61,6 +61,8 @@ export const ChatBody = Schema.Struct({
   locationId: Schema.optional(Schema.NullOr(Schema.String)),
   days: Schema.optional(Schema.NullOr(Schema.Number)),
   deep: Schema.optional(Schema.NullOr(Schema.Boolean)),
+  /** The member's app language (`en` | `fr`); Anowa answers in it. */
+  lang: Schema.optional(Schema.NullOr(Schema.String)),
 })
 export type ChatBody = typeof ChatBody.Type
 

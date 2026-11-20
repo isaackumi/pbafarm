@@ -30,6 +30,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocale, useT } from '../lib/i18n/context'
+import { assistantErrorText } from '../lib/assistantErrors'
 import { chatCompletion, draftAutomation, fetchLlmModels } from '../lib/llmClient'
 import { isAutomationRequest } from '../lib/anowaIntent'
 import { localToday } from '../lib/format'
@@ -51,6 +52,7 @@ import { AnowaLockup } from './brand/AnowaLogo'
 import { initials } from './ui'
 import Layout from './Layout'
 import { AssistantOff, Thread, useAssistantAccess } from './AiAssistant'
+import AnswerText from './AnswerText'
 
 /**
  * Ask Anowa, expanded (Paper artboards 47 and 47b): a full-screen assistant
@@ -111,7 +113,8 @@ function AskAnowa() {
   const t = useT()
   const router = useRouter()
   const collapse = useCollapse()
-  const { canDraft } = useAssistantAccess()
+  const { canDraft, canManage } = useAssistantAccess()
+  const { locale } = useLocale()
   const { locations, activeLocationId } = useLocation()
   const deepLink = parseDeepLink(router.query)
 
@@ -251,20 +254,14 @@ function AskAnowa() {
           days,
           deep,
           locationId: siteId || undefined,
+          lang: locale,
           messages: [...history, userMsg],
         })
         answer = { role: 'assistant', content: reply.text }
       }
     } catch (err) {
-      const msg = String(err?.message || err)
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          failed: true,
-          content: /no api key/i.test(msg) ? t('assistantUi.noKeyReply') : t('assistantUi.failed', { message: msg }),
-        },
-      ])
+      // Never the raw error: the server sends a kind, shown as a sentence (lib/assistantErrors).
+      setMessages((m) => [...m, { role: 'assistant', failed: true, content: assistantErrorText(t, err, { canManage }) }])
       setBusy(false)
       return
     }
@@ -914,7 +911,9 @@ function SavedAnswers({ t, onOpen }) {
           {rows.map((r) => (
             <li key={r._id} className="flex flex-col gap-3 rounded-card border border-line bg-surface p-5">
               <p className="text-xs leading-4 text-faint">{r.chatTitle}</p>
-              <p className="whitespace-pre-wrap text-[15px] leading-6 text-text">{r.content}</p>
+              <div className="text-[15px] leading-6 text-text">
+                <AnswerText text={r.content} />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
