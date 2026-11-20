@@ -240,3 +240,120 @@ export function requestJsonAs<S extends Schema.Decoder<unknown>>(
     )
   })
 }
+
+/** The response body (declared or actual) is over the caller's cap. */
+export class HttpTooLargeError extends Data.TaggedError('HttpTooLargeError')<{
+  readonly url: string
+  readonly maxBytes: number
+  readonly message: string
+}> {}
+
+export type HttpBytes = {
+  readonly status: number
+  /** Declared Content-Type without parameters, lower case ('' when absent). */
+  readonly contentType: string
+  readonly bytes: Uint8Array
+}
+
+type BytesAttempt = HttpBytes | { readonly tooLarge: true } | { readonly failed: number; readonly text: string }
+
+/** Read a body, stopping as soon as it passes `maxBytes`. */
+async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array | null> {
+  const declared = Number(res.headers.get('content-length') ?? '')
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await res.body?.cancel().catch(() => undefined)
+    return null
+  }
+  if (!res.body) {
+    const buf = new Uint8Array(await res.arrayBuffer())
+    return buf.byteLength > maxBytes ? null : buf
+  }
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined)
+      return null
+    }
+    chunks.push(value)
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
+}
+
+/**
+ * GET a binary body (media download) with the same timeout and retry rules
+ * as `requestJson`, refusing bodies over `maxBytes` without buffering them.
+ * A too-large body is never retried.
+ */
+export function requestBytes(
+  req: { readonly url: string; readonly headers?: Record<string, string> },
+  policy: HttpPolicy & { readonly maxBytes: number },
+): Effect.Effect<HttpBytes, HttpTransportError | HttpTooLargeError, Fetch> {
+  const safeUrl = redactUrl(req.url)
+  const timeoutMs = policy.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const once = Effect.gen(function* () {
+    const fetchFn = yield* Fetch
+    const result = yield* Effect.tryPromise({
+      try: async (signal): Promise<BytesAttempt> => {
+        const res = await fetchFn(req.url, { method: 'GET', headers: { ...(req.headers ?? {}) }, signal, redirect: 'follow' })
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          return { failed: res.status, text: text.slice(0, 500) }
+        }
+        const bytes = await readCapped(res, policy.maxBytes)
+        if (!bytes) return { tooLarge: true }
+        const contentType = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+        return { status: res.status, contentType, bytes }
+      },
+      catch: (cause) => new HttpNetworkError({ url: safeUrl, message: errorMessage(cause), cause }),
+    }).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.millis(timeoutMs),
+        orElse: () =>
+          Effect.fail(
+            new HttpTimeoutError({ url: safeUrl, timeoutMs, message: `Request to ${safeUrl} timed out after ${timeoutMs} ms` }),
+          ),
+      }),
+    )
+    if ('tooLarge' in result) {
+      return yield* Effect.fail(
+        new HttpTooLargeError({ url: safeUrl, maxBytes: policy.maxBytes, message: `Response from ${safeUrl} is over ${policy.maxBytes} bytes` }),
+      )
+    }
+    if ('failed' in result) {
+      return yield* Effect.fail(
+        new HttpStatusError({
+          url: safeUrl,
+          status: result.failed,
+          body: parseBody(result.text),
+          text: result.text,
+          message: `Request to ${safeUrl} failed (${result.failed})`,
+        }),
+      )
+    }
+    return result
+  })
+  const retries = policy.retries ?? DEFAULT_RETRIES
+  if (retries <= 0) return once
+  const retryOn = policy.retryOn ?? isTransientHttpError
+  const schedule = Schedule.exponential(Duration.millis(policy.retryBaseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS)).pipe(
+    Schedule.jittered,
+  )
+  return once.pipe(
+    Effect.retry({
+      schedule,
+      times: retries,
+      while: (e) => e._tag !== 'HttpTooLargeError' && retryOn(e),
+    }),
+  )
+}

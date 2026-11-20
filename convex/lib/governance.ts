@@ -137,6 +137,7 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'channelMessageCosts', index: 'by_companyId_and_sentAt' },
   { table: 'channelConnectCodes', index: 'by_companyId', export: false },
   { table: 'pendingBotActions', index: 'by_companyId', export: false },
+  { table: 'logbookScans', index: 'by_companyId_and_createdAt', export: false },
   { table: 'botApprovalPrompts', index: 'by_companyId', export: false },
   // Governance bookkeeping: purged, not exported.
   { table: 'dataExports', index: 'by_companyId', export: false },

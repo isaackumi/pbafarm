@@ -149,3 +149,32 @@ Usage is in `llmUsage` with feature `bot`, and counts against the same per-user 
 
 **Limits**
 - See doc 23 §6. A flood from one unbound number gets at most 10 replies an hour; all unbound replies together are capped at 500 an hour.
+
+## 7. Logbook photos (BOT-006)
+
+A worker sends a photo of a paper daily-logbook page. The bot reads it with a vision model and replies with one draft per unit row and three buttons: **Save all**, **Review each** (each draft with its own Save/Edit/Cancel) and **Discard all**. Nothing is written until a tap. Save all commits each draft through the normal BOT-003 commit, so binding, permission, site scope, the duplicate guard and idempotency are checked per draft. A draft the duplicate guard flags is not saved by Save all; the reply asks for Review each.
+
+**Who can use it**
+- The binding's member needs `production.daily.record`.
+- The organization needs the assistant switched on (`settings.aiAssistantEnabled`) and, on a subscription, the `ai_assistant` plan feature.
+- Each photo counts once against the SEC-004 LLM limits (per user per minute and hour, per organization per hour) and the admin's daily cap per member (AI policy). Calls on the platform key also count against the plan's `aiCredits`.
+
+**Model**
+- If the organization has its own key, that key and its saved model are used. A Groq key cannot read images, so the server key is used instead.
+- Otherwise the server key is used: `BOT_VISION_PROVIDER` when set and keyed, else the same order as the bot (`BOT_LLM_PROVIDER`, `LLM_DEFAULT_PROVIDER`, Gemini, any keyed provider). `BOT_VISION_MODEL` overrides the model; the default is the provider's default model (Gemini `gemini-2.0-flash`, OpenAI `gpt-4o-mini`), and both read images.
+- Each call writes an `llmUsage` row with feature `ocr`, including failed reads. The PLAT-110 nightly rollup counts these rows.
+
+**Media**
+- WhatsApp media URLs expire after about 5 minutes. The photo is downloaded as soon as it is processed, using `WHATSAPP_BOT_ACCESS_TOKEN`, and only from Meta hosts. Telegram uses `getFile` with `TELEGRAM_BOT_TOKEN`.
+- Limits: 5 MB, JPEG, PNG or WebP. The type is checked from the file's bytes. A declared oversize is refused before download; an undeclared one is refused while streaming.
+- The photo is stored in the files register under the organization: `files` row with `entityType: 'logbookScans'`, on R2 when configured (`files/<companyId>/logbook/<scanId>`), otherwise Convex storage. It is filed under the chat's active site, or the member's first site for a site-limited member.
+
+**Matching**
+- Unit codes are matched only against the member's units in scope: exact name or code, then unique partial, then handwriting look-alikes (O/0, I/1, S/5, B/8, Z/2, G/6), then one wrong character on codes of 4 or more characters. A draft from a match below 95% confidence says what was read ("read as "CIO", please check").
+- These rows are flagged in the reply and never drafted: unknown or ambiguous units, units of another site or organization, a unit listed twice, a page date in the future or more than 7 days ago, rows that fail the usual draft checks (for example, an unknown feed type), and rows past 20 on one page.
+
+**Data and troubleshooting**
+- `logbookScans` has one row per (binding, message), so a webhook retry never reads the same photo twice. Fields: status `processing` / `ready` / `failed`, `error` (for example `media_too_large`, `media_unavailable`, or the model's error), `rowCount`, `draftCount`, `flagged` (unit and reason), `fileId`, provider and model. Index: `by_companyId_and_createdAt`.
+- Drafts from a photo are `pendingBotActions` rows with `scanId`.
+- "I could not read this page": the model did not return the expected JSON. The `llmUsage` row has `ok: false`. Ask for a flat, well-lit photo of the whole page.
+- "I cannot read photos right now": no usable key (or only a Groq key with no server key), or the provider failed. Check the `llmUsage` error.

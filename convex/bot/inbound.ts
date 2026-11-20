@@ -21,6 +21,7 @@ import { botLocale, t, type BotLocale } from './i18n'
 import { checkBinding, type BoundMember } from './scope'
 import { codeHash, revokeBindingsForUser } from './bindings'
 import { closeDraft } from './pending'
+import { logbookButton, logbookPlan } from './logbook'
 import { MAX_EVENT_AGE_MS } from './verify'
 import { REJECT_REASON_CODES, MAX_REASON_CHARS, askRejectReason, awaitingReason, keepPending } from './approvals'
 
@@ -28,11 +29,14 @@ const inboundEvent = v.object({
   provider: botProvider,
   externalId: v.string(),
   address: v.string(),
-  kind: v.union(v.literal('text'), v.literal('button'), v.literal('unsupported')),
+  kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('unsupported')),
   text: v.optional(v.string()),
   buttonId: v.optional(v.string()),
   callbackQueryId: v.optional(v.string()),
   profileName: v.optional(v.string()),
+  mediaId: v.optional(v.string()),
+  mediaMime: v.optional(v.string()),
+  mediaSize: v.optional(v.number()),
   sentAt: v.number(),
 })
 
@@ -307,6 +311,8 @@ export const route = internalMutation({
     })
 
     if (inbound.kind === 'unsupported') return { type: 'reply', ...tgt, messages: [text(s.unsupported)] }
+    // A photo of a logbook page (BOT-006): read into drafts by the processing action.
+    if (inbound.kind === 'image') return logbookPlan(inbound, { ...tgt, bindingId: binding._id })
 
     if (inbound.kind === 'button') {
       const raw = inbound.buttonId ?? ''
@@ -314,6 +320,8 @@ export const route = internalMutation({
       const verb = sep > 0 ? raw.slice(0, sep) : raw
       const arg = sep > 0 ? raw.slice(sep + 1) : ''
       const pendingId = ctx.db.normalizeId('pendingBotActions', arg)
+      const scanPlan = await logbookButton(ctx, bound, verb, arg, { ...tgt, bindingId: binding._id }, inbound.externalId)
+      if (scanPlan) return scanPlan
       switch (verb) {
         case 'ok':
         case 'dup':

@@ -52,7 +52,7 @@ const MAX_SUMMARY_ROWS = 5000
 const MAX_CREDENTIALS = Object.keys(PROVIDERS).length
 
 const feature = v.union(v.literal('chat'), v.literal('insights'))
-const usageFeature = v.union(v.literal('chat'), v.literal('insights'), v.literal('report'), v.literal('bot'))
+const usageFeature = v.union(v.literal('chat'), v.literal('insights'), v.literal('report'), v.literal('bot'), v.literal('ocr'))
 const message = v.object({
   role: v.union(v.literal('system'), v.literal('user'), v.literal('assistant')),
   content: v.string(),
@@ -536,7 +536,7 @@ export async function insertUsage(
     source: 'org_key' | 'server_key'
     providerId: string
     model: string
-    feature: 'chat' | 'insights' | 'report' | 'bot'
+    feature: 'chat' | 'insights' | 'report' | 'bot' | 'ocr'
     ok: boolean
     error?: string
     inputTokens?: number

@@ -17,11 +17,15 @@ export type InboundEvent = {
   provider: BotProvider
   externalId: string
   address: string
-  kind: 'text' | 'button' | 'unsupported'
+  kind: 'text' | 'button' | 'image' | 'unsupported'
   text?: string
   buttonId?: string
   callbackQueryId?: string
   profileName?: string
+  /** Photo (BOT-006): WhatsApp media id / Telegram file_id, declared type and size. Untrusted. */
+  mediaId?: string
+  mediaMime?: string
+  mediaSize?: number
   sentAt: number
 }
 
@@ -161,6 +165,16 @@ export function parseWhatsApp(
           const buttonId = cap(str(b?.payload), MAX_BUTTON_ID_CHARS)
           if (buttonId) events.push({ ...base, kind: 'button', buttonId, text: cap(str(b?.text), 100) })
           else events.push({ ...base, kind: 'text', text: cap(str(b?.text) ?? '', MAX_TEXT_CHARS) })
+        } else if (type === 'image' || type === 'document') {
+          // A logbook photo (BOT-006); a document only when it says it is an image.
+          const media = obj(type === 'image' ? m.image : m.document)
+          const mediaId = cap(str(media?.id), 200)
+          const mime = cap(str(media?.mime_type), 100)?.toLowerCase()
+          if (mediaId && (type === 'image' || mime?.startsWith('image/'))) {
+            events.push({ ...base, kind: 'image', mediaId, mediaMime: mime, text: cap(str(media?.caption), MAX_TEXT_CHARS) })
+          } else {
+            events.push({ ...base, kind: 'unsupported' })
+          }
         } else {
           events.push({ ...base, kind: 'unsupported' })
         }
@@ -184,6 +198,32 @@ export function parseWhatsApp(
   return { events: events.slice(0, MAX_EVENTS_PER_REQUEST), statuses: statuses.slice(0, MAX_EVENTS_PER_REQUEST) }
 }
 
+/** Telegram keeps photos under this size for bots to download. */
+const TELEGRAM_PHOTO_CAP = 5 * 1024 * 1024
+
+/**
+ * A photo (largest size that fits the cap, else the largest, which is then
+ * refused as too large) or an image sent as a document.
+ */
+function telegramPhoto(message: Obj): { mediaId: string; mediaMime?: string; mediaSize?: number } | null {
+  const sizes = arr(message.photo)
+    .map(obj)
+    .filter((p): p is Obj => !!p && !!str(p.file_id))
+    .map((p) => ({ id: str(p.file_id)!, size: typeof p.file_size === 'number' ? p.file_size : undefined, area: Number(p.width ?? 0) * Number(p.height ?? 0) }))
+    .sort((a, b) => b.area - a.area)
+  if (sizes.length) {
+    const pick = sizes.find((p) => p.size === undefined || p.size <= TELEGRAM_PHOTO_CAP) ?? sizes[0]
+    return { mediaId: cap(pick.id, 200)!, mediaMime: 'image/jpeg', mediaSize: pick.size }
+  }
+  const doc = obj(message.document)
+  const mime = cap(str(doc?.mime_type), 100)?.toLowerCase()
+  const id = str(doc?.file_id)
+  if (doc && id && mime?.startsWith('image/')) {
+    return { mediaId: cap(id, 200)!, mediaMime: mime, mediaSize: typeof doc.file_size === 'number' ? doc.file_size : undefined }
+  }
+  return null
+}
+
 /**
  * One Telegram update. Private chats only: a bot added to a group must not
  * bind or answer the group (the binding is per person).
@@ -200,6 +240,19 @@ export function parseTelegram(body: unknown): InboundEvent | null {
     const from = obj(message.from)
     if (from?.is_bot === true) return null
     const sentAt = Number(str(message.date) ?? '0') * 1000 || Date.now()
+    const photo = telegramPhoto(message)
+    if (photo) {
+      return {
+        provider: 'telegram',
+        externalId: updateId,
+        address: chatId,
+        kind: 'image',
+        ...photo,
+        text: cap(str(message.caption), MAX_TEXT_CHARS),
+        profileName: cap(str(from?.first_name), 80),
+        sentAt,
+      }
+    }
     const text = str(message.text)
     return {
       provider: 'telegram',

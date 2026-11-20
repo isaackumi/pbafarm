@@ -69,6 +69,23 @@ export const routePlan = v.union(
     sourceMessageId: v.string(),
     sentAt: v.number(),
   }),
+  /** A logbook page photo to read into drafts (BOT-006). */
+  v.object({
+    type: v.literal('logbook'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    mediaId: v.string(),
+    sourceMessageId: v.string(),
+    sentAt: v.number(),
+  }),
+  /** Save all drafts read from one logbook page. */
+  v.object({
+    type: v.literal('logbook_commit'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    scanId: v.id('logbookScans'),
+    sourceMessageId: v.string(),
+  }),
 )
 
 export const targetValidator = v.object(target)

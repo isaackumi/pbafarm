@@ -34,6 +34,9 @@ export const proposalInput = v.union(
     mortalityCause: v.optional(v.string()),
     notes: v.optional(v.string()),
     daysAgo: v.optional(v.number()),
+    /** Water readings (logbook photos, BOT-006). */
+    dissolvedOxygen: v.optional(v.number()),
+    temperatureC: v.optional(v.number()),
   }),
   v.object({
     kind: v.literal('feed_issue'),
@@ -138,7 +141,17 @@ export async function proposeFor(
       return { ok: false, error: 'Mortality must be a whole number of fish.' }
     }
     const notes = input.notes?.trim().slice(0, 500) || undefined
-    if (feedKg === 0 && mortality === 0 && !notes) return { ok: false, error: 'Nothing to record: give feed, mortality or notes.' }
+    const { dissolvedOxygen, temperatureC } = input
+    if (dissolvedOxygen !== undefined && !(dissolvedOxygen >= 0 && dissolvedOxygen <= 30)) {
+      return { ok: false, error: 'Dissolved oxygen must be between 0 and 30 mg/L.' }
+    }
+    if (temperatureC !== undefined && !(temperatureC >= 0 && temperatureC <= 45)) {
+      return { ok: false, error: 'Water temperature must be between 0 and 45 °C.' }
+    }
+    const water = dissolvedOxygen !== undefined || temperatureC !== undefined
+    if (feedKg === 0 && mortality === 0 && !notes && !water) {
+      return { ok: false, error: 'Nothing to record: give feed, mortality or notes.' }
+    }
     let feedType: Doc<'feedTypes'> | null = null
     if (feedKg > 0) {
       const types = await feedTypesOf(ctx, companyId)
@@ -179,6 +192,8 @@ export async function proposeFor(
       mortality,
       mortalityCause: cause,
       notes,
+      ...(dissolvedOxygen !== undefined ? { dissolvedOxygen } : {}),
+      ...(temperatureC !== undefined ? { temperatureC } : {}),
     }
     summary = s.summaryDaily({
       unit: unit.name,
@@ -187,6 +202,8 @@ export async function proposeFor(
       mortality,
       notes,
     })
+    if (dissolvedOxygen !== undefined) summary += `, DO ${dissolvedOxygen} mg/L`
+    if (temperatureC !== undefined) summary += `, ${temperatureC} °C`
     fingerprint = `daily|${unit._id}|${date}|${feedKg}|${mortality}`
   } else {
     if (!can(bound.member, 'inventory.issue')) return { ok: false, error: 'You do not have permission to issue feed.' }
@@ -335,6 +352,8 @@ export const commit = internalMutation({
             mortality: p.mortality,
             mortalityCause: p.mortalityCause,
             notes: p.notes,
+            dissolvedOxygen: p.dissolvedOxygen,
+            temperatureC: p.temperatureC,
           },
         ],
       })

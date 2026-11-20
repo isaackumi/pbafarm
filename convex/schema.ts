@@ -97,6 +97,8 @@ export const fileEntityType = v.union(
   v.literal('biosecurityLogs'),
   /** Photos held by custom photo fields (CUSTOM-001); entityId is the field definition. */
   v.literal('customFieldDefs'),
+  /** Logbook page photos sent to the farm bot (BOT-006); entityId is the scan. */
+  v.literal('logbookScans'),
 )
 
 export const complianceFrequency = v.union(

@@ -11,6 +11,7 @@ import { internal } from '../_generated/api'
 import { isUserError } from '../lib/errors'
 import { t } from './i18n'
 import { runAgent } from './agent'
+import { commitLogbook, runLogbook } from './logbook'
 import { deliver } from './outbound'
 import { UNDO_WINDOW_MS } from './pending'
 import { decideFromChat } from './approvals'
@@ -29,6 +30,10 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
   switch (plan.type) {
     case 'reply':
       return plan.messages
+    case 'logbook':
+      return await runLogbook(ctx, plan)
+    case 'logbook_commit':
+      return await commitLogbook(ctx, plan)
     case 'agent':
       return await runAgent(ctx, {
         bindingId: plan.bindingId,

@@ -27,6 +27,9 @@ export const dailyEntryPayload = v.object({
   mortality: v.number(),
   mortalityCause: v.optional(v.string()),
   notes: v.optional(v.string()),
+  /** Water readings read off a logbook page (BOT-006). */
+  dissolvedOxygen: v.optional(v.number()),
+  temperatureC: v.optional(v.number()),
 })
 
 /** Feed taken out of the store, optionally to a unit's bin. */
@@ -53,8 +56,8 @@ export const botTables = {
     externalId: v.string(),
     /** E.164 phone (WhatsApp) or Telegram chat id. */
     address: v.string(),
-    kind: v.union(v.literal('text'), v.literal('button'), v.literal('unsupported')),
-    /** Untrusted user text, capped. */
+    kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('unsupported')),
+    /** Untrusted user text, capped (an image's caption). */
     text: v.optional(v.string()),
     /** Button / list / callback payload we generated (still untrusted). */
     buttonId: v.optional(v.string()),
@@ -62,6 +65,10 @@ export const botTables = {
     callbackQueryId: v.optional(v.string()),
     /** Sender's profile name, for the /account card. */
     profileName: v.optional(v.string()),
+    /** Photo (BOT-006): WhatsApp media id or Telegram file_id, declared type and size. Untrusted. */
+    mediaId: v.optional(v.string()),
+    mediaMime: v.optional(v.string()),
+    mediaSize: v.optional(v.number()),
     /** Provider timestamp of the message (ms). */
     sentAt: v.number(),
     receivedAt: v.number(),
@@ -143,11 +150,49 @@ export const botTables = {
     dailyRecordId: v.optional(v.id('dailyRecords')),
     feedUsageId: v.optional(v.id('feedUsage')),
     error: v.optional(v.string()),
+    /** The logbook photo this draft was read from (BOT-006). */
+    scanId: v.optional(v.id('logbookScans')),
   })
     .index('by_bindingId_and_status', ['bindingId', 'status'])
+    .index('by_scanId', ['scanId'])
     .index('by_bindingId_and_fingerprint', ['bindingId', 'fingerprint'])
     .index('by_status_and_expiresAt', ['status', 'expiresAt'])
     .index('by_companyId', ['companyId']),
+
+  /**
+   * A photo of a paper logbook page sent to the bot (BOT-006). The image is
+   * a `files` row (entityType 'logbookScans'); each extracted row that
+   * matched a unit is a pendingBotActions draft with this scanId, so nothing
+   * is saved until the user taps. One scan per (binding, message).
+   */
+  logbookScans: defineTable({
+    companyId: v.id('companies'),
+    /** The binding's active site when set (the file's site scope). */
+    locationId: v.optional(v.id('farmLocations')),
+    userId: v.id('users'),
+    bindingId: v.id('channelBindings'),
+    provider: botProvider,
+    sourceMessageId: v.string(),
+    status: v.union(
+      v.literal('processing'),
+      v.literal('ready'),
+      v.literal('failed'),
+    ),
+    error: v.optional(v.string()),
+    fileId: v.optional(v.id('files')),
+    providerId: v.optional(v.string()),
+    model: v.optional(v.string()),
+    /** Page date read by the model (YYYY-MM-DD), when it found one. */
+    pageDate: v.optional(v.string()),
+    /** Rows read off the page; capped (MAX_ROWS in bot/logbook.ts). */
+    rowCount: v.optional(v.number()),
+    draftCount: v.optional(v.number()),
+    /** Rows that did not become a draft, with the reason, for the reply. */
+    flagged: v.optional(v.array(v.object({ unit: v.string(), reason: v.string() }))),
+    createdAt: v.number(),
+  })
+    .index('by_bindingId_and_sourceMessageId', ['bindingId', 'sourceMessageId'])
+    .index('by_companyId_and_createdAt', ['companyId', 'createdAt']),
 
   /**
    * An approval request (stocking, top-up, transfer) sent to one approver's

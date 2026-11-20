@@ -45,13 +45,13 @@ const SERVER_KEY_ENV: Record<string, string> = {
   custom: 'CUSTOM_LLM_API_KEY',
 }
 
-function serverKey(providerId: string): string {
+export function serverKey(providerId: string): string {
   const name = SERVER_KEY_ENV[providerId]
   return name ? String(process.env[name] || '').trim() : ''
 }
 
 /** The server-key provider: BOT_LLM_PROVIDER, LLM_DEFAULT_PROVIDER, Gemini, then any with a key. */
-function serverProvider(): string | null {
+export function serverProvider(): string | null {
   for (const id of [process.env.BOT_LLM_PROVIDER, process.env.LLM_DEFAULT_PROVIDER, 'gemini']) {
     if (id && serverKey(id)) return id
   }
@@ -59,7 +59,7 @@ function serverProvider(): string | null {
 }
 
 /** OpenAI-compatible base URL per provider (Gemini and Anthropic both offer one). */
-function openAiBaseUrl(providerId: string, baseUrl: string | null): string | null {
+export function openAiBaseUrl(providerId: string, baseUrl: string | null): string | null {
   if (providerId === 'gemini') return 'https://generativelanguage.googleapis.com/v1beta/openai'
   if (providerId === 'custom') return baseUrl || process.env.CUSTOM_LLM_BASE_URL || null
   return PROVIDERS[providerId]?.baseUrl || null
