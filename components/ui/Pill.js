@@ -8,10 +8,11 @@ const TONE = {
   red: 'border-[var(--pill-red-border)] text-[var(--pill-red-text)]',
 }
 
-export function Pill({ tone = 'neutral', children, className = '', ...props }) {
+/** size 'md' (default) 12px side padding; 'sm' 10px (Paper 56 scope and status pills). */
+export function Pill({ tone = 'neutral', size = 'md', children, className = '', ...props }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border px-3 py-1 text-[12px] leading-4 ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border py-1 text-[12px] leading-4 ${size === 'sm' ? 'px-[10px]' : 'px-3'} ${
         TONE[tone] || TONE.neutral
       } ${className}`}
       {...props}

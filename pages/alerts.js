@@ -18,12 +18,6 @@ import { useLocale, useT } from '../lib/i18n/context'
  * the caller's sites with filters, plus today's suggested rations. Reads
  * farmAlerts.list and feedingPlans.rations; both require production.view.
  */
-/**
- * Paper 42 "Today's feeding plan" panel: 12px radius, 16/20 header with a
- * 15px title, 10px header cells and 12px rows of 13px text, 20px side padding.
- */
-const PANEL_TABLE =
-  '!rounded-[12px] [&>div:first-child]:!px-5 [&>div:first-child]:!py-4 [&_h2]:!text-[15px] [&_h2]:!leading-[18px] [&_th]:!py-[10px] [&_td]:!py-3 [&_td]:!text-[13px] [&_td]:!leading-4 [&_th:first-child]:!pl-5 [&_td:first-child]:!pl-5 [&_th:last-child]:!pr-5 [&_td:last-child]:!pr-5'
 
 export default function AlertsPage() {
   const t = useT()
@@ -151,7 +145,7 @@ function AlertsAndInsights({ args, rations }) {
       </section>
 
       <Table
-        className={PANEL_TABLE}
+        variant="panel"
         title={t('alertsPage.feedingTitle')}
         actions={<span className="text-xs leading-4 text-muted">{t('alertsPage.feedingSub')}</span>}
         rowKey={(r) => r.cageId}

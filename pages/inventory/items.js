@@ -316,7 +316,7 @@ function Items() {
                 <Input id="mv-date" type="date" value={move.date} onChange={setM('date')} />
               </Field>
             )}
-            <GradientButton type="submit" variant="solid" className="w-full [&>span]:w-full [&>span]:justify-center" disabled={busy}>
+            <GradientButton type="submit" variant="solid" block disabled={busy}>
               {busy ? t('ops.common.saving') : t('ops.common.save')}
             </GradientButton>
           </form>

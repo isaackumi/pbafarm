@@ -664,7 +664,8 @@ function LimitsTab({ d }) {
                   <label key={f} className="flex items-center gap-2 text-text">
                     <Select
                       aria-label={f}
-                      className="!min-h-9 !py-1 w-28"
+                      size="sm"
+                      className="w-28"
                       value={features[f] === undefined ? '' : String(features[f])}
                       onChange={(e) =>
                         setFeatures((x) => {

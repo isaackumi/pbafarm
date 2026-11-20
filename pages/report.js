@@ -280,7 +280,7 @@ function Reports() {
                   </div>
                 </fieldset>
 
-                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} className="w-full [&>span]:grow [&>span]:justify-center">
+                <GradientButton variant="solid" icon={BarChart} onClick={generateReport} disabled={loading} block>
                   {loading ? t('ops.report.generating') : t('ops.report.generate')}
                 </GradientButton>
 

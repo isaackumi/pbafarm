@@ -113,7 +113,13 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
               titleProps={{ 'data-tour': 'header-title' }}
             />
           )}
-          <QueryBoundary resetKey={router.asPath}>{children}</QueryBoundary>
+          {/* Paper shell: page sections stack 28px apart. A page that wraps its
+              sections in one element is unaffected. */}
+          <QueryBoundary resetKey={router.asPath}>
+            <div className="flex min-w-0 flex-col gap-7" data-page-stack>
+              {children}
+            </div>
+          </QueryBoundary>
         </main>
       </div>
       <MobileTabBar onOpenMenu={() => setMobileNavOpen(true)} />

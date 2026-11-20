@@ -122,7 +122,9 @@
       "feedAnalytics": "Analyses aliment",
       "inventoryOverview": "Vue d'ensemble stocks",
       "inventoryAnalytics": "Analyses stocks"
-    }
+    },
+    "feedCover": "Autonomie aliment",
+    "feedCoverDays": "{count} jours"
   },
   "common": {
     "language": "Langue",

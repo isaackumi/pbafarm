@@ -152,25 +152,26 @@ export function HealthMeter({ score, label }) {
   )
 }
 
-/** Dashed pond outline used by empty states (Paper 62). */
+/** Cage collar on still water: dashed outer ring, faint inner ring (Paper 62 empty). */
 function EmptyGlyph() {
   return (
-    <svg width="64" height="40" viewBox="0 0 64 40" fill="none" aria-hidden className="text-line-strong">
-      <ellipse cx="32" cy="20" rx="29" ry="15" stroke="currentColor" strokeWidth="2" strokeDasharray="5 5" />
-      <ellipse cx="32" cy="20" rx="16" ry="7" className="fill-surface-2" />
+    <svg width="88" height="40" viewBox="0 0 88 40" fill="none" aria-hidden>
+      <ellipse cx="44" cy="22" rx="40" ry="12" className="stroke-line-strong" strokeWidth="2" strokeDasharray="4 5" />
+      <ellipse cx="44" cy="20" rx="30" ry="8" className="stroke-faint" strokeWidth="1.5" />
     </svg>
   )
 }
 
+/** Paper 62 empty state: glyph, 20/26 title, 14/20 body, action; 18px apart. */
 export function EmptyState({ title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 px-4 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-[18px] px-4 py-10 text-center">
       <EmptyGlyph />
-      <div className="flex flex-col gap-1.5">
-        <p className="text-base font-semibold leading-5 text-text">{title}</p>
-        {description && <p className="mx-auto max-w-sm text-sm leading-5 text-muted">{description}</p>}
+      <div className="flex flex-col gap-2">
+        <p className="text-[20px] font-semibold leading-[26px] tracking-[-0.02em] text-text">{title}</p>
+        {description && <p className="mx-auto max-w-sm text-[14px] leading-5 text-muted">{description}</p>}
       </div>
-      {action && <div className="mt-1">{action}</div>}
+      {action && <div>{action}</div>}
     </div>
   )
 }
@@ -436,9 +437,13 @@ export function Input({ className = '', ...props }) {
   return <input className={`${FIELD_CLASS} ${className}`} {...props} />
 }
 
-export function Select({ className = '', children, ...props }) {
+// Compact select for table toolbars (Paper 40 filters): 36px, content width.
+const FIELD_SM =
+  'w-auto rounded-input border border-line-strong bg-bg px-3.5 py-1 text-[13px] leading-4 text-text focus:outline-none focus:border-pearl-cyan focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--cyan)_25%,transparent)] disabled:opacity-50 disabled:cursor-not-allowed min-h-9'
+
+export function Select({ className = '', size = 'md', children, ...props }) {
   return (
-    <select className={`${FIELD_CLASS} ${className}`} {...props}>
+    <select className={`${size === 'sm' ? FIELD_SM : FIELD_CLASS} ${className}`} {...props}>
       {children}
     </select>
   )

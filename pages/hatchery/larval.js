@@ -156,7 +156,7 @@ function BatchPanel({ batch, onBack }) {
       </div>
       {tabs.length > 1 && (
         <div className="border-b border-line">
-          <Tabs variant="underline" label={t('hatcheryPage.larval.actions')} tabs={tabs} value={tab} onChange={setTab} />
+          <Tabs variant="page" label={t('hatcheryPage.larval.actions')} tabs={tabs} value={tab} onChange={setTab} />
         </div>
       )}
       {tab === 'log' && <DailyLog batch={batch} />}

@@ -122,7 +122,7 @@ function GradingActions() {
   const canGrade = usePermission('production.transfer.approve')
   return (
     <>
-      <GhostButton href="/fish-transfers" icon={ArrowLeftRight} size="lg" className="!h-[45px] !gap-2.5 !px-[22px] !text-[15px] font-medium !leading-[18px]">
+      <GhostButton href="/fish-transfers" icon={ArrowLeftRight} size="xl">
         {t('gradingPage.transfers')}
       </GhostButton>
       {canGrade && (

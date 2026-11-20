@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import type { MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import { scopedRows } from './lib/scope'
+import { assertSiteFilterInScope, rollupRowsInSiteScope, scopedRows, tenantScope } from './lib/scope'
 import {
   assertOwns,
   listForCompany,
@@ -777,5 +777,62 @@ export const siteLedgerTally = query({
       }
     }
     return rows
+  },
+})
+
+/**
+ * Sidebar "Feed cover" line (Paper 7Z-0): feed in stock and how many days it
+ * lasts at the average daily use over [from, to]. Reads the company's feed
+ * types and the unit-day rollups (no raw records). The client passes the
+ * window, so the query never reads the clock. Null when nothing was fed.
+ */
+export const coverSummary = query({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    locationId: v.optional(v.id('farmLocations')),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({ stock_kg: v.number(), daily_kg: v.number(), cover_days: v.number() }),
+  ),
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'inventory.view' })
+    const scope = tenantScope(user)
+    if (scope.kind !== 'company') return null
+    assertSiteFilterInScope(user, args.locationId)
+
+    const feedTypes = await ctx.db
+      .query('feedTypes')
+      .withIndex('by_company', (q) => q.eq('companyId', scope.companyId))
+      .take(500)
+    let stockKg = 0
+    for (const f of feedTypes) {
+      if (!f.active || f.deletedAt) continue
+      stockKg += args.locationId ? (await siteStock(ctx, f, args.locationId)).available : f.currentStock
+    }
+
+    const rows = await rollupRowsInSiteScope(
+      ctx,
+      user,
+      await ctx.db
+        .query('unitDailyStats')
+        .withIndex('by_companyId_and_date', (q) =>
+          q.eq('companyId', scope.companyId).gte('date', args.from).lte('date', args.to),
+        )
+        .take(10_000),
+    )
+    let usedKg = 0
+    for (const r of rows) {
+      if (args.locationId && r.locationId !== args.locationId) continue
+      usedKg += r.feedKg
+    }
+    const days = Math.max(
+      1,
+      Math.round((Date.parse(`${args.to}T00:00:00Z`) - Date.parse(`${args.from}T00:00:00Z`)) / 86_400_000) + 1,
+    )
+    const dailyKg = usedKg / days
+    if (!(dailyKg > 0)) return null
+    return { stock_kg: stockKg, daily_kg: dailyKg, cover_days: Math.max(0, stockKg / dailyKg) }
   },
 })

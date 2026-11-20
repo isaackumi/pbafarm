@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import PlatformLayout, { CONSOLE_KPI, CONSOLE_TABLE } from '../../../components/platform/PlatformLayout'
+import PlatformLayout from '../../../components/platform/PlatformLayout'
 import { GhostButton, KpiStrip, LoadingState, Select, StatusDot, Table } from '../../../components/ui'
 import { formatDate, formatMinor } from '../../../lib/billingFormat'
 import { useT } from '../../../lib/i18n/context'
@@ -28,7 +28,7 @@ function Kpis({ k }) {
   if (!k) return <LoadingState label={t('platform.tenants.loadingKpis')} />
   return (
     <KpiStrip
-      className={CONSOLE_KPI}
+      size="console"
       items={[
         { key: 'mrr', label: t('platform.tenants.kpi.mrr'), value: moneyList(k.mrr) },
         {
@@ -89,7 +89,7 @@ function TenantList({ k }) {
     <div className="flex flex-col gap-3">
       <div id="tenant-rows" role="tabpanel">
         <Table
-          className={CONSOLE_TABLE}
+          variant="console"
           tabs={tabs}
           tab={tab}
           onTabChange={reset(setTab)}
@@ -104,7 +104,7 @@ function TenantList({ k }) {
               </label>
               <Select
                 id="tenant-sub"
-                className="!min-h-9 !w-auto !py-1 text-sm"
+                size="sm"
                 value={tabFilter.subscriptionStatus || subscriptionStatus}
                 disabled={Boolean(tabFilter.subscriptionStatus)}
                 onChange={(e) => reset(setSubscriptionStatus)(e.target.value)}
@@ -119,7 +119,7 @@ function TenantList({ k }) {
               <label className="sr-only" htmlFor="tenant-plan">
                 {t('platform.tenants.plan')}
               </label>
-              <Select id="tenant-plan" className="!min-h-9 !w-auto !py-1 text-sm" value={planCode} onChange={(e) => reset(setPlanCode)(e.target.value)}>
+              <Select id="tenant-plan" size="sm" value={planCode} onChange={(e) => reset(setPlanCode)(e.target.value)}>
                 <option value="">{t('platform.tenants.anyPlan')}</option>
                 {(plans ?? []).map((p) => (
                   <option key={p.id} value={p.code}>
@@ -130,7 +130,7 @@ function TenantList({ k }) {
               <label className="sr-only" htmlFor="tenant-sort">
                 {t('platform.tenants.sort')}
               </label>
-              <Select id="tenant-sort" className="!min-h-9 !w-auto !py-1 text-sm" value={sort} onChange={(e) => reset(setSort)(e.target.value)}>
+              <Select id="tenant-sort" size="sm" value={sort} onChange={(e) => reset(setSort)(e.target.value)}>
                 {['newest', 'oldest', 'name', 'trialEnding'].map((s) => (
                   <option key={s} value={s}>
                     {t(`platform.tenants.sortBy.${s}`)}
