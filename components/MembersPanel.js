@@ -7,8 +7,9 @@ import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
-import { Avatar, CheckCell, GhostButton, GradientButton, Pill, Segmented, Table } from './ui'
+import { CheckCell, GhostButton, GradientButton, Pill, Table, initials } from './ui'
 import { CardNote, DangerRow, FIELD, InlineError, SettingsCard, SettingsRow } from './settings'
+import { TonePill } from './paperTones'
 
 export const ROLE_OPTIONS = [
   { value: 'owner', label: 'Owner' },
@@ -18,7 +19,8 @@ export const ROLE_OPTIONS = [
   { value: 'viewer', label: 'Viewer' },
 ]
 
-const ROLE_TONE = { owner: 'pink', admin: 'pink', manager: 'cyan' }
+/** Paper 14 role pills: Owner lime, Manager sky, the rest neutral. Admin sits with Owner. */
+const ROLE_TONE = { owner: 'lime', admin: 'lime', manager: 'sky' }
 
 /** Display name of a member's role: custom role name, else the template label. */
 export function useRoleLabel() {
@@ -31,6 +33,34 @@ export function useRoleLabel() {
     }
     return t.or(`settingsUi.team.role.${roleKey}`, roleKey)
   }
+}
+
+/**
+ * Paper 23 "All locations / Selected": 3px bg track with a line border,
+ * 6/14 items of 12/16 text, the active one filled in the button colour.
+ */
+function ScopeSwitch({ options, value, onChange, label }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-pill border border-line bg-bg p-[3px]">
+      {options.map((opt) => {
+        const on = opt.value === value
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(opt.value)}
+            className={`rounded-pill px-[14px] py-[6px] text-[12px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
+              on ? 'bg-button font-semibold text-button-text' : 'text-muted hover:text-text'
+            }`}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 function useSiteNames() {
@@ -139,7 +169,7 @@ export default function MembersPanel() {
       key: 'role',
       header: t('settingsUi.team.col.role'),
       width: 130,
-      render: (r) => <Pill tone={ROLE_TONE[r.roleKey] || 'neutral'}>{roleLabel(r.roleKey, r.roleId)}</Pill>,
+      render: (r) => <TonePill tone={ROLE_TONE[r.roleKey] || 'neutral'}>{roleLabel(r.roleKey, r.roleId)}</TonePill>,
     },
     {
       key: 'sites',
@@ -300,11 +330,11 @@ export function MemberDetail({ userId, renderShell }) {
 
   const actions = member && !isMe && (
     <>
-      <GradientButton icon={Check} disabled={!dirty || busy} onClick={save}>
+      <GradientButton variant="lime" icon={Check} disabled={!dirty || busy} onClick={save}>
         {t('settingsUi.team.save')}
       </GradientButton>
       <GradientButton
-        reverse
+        ring="sky"
         icon={UserRound}
         disabled={busy}
         onClick={() =>
@@ -336,10 +366,17 @@ export function MemberDetail({ userId, renderShell }) {
           {t('settingsUi.team.backToMembers')}
         </GhostButton>
         <InlineError>{error}</InlineError>
-        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className={`grid grid-cols-1 items-start gap-5 ${isMe ? '' : 'xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'}`}>
           <div className="flex min-w-0 flex-col gap-5">
             <section className="flex flex-wrap items-center gap-[18px] rounded-card border border-line bg-surface px-5 py-6 shadow-[var(--shadow-card)] sm:px-[26px]">
-              <Avatar name={label} size={56} />
+              {/* Paper 23: 56px sky-gradient disc, line-strong edge, 19/24 initials. */}
+              <span
+                aria-hidden
+                className="flex size-14 shrink-0 items-center justify-center rounded-pill border border-line-strong bg-origin-border text-[19px] font-semibold leading-6 text-text"
+                style={{ backgroundImage: 'var(--gradient-sky)' }}
+              >
+                {initials(label)}
+              </span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-[10px]">
                   <span className="text-[20px] font-semibold leading-6 text-text">{label}</span>
@@ -385,7 +422,7 @@ export function MemberDetail({ userId, renderShell }) {
             <SettingsCard
               title={t('settingsUi.team.siteScope')}
               action={
-                <Segmented
+                <ScopeSwitch
                   label={t('settingsUi.team.siteScope')}
                   value={state.allLocations ? 'all' : 'selected'}
                   onChange={(v) => update({ allLocations: v === 'all' })}
@@ -425,9 +462,6 @@ export function MemberDetail({ userId, renderShell }) {
                 </ul>
               )}
             </SettingsCard>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-5">
             <SettingsCard
               title={t('settingsUi.team.effective')}
               meta={t('settingsUi.team.grantedCount', { count: granted.length })}
@@ -437,12 +471,15 @@ export function MemberDetail({ userId, renderShell }) {
               ) : (
                 granted.map((key) => (
                   <SettingsRow key={key} label={permissionLabels.get(key) || key}>
-                    <Pill>{currentRole}</Pill>
+                    <TonePill>{currentRole}</TonePill>
                   </SettingsRow>
                 ))
               )}
             </SettingsCard>
-            {!isMe && (
+          </div>
+
+          {!isMe && (
+            <div className="flex min-w-0 flex-col gap-5">
               <SettingsCard title={t('settingsUi.team.dangerTitle')}>
                 <DangerRow label={t('settingsUi.team.remove')} helper={t('settingsUi.team.removeHelper')}>
                   <GhostButton
@@ -462,8 +499,8 @@ export function MemberDetail({ userId, renderShell }) {
                   </GhostButton>
                 </DangerRow>
               </SettingsCard>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </>
     )

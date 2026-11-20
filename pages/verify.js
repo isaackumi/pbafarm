@@ -14,12 +14,20 @@ import {
   AuthHeading,
   AuthInput,
   AuthLayout,
+  AuthSolid,
+  AuthStateCard,
   AuthSubmit,
+  DarkEmphasis,
   OtpInput,
+  StateIcon,
+  clock,
 } from '../components/auth/AuthUi'
 import { AuthenticatorEnrol, AuthenticatorVerify } from '../components/AuthenticatorApp'
 
 const CHANNEL_KEY = { sms: 'auth.verify.channelSms', whatsapp: 'auth.verify.channelWhatsapp' }
+/** Paper 61 "/verify" link line: sky on dark, muted on light. */
+const CARD_LINK =
+  'rounded-sm text-sky-ink hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink disabled:no-underline [html[data-theme=light]_&]:text-muted'
 const RESEND_SECONDS = 30
 
 /**
@@ -125,9 +133,10 @@ export default function VerifyPage() {
             title: t('auth.verify.titleConfirm'),
             subtitle: t('auth.verify.introConfirm', { phone: user.maskedPhone }),
           }
+  const codeCard = mode === 'sms' && channels.length > 0 && sentTo
   return (
-    <AuthLayout title={heading.title}>
-      <AuthHeading title={heading.title} subtitle={heading.subtitle} />
+    <AuthLayout title={codeCard ? t('authUi.verify.codeTitle') : heading.title}>
+      {!codeCard && <AuthHeading title={heading.title} subtitle={heading.subtitle} />}
 
       {error && <AuthAlert>{error}</AuthAlert>}
 
@@ -175,31 +184,45 @@ export default function VerifyPage() {
           </AuthSubmit>
         </form>
       ) : (
-        <form className="flex flex-col gap-[22px]" onSubmit={verify}>
-          <p className="text-sm leading-5 text-muted">
-            {t('auth.verify.codeSent', { channel: channelLabel(channel), to: sentTo })}
-          </p>
-          <OtpInput id="mfa-code" label={t('common.code')} value={code} onChange={setCode} autoFocus />
-          <div className="flex items-center justify-between gap-3 text-[13px] leading-4">
-            <button
-              type="button"
-              className={AUTH_LINK}
-              onClick={() => {
-                setSentTo(null)
-                setCode('')
-                setError('')
-              }}
-            >
-              {enrolling ? t('common.changeNumber') : t('auth.verify.chooseAnother')}
-            </button>
-            <button type="button" className={AUTH_LINK} disabled={cooldown > 0 || busy} onClick={send}>
-              {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
-            </button>
-          </div>
-          <AuthSubmit disabled={busy || code.length !== 6}>
-            {busy ? t('common.checking') : t('common.verify')}
-          </AuthSubmit>
-        </form>
+        // Paper 61 "/verify" card: code boxes, the drawn disabled Verify, one link line.
+        <AuthStateCard
+          icon={StateIcon.phone}
+          title={t('authUi.verify.codeTitle')}
+          body={
+            <>
+              {t(channel === 'whatsapp' ? 'authUi.verify.sentBy.whatsapp' : 'authUi.verify.sentBy.sms')}{' '}
+              <DarkEmphasis>{sentTo}</DarkEmphasis>
+            </>
+          }
+        >
+          <form className="flex flex-col gap-5" onSubmit={verify}>
+            <OtpInput id="mfa-code" card label={t('common.code')} value={code} onChange={setCode} autoFocus />
+            <AuthSolid type="submit" disabled={busy || code.length !== 6}>
+              {busy ? t('common.checking') : t('common.verify')}
+            </AuthSolid>
+            <p className="text-[13px] leading-4 text-sky-ink [html[data-theme=light]_&]:text-muted">
+              <button
+                type="button"
+                className={CARD_LINK}
+                onClick={() => {
+                  setSentTo(null)
+                  setCode('')
+                  setError('')
+                }}
+              >
+                {enrolling ? t('common.changeNumber') : t('auth.verify.chooseAnother')}
+              </button>
+              {' · '}
+              {cooldown > 0 ? (
+                <span aria-live="polite">{t('authUi.verify.resendIn', { time: clock(cooldown) })}</span>
+              ) : (
+                <button type="button" className={CARD_LINK} disabled={busy} onClick={send}>
+                  {t('authUi.verify.resend')}
+                </button>
+              )}
+            </p>
+          </form>
+        </AuthStateCard>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] leading-4">
@@ -215,7 +238,7 @@ export default function VerifyPage() {
         )}
         <button
           type="button"
-          className="ml-auto rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          className="ml-auto rounded text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
           onClick={async () => {
             await signOut({ force: true })
             router.replace('/login')

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { LayoutGrid, RotateCcw, Save, ClipboardPen, Wheat } from 'lucide-react'
+import { LayoutGrid, RotateCcw, Save } from 'lucide-react'
+import { DownloadIcon, PencilIcon } from '../lib/navIcons'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
@@ -284,21 +285,27 @@ function DashboardView() {
       render: (r) => (r.fish_count != null ? Number(r.fish_count).toLocaleString() : '—'),
     },
     {
-      key: 'abw',
-      header: t('home.activity.abw'),
+      // Paper 01 "Biomass": stocked fish × ABW, "0.36 t" / "620 kg"
+      key: 'biomass',
+      header: t('home.activity.biomass'),
       width: 130,
       align: 'right',
-      render: (r) => (r.initial_abw != null ? `${Number(r.initial_abw).toFixed(1)} g` : '—'),
+      render: (r) => {
+        if (r.fish_count == null || r.initial_abw == null) return '—'
+        const kg = (Number(r.fish_count) * Number(r.initial_abw)) / 1000
+        return kg >= 1000 ? `${(kg / 1000).toFixed(2)} t` : `${Math.round(kg).toLocaleString()} kg`
+      },
     },
     {
       key: 'status',
-      header: t('home.activity.status'),
+      // Paper 01: status column inset 28px (12px cell padding + 16px)
+      header: <span className="pl-4">{t('home.activity.status')}</span>,
       width: 180,
       render: (r) =>
         r.status ? (
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 pl-4">
             <StatusDot tone={statusTone[r.status] || 'neutral'} />
-            <span className="text-muted">{t.or(`home.stockingStatus.${r.status}`, r.status)}</span>
+            <span className="text-[13px] leading-4 text-muted">{t.or(`home.stockingStatus.${r.status}`, r.status)}</span>
           </span>
         ) : (
           '—'
@@ -415,7 +422,9 @@ function DashboardView() {
     ? t(`home.greeting.${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}`, { name: firstName })
     : t('home.greeting.anon')
 
-  const eyebrow = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  // Paper 01: "Wednesday, 18 Nov"
+  const now = new Date()
+  const eyebrow = `${now.toLocaleDateString(undefined, { weekday: 'long' })}, ${now.getDate()} ${now.toLocaleDateString(undefined, { month: 'short' })}`
   const canCustomize = canReports && !customizing
   const canLogDaily = can(routePermission('/daily-entry'))
   const canIssueFeed = can(routePermission('/feed-issue'))
@@ -435,12 +444,12 @@ function DashboardView() {
                   </SkyButton>
                 )}
                 {canLogDaily && (
-                  <SkyButton href="/daily-entry" tone="lime" icon={ClipboardPen}>
+                  <SkyButton href="/daily-entry" tone="lime" icon={PencilIcon}>
                     {t('home.logDaily')}
                   </SkyButton>
                 )}
                 {canIssueFeed && (
-                  <SkyButton href="/feed-issue" icon={Wheat}>
+                  <SkyButton href="/feed-issue" icon={DownloadIcon}>
                     {t('home.issueFeed')}
                   </SkyButton>
                 )}
@@ -459,13 +468,14 @@ function DashboardView() {
                   {t('dashboardLayout.customize')}
                 </GhostButton>
               )}
+              {/* Paper 01: lime primary, sky-ring secondary */}
               {canLogDaily && (
-                <GradientButton href="/daily-entry" icon={ClipboardPen}>
+                <GradientButton href="/daily-entry" variant="lime" icon={PencilIcon}>
                   {t('home.logDaily')}
                 </GradientButton>
               )}
               {canIssueFeed && (
-                <GradientButton href="/feed-issue" reverse icon={Wheat}>
+                <GradientButton href="/feed-issue" icon={DownloadIcon}>
                   {t('home.issueFeed')}
                 </GradientButton>
               )}

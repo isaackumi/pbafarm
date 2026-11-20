@@ -1,5 +1,6 @@
 import { CloudOff } from 'lucide-react'
-import { Button, Modal } from './ui'
+import { GhostButton, GradientButton, Modal } from './ui'
+import { DangerButton } from './ui/Modal'
 import { useT } from '../lib/i18n/context'
 
 /**
@@ -31,15 +32,15 @@ export default function SignOutOutboxDialog({
       description={t('overlay.outbox.body')}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} disabled={sending}>
+          <GhostButton size="dialog" className="justify-center" onClick={onCancel} disabled={sending}>
             {t('common.cancel')}
-          </Button>
-          <Button variant="danger" onClick={onDiscard} disabled={sending}>
+          </GhostButton>
+          <DangerButton onClick={onDiscard} disabled={sending}>
             {t('overlay.outbox.discard')}
-          </Button>
-          <Button onClick={onSend} disabled={sending || !online}>
+          </DangerButton>
+          <GradientButton variant="solid" size="row" className="justify-center" onClick={onSend} disabled={sending || !online}>
             {sending ? t('common.sending') : t('overlay.outbox.send')}
-          </Button>
+          </GradientButton>
         </>
       }
     >

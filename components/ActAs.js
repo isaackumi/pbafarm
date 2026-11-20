@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { Eye } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { errorMessage } from '../lib/errorMessage'
 import { Button, Field, Input, Modal, Textarea } from './ui'
 import { useT } from '../lib/i18n/context'
+import { getActiveLocale } from '../lib/format'
 
-function minutesLeft(expiresAt, now) {
-  return Math.max(0, Math.ceil((expiresAt - now) / 60_000))
+/** Clock time the session ends, e.g. "08:15" (Paper 63 "ends 08:15"). */
+function endsAt(expiresAt) {
+  return new Intl.DateTimeFormat(getActiveLocale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    new Date(expiresAt),
+  )
 }
 
 /**
@@ -27,25 +30,30 @@ export function ActAsBanner() {
     return () => clearInterval(id)
   }, [session])
   if (!session || session.expiresAt <= now) return null
-  const left = minutesLeft(session.expiresAt, now)
   return (
-    // Paper 63 act-as strip: gradient hairline under a pink-tinted bar.
-    <div role="status" className="sticky top-0 z-40 pb-[1.5px]" style={{ backgroundImage: 'var(--gradient-brand)' }}>
-      <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-3.5 gap-y-1 bg-[color:var(--banner-pink-bg)] px-4 py-2 text-[13px] leading-4">
-        <Eye className="h-4 w-4 shrink-0 text-pink" aria-hidden />
+    // Paper 63 act-as strip: 44px, 1.5px sky-gradient hairline under the bar.
+    // Dark: #0F1A2B bar, sky eye, muted tail, lime-outlined Exit. Light:
+    // #F3FAD6 bar, lime-ink eye, text-colour tail, ink-filled Exit.
+    <div role="status" className="sticky top-0 z-40 pb-[1.5px]" style={{ backgroundImage: 'var(--gradient-sky)' }}>
+      <div className="flex min-h-[42.5px] flex-wrap items-center justify-center gap-x-3.5 gap-y-1 bg-[#0F1A2B] px-4 py-2 text-[13px] leading-4 [[data-theme=light]_&]:bg-[#F3FAD6]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-sky-ink [[data-theme=light]_&]:text-lime-ink" aria-hidden>
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
         <span className="text-text">
           {t('overlay.actAs.viewingAs')} <b className="font-semibold">{session.companyName}</b>
-          <span className="text-muted">
+          <span className="text-muted [[data-theme=light]_&]:text-text">
             {' · '}
             {session.allowWrites ? t('overlay.actAs.writes') : t('overlay.actAs.readOnly')}
             {' · '}
-            {t('overlay.actAs.endsIn', { minutes: left })}
+            {t('overlay.actAs.endsAt', { time: endsAt(session.expiresAt) })}
             {session.reason ? ` · ${session.reason}` : ''}
           </span>
         </span>
         <button
           type="button"
-          className="rounded-pill border border-[color:var(--pill-pink-border)] px-3.5 py-1 text-xs font-medium leading-4 text-pink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+          aria-label={t('overlay.actAs.exitLabel')}
+          className="rounded-pill border border-[#4A5A1C] px-3.5 py-1 text-xs font-medium leading-4 text-lime-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan [[data-theme=light]_&]:border-ink [[data-theme=light]_&]:bg-ink [[data-theme=light]_&]:text-white [[data-theme=light]_&]:hover:opacity-90"
           onClick={() => stop({}).then(() => window.location.reload())}
         >
           {t('overlay.actAs.exit')}

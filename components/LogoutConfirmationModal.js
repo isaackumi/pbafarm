@@ -1,6 +1,7 @@
 // components/LogoutConfirmationModal.js
 import { LogOut } from 'lucide-react'
-import { Button, Modal } from './ui'
+import { GhostButton, Modal } from './ui'
+import { DangerButton } from './ui/Modal'
 import { useT } from '../lib/i18n/context'
 
 const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
@@ -15,12 +16,10 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
       description={t('overlay.logout.body')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <GhostButton size="dialog" className="justify-center" onClick={onClose}>
             {t('common.cancel')}
-          </Button>
-          <Button variant="danger" onClick={onConfirm}>
-            {t('overlay.logout.confirm')}
-          </Button>
+          </GhostButton>
+          <DangerButton onClick={onConfirm}>{t('overlay.logout.confirm')}</DangerButton>
         </>
       }
     />

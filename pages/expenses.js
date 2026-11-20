@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import { Download, Plus } from 'lucide-react'
 import { Field, GhostButton, GradientButton, Input, KpiStrip, Pill, Select, Table } from '../components/ui'
 import NavTabs from '../components/ui/NavTabs'
-import { ListRow, Panel } from '../components/ui/Panel'
+import { Panel } from '../components/ui/Panel'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -18,6 +18,8 @@ import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLay
 import { useT } from '../lib/i18n/context'
 import { financeTabs } from '../lib/sectionTabs'
 import { costBuildUp, splitDirect, summarizePnl } from '../lib/pnlSummary'
+import { paperMoney } from '../lib/financeFormat'
+import BreakdownRow, { breakdownDot } from '../components/finance/BreakdownRow'
 
 export default function ExpensesPage() {
   return (
@@ -47,7 +49,8 @@ function Expenses() {
   const canRecord = usePermission('finance.expenses.record')
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
-  const { formatCurrency, symbol } = useCurrency()
+  const { formatCurrency, symbol, currency } = useCurrency()
+  const money = (n, opts) => paperMoney(n, currency, opts)
 
   const [dateFrom, setDateFrom] = useState(monthStart())
   const [dateTo, setDateTo] = useState(today())
@@ -238,6 +241,7 @@ function Expenses() {
         <>
           {canRecord && (
             <GradientButton
+              variant="lime"
               icon={Plus}
               onClick={() => {
                 setShowForm(true)
@@ -247,7 +251,7 @@ function Expenses() {
               {t('ops.pnl.addExpense')}
             </GradientButton>
           )}
-          <GradientButton reverse icon={Download} onClick={exportCsv} disabled={rows.length === 0}>
+          <GradientButton ring="sky" icon={Download} onClick={exportCsv} disabled={rows.length === 0}>
             {t('ops.expenses.exportCsv')}
           </GradientButton>
         </>
@@ -260,22 +264,22 @@ function Expenses() {
         items={[
           {
             label: t('ops.expenses.costPerKg'),
-            value: pnlTotals.costPerKg == null ? '—' : formatCurrency(pnlTotals.costPerKg),
+            value: pnlTotals.costPerKg == null ? '—' : money(pnlTotals.costPerKg, { decimals: 2 }),
             suffix: pnlTotals.costPerKg == null ? undefined : t('ops.expenses.inclOverheads'),
           },
           {
             label: t('ops.expenses.total'),
-            value: data === undefined ? '—' : formatCurrency(data.total),
+            value: data === undefined ? '—' : money(data.total, { compact: true }),
             suffix: data === undefined ? undefined : t('ops.expenses.entries', { count: rows.length }),
           },
           {
             label: t('ops.expenses.direct'),
-            value: data === undefined ? '—' : formatCurrency(split.direct),
+            value: data === undefined ? '—' : money(split.direct, { compact: true }),
             suffix: split.directPct == null ? undefined : `${split.directPct}%`,
           },
           {
             label: t('ops.expenses.siteWide'),
-            value: data === undefined ? '—' : formatCurrency(split.overhead),
+            value: data === undefined ? '—' : money(split.overhead, { compact: true }),
             suffix: split.overheadPct == null ? undefined : `${split.overheadPct}%`,
           },
         ]}
@@ -395,7 +399,8 @@ function Expenses() {
                         className={`shrink-0 rounded-[6px] ${l.key === '__total' ? 'bg-button' : ''}`}
                         style={{
                           height: `${Math.max((l.perKg / barMax) * 100, 2)}%`,
-                          ...(l.key === '__total' ? {} : { backgroundImage: 'linear-gradient(in oklab 180deg, var(--cyan-fill) 0%, var(--pink-fill) 100%)' }),
+                          // Paper 19 (48S-0): #8EC2F7 → #1562D6 top to bottom; the total bar is #E4E6E8 (bg-button).
+                          ...(l.key === '__total' ? {} : { backgroundImage: 'linear-gradient(in oklab 180deg, #8EC2F7 0%, #1562D6 100%)' }),
                         }}
                       />
                     </div>
@@ -412,12 +417,12 @@ function Expenses() {
             <p className="border-t border-line py-[11px] text-[13px] text-muted">{data === undefined ? t('common.loading') : t('ops.expenses.empty')}</p>
           ) : (
             byCategory.map(([key, amount], i) => (
-              <ListRow
+              <BreakdownRow
                 key={key}
-                dot={i === 0 ? 'cyan' : i === 1 ? 'pink' : 'neutral'}
+                dotClass={breakdownDot(i)}
                 title={labelOf(key)}
                 sub={data.total > 0 ? `${Math.round((amount / data.total) * 100)}%` : undefined}
-                value={formatCurrency(amount)}
+                value={money(amount, { compact: true })}
               />
             ))
           )}
@@ -486,7 +491,10 @@ function Expenses() {
             key: 'type',
             header: t('ops.expenses.type'),
             render: (r) => (
-              <Pill tone={r.cage_id ? 'cyan' : 'neutral'}>{r.cage_id ? t('ops.expenses.directPill') : t('ops.expenses.sitePill')}</Pill>
+              // Paper 19 type pills: a cage cost is sky like "Production" (#1F3E6E / #6AA8F5), site-wide is neutral like "Overhead".
+              <Pill tone="neutral" className={r.cage_id ? '!border-[#1F3E6E] !text-sky-ink' : ''}>
+                {r.cage_id ? t('ops.expenses.directPill') : t('ops.expenses.sitePill')}
+              </Pill>
             ),
           },
           { key: 'date', header: t('ops.expenses.date'), render: (r) => <span className="tabular-nums">{r.date}</span> },

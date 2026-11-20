@@ -291,7 +291,7 @@
     "logged": "Logged",
     "selectAllOpen": "Select all open",
     "copying": "Copying…",
-    "sameAsYesterday": "Same as yesterday",
+    "sameAsYesterday": "Copy yesterday's feed",
     "clearAll": "Clear all",
     "qrCodes": "Cage QR codes",
     "loggedCount": "{logged} of {total} cages already logged for {date}",
@@ -397,7 +397,12 @@
       "water": "Water",
       "editAria": "Edit {cage} on {date}",
       "deleteAria": "Delete {cage} on {date}"
-    }
+    },
+    "footerTotals": {
+      "one": "{feed} kg feed · {count} mortality",
+      "other": "{feed} kg feed · {count} mortalities"
+    },
+    "speciesBiomass": "{species} · {biomass}"
   },
   "biweekly": {
     "pageTitle": "Bi-weekly entry",
@@ -442,18 +447,18 @@
     "saveSamples": "Save samples",
     "records": {
       "title": "Sampling & growth",
-      "eyebrow": "Production · Bi-weekly weigh-ins",
+      "eyebrow": "Production · Bi-weekly sampling",
       "loading": "Loading sampling records…",
       "newSampling": "New sampling",
       "export": "Export CSV",
-      "kpiAvgAbw": "Average ABW",
-      "kpiAdg": "Daily gain",
+      "kpiAvgAbw": "Avg ABW",
+      "kpiAdg": "ADG",
       "gPerDay": "g/day",
-      "kpiSampled14": "Sampled · 14 days",
-      "ofCages": "of {total}",
+      "kpiSampled14": "Sampled · 14d",
+      "ofCages": "of {total} cages",
       "kpiFish": "Fish counted · this page",
       "abwByCage": "ABW by cage",
-      "abwByCageHint": "Latest sampling, grams",
+      "abwByCageHint": "Last sample · grams",
       "tableTitle": "Samplings",
       "rangeAll": "All time",
       "range30": "Last 30 days",
@@ -463,7 +468,7 @@
       "colDate": "Date",
       "colCage": "Cage",
       "colBatch": "Batch",
-      "colSample": "Samples",
+      "colSample": "Sample",
       "colTotal": "Fish",
       "colAbw": "ABW",
       "colGain": "Gain",
@@ -477,7 +482,21 @@
       "noMatch": "No samplings match these filters.",
       "pageOf": "Page {page} of {pages} · {total} records",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "allActive": "all active cages",
+      "kpiNextRound": "Next round",
+      "inDays": {
+        "one": "in {count} day",
+        "other": "in {count} days"
+      },
+      "dueToday": "today",
+      "overdue": {
+        "one": "{count} day late",
+        "other": "{count} days late"
+      },
+      "colWeight": "Weight",
+      "fishN": "{n} fish",
+      "gPerDayUnit": "{value} g/day"
     },
     "eyebrow": "Production · Bi-weekly sampling"
   },
@@ -920,7 +939,7 @@
       "board": "Board",
       "broodstock": "Broodstock",
       "spawning": "Spawning",
-      "larval": "Larvae & fingerlings",
+      "larval": "Larvae & nursery",
       "liveFeed": "Live feed"
     },
     "kpi": {
@@ -939,7 +958,7 @@
       "one": "{count} lot",
       "other": "{count} lots"
     },
-    "survival": "{pct} survival",
+    "survival": "survival {pct}",
     "batchesN": {
       "one": "{count} batch",
       "other": "{count} batches"
@@ -1404,26 +1423,31 @@
     "eyebrow": "Live · {readings} on {units} · updated {updated}",
     "eyebrowSite": "Sensors · {site}",
     "readingsN": {
-      "one": "{count} reading",
-      "other": "{count} readings"
+      "one": "{count} sensor",
+      "other": "{count} sensors"
     },
     "unitsOn": {
       "one": "{count} unit",
       "other": "{count} units"
     },
     "alertRules": "Alert rules",
+    "period": {
+      "24h": "24h",
+      "7d": "7d",
+      "30d": "30d"
+    },
     "editThresholds": "Edit thresholds",
     "kpi": {
-      "reporting": "Reporting",
+      "reporting": "Online",
       "quietN": {
-        "one": "{count} quiet",
-        "other": "{count} quiet"
+        "one": "{count} offline",
+        "other": "{count} offline"
       },
       "unitsN": {
         "one": "on {count} unit",
         "other": "on {count} units"
       },
-      "breaches": "Breaches · {period}",
+      "breaches": "Alerts · {period}",
       "lowDo": {
         "one": "{count} low DO",
         "other": "{count} low DO"
@@ -1438,7 +1462,7 @@
       "alert": "Alert",
       "warn": "Breached",
       "good": "Online",
-      "offline": "Quiet"
+      "offline": "Offline"
     },
     "minAvgMax": "Min {min} · avg {avg} · max {max}",
     "minMax": "{min} – {max}",
@@ -1458,7 +1482,7 @@
     "tab": {
       "all": "All",
       "alerts": "Alerts",
-      "quiet": "Quiet"
+      "quiet": "Offline"
     },
     "search": "Search units or parameters",
     "noMatch": "No readings match.",
@@ -1504,8 +1528,8 @@
     "grade": "grade {grade}",
     "avgG": "avg {g} g",
     "dispatchCount": {
-      "one": "{count} dispatch",
-      "other": "{count} dispatches"
+      "one": "{count} truck",
+      "other": "{count} trucks"
     },
     "openCount": {
       "one": "{count} open",
@@ -2053,7 +2077,17 @@
       "noSubsidiaries": "No subsidiaries share reports yet",
       "noSubsidiariesHint": "Link a subsidiary in Organization structure; its admins accept and choose to share reports.",
       "sitesOf": "Sites of {name}",
-      "yourOrg": "your organization"
+      "yourOrg": "your organization",
+      "pageTitle": "Group & regions",
+      "eyebrow": "Reports · Group roll-up across linked companies",
+      "linkCompany": "Link company",
+      "comparison": "Company comparison",
+      "comparisonHint": "Only metrics each company shares with the group",
+      "total": "Group total",
+      "totalSub": {
+        "one": "{count} company",
+        "other": "{count} companies"
+      }
     },
     "regions": {
       "title": "Regional report",
@@ -2381,7 +2415,7 @@
       "unit": "Unit",
       "batch": "Batch",
       "fish": "Fish",
-      "abw": "Stocked ABW",
+      "biomass": "Biomass",
       "status": "Status",
       "stocking": "Stocking",
       "empty": "No stockings yet. Create a stocking batch to track days of culture and biomass.",
@@ -2427,12 +2461,12 @@
     "filterGroup": "Group",
     "allGroups": "All groups",
     "filterSpecies": "Species",
-    "anySpecies": "Species: any",
+    "anySpecies": "Species: Any",
     "alertsOnly": "Alerts only · {count}",
     "emptyTitle": "No units yet",
     "emptyBody": "Add your cages, ponds or tanks to see them here.",
     "noMatch": "No units match these filters.",
-    "eyebrow": "{stocked} stocked · {idle} fallow or empty · {units} units",
+    "eyebrow": "{stocked} active · {idle} fallow",
     "densityOfLimit": "Stocking density, share of the limit",
     "signal": {
       "doLow": "DO {value} low",
@@ -2448,7 +2482,10 @@
       "harvested": "Harvested",
       "fallow": "Fallow",
       "maintenance": "Maintenance"
-    }
+    },
+    "speciesDay": "{species} · Day {day}",
+    "eyebrowSite": "{stocked} active · {idle} fallow · {site}",
+    "allRows": "All rows"
   },
   "cagesTable": {
     "eyebrow": "{active} stocked · {total} units",
@@ -2495,24 +2532,35 @@
   },
   "mapUi": {
     "title": "Farm map",
-    "eyebrow": {
-      "one": "Cages · {count} placed unit",
-      "other": "Cages · {count} placed units"
+    "crumb": "Cages",
+    "unitCount": {
+      "one": "{count} unit",
+      "other": "{count} units"
     },
+    "unitsOn": {
+      "one": "{count} unit on {water}",
+      "other": "{count} units on {water}"
+    },
+    "addCage": "Add cage",
+    "editLayout": "Edit layout",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "maintenance": "Maintenance",
+    "checkOverdue": "Check overdue",
     "loading": "Loading map…",
     "legendLabel": "Legend",
     "legend": {
       "inRange": "In range",
       "watch": "Watch",
       "alert": "Alert",
-      "idle": "Fallow or empty"
+      "idle": "Fallow"
     },
     "emptyTitle": "Nothing to place yet",
     "emptyBody": "Give your units, groups or sites a latitude and longitude to see them on the map.",
     "doShort": "{value} mg/L",
-    "do": "DO",
+    "do": "Dissolved O₂",
     "biomass": "Biomass",
-    "abw": "ABW",
+    "abw": "Avg weight",
     "fish": "Fish",
     "units": "Units",
     "stocked": "Stocked",
@@ -2636,16 +2684,62 @@
   },
   "equipmentUi": {
     "title": "Equipment",
-    "eyebrow": "Aerators, feeders, power, nets and moorings",
+    "eyebrow": "Cages · Aerators, feeders, power, nets",
     "logInspection": "Log inspection",
     "add": "Add equipment",
     "kpi": {
       "dueWeek": "Due this week",
       "overdue": "Overdue",
       "faulty": "Faulty or in repair",
+      "findings": "Open findings",
       "inService": "In service"
     },
     "ofActive": "of {count}",
+    "faultyCount": "{count} faulty or in repair",
+    "oldest": {
+      "one": "oldest {count} day",
+      "other": "oldest {count} days"
+    },
+    "critical": "{count} critical",
+    "dueGroup": {
+      "aeration": {
+        "one": "{count} aerator",
+        "other": "{count} aerators"
+      },
+      "power": {
+        "one": "{count} generator",
+        "other": "{count} generators"
+      },
+      "nets": {
+        "one": "{count} net",
+        "other": "{count} nets"
+      },
+      "misc": {
+        "one": "{count} other",
+        "other": "{count} other"
+      }
+    },
+    "statusPill": {
+      "overdue": "Overdue {days}d",
+      "dueToday": "Due today",
+      "dueSoon": "Due soon",
+      "calibrateSoon": "Calibrate soon",
+      "findings": {
+        "one": "{count} finding",
+        "other": "{count} findings"
+      },
+      "ok": "OK"
+    },
+    "inspection": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "none": "No inspection logged yet.",
+      "noChecklist": "Last inspected {date}, without a checklist.",
+      "finding": "Finding · {text}",
+      "fixBy": "fix by {date}",
+      "submit": "Submit inspection",
+      "addFinding": "Add finding"
+    },
     "registry": "Equipment",
     "tab": {
       "all": "All",
@@ -2721,8 +2815,8 @@
     "noLocation": "No location"
   },
   "qrUi": {
-    "title": "Cage QR codes",
-    "eyebrow": "Print labels · one per unit",
+    "title": "QR labels",
+    "eyebrow": "Cages · Printable unit labels",
     "print": "Print",
     "help": "Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in. Codes stay valid if the app moves to a new address; labels printed earlier keep working.",
     "loading": "Loading cages…",
@@ -2730,7 +2824,11 @@
     "emptyDescription": "Create a cage first, then come back to print its code.",
     "create": "Create a cage",
     "cage": "Cage",
-    "scanTo": "Scan to log feed"
+    "scanTo": "Scan to log feed",
+    "printN": {
+      "one": "Print {count} label",
+      "other": "Print {count} labels"
+    }
   },
   "tasksUi": {
     "title": "My tasks",
@@ -2869,7 +2967,7 @@
   "calendarUi": {
     "title": "Calendar",
     "eyebrow": "Operations · {month}",
-    "schedule": "Schedule a task",
+    "schedule": "Schedule",
     "prev": "Previous month",
     "next": "Next month",
     "today": "Today",
@@ -2953,7 +3051,49 @@
     "coverage": "{planned} of {total} units have a ration",
     "why": "Why",
     "countFrom": "Fish count: {stocked} stocked + {transferredIn} in − {transferredOut} out − {harvested} harvested − {mortality} dead − {unaccounted} unaccounted = {count}.",
-    "neverApplied": "A suggestion only: it is never entered for you. Adjust to appetite and water quality."
+    "neverApplied": "A suggestion only: it is never entered for you. Adjust to appetite and water quality.",
+    "paper": {
+      "title": "Feed types & plans",
+      "eyebrow": "Feed & inventory · Rations by weight band",
+      "newPlan": "New plan",
+      "activePlans": "Active plans",
+      "cagesOnPlan": {
+        "one": "{count} cage on plan",
+        "other": "{count} cages on plan"
+      },
+      "rationToday": "Ration today",
+      "issuedSoFar": "{amount} issued so far",
+      "fcr30d": "Farm FCR · 30d",
+      "feedCover": "Feed cover",
+      "inStore": "{amount} in store",
+      "plans": "Plans",
+      "weightBand": "Weight band",
+      "pellet": "Pellet",
+      "feed": "Feed",
+      "bwPerDay": "% BW / day",
+      "meals": {
+        "one": "{count} meal",
+        "other": "{count} meals"
+      },
+      "cages": "Cages",
+      "band": "{from} – {to} g",
+      "bandOpen": "{from} g +",
+      "skus": {
+        "one": "{count} SKU",
+        "other": "{count} SKUs"
+      },
+      "bags": "{kg} kg bags",
+      "perBag": "{amount} / bag",
+      "today": "Today · {day}",
+      "biomass": "{kg} kg biomass · avg {abw} g",
+      "planPct": "Plan · {pct}% body weight",
+      "tempCut": "Water temperature · {temp} °C",
+      "meal": "Meal {n}",
+      "fromStore": "From store · {feed}",
+      "bagCount": "{count} bags",
+      "issueTo": "Issue {amount} to {cage}",
+      "issueNote": "Logged to inventory and the cage's feed bin"
+    }
   },
   "customizePage": {
     "tab": {
@@ -3202,7 +3342,9 @@
       "nextAttempt": "Next try {when}",
       "more": "Load more",
       "emptyTitle": "No deliveries yet",
-      "emptyBody": "Scheduled and sent-now reports appear here."
+      "emptyBody": "Scheduled and sent-now reports appear here.",
+      "title": "Recent exports",
+      "range": "Range"
     }
   },
   "integ": {
@@ -3702,6 +3844,7 @@
       "custom": "custom",
       "template": "template",
       "basedOn": "Based on {role}",
+      "basedOnPrefix": "Based on",
       "permissionCount": {
         "one": "{count} permission",
         "other": "{count} permissions"
@@ -4046,6 +4189,7 @@
     },
     "ai": {
       "crumb": "Your farm's AI co-pilot",
+      "open": "Open Anowa",
       "policy": {
         "title": "Anowa policy",
         "meta": "What Anowa may do for your team",
@@ -5152,29 +5296,45 @@
     "notOwner": "Not the owner? Ask your organization's owner to pay, or switch to another workspace."
   },
   "authUi": {
-    "footerSecure": "Secured sign-in · your data stays with your company",
+    "footerSecure": "🔒 Protected by 2-step verification",
     "show": "Show",
     "hide": "Hide",
     "or": "or",
     "humanFailed": "Human check failed",
     "strength": {
-      "weak": "Weak password",
-      "fair": "Fair password",
-      "good": "Good password",
-      "strong": "Strong password"
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong",
+      "hintStrong": "12+ characters",
+      "hintMore": "add a number or phrase"
     },
     "panel": {
-      "loginEyebrow": "Farm operations",
-      "loginHeadline": "Every cage, pond and tank, in one calm place.",
-      "signupEyebrow": "New workspace",
-      "signupHeadline": "Set up your farm in an afternoon.",
       "inviteEyebrow": "You're invited",
       "inviteHeadline": "Your team already runs its farm here.",
-      "cardAutomationLabel": "Automation resolved",
-      "cardAutomationTitle": "C-07 oxygen back to 6.0 mg/L",
-      "cardAutomationMeta": "Aerator task closed by Kofi A. · 06:31",
-      "cardOvernightLabel": "Overnight",
-      "cardOvernightMeta": "cages logged · 7 due by 09:00"
+      "login": {
+        "eyebrow": "Akosombo · 06:42 · 27 °C",
+        "headline": "Your farm kept working while you slept.",
+        "cardTopLabel": "Automation resolved",
+        "cardTopTitle": "C-07 oxygen back to 6.0 mg/L",
+        "cardTopMeta": "Aerator task closed by Kofi A. · 06:31",
+        "cardLeftLabel": "Overnight",
+        "cardLeftValue": "31 / 38",
+        "cardLeftMeta": "cages logged · 7 due by 09:00"
+      },
+      "signup": {
+        "eyebrow": "Week one · What you get",
+        "headline": "Every cage, every feed bag, one calm place.",
+        "cardTopLabel": "Free for 30 days",
+        "cardTopTitle": "Up to 10 cages · no card needed",
+        "cardTopMeta": "Invite your team after setup",
+        "cardLeftLabel": "Setup time",
+        "cardLeftValue": "~ 4 min",
+        "cardLeftMeta": "company · sites · first cages"
+      },
+      "quote": "“FCR went from 1.7 to 1.4 in one cycle.”",
+      "quoteBy": "Kwame Agyei · PBA Farm Ltd",
+      "reach": "40+ farms · 3 countries"
     },
     "login": {
       "title": "Welcome back",
@@ -5183,16 +5343,19 @@
       "tabSso": "SSO",
       "codeTitle": "Enter your code",
       "verifyAndSignIn": "Verify and sign in",
-      "sharedPhoneTitle": "On a shared phone?",
-      "sharedPhoneBody": "Sign out when you finish so the next person can't see your farm.",
+      "sharedPhoneTitle": "Field staff on a shared phone?",
+      "sharedPhoneBody": "Phone codes need no password. Sign out when you finish so the next person can't see your farm.",
       "useEmail": "Use email instead",
       "ssoHint": "Sign in with your company account through {name}.",
       "newHere": "New to Anowa?",
-      "createWorkspace": "Create a farm workspace"
+      "createWorkspace": "Create a farm workspace",
+      "workEmail": "Work email",
+      "forgot": "Forgot?",
+      "resendIn": "Resend in {time}"
     },
     "signup": {
       "title": "Create your account",
-      "subtitle": "Start with email and password. Next, register your farm or accept your company's invite.",
+      "subtitle": "Two minutes now. Your first cage tomorrow morning.",
       "fullName": "Full name",
       "confirm": "Confirm password",
       "create": "Create account",
@@ -5200,7 +5363,11 @@
       "haveAccount": "Already have an account?",
       "mismatch": "Passwords do not match",
       "tooShort": "Password must be at least 6 characters long",
-      "failed": "Sign up failed"
+      "failed": "Sign up failed",
+      "agreeBefore": "I agree to the",
+      "agreeTerms": "Terms",
+      "agreeAnd": "and",
+      "agreePrivacy": "Privacy policy"
     },
     "reset": {
       "title": "Reset your password",
@@ -5213,7 +5380,9 @@
       "remembered": "Remembered it?",
       "noAccount": "No account uses that email.",
       "couldNotSend": "Could not send the code. Try again in a minute.",
-      "wrongCode": "That code is wrong or has expired. Ask for a new one."
+      "wrongCode": "That code is wrong or has expired. Ask for a new one.",
+      "sessionsNote": "Other sessions will be signed out.",
+      "saveSignIn": "Save & sign in"
     },
     "invite": {
       "pageTitle": "Organization invite",
@@ -5249,9 +5418,40 @@
       "joining": "Joining…",
       "decline": "Decline",
       "acceptFailed": "Could not accept the invite",
-      "declineFailed": "Could not decline the invite"
+      "declineFailed": "Could not decline the invite",
+      "sites": "Sites",
+      "expiresIn": "in {count} days",
+      "expiresTomorrow": "in 1 day",
+      "expiresToday": "today",
+      "joinAsBefore": "You'll join as"
     },
-    "humanFirst": "Please complete the human check first."
+    "humanFirst": "Please complete the human check first.",
+    "footerPrivacy": "Privacy",
+    "footerTerms": "Terms",
+    "footerStatus": "Status",
+    "human": {
+      "title": "You're human",
+      "body": "Verified quietly · no puzzles",
+      "checking": "Checking you're human…",
+      "provider": "Turnstile"
+    },
+    "verifyEmail": {
+      "sentTitle": "Check your inbox",
+      "sentBefore": "We sent a code to",
+      "sentAfter": "It works for 15 minutes.",
+      "openGmail": "Open Gmail",
+      "resendIn": "Resend in {time}",
+      "resend": "Resend code"
+    },
+    "verify": {
+      "codeTitle": "Enter 6-digit code",
+      "sentBy": {
+        "sms": "Sent by SMS to",
+        "whatsapp": "Sent by WhatsApp to"
+      },
+      "resendIn": "resend {time}",
+      "resend": "resend"
+    }
   },
   "onboarding": {
     "eyebrow": "Set up your workspace",
@@ -5322,7 +5522,9 @@
       "title": "Confirm delete",
       "message": "This action cannot be undone.",
       "confirm": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "typePrefix": "Type",
+      "typeSuffix": "to confirm"
     },
     "logout": {
       "title": "Log out?",
@@ -5363,7 +5565,9 @@
       "readOnly": "read-only",
       "writes": "changes allowed and audited",
       "endsIn": "ends in {minutes} min",
-      "exit": "End support access",
+      "endsAt": "ends {time}",
+      "exit": "Exit",
+      "exitLabel": "End support access",
       "startTitle": "Support access: {name}",
       "startBody": "You will see this organization as its admin until you end the session or it expires. Starting, ending and every change are recorded in the organization's audit log under your name.",
       "start": "Start support access",
@@ -5380,19 +5584,23 @@
       "info": "Info"
     },
     "update": {
-      "title": "Update available"
+      "title": "New version ready"
     }
   },
   "system": {
     "notFound": {
       "title": "This cage drifted off",
       "body": "The page you're after moved or never existed.",
-      "home": "Go home"
+      "home": "Go home",
+      "search": "Search {shortcut}"
     },
     "error": {
       "title": "Something went wrong",
       "titleCode": "Something went wrong (error {code})",
-      "body": "Your saved data is safe. Try again, and if it keeps happening tell your administrator what you were doing.",
+      "body": "Your entries are safe offline.",
+      "notified": "We've been notified.",
+      "copyCode": "Copy error code {code}",
+      "codeCopied": "Error code copied",
       "home": "Go to dashboard"
     },
     "redirectApprovals": "Redirecting to approvals…",
@@ -5533,7 +5741,8 @@
       "rejectFailed": "Could not reject",
       "reasonRequired": "Give a reason for rejecting",
       "rejectTitle": "Reject {batch}",
-      "rejectReason": "Reason for rejecting"
+      "rejectReason": "Reason for rejecting",
+      "tabGrading": "Grading"
     },
     "detail": {
       "eyebrow": "Production · Stocking & transfers",
@@ -5688,6 +5897,7 @@
       "nothingToReorder": "Every feed is above its minimum.",
       "recentMovements": "Recent movements",
       "noMovements": "No stock movements yet.",
+      "searchMovements": "Search movements",
       "feedTypes": "Feed types",
       "searchFeedTypes": "Search feed types",
       "addFeedType": "Add feed type",
@@ -5795,6 +6005,28 @@
       "unit": "Unit",
       "reorderLevel": "Reorder level",
       "reorderHint": "Admins get a low-stock reminder at or below this.",
+      "colValue": "Value",
+      "colStatus": "Cover · status",
+      "search": "Search items",
+      "statusDays": {
+        "one": "{status} · {count} day",
+        "other": "{status} · {count} days"
+      },
+      "lotCount": {
+        "one": "{count} lot",
+        "other": "{count} lots"
+      },
+      "siteCount": {
+        "one": "{count} site",
+        "other": "{count} sites"
+      },
+      "lastCount": "Last count",
+      "variance": "{pct} variance",
+      "bySite": "Stock by site",
+      "thisSite": "this site",
+      "avgUse": "Avg daily use · 14d",
+      "perDay": "{qty} {unit}/day",
+      "issueToCages": "Issue to cages",
       "mode": {
         "issue": "Issue",
         "receive": "Receive",
@@ -5825,6 +6057,7 @@
       "expiring30": "Expiring · 30d",
       "expired": "Expired",
       "title": "Lots · FEFO order",
+      "issueNext": "issue next",
       "batch": "Batch",
       "expires": "Expires",
       "state": {
@@ -5995,6 +6228,7 @@
         "paid": "Paid",
         "overdue": "Overdue {days}d",
         "partial": "Part paid · {pct}%",
+        "partialShort": "Part paid",
         "invoiced": "Invoiced",
         "unpaid": "Unpaid"
       },
@@ -6254,7 +6488,8 @@
     "active": "Active",
     "switching": "Switching…",
     "registerAnother": "Register another organization",
-    "menuLabel": "Your farms",
+    "menuLabel": "Switch farm",
+    "sites": "Sites",
     "current": "Current farm: {name} ({role})",
     "status": {
       "pending": "Awaiting approval",
@@ -6272,7 +6507,10 @@
     "continueTo": "Continue to {name}",
     "newFarm": "Starting a new farm?",
     "notYou": "Not you?",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "pending": "Waiting for approval · usually under a day",
+    "panelEyebrow": "One sign-in · every farm you run",
+    "panelHeadline": "Each farm keeps its own cages, people and books."
   },
   "forecast": {
     "title": "Growth forecast",

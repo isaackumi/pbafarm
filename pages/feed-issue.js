@@ -71,16 +71,17 @@ function FeedIssue() {
   const selected = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)
   const bagSize = selected?.bag_size_kg || 25
 
-  // Ask Anowa's Edit (artboard 48): /feed-issue?feedType=…&qty=…&cage=…&date=…
+  // Ask Anowa's Edit (artboard 48): /feed-issue?feedType=…&qty=…&cage=…&date=…; Paper 67's
+  // "Issue 42 kg to C-07" sends cage and qty (feedType when a feed matches the pellet).
   const router = useRouter()
   const prefilled = useRef(false)
   useEffect(() => {
-    if (!router.isReady || prefilled.current || !router.query.feedType) return
+    if (!router.isReady || prefilled.current || (!router.query.feedType && !router.query.cage)) return
     prefilled.current = true
     const q = router.query
     setForm((p) => ({
       ...p,
-      feedTypeId: queryValue(q, 'feedType', 64),
+      feedTypeId: queryValue(q, 'feedType', 64) || p.feedTypeId,
       cageId: queryValue(q, 'cage', 64),
       quantityKg: queryNumber(q, 'qty'),
       bags: '',

@@ -5,7 +5,8 @@ import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import { usePermission } from '../hooks/usePermission'
 import { useT } from '../lib/i18n/context'
-import { Avatar, CheckCell, GhostButton, GradientButton, Pill, Toggle } from './ui'
+import { CheckCell, GhostButton, GradientButton, Pill, initials } from './ui'
+import { LIME_BUTTON, SKY_TEXT, SkyToggle, TonePill } from './paperTones'
 import { CardNote, DangerRow, FIELD, InlineError, SettingsCard, SettingsField } from './settings'
 
 const roleId = (role) => (role.id ? `c:${role.id}` : `t:${role.key}`)
@@ -119,11 +120,11 @@ export default function RolesPanel({ renderShell }) {
   const actions = (
     <>
       {canManage && (
-        <GradientButton icon={Plus} onClick={() => select('new')}>
+        <GradientButton variant="lime" className={LIME_BUTTON} icon={Plus} onClick={() => select('new')}>
           {t('settingsUi.roles.new')}
         </GradientButton>
       )}
-      <GradientButton reverse icon={ArrowLeftRight} href="#matrix">
+      <GradientButton ring="sky" icon={ArrowLeftRight} href="#matrix">
         {t('settingsUi.roles.compare')}
       </GradientButton>
     </>
@@ -175,7 +176,7 @@ export default function RolesPanel({ renderShell }) {
                 <span className="flex min-w-0 grow basis-0 flex-col gap-[3px]">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="text-[14px] font-medium leading-[18px] text-text">{name(role)}</span>
-                    {role.id && <Pill tone="pink">{t('settingsUi.roles.custom')}</Pill>}
+                    {role.id && <TonePill tone="lime">{t('settingsUi.roles.custom')}</TonePill>}
                   </span>
                   <span className="text-[12px] leading-4 text-muted">
                     {role.id
@@ -205,12 +206,18 @@ export default function RolesPanel({ renderShell }) {
                   <h2 id="role-detail-title" className="text-[22px] font-semibold leading-7 tracking-tight text-text">
                     {selected === 'new' ? t('settingsUi.roles.new') : name(current)}
                   </h2>
-                  {(selected === 'new' || current?.id) && <Pill tone="pink">{t('settingsUi.roles.custom')}</Pill>}
+                  {(selected === 'new' || current?.id) && <TonePill tone="lime">{t('settingsUi.roles.custom')}</TonePill>}
                   {selected !== 'new' && !current?.id && <Pill>{t('settingsUi.roles.template')}</Pill>}
                 </div>
                 <p className="text-[13px] leading-4 text-muted">
+                  {/* Paper 22: the base role's name is in the text colour. */}
+                  {basedOnName && (
+                    <>
+                      {t('settingsUi.roles.basedOnPrefix')} <span className="text-text">{basedOnName}</span>
+                      {' · '}
+                    </>
+                  )}
                   {[
-                    basedOnName && t('settingsUi.roles.basedOn', { role: basedOnName }),
                     extra != null
                       ? t('settingsUi.roles.extraCount', { count: extra })
                       : t('settingsUi.roles.permissionCount', { count: form.permissions.length }),
@@ -223,10 +230,15 @@ export default function RolesPanel({ renderShell }) {
               {roleMembers.length > 0 && (
                 <div className="flex" aria-hidden>
                   {roleMembers.slice(0, 3).map((m) => (
-                    <Avatar key={m.userId} name={m.name || m.email} size={32} />
+                    <span
+                      key={m.userId}
+                      className="flex size-8 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-text"
+                    >
+                      {initials(m.name || m.email)}
+                    </span>
                   ))}
                   {roleMembers.length > 3 && (
-                    <span className="flex size-8 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[11px] font-semibold text-text">
+                    <span className="flex size-8 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-text">
                       +{roleMembers.length - 3}
                     </span>
                   )}
@@ -277,9 +289,9 @@ export default function RolesPanel({ renderShell }) {
                       <div key={p.key} className="flex items-center gap-[14px] py-[10px]">
                         <div className="flex min-w-0 grow basis-0 flex-col gap-[2px]">
                           <span className="text-[14px] leading-[18px] text-text">{p.label}</span>
-                          <span className="font-data text-[12px] leading-4 text-faint">{p.key}</span>
+                          <span className="font-mono text-[12px] leading-4 text-faint">{p.key}</span>
                         </div>
-                        <Toggle
+                        <SkyToggle
                           checked={form.permissions.includes(p.key)}
                           disabled={!editing || busy}
                           onChange={() => togglePerm(p.key)}
@@ -331,7 +343,7 @@ export default function RolesPanel({ renderShell }) {
       <SettingsCard
         id="matrix"
         title={t('settingsUi.roles.matrix')}
-        meta={t('settingsUi.roles.matrixLegend')}
+        meta={<span className={`text-[12px] ${SKY_TEXT}`}>{t('settingsUi.roles.matrixLegend')}</span>}
         className="scroll-mt-24"
       >
         <div className="overflow-x-auto">

@@ -19,6 +19,7 @@ import {
   AuthLayout,
   AuthSubmit,
   MethodTabs,
+  clock,
   OtpInput,
   PasswordInput,
 } from '../components/auth/AuthUi'
@@ -84,14 +85,22 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
   }
 
   if (step === 'code') {
+    // Paper 15b: code boxes, "Resend in 0:24" (muted while counting) and a
+    // sky link on the right, lime "Verify and sign in", the shared-phone note.
     return (
       <form className="flex flex-col gap-[22px]" onSubmit={verify}>
         {error && <AuthAlert>{error}</AuthAlert>}
         <OtpInput id="otp" label={t('common.code')} value={code} onChange={setCode} autoFocus />
         <div className="flex items-center justify-between gap-3 text-[13px] leading-4">
-          <button type="button" className={AUTH_LINK} disabled={cooldown > 0 || busy} onClick={send}>
-            {cooldown > 0 ? t('common.sendAgainIn', { seconds: cooldown }) : t('common.sendNewCode')}
-          </button>
+          {cooldown > 0 ? (
+            <span className="text-muted" aria-live="polite">
+              {t('authUi.login.resendIn', { time: clock(cooldown) })}
+            </span>
+          ) : (
+            <button type="button" className={AUTH_LINK} disabled={busy} onClick={send}>
+              {t('common.sendNewCode')}
+            </button>
+          )}
           <button
             type="button"
             className={AUTH_LINK}
@@ -107,11 +116,20 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
         <AuthSubmit disabled={busy || code.length !== 6}>
           {busy ? t('common.checking') : t('authUi.login.verifyAndSignIn')}
         </AuthSubmit>
-        <div className="flex flex-col gap-[3px] rounded-input border border-line bg-surface px-4 py-3.5">
-          <p className="text-[13px] font-medium leading-4 text-text">{t('authUi.login.sharedPhoneTitle')}</p>
-          <p className="text-xs leading-[150%] text-muted">{t('authUi.login.sharedPhoneBody')}</p>
+        <div className="flex gap-3 rounded-input border border-line bg-surface px-4 py-3.5">
+          <span className="text-[16px] leading-5" aria-hidden>
+            📶
+          </span>
+          <div className="flex flex-col gap-[3px]">
+            <p className="text-[13px] font-medium leading-4 text-text">{t('authUi.login.sharedPhoneTitle')}</p>
+            <p className="text-xs leading-[150%] text-muted">{t('authUi.login.sharedPhoneBody')}</p>
+          </div>
         </div>
-        <button type="button" onClick={onUseEmail} className={`self-start text-[13px] leading-4 text-muted hover:text-text ${AUTH_LINK.replace('text-cyan ', '')}`}>
+        <button
+          type="button"
+          onClick={onUseEmail}
+          className="self-start rounded-sm text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
+        >
           ← {t('authUi.login.useEmail')}
         </button>
       </form>
@@ -229,17 +247,16 @@ export default function Login() {
       )}
       {error && <AuthAlert>{error}</AuthAlert>}
 
-      {!codeStep && (
-        <MethodTabs
-          label={t('auth.login.method')}
-          tabs={tabs}
-          value={method}
-          onChange={(id) => {
-            setMethod(id)
-            setError('')
-          }}
-        />
-      )}
+      {/* Paper 15b keeps the tabs on the code step, Phone code selected. */}
+      <MethodTabs
+        label={t('auth.login.method')}
+        tabs={tabs}
+        value={method}
+        onChange={(id) => {
+          setMethod(id)
+          setError('')
+        }}
+      />
 
       {method === 'phone' ? (
         <PhoneSignIn
@@ -262,7 +279,7 @@ export default function Login() {
         </div>
       ) : (
         <form className="flex flex-col gap-[22px]" onSubmit={handleEmailLogin}>
-          <AuthField label={t('auth.login.email')} htmlFor="email">
+          <AuthField label={t('authUi.login.workEmail')} htmlFor="email">
             <AuthInput
               id="email"
               name="email"
@@ -279,7 +296,7 @@ export default function Login() {
             htmlFor="password"
             aside={
               <Link href="/reset-password" className={`text-[13px] leading-4 ${AUTH_LINK}`}>
-                {t('auth.login.forgot')}
+                {t('authUi.login.forgot')}
               </Link>
             }
           >
@@ -305,7 +322,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setMethod('sso')}
-                className="w-full rounded-pill border border-line-strong py-[13px] text-sm leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                className="w-full rounded-pill border border-line-strong py-[13px] text-[14px] leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
               >
                 {t('auth.login.sso', { name: SSO_NAME })}
               </button>
@@ -317,7 +334,10 @@ export default function Login() {
       {!codeStep && (
         <p className="text-[13px] leading-4 text-muted">
           {t('authUi.login.newHere')}{' '}
-          <Link href="/signup" className={AUTH_LINK}>
+          <Link
+            href="/signup"
+            className="rounded-sm hover:text-text hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
+          >
             {t('authUi.login.createWorkspace')} →
           </Link>
         </p>

@@ -23,12 +23,31 @@ function shortDate(iso, locale) {
   return new Date(y, m - 1, d).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+/**
+ * Paper 12 pills (py-1 px-3, 12/16, outlined): red "Urgent" (#6B3A3A / alert),
+ * sky "Feeding" (#1F3E6E / #6AA8F5), lime "Sampling" (#4A5A1C / #D7F75B),
+ * amber, neutral, green. The Pill component has no sky or lime tone, so
+ * those two are drawn here with the artboard's values.
+ */
+const PAPER_TONE = {
+  sky: 'border-[#1F3E6E] text-sky-ink',
+  lime: 'border-[#4A5A1C] text-lime-ink',
+}
+function TonePill({ tone, children }) {
+  if (!PAPER_TONE[tone]) return <Pill tone={tone}>{children}</Pill>
+  return (
+    <span className={`inline-flex items-center whitespace-nowrap rounded-pill border px-3 py-1 text-[12px] leading-4 ${PAPER_TONE[tone]}`}>
+      {children}
+    </span>
+  )
+}
+
 /** Category pill: overdue wins, then automation, team, or a plain assignment. */
 function TaskPill({ task, today, t }) {
   if (task.status === 'open' && task.dueDate && task.dueDate < today) return <Pill tone="red">{t('tasksUi.pill.overdue')}</Pill>
   if (task.status === 'cancelled') return <Pill tone="neutral">{t('tasksUi.pill.dismissed')}</Pill>
-  if (task.ruleId) return <Pill tone="cyan">{t('tasksUi.pill.automation')}</Pill>
-  if (task.teamName) return <Pill tone="pink">{task.teamName}</Pill>
+  if (task.ruleId) return <TonePill tone="sky">{t('tasksUi.pill.automation')}</TonePill>
+  if (task.teamName) return <TonePill tone="lime">{task.teamName}</TonePill>
   return <Pill tone="neutral">{t('tasksUi.pill.assigned')}</Pill>
 }
 
@@ -51,10 +70,10 @@ function TaskRow({ task, onStatus, busy, today, t, locale }) {
         disabled={busy}
         aria-label={open ? t('tasksUi.markDone', { title: task.title }) : t('tasksUi.reopen', { title: task.title })}
         className={`flex size-5 shrink-0 items-center justify-center rounded-pill focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50 ${
-          open ? 'border-[1.5px] border-line-strong hover:border-text' : 'bg-text text-bg'
+          open ? 'border-[1.5px] border-line-strong hover:border-text' : 'bg-button text-button-text'
         }`}
       >
-        {!open && <Check size={12} strokeWidth={3} aria-hidden />}
+        {!open && <Check size={12} strokeWidth={2} aria-hidden />}
       </button>
       <div className="flex min-w-0 grow basis-0 flex-col gap-[3px]">
         <span className={`text-[14px] leading-[18px] ${open ? 'text-text' : 'text-faint line-through'}`}>{task.title}</span>
@@ -126,13 +145,13 @@ function Tasks() {
       }
       actions={
         canCreate && (
-          <GradientButton href="/teams" icon={Plus}>
+          <GradientButton variant="lime" href="/teams" icon={Plus}>
             {t('tasksUi.new')}
           </GradientButton>
         )
       }
     >
-      <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-[28px]">
         <Tabs
           variant="page"
           label={t('tasksUi.tabsLabel')}
@@ -146,7 +165,7 @@ function Tasks() {
         />
         <section
           aria-label={t(`tasksUi.tab.${tab}`)}
-          className="max-w-[640px] rounded-card border border-line bg-surface shadow-[var(--shadow-card)]"
+          className="w-full rounded-card border border-line bg-surface shadow-[var(--shadow-card)] xl:max-w-[calc((100%-20px)*1.6/2.6)]"
         >
           {!data ? (
             <LoadingState />
@@ -166,7 +185,7 @@ function Tasks() {
         {tab !== 'done' && (
           <p className="text-xs text-muted">
             {t('tasksUi.footer')}{' '}
-            <Link href="/calendar" className="text-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+            <Link href="/calendar" className="text-sky-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
               {t('tasksUi.calendarLink')}
             </Link>
           </p>

@@ -339,7 +339,7 @@ function FieldEditor({ entity, initial, defs, sites, onDone }) {
       </fieldset>
 
       <div className="flex flex-wrap gap-2">
-        <GradientButton type="submit" disabled={saving || !f.label.trim() || !f.key}>
+        <GradientButton ring="sky" type="submit" disabled={saving || !f.label.trim() || !f.key}>
           {saving ? 'Saving…' : editing ? 'Save field' : 'Add field'}
         </GradientButton>
         <GhostButton onClick={onDone} disabled={saving}>Cancel</GhostButton>
@@ -386,7 +386,7 @@ export default function FieldsBuilder() {
       <div className="flex flex-col gap-5 lg:col-span-2">
         <SettingsCard title="Custom fields" action={
               !editing && (
-                <GradientButton size="sm" onClick={() => setEditing(blank())}>
+                <GradientButton ring="sky" size="sm" onClick={() => setEditing(blank())}>
                   <Plus className="h-4 w-4" aria-hidden />
                   Add field
                 </GradientButton>

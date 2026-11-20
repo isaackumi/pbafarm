@@ -22,6 +22,24 @@ const short = (t) =>
 const g = (v) => (v == null ? '—' : `${Math.round(v).toLocaleString()} g`)
 
 /**
+ * Paper 03 / L · 03 "Growth vs plan" values per theme: the actual ABW
+ * gradient end, and the latest sample's lime dot halo and edge.
+ */
+export const GROWTH_VARS =
+  '[--growth-end:#8EC2F7] [--growth-halo:#D7F75B2E] [--growth-dot-edge:transparent] [html[data-theme=light]_&]:[--growth-end:#5FA0EE] [html[data-theme=light]_&]:[--growth-halo:#A8C93A40] [html[data-theme=light]_&]:[--growth-dot-edge:#4F6B00]'
+
+/** The latest sample: a 5px lime dot in a 10px halo. */
+function LatestDot({ cx, cy, index, last }) {
+  if (index !== last || cx == null || cy == null) return null
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={10} style={{ fill: 'var(--growth-halo)' }} />
+      <circle cx={cx} cy={cy} r={5} fill="#D7F75B" style={{ stroke: 'var(--growth-dot-edge)' }} />
+    </g>
+  )
+}
+
+/**
  * @param {{ samples: {date: string, abw: number}[], series: {date: string, low: number, expected: number, high: number}[],
  *   asOf: string, targetG?: number, labels: {actual: string, expected: string, band: string, target: string, today: string} }} props
  */
@@ -35,60 +53,74 @@ export default function GrowthForecastChart({ samples, series, asOf, targetG, la
     byDate.set(p.date, row)
   }
   const data = [...byDate.values()].sort((a, b) => a.t - b.t)
+  let lastActual = -1
+  data.forEach((row, i) => {
+    if (row.actual != null) lastActual = i
+  })
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid {...GRID} />
-        <XAxis
-          dataKey="t"
-          type="number"
-          scale="time"
-          domain={['dataMin', 'dataMax']}
-          tick={AXIS_TICK}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={short}
-          minTickGap={24}
-        />
-        <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={44} />
-        <Tooltip
-          {...TOOLTIP}
-          labelFormatter={short}
-          formatter={(v, name) => [Array.isArray(v) ? `${g(v[0])} – ${g(v[1])}` : g(v), name]}
-        />
-        <Area
-          dataKey="band"
-          name={labels.band}
-          stroke="none"
-          fill="var(--cyan)"
-          fillOpacity={0.16}
-          connectNulls
-          isAnimationActive={false}
-        />
-        <Line
-          dataKey="expected"
-          name={labels.expected}
-          stroke="var(--cyan)"
-          strokeWidth={2}
-          strokeDasharray="6 4"
-          dot={false}
-          connectNulls
-          isAnimationActive={false}
-        />
-        <Line
-          dataKey="actual"
-          name={labels.actual}
-          stroke="var(--pink)"
-          strokeWidth={2}
-          dot={{ r: 3, strokeWidth: 2, stroke: 'var(--surface)', fill: 'var(--pink)' }}
-          connectNulls
-          isAnimationActive={false}
-        />
-        {targetG ? (
-          <ReferenceLine y={targetG} stroke="var(--muted)" strokeDasharray="2 4" label={{ value: labels.target, fill: 'var(--muted)', fontSize: 11, position: 'insideTopLeft' }} />
-        ) : null}
-        <ReferenceLine x={ts(asOf)} stroke="var(--line-strong)" label={{ value: labels.today, fill: 'var(--muted)', fontSize: 11, position: 'insideTopRight' }} />
-      </ComposedChart>
-    </ResponsiveContainer>
+    <div className={`h-full w-full ${GROWTH_VARS}`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <defs>
+            {/* Paper 03: actual ABW stroke #1562D6 → #8EC2F7 (dark), → #5FA0EE (L · 03) */}
+            <linearGradient id="growth-actual" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stopColor="#1562D6" />
+              <stop offset="1" style={{ stopColor: 'var(--growth-end)' }} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid {...GRID} />
+          <XAxis
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={['dataMin', 'dataMax']}
+            tick={AXIS_TICK}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={short}
+            minTickGap={24}
+          />
+          <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={44} />
+          <Tooltip
+            {...TOOLTIP}
+            labelFormatter={short}
+            formatter={(v, name) => [Array.isArray(v) ? `${g(v[0])} – ${g(v[1])}` : g(v), name]}
+          />
+          <Area
+            dataKey="band"
+            name={labels.band}
+            stroke="none"
+            fill="var(--faint)"
+            fillOpacity={0.16}
+            connectNulls
+            isAnimationActive={false}
+          />
+          <Line
+            dataKey="expected"
+            name={labels.expected}
+            stroke="var(--faint)"
+            strokeWidth={1.5}
+            strokeDasharray="5 5"
+            dot={false}
+            connectNulls
+            isAnimationActive={false}
+          />
+          <Line
+            dataKey="actual"
+            name={labels.actual}
+            stroke="url(#growth-actual)"
+            strokeWidth={2.5}
+            dot={(props) => <LatestDot key={props.index} {...props} last={lastActual} />}
+            activeDot={{ r: 4, strokeWidth: 0, fill: '#6AA8F5' }}
+            connectNulls
+            isAnimationActive={false}
+          />
+          {targetG ? (
+            <ReferenceLine y={targetG} stroke="var(--muted)" strokeDasharray="2 4" label={{ value: labels.target, fill: 'var(--muted)', fontSize: 11, position: 'insideTopLeft' }} />
+          ) : null}
+          <ReferenceLine x={ts(asOf)} stroke="var(--line-strong)" label={{ value: labels.today, fill: 'var(--muted)', fontSize: 11, position: 'insideTopRight' }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
   )
 }

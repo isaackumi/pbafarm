@@ -1,6 +1,8 @@
 import Link from 'next/link'
-import { ProgressBar, StatusDot } from '../ui'
-import { formatDate, formatNumber } from '../../lib/format'
+import { StatusDot } from '../ui'
+import { formatNumber } from '../../lib/format'
+import { shortDate } from '../../lib/projectsView'
+import { BAR_FILL, formatBiomassT } from '../units/UnitCard'
 import { gradeShares } from '../../lib/harvestView'
 import { useLocale, useT } from '../../lib/i18n/context'
 
@@ -22,7 +24,7 @@ export function SizeGradesCard({ record, className = '' }) {
   const grades = gradeShares(record)
   return (
     <section className={`${CARD} gap-[18px] ${className}`} aria-labelledby="harvest-grades-title">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap justify-between gap-2">
         <h2 id="harvest-grades-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {record
             ? t('harvestPage.grades.titleFor', { cage: record.cage?.name || '—' })
@@ -34,7 +36,7 @@ export function SizeGradesCard({ record, className = '' }) {
             {record.estimated_count
               ? ` · ${t('harvestPage.grades.fish', { count: record.estimated_count, n: formatNumber(record.estimated_count, { locale }) })}`
               : ''}
-            {` · ${formatDate(record.harvest_date, { locale })}`}
+            {` · ${shortDate(record.harvest_date, locale)}`}
           </span>
         )}
       </div>
@@ -45,13 +47,19 @@ export function SizeGradesCard({ record, className = '' }) {
           <div key={g.key} className="flex items-center gap-4">
             <div className="w-[110px] shrink-0 text-[13px] leading-4 text-muted">
               {g.key}
-              {g.range ? <span className="text-faint"> {g.range}</span> : null}
+              {g.range ? ` ${g.range}` : null}
             </div>
-            <ProgressBar
-              value={g.pct}
-              label={t('harvestPage.grades.barLabel', { grade: g.key, pct: g.pct })}
-              className="h-[10px] grow basis-0"
-            />
+            {/* Paper 08: 10px line track, blue gradient fill. */}
+            <div
+              role="progressbar"
+              aria-label={t('harvestPage.grades.barLabel', { grade: g.key, pct: g.pct })}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={g.pct}
+              className="h-[10px] grow basis-0 overflow-hidden rounded-pill bg-line"
+            >
+              <div className={`h-full rounded-pill ${BAR_FILL}`} style={{ width: `${Math.max(0, Math.min(100, g.pct))}%` }} />
+            </div>
             <div className="w-[70px] shrink-0 text-right text-[14px] leading-[18px] text-text tabular-nums">{g.pct}%</div>
           </div>
         ))
@@ -98,7 +106,7 @@ export function ReadyToHarvestCard({ rows, loading, className = '' }) {
                   </div>
                   <div className="text-xs leading-4 text-muted">
                     {held
-                      ? t('harvestPage.ready.inWithdrawal', { date: formatDate(r.holdUntil, { locale }) })
+                      ? t('harvestPage.ready.inWithdrawal', { date: shortDate(r.holdUntil, locale) })
                       : [
                           r.abw ? `${formatNumber(r.abw, { locale })} g` : null,
                           r.doc != null ? t('harvestPage.ready.day', { n: r.doc }) : null,
@@ -108,7 +116,8 @@ export function ReadyToHarvestCard({ rows, loading, className = '' }) {
                   </div>
                 </div>
                 <div className="shrink-0 text-[14px] font-medium leading-[18px] text-text tabular-nums">
-                  {r.biomassKg ? formatKg(r.biomassKg, locale) : '—'}
+                  {/* Paper 08 "15.6 t", "9.4 t" */}
+                  {r.biomassKg ? (r.biomassKg >= 1000 ? formatBiomassT(r.biomassKg / 1000) : formatKg(r.biomassKg, locale)) : '—'}
                 </div>
               </li>
             )

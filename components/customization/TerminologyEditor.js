@@ -123,7 +123,7 @@ export default function TerminologyEditor() {
       </SettingsCard>
 
       <div className="flex flex-wrap items-center gap-2">
-        <GradientButton type="submit" disabled={saving || !canWrite || !dirty}>
+        <GradientButton ring="sky" type="submit" disabled={saving || !canWrite || !dirty}>
           <Save size={16} aria-hidden />
           {saving ? 'Saving…' : 'Save words'}
         </GradientButton>

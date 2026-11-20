@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import { Plus, X } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Field, GhostButton, GradientButton, Input, Segmented, Table } from '../components/ui'
+import { Field, GhostButton, GradientButton, Input, Table } from '../components/ui'
 import NavTabs from '../components/ui/NavTabs'
 import { ListRow, Panel } from '../components/ui/Panel'
 import { api } from '../convex/_generated/api'
@@ -16,6 +17,8 @@ import { speciesLabel } from '../lib/fishSpecies'
 import { mortalityCauseLabel } from '../lib/farmHealth'
 import { financeTabs } from '../lib/sectionTabs'
 import { cageBars, costBreakdown, summarizePnl } from '../lib/pnlSummary'
+import { paperMoney } from '../lib/financeFormat'
+import BreakdownRow, { breakdownDot } from '../components/finance/BreakdownRow'
 
 export default function PnLPage() {
   return (
@@ -26,18 +29,30 @@ export default function PnLPage() {
 }
 
 const marginClass = (n) => (n >= 0 ? 'text-good' : 'text-alert')
-const DOTS = ['cyan', 'pink', 'neutral', 'neutral']
-const fmtPct = (n) => (n == null ? '—' : `${n.toFixed(1)}%`)
+const fmtPct = (n) => (n == null ? '—' : `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(1)}%`)
+
+/* Paper 10 (2FB-0) and L · 10 (7R0-0): light values under [data-theme=light]. */
+/** "Record sale": lime pill; on light a soft lime shadow and a 500 label. */
+const RECORD_SALE = '[[data-theme=light]_&]:shadow-[0_8px_20px_-10px_#4F6B0066] [[data-theme=light]_&]:[&>span]:font-medium'
+/** "Add expense": sky ring #1562D6 → #B9DDF9, on light #1562D6 → #7DB6F2. */
+const ADD_EXPENSE = '[[data-theme=light]_&]:![background-image:linear-gradient(in_oklab_120deg,#1562D6_0%,#7DB6F2_100%)]'
+/** Revenue bars: #8EC2F7 → #1562D6 top to bottom (light #5FA0EE → #1562D6). */
+const REVENUE_FILL = 'bg-[image:linear-gradient(in_oklab_180deg,#8EC2F7_0%,#1562D6_100%)] [[data-theme=light]_&]:bg-[image:linear-gradient(in_oklab_180deg,#5FA0EE_0%,#1562D6_100%)]'
+/** Cost bars: line-strong (light #CBD6E3). */
+const COST_FILL = 'bg-line-strong [[data-theme=light]_&]:bg-[#CBD6E3]'
 
 function CagePnL() {
   const t = useT()
   const { user } = useAuth()
   const { locationArgs } = useLocation()
-  const { formatCurrency } = useCurrency()
+  const router = useRouter()
+  const { formatCurrency, currency } = useCurrency()
+  const money = (n, opts) => paperMoney(n, currency, opts)
   const canRecordSale = usePermission('finance.sales.record')
   const canAddExpense = usePermission('finance.expenses.record')
 
-  const [view, setView] = useState('cage')
+  // Paper 10 tabs: "By cycle" is a finance tab (/pnl?view=cycle), not a toggle.
+  const view = router.query.view === 'cycle' ? 'cycle' : 'cage'
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedCageId, setSelectedCageId] = useState('')
@@ -101,7 +116,7 @@ function CagePnL() {
         setSelectedCageId(r.cage_id)
       }}
       className={`rounded-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-        selectedCageId === r.cage_id ? 'text-pearl-cyan' : 'text-text'
+        selectedCageId === r.cage_id ? 'text-sky-ink' : 'text-text'
       }`}
     >
       {r.cage_name}
@@ -115,12 +130,12 @@ function CagePnL() {
       actions={
         <>
           {canRecordSale && (
-            <GradientButton href="/sales" icon={Plus}>
+            <GradientButton href="/sales" variant="lime" icon={Plus} className={RECORD_SALE}>
               {t('ops.sales.recordSale')}
             </GradientButton>
           )}
           {canAddExpense && (
-            <GradientButton href="/expenses" reverse icon={Plus}>
+            <GradientButton href="/expenses" ring="sky" icon={Plus} className={ADD_EXPENSE}>
               {t('ops.pnl.addExpense')}
             </GradientButton>
           )}
@@ -128,20 +143,15 @@ function CagePnL() {
       }
     >
       <div data-tour="page-pnl" className="flex flex-col gap-[28px]">
-        <NavTabs tabs={financeTabs(t)} label={t('ops.tabs.finance')} />
+        <NavTabs
+          tabs={financeTabs(t)}
+          label={t('ops.tabs.finance')}
+          active={view === 'cycle' ? '/pnl?view=cycle' : '/pnl'}
+        />
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Segmented
-            size="md"
-            label={t('ops.pnl.view')}
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'cage', label: t('ops.pnl.byCage') },
-              { value: 'cycle', label: t('ops.pnl.byCycle') },
-            ]}
-          />
-          {view === 'cage' && (
+        {/* Not on Paper 10: the date range the P&L covers. */}
+        {view === 'cage' && (
+          <div className="flex justify-end">
             <div className="grid w-full grid-cols-2 gap-4 sm:w-96">
               <Field label={t('ops.ledger.from')} htmlFor="pnl-from">
                 <Input id="pnl-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -150,8 +160,8 @@ function CagePnL() {
                 <Input id="pnl-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
               </Field>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {view === 'cycle' ? (
           <CycleTable cycles={cycles} formatCurrency={formatCurrency} perKg={perKg} t={t} />
@@ -166,13 +176,13 @@ function CagePnL() {
                   {dateFrom || dateTo ? t('ops.pnl.netRange') : t('ops.pnl.netToDate')}
                 </h2>
                 <p className="text-[40px] font-semibold leading-[48px] tracking-[-0.035em] text-text tabular-nums sm:text-[48px] sm:leading-[58px]">
-                  {loading ? '—' : formatCurrency(totals.net)}
+                  {loading ? '—' : money(totals.net, { compact: true })}
                 </p>
                 {!loading && (
                   <p className={`text-[13px] leading-4 ${totals.net >= 0 ? 'text-good' : 'text-alert'}`}>
                     {totals.marginPct == null ? t('ops.pnl.noRevenue') : t('ops.pnl.marginPct', { pct: totals.marginPct.toFixed(1) })}
                     {totals.costPerKg != null && (
-                      <span className="text-faint"> · {t('ops.pnl.costPerKgProduced', { value: formatCurrency(totals.costPerKg) })}</span>
+                      <span className="text-faint"> · {t('ops.pnl.costPerKgProduced', { value: money(totals.costPerKg, { decimals: 1 }) })}</span>
                     )}
                   </p>
                 )}
@@ -186,11 +196,8 @@ function CagePnL() {
                             className="flex h-[150px] w-full shrink-0 items-end gap-1"
                             title={`${b.label}: ${t('ops.pnl.revenue')} ${formatCurrency(b.revenue)} · ${t('ops.pnl.cost')} ${formatCurrency(b.cost)}`}
                           >
-                            <div
-                              className="grow basis-0 rounded-[4px]"
-                              style={{ height: `${Math.max(b.revenueH * 100, 1)}%`, backgroundImage: 'linear-gradient(in oklab 180deg, var(--cyan-fill) 0%, var(--pink-fill) 100%)' }}
-                            />
-                            <div className="grow basis-0 rounded-[4px] bg-line-strong" style={{ height: `${Math.max(b.costH * 100, 1)}%` }} />
+                            <div className={`grow basis-0 rounded-[4px] ${REVENUE_FILL}`} style={{ height: `${Math.max(b.revenueH * 100, 1)}%` }} />
+                            <div className={`grow basis-0 rounded-[4px] ${COST_FILL}`} style={{ height: `${Math.max(b.costH * 100, 1)}%` }} />
                           </div>
                           <span className="max-w-full truncate text-xs leading-4 text-faint">{b.label}</span>
                         </div>
@@ -198,11 +205,11 @@ function CagePnL() {
                     </div>
                     <div className="flex gap-4 pt-3 text-xs leading-4 text-muted">
                       <span className="inline-flex items-center gap-2">
-                        <span aria-hidden className="size-[7px] rounded-pill" style={{ backgroundImage: 'var(--gradient-brand-rev)' }} />
+                        <span aria-hidden className={`size-[7px] rounded-pill ${REVENUE_FILL}`} />
                         {t('ops.pnl.revenue')}
                       </span>
                       <span className="inline-flex items-center gap-2">
-                        <span aria-hidden className="size-[7px] rounded-pill bg-line-strong" />
+                        <span aria-hidden className={`size-[7px] rounded-pill ${COST_FILL}`} />
                         {t('ops.pnl.cost')}
                       </span>
                     </div>
@@ -215,12 +222,12 @@ function CagePnL() {
                   <p className="border-t border-line py-[11px] text-[13px] leading-5 text-muted">{loading ? t('common.loading') : t('ops.pnl.noCosts')}</p>
                 ) : (
                   breakdown.map((line, i) => (
-                    <ListRow
+                    <BreakdownRow
                       key={line.key}
-                      dot={DOTS[Math.min(i, DOTS.length - 1)]}
+                      dotClass={breakdownDot(i)}
                       title={labelOf(line.key)}
                       sub={i === 0 ? t('ops.pnl.ofCost', { pct: line.pct }) : `${line.pct}%`}
-                      value={formatCurrency(line.amount)}
+                      value={money(line.amount, { compact: true })}
                     />
                   ))
                 )}
@@ -241,8 +248,8 @@ function CagePnL() {
               empty={rows === undefined ? t('common.loading') : t('ops.pnl.empty')}
               columns={[
                 { key: 'cage', header: t('ops.pnl.cage'), width: 126, render: cageCell, sub: (r) => (r.species ? speciesLabel(r.species) : null) },
-                { key: 'revenue', header: t('ops.pnl.revenue'), width: 164, align: 'right', render: (r) => formatCurrency(r.revenue) },
-                { key: 'cost', header: t('ops.pnl.cost'), width: 164, align: 'right', render: (r) => formatCurrency(r.total_cost) },
+                { key: 'revenue', header: t('ops.pnl.revenue'), width: 164, align: 'right', render: (r) => money(r.revenue, { compact: true }) },
+                { key: 'cost', header: t('ops.pnl.cost'), width: 164, align: 'right', render: (r) => money(r.total_cost, { compact: true }) },
                 {
                   key: 'margin',
                   header: t('ops.pnl.margin'),
@@ -250,12 +257,19 @@ function CagePnL() {
                   align: 'right',
                   render: (r) => <span className={r.net_margin_pct == null ? 'text-muted' : marginClass(r.net_margin)}>{fmtPct(r.net_margin_pct)}</span>,
                 },
-                { key: 'perKg', header: t('ops.pnl.costKg'), width: 144, align: 'right', render: (r) => perKg(r.cost_per_kg) },
                 {
+                  key: 'perKg',
+                  header: t('ops.pnl.costKg'),
+                  width: 144,
+                  align: 'right',
+                  render: (r) => (r.cost_per_kg == null ? '—' : money(r.cost_per_kg, { decimals: 1 })),
+                },
+                {
+                  // Not on Paper 10: net margin in money, in the flexible last lane.
                   key: 'net',
                   header: t('ops.pnl.net'),
                   align: 'right',
-                  render: (r) => <span className={`font-medium ${marginClass(r.net_margin)}`}>{formatCurrency(r.net_margin)}</span>,
+                  render: (r) => <span className={`font-medium ${marginClass(r.net_margin)}`}>{money(r.net_margin, { compact: true })}</span>,
                 },
               ]}
             />

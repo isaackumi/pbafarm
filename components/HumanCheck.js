@@ -59,6 +59,9 @@ export function useHumanCheck(purpose) {
           action: purpose,
           // Match the app theme (Paper dark default, light on request).
           theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
+          // Paper 60 "Verified quietly · no puzzles": the box only appears
+          // when Cloudflare needs the person to interact.
+          appearance: 'interaction-only',
           callback: (t) => setToken(t),
           'expired-callback': () => setToken(''),
           'error-callback': () => setToken(''),
@@ -85,11 +88,33 @@ export function useHumanCheck(purpose) {
     }
   }, [token, purpose, verify, t])
 
-  // Paper 60 human-check card: the Turnstile box sits on a bordered surface.
+  // Paper 60 human-check card: 24px ring with a check (green border and
+  // stroke), "You're human" 14/18, "Verified quietly · no puzzles" 12/16
+  // muted, "Turnstile" 11/14 Geist Mono faint; 12×14 padding, 14px radius.
   const widget = SITE_KEY ? (
-    <div className="flex flex-col gap-1.5 rounded-input border border-line bg-surface p-2">
-      <div ref={setContainer} className="min-h-[65px]" />
-      {loadError && <p className="px-2 pb-1 text-xs text-alert">{loadError}</p>}
+    <div className="flex flex-col rounded-input border border-line bg-surface px-3.5 py-3" role="status">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex size-6 shrink-0 items-center justify-center rounded-pill border border-[color:var(--pill-green-border)] text-good [html[data-theme=light]_&]:border-[#BBE5C8]"
+            aria-hidden
+          >
+            {token && (
+              <svg width="12" height="12" viewBox="0 0 24 24">
+                <path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[14px] leading-[18px] text-text">{token ? t('authUi.human.title') : t('authUi.human.checking')}</p>
+            {token && <p className="text-xs leading-4 text-muted">{t('authUi.human.body')}</p>}
+          </div>
+        </div>
+        <span className="font-geist text-[11px] leading-[14px] text-faint">{t('authUi.human.provider')}</span>
+      </div>
+      {/* Holds the Turnstile box, which stays empty unless a challenge is needed. */}
+      <div ref={setContainer} />
+      {loadError && <p className="mt-2 text-xs leading-4 text-alert">{loadError}</p>}
     </div>
   ) : null
 

@@ -45,11 +45,11 @@ export function FilterSelect({ label, value, onChange, children, className = '' 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="cursor-pointer appearance-none bg-transparent py-2 pl-[14px] pr-8 text-[13px] leading-4 text-text focus:outline-none"
+        className="cursor-pointer appearance-none bg-transparent py-2 pl-[14px] pr-[30px] text-[13px] leading-4 text-text focus:outline-none"
       >
         {children}
       </select>
-      <span aria-hidden className="pointer-events-none absolute right-[14px] text-[10px] text-muted">▾</span>
+      <span aria-hidden className="pointer-events-none absolute right-[14px] text-[13px] leading-4 text-text">▾</span>
     </label>
   )
 }

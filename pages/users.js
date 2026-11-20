@@ -63,7 +63,7 @@ export default function UsersPage() {
         title={t('settingsUi.nav.label')}
         eyebrow={eyebrow}
         actions={
-          <GradientButton icon={UserRound} href="#invite">
+          <GradientButton variant="lime" icon={UserRound} href="#invite">
             {t('settingsUi.team.invite')}
           </GradientButton>
         }

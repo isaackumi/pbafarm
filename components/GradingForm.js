@@ -16,7 +16,15 @@ const PILL_SELECT =
   'h-[30px] rounded-pill border border-line-strong bg-transparent px-3 text-[13px] leading-4 text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 const CELL_INPUT =
   'h-[30px] w-[80px] shrink-0 rounded-[8px] border border-line-strong bg-bg px-2 text-right text-[14px] leading-[18px] text-text tabular-nums placeholder:text-faint focus:border-cyan focus:outline-none'
-const DOTS = ['bg-pearl-pink', 'bg-pearl-cyan', 'bg-muted', 'bg-warn', 'bg-good']
+// Paper 52 class dots: Large lime, Medium sky, Small muted (52 — Light: #A8C93A,
+// #3D86E6, #8A9098); further classes warn, good.
+const DOTS = [
+  'bg-lime [html[data-theme=light]_&]:bg-[#A8C93A]',
+  'bg-sky-ink [html[data-theme=light]_&]:bg-[#3D86E6]',
+  'bg-muted [html[data-theme=light]_&]:bg-[#8A9098]',
+  'bg-warn',
+  'bg-good',
+]
 const newGrade = (cageId = '') => ({
   key: Math.random().toString(36).slice(2),
   cageId,
@@ -193,9 +201,10 @@ export default function GradingForm({ initialCageId = '', formId = 'grading-form
                 type="button"
                 disabled={grades.length >= 20}
                 onClick={() => setGrades((gs) => [...gs, newGrade()])}
-                className="inline-flex items-center gap-[6px] rounded-sm text-[13px] leading-4 text-pearl-cyan hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50"
+                className="inline-flex items-center gap-[6px] rounded-sm text-[13px] leading-4 text-sky-ink hover:underline [html[data-theme=light]_&]:text-[#1562D6] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan disabled:opacity-50"
               >
-                <Plus size={14} strokeWidth={2} aria-hidden />
+                {/* Paper 52: the plus is stroked #9FE3E6 beside sky text (#1562D6 for both on 52 — Light). */}
+                <Plus size={14} strokeWidth={2} aria-hidden className="text-[#9FE3E6] [html[data-theme=light]_&]:text-[#1562D6]" />
                 Add class
               </button>
             </div>
@@ -286,7 +295,7 @@ export default function GradingForm({ initialCageId = '', formId = 'grading-form
                     </li>
                   ))}
                 </ul>
-                <div className="flex items-center gap-6 rounded-b-card border-t border-line bg-[color-mix(in_oklab,var(--bg)_50%,var(--surface))] px-6 py-4">
+                <div className="flex items-center gap-6 rounded-b-card border-t border-line bg-[#0E1012] px-6 py-4 [html[data-theme=light]_&]:bg-[#F4F7FB]">
                   <div className="flex grow basis-0 flex-wrap items-center gap-2 text-[13px] leading-4 text-muted">
                     <span>Total ·</span>
                     <label htmlFor="gr-culls" className="sr-only">

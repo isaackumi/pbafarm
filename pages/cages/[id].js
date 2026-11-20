@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { ArrowLeftRight, ClipboardPen, Archive, Pencil } from 'lucide-react'
+import { Archive, Pencil } from 'lucide-react'
 import Layout from '../../components/Layout'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { Button, EmptyState, GhostButton, GradientButton, KpiStrip, LoadingState, StatusDot, Table } from '../../components/ui'
@@ -11,7 +11,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import { api } from '../../convex/_generated/api'
 import { WQ_PARAMETERS } from '../../convex/lib/waterQuality'
 import Waterline from '../../components/Waterline'
-import { formatDate, localToday, unitLabel } from '../../lib/format'
+import { getActiveLocale, localToday, unitLabel } from '../../lib/format'
+import { shortDate } from '../../lib/projectsView'
+import { clock } from '../../lib/keepers'
 import BatchHistory from '../../components/BatchHistory'
 import UnitProfile from '../../components/UnitProfile'
 import UnitTabs from '../../components/UnitTabs'
@@ -32,10 +34,31 @@ const WATER_WINDOW_MS = 14 * 86400000
 
 const cardClass = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
 
+/** Paper 03 "Log entry" glyph (pen and baseline). */
+function PenIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+    </svg>
+  )
+}
+
+/** Paper 03 "Transfer fish" glyph (two opposed arrows). */
+function TransferIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
+    </svg>
+  )
+}
+
+/** Paper 03 dates: "Nov 18", "Sep 17". */
+const dayMonth = (iso) => shortDate(iso, getActiveLocale()) || '—'
+
 function rangeText(range) {
   if (!range) return ''
   if (range.min != null && range.max != null) return `${range.min} – ${range.max}`
-  if (range.min != null) return `≥ ${range.min}`
+  if (range.min != null) return `target ≥ ${range.min}`
   if (range.max != null) return `< ${range.max}`
   return ''
 }
@@ -59,7 +82,13 @@ function WaterNow({ unitId }) {
         </h2>
         {latest && (
           <span className="text-xs leading-4 text-muted">
-            {t('cageDetail.loggedAt', { when: latest.date || new Date(latest.measuredAt).toLocaleString() })}
+            {t('cageDetail.loggedAt', {
+              when: latest.measuredAt
+                ? latest.date && latest.date !== localToday()
+                  ? `${dayMonth(latest.date)} ${clock(latest.measuredAt, getActiveLocale())}`
+                  : clock(latest.measuredAt, getActiveLocale())
+                : dayMonth(latest.date),
+            })}
           </span>
         )}
       </div>
@@ -135,20 +164,16 @@ function RecentLog({ daily, samples }) {
   const t = useT()
   const [tab, setTab] = useState('daily')
   const dailyColumns = [
-    { key: 'date', header: t('cageDetail.col.date'), width: 110, render: (r) => formatDate(r.date) },
-    { key: 'feed', header: t('cageDetail.col.feed'), align: 'right', render: (r) => n1(r.feed_amount ?? r.feedAmount, ' kg') },
-    {
-      key: 'mort',
-      header: t('cageDetail.col.mortality'),
-      align: 'right',
-      render: (r) => <span className={(r.mortality ?? 0) > 0 ? 'text-alert' : ''}>{r.mortality ?? 0}</span>,
-    },
-    { key: 'cause', header: t('cageDetail.col.cause'), render: (r) => <span className="text-muted">{r.mortality_cause || '—'}</span> },
-    { key: 'do', header: t('cageDetail.col.do'), align: 'right', render: (r) => n1(r.dissolved_oxygen) },
-    { key: 'temp', header: t('cageDetail.col.temp'), align: 'right', render: (r) => n1(r.temperature_c) },
+    // Paper 03 columns: 110 / 120 / 120 / grow / 100 / 100, all cells in the text colour.
+    { key: 'date', header: t('cageDetail.col.date'), width: 110, render: (r) => dayMonth(r.date) },
+    { key: 'feed', header: t('cageDetail.col.feed'), width: 120, align: 'right', render: (r) => n1(r.feed_amount ?? r.feedAmount, ' kg') },
+    { key: 'mort', header: t('cageDetail.col.mortality'), width: 120, align: 'right', render: (r) => r.mortality ?? 0 },
+    { key: 'cause', header: t('cageDetail.col.cause'), render: (r) => r.mortality_cause || '—' },
+    { key: 'do', header: t('cageDetail.col.do'), width: 100, align: 'right', render: (r) => n1(r.dissolved_oxygen) },
+    { key: 'temp', header: t('cageDetail.col.temp'), width: 100, align: 'right', render: (r) => n1(r.temperature_c) },
   ]
   const sampleColumns = [
-    { key: 'date', header: t('cageDetail.col.date'), width: 110, render: (r) => formatDate(r.date) },
+    { key: 'date', header: t('cageDetail.col.date'), width: 110, render: (r) => dayMonth(r.date) },
     { key: 'abw', header: t('cageDetail.col.abw'), align: 'right', render: (r) => n1(r.average_body_weight ?? r.averageBodyWeight, ' g') },
   ]
   return (
@@ -214,11 +239,15 @@ function CageDetails() {
     ws?.group?.name,
     cage.species,
     g?.batch_number ? t('cageDetail.batch', { batch: g.batch_number }) : null,
-    g?.stocking_date ? t('cageDetail.stocked', { date: formatDate(g.stocking_date) }) : null,
+    g?.stocking_date ? t('cageDetail.stocked', { date: dayMonth(g.stocking_date) }) : null,
     ws?.status?.label,
   ]
     .filter(Boolean)
     .flatMap((part, i) => (i === 0 ? [part] : [i === 1 ? ' / ' : ' · ', part]))
+
+  // Paper 03 title "Cage C-07": the unit word before a bare code.
+  const kindWord = unitLabel(cage)
+  const titled = cage.name.toLowerCase().startsWith(kindWord.toLowerCase()) ? cage.name : `${kindWord} ${cage.name}`
 
   const biomassKg = g?.current_biomass_kg
   const kpis = [
@@ -232,7 +261,7 @@ function CageDetails() {
       key: 'abw',
       label: t('cageDetail.kpi.abw'),
       value: n1(g?.current_abw_g ?? cage.current_weight, ' g'),
-      suffix: g?.abw_measured_on ? t('cageDetail.sampled', { date: formatDate(g.abw_measured_on) }) : undefined,
+      suffix: g?.abw_measured_on ? t('cageDetail.sampled', { date: dayMonth(g.abw_measured_on) }) : undefined,
     },
     {
       key: 'biomass',
@@ -245,7 +274,7 @@ function CageDetails() {
       key: 'fcr',
       label: t('cageDetail.kpi.fcr'),
       value: g?.efcr == null ? '—' : g.efcr.toFixed(2),
-      valueTone: g?.efcr == null ? undefined : g.efcr <= 1.6 ? 'good' : g.efcr > 2 ? 'alert' : undefined,
+      valueTone: g?.efcr != null && g.efcr > 2 ? 'alert' : undefined,
     },
     {
       key: 'survival',
@@ -264,17 +293,17 @@ function CageDetails() {
 
   return (
     <Layout
-      title={cage.name}
+      title={titled}
       eyebrow={eyebrow}
       actions={
         <>
           {allowed('/daily-entry') && (
-            <GradientButton href={`/daily-entry?cage=${cageId}`} icon={ClipboardPen}>
+            <GradientButton href={`/daily-entry?cage=${cageId}`} variant="lime" icon={PenIcon}>
               {t('cageDetail.logEntry')}
             </GradientButton>
           )}
           {allowed('/fish-transfers') && (
-            <GradientButton href={`/fish-transfers?source=${cageId}`} reverse icon={ArrowLeftRight}>
+            <GradientButton href={`/fish-transfers?source=${cageId}`} ring="sky" icon={TransferIcon}>
               {t('cageDetail.transfer')}
             </GradientButton>
           )}
@@ -286,6 +315,16 @@ function CageDetails() {
 
         <KpiStrip items={kpis} />
 
+        <div className="flex flex-col gap-5 lg:flex-row">
+          <GrowthForecastCard unitId={cageId} samples={recentBiweekly} stockingDate={growth?.stocking_date} />
+          <div className="flex min-w-0 flex-col lg:grow lg:basis-0">
+            <WaterNow unitId={cageId} />
+          </div>
+        </div>
+
+        <RecentLog daily={dailyRows} samples={recentBiweekly} />
+
+        {/* Not in Paper 03: keeper, quick actions, ration and alerts follow the artboard's sections. */}
         <KeeperChip unitId={cageId} />
 
         {(quick.length > 0 || canEdit || isAdmin) && (
@@ -310,15 +349,6 @@ function CageDetails() {
 
         <RationSuggestion cageId={cageId} detailed />
         <FarmAlerts unitId={cageId} compact />
-
-        <div className="flex flex-col gap-5 lg:flex-row">
-          <GrowthForecastCard unitId={cageId} samples={recentBiweekly} stockingDate={growth?.stocking_date} />
-          <div className="flex min-w-0 flex-col lg:grow lg:basis-0">
-            <WaterNow unitId={cageId} />
-          </div>
-        </div>
-
-        <RecentLog daily={dailyRows} samples={recentBiweekly} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <CycleCard growth={growth} cage={cage} />

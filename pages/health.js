@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { Pencil, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -27,7 +27,8 @@ import LocationMetaField from '../components/LocationMetaField'
 import DoTrendCard from '../components/health/DoTrendCard'
 import { waterLogColumns } from '../components/health/WaterLog'
 import { DIAGNOSIS_SUGGESTIONS } from '../lib/farmHealth'
-import { addDays, formatDate, formatNumber, localToday } from '../lib/format'
+import { addDays, formatDate, formatNumber, getActiveLocale, localToday } from '../lib/format'
+import { shortDate } from '../lib/projectsView'
 import {
   activeTreatments,
   doTrend,
@@ -53,6 +54,18 @@ const EMPTY_FORM = {
   notes: '',
 }
 
+/** Paper 07 "Log water" glyph (pen and baseline). */
+function PenIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+    </svg>
+  )
+}
+
+/** Paper 07 dates: "Nov 26". */
+const dayMonth = (iso) => shortDate(iso, getActiveLocale()) || '—'
+
 export default function HealthPage() {
   const t = useT()
   const [showForm, setShowForm] = useState(false)
@@ -64,12 +77,12 @@ export default function HealthPage() {
         actions={
           <>
             <IfPermitted permission="production.daily.record">
-              <GradientButton href="/water-entry" icon={Pencil}>
+              <GradientButton href="/water-entry" variant="lime" icon={PenIcon}>
                 {t('healthWater.logWater')}
               </GradientButton>
             </IfPermitted>
             <IfPermitted permission="production.health.record">
-              <GradientButton reverse icon={Plus} onClick={() => setShowForm(true)} aria-expanded={showForm}>
+              <GradientButton ring="sky" icon={Plus} onClick={() => setShowForm(true)} aria-expanded={showForm}>
                 {t('healthWater.newTreatment')}
               </GradientButton>
             </IfPermitted>
@@ -238,7 +251,6 @@ function HealthTreatments({ showForm, setShowForm }) {
             key: 'do',
             label: t('healthWater.kpi.avgDo'),
             value: loaded ? (summary.avgDo == null ? '—' : `${fmt1(summary.avgDo)} mg/L`) : '—',
-            valueTone: summary.lowDoUnits > 0 ? 'warn' : undefined,
             suffix: summary.lowDoUnits > 0 ? t('healthWater.kpi.belowThreshold', { count: summary.lowDoUnits }) : null,
           },
           {
@@ -255,7 +267,7 @@ function HealthTreatments({ showForm, setShowForm }) {
             key: 'withdrawal',
             label: t('healthWater.kpi.inWithdrawal'),
             value: withdrawals === undefined ? '—' : t('healthWater.kpi.units', { count: hold.units }),
-            suffix: hold.lastUntil ? t('healthWater.kpi.noHarvestUntil', { date: formatDate(hold.lastUntil) }) : null,
+            suffix: hold.lastUntil ? t('healthWater.kpi.noHarvestUntil', { date: dayMonth(hold.lastUntil) }) : null,
           },
         ]}
       />
@@ -387,12 +399,12 @@ function HealthTreatments({ showForm, setShowForm }) {
                       {r.cage_name} · {r.treatment}
                     </div>
                     <div className="truncate text-xs leading-4 text-muted">
-                      {[formatDate(r.date), r.administered_by].filter(Boolean).join(' · ')}
+                      {[dayMonth(r.date), r.administered_by].filter(Boolean).join(' · ')}
                     </div>
                   </div>
                   <div className="shrink-0 text-[14px] font-medium leading-[18px] text-text tabular-nums">
                     {r.inWithdrawal
-                      ? t('healthWater.active.until', { date: formatDate(r.withdrawal_until) })
+                      ? t('healthWater.active.until', { date: dayMonth(r.withdrawal_until) })
                       : t('healthWater.active.noWithdrawal')}
                   </div>
                 </li>

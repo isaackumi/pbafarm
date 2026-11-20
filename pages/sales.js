@@ -21,7 +21,8 @@ import {
 import NavTabs from '../components/ui/NavTabs'
 import { Panel, ListRow } from '../components/ui/Panel'
 import { financeTabs } from '../lib/sectionTabs'
-import { formatMass, shortDate } from '../lib/feedOverview'
+import { shortDate } from '../lib/feedOverview'
+import { paperMoney } from '../lib/financeFormat'
 import { prevMonth, salePill, summarizeSales, topCustomers } from '../lib/salesSummary'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,7 +30,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useToast } from '../components/Toast'
 import { useCurrency } from '../hooks/useCurrency'
 import LocationMetaField from '../components/LocationMetaField'
-import { formatDate, localToday } from '../lib/format'
+import { formatDate, formatNumber, localToday } from '../lib/format'
 import { usePermission } from '../hooks/usePermission'
 import { errorCode, errorMessage } from '../lib/errorMessage'
 import { useLocale, useT } from '../lib/i18n/context'
@@ -47,6 +48,23 @@ export default function SalesPage() {
 
 const SALE_TABS = ['all', 'unpaid', 'overdue', 'walkin']
 
+/** Paper 24 numbers: whole amounts without decimals, cents only when there are any. */
+const places = (n) => (Number.isInteger(Number(n)) ? 0 : 2)
+/** Paper 24 weight: "2,400 kg" (kilograms with thousands separators). */
+const kg = (n) => `${formatNumber(Number(n) || 0, { decimals: 0 })} kg`
+
+/** Paper 24 payment pill; "sky" (Invoiced) is border #1F3E6E with #6AA8F5 text. */
+function SalePill({ pill, label }) {
+  if (pill.tone === 'sky') {
+    return (
+      <Pill tone="neutral" className="!border-[#1F3E6E] !text-sky-ink">
+        {label}
+      </Pill>
+    )
+  }
+  return <Pill tone={pill.tone}>{label}</Pill>
+}
+
 function Sales() {
   const { user } = useAuth()
   const isAdmin = usePermission('finance.sales.correct')
@@ -54,7 +72,9 @@ function Sales() {
   const { formatLocale } = useLocale()
   const { locationArgs, activeLocationId } = useLocation()
   const { showToast } = useToast()
-  const { formatCurrency } = useCurrency()
+  const { formatCurrency, currency } = useCurrency()
+  const money = (n, opts) => paperMoney(n, currency, { decimals: places(n), ...opts })
+  const num = (n) => formatNumber(Number(n) || 0, { decimals: places(n) })
   const t = useT()
   const [tab, setTab] = useState('sales')
   const [selectedId, setSelectedId] = useState(null)
@@ -217,12 +237,12 @@ function Sales() {
       actions={
         <>
           {canRecord && (
-            <GradientButton icon={Plus} onClick={() => setShowForm(true)}>
+            <GradientButton variant="lime" icon={Plus} onClick={() => setShowForm(true)}>
               {t('ops.sales.recordSale')}
             </GradientButton>
           )}
           {isAdmin && (
-            <GradientButton reverse icon={UserPlus} onClick={() => setShowCustomer(true)}>
+            <GradientButton ring="sky" icon={UserPlus} onClick={() => setShowCustomer(true)}>
               {t('ops.sales.newCustomer')}
             </GradientButton>
           )}
@@ -246,24 +266,22 @@ function Sales() {
         items={[
           {
             label: t('ops.sales.salesMonth', { month: monthLabel }),
-            value: sales === undefined ? '—' : formatCurrency(summary.total),
-            suffix: summary.changePct == null ? undefined : t('ops.sales.vsPrev', { pct: `${summary.changePct > 0 ? '+' : ''}${summary.changePct}`, month: prevMonthLabel }),
-            suffixTone: summary.changePct == null ? undefined : summary.changePct >= 0 ? 'good' : 'alert',
+            value: sales === undefined ? '—' : money(summary.total, { decimals: 0 }),
+            suffix: summary.changePct == null ? undefined : t('ops.sales.vsPrev', { pct: `${summary.changePct > 0 ? '+' : summary.changePct < 0 ? '−' : ''}${Math.abs(summary.changePct)}`, month: prevMonthLabel }),
           },
           {
             label: t('ops.sales.collected'),
-            value: sales === undefined ? '—' : formatCurrency(summary.collected),
+            value: sales === undefined ? '—' : money(summary.collected, { decimals: 0 }),
             suffix: summary.collectedPct == null ? undefined : `${summary.collectedPct}%`,
           },
           {
             label: t('ops.sales.outstanding'),
-            value: summary.outstanding == null ? '—' : formatCurrency(summary.outstanding),
+            value: summary.outstanding == null ? '—' : money(summary.outstanding, { decimals: 0 }),
             suffix: summary.outstanding == null ? undefined : t('ops.sales.openSales', { count: summary.outstandingCount }),
           },
           {
             label: t('ops.sales.overdue'),
-            value: summary.outstanding == null ? '—' : formatCurrency(summary.overdue),
-            valueTone: summary.overdue > 0 ? 'alert' : undefined,
+            value: summary.outstanding == null ? '—' : money(summary.overdue, { decimals: 0 }),
             suffix: summary.overdue30Count ? t('ops.sales.over30', { count: summary.overdue30Count }) : undefined,
           },
         ]}
@@ -527,7 +545,8 @@ function Sales() {
           searchPlaceholder={t('ops.sales.search')}
           onRowClick={(sale) => setSelectedId(sale.id || sale._id)}
           columns={[
-            { key: 'date', header: t('ops.col.date'), width: 90, render: (sale) => shortDate(sale.sale_date) },
+            // Paper 24 lanes: date 60, weight 80, amount 110, paid 130 (+ the 24px gaps as cell padding).
+            { key: 'date', header: t('ops.col.date'), width: 96, render: (sale) => shortDate(sale.sale_date) },
             {
               key: 'customer',
               header: t('ops.sales.customerLot'),
@@ -551,19 +570,18 @@ function Sales() {
             {
               key: 'weight',
               header: t('ops.sales.weight'),
-              width: 100,
+              width: 104,
               align: 'right',
-              render: (sale) =>
-                sale.unit_count != null ? t('ops.sales.units', { count: sale.unit_count }) : formatMass(Number(sale.weight_kg || 0)),
+              render: (sale) => (sale.unit_count != null ? t('ops.sales.units', { count: sale.unit_count }) : kg(sale.weight_kg)),
             },
-            { key: 'amount', header: t('ops.sales.amount'), width: 120, align: 'right', render: (sale) => formatCurrency(sale.total_amount) },
+            { key: 'amount', header: t('ops.sales.amount'), width: 134, align: 'right', render: (sale) => money(sale.total_amount) },
             {
               key: 'paid',
               header: t('ops.sales.paid'),
-              width: 150,
+              width: 166,
               render: (sale) => {
                 const pill = salePill(sale, overdueDays.get(sale.id || sale._id) || 0)
-                return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
+                return <SalePill pill={pill} label={t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })} />
               },
             },
           ]}
@@ -585,8 +603,10 @@ function Sales() {
                   </h2>
                 </div>
                 {(() => {
+                  // Paper 24: the card's pill drops the share ("Part paid"); the table shows it.
                   const pill = salePill(focusSale, overdueDays.get(focusSale.id || focusSale._id) || 0)
-                  return <Pill tone={pill.tone}>{t(`ops.sales.pill.${pill.key}`, { pct: pill.pct, days: pill.days })}</Pill>
+                  const key = pill.key === 'partial' ? 'partialShort' : pill.key
+                  return <SalePill pill={pill} label={t(`ops.sales.pill.${key}`, { pct: pill.pct, days: pill.days })} />
                 })()}
               </div>
               <div className="flex flex-col gap-[10px] rounded-[14px] border border-line bg-bg p-4 text-[13px] leading-4">
@@ -596,17 +616,17 @@ function Sales() {
                       focusSale.cage_name,
                       focusSale.unit_count != null
                         ? t('ops.sales.units', { count: focusSale.unit_count })
-                        : `${formatMass(Number(focusSale.weight_kg || 0))} × ${formatCurrency(focusSale.price_per_kg)}`,
+                        : `${kg(focusSale.weight_kg)} × ${num(focusSale.price_per_kg)}`,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
-                  <span className="text-text tabular-nums">{formatCurrency(focusSale.total_amount)}</span>
+                  <span className="whitespace-pre text-text tabular-nums">{num(focusSale.total_amount)}</span>
                 </div>
                 {Number(focusSale.amount_paid) > 0 && (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted">{t('ops.sales.paidSoFar')}</span>
-                    <span className="text-good tabular-nums">− {formatCurrency(focusSale.amount_paid)}</span>
+                    <span className="whitespace-pre text-good tabular-nums">− {num(focusSale.amount_paid)}</span>
                   </div>
                 )}
                 <div aria-hidden className="h-px shrink-0 bg-line" />
@@ -615,22 +635,21 @@ function Sales() {
                     {focusDue ? t('ops.sales.balanceDueOn', { date: shortDate(focusDue) }) : t('ops.sales.balanceDue')}
                   </span>
                   <span className="text-[22px] font-semibold leading-[28px] tabular-nums text-text">
-                    {formatCurrency(Math.max(0, Number(focusSale.balance || 0)))}
+                    {money(Math.max(0, Number(focusSale.balance || 0)))}
                   </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-[10px] pt-[14px]">
-                <GradientButton variant="solid" size="sm" onClick={() => setSelectedId(focusSale.id || focusSale._id)} aria-expanded={Boolean(selectedSale)}>
+                <GradientButton variant="solid" ring="sky" size="sm" onClick={() => setSelectedId(focusSale.id || focusSale._id)} aria-expanded={Boolean(selectedSale)}>
                   {Number(focusSale.balance) > 0 ? t('ops.sales.recordPayment') : t('ops.sales.openSale')}
                 </GradientButton>
                 {focusSale.invoice_id && (
-                  <GhostButton size="sm" href={`/invoices/${focusSale.invoice_id}`}>
+                  <GhostButton href={`/invoices/${focusSale.invoice_id}`}>
                     {t('ops.sales.viewInvoice')}
                   </GhostButton>
                 )}
                 {isAdmin && (
                   <GhostButton
-                    size="sm"
                     tone="danger"
                     onClick={async () => {
                       try {
@@ -663,7 +682,7 @@ function Sales() {
                   sub={[t('ops.sales.saleCount', { count: c.count }), c.open ? t('ops.sales.openCount', { count: c.open }) : null]
                     .filter(Boolean)
                     .join(' · ')}
-                  value={formatCurrency(c.total)}
+                  value={money(c.total, { compact: true })}
                 />
               ))
             )}

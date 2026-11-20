@@ -4,7 +4,8 @@ import { api } from '../convex/_generated/api'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
-import { Skeleton, Toggle } from './ui'
+import { Skeleton } from './ui'
+import { SkyToggle } from './paperTones'
 import { SettingsCard, SettingsRow, FIELD } from './settings'
 
 const CHANNELS = [
@@ -89,7 +90,7 @@ export default function NotificationPreferencesCard() {
                     : undefined
               }
             >
-              <Toggle
+              <SkyToggle
                 label={label}
                 checked={form[c.key]}
                 disabled={saving}
@@ -100,8 +101,8 @@ export default function NotificationPreferencesCard() {
         })}
       </SettingsCard>
       <SettingsCard title={t('settingsUi.notif.quietHours')}>
-        <SettingsRow label={form.quiet ? range : t('settingsUi.off')} helper={t('settingsUi.notif.quietHelper')}>
-          <Toggle
+        <SettingsRow label={form.quiet ? range : t('settingsUi.off')} helper={t('settingsUi.notif.quietHelper')} className="py-3!">
+          <SkyToggle
             label={t('settingsUi.notif.quietHours')}
             checked={form.quiet}
             disabled={saving}

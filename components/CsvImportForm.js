@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { FileSpreadsheet } from 'lucide-react'
+import { ArrowUpToLine, FileUp } from 'lucide-react'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -15,6 +15,7 @@ import { formatNumber, localToday } from '../lib/format'
 import { useT } from '../lib/i18n/context'
 import { Card, GhostButton, GradientButton, Pill, StatusDot, Table } from './ui'
 import { ActionBar } from './ui/ActionBar'
+import { SKY_TEXT } from './paperTones'
 
 const KINDS = {
   daily: {
@@ -166,7 +167,7 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
       key: 'line',
       header: t('csvImport.preview.colRow'),
       width: 56,
-      render: (r) => <span className="font-mono text-xs text-faint">{r.line}</span>,
+      render: (r) => <span className="font-geist text-xs text-faint">{r.line}</span>,
     },
     { key: 'date', header: t('csvImport.preview.colDate'), width: 110, render: (r) => <span className="tabular-nums">{cell(r.values, 'date') || '—'}</span> },
     { key: 'cage', header: t('csvImport.preview.colCage'), width: 100, render: (r) => cell(r.values, 'cage_name', 'cage') || '—' },
@@ -223,12 +224,12 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          className={`flex flex-col gap-4 rounded-input border-[1.5px] border-dashed bg-[color-mix(in_oklab,var(--bg)_50%,var(--surface))] p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-7 ${
-            dragging ? 'border-pearl-cyan' : 'border-line-strong'
+          className={`flex flex-col gap-4 rounded-input border-[1.5px] border-dashed bg-[color-mix(in_oklab,var(--bg)_50%,var(--surface))] p-5 sm:flex-row sm:items-center sm:gap-5 sm:p-7 [html[data-theme=light]_&]:bg-[#F4F7FB] ${
+            dragging ? 'border-sky-ink [html[data-theme=light]_&]:border-[#1562D6]' : 'border-line-strong [html[data-theme=light]_&]:border-[#CBD6E3]'
           }`}
         >
-          <div className="flex size-[52px] shrink-0 items-center justify-center rounded-full bg-surface-2 text-pearl-cyan">
-            <FileSpreadsheet size={22} strokeWidth={2} aria-hidden />
+          <div className={`flex size-[52px] shrink-0 items-center justify-center rounded-full bg-surface-2 [html[data-theme=light]_&]:bg-white ${SKY_TEXT}`}>
+            <FileUp size={22} strokeWidth={2} aria-hidden />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <p className="truncate text-[15px] font-semibold leading-[18px] text-text">
@@ -287,7 +288,10 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
       )}
 
       {file && preview && !preview.error && (
-        <ActionBar aria-live="polite">
+        <ActionBar
+          aria-live="polite"
+          className="[html[data-theme=light]_&]:border-[#CBD6E3] [html[data-theme=light]_&]:shadow-[0_8px_24px_#1018281F,0_1px_2px_#1018281A]"
+        >
           <div className="mr-auto flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
             <span className="flex items-center gap-2">
               <StatusDot tone={okCount ? 'good' : 'alert'} size={8} />
@@ -304,7 +308,7 @@ export default function CsvImportForm({ kind, onSuccess, onCancel, header = null
           >
             {t('common.cancel')}
           </button>
-          <GradientButton variant="solid" onClick={handleImport} disabled={loading || !okCount}>
+          <GradientButton variant="lime" icon={ArrowUpToLine} className="[&>span]:h-[42px]" onClick={handleImport} disabled={loading || !okCount}>
             {loading ? t('csvImport.uploading') : t('csvImport.importCount', { count: okCount })}
           </GradientButton>
         </ActionBar>

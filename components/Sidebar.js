@@ -4,13 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import {
-  ChevronDown,
-  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ChevronsUpDown,
-  MapPin,
-  Plus,
   X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,6 +15,7 @@ import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 import { navKey } from '../lib/i18n'
 import { MENU_SECTIONS } from '../lib/navigation'
+import { ChevronDownIcon, ChevronRightIcon } from '../lib/navIcons'
 import { routePermission } from '../lib/routePermissions'
 import { api } from '../convex/_generated/api'
 import { useOptionalQuery } from '../hooks/useOptionalQuery'
@@ -39,56 +35,22 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 
 
 /**
- * Workspace card (Paper EZ-0): active site (switches location; the farm itself
- * is picked in FarmSwitcher above, Paper 69),
- * optional feed cover line and the "Stock a new cage" action.
+ * Tenant block (Paper 7Z-0 EZ-0): the farm row (FarmSwitcher: farm, active
+ * site and the switch menu, Paper 69), the feed cover line and the
+ * "Stock a new cage" action, 12px apart.
  */
-function WorkspaceCard({ feedCover, canStock }) {
+function WorkspaceCard({ feedCover, canStock, showFarm }) {
   const t = useT()
-  const { locations, activeLocationId, setActiveLocation, loading } = useLocation()
-  const active = locations.find((loc) => (loc.id || loc._id) === activeLocationId)
+  const { locations, loading } = useLocation()
   return (
-    <div className="flex flex-col gap-3">
-      <div
-        className="relative flex items-center gap-2.5 rounded-[8px] px-1.5 py-1 hover:bg-surface-2"
-        data-tour="location-switcher"
-      >
-        <span className="flex w-7 shrink-0 justify-center text-muted" aria-hidden>
-          <MapPin size={14} strokeWidth={2} />
-        </span>
-        <div className="flex min-w-0 grow basis-0 flex-col">
-          {locations.length > 0 ? (
-            <div className="truncate text-[13px] leading-4 text-text">{active?.name || '—'}</div>
-          ) : (
-            <Link href="/farm-locations" className="relative z-10 text-[12px] leading-4 text-cyan hover:underline">
-              Set location
-            </Link>
-          )}
-        </div>
-        {locations.length > 1 && (
-          <>
-            <ChevronsUpDown size={14} strokeWidth={2} className="shrink-0 text-muted" aria-hidden />
-            <select
-              aria-label="Farm location"
-              title="Changing location refreshes the page"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              value={activeLocationId || ''}
-              disabled={loading}
-              onChange={(e) => {
-                const next = e.target.value
-                if (!next || next === activeLocationId) return
-                setActiveLocation(next)
-              }}
-            >
-              {locations.map((loc) => (
-                <option key={loc.id || loc._id} value={loc.id || loc._id}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </div>
+    <div className="flex flex-col gap-3" data-tour="location-switcher">
+      {showFarm && <FarmSwitcher />}
+      {/* Not in the artboard: a farm with no site yet links to set one up. */}
+      {!loading && locations.length === 0 && (
+        <Link href="/farm-locations" className="px-1.5 text-[12px] leading-4 text-sky-ink hover:underline">
+          Set location
+        </Link>
+      )}
       {feedCover && (
         <div className="px-1.5 text-[12px] leading-[17px] text-muted">
           {t('nav.feedCover')} <span className="text-text">{t('nav.feedCoverDays', { count: feedCover.days })}</span>
@@ -100,7 +62,9 @@ function WorkspaceCard({ feedCover, canStock }) {
           href="/stocking"
           className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-pill border border-line-strong text-[13px] font-medium leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
-          <Plus size={14} strokeWidth={2} aria-hidden />
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
           Stock a new cage
         </Link>
       )}
@@ -287,12 +251,13 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
         )}
       </div>
 
-      {canUseApp && <FarmSwitcher collapsed={collapsed} />}
+      {canUseApp && collapsed && <FarmSwitcher collapsed />}
 
       {!collapsed && (
         <WorkspaceCard
           feedCover={feedCover}
           canStock={can(routePermission('/stocking'))}
+          showFarm={canUseApp}
         />
       )}
 
@@ -314,7 +279,12 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                 title={collapsed ? title : undefined}
                 className={`${ROW} ${active ? ROW_ACTIVE : ROW_IDLE} ${collapsed ? 'justify-center px-0' : ''}`}
               >
-                <SectionIcon size={16} strokeWidth={2} className="shrink-0" aria-hidden />
+                <SectionIcon
+                  size={16}
+                  strokeWidth={2}
+                  className={`shrink-0 ${SectionIcon.muted && !active ? 'text-muted' : ''}`}
+                  aria-hidden
+                />
                 {!collapsed && <span className="grow basis-0 truncate">{title}</span>}
                 {!collapsed && count > 0 && (
                   <span className={`text-[12px] leading-4 ${active ? 'text-button-text' : 'text-muted'}`}>
@@ -354,13 +324,18 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                 className={`${ROW} ${rowActive ? ROW_ACTIVE : ROW_IDLE} ${collapsed ? 'justify-center px-0' : ''}`}
                 title={collapsed ? title : undefined}
               >
-                <SectionIcon size={16} strokeWidth={2} className="shrink-0" aria-hidden />
+                <SectionIcon
+                  size={16}
+                  strokeWidth={2}
+                  className={`shrink-0 ${SectionIcon.muted && !rowActive ? 'text-muted' : ''}`}
+                  aria-hidden
+                />
                 {!collapsed && <span className="grow basis-0 truncate">{title}</span>}
                 {!collapsed &&
                   (open ? (
-                    <ChevronDown size={14} strokeWidth={2} className="shrink-0" aria-hidden />
+                    <ChevronDownIcon size={14} strokeWidth={2} className="shrink-0" aria-hidden />
                   ) : (
-                    <ChevronRight
+                    <ChevronRightIcon
                       size={14}
                       strokeWidth={2}
                       className={`shrink-0 ${rowActive ? '' : 'text-muted'}`}

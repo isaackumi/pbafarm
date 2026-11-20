@@ -8,6 +8,16 @@ import { usePermissions } from '../../hooks/usePermission'
 export const fmt = (v, dp = 0) =>
   v == null || v === '' ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: dp })
 
+/** Paper 13 board counts: "412", "186k", "1.2M" (lowercase k, as in the artboard). */
+export const compact = (v) => {
+  if (v == null || v === '') return '—'
+  const n = Number(v)
+  const abs = Math.abs(n)
+  if (abs >= 1e6) return `${(n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 1 })}M`
+  if (abs >= 1e3) return `${Math.round(n / 1e3).toLocaleString()}k`
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
 export const today = () => new Date().toISOString().slice(0, 10)
 
 /** Number from an input, or undefined when blank (blank is not 0). */
@@ -81,7 +91,7 @@ export function HatcheryNav() {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={`-mb-px inline-flex border-b-2 pb-3 text-[14px] leading-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-                  active ? 'border-text font-medium text-text' : 'border-transparent text-muted hover:text-text'
+                  active ? 'border-button font-medium text-text' : 'border-transparent text-muted hover:text-text'
                 }`}
               >
                 {t(`hatcheryPage.tab.${tab.key}`)}
