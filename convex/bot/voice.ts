@@ -112,15 +112,18 @@ export async function voicePlan(
   if (!speechAvailable(language, speechConfigFromEnv())) return reply(s.voiceNotSetUp(s.languageNames[language]))
   if (!can(bound.member, 'production.daily.record')) return reply(s.voiceNoPermission)
   if (bound.company.settings?.aiAssistantEnabled !== true) return reply(s.aiDisabled)
-  // The agent turn would refuse anyway: do not pay for a transcription first.
-  for (const [name, key] of [
+  // Transcription is paid on the platform's key: it spends the SEC-004
+  // assistant limits up front (check all, then spend), like an agent turn.
+  const limits = [
     ['llmPerUserMinute', bound.binding.userId],
     ['llmPerUserHour', bound.binding.userId],
     ['llmPerCompanyHour', bound.binding.companyId],
-  ] as const) {
+  ] as const
+  for (const [name, key] of limits) {
     const verdict = await rateLimiter.check(ctx, name, { key })
     if (!verdict.ok) return reply(s.aiQuota(retryAfterText(verdict.retryAfter)))
   }
+  for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
   // The pipeline sends its own reply; a repeat of the same message does nothing.
   const voiceNoteId = await createVoiceNote(ctx, bound, {
     sourceMessageId: inbound.externalId,
@@ -348,27 +351,32 @@ export function voiceMessages(locale: BotLocale, voiceNoteId: Id<'voiceNotes'>, 
   const date = view.drafts[0].date
   notes.push(s.savingFor(date, date === view.today))
 
-  const body: string[] = []
-  let used = 0
-  const push = (line: string) => {
-    if (used + line.length + 1 > BODY_BUDGET) return false
-    body.push(line)
-    used += line.length + 1
-    return true
+  // Every draft line must be visible before Save: never cut one off. When
+  // the whole reply does not fit WhatsApp's button body, the transcript goes
+  // first as its own message, then (if still too long) the drafts too.
+  const draftText = [...lines, '', ...notes].join('\n')
+  const full = [...header, '', draftText].join('\n')
+  const out: ChatMessageValue[] = []
+  let buttonText = full
+  if (full.length > BODY_BUDGET) {
+    out.push(text(header.join('\n')))
+    buttonText = draftText
+    if (draftText.length > BODY_BUDGET) {
+      out.push(text(draftText))
+      buttonText = s.heardCount(view.drafts.length, allCages)
+    }
   }
-  for (const line of [...header, '', ...lines, '', ...notes]) if (!push(line)) break
-
-  const out: ChatMessageValue[] = [
+  out.push(
     {
       kind: 'buttons',
-      text: body.join('\n'),
+      text: buttonText,
       buttons: [
         { id: `${VOICE_VERBS.saveAll}:${voiceNoteId}`, title: s.saveGroup(view.drafts.length).slice(0, 20) },
         { id: `${VOICE_VERBS.edit}:${voiceNoteId}`, title: s.edit.slice(0, 20) },
         { id: `${VOICE_VERBS.cancel}:${voiceNoteId}`, title: s.cancel.slice(0, 20) },
       ],
     },
-  ]
+  )
   // "Which cage?" with the 2 closest matches + Another (artboard 49).
   for (const d of view.drafts) {
     if (!d.needsCheck?.includes('unit') || !d.unitChoices?.length) continue

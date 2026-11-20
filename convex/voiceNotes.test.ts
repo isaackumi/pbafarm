@@ -16,6 +16,8 @@ import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
 import { testHooks } from './bot/agent'
+import { voiceMessages } from './bot/voice'
+import { rateLimiter } from './lib/rateLimits'
 
 const modules = import.meta.glob('./**/*.ts')
 
@@ -471,5 +473,54 @@ describe('BOT-005 voice notes', () => {
     expect(note?.audioDeletedAt).toBeTypeOf('number')
     expect(await rows(s, 'files')).toHaveLength(0)
     expect(await s.t.mutation(internal.bot.voice.purgeOldAudio, {})).toBe(0)
+  })
+
+  test('transcription spends the assistant quota up front, even when it fails', async () => {
+    stubEnv(SPEECH_ENV)
+    const s = await setup()
+    await s.t.run(async (ctx) => {
+      // The hourly limit: draining advances the faked clock past a minute window.
+      for (let i = 0; i < 99; i++) await rateLimiter.limit(ctx, 'llmPerUserHour', { key: s.staff })
+    })
+    whisperReply = [400, { error: { message: 'bad audio' } }]
+    await postWhatsApp(s, waVoice())
+    await drain(s)
+    await postWhatsApp(s, waVoice())
+    const replies = await drain(s)
+    expect(replies[0].text).toMatch(/You have used the assistant a lot recently/)
+    expect(speechCalls).toHaveLength(1)
+    expect(await rows(s, 'voiceNotes')).toHaveLength(1)
+  })
+})
+
+describe('BOT-005 reply layout', () => {
+  test('every draft stays visible: a long transcript moves to its own message, drafts are never cut', () => {
+    const drafts = Array.from({ length: 5 }, (_, i) => ({
+      _id: `p${i}` as Id<'pendingBotActions'>,
+      payload: {
+        kind: 'daily_entry' as const,
+        cageId: `c${i}` as Id<'cages'>,
+        cageName: `Cage North Bank Long Name ${i}`,
+        feedKg: 10 + i,
+        feedTypeName: 'Grower 4mm floating pellet',
+        mortality: i,
+        notes: 'x'.repeat(100),
+      },
+      date: '2026-11-20',
+      duplicateOf: `d${i}` as Id<'pendingBotActions'>,
+    }))
+    const out = voiceMessages('en', 'n1' as Id<'voiceNotes'>, {
+      transcript: 'y'.repeat(400),
+      english: 'z'.repeat(400),
+      language: 'tw',
+      today: '2026-11-20',
+      drafts,
+    })
+    const all = out.map((m) => ('text' in m ? m.text : '')).join('\n')
+    for (let i = 0; i < 5; i++) expect(all).toContain(`${i + 1}. Unit: Cage North Bank Long Name ${i}`)
+    expect(all.split('A similar entry was sent a few minutes ago.').length - 1).toBe(5)
+    const buttons = out.find((m) => m.kind === 'buttons')!
+    expect(buttons.kind === 'buttons' && buttons.text.length).toBeLessThanOrEqual(1024)
+    expect(buttons.kind === 'buttons' && buttons.buttons[0].id).toBe('vsa:n1')
   })
 })
