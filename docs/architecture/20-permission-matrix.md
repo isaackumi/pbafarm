@@ -17,6 +17,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `analytics.cycles` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.growth` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.trends` | `reports.view` | yes | yes | yes | yes | yes |
+| `anowa/agent.ask` | `allowlisted` | see test | see test | see test | see test | see test |
+| `anowa/drafts.cancel` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/drafts.confirm` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/drafts.get` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/drafts.undo` | `ai.use` | yes | yes | yes | no | no |
 | `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `apiKeys.overview` | `integrations.manage` | yes | yes | no | no | no |
 | `apiKeys.revoke` | `integrations.manage` | yes | yes | no | no | no |
@@ -385,6 +390,20 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `procurement.markOrdered` | `inventory.purchase.correct` | yes | yes | no | no | no |
 | `procurement.receive` | `inventory.purchase.record` | yes | yes | yes | no | no |
 | `procurement.update` | `inventory.purchase.record` | yes | yes | yes | no | no |
+| `projects.addCost` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.addMilestone` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.create` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.get` | `projects.view` | yes | yes | yes | yes | yes |
+| `projects.linkable` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.list` | `projects.view` | yes | yes | yes | yes | yes |
+| `projects.listCosts` | `projects.view` | yes | yes | yes | yes | yes |
+| `projects.ownerOptions` | `projects.view` | yes | yes | yes | yes | yes |
+| `projects.remove` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.removeCost` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.removeMilestone` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.summary` | `projects.view` | yes | yes | yes | yes | yes |
+| `projects.update` | `projects.manage` | yes | yes | yes | no | no |
+| `projects.updateMilestone` | `projects.manage` | yes | yes | yes | no | no |
 | `reminders.runForMyCompanyNow` | `org.settings.manage` | yes | yes | no | no | no |
 | `reportBuilder.filterOptions` | `reports.view` | yes | yes | yes | yes | yes |
 | `reportBuilder.list` | `reports.view` | yes | yes | yes | yes | yes |

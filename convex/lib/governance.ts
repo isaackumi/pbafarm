@@ -102,6 +102,10 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'expenses', index: 'by_company_and_date' },
   { table: 'expenseCategories', index: 'by_company_and_key' },
   { table: 'purchaseOrders', index: 'by_company' },
+  // Projects (PROJ-001): children first.
+  { table: 'projectCosts', index: 'by_company_and_expenseId' },
+  { table: 'projectMilestones', index: 'by_company_and_open_and_dueDate' },
+  { table: 'projects', index: 'by_company_and_targetEndDate' },
   { table: 'inventoryItems', index: 'by_company' },
   { table: 'inventoryItemStock', index: 'by_company' },
   { table: 'inventoryMovements', index: 'by_company_and_date' },

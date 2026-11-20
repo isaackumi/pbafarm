@@ -82,7 +82,8 @@
       "alerts": "Alerts & insights",
       "calendar": "Calendar",
       "assistant": "Anowa",
-      "cyclePlanner": "Cycle planner"
+      "cyclePlanner": "Cycle planner",
+      "projects": "Projects"
     },
     "section": {
       "anowa": "Ask Anowa",
@@ -6451,6 +6452,19 @@
           "title": "Assign a task",
           "meta": "Tasks",
           "metaUnit": "Tasks · {unit}"
+        },
+        "projectNew": {
+          "title": "Create a project",
+          "meta": "Projects · company-wide",
+          "metaSite": "Projects · {site}"
+        },
+        "projectMilestone": {
+          "title": "Add a milestone",
+          "meta": "Project · {project}"
+        },
+        "projectCost": {
+          "title": "Log a project cost",
+          "meta": "Project · {project}"
         }
       },
       "fields": {
@@ -6470,7 +6484,17 @@
         "task": "Task",
         "assignee": "Assignee",
         "due": "Due",
-        "noDue": "No due date"
+        "noDue": "No due date",
+        "project": "Project",
+        "budget": "Budget",
+        "dates": "Dates",
+        "owner": "Owner",
+        "milestone": "Milestone",
+        "progress": "Progress",
+        "amount": "Amount",
+        "spentAfter": "Spent after",
+        "ofBudget": "({pct}% of budget)",
+        "note": "Note"
       },
       "bar": {
         "label": "Why this amount",
@@ -6517,6 +6541,12 @@
       "failed": "Could not save: {message}",
       "followUpLabel": "Suggested next step",
       "notNow": "Not now"
+    },
+    "brief": {
+      "label": "Anowa brief",
+      "from": "Anowa",
+      "loading": "Reading your records…",
+      "ask": "Ask Anowa"
     }
   },
   "marketing": {
@@ -7407,6 +7437,175 @@
       "none": "Save two or more plans to see the trade-off between them.",
       "same": "{name} sells first and earns the most margin, so it wins on both counts.",
       "tradeoff": "{fast} sells {weeks} weeks sooner, but {best} makes {gap} more margin. Per month in the water, {leader} earns more, about {perMonth}."
+    }
+  },
+  "projectsPage": {
+    "title": "Projects",
+    "eyebrow": "Projects · Capex and farm improvements",
+    "detailEyebrow": "Projects · {site}",
+    "new": "New project",
+    "edit": "Edit",
+    "back": "All projects",
+    "notFound": "This project does not exist or is not in your sites.",
+    "tabsLabel": "Project views",
+    "tabs": {
+      "timeline": "Timeline",
+      "board": "Board",
+      "budget": "Budget"
+    },
+    "companyWide": "Company-wide",
+    "atRisk": "Needs attention",
+    "late": "Late",
+    "dueSoon": "Due soon",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "units": {
+      "one": "1 unit",
+      "other": "{count} units"
+    },
+    "progress": "{pct}% done",
+    "ownerIs": "Owner: {name}",
+    "spentOf": "{spent} of {budget}",
+    "noBudget": "No budget",
+    "noBudgets": "No project on this page has a budget yet.",
+    "milestones": "Milestones",
+    "milestonesNeed": "Milestones that need you",
+    "noMilestonesNeed": "No milestone is late or due in the next 14 days.",
+    "noMilestones": "No milestones yet.",
+    "noCosts": "No costs logged yet.",
+    "budgetVsActual": "Budget vs actual",
+    "details": "Details",
+    "cancelProject": "Cancel project",
+    "delete": "Delete project",
+    "deleteTitle": "Delete {name}?",
+    "deleteBody": "Its milestones are deleted too. A project with costs cannot be deleted; cancel it instead.",
+    "status": {
+      "planned": "Planned",
+      "active": "Active",
+      "on_hold": "On hold",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "category": {
+      "infrastructure": "Infrastructure",
+      "equipment": "Equipment",
+      "expansion": "Expansion",
+      "maintenance": "Maintenance",
+      "certification": "Certification",
+      "other": "Other"
+    },
+    "group": {
+      "none": "No grouping",
+      "site": "Group by site",
+      "owner": "Group by owner",
+      "status": "Group by status"
+    },
+    "filters": {
+      "search": "Search projects",
+      "site": "Site",
+      "allSites": "All sites",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "owner": "Owner",
+      "allOwners": "All owners",
+      "atRisk": "At risk only",
+      "group": "Grouping"
+    },
+    "empty": {
+      "title": "No projects yet",
+      "body": "Track builds, equipment and certification work: dates, milestones and budget vs actual in one place.",
+      "noMatch": "No projects match",
+      "noMatchBody": "Clear a filter or search for another name."
+    },
+    "brief": {
+      "lead": {
+        "one": "1 project needs you",
+        "other": "{count} projects need you"
+      },
+      "overBudget": "{name} is {pct}% over budget",
+      "late": "{title} on {name} was due {date} and is {pct}% done",
+      "dueSoon": "{title} due {date} is {pct}% done",
+      "calm": "Nothing needs you: no project is over budget and no milestone is late.",
+      "question": "Which projects need my attention this week, and why?",
+      "leadSelf": "This project needs you",
+      "overBudgetSelf": "it is {pct}% over budget",
+      "lateSelf": "{title} was due {date} and is {pct}% done",
+      "pastEnd": "it is past its target end ({date})",
+      "calmSelf": "On track: {pct}% done, within budget, no late milestones.",
+      "questionSelf": "How is {name} going?"
+    },
+    "timeline": {
+      "project": "Project",
+      "earlier": "Earlier months",
+      "later": "Later months",
+      "bar": "{start} to {end}, {pct}% done",
+      "todayLine": "The red line marks today."
+    },
+    "table": {
+      "project": "Project",
+      "site": "Site",
+      "budget": "Budget",
+      "spent": "Spent",
+      "used": "Budget used"
+    },
+    "board": {
+      "empty": "None"
+    },
+    "kpi": {
+      "budget": "Budget",
+      "spent": "Spent",
+      "used": "Budget used",
+      "progress": "Progress",
+      "milestones": "{done} of {count} milestones"
+    },
+    "milestone": {
+      "title": "Milestone",
+      "due": "Due date",
+      "add": "Add milestone",
+      "dueSub": "Due {date} · {pct}%",
+      "lateSub": "Late: due {date} · {pct}%",
+      "done": "Done {date}",
+      "progress": "Progress of {title}",
+      "markDone": "Mark {title} done",
+      "reopen": "Reopen {title}",
+      "remove": "Remove {title}"
+    },
+    "cost": {
+      "amount": "Amount",
+      "date": "Date",
+      "note": "What was it for?",
+      "add": "Log cost",
+      "remove": "Remove cost",
+      "link": "Link an expense",
+      "linkTitle": "Link an existing expense or order",
+      "linkHint": "It counts towards this project once, at its own amount, and follows later edits.",
+      "linkThis": "Link",
+      "linked": "Linked. It now counts towards this project.",
+      "expenses": "Expenses",
+      "orders": "Purchase orders",
+      "nothingToLink": "Nothing to link",
+      "needFinance": "Your role cannot see expenses.",
+      "source": {
+        "manual": "Logged here",
+        "expense": "Expense",
+        "purchase_order": "Purchase order"
+      }
+    },
+    "form": {
+      "newTitle": "New project",
+      "editTitle": "Edit project",
+      "name": "Name",
+      "category": "Category",
+      "status": "Status",
+      "site": "Site",
+      "owner": "Owner",
+      "ownerMe": "Me",
+      "start": "Start",
+      "end": "Target end",
+      "budget": "Budget ({symbol})",
+      "notes": "Notes",
+      "created": "Project created",
+      "updated": "Project saved"
     }
   }
 }

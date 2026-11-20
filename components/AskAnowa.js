@@ -192,6 +192,15 @@ function AskAnowa() {
     setMessages(opened.messages.map((m) => ({ ...m })))
   }, [deepLink.chat, opened, t])
 
+  // A question handed over by a page (?q=…, e.g. the Projects brief): put it in the composer once.
+  const prefilledRef = useRef('')
+  useEffect(() => {
+    if (!deepLink.q || prefilledRef.current === deepLink.q) return
+    prefilledRef.current = deepLink.q
+    setInput((cur) => cur || deepLink.q)
+    inputRef.current?.focus()
+  }, [deepLink.q])
+
   const go = useCallback(
     (query) => router.push({ pathname: '/assistant', query }, undefined, { shallow: true }),
     [router],

@@ -810,14 +810,10 @@ export const ownerOptions = query({
 // Mutations (forms)
 // ---------------------------------------------------------------------------
 
-async function manager(ctx: MutationCtx) {
-  return await requireMember(ctx, { permission: 'projects.manage' })
-}
-
 export const create = mutation({
   args: createFields,
   returns: v.id('projects'),
-  handler: async (ctx, args) => createProjectAs(ctx, await manager(ctx), args),
+  handler: async (ctx, args) => createProjectAs(ctx, await requireMember(ctx, { permission: 'projects.manage' }), args),
 })
 
 export const update = mutation({
@@ -837,7 +833,7 @@ export const update = mutation({
   },
   returns: v.id('projects'),
   handler: async (ctx, args) => {
-    const m = await manager(ctx)
+    const m = await requireMember(ctx, { permission: 'projects.manage' })
     const p = await loadProject(ctx, m, args.id)
     const next: Partial<Doc<'projects'>> = { updatedAt: Date.now() }
     if (args.name !== undefined) next.name = validName(args.name)
@@ -874,7 +870,7 @@ export const remove = mutation({
   args: { id: v.id('projects') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await removeProjectAs(ctx, await manager(ctx), args.id)
+    await removeProjectAs(ctx, await requireMember(ctx, { permission: 'projects.manage' }), args.id)
     return null
   },
 })
@@ -882,7 +878,7 @@ export const remove = mutation({
 export const addMilestone = mutation({
   args: { projectId: v.id('projects'), title: v.string(), dueDate: v.string(), progressPct: v.optional(v.number()) },
   returns: v.id('projectMilestones'),
-  handler: async (ctx, { projectId, ...input }) => addMilestoneAs(ctx, await manager(ctx), projectId, input),
+  handler: async (ctx, { projectId, ...input }) => addMilestoneAs(ctx, await requireMember(ctx, { permission: 'projects.manage' }), projectId, input),
 })
 
 export const updateMilestone = mutation({
@@ -896,7 +892,7 @@ export const updateMilestone = mutation({
   },
   returns: v.id('projectMilestones'),
   handler: async (ctx, args) => {
-    const m = await manager(ctx)
+    const m = await requireMember(ctx, { permission: 'projects.manage' })
     const ms = await ctx.db.get(args.id)
     if (!ms || ms.companyId !== m.companyId) return notFound('Milestone')
     const p = await loadProject(ctx, m, ms.projectId)
@@ -934,7 +930,7 @@ export const removeMilestone = mutation({
   args: { id: v.id('projectMilestones') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await removeMilestoneAs(ctx, await manager(ctx), args.id)
+    await removeMilestoneAs(ctx, await requireMember(ctx, { permission: 'projects.manage' }), args.id)
     return null
   },
 })
@@ -950,7 +946,7 @@ export const addCost = mutation({
   },
   returns: v.id('projectCosts'),
   handler: async (ctx, { projectId, ...input }) => {
-    const m = await manager(ctx)
+    const m = await requireMember(ctx, { permission: 'projects.manage' })
     // Linking reads the expense or order: the member must be able to see them.
     if (input.expenseId && !can(m, 'finance.view')) throw userError('FORBIDDEN', 'Insufficient permissions: finance.view', { permission: 'finance.view' })
     if (input.purchaseOrderId && !can(m, 'inventory.view')) throw userError('FORBIDDEN', 'Insufficient permissions: inventory.view', { permission: 'inventory.view' })
@@ -962,7 +958,7 @@ export const removeCost = mutation({
   args: { id: v.id('projectCosts') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await removeCostAs(ctx, await manager(ctx), args.id)
+    await removeCostAs(ctx, await requireMember(ctx, { permission: 'projects.manage' }), args.id)
     return null
   },
 })
