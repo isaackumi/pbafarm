@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { AnowaPulseIcon } from './brand/AnowaPulseIcon'
 import { useT } from '../lib/i18n/context'
 import { usePermission } from '../hooks/usePermission'
 
@@ -20,7 +20,7 @@ export default function AnowaBrief({ lead, items = [], calm, question, loading =
       className="flex flex-col gap-3 rounded-card border border-line bg-surface px-5 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:gap-4"
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-surface-2 text-text" aria-hidden>
-        <Sparkles size={16} />
+        <AnowaPulseIcon size={16} />
       </span>
       <p className="min-w-0 grow text-[14px] leading-5 text-muted" aria-live="polite">
         <span className="mr-2 text-xs font-medium uppercase tracking-[0.06em] text-faint">{t('askAnowa.brief.from')}</span>
@@ -39,7 +39,7 @@ export default function AnowaBrief({ lead, items = [], calm, question, loading =
           href={`/assistant?q=${encodeURIComponent(question)}`}
           className="inline-flex shrink-0 items-center gap-2 self-start rounded-pill border border-line-strong px-[18px] py-[9px] text-[13px] leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:self-auto"
         >
-          <Sparkles size={14} aria-hidden />
+          <AnowaPulseIcon size={14} />
           {t('askAnowa.brief.ask')}
         </Link>
       )}
