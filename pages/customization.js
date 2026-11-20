@@ -9,6 +9,7 @@ import FormLayoutEditor from '../components/customization/FormLayoutEditor'
 import DashboardLayoutEditor from '../components/customization/DashboardLayoutEditor'
 import { LineTabs, RouteGate, SettingsCard, useSettingsEyebrow } from '../components/settings'
 import { usePermission } from '../hooks/usePermission'
+import { SKY_TEXT } from '../components/paperTones'
 import { useT } from '../lib/i18n/context'
 
 /** Settings → Customization (D-007, Paper 32): one place for the organization's configuration. */
@@ -44,7 +45,7 @@ function Customization() {
         <p className="text-[14px] leading-[18px] text-muted">
           {t('settingsUi.custom.description')}{' '}
           <RouteGate href="/company-settings">
-            <Link href="/company-settings" className="text-pearl-cyan underline-offset-2 hover:underline">
+            <Link href="/company-settings" className={`${SKY_TEXT} underline-offset-2 hover:underline`}>
               {t('settingsUi.nav.company')}
             </Link>
           </RouteGate>

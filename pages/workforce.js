@@ -3,7 +3,8 @@ import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { Plus } from 'lucide-react'
-import { GhostButton, GradientButton, Pill, Table, Toggle } from '../components/ui'
+import { GhostButton, GradientButton, Pill, Table } from '../components/ui'
+import { SkyToggle } from '../components/paperTones'
 import { FIELD, SettingsCard, SettingsField as Field, SettingsFrame, useSettingsEyebrow } from '../components/settings'
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
@@ -116,7 +117,7 @@ function StaffForm({ departments, people, onDone }) {
         </Field>
         <div className="flex justify-end gap-2 sm:col-span-2 xl:col-span-4">
           {onDone && <GhostButton size="lg" onClick={onDone}>{t('common.cancel')}</GhostButton>}
-          <GradientButton type="submit" disabled={saving || !form.fullName.trim()}>{saving ? t('common.saving') : t('ent.workforce.add')}</GradientButton>
+          <GradientButton type="submit" ring="sky" disabled={saving || !form.fullName.trim()}>{saving ? t('common.saving') : t('ent.workforce.add')}</GradientButton>
         </div>
       </form>
     </SettingsCard>
@@ -151,7 +152,7 @@ function Workforce({ adding, setAdding }) {
       render: (s) => (
         <span className={s.status === 'inactive' ? 'text-muted' : ''}>
           {s.fullName}
-          {s.employeeCode && <span className="font-data text-muted"> ({s.employeeCode})</span>}
+          {s.employeeCode && <span className="font-geist text-muted"> ({s.employeeCode})</span>}
         </span>
       ),
       sub: (s) => s.jobTitle || null,
@@ -202,7 +203,7 @@ function Workforce({ adding, setAdding }) {
         actions={
           <span className="flex items-center gap-2 text-[13px] leading-4 text-muted">
             <span aria-hidden>{t('ent.workforce.showInactive')}</span>
-            <Toggle checked={showInactive} onChange={setShowInactive} label={t('ent.workforce.showInactive')} />
+            <SkyToggle checked={showInactive} onChange={setShowInactive} label={t('ent.workforce.showInactive')} />
           </span>
         }
         columns={columns}
@@ -225,7 +226,7 @@ export default function WorkforcePage() {
         eyebrow={eyebrow}
         actions={
           canManage && !adding ? (
-            <GradientButton icon={Plus} onClick={() => setAdding(true)}>
+            <GradientButton variant="lime" icon={Plus} onClick={() => setAdding(true)}>
               {t('ent.workforce.add')}
             </GradientButton>
           ) : null

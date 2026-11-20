@@ -3806,6 +3806,7 @@
       "custom": "personnalisé",
       "template": "modèle",
       "basedOn": "Basé sur {role}",
+      "basedOnPrefix": "Basé sur",
       "permissionCount": {
         "one": "{count} permission",
         "other": "{count} permissions"
@@ -4150,6 +4151,7 @@
     },
     "ai": {
       "crumb": "Le copilote IA de votre ferme",
+      "open": "Ouvrir Anowa",
       "policy": {
         "title": "Politique Anowa",
         "meta": "Ce qu’Anowa peut faire pour votre équipe",

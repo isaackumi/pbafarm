@@ -4,6 +4,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
 import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
 import { IntegrationsShell, SecretOnce as SecretCard, formatTime } from '../components/integrations/kit'
+import { LIME_BUTTON } from '../components/paperTones'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -112,7 +113,7 @@ function WebhookCard({ hook, base, onSecret }) {
               {active ? t('integ.common.on') : t('integ.common.off')}
             </Pill>
           </div>
-          <p className="mt-1 break-all font-mono text-[13px] leading-4 text-muted">{url}</p>
+          <p className="mt-1 break-all font-geist text-[13px] leading-4 text-muted">{url}</p>
           <p className="mt-1 text-[13px] leading-4 text-muted">
             {t('integ.inbound.secretLine', { hint: hook.secretHint || '—', time: formatTime(hook.lastReceivedAt) })}
           </p>
@@ -188,7 +189,7 @@ function InboundWebhooksPage() {
     <IntegrationsShell
       title={t('integ.inbound.title')}
       actions={
-        <GradientButton href="#new-inbound">
+        <GradientButton variant="lime" className={LIME_BUTTON} href="#new-inbound">
           {t('integ.inbound.add')}
         </GradientButton>
       }
@@ -220,7 +221,7 @@ function InboundWebhooksPage() {
                   required
                 />
               </SettingsField>
-              <GradientButton type="submit" size="sm" className="sm:mb-1" disabled={busy || !name.trim() || !data.encryptionReady}>
+              <GradientButton ring="sky" type="submit" size="sm" className="sm:mb-1" disabled={busy || !name.trim() || !data.encryptionReady}>
                 {busy ? t('integ.common.adding') : t('integ.inbound.add')}
               </GradientButton>
             </form>

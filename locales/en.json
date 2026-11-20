@@ -3806,6 +3806,7 @@
       "custom": "custom",
       "template": "template",
       "basedOn": "Based on {role}",
+      "basedOnPrefix": "Based on",
       "permissionCount": {
         "one": "{count} permission",
         "other": "{count} permissions"
@@ -4150,6 +4151,7 @@
     },
     "ai": {
       "crumb": "Your farm's AI co-pilot",
+      "open": "Open Anowa",
       "policy": {
         "title": "Anowa policy",
         "meta": "What Anowa may do for your team",

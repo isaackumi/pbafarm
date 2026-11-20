@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { ArrowDownToLine } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import BulkDailyUploadForm from '../components/BulkDailyUploadForm'
@@ -30,7 +30,7 @@ function KindPicker({ value, onChange }) {
     <div
       role="radiogroup"
       aria-label={t('csvImport.page.kindLabel')}
-      className="inline-flex w-fit flex-wrap gap-1 rounded-pill border border-line bg-bg p-1"
+      className="inline-flex w-fit flex-wrap gap-1 rounded-pill border border-line bg-bg p-1 [html[data-theme=light]_&]:border-[#DFE6EF] [html[data-theme=light]_&]:bg-[#F4F7FB]"
     >
       {KINDS.map((k) => (
         <button
@@ -59,7 +59,8 @@ function BulkUpload() {
       title={t('csvImport.page.title')}
       eyebrow={t('csvImport.page.eyebrow')}
       actions={
-        <GradientButton icon={Download} onClick={() => downloadTemplate(activeTab)}>
+        // Paper 53: sky ring, 42px inner height.
+        <GradientButton ring="sky" icon={ArrowDownToLine} className="[&>span]:h-[42px]" onClick={() => downloadTemplate(activeTab)}>
           {t('csvImport.page.template')}
         </GradientButton>
       }

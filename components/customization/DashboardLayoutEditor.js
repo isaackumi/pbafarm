@@ -49,7 +49,7 @@ export default function DashboardLayoutEditor() {
         <>
           <WidgetListEditor widgets={draft} onChange={setDraft} can={can} />
           <div className="mt-4 flex flex-wrap gap-2">
-            <GradientButton disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}>
+            <GradientButton ring="sky" disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'org', widgets: draft }), t('dashboardLayout.savedOrg'))}>
               <Save className="h-4 w-4" aria-hidden />
               {t('dashboardLayout.saveOrg')}
             </GradientButton>

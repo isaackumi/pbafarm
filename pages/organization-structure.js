@@ -5,6 +5,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { GhostButton, GradientButton, Pill } from '../components/ui'
 import { initials } from '../components/ui/Avatar'
+import { LIME_TEXT, SKY_TEXT } from '../components/paperTones'
 import {
   CardNote,
   DetailList,
@@ -57,6 +58,27 @@ function useRun() {
     }
   }
   return { busy, run }
+}
+
+/**
+ * Paper 50 site detail rows: 10px above the list, 11px rows of 13/16 text
+ * with a hairline under each, GPS in 12px Geist Mono sky.
+ */
+function SiteDetails({ items }) {
+  return (
+    <dl className="flex flex-col pt-[10px]">
+      {items
+        .filter((item) => item.value != null && item.value !== '')
+        .map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-3 border-b border-line py-[11px]">
+            <dt className="shrink-0 text-[13px] leading-4 text-muted">{item.label}</dt>
+            <dd className={`min-w-0 truncate text-right ${item.mono ? `font-geist text-[12px] leading-4 ${SKY_TEXT}` : 'text-[13px] leading-4 text-text'}`}>
+              {item.value}
+            </dd>
+          </div>
+        ))}
+    </dl>
+  )
 }
 
 /** Paper 50 tree row: 14px chevron, icon, 14px title over a 12px helper, 72px count lane. */
@@ -151,7 +173,7 @@ function StructurePanel({ units, sites }) {
       depth={depth}
       selected={pickedSite?.id === s.id}
       onSelect={() => setSelected({ type: 'site', id: s.id })}
-      icon={<MapPin size={16} strokeWidth={2} aria-hidden className={`shrink-0 ${pickedSite?.id === s.id ? 'text-pearl-cyan' : 'text-muted'}`} />}
+      icon={<MapPin size={16} strokeWidth={2} aria-hidden className={`shrink-0 ${pickedSite?.id === s.id ? 'text-pearl-cyan [html[data-theme=light]_&]:text-[#1562D6]' : 'text-muted'}`} />}
       title={s.name}
       helper={[s.waterBody, siteType(s)].filter(Boolean).join(' · ')}
       muted={!s.active}
@@ -224,7 +246,8 @@ function StructurePanel({ units, sites }) {
                     open={!closed[u._id]}
                     onToggle={hasKids ? () => setClosed((c) => ({ ...c, [u._id]: !c[u._id] })) : undefined}
                     icon={
-                      <span className="flex size-[28px] shrink-0 items-center justify-center rounded-sm border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-pearl-pink" aria-hidden>
+                      // Paper 50: unit badges alternate lime (first) and sky.
+                      <span className={`flex size-[28px] shrink-0 items-center justify-center rounded-sm border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] ${i % 2 ? SKY_TEXT : LIME_TEXT}`} aria-hidden>
                         {initials(u.name)}
                       </span>
                     }
@@ -263,8 +286,7 @@ function StructurePanel({ units, sites }) {
               </div>
               <RouteGate href="/farm-locations"><GhostButton href="/farm-locations">{t('settingsUi.org.edit')}</GhostButton></RouteGate>
             </div>
-            <DetailList
-              className="border-t border-line"
+            <SiteDetails
               items={[
                 { label: t('settingsUi.org.location'), value: pickedSite.address || pickedSite.waterBody },
                 {
@@ -457,7 +479,7 @@ export default function OrganizationStructurePage() {
         title={t('settingsUi.org.title')}
         eyebrow={eyebrow}
         actions={
-          <RouteGate href="/farm-locations"><GradientButton icon={Plus} href="/farm-locations?new=1">
+          <RouteGate href="/farm-locations"><GradientButton variant="lime" icon={Plus} href="/farm-locations?new=1">
             {t('settingsUi.org.addSite')}
           </GradientButton></RouteGate>
         }

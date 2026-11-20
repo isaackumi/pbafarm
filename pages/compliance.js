@@ -18,6 +18,7 @@ import {
   Textarea,
 } from '../components/ui'
 import Attachments from '../components/Attachments'
+import { TonePill } from '../components/paperTones'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
@@ -28,8 +29,17 @@ import { usePermission } from '../hooks/usePermission'
 import { useLocale, useT } from '../lib/i18n/context'
 
 const KINDS = ['visitor', 'vehicle', 'disinfection', 'other']
+
+/** Share (0 to 100) of a withdrawal period already served on `today` (YYYY-MM-DD). */
+function holdProgress(h, today) {
+  const start = Date.parse(h.date)
+  const end = Date.parse(h.withdrawal_until)
+  const now = Date.parse(today)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0
+  return Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)))
+}
 const CARD = 'rounded-card border border-line bg-surface px-[22px] py-6 shadow-[var(--shadow-card)] sm:px-[26px]'
-const ROW = 'border-t border-line py-[11px]'
+const ROW = 'border-t border-line py-3'
 
 export default function CompliancePage() {
   return (
@@ -136,11 +146,11 @@ function Compliance() {
         activeLocationId ? (
           <IfPermitted permission="production.health.record">
             {openDue.length > 0 && (
-              <GradientButton icon={ClipboardCheck} onClick={startChecklist}>
+              <GradientButton variant="lime" icon={ClipboardCheck} onClick={startChecklist}>
                 {t('compliancePage.startChecklist')}
               </GradientButton>
             )}
-            <GradientButton reverse icon={Plus} onClick={() => setLogging(true)}>
+            <GradientButton ring="sky" icon={Plus} onClick={() => setLogging(true)}>
               {t('compliancePage.logEntry')}
             </GradientButton>
           </IfPermitted>
@@ -163,14 +173,12 @@ function Compliance() {
                 key: 'findings',
                 label: t('compliancePage.kpi.findings'),
                 value: records ? String(findings.length) : '—',
-                valueTone: findings.length ? 'warn' : undefined,
                 suffix: t('compliancePage.kpi.last30'),
               },
               {
                 key: 'holds',
                 label: t('compliancePage.kpi.holds'),
                 value: holds ? t('compliancePage.kpi.cagesN', { count: holdCages.length }) : '—',
-                valueTone: holdCages.length ? 'alert' : undefined,
                 suffix: holdCages.slice(0, 3).join(', ') || undefined,
               },
               {
@@ -203,12 +211,13 @@ function Compliance() {
               onRowClick={setDetail}
               empty={records === undefined || bio === undefined ? t('ui.loading') : t('compliancePage.logEmpty')}
               columns={[
-                { key: 'when', header: t('compliancePage.col.when'), render: (r) => d(r.date) },
+                { key: 'when', header: t('compliancePage.col.when'), width: 90, render: (r) => d(r.date) },
                 { key: 'check', header: t('compliancePage.col.check'), render: (r) => r.check, sub: (r) => r.sub || null },
-                { key: 'by', header: t('compliancePage.col.by'), render: (r) => r.by || '—' },
+                { key: 'by', header: t('compliancePage.col.by'), width: 120, render: (r) => r.by || '—' },
                 {
                   key: 'result',
                   header: t('compliancePage.col.result'),
+                  width: 130,
                   render: (r) => <Pill tone={r.ok ? 'green' : 'red'}>{r.result}</Pill>,
                 },
               ]}
@@ -248,17 +257,26 @@ function Compliance() {
             </div>
 
             <div className="flex min-w-0 flex-col gap-[20px]">
-              <Card title={t('compliancePage.holds')} meta={holdCages.length ? <span className="text-alert">{t('compliancePage.harvestBlocked')}</span> : undefined}>
+              <Card title={t('compliancePage.holds')} meta={holdCages.length ? t('compliancePage.harvestBlocked') : undefined}>
                 {!holds || holds.length === 0 ? (
                   <p className={`${ROW} text-[13px] leading-[18px] text-muted`}>{holds ? t('compliancePage.noHolds') : t('ui.loading')}</p>
                 ) : (
                   <ul className="flex flex-col">
                     {holds.map((h) => (
-                      <li key={h.id} className={`${ROW} flex items-center justify-between gap-3`}>
-                        <span className="text-[14px] leading-[18px] text-text">
-                          {h.cage_name || '—'} · {h.product_name || h.treatment || h.diagnosis || '—'}
-                        </span>
-                        <span className="shrink-0 text-xs leading-4 text-warn">{t('compliancePage.clears', { date: d(h.withdrawal_until) })}</span>
+                      <li key={h.id} className={`${ROW} flex flex-col gap-2`}>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-[14px] leading-[18px] text-text">
+                            {h.cage_name || '—'} · {h.product_name || h.treatment || h.diagnosis || '—'}
+                          </span>
+                          <span className="shrink-0 text-[13px] leading-4 text-warn">{t('compliancePage.clears', { date: d(h.withdrawal_until) })}</span>
+                        </div>
+                        {/* Paper 27: 6px line track, sky gradient fill for the share of the period served. */}
+                        <div className="flex h-[6px] rounded-pill bg-line" aria-hidden>
+                          <div
+                            className="rounded-pill"
+                            style={{ width: `${holdProgress(h, today)}%`, backgroundImage: 'linear-gradient(in oklab 90deg, #1562D6 0%, #8EC2F7 100%)' }}
+                          />
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -409,7 +427,7 @@ function TemplatePacks({ embedded = false }) {
               <div className="flex min-w-0 flex-col gap-[2px]">
                 <span className="flex items-center gap-2 text-[14px] leading-[18px] text-text">
                   {p.name}
-                  {p.recommended && <Pill tone="cyan">{t('country.packs.recommended')}</Pill>}
+                  {p.recommended && <TonePill tone="sky">{t('country.packs.recommended')}</TonePill>}
                 </span>
                 <span className="text-xs leading-4 text-muted">{p.description}</span>
                 <span className="text-xs leading-4 text-faint">

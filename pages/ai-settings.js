@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { useAction, useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { GhostButton, GradientButton, Pill, Skeleton, Toggle } from '../components/ui'
-import { FIELD, Notice, SettingsCard, SettingsField, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
+import { Sparkle } from 'lucide-react'
+import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
+import { LIME_BUTTON, SKY_TEXT, SkyToggle, TonePill } from '../components/paperTones'
+import { FIELD, Notice, RouteGate, SettingsCard, SettingsField, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -113,14 +115,16 @@ function AddKey({ providers, disabled }) {
               aria-checked={on}
               onClick={() => setProviderId(p.id)}
               className={`flex min-w-0 rounded-[14px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-                on ? 'bg-[image:var(--gradient-brand)] p-[1.5px]' : 'border border-line-strong hover:bg-surface-2'
+                on
+                  ? 'bg-[image:var(--gradient-sky)] p-[1.5px] [html[data-theme=light]_&]:bg-[image:linear-gradient(in_oklab_120deg,#1562D6_0%,#7DB6F2_100%)]'
+                  : 'border border-line-strong hover:bg-surface-2'
               }`}
             >
               <span className={`flex min-w-0 grow flex-col gap-1 rounded-[13px] ${on ? 'bg-surface-2 px-[15px] py-[13px]' : 'px-4 py-[14px]'}`}>
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden
-                    className={`size-[14px] shrink-0 rounded-full ${on ? 'border-4 border-cyan' : 'border-[1.5px] border-faint'}`}
+                    className={`size-[14px] shrink-0 rounded-full ${on ? 'border-4 border-sky-ink [html[data-theme=light]_&]:border-[#3D86E6]' : 'border-[1.5px] border-faint'}`}
                   />
                   <span className="text-[14px] leading-[18px] text-text">{p.label}</span>
                 </span>
@@ -183,10 +187,10 @@ function AddKey({ providers, disabled }) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-3 text-[14px] leading-[18px] text-text">
-          <Toggle checked={makeDefault} onChange={setMakeDefault} label={t('integ.ai.makeDefault')} />
+          <SkyToggle checked={makeDefault} onChange={setMakeDefault} label={t('integ.ai.makeDefault')} />
           <span aria-hidden>{t('integ.ai.makeDefault')}</span>
         </span>
-        <GradientButton type="submit" size="sm" disabled={busy || disabled || !apiKey.trim() || !providerId}>
+        <GradientButton type="submit" size="sm" ring="sky" disabled={busy || disabled || !apiKey.trim() || !providerId}>
           {busy ? t('common.saving') : t('common.save')}
         </GradientButton>
       </div>
@@ -210,16 +214,16 @@ function CredentialRow({ cred, live }) {
   return (
     <li
       className={`flex flex-col gap-3 rounded-[14px] border px-4 py-[14px] sm:flex-row sm:items-center sm:justify-between ${
-        cred.isDefault ? 'border-cyan' : 'border-line-strong'
+        cred.isDefault ? 'border-sky-ink [html[data-theme=light]_&]:border-[#3D86E6]' : 'border-line-strong'
       }`}
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[14px] font-medium leading-[18px] text-text">{cred.providerLabel}</span>
-          {cred.isDefault && <Pill tone="cyan">{t('integ.ai.default')}</Pill>}
+          {cred.isDefault && <TonePill tone="sky">{t('integ.ai.default')}</TonePill>}
           <Pill tone={cred.enabled ? 'green' : 'neutral'}>{cred.enabled ? t('integ.common.on') : t('integ.common.off')}</Pill>
         </div>
-        <p className="mt-1 font-mono text-[12px] leading-4 text-muted">
+        <p className="mt-1 font-geist text-[12px] leading-4 text-muted">
           {cred.model || t('integ.ai.modelAutoWith', { model: live?.model || '…' })} ·{' '}
           {t('integ.ai.keyEnding', { hint: cred.keyHint || '—' })}
           {cred.baseUrl ? ` · ${cred.baseUrl}` : ''}
@@ -380,7 +384,7 @@ function AnowaPolicyCard() {
   return (
     <SettingsCard title={t('settingsUi.ai.policy.title')} meta={t('settingsUi.ai.policy.meta')}>
       <SettingsRow label={t('settingsUi.ai.policy.drafts')} helper={t('settingsUi.ai.policy.draftsHelper')}>
-        <Toggle
+        <SkyToggle
           checked={policy.allowAutomationDrafts}
           disabled={busy}
           label={t('settingsUi.ai.policy.drafts')}
@@ -388,7 +392,7 @@ function AnowaPolicyCard() {
         />
       </SettingsRow>
       <SettingsRow label={t('settingsUi.ai.policy.paused')} helper={t('settingsUi.ai.policy.pausedHelper')}>
-        <Toggle
+        <SkyToggle
           checked={policy.draftsStartPaused}
           disabled={busy || !policy.allowAutomationDrafts}
           label={t('settingsUi.ai.policy.paused')}
@@ -422,7 +426,7 @@ function AnowaPolicyCard() {
       </SettingsRow>
       <p className="border-t border-line pt-3 text-[12px] leading-4 text-muted">
         {t('settingsUi.ai.policy.whoUses')}{' '}
-        <Link href="/users?view=roles" className="text-cyan hover:underline">
+        <Link href="/users?view=roles" className={`${SKY_TEXT} hover:underline`}>
           {t('settingsUi.ai.policy.rolesLink')}
         </Link>
       </p>
@@ -492,7 +496,12 @@ function AiBudgetCard() {
     run(() => setKeyBudget({ credentialId, monthlyBudgetUsd: value }))
   }
   const pct = status.usedPct == null ? null : Math.min(100, status.usedPct)
-  const tone = status.refusing ? 'bg-alert' : (status.usedPct ?? 0) >= 80 ? 'bg-warn' : 'bg-cyan'
+  // Paper 58 quota bar: sky gradient (#1562D6 → #8EC2F7; light → #5FA0EE); warn and alert stay solid.
+  const tone = status.refusing
+    ? 'bg-alert'
+    : (status.usedPct ?? 0) >= 80
+      ? 'bg-warn'
+      : 'rounded-pill bg-[image:linear-gradient(in_oklab_90deg,#1562D6_0%,#8EC2F7_100%)] [html[data-theme=light]_&]:bg-[image:linear-gradient(in_oklab_90deg,#1562D6_0%,#5FA0EE_100%)]'
 
   return (
     <SettingsCard title={t('settingsUi.ai.budget.title')} meta={t('settingsUi.ai.budget.meta', { month: status.month })}>
@@ -507,7 +516,7 @@ function AiBudgetCard() {
             </span>
           </div>
           {pct != null && (
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('settingsUi.ai.budget.title')}>
+            <div className="mt-2 h-[6px] overflow-hidden rounded-pill bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('settingsUi.ai.budget.title')}>
               <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
             </div>
           )}
@@ -651,7 +660,17 @@ function AiSettingsScreen() {
   const t = useT()
   const eyebrow = useSettingsEyebrow(t('settingsUi.ai.crumb'))
   return (
-    <Layout title={t('integ.ai.title')} eyebrow={eyebrow}>
+    <Layout
+      title={t('integ.ai.title')}
+      eyebrow={eyebrow}
+      actions={
+        <RouteGate href="/assistant">
+          <GradientButton variant="lime" className={LIME_BUTTON} icon={Sparkle} href="/assistant">
+            {t('settingsUi.ai.open')}
+          </GradientButton>
+        </RouteGate>
+      }
+    >
       <SettingsFrame active="ai">
         <p className="mb-5 max-w-3xl text-[14px] leading-[18px] text-muted">{t('integ.ai.description')}</p>
         <AiSettingsPage />
