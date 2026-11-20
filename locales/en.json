@@ -2824,7 +2824,38 @@
     "modelsRetry": "Try again",
     "modelUnavailable": "no model available",
     "vision": "reads photos",
-    "defaultModel": "default"
+    "defaultModel": "default",
+    "errors": {
+      "quota": "Anowa has used up its AI allowance for now.",
+      "rate_limited": "Anowa is getting a lot of questions right now.",
+      "unavailable": "The AI service isn't responding right now. Try again in a few minutes.",
+      "timeout": "That took too long to answer. Try a shorter question, one site, or a shorter date range.",
+      "auth": "Anowa can't reach its AI service right now. An admin needs to check the AI settings.",
+      "not_configured": "Anowa isn't connected to an AI service yet. An admin can set one up in AI settings.",
+      "model_unavailable": "The chosen model isn't available any more. Pick Auto in the model menu and ask again.",
+      "blocked": "The AI service declined to answer that. Try asking it another way.",
+      "too_long": "That's more farm data than fits in one answer. Pick one site or a shorter date range.",
+      "empty": "Anowa didn't get an answer back. Try again.",
+      "forbidden": "You don't have access to that.",
+      "invalid": "Anowa couldn't read that request. Try again.",
+      "offline": "You seem to be offline. Your question wasn't sent; try again when you have signal.",
+      "unknown": "Anowa couldn't answer just now. Try again in a moment.",
+      "retryHours": {
+        "one": "Try again in about an hour.",
+        "other": "Try again in about {count} hours."
+      },
+      "retryMinutes": {
+        "one": "Try again in a minute.",
+        "other": "Try again in {count} minutes."
+      },
+      "retrySoon": "Try again in a moment.",
+      "fix": {
+        "quota": "To keep going now, choose another model in the model menu, or add billing for your AI provider in AI settings.",
+        "auth": "Open AI settings to check or replace the provider key.",
+        "not_configured": "Open AI settings to add a provider key.",
+        "model_unavailable": "AI settings shows the models your key can use."
+      }
+    }
   },
   "calendarUi": {
     "title": "Calendar",

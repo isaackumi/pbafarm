@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
+import { LLM_FAILURE_TEXT } from './lib/llmErrors'
 import rateLimiterTest from '@convex-dev/rate-limiter/test'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
@@ -224,7 +225,8 @@ describe('live model list on the org key (D-022)', () => {
     }
     let calls = stubFetch([OPENAI_OK])
     await expect(s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })).rejects.toThrow(
-      "Can't reach ChatGPT (OpenAI) to list models; set LLM_DEFAULT_MODEL_OPENAI",
+      // The env-var hint stays in the server log; members get the "unavailable" sentence (llmErrors).
+      LLM_FAILURE_TEXT.unavailable,
     )
     expect(calls).toHaveLength(0)
     vi.stubEnv('LLM_DEFAULT_MODEL_OPENAI', 'gpt-4o')
@@ -332,10 +334,16 @@ describe('gateway chat', () => {
     try {
       await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
     } catch (err: any) {
-      expect(typeof err.data === 'string' ? JSON.parse(err.data) : err.data).toMatchObject({ code: 'UPSTREAM', message: 'Incorrect API key' })
+      // The provider's own text is not returned; the kind and a safe sentence are (llmErrors).
+      expect(typeof err.data === 'string' ? JSON.parse(err.data) : err.data).toMatchObject({
+        code: 'UPSTREAM',
+        message: LLM_FAILURE_TEXT.auth,
+        details: { kind: 'auth', status: 401 },
+      })
     }
     expect(calls).toHaveLength(2)
     const rows = await usageRows(s)
+    // Admins still see the provider's words in the usage log.
     expect(rows.every((r) => !r.ok && r.error === 'Incorrect API key')).toBe(true)
   })
 

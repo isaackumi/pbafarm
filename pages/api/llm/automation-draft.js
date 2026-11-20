@@ -2,7 +2,7 @@ import { requireApiUser } from '../../../lib/llmApiAuth'
 import { api } from '../../../lib/convexBridge'
 import { assistantRefusal, createRateLimiter } from '../../../lib/llmProxyGuard'
 import { resolveProvider } from '../../../lib/llmServer'
-import { chatWithOrgKey, chatWithServerKey, gatewayError } from '../../../lib/llmGatewayRoute'
+import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError } from '../../../lib/llmGatewayRoute'
 import {
   MAX_REQUEST_CHARS,
   buildDraftSystemPrompt,
@@ -118,10 +118,9 @@ export default async function handler(req, res) {
       try {
         text = await ask()
       } catch (err) {
-        if (err?.status) return res.status(err.status).json({ error: err.message })
-        if (!err?.data) throw err
+        // resolveProvider refusals and provider failures alike: a safe message per kind (llmErrors).
         const failed = gatewayError(err)
-        return res.status(failed.status).json({ error: failed.error })
+        return res.status(failed.status).json(failureBody(failed))
       }
       result = normalizeDraft(extractJson(text))
       if (result.draft && !result.problems.length) {
@@ -142,6 +141,6 @@ export default async function handler(req, res) {
     })
   } catch (err) {
     console.error('[api/llm/automation-draft]', err?.message)
-    return res.status(500).json({ error: err?.message || 'Could not draft the automation' })
+    return res.status(500).json({ error: 'Could not draft the automation. Try again in a moment.', code: 'unknown' })
   }
 }
