@@ -5115,7 +5115,12 @@
       "signupEyebrow": "New workspace",
       "signupHeadline": "Set up your farm in an afternoon.",
       "inviteEyebrow": "You're invited",
-      "inviteHeadline": "Your team already runs its farm here."
+      "inviteHeadline": "Your team already runs its farm here.",
+      "cardAutomationLabel": "Automation resolved",
+      "cardAutomationTitle": "C-07 oxygen back to 6.0 mg/L",
+      "cardAutomationMeta": "Aerator task closed by Kofi A. · 06:31",
+      "cardOvernightLabel": "Overnight",
+      "cardOvernightMeta": "cages logged · 7 due by 09:00"
     },
     "login": {
       "title": "Welcome back",

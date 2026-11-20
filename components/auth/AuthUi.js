@@ -22,17 +22,22 @@ export function Brand({ href = '/' }) {
   )
 }
 
-/** Lake at dawn with cage rings (Paper 15 visual side); colours come from the theme's scene tokens. */
+/**
+ * Sky and lake with cage rings (Paper 15 visual side, dark and light). Every
+ * colour is a theme token (styles/theme.css --scene-*), so one drawing serves
+ * both themes: blue dawn over dark water, or a bright day over blue water.
+ */
 export function LakeScene() {
   const id = useId().replace(/:/g, '')
-  const stop = (v, extra = {}) => ({ stopColor: `var(${v})`, ...extra })
+  const c = (v) => `var(${v})`
+  // [cx, cy, rx, ry, ring, fill]
   const cages = [
-    [180, 560, 70, 16, '--cyan'],
-    [340, 575, 78, 18, '--cyan'],
-    [510, 560, 70, 16, '--alert'],
-    [250, 640, 92, 22, '--cyan'],
-    [450, 650, 96, 23, '--cyan'],
-    [640, 640, 88, 21, '--cyan'],
+    [180, 560, 70, 16, '--scene-cage-ring', '--scene-cage-fill'],
+    [340, 575, 78, 18, '--scene-cage-ring', '--scene-cage-fill'],
+    [510, 560, 70, 16, '--scene-cage-hot-ring', '--scene-cage-hot-fill'],
+    [250, 640, 92, 22, '--scene-cage-ring', '--scene-cage-fill'],
+    [450, 650, 96, 23, '--scene-cage-ring', '--scene-cage-fill'],
+    [640, 640, 88, 21, '--scene-cage-ring', '--scene-cage-lime-fill'],
   ]
   return (
     <svg
@@ -43,46 +48,74 @@ export function LakeScene() {
     >
       <defs>
         <linearGradient id={`${id}sky`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style={stop('--scene-sky-top')} />
-          <stop offset="0.55" style={stop('--scene-sky-mid')} />
-          <stop offset="0.72" style={stop('--pink-fill', { stopOpacity: 0.55 })} />
+          <stop offset="0" style={{ stopColor: c('--scene-sky-1') }} />
+          <stop offset="0.5" style={{ stopColor: c('--scene-sky-2') }} />
+          <stop offset="0.8" style={{ stopColor: c('--scene-sky-3') }} />
+          <stop offset="1" style={{ stopColor: c('--scene-sky-4') }} />
         </linearGradient>
         <linearGradient id={`${id}water`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style={stop('--scene-water-top')} />
-          <stop offset="1" style={stop('--scene-water-bottom')} />
+          <stop offset="0" style={{ stopColor: c('--scene-water-top') }} />
+          <stop offset="1" style={{ stopColor: c('--scene-water-bottom') }} />
         </linearGradient>
         <radialGradient id={`${id}sun`} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" style={stop('--scene-sun')} />
-          <stop offset="0.4" style={stop('--pink-fill', { stopOpacity: 0.6 })} />
-          <stop offset="1" style={stop('--pink-fill', { stopOpacity: 0 })} />
+          <stop offset="0" style={{ stopColor: c('--scene-sun') }} />
+          <stop offset="0.4" style={{ stopColor: c('--scene-sun-halo') }} />
+          <stop offset="1" style={{ stopColor: c('--scene-sun-edge') }} />
         </radialGradient>
       </defs>
       <rect width="788" height="500" fill={`url(#${id}sky)`} />
-      <circle cx="560" cy="470" r="140" fill={`url(#${id}sun)`} />
+      <circle cx="560" cy="460" r="145" fill={`url(#${id}sun)`} />
+      <ellipse cx="200" cy="220" rx="140" ry="26" style={{ fill: c('--scene-cloud') }} />
+      <ellipse cx="620" cy="160" rx="110" ry="20" style={{ fill: c('--scene-cloud'), fillOpacity: 0.85 }} />
       <path
         d="M0 470 C120 430 220 450 320 432 S520 420 620 440 S760 430 788 446 V500 H0Z"
-        style={{ fill: 'var(--scene-hills)' }}
+        style={{ fill: c('--scene-hills') }}
       />
       <rect y="496" width="788" height="372" fill={`url(#${id}water)`} />
       <path
         d="M500 506h120M470 520h180M520 534h80"
         fill="none"
         strokeWidth="2"
-        style={{ stroke: 'var(--pink)', strokeOpacity: 0.35 }}
+        style={{ stroke: c('--scene-ripple') }}
       />
-      {cages.map(([cx, cy, rx, ry, tone]) => (
+      {cages.map(([cx, cy, rx, ry, ring, fill]) => (
         <g key={`${cx}-${cy}`}>
-          <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" strokeWidth="3" style={{ stroke: 'var(--line-strong)' }} />
-          <ellipse cx={cx} cy={cy} rx={rx - 8} ry={ry - 3} style={{ fill: `var(${tone})`, fillOpacity: 0.06 }} />
+          <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" strokeWidth="3" style={{ stroke: c(ring) }} />
+          <ellipse cx={cx} cy={cy} rx={rx - 8} ry={ry - 3} style={{ fill: c(fill) }} />
           <path
             d={`M${cx - rx} ${cy}v10M${cx + rx} ${cy}v10`}
             fill="none"
             strokeWidth="2"
-            style={{ stroke: 'var(--line-strong)' }}
+            style={{ stroke: c('--scene-cage-post') }}
           />
         </g>
       ))}
     </svg>
+  )
+}
+
+const SCENE_CARD =
+  'absolute flex flex-col rounded-[18px] border px-5 py-[18px] backdrop-blur-sm [background-color:var(--scene-card-bg)] [border-color:var(--scene-card-border)] [box-shadow:var(--scene-card-shadow)]'
+
+/** The two floating cards over the scene (Paper 15): an automation that fixed itself and last night's logging. */
+function SceneCards() {
+  const t = useT()
+  return (
+    <>
+      <div className={`${SCENE_CARD} right-10 top-[210px] w-[300px] gap-2.5`}>
+        <p className="flex items-center gap-2 text-xs leading-4 [color:var(--scene-card-ok)]">
+          <span className="size-[7px] shrink-0 rounded-pill bg-good" />
+          {t('authUi.panel.cardAutomationLabel')}
+        </p>
+        <p className="text-sm font-semibold leading-[18px] text-text">{t('authUi.panel.cardAutomationTitle')}</p>
+        <p className="text-xs leading-4 text-muted">{t('authUi.panel.cardAutomationMeta')}</p>
+      </div>
+      <div className={`${SCENE_CARD} left-12 top-[330px] w-[280px] gap-1.5`}>
+        <p className="text-xs leading-4 text-muted">{t('authUi.panel.cardOvernightLabel')}</p>
+        <p className="text-[30px] font-semibold leading-9 tracking-[-0.03em] text-text">31 / 38</p>
+        <p className="text-xs leading-4 text-muted">{t('authUi.panel.cardOvernightMeta')}</p>
+      </div>
+    </>
   )
 }
 
@@ -119,8 +152,9 @@ export function AuthLayout({ title, eyebrow, headline, children, footer }) {
         aria-hidden
       >
         <LakeScene />
+        <SceneCards />
         <div className="absolute left-12 top-12 flex max-w-[560px] flex-col gap-3.5 pr-12">
-          <p className="text-[13px] uppercase leading-4 tracking-[0.08em] text-cyan">
+          <p className="text-[13px] uppercase leading-4 tracking-[0.08em] [color:var(--scene-eyebrow)]">
             {eyebrow || t('authUi.panel.loginEyebrow')}
           </p>
           <p className="text-[40px] font-semibold leading-[110%] tracking-[-0.03em] text-text">
