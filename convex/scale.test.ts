@@ -15,6 +15,26 @@ import schema from './schema'
 import { api, internal } from './_generated/api'
 
 const modules = import.meta.glob('./**/*.ts')
+
+/**
+ * Ids replaced by their order of first appearance: convex-test numbers
+ * documents with one counter across tables, so A's ids differ when B's rows
+ * are inserted too. Structure and values must still match exactly.
+ */
+function canonicalIds(value: unknown): unknown {
+  const seen = new Map<string, string>()
+  const isId = (x: string) => /^\d{5,};?[A-Za-z_]+$/.test(x)
+  const walk = (x: unknown): unknown => {
+    if (typeof x === 'string' && isId(x)) {
+      if (!seen.has(x)) seen.set(x, `id#${seen.size}`)
+      return seen.get(x)
+    }
+    if (Array.isArray(x)) return x.map(walk)
+    if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, walk(v)]))
+    return x
+  }
+  return walk(value)
+}
 const DATE = '2026-11-18'
 const PAST = '2026-11-01'
 const now = 1_763_000_000_000
@@ -249,7 +269,7 @@ describe('company A is unaffected by company B (PLAT-001)', () => {
     const before = await viewOfA(empty.t, empty.adminA, empty.cages)
     const heavy = await seed(true)
     const after = await viewOfA(heavy.t, heavy.adminA, heavy.cages)
-    expect(after).toEqual(before)
+    expect(canonicalIds(after)).toEqual(canonicalIds(before))
 
     // Sanity: the fixture really exercises what it claims.
     const v = before as any
@@ -266,7 +286,7 @@ describe('company A is unaffected by company B (PLAT-001)', () => {
     const before = await remindersOfA(empty.t, empty.adminA, empty.staffA)
     const heavy = await seed(true)
     const after = await remindersOfA(heavy.t, heavy.adminA, heavy.staffA)
-    expect(after).toEqual(before)
+    expect(canonicalIds(after)).toEqual(canonicalIds(before))
     // A1 is logged for DATE; only A2 is missing. Low stock goes to the admin.
     expect(before[1]).toEqual([
       {

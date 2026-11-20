@@ -15,6 +15,7 @@ import { commitLogbook, runLogbook } from './logbook'
 import { deliver } from './outbound'
 import { UNDO_WINDOW_MS } from './pending'
 import { decideFromChat } from './approvals'
+import { commitVoice, startVoice, undoVoice } from './voice'
 import type { ChatMessageValue, RoutePlan } from './validators'
 
 function errorText(err: unknown): string {
@@ -34,6 +35,12 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
       return await runLogbook(ctx, plan)
     case 'logbook_commit':
       return await commitLogbook(ctx, plan)
+    case 'voice':
+      return await startVoice(ctx, plan)
+    case 'voice_commit':
+      return await commitVoice(ctx, plan)
+    case 'voice_undo':
+      return await undoVoice(ctx, plan)
     case 'agent':
       return await runAgent(ctx, {
         bindingId: plan.bindingId,

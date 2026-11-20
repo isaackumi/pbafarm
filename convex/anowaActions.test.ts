@@ -113,7 +113,8 @@ describe('Ask Anowa does it for you', () => {
     const card = await s.as(s.owner).query(api.anowa.drafts.get, { draftGroup: res.draftGroup! })
     expect(card?.items).toHaveLength(2)
     expect(card?.items.every((i) => i.status === 'pending' && i.problem === null)).toBe(true)
-    expect(card?.expiresAt).toBe(Date.now() + DRAFT_TTL_MS)
+    // convex-test's transaction clock can run a few ms ahead of the test's.
+    expect(Math.abs(card!.expiresAt - (Date.now() + DRAFT_TTL_MS))).toBeLessThan(1000)
     const [mort, po] = card!.items
     expect(mort.payload).toMatchObject({ kind: 'daily_entry', cageId: s.cageA2, mortality: 3, feedKg: 0, fishBefore: 1000 })
     expect(po.payload).toMatchObject({ kind: 'purchase_order', feedTypeId: s.feedA, supplierId: s.supplier, bagKg: 25, stockKg: 20, days: 14, units: 2 })

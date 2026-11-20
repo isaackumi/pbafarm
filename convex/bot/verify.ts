@@ -17,12 +17,12 @@ export type InboundEvent = {
   provider: BotProvider
   externalId: string
   address: string
-  kind: 'text' | 'button' | 'image' | 'unsupported'
+  kind: 'text' | 'button' | 'image' | 'audio' | 'unsupported'
   text?: string
   buttonId?: string
   callbackQueryId?: string
   profileName?: string
-  /** Photo (BOT-006): WhatsApp media id / Telegram file_id, declared type and size. Untrusted. */
+  /** Photo (BOT-006) or voice note (BOT-005): WhatsApp media id / Telegram file_id, declared type and size. Untrusted. */
   mediaId?: string
   mediaMime?: string
   mediaSize?: number
@@ -165,13 +165,21 @@ export function parseWhatsApp(
           const buttonId = cap(str(b?.payload), MAX_BUTTON_ID_CHARS)
           if (buttonId) events.push({ ...base, kind: 'button', buttonId, text: cap(str(b?.text), 100) })
           else events.push({ ...base, kind: 'text', text: cap(str(b?.text) ?? '', MAX_TEXT_CHARS) })
+        } else if (type === 'audio') {
+          // A voice note or audio file (BOT-005); the type is checked from the bytes later.
+          const media = obj(m.audio)
+          const mediaId = cap(str(media?.id), 200)
+          if (mediaId) events.push({ ...base, kind: 'audio', mediaId, mediaMime: cap(str(media?.mime_type), 100)?.toLowerCase() })
+          else events.push({ ...base, kind: 'unsupported' })
         } else if (type === 'image' || type === 'document') {
-          // A logbook photo (BOT-006); a document only when it says it is an image.
+          // A logbook photo (BOT-006); a document only when it says it is an image (or audio, BOT-005).
           const media = obj(type === 'image' ? m.image : m.document)
           const mediaId = cap(str(media?.id), 200)
           const mime = cap(str(media?.mime_type), 100)?.toLowerCase()
           if (mediaId && (type === 'image' || mime?.startsWith('image/'))) {
             events.push({ ...base, kind: 'image', mediaId, mediaMime: mime, text: cap(str(media?.caption), MAX_TEXT_CHARS) })
+          } else if (mediaId && mime?.startsWith('audio/')) {
+            events.push({ ...base, kind: 'audio', mediaId, mediaMime: mime })
           } else {
             events.push({ ...base, kind: 'unsupported' })
           }
@@ -224,6 +232,19 @@ function telegramPhoto(message: Obj): { mediaId: string; mediaMime?: string; med
   return null
 }
 
+/** A voice note, an audio file, or an audio document (BOT-005). */
+function telegramAudio(message: Obj): { mediaId: string; mediaMime?: string; mediaSize?: number } | null {
+  for (const key of ['voice', 'audio', 'document'] as const) {
+    const m = obj(message[key])
+    const id = str(m?.file_id)
+    const mime = cap(str(m?.mime_type), 100)?.toLowerCase()
+    if (!m || !id) continue
+    if (key === 'document' && !mime?.startsWith('audio/')) continue
+    return { mediaId: cap(id, 200)!, mediaMime: mime, mediaSize: typeof m.file_size === 'number' ? m.file_size : undefined }
+  }
+  return null
+}
+
 /**
  * One Telegram update. Private chats only: a bot added to a group must not
  * bind or answer the group (the binding is per person).
@@ -249,6 +270,18 @@ export function parseTelegram(body: unknown): InboundEvent | null {
         kind: 'image',
         ...photo,
         text: cap(str(message.caption), MAX_TEXT_CHARS),
+        profileName: cap(str(from?.first_name), 80),
+        sentAt,
+      }
+    }
+    const audio = telegramAudio(message)
+    if (audio) {
+      return {
+        provider: 'telegram',
+        externalId: updateId,
+        address: chatId,
+        kind: 'audio',
+        ...audio,
         profileName: cap(str(from?.first_name), 80),
         sentAt,
       }

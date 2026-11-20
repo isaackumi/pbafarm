@@ -61,6 +61,7 @@ import type * as bot_tables from "../bot/tables.js";
 import type * as bot_unitMatch from "../bot/unitMatch.js";
 import type * as bot_validators from "../bot/validators.js";
 import type * as bot_verify from "../bot/verify.js";
+import type * as bot_voice from "../bot/voice.js";
 import type * as businessUnits from "../businessUnits.js";
 import type * as cages from "../cages.js";
 import type * as companies from "../companies.js";
@@ -177,6 +178,7 @@ import type * as lib_sensorAlerts from "../lib/sensorAlerts.js";
 import type * as lib_sensorAnalytics from "../lib/sensorAnalytics.js";
 import type * as lib_siteKpis from "../lib/siteKpis.js";
 import type * as lib_species from "../lib/species.js";
+import type * as lib_speech from "../lib/speech.js";
 import type * as lib_sso from "../lib/sso.js";
 import type * as lib_tenancy from "../lib/tenancy.js";
 import type * as lib_tenantStatus from "../lib/tenantStatus.js";
@@ -253,6 +255,7 @@ import type * as users from "../users.js";
 import type * as waterQuality from "../waterQuality.js";
 import type * as weather from "../weather.js";
 import type * as webhooks from "../webhooks.js";
+import type * as workflow from "../workflow.js";
 import type * as workforce from "../workforce.js";
 
 import type {
@@ -315,6 +318,7 @@ declare const fullApi: ApiFromModules<{
   "bot/unitMatch": typeof bot_unitMatch;
   "bot/validators": typeof bot_validators;
   "bot/verify": typeof bot_verify;
+  "bot/voice": typeof bot_voice;
   businessUnits: typeof businessUnits;
   cages: typeof cages;
   companies: typeof companies;
@@ -431,6 +435,7 @@ declare const fullApi: ApiFromModules<{
   "lib/sensorAnalytics": typeof lib_sensorAnalytics;
   "lib/siteKpis": typeof lib_siteKpis;
   "lib/species": typeof lib_species;
+  "lib/speech": typeof lib_speech;
   "lib/sso": typeof lib_sso;
   "lib/tenancy": typeof lib_tenancy;
   "lib/tenantStatus": typeof lib_tenantStatus;
@@ -507,6 +512,7 @@ declare const fullApi: ApiFromModules<{
   waterQuality: typeof waterQuality;
   weather: typeof weather;
   webhooks: typeof webhooks;
+  workflow: typeof workflow;
   workforce: typeof workforce;
 }>;
 
@@ -539,4 +545,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
   agent: import("@convex-dev/agent/_generated/component.js").ComponentApi<"agent">;
+  workflow: import("@convex-dev/workflow/_generated/component.js").ComponentApi<"workflow">;
 };

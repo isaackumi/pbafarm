@@ -93,7 +93,7 @@ export const botTables = {
     externalId: v.string(),
     /** E.164 phone (WhatsApp) or Telegram chat id. */
     address: v.string(),
-    kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('unsupported')),
+    kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('audio'), v.literal('unsupported')),
     /** Untrusted user text, capped (an image's caption). */
     text: v.optional(v.string()),
     /** Button / list / callback payload we generated (still untrusted). */
@@ -102,7 +102,7 @@ export const botTables = {
     callbackQueryId: v.optional(v.string()),
     /** Sender's profile name, for the /account card. */
     profileName: v.optional(v.string()),
-    /** Photo (BOT-006): WhatsApp media id or Telegram file_id, declared type and size. Untrusted. */
+    /** Photo (BOT-006) or voice note (BOT-005): WhatsApp media id or Telegram file_id, declared type and size. Untrusted. */
     mediaId: v.optional(v.string()),
     mediaMime: v.optional(v.string()),
     mediaSize: v.optional(v.number()),
@@ -138,6 +138,8 @@ export const botTables = {
     reminderTimezone: v.optional(v.string()),
     /** Farm date of the last reminder sent, so each day sends once. */
     lastReminderDate: v.optional(v.string()),
+    /** Spoken language of voice notes (BOT-005, VOICE command): en, fr, tw, ee, gaa. Else from the account locale. */
+    voiceLanguage: v.optional(v.string()),
   })
     .index('by_provider_and_address', ['provider', 'address'])
     .index('by_userId', ['userId'])
@@ -191,6 +193,16 @@ export const botTables = {
     error: v.optional(v.string()),
     /** The logbook photo this draft was read from (BOT-006). */
     scanId: v.optional(v.id('logbookScans')),
+    /** The voice note this draft was heard from (BOT-005). */
+    voiceNoteId: v.optional(v.id('voiceNotes')),
+    /** Fields heard with low confidence, shown as CHECK: 'unit', 'feedKg', 'mortality', 'quantityKg'. */
+    needsCheck: v.optional(v.array(v.string())),
+    /** What was heard for a CHECK field, e.g. "aduasa", for the explanation line. */
+    checkHeard: v.optional(v.string()),
+    /** Fields the worker did not say: shown blank, never as 0. */
+    notSaid: v.optional(v.array(v.string())),
+    /** Closest units when the cage was unclear (picker buttons, best first, at most 10). */
+    unitChoices: v.optional(v.array(v.object({ cageId: v.id('cages'), name: v.string() }))),
     /** Ask Anowa in the web app: the items of one draft card share a draftGroup. */
     channel: v.optional(v.literal('web')),
     draftGroup: v.optional(v.string()),
@@ -202,6 +214,7 @@ export const botTables = {
     .index('by_bindingId_and_status', ['bindingId', 'status'])
     .index('by_userId_and_draftGroup', ['userId', 'draftGroup'])
     .index('by_scanId', ['scanId'])
+    .index('by_voiceNoteId', ['voiceNoteId'])
     .index('by_bindingId_and_fingerprint', ['bindingId', 'fingerprint'])
     .index('by_status_and_expiresAt', ['status', 'expiresAt'])
     .index('by_companyId', ['companyId']),
@@ -240,6 +253,54 @@ export const botTables = {
   })
     .index('by_bindingId_and_sourceMessageId', ['bindingId', 'sourceMessageId'])
     .index('by_companyId_and_createdAt', ['companyId', 'createdAt']),
+
+  /**
+   * A voice note sent to the bot (BOT-005). One per (binding, message): the
+   * row is the idempotency key for its workflow run. The audio is a `files`
+   * row (entityType 'voiceNotes') deleted after 30 days; the transcript stays
+   * with the drafts (pendingBotActions.voiceNoteId).
+   */
+  voiceNotes: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    userId: v.id('users'),
+    bindingId: v.id('channelBindings'),
+    provider: botProvider,
+    sourceMessageId: v.string(),
+    /** WhatsApp media id or Telegram file_id (untrusted). */
+    mediaId: v.string(),
+    /** Provider timestamp of the message (ms): the drafts' farm date. */
+    sentAt: v.number(),
+    /** en, fr, tw, ee or gaa. */
+    language: v.string(),
+    status: v.union(
+      v.literal('queued'),
+      v.literal('stored'),
+      v.literal('transcribed'),
+      v.literal('ready'),
+      v.literal('failed'),
+    ),
+    error: v.optional(v.string()),
+    workflowId: v.optional(v.string()),
+    fileId: v.optional(v.id('files')),
+    mime: v.optional(v.string()),
+    size: v.optional(v.number()),
+    /** What was heard, in the spoken language (capped). */
+    transcript: v.optional(v.string()),
+    /** The English line shown under the transcript. */
+    english: v.optional(v.string()),
+    /** Words heard with low confidence. */
+    lowConfidence: v.optional(v.array(v.string())),
+    vendor: v.optional(v.string()),
+    model: v.optional(v.string()),
+    draftCount: v.optional(v.number()),
+    /** When the audio was deleted (30-day retention). */
+    audioDeletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_bindingId_and_sourceMessageId', ['bindingId', 'sourceMessageId'])
+    .index('by_companyId_and_createdAt', ['companyId', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
 
   /**
    * An approval request (stocking, top-up, transfer) sent to one approver's

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { editDistance, foldLookalikes, fuzzyMatchUnit } from './unitMatch'
+import { editDistance, foldLookalikes, fuzzyMatchUnit, rankUnits } from './unitMatch'
 
 const units = [
   { _id: '1', name: 'Cage A1' },
@@ -38,5 +38,22 @@ describe('BOT-006 unit matching', () => {
     const r = fuzzyMatchUnit(units, 'A')
     expect(r.unit).toBeNull()
     expect(fuzzyMatchUnit(units, '')).toMatchObject({ unit: null })
+  })
+})
+
+describe('BOT-005 cage ranking for the picker', () => {
+  const cages = [
+    { _id: 'a8', name: 'A-08' },
+    { _id: 'b8', name: 'B-08' },
+    { _id: 'a3', name: 'A-03' },
+    { _id: 'c7', name: 'C-07' },
+  ]
+  test('closest first; a heard number is a hint; nothing for empty text', () => {
+    const r = rankUnits(cages, 'A8')
+    expect(r.slice(0, 2).map((x) => x.unit._id)).toEqual(['a8', 'b8'])
+    expect(r[0].score).toBeGreaterThan(r[1].score)
+    expect(rankUnits(cages, 'cage seven 7')[0].unit._id).toBe('c7')
+    expect(rankUnits(cages, '   ')).toEqual([])
+    expect(rankUnits(cages, 'A8', 1)).toHaveLength(1)
   })
 })

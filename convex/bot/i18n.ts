@@ -25,7 +25,7 @@ const en = {
   siteSet: (site: string) => `Active site: ${site}.`,
   companySet: (company: string) => `Active organization: ${company}.`,
   allSites: 'All sites',
-  unsupported: 'I can only read text messages for now.',
+  unsupported: 'I can read text messages, voice notes and logbook photos.',
   aiDisabled:
     'The assistant is not enabled for your organization, so I can only take buttons and commands (HELP). An administrator can enable it in Settings → AI.',
   aiUnavailable: 'The assistant is not available right now. Please try again later.',
@@ -90,6 +90,47 @@ const en = {
     weight: 'Wrong weight (ABW)',
     plan: 'Not in the plan',
   } as Record<'count' | 'unit' | 'date' | 'weight' | 'plan', string>,
+  // Voice notes (BOT-005, artboard 49)
+  languageNames: { en: 'English', fr: 'French', tw: 'Twi', ee: 'Ewe', gaa: 'Ga' } as Record<
+    'en' | 'fr' | 'tw' | 'ee' | 'gaa',
+    string
+  >,
+  voiceNotSetUp: (lang: string) =>
+    `Voice notes in ${lang} are not set up yet. Please type the entry instead, e.g. "Cage A3: fed 25 kg, 2 dead".`,
+  voiceTooLarge: (mb: number) => `This voice note is too long (over ${mb} MB). Please send a shorter one.`,
+  voiceBadType: 'I could not play this voice note. Please record it again in WhatsApp or Telegram.',
+  voiceDownloadFailed: 'I could not download the voice note. Please send it again.',
+  voiceUnavailable: 'I could not listen to the voice note right now. Please try again later or type the entry.',
+  voiceEmpty: 'I could not hear anything in that voice note. Please try again closer to the phone.',
+  voiceNoPermission: 'Your role cannot record daily entries, so I cannot take voice notes from you.',
+  heardIn: (lang: string, translated: boolean) => (translated ? `Heard in ${lang} · English` : `Heard in ${lang}`),
+  heardCount: (n: number, cages: boolean) =>
+    `Got it. I heard ${n} ${cages ? (n === 1 ? 'cage' : 'cages') : n === 1 ? 'entry' : 'entries'}. Please check before I save:`,
+  fieldUnit: 'Unit',
+  fieldFeed: 'Feed',
+  fieldMortality: 'Mortality',
+  fieldIssue: 'Feed issue',
+  fish: (n: number) => `${n} fish`,
+  notSaid: 'Not said, saved as 0',
+  check: 'CHECK',
+  checkNote: (heard: string | undefined, value: string, unit: string) =>
+    heard
+      ? `I heard "${heard}" (${value}) for ${unit} but the line was noisy. Tap Edit if that's wrong.`
+      : `I am not sure of ${value} for ${unit}. Tap Edit if that's wrong.`,
+  savingFor: (date: string, isToday: boolean) => (isToday ? `Saving for today, ${date}.` : `Saving for ${date}.`),
+  saveGroup: (n: number) => (n === 1 ? 'Save' : n === 2 ? 'Save both' : `Save all ${n}`),
+  whichCage: (what: string | null) =>
+    what ? `I didn't catch the cage clearly. Which one had ${what}?` : "I didn't catch the cage clearly. Which one was it?",
+  whatDead: (n: number) => (n === 1 ? '1 dead fish' : `${n} dead fish`),
+  whatFeed: (kg: string) => `${kg} of feed`,
+  another: 'Another',
+  pickFromList: 'Which cage? If it is not here, tap Cancel and send the note again with the cage name.',
+  cagePicked: (name: string) => `OK, ${name}.`,
+  pickCageFirst: 'Pick the cage first, then tap Save.',
+  voiceSaved: (names: string, mins: number) => `Saved ${names}. You can undo for ${mins} minutes.`,
+  voiceUndoAll: (n: number) => (n === 1 ? 'Undone. The entry was removed.' : `Undone. ${n} entries were removed.`),
+  voiceLanguageSet: (lang: string) => `Voice notes: I will listen for ${lang}.`,
+  voiceLanguageHelp: 'Send VOICE TWI, VOICE EWE, VOICE GA, VOICE EN or VOICE FR to set the language of your voice notes.',
 }
 
 type Strings = typeof en
@@ -111,7 +152,7 @@ const fr: Strings = {
   siteSet: (site: string) => `Site actif : ${site}.`,
   companySet: (company: string) => `Organisation active : ${company}.`,
   allSites: 'Tous les sites',
-  unsupported: 'Je ne lis que les messages texte pour le moment.',
+  unsupported: 'Je lis les messages texte, les notes vocales et les photos du cahier.',
   aiDisabled:
     "L'assistant n'est pas activé pour votre organisation : je ne traite que les boutons et les commandes (AIDE). Un administrateur peut l'activer dans Paramètres → IA.",
   aiUnavailable: "L'assistant n'est pas disponible pour le moment. Réessayez plus tard.",
@@ -174,6 +215,43 @@ const fr: Strings = {
     weight: 'Poids moyen faux',
     plan: 'Hors planning',
   },
+  languageNames: { en: 'anglais', fr: 'français', tw: 'twi', ee: 'éwé', gaa: 'ga' },
+  voiceNotSetUp: (lang) =>
+    `Les notes vocales en ${lang} ne sont pas encore configurées. Écrivez plutôt la saisie, par ex. « Cage A3 : 25 kg d'aliment, 2 morts ».`,
+  voiceTooLarge: (mb) => `Cette note vocale est trop longue (plus de ${mb} Mo). Envoyez-en une plus courte.`,
+  voiceBadType: "Je n'arrive pas à lire cette note vocale. Enregistrez-la à nouveau dans WhatsApp ou Telegram.",
+  voiceDownloadFailed: "Je n'ai pas pu télécharger la note vocale. Envoyez-la à nouveau.",
+  voiceUnavailable: "Je ne peux pas écouter la note vocale pour le moment. Réessayez plus tard ou écrivez la saisie.",
+  voiceEmpty: "Je n'ai rien entendu dans cette note vocale. Réessayez plus près du téléphone.",
+  voiceNoPermission: 'Votre rôle ne permet pas les saisies quotidiennes, je ne peux donc pas prendre vos notes vocales.',
+  heardIn: (lang, translated) => (translated ? `Entendu en ${lang} · anglais` : `Entendu en ${lang}`),
+  heardCount: (n, cages) =>
+    `Bien reçu. J'ai entendu ${n} ${cages ? (n === 1 ? 'cage' : 'cages') : n === 1 ? 'saisie' : 'saisies'}. Vérifiez avant que j'enregistre :`,
+  fieldUnit: 'Unité',
+  fieldFeed: 'Aliment',
+  fieldMortality: 'Mortalité',
+  fieldIssue: "Sortie d'aliment",
+  fish: (n) => `${n} poissons`,
+  notSaid: 'Non dit, enregistré comme 0',
+  check: 'À VÉRIFIER',
+  checkNote: (heard, value, unit) =>
+    heard
+      ? `J'ai entendu « ${heard} » (${value}) pour ${unit} mais la ligne était bruyante. Touchez Modifier si c'est faux.`
+      : `Je ne suis pas sûr de ${value} pour ${unit}. Touchez Modifier si c'est faux.`,
+  savingFor: (date, isToday) => (isToday ? `Enregistrement pour aujourd'hui, ${date}.` : `Enregistrement pour le ${date}.`),
+  saveGroup: (n) => (n === 1 ? 'Enregistrer' : `Enregistrer les ${n}`),
+  whichCage: (what) =>
+    what ? `Je n'ai pas bien compris la cage. Laquelle avait ${what} ?` : "Je n'ai pas bien compris la cage. Laquelle était-ce ?",
+  whatDead: (n) => (n === 1 ? '1 poisson mort' : `${n} poissons morts`),
+  whatFeed: (kg) => `${kg} d'aliment`,
+  another: 'Une autre',
+  pickFromList: "Quelle cage ? Si elle n'est pas ici, touchez Annuler et renvoyez la note avec le nom de la cage.",
+  cagePicked: (name) => `Entendu, ${name}.`,
+  pickCageFirst: "Choisissez d'abord la cage, puis touchez Enregistrer.",
+  voiceSaved: (names, mins) => `${names} enregistré. Vous pouvez annuler pendant ${mins} minutes.`,
+  voiceUndoAll: (n) => (n === 1 ? 'Annulé. La saisie a été supprimée.' : `Annulé. ${n} saisies ont été supprimées.`),
+  voiceLanguageSet: (lang) => `Notes vocales : j'écoute en ${lang}.`,
+  voiceLanguageHelp: 'Envoyez VOICE TWI, VOICE EWE, VOICE GA, VOICE EN ou VOICE FR pour choisir la langue de vos notes vocales.',
 }
 
 export function t(locale: BotLocale): Strings {

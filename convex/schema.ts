@@ -99,6 +99,8 @@ export const fileEntityType = v.union(
   v.literal('customFieldDefs'),
   /** Logbook page photos sent to the farm bot (BOT-006); entityId is the scan. */
   v.literal('logbookScans'),
+  /** Voice notes sent to the farm bot (BOT-005); entityId is the voice note. Deleted after 30 days. */
+  v.literal('voiceNotes'),
 )
 
 export const complianceFrequency = v.union(

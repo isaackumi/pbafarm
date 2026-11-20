@@ -45,7 +45,7 @@
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^26.1.1",
-    "convex-test": "^0.0.38",
+    "convex-test": "^0.0.67",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
     "jose": "^6.2.4",

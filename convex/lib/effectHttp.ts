@@ -73,7 +73,7 @@ export type HttpRequest = {
   readonly url: string
   readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   readonly headers?: Record<string, string>
-  /** Objects are sent as JSON (Content-Type set if absent); strings as-is. */
+  /** Objects are sent as JSON (Content-Type set if absent); strings, FormData and bytes as-is. */
   readonly body?: unknown
   /** fetch redirect mode; 'manual' makes a 3xx an HttpStatusError (webhooks). */
   readonly redirect?: 'follow' | 'manual' | 'error'
@@ -133,6 +133,16 @@ function parseBody(text: string): unknown {
   }
 }
 
+/** Bodies sent as they are: multipart forms (audio uploads) and raw bytes. */
+function isBinaryBody(body: unknown): body is FormData | Blob | Uint8Array<ArrayBuffer> | ArrayBuffer {
+  return (
+    (typeof FormData !== 'undefined' && body instanceof FormData) ||
+    (typeof Blob !== 'undefined' && body instanceof Blob) ||
+    body instanceof Uint8Array ||
+    body instanceof ArrayBuffer
+  )
+}
+
 function errorMessage(cause: unknown): string {
   if (cause instanceof Error && cause.message) return cause.message
   return String(cause)
@@ -147,8 +157,10 @@ function attempt(
   return Effect.gen(function* () {
     const fetchFn = yield* Fetch
     const headers: Record<string, string> = { ...(req.headers ?? {}) }
-    let body: string | undefined
-    if (typeof req.body === 'string') {
+    let body: BodyInit | undefined
+    if (typeof req.body === 'string' || isBinaryBody(req.body)) {
+      // Strings, multipart forms and raw bytes go as they are (fetch sets the
+      // multipart boundary itself; callers set Content-Type for bytes).
       body = req.body
     } else if (req.body !== undefined) {
       body = JSON.stringify(req.body)
