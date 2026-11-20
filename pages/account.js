@@ -384,7 +384,7 @@ function DataPrivacyCard({ showDelete }) {
       {canExport && (
         <RouteGate href="/export">
         <SettingsRow label={t('settingsUi.account.download')} helper={t('settingsUi.account.downloadHelper')}>
-          <GradientButton href="/export" size="sm">
+          <GradientButton href="/export" size="sm" ring="sky">
             {t('settingsUi.account.downloadAction')}
           </GradientButton>
         </SettingsRow>

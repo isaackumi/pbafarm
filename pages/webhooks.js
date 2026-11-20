@@ -4,6 +4,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
 import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
 import { CheckTile, IntegrationsShell, SecretOnce, formatTime } from '../components/integrations/kit'
+import { LIME_BUTTON } from '../components/paperTones'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -79,7 +80,7 @@ function NewEndpoint({ events, onCreated, disabled }) {
         </div>
         <EventPicker events={events} value={types} onChange={setTypes} idPrefix="new" />
         <div>
-          <GradientButton type="submit" size="sm" disabled={busy || disabled || !url.trim() || !types.length}>
+          <GradientButton ring="sky" type="submit" size="sm" disabled={busy || disabled || !url.trim() || !types.length}>
             {busy ? t('integ.common.adding') : t('settingsUi.integ.addEndpoint')}
           </GradientButton>
         </div>
@@ -169,7 +170,7 @@ function EndpointCard({ ep, events, onSecret }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="break-all font-mono text-[13px] leading-4 text-text">{ep.url}</span>
+            <span className="break-all font-geist text-[13px] leading-4 text-text">{ep.url}</span>
             <Pill tone={!active ? 'neutral' : failing ? 'red' : 'green'}>
               {!active
                 ? t('integ.common.off')
@@ -199,7 +200,7 @@ function EndpointCard({ ep, events, onSecret }) {
               </GhostButton>
             </>
           ) : (
-            <GradientButton size="sm" onClick={() => act(() => update({ endpointId: ep.id, enabled: true }), t('settingsUi.integ.hooks.turnedOn'))}>
+            <GradientButton ring="sky" size="sm" onClick={() => act(() => update({ endpointId: ep.id, enabled: true }), t('settingsUi.integ.hooks.turnedOn'))}>
               {t('integ.common.turnOn')}
             </GradientButton>
           )}
@@ -213,7 +214,7 @@ function EndpointCard({ ep, events, onSecret }) {
         <div className="mt-4 flex flex-col gap-4">
           <EventPicker events={events} value={types} onChange={setTypes} idPrefix={`ep-${ep.id}`} />
           <div>
-            <GradientButton
+            <GradientButton ring="sky"
               size="sm"
               disabled={!types.length}
               onClick={() =>
@@ -295,7 +296,7 @@ function WebhooksScreen() {
     <IntegrationsShell
       title={t('settingsUi.integ.nav.outbound')}
       actions={
-        <GradientButton href="#new-endpoint">
+        <GradientButton variant="lime" className={LIME_BUTTON} href="#new-endpoint">
           {t('settingsUi.integ.addEndpoint')}
         </GradientButton>
       }

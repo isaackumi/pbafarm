@@ -7,9 +7,13 @@ import { formatDateTime } from '../lib/format'
 import { useT } from '../lib/i18n/context'
 import { GhostButton } from './ui'
 
-const TONE = { ok: 'var(--good)', broken: 'var(--alert)', running: 'var(--cyan)' }
-/** Ring colours from the Paper 47 banner (pill border tokens). */
-const RING = { ok: 'var(--pill-green-border)', broken: 'var(--pill-red-border)', running: 'var(--pill-cyan-border)' }
+const TONE = { ok: 'text-good', broken: 'text-alert', running: 'text-sky-ink [html[data-theme=light]_&]:text-[#1562D6]' }
+/** Ring colours from the Paper 47 banner: intact #2E5A3E (light #A7DDB8). */
+const RING = {
+  ok: 'border-[#2E5A3E] [html[data-theme=light]_&]:border-[#A7DDB8]',
+  broken: 'border-[var(--pill-red-border)]',
+  running: 'border-[#1F3E6E] [html[data-theme=light]_&]:border-[#B9D3F5]',
+}
 
 function shortHash(hash) {
   if (!hash) return null
@@ -24,7 +28,6 @@ export default function AuditChainStatus() {
   const [error, setError] = useState('')
   if (!status) return null
   const latest = status.latest
-  const color = TONE[latest?.status] || 'var(--muted)'
   const Icon = latest?.status === 'broken' ? ShieldAlert : ShieldCheck
   const headline = !latest
     ? t('settingsUi.audit.chain.notChecked')
@@ -43,8 +46,7 @@ export default function AuditChainStatus() {
       <div className="flex flex-wrap items-center gap-5">
         <span
           aria-hidden
-          className="flex size-11 shrink-0 items-center justify-center rounded-full border"
-          style={{ borderColor: RING[latest?.status] || 'var(--line-strong)', color }}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-full border ${RING[latest?.status] || 'border-line-strong'} ${TONE[latest?.status] || 'text-muted'}`}
         >
           <Icon size={20} />
         </span>
@@ -52,14 +54,15 @@ export default function AuditChainStatus() {
           <p role="status" className="text-[15px] font-semibold leading-[18px] text-text">
             {headline}
           </p>
-          <p className="text-[13px] leading-4 text-muted">
+          {/* Paper 47: the whole line is sky on dark; on light it is muted with a sky hash. */}
+          <p className="text-[13px] leading-4 text-sky-ink [html[data-theme=light]_&]:text-muted">
             {latest?.finishedAt ? t('settingsUi.audit.chain.lastCheck', { time: formatDateTime(latest.finishedAt) }) : null}
             {latest?.finishedAt ? ' · ' : ''}
             {t('settingsUi.audit.chain.length', { count: status.chainLength.toLocaleString() })}
             {hash && (
               <>
                 {' · '}
-                {t('settingsUi.audit.chain.head')} <span className="font-mono text-pearl-cyan">{hash}</span>
+                {t('settingsUi.audit.chain.head')} <span className="font-geist [html[data-theme=light]_&]:text-[#1562D6]">{hash}</span>
               </>
             )}
           </p>

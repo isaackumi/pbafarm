@@ -138,7 +138,7 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
       {canConnect ? (
         <div className="flex flex-wrap gap-2">
           {pending?.link ? (
-            <GradientButton size="sm" href={pending.link} target="_blank" rel="noopener noreferrer">
+            <GradientButton size="sm" ring="sky" href={pending.link} target="_blank" rel="noopener noreferrer">
               {t('chatChannels.openIn', { app: meta.name })}
             </GradientButton>
           ) : null}

@@ -6,6 +6,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
 import { FIELD, Notice, SettingsCard, SettingsField } from '../components/settings'
 import { CheckTile, IntegrationsShell, SecretOnce, formatTime, scopeTone, useRelativeTime } from '../components/integrations/kit'
+import { LIME_BUTTON, SKY_TEXT, TonePill } from '../components/paperTones'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -87,7 +88,7 @@ function NewKeyCard({ scopes, sites, onCreated }) {
           </select>
         </SettingsField>
         <div>
-          <GradientButton type="submit" size="sm" disabled={busy || !name.trim() || !chosen.length}>
+          <GradientButton type="submit" size="sm" ring="sky" disabled={busy || !name.trim() || !chosen.length}>
             {busy ? t('settingsUi.integ.keys.creating') : t('settingsUi.integ.keys.create')}
           </GradientButton>
         </div>
@@ -123,7 +124,7 @@ function KeyRow({ k, sitesById, now }) {
           <span className="text-[14px] leading-[18px] text-text">{k.name}</span>
           {!active && <Pill tone={STATUS_TONE[k.status] || 'neutral'}>{t(`settingsUi.integ.keys.status.${k.status}`)}</Pill>}
         </div>
-        <p className="mt-1 truncate font-mono text-[12px] leading-4 text-muted">{k.prefix}…</p>
+        <p className="mt-1 truncate font-geist text-[12px] leading-4 text-muted">{k.prefix}…</p>
         <p className="mt-1 text-[12px] leading-4 text-faint">
           {sites}
           {k.expiresAt ? ` · ${t('settingsUi.integ.keys.expiresOn', { time: formatTime(k.expiresAt) })}` : ''}
@@ -136,9 +137,9 @@ function KeyRow({ k, sitesById, now }) {
       <ul className="flex flex-wrap gap-[6px]" aria-label={t('settingsUi.integ.keys.permissions')}>
         {k.scopes.map((s) => (
           <li key={s}>
-            <Pill tone={scopeTone(s)} size="sm">
+            <TonePill tone={scopeTone(s)} size="sm">
               {s}
-            </Pill>
+            </TonePill>
           </li>
         ))}
       </ul>
@@ -168,7 +169,7 @@ function OutboundSummary({ now }) {
     <SettingsCard
       title={t('settingsUi.integ.nav.outbound')}
       action={
-        <Link href="/webhooks" className="flex items-center gap-1 rounded text-[13px] leading-4 text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
+        <Link href="/webhooks" className={`flex items-center gap-1 rounded text-[13px] leading-4 ${SKY_TEXT} focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan`}>
           <Plus size={14} aria-hidden />
           {t('settingsUi.integ.addEndpoint')}
         </Link>
@@ -194,7 +195,7 @@ function OutboundSummary({ now }) {
             return (
               <li key={ep.id} className="flex flex-col gap-2 border-t border-line py-[14px]">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate font-mono text-[13px] leading-4 text-text">{ep.url}</span>
+                  <span className="min-w-0 truncate font-geist text-[13px] leading-4 text-text">{ep.url}</span>
                   <Pill tone={tone} size="sm" className="shrink-0">
                     {label}
                   </Pill>
@@ -251,7 +252,11 @@ function DocsLink() {
       href="/api-docs"
       className="flex items-center gap-4 rounded-card border border-line px-5 py-5 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:px-[26px]"
     >
-      <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--pill-cyan-border)] text-cyan">
+      {/* Paper 56: #1F3E6E ring, #9FE3E6 glyph; light #B9D3F5 ring, #1562D6 glyph. */}
+      <span
+        aria-hidden
+        className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#1F3E6E] text-[#9FE3E6] [html[data-theme=light]_&]:border-[#B9D3F5] [html[data-theme=light]_&]:text-[#1562D6]"
+      >
         <CodeXml size={18} />
       </span>
       <span className="min-w-0 flex-1">
@@ -285,7 +290,7 @@ function ApiKeysScreen() {
     <IntegrationsShell
       title={t('settingsUi.integ.title')}
       actions={
-        <GradientButton href="#new-key" icon={Plus}>
+        <GradientButton variant="lime" className={LIME_BUTTON} href="#new-key" icon={Plus}>
           {t('settingsUi.integ.keys.newTitle')}
         </GradientButton>
       }

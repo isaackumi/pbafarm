@@ -16,6 +16,7 @@ import {
   resolveLayout,
 } from '../../convex/lib/formLayouts'
 import { FIELD, InlineError, SettingsCard, SettingsField } from '../settings'
+import { TonePill } from '../paperTones'
 
 const NO_DEFS = []
 const lite = (defs) => (defs ?? []).map((d) => ({ key: d.key, required: d.required, archived: d.archived }))
@@ -204,7 +205,7 @@ function FormEditor({ formKey }) {
                       <p className="flex flex-wrap items-center gap-2 text-[14px] leading-[18px] text-text">
                         {label(f.ref)}
                         {required(f.ref) && <Pill>{t('formLayout.required')}</Pill>}
-                        {f.ref.startsWith('custom:') && <Pill tone="pink">{t('formLayout.custom')}</Pill>}
+                        {f.ref.startsWith('custom:') && <TonePill tone="lime">{t('formLayout.custom')}</TonePill>}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <select
@@ -309,7 +310,7 @@ function FormEditor({ formKey }) {
           <Plus className="h-4 w-4" aria-hidden />
           {t('formLayout.addSection')}
         </GhostButton>
-        <GradientButton onClick={submit} disabled={busy || problems.length > 0}>
+        <GradientButton ring="sky" onClick={submit} disabled={busy || problems.length > 0}>
           <Save className="h-4 w-4" aria-hidden />
           {t('formLayout.save')}
         </GradientButton>

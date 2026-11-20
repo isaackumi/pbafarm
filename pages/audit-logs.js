@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { Avatar, GhostButton, Modal, Pill, Table } from '../components/ui'
+import { GhostButton, Modal, Table, initials } from '../components/ui'
+import { TonePill } from '../components/paperTones'
 import { SettingsCard, SettingsFrame, useSettingsEyebrow } from '../components/settings'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
@@ -29,9 +30,9 @@ const RANGES = [7, 30, 90, 365]
 const ACCESS_TABLES = new Set(['users', 'companies', 'memberships', 'roles', 'invitations', 'apiKeys'])
 const FINANCE_TABLES = new Set(['feedPurchases', 'sales', 'expenses', 'invoices', 'payments', 'payroll'])
 function category(table) {
-  if (ACCESS_TABLES.has(table)) return { key: 'access', tone: 'pink' }
-  if (FINANCE_TABLES.has(table)) return { key: 'finance', tone: 'cyan' }
-  return { key: 'data', tone: 'neutral' }
+  if (ACCESS_TABLES.has(table)) return { key: 'access', tone: 'lime' }
+  if (FINANCE_TABLES.has(table)) return { key: 'finance', tone: 'sky' }
+  return { key: 'data', tone: 'data' }
 }
 
 /** Pill dropdown from the Paper 47 table header ("Last 7 days", "Anyone"). */
@@ -114,7 +115,13 @@ function AuditLogsContent() {
         const name = log.user_label || log.user_id || t('settingsUi.audit.unknownUser')
         return (
           <span className="flex min-w-0 items-center gap-[10px]">
-            <Avatar name={name} size={28} />
+            {/* Paper 47: 28px disc, 11/14 semibold initials (light #EAF1FA on #CBD6E3). */}
+            <span
+              aria-hidden
+              className="flex size-7 shrink-0 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-text [html[data-theme=light]_&]:border-[#CBD6E3] [html[data-theme=light]_&]:bg-[#EAF1FA]"
+            >
+              {initials(name)}
+            </span>
             <span className="truncate">{name}</span>
           </span>
         )
@@ -141,7 +148,7 @@ function AuditLogsContent() {
       width: '146px',
       render: (log) => {
         const c = category(log.table_name)
-        return <Pill tone={c.tone}>{t(`settingsUi.audit.category.${c.key}`)}</Pill>
+        return <TonePill tone={c.tone}>{t(`settingsUi.audit.category.${c.key}`)}</TonePill>
       },
     },
   ]

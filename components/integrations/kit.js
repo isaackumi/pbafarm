@@ -59,13 +59,13 @@ export function IntegrationsShell({ title, actions, children }) {
 export function SecretOnce({ title, hint, secret, copyLabel, onCopy, onDone }) {
   const t = useT()
   return (
-    <SettingsCard title={title} role="status" style={{ borderColor: 'var(--cyan)' }}>
+    <SettingsCard title={title} role="status" style={{ borderColor: 'var(--sky-ink)' }}>
       <p className="mb-3 text-[13px] leading-4 text-muted">{hint}</p>
       <code className="block select-all break-all rounded-input border border-line-strong bg-bg px-[14px] py-3 font-mono text-[13px] leading-[18px] text-text">
         {secret}
       </code>
       <div className="mt-4 flex flex-wrap gap-2">
-        <GradientButton size="sm" onClick={onCopy}>
+        <GradientButton size="sm" ring="sky" onClick={onCopy}>
           {copyLabel}
         </GradientButton>
         <GhostButton onClick={onDone}>{t('integ.common.stored')}</GhostButton>
@@ -127,7 +127,7 @@ export function useRelativeTime() {
   }
 }
 
-/** Scope pill tone: writes pink, reads cyan (Paper 56). */
+/** Scope pill tone for `TonePill` (Paper 56): writes lime, reads sky. */
 export function scopeTone(scope) {
-  return /:(write|manage|create)$/.test(scope) ? 'pink' : 'cyan'
+  return /:(write|manage|create)$/.test(scope) ? 'lime' : 'sky'
 }

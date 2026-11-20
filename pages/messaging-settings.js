@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { GhostButton, GradientButton, Pill, Skeleton, Toggle } from '../components/ui'
+import { GhostButton, GradientButton, Pill, Skeleton } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
 import Link from 'next/link'
 import { CloudOff, Send } from 'lucide-react'
 import { CardNote, FIELD, Notice, RouteGate, SettingsCard, SettingsField, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
+import { LIME_BUTTON, SKY_TEXT, SkyToggle, TonePill } from '../components/paperTones'
 import { useT } from '../lib/i18n/context'
 import { useOutbox } from '../hooks/useOutbox'
 
@@ -188,7 +189,7 @@ function ChannelCard({ spec, row, providers, platform, encryptionReady }) {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <GradientButton onClick={onSave} disabled={!provider || busy !== null}>
+        <GradientButton ring="sky" onClick={onSave} disabled={!provider || busy !== null}>
           {busy === 'save' ? t('settingsUi.saving') : row ? t('settingsUi.msg.saveChanges') : t('settingsUi.msg.addChannel', { channel: name })}
         </GradientButton>
         {row && row.status !== 'disabled' && (
@@ -270,7 +271,7 @@ function ChannelCard({ spec, row, providers, platform, encryptionReady }) {
                 onChange={(e) => setTestTo(e.target.value)}
               />
             </SettingsField>
-            <GradientButton onClick={onTest} disabled={!testTo.trim() || busy !== null}>
+            <GradientButton ring="sky" onClick={onTest} disabled={!testTo.trim() || busy !== null}>
               {busy === 'test' ? t('settingsUi.msg.sending') : t('settingsUi.msg.sendTest')}
             </GradientButton>
           </div>
@@ -323,7 +324,7 @@ function SecurityCard() {
     <SettingsCard title={t('settingsUi.msg.sec.title')}>
       <p className="-mt-2 mb-2 text-[12px] leading-4 text-muted">{t('settingsUi.msg.sec.sub')}</p>
       <SettingsRow label={t('settingsUi.msg.sec.phone')} helper={t('settingsUi.msg.sec.phoneHelp')}>
-        <Toggle
+        <SkyToggle
           checked={policy.allowPhoneLogin}
           disabled={saving}
           label={t('settingsUi.msg.sec.phone')}
@@ -347,7 +348,7 @@ function SecurityCard() {
         label={t('settingsUi.msg.sec.mfa')}
         helper={policy.adminHasPhone ? t('settingsUi.msg.sec.mfaHelpHas') : t('settingsUi.msg.sec.mfaHelpNone')}
       >
-        <Toggle
+        <SkyToggle
           checked={policy.require2fa}
           disabled={saving}
           label={t('settingsUi.msg.sec.mfa')}
@@ -376,7 +377,7 @@ function SecurityCard() {
         label={t('settingsUi.msg.sec.phoneCounts')}
         helper={t('settingsUi.msg.sec.phoneCountsHelp')}
       >
-        <Toggle
+        <SkyToggle
           checked={policy.phoneLoginSatisfies2fa}
           disabled={saving}
           label={t('settingsUi.msg.sec.phoneCounts')}
@@ -442,7 +443,7 @@ function PreferencesCard({ data }) {
             label={label}
             helper={p.available ? t('settingsUi.msg.def.available') : t('settingsUi.msg.def.unavailable')}
           >
-            <Toggle checked={p.enabled} disabled={saving || !p.available} label={label} onChange={(v) => save({ [key]: v })} />
+            <SkyToggle checked={p.enabled} disabled={saving || !p.available} label={label} onChange={(v) => save({ [key]: v })} />
           </SettingsRow>
         )
       })}
@@ -466,16 +467,16 @@ function ChannelSummary({ spec, row, providers, platform }) {
         {row ? (
           <StatusPill status={row.status} />
         ) : (
-          <Pill tone={platformOn ? 'cyan' : 'neutral'} size="sm">
+          <TonePill tone={platformOn ? 'sky' : 'neutral'} size="sm">
             {platformOn ? t('settingsUi.msg.platformChannel') : t('settingsUi.msg.notConfigured')}
-          </Pill>
+          </TonePill>
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-[2px]">
         <span className="text-[13px] leading-4 text-muted">
           {provider ? `${provider.label} · ${provider.senderLabel || ''}`.replace(/ · $/, '') : t(`settingsUi.msg.channel.${spec.id}`)}
         </span>
-        {row?.senderId && <span className="truncate font-data text-[14px] leading-[18px] text-text">{row.senderId}</span>}
+        {row?.senderId && <span className="truncate font-geist text-[14px] leading-[18px] text-text">{row.senderId}</span>}
       </div>
     </a>
   )
@@ -490,6 +491,8 @@ function PhoneOutboxBanner() {
     <Notice
       tone="warn"
       role="status"
+      // Paper 57: #17140C on #5E4A1E; light #FFFBEB on #F3D9A4 (the Notice sets these inline).
+      className="border-[#5E4A1E]! bg-[#17140C]! [html[data-theme=light]_&]:border-[#F3D9A4]! [html[data-theme=light]_&]:bg-[#FFFBEB]!"
       action={
         <button
           type="button"
@@ -503,7 +506,7 @@ function PhoneOutboxBanner() {
     >
       <span className="text-text">{t('settingsUi.msg.outbox.waiting', { count: items.length })}</span>
       {' · '}
-      <Link href="/outbox" className="text-muted underline-offset-2 hover:underline">
+      <Link href="/outbox" className="text-muted underline-offset-2 hover:underline [html[data-theme=light]_&]:text-text">
         {t('settingsUi.msg.outbox.open')}
       </Link>
     </Notice>
@@ -538,7 +541,7 @@ function MessagingSettings() {
       eyebrow={eyebrow}
       actions={
         testable ? (
-          <GradientButton icon={Send} href={`#${testable.id}-test`}>
+          <GradientButton variant="lime" className={LIME_BUTTON} icon={Send} href={`#${testable.id}-test`}>
             {t('settingsUi.msg.sendTestAction')}
           </GradientButton>
         ) : null
@@ -549,7 +552,7 @@ function MessagingSettings() {
           <p className="text-[14px] leading-[18px] text-muted">
             {t('settingsUi.msg.description')}{' '}
             <RouteGate href="/users">
-              <Link href="/users" className="text-pearl-cyan underline-offset-2 hover:underline">
+              <Link href="/users" className={`${SKY_TEXT} underline-offset-2 hover:underline`}>
                 {t('settingsUi.nav.members')}
               </Link>
             </RouteGate>

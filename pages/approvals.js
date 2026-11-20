@@ -3,7 +3,8 @@ import { useMutation, useQuery } from 'convex/react'
 import { ArrowRight } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
-import { GhostButton, GradientButton, Pill, Tabs, Textarea } from '../components/ui'
+import { GhostButton, GradientButton, Tabs, Textarea } from '../components/ui'
+import { SKY_TEXT, TonePill } from '../components/paperTones'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
@@ -12,7 +13,8 @@ import { formatDate, formatNumber } from '../lib/format'
 import { APPROVAL_TABS, inboxView, requestAge, rowKey, tabCounts } from '../lib/approvalsView'
 import { useLocale, useT } from '../lib/i18n/context'
 
-const TYPE_TONE = { stocking: 'cyan', fish_transfer: 'pink', topup: 'neutral' }
+/** Paper 25: Transfer lime, Stocking sky, Top-up neutral (Expense amber when it lands). */
+const TYPE_TONE = { stocking: 'sky', fish_transfer: 'lime', topup: 'neutral', expense: 'amber' }
 const typeLabel = (t, type) => t.or(`approvalsPage.type.${type}`, type)
 
 function useNow(ms = 60000) {
@@ -50,7 +52,7 @@ function InboxItem({ row, selected, onSelect, now }) {
         }`}
       >
         <span className="flex w-full items-center justify-between gap-3">
-          <Pill tone={TYPE_TONE[row.type]}>{typeLabel(t, row.type)}</Pill>
+          <TonePill tone={TYPE_TONE[row.type]}>{typeLabel(t, row.type)}</TonePill>
           <span className="text-xs leading-4 text-faint tabular-nums">
             {ageText(t, row.createdAt, now)}
           </span>
@@ -138,7 +140,7 @@ function Detail({ row, now, onDone }) {
     >
       <div className="flex flex-col gap-[6px]">
         <div className="flex flex-wrap items-center gap-[10px]">
-          <Pill tone={TYPE_TONE[row.type]}>{t('approvalsPage.request', { type: label })}</Pill>
+          <TonePill tone={TYPE_TONE[row.type]}>{t('approvalsPage.request', { type: label })}</TonePill>
           <span className="text-xs leading-4 text-muted">
             {t('approvalsPage.requestedAgo', { age: ageText(t, row.createdAt, now) })}
           </span>
@@ -150,14 +152,14 @@ function Detail({ row, now, onDone }) {
 
       {row.type === 'fish_transfer' ? (
         <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
-          <StatBox label={t('approvalsPage.from', { cage: from })} value={`−${count}`} sub={t('approvalsPage.fish')} />
+          <StatBox label={t('approvalsPage.from', { cage: from })} value={`−${count}`} sub={t('approvalsPage.fish')} subTone="text-good" />
           <ArrowRight size={20} aria-hidden className="hidden shrink-0 text-faint sm:block" />
-          <StatBox label={t('approvalsPage.to', { cage: to })} value={`+${count}`} sub={t('approvalsPage.fish')} subTone="text-pearl-cyan" />
+          <StatBox label={t('approvalsPage.to', { cage: to })} value={`+${count}`} sub={t('approvalsPage.fish')} subTone={SKY_TEXT} />
         </div>
       ) : (
         <div className="flex flex-col gap-4 sm:flex-row">
           <StatBox label={t('approvalsPage.unit')} value={row.cageName} sub={row.batchNumber} />
-          <StatBox label={t('approvalsPage.quantity')} value={count} sub={t('approvalsPage.fish')} subTone="text-pearl-cyan" />
+          <StatBox label={t('approvalsPage.quantity')} value={count} sub={t('approvalsPage.fish')} subTone={SKY_TEXT} />
         </div>
       )}
 
@@ -200,7 +202,7 @@ function Detail({ row, now, onDone }) {
           <GhostButton onClick={reject} disabled={Boolean(busy)}>
             {busy === 'reject' ? t('approvalsPage.processing') : t('approvalsPage.reject')}
           </GhostButton>
-          <GradientButton variant="solid" size="sm" onClick={approve} disabled={Boolean(busy)}>
+          <GradientButton variant="lime" size="sm" onClick={approve} disabled={Boolean(busy)}>
             {busy === 'approve' ? t('approvalsPage.processing') : t('approvalsPage.approve', { type: label.toLowerCase() })}
           </GradientButton>
         </div>
