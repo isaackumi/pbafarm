@@ -297,6 +297,42 @@ describe('admin membership management', () => {
   })
 })
 
+describe('listMine for the farm switcher', () => {
+  test('returns role display names (template, custom, archived fallback) and the logo URL or null', async () => {
+    const { t, as, staffA, companyA, companyB } = await setup()
+    // Legacy member, no logo: template label, null logo.
+    expect(await as(staffA).query(api.memberships.listMine, {})).toEqual([
+      expect.objectContaining({ name: 'Lake Farm', roleKey: 'manager', roleName: 'Manager', logoUrl: null, isActive: true }),
+    ])
+    await t.run(async (ctx) => {
+      const now = Date.now()
+      const logo = await ctx.storage.store(new Blob(['logo'], { type: 'image/png' }))
+      await ctx.db.patch(companyA, { logoStorageId: logo })
+      const roleId = await ctx.db.insert('roles', {
+        companyId: companyB, key: 'feeder', name: 'Feeding lead', permissions: [], archived: false, updatedAt: now,
+      })
+      await ctx.db.insert('memberships', {
+        userId: staffA, companyId: companyB, roleKey: 'feeder', roleId, allLocations: true, status: 'active', updatedAt: now,
+      })
+    })
+    const mine = await as(staffA).query(api.memberships.listMine, {})
+    expect(mine.map((m: any) => [m.name, m.roleName, m.isActive])).toEqual([
+      ['Lake Farm', 'Manager', true],
+      ['River Farm', 'Feeding lead', false],
+    ])
+    expect(mine[0].logoUrl).toEqual(expect.any(String))
+    expect(mine[1].logoUrl).toBeNull()
+
+    // An archived custom role falls back to the key.
+    await t.run(async (ctx) => {
+      const role = await ctx.db.query('roles').first()
+      await ctx.db.patch(role!._id, { archived: true })
+    })
+    const after = await as(staffA).query(api.memberships.listMine, {})
+    expect(after.find((m: any) => m.name === 'River Farm')?.roleName).toBe('feeder')
+  })
+})
+
 describe('registering a second organization', () => {
   test('a member of A can register B2; approval makes them its owner without moving them', async () => {
     const { t, as, staffA, platform, companyA } = await setup()

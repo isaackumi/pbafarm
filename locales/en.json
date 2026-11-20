@@ -6180,5 +6180,30 @@
         "other": "Last {count} weeks"
       }
     }
+  },
+  "farmSwitcher": {
+    "organization": "Organization",
+    "active": "Active",
+    "switching": "Switching…",
+    "registerAnother": "Register another organization",
+    "menuLabel": "Your farms",
+    "current": "Current farm: {name} ({role})",
+    "status": {
+      "pending": "Awaiting approval",
+      "rejected": "Not approved"
+    }
+  },
+  "chooseOrg": {
+    "title": "Where are you working today?",
+    "subtitle": "Signed in as {name}. You belong to {count} farms — pick one. You can switch any time from the sidebar.",
+    "listLabel": "Your farms",
+    "lastUsed": "Last used",
+    "continue": "Continue",
+    "continuing": "Opening…",
+    "error": "Could not switch to that farm. Try again.",
+    "continueTo": "Continue to {name}",
+    "newFarm": "Starting a new farm?",
+    "notYou": "Not you?",
+    "signOut": "Sign out"
   }
 }

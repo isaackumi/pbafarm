@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
-import { safeNextPath } from '../lib/safeRedirect'
+import { postSignInPath } from '../lib/activeOrganization'
 import {
   AUTH_ERROR_CODES,
   SIGN_OUT_CODES,
@@ -163,7 +163,7 @@ export default function Login() {
   // An account that is about to be signed out (inactive, company not approved)
   // stays here; AuthWrapper ends the session and sets ?reason=.
   if (user && !SIGN_OUT_CODES.includes(user.accessState)) {
-    router.push(safeNextPath(router.query.next))
+    router.push(postSignInPath(router.query.next))
     return null
   }
 
@@ -205,7 +205,7 @@ export default function Login() {
       return
     }
 
-    router.push(safeNextPath(router.query.next))
+    router.push(postSignInPath(router.query.next))
   }
 
   const codeStep = method === 'phone' && phoneStep === 'code'
@@ -247,7 +247,7 @@ export default function Login() {
           setPhone={setPhone}
           step={phoneStep}
           setStep={setPhoneStep}
-          onSignedIn={() => router.push(safeNextPath(router.query.next))}
+          onSignedIn={() => router.push(postSignInPath(router.query.next))}
           onUseEmail={() => {
             setMethod('email')
             setPhoneStep('phone')
@@ -256,7 +256,7 @@ export default function Login() {
       ) : method === 'sso' && SSO_NAME ? (
         <div className="flex flex-col gap-[22px]">
           <p className="text-[13px] leading-5 text-muted">{t('authUi.login.ssoHint', { name: SSO_NAME })}</p>
-          <AuthSubmit type="button" onClick={() => signIn('oidc', { redirectTo: safeNextPath(router.query.next) })}>
+          <AuthSubmit type="button" onClick={() => signIn('oidc', { redirectTo: postSignInPath(router.query.next) })}>
             {t('auth.login.sso', { name: SSO_NAME })}
           </AuthSubmit>
         </div>

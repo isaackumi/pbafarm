@@ -9,11 +9,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  MapPin,
   Plus,
   X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import { useLocation } from '../contexts/LocationContext'
 import { usePermissions } from '../hooks/usePermission'
 import { useTerm } from '../hooks/useTerm'
@@ -24,7 +24,7 @@ import { routePermission } from '../lib/routePermissions'
 import { api } from '../convex/_generated/api'
 import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import { addDays, localToday } from '../lib/format'
-import { Avatar } from './ui/Avatar'
+import FarmSwitcher from './FarmSwitcher'
 import { AnowaLockup, AnowaMark } from './brand/AnowaLogo'
 import {
   getExpandedSections,
@@ -39,30 +39,26 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 
 
 /**
- * Workspace switcher (Paper EZ-0): company, active site (switches location),
+ * Workspace card (Paper EZ-0): active site (switches location; the farm itself
+ * is picked in FarmSwitcher above, Paper 69),
  * optional feed cover line and the "Stock a new cage" action.
  */
-function WorkspaceCard({ displayName, logoUrl, feedCover, canStock }) {
+function WorkspaceCard({ feedCover, canStock }) {
   const t = useT()
   const { locations, activeLocationId, setActiveLocation, loading } = useLocation()
   const active = locations.find((loc) => (loc.id || loc._id) === activeLocationId)
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative flex items-center gap-2.5 px-1.5" data-tour="location-switcher">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt=""
-            className="size-6 shrink-0 rounded-[6px] border border-line-strong object-cover"
-          />
-        ) : (
-          <Avatar name={displayName} size={24} square />
-        )}
+      <div
+        className="relative flex items-center gap-2.5 rounded-[8px] px-1.5 py-1 hover:bg-surface-2"
+        data-tour="location-switcher"
+      >
+        <span className="flex w-7 shrink-0 justify-center text-muted" aria-hidden>
+          <MapPin size={14} strokeWidth={2} />
+        </span>
         <div className="flex min-w-0 grow basis-0 flex-col">
-          <div className="truncate text-[14px] font-medium leading-[18px] text-text">{displayName}</div>
           {locations.length > 0 ? (
-            <div className="truncate text-[12px] leading-4 text-muted">{active?.name || '—'}</div>
+            <div className="truncate text-[13px] leading-4 text-text">{active?.name || '—'}</div>
           ) : (
             <Link href="/farm-locations" className="relative z-10 text-[12px] leading-4 text-cyan hover:underline">
               Set location
@@ -119,7 +115,6 @@ const ROW_IDLE = 'text-text hover:bg-surface-2'
 
 const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }) => {
   const { user, canUseApp } = useAuth()
-  const { displayName, logoUrl } = useCompanySettings()
   const router = useRouter()
   // Production stays open like the Paper shell; the section holding the
   // current page also opens on navigation (UX-004).
@@ -250,7 +245,6 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
 
   const label = (item) => term.text(t.or(item.labelKey || navKey(item.path), item.title))
   const sectionLabel = (key, section) => t.or(`nav.section.${key}`, section.title)
-  const name = displayName || 'Anowa'
 
   return (
     <aside
@@ -293,10 +287,10 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
         )}
       </div>
 
+      {canUseApp && <FarmSwitcher collapsed={collapsed} />}
+
       {!collapsed && (
         <WorkspaceCard
-          displayName={name}
-          logoUrl={logoUrl}
           feedCover={feedCover}
           canStock={can(routePermission('/stocking'))}
         />

@@ -27,7 +27,7 @@ import {
   upsertMembership,
 } from './lib/memberships'
 import { sha256Hex } from './lib/tokens'
-import { requireAccount, requireMember } from './lib/permissions'
+import { isTemplateKey, requireAccount, requireMember, TEMPLATE_LABELS } from './lib/permissions'
 import { assertHumanTicket } from './humanVerification'
 import { companyUsable } from './lib/tenantStatus'
 
@@ -47,6 +47,25 @@ async function myMemberships(ctx: QueryCtx | MutationCtx, me: Doc<'users'>) {
   return out
 }
 
+/** Display name of a membership's role: its custom role, its template label, else the key. */
+async function roleNameOf(ctx: QueryCtx, m: Doc<'memberships'>) {
+  if (m.roleId) {
+    const role = await ctx.db.get(m.roleId)
+    if (role && role.companyId === m.companyId && !role.archived) return role.name
+  }
+  return isTemplateKey(m.roleKey) ? TEMPLATE_LABELS[m.roleKey] : m.roleKey
+}
+
+/** A signed URL for a stored logo, or null when absent or no longer stored. */
+async function logoUrlOf(ctx: QueryCtx, storageId: Id<'_storage'> | undefined) {
+  if (!storageId) return null
+  try {
+    return await ctx.storage.getUrl(storageId)
+  } catch {
+    return null
+  }
+}
+
 export const listMine = query({
   args: {},
   returns: v.array(
@@ -56,6 +75,8 @@ export const listMine = query({
       code: v.string(),
       companyStatus: v.union(v.literal('pending'), v.literal('rejected'), v.literal('approved')),
       roleKey: v.string(),
+      roleName: v.string(),
+      logoUrl: v.union(v.string(), v.null()),
       isActive: v.boolean(),
     }),
   ),
@@ -73,6 +94,8 @@ export const listMine = query({
         code: company.code,
         companyStatus: company.status,
         roleKey: m.roleKey,
+        roleName: await roleNameOf(ctx, m),
+        logoUrl: await logoUrlOf(ctx, company.logoStorageId),
         isActive: me.companyId === m.companyId,
       })
     }

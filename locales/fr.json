@@ -6180,5 +6180,30 @@
         "other": "{count} dernières semaines"
       }
     }
+  },
+  "farmSwitcher": {
+    "organization": "Organisation",
+    "active": "Active",
+    "switching": "Changement…",
+    "registerAnother": "Enregistrer une autre organisation",
+    "menuLabel": "Vos fermes",
+    "current": "Ferme actuelle : {name} ({role})",
+    "status": {
+      "pending": "En attente d’approbation",
+      "rejected": "Non approuvée"
+    }
+  },
+  "chooseOrg": {
+    "title": "Où travaillez-vous aujourd’hui ?",
+    "subtitle": "Connecté en tant que {name}. Vous appartenez à {count} fermes — choisissez-en une. Vous pourrez en changer à tout moment depuis la barre latérale.",
+    "listLabel": "Vos fermes",
+    "lastUsed": "Dernière utilisée",
+    "continue": "Continuer",
+    "continuing": "Ouverture…",
+    "error": "Impossible de passer à cette ferme. Réessayez.",
+    "continueTo": "Continuer vers {name}",
+    "newFarm": "Nouvelle ferme ?",
+    "notYou": "Ce n’est pas vous ?",
+    "signOut": "Se déconnecter"
   }
 }

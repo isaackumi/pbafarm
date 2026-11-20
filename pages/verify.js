@@ -4,6 +4,7 @@ import { useAction } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
+import { postSignInPath } from '../lib/activeOrganization'
 import { useT } from '../lib/i18n/context'
 import {
   AUTH_INPUT,
@@ -59,7 +60,7 @@ export default function VerifyPage() {
 
   // Verified (here or elsewhere): continue into the app.
   useEffect(() => {
-    if (user && !user.mfaRequired) router.replace('/dashboard')
+    if (user && !user.mfaRequired) router.replace(postSignInPath('/dashboard'))
   }, [user, router])
 
   if (!user) return null
@@ -134,7 +135,7 @@ export default function VerifyPage() {
         user.mfaTotp ? (
           <AuthenticatorVerify />
         ) : (
-          <AuthenticatorEnrol onDone={() => router.replace('/dashboard')} />
+          <AuthenticatorEnrol onDone={() => router.replace(postSignInPath('/dashboard'))} />
         )
       ) : channels.length === 0 ? (
         <AuthAlert tone="info">{t('auth.verify.noChannel')}</AuthAlert>

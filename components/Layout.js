@@ -1,5 +1,6 @@
 // components/Layout.js — app shell (Paper Shell 7Z-0)
 import React, { useState, useEffect } from 'react'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Header from './Header'
 import QueryBoundary from './QueryBoundary'
@@ -7,6 +8,8 @@ import Sidebar from './Sidebar'
 import MobileTabBar from './MobileTabBar'
 import { ActAsBanner } from './ActAs'
 import { PageTitle } from './ui/PageTitle'
+import { useActiveOrganization } from '../lib/useActiveOrganization'
+import { documentTitle } from '../lib/activeOrganization'
 import { getSidebarCollapsed, peekSidebarCollapsed, setSidebarCollapsed } from '../lib/sidebarState'
 
 const TITLE_BY_PREFIX = [
@@ -74,6 +77,8 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
     setSidebarCollapsedState(next)
   }
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  // Browser tab: "<page> · <active farm>" so members can tell farms apart.
+  const { active: activeOrg } = useActiveOrganization()
 
   useEffect(() => {
     if (initialTitle) {
@@ -92,6 +97,9 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
 
   return (
     <div className="min-h-screen bg-bg font-sans text-text" data-tour="app-shell">
+      <Head>
+        <title>{documentTitle(title, activeOrg?.name)}</title>
+      </Head>
       <Sidebar
         collapsed={sidebarCollapsed && !mobileNavOpen}
         onToggle={toggleSidebar}
