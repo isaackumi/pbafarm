@@ -4,18 +4,18 @@ import { useT } from '../../lib/i18n/context'
 import { Brand } from '../auth/AuthUi'
 import LanguageSwitcher from '../LanguageSwitcher'
 
-/** Paper 16 step marker: done = solid check, current = gradient ring, upcoming = outline. */
+/** Paper 16 step marker: done = solid check, current = sky gradient ring, upcoming = outline. */
 function StepMarker({ state, n }) {
   if (state === 'done') {
     return (
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-button text-button-text">
-        <Check size={14} strokeWidth={2.5} aria-hidden />
+        <Check size={14} strokeWidth={2} aria-hidden />
       </span>
     )
   }
   if (state === 'current') {
     return (
-      <span className="flex h-7 w-7 shrink-0 rounded-full p-[1.5px]" style={{ backgroundImage: 'var(--gradient-brand)' }}>
+      <span className="flex h-7 w-7 shrink-0 rounded-full p-[1.5px]" style={{ backgroundImage: 'var(--gradient-sky)' }}>
         <span className="flex h-full w-full items-center justify-center rounded-full bg-surface text-xs font-semibold text-text">
           {n}
         </span>
@@ -54,7 +54,7 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
           <LanguageSwitcher className="lg:hidden" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs uppercase leading-4 tracking-[0.08em] text-cyan">{t('onboarding.eyebrow')}</p>
+          <p className="text-xs uppercase leading-4 tracking-[0.08em] text-sky-ink">{t('onboarding.eyebrow')}</p>
           <p className="text-[13px] leading-4 text-muted">
             {t('onboarding.stepOf', { n: currentIndex + 1, total: steps.length })}
           </p>
@@ -66,7 +66,7 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
             aria-valuenow={progress}
             aria-label={t('onboarding.eyebrow')}
           >
-            <div className="h-full rounded-pill" style={{ width: `${progress}%`, backgroundImage: 'var(--gradient-bar)' }} />
+            <div className="h-full rounded-pill" style={{ width: `${progress}%`, backgroundImage: 'linear-gradient(in oklab 90deg, #1562D6 0%, #8EC2F7 100%)' }} />
           </div>
         </div>
         <ol className="hidden flex-col lg:flex">
@@ -112,9 +112,9 @@ export default function OnboardingLayout({ title, subtitle, pageTitle, steps, ch
   )
 }
 
-/** Paper 16 input: bg-bg, 14px radius, 13/16 padding. */
+/** Paper 16 input: bg-bg, 14px radius, 13/16 padding; sky border when focused (Paper 50). */
 export const ONBOARDING_INPUT =
-  'w-full rounded-input border border-line-strong bg-bg px-4 py-[13px] text-[15px] leading-[18px] text-text placeholder:text-faint focus:border-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 disabled:opacity-60'
+  'w-full rounded-input border border-line-strong bg-bg px-4 py-[13px] text-[15px] leading-[18px] text-text placeholder:text-faint focus:border-sky-ink focus:outline-none focus-visible:ring-0 disabled:opacity-60'
 
 export function OnboardingField({ label, htmlFor, hint, required, children, className = '' }) {
   const t = useT()

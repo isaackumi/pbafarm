@@ -92,13 +92,13 @@ function Projects() {
       eyebrow={t('projectsPage.eyebrow')}
       actions={
         canManage ? (
-          <GradientButton variant="solid" icon={Plus} onClick={() => setCreating(true)}>
+          <GradientButton variant="lime" icon={Plus} onClick={() => setCreating(true)}>
             {t('projectsPage.new')}
           </GradientButton>
         ) : null
       }
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-[28px]">
         <AnowaBrief
           loading={summary === undefined}
           lead={t('projectsPage.brief.lead', { count: brief?.count ?? 0 })}
@@ -416,7 +416,7 @@ function BudgetTable({ groups, money }) {
                       <div className="flex items-center gap-3">
                         <div className="h-2 grow overflow-hidden rounded-pill bg-line" role="img" aria-label={`${pct}%`}>
                           <div
-                            className={`h-full rounded-pill ${p.overBudget ? 'bg-alert' : pct >= 90 ? 'bg-warn' : 'bg-gradient-to-r from-sky to-sky-soft'}`}
+                            className={`h-full rounded-pill ${p.overBudget ? 'bg-alert' : pct >= 90 ? 'bg-warn' : BAR_CLASS.normal}`}
                             style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>

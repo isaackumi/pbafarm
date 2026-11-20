@@ -920,7 +920,7 @@
       "board": "Board",
       "broodstock": "Broodstock",
       "spawning": "Spawning",
-      "larval": "Larvae & fingerlings",
+      "larval": "Larvae & nursery",
       "liveFeed": "Live feed"
     },
     "kpi": {
@@ -939,7 +939,7 @@
       "one": "{count} lot",
       "other": "{count} lots"
     },
-    "survival": "{pct} survival",
+    "survival": "survival {pct}",
     "batchesN": {
       "one": "{count} batch",
       "other": "{count} batches"
@@ -2058,7 +2058,17 @@
       "noSubsidiaries": "No subsidiaries share reports yet",
       "noSubsidiariesHint": "Link a subsidiary in Organization structure; its admins accept and choose to share reports.",
       "sitesOf": "Sites of {name}",
-      "yourOrg": "your organization"
+      "yourOrg": "your organization",
+      "pageTitle": "Group & regions",
+      "eyebrow": "Reports · Group roll-up across linked companies",
+      "linkCompany": "Link company",
+      "comparison": "Company comparison",
+      "comparisonHint": "Only metrics each company shares with the group",
+      "total": "Group total",
+      "totalSub": {
+        "one": "{count} company",
+        "other": "{count} companies"
+      }
     },
     "regions": {
       "title": "Regional report",
@@ -2931,7 +2941,7 @@
   "calendarUi": {
     "title": "Calendar",
     "eyebrow": "Operations · {month}",
-    "schedule": "Schedule a task",
+    "schedule": "Schedule",
     "prev": "Previous month",
     "next": "Next month",
     "today": "Today",
@@ -3306,7 +3316,9 @@
       "nextAttempt": "Next try {when}",
       "more": "Load more",
       "emptyTitle": "No deliveries yet",
-      "emptyBody": "Scheduled and sent-now reports appear here."
+      "emptyBody": "Scheduled and sent-now reports appear here.",
+      "title": "Recent exports",
+      "range": "Range"
     }
   },
   "integ": {
