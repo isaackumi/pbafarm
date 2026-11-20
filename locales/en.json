@@ -84,6 +84,7 @@
       "assistant": "Anowa"
     },
     "section": {
+      "anowa": "Ask Anowa",
       "production": "Production",
       "records": "Records",
       "finance": "Finance",
@@ -2805,8 +2806,11 @@
     "newChat": "New chat",
     "settings": "Model settings",
     "fullPage": "Open full page",
-    "offTitle": "The assistant is off",
-    "offBody": "An administrator turns the farm assistant on in AI settings, and your role needs permission to use it.",
+    "offTitle": "Anowa is off",
+    "offBody": "An administrator turns Anowa on in Company settings, and your role needs permission to use it.",
+    "offAdmin": "Anowa is off for your company. Turn it on in Company settings to ask questions and draft automations.",
+    "turnOn": "Turn on Anowa",
+    "ask": "Ask Anowa",
     "insights": "Insights today",
     "tryAsking": "Try asking",
     "prompt": {
@@ -3782,7 +3786,7 @@
         "sub": "Defaults and rules for stock lots, purchases, and low-stock alerts."
       },
       "cb": {
-        "ai": "Enable AI assistant for this company",
+        "ai": "Enable Anowa (AI assistant) for this company",
         "stock": "Require approval for new stockings",
         "topup": "Require approval for top-ups",
         "transfer": "Require approval for fish transfers",
