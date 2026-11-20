@@ -23,6 +23,8 @@ describe('provider failures → kinds (no provider text for members)', () => {
     expect(kind(401, 'Incorrect API key provided: sk-…')).toBe('auth')
     expect(kind(400, 'API key not valid. Please pass a valid API key.')).toBe('auth')
     expect(kind(404, 'models/old-model is not found for API version v1beta')).toBe('model_unavailable')
+    expect(kind(400, 'Multiturn chat is not enabled for models/antigravity-preview-09-2026')).toBe('model_unavailable')
+    expect(kind(400, '`temperature` is deprecated for this model.')).toBe('model_unavailable')
     expect(kind(400, "This model's maximum context length is 128000 tokens")).toBe('too_long')
     expect(kind(400, 'Response was blocked due to SAFETY')).toBe('blocked')
     expect(kind(503, 'The model is overloaded. Please try again later.')).toBe('unavailable')

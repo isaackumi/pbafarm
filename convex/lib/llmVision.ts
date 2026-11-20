@@ -190,8 +190,8 @@ function visionText(o: VisionOptions): Effect.Effect<{ text: string; usage: Chat
       { 'x-api-key': o.apiKey, 'anthropic-version': '2023-06-01' },
       {
         model: o.model,
-        max_tokens: 4096,
-        temperature: 0,
+        // Room for thinking; no temperature (current Claude models reject it).
+        max_tokens: 16000,
         system: o.prompt,
         messages: [
           {
