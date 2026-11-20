@@ -36,6 +36,16 @@ export default function ProcurementPage() {
 
 const COLUMNS = ['draft', 'ordered', 'received', 'cancelled']
 const STATUS_TONE = { draft: 'neutral', ordered: 'cyan', received: 'green', cancelled: 'red' }
+/** Paper 29 dark "Ordered" pill: border #1F3E6E, sky text #6AA8F5 (no light artboard; light keeps the cyan pill). */
+const STATUS_CLASS = { ordered: 'dark:!border-[#1F3E6E] dark:!text-sky-ink' }
+
+function StatusPill({ status, children }) {
+  return (
+    <Pill tone={STATUS_TONE[status]} className={STATUS_CLASS[status] || ''}>
+      {children}
+    </Pill>
+  )
+}
 // Closed columns show only the latest few cards; the count shows the total.
 const CLOSED_LIMIT = 4
 
@@ -192,11 +202,11 @@ function PurchaseOrders() {
       actions={
         <>
           {canRecord && (
-            <GradientButton icon={Plus} onClick={() => setShowForm((v) => !v)} aria-expanded={showForm}>
+            <GradientButton variant="lime" icon={Plus} onClick={() => setShowForm((v) => !v)} aria-expanded={showForm}>
               {showForm ? t('ops.po.closeForm') : t('ops.po.newPo')}
             </GradientButton>
           )}
-          <GradientButton reverse icon={UserRound} href="/feed-suppliers">
+          <GradientButton ring="sky" icon={UserRound} href="/feed-suppliers">
             {t('ops.po.suppliers')}
           </GradientButton>
         </>
@@ -286,7 +296,7 @@ function PurchaseOrders() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-[10px]">
-                <GradientButton type="submit" variant="solid" size="sm" disabled={busy}>
+                <GradientButton type="submit" variant="solid" ring="sky" size="sm" disabled={busy}>
                   {t('ops.po.saveDraft')}
                 </GradientButton>
                 <GhostButton size="sm" icon={Plus} onClick={() => setForm((f) => ({ ...f, lines: [...f.lines, blankLine()] }))}>
@@ -305,10 +315,10 @@ function PurchaseOrders() {
               <section
                 key={col}
                 aria-label={t(`ops.po.status.${col}`)}
-                className="flex flex-col gap-[10px] rounded-card border border-line bg-bg p-4"
+                className="flex flex-col gap-[10px] rounded-card border border-line bg-bg p-4 dark:bg-[#0E1012]"
               >
                 <div className="flex items-center justify-between px-1 pb-[6px] pt-[2px]">
-                  <Pill tone={STATUS_TONE[col]}>{t(`ops.po.status.${col}`)}</Pill>
+                  <StatusPill status={col}>{t(`ops.po.status.${col}`)}</StatusPill>
                   <span className="text-[13px] leading-4 text-muted">{orders === undefined ? '—' : all.length}</span>
                 </div>
                 {cards.length === 0 ? (
@@ -365,7 +375,7 @@ function PurchaseOrders() {
                     {selected.supplier_name || '—'}
                   </h2>
                 </div>
-                <Pill tone={STATUS_TONE[selected.status]}>{t(`ops.po.status.${selected.status}`)}</Pill>
+                <StatusPill status={selected.status}>{t(`ops.po.status.${selected.status}`)}</StatusPill>
               </div>
               {selected.lines.map((l, i) => (
                 <div key={i} className="flex justify-between gap-3 border-t border-line py-[11px] text-[14px] leading-[18px]">
@@ -420,7 +430,7 @@ function PurchaseOrders() {
                     </div>
                   ))}
                   <div className="flex flex-wrap gap-[10px] pt-2">
-                    <GradientButton variant="solid" size="sm" disabled={busy} onClick={submitReceive}>
+                    <GradientButton variant="solid" ring="sky" size="sm" disabled={busy} onClick={submitReceive}>
                       {t('ops.po.receiveIntoStock')}
                     </GradientButton>
                     <GhostButton size="sm" onClick={() => setReceiving(null)}>
@@ -431,13 +441,14 @@ function PurchaseOrders() {
               ) : (
                 <div className="flex flex-wrap gap-[10px] pt-4">
                   {canRecord && selected.status === 'ordered' && (
-                    <GradientButton variant="solid" size="sm" onClick={() => startReceive(selected)}>
+                    <GradientButton variant="solid" ring="sky" size="sm" onClick={() => startReceive(selected)}>
                       {t('ops.po.receiveGoods')}
                     </GradientButton>
                   )}
                   {isAdmin && selected.status === 'draft' && (
                     <GradientButton
                       variant="solid"
+                      ring="sky"
                       size="sm"
                       disabled={busy}
                       onClick={() => run(() => markOrdered({ id: selected.id }), t('ops.po.orderedToast'))}
@@ -483,6 +494,7 @@ function PurchaseOrders() {
                     .filter(Boolean)
                     .join(' · ')}
                   value={formatCurrency(row.spend)}
+                  valueClassName="!font-normal"
                 />
               ))
             )}

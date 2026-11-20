@@ -32,7 +32,7 @@ export default function BatchTrace({ batchId }) {
   if (trace.feed.length) {
     steps.push({
       key: 'feed',
-      tone: 'cyan',
+      tone: 'sky',
       label: t('tracePage.feedLots'),
       title: t('tracePage.feedKg', { kg: formatNumber(feedKg, { locale, decimals: 1 }) }),
       sub: trace.feed

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
@@ -14,7 +14,7 @@ import {
   Table,
 } from '../../components/ui'
 import NavTabs from '../../components/ui/NavTabs'
-import { Panel, ListRow } from '../../components/ui/Panel'
+import { Panel } from '../../components/ui/Panel'
 import InventoryActions from '../../components/inventory/InventoryActions'
 import { inventoryTabs } from '../../lib/sectionTabs'
 import { shortDate } from '../../lib/feedOverview'
@@ -23,14 +23,18 @@ import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLocation } from '../../contexts/LocationContext'
 import { useToast } from '../../components/Toast'
-import { formatNumber, localToday } from '../../lib/format'
+import { addDays, formatNumber, localToday } from '../../lib/format'
+import { useCurrency } from '../../hooks/useCurrency'
 import { usePermission } from '../../hooks/usePermission'
 
 export default function InventoryItemsPage() {
   const t = useT()
+  const { activeLocation } = useLocation()
+  // Paper 51: "Feed & inventory · Akosombo store" (the header site).
+  const eyebrow = activeLocation?.name ? t('ops.feed.eyebrowAt', { site: activeLocation.name }) : t('ops.items.eyebrow')
   return (
     <ProtectedRoute>
-      <Layout title={t('ops.inventory.title')} eyebrow={t('ops.items.eyebrow')} actions={<InventoryActions />}>
+      <Layout title={t('ops.inventory.title')} eyebrow={eyebrow} actions={<InventoryActions />}>
         <Items />
       </Layout>
     </ProtectedRoute>
@@ -57,6 +61,38 @@ const MOVE_TONE = {
 const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString('en-US')
 const today = () => localToday()
 
+/**
+ * Paper 51 light theme draws two things in other roles than dark: the KPI
+ * suffix in the body text colour, and the highlighted row in text on a
+ * #B9D3F5 ring (dark: sky #6AA8F5 text on #1F3E6E).
+ */
+const LIGHT = '[html[data-theme=light]_&]'
+
+/** Paper 51 KPI value: 26/32 figure with a 13/16 regular suffix. */
+function KpiValue({ value, suffix }) {
+  return (
+    <>
+      {value}
+      {suffix != null && (
+        <span className={`text-[13px] font-normal leading-4 text-muted ${LIGHT}:text-text`}> {suffix}</span>
+      )}
+    </>
+  )
+}
+
+/** "−0.8%": signed percentage with a true minus. */
+const signedPct = (n) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${Math.abs(n).toFixed(1)}%`
+
+/** Stock status pill (Paper 51 "Cover · status"): red when low, green when OK, with days of cover when known. */
+function StatusPill({ low, days, t }) {
+  const label = low ? t('ops.stock.low') : t('ops.stock.ok')
+  return (
+    <Pill tone={low ? 'red' : 'green'}>
+      {days != null ? t('ops.items.statusDays', { status: label, count: days }) : label}
+    </Pill>
+  )
+}
+
 function Items() {
   const t = useT()
   const { user } = useAuth()
@@ -68,6 +104,11 @@ function Items() {
   const movements = useQuery(api.inventoryItems.listMovements, user ? { limit: 50 } : 'skip')
   const cages = useQuery(api.cages.list, user ? locationArgs : 'skip')
   const suppliers = useQuery(api.feed.listSuppliers, user ? {} : 'skip')
+  const lots = useQuery(api.inventory.listLots, user ? locationArgs : 'skip')
+  const counts = useQuery(api.stockCounts.listCounts, user ? locationArgs : 'skip')
+  const { symbol } = useCurrency()
+  const money = (n) => `${symbol} ${formatNumber(Math.round(n))}`
+  const formRef = useRef(null)
 
   const createItem = useMutation(api.inventoryItems.createItem)
   const receive = useMutation(api.inventoryItems.receive)
@@ -88,11 +129,28 @@ function Items() {
   const [newItem, setNewItem] = useState({ name: '', category: 'chemical', unit: 'L', minimumStock: '', supplierId: '' })
   const [busy, setBusy] = useState(false)
   const [category, setCategory] = useState('all')
+  const [search, setSearch] = useState('')
 
   const selected = useMemo(
     () => (items || []).find((i) => i.id === move.itemId) || null,
     [items, move.itemId],
   )
+  // Paper 51 always shows one item's detail: open the first item once loaded.
+  const firstId = items?.[0]?.id
+  useEffect(() => {
+    if (firstId) setMove((m) => (m.itemId ? m : { ...m, itemId: firstId }))
+  }, [firstId])
+
+  // The selected item's issues over the last 14 days: average daily use and days of cover.
+  const itemMoves = useQuery(api.inventoryItems.listMovements, user && selected ? { itemId: selected.id, limit: 500 } : 'skip')
+  const avgUse = useMemo(() => {
+    if (!itemMoves) return null
+    const from = addDays(localToday(), -14)
+    const used = itemMoves
+      .filter((m) => m.type === 'issue' && m.date > from)
+      .reduce((sum, m) => sum + Math.abs(m.quantity), 0)
+    return used / 14
+  }, [itemMoves])
   const setM = (k) => (e) => setMove((m) => ({ ...m, [k]: e.target.value }))
   const setN = (k) => (e) => setNewItem((n) => ({ ...n, [k]: e.target.value }))
 
@@ -178,23 +236,64 @@ function Items() {
   ]
 
   const categoriesPresent = CATEGORIES.filter(([k]) => (items || []).some((i) => i.category === k))
-  const shownItems = (items || []).filter((i) => category === 'all' || i.category === category)
+  const needle = search.trim().toLowerCase()
+  const shownItems = (items || []).filter(
+    (i) => (category === 'all' || i.category === category) && (!needle || i.name.toLowerCase().includes(needle)),
+  )
   const lowCount = (items || []).filter((i) => i.low).length
   const qty = (i) => i.site_quantity ?? i.total
+  const value = (i) => (i.unit_cost != null ? qty(i) * i.unit_cost : null)
   const pickItem = (i) => setMove((m) => ({ ...m, itemId: i.id }))
+
+  // KPIs (Paper 51): stock value, below reorder, lots expiring in 30 days, last posted count.
+  const costed = (items || []).filter((i) => i.unit_cost != null)
+  const stockValue = costed.reduce((sum, i) => sum + value(i), 0)
+  const now = localToday()
+  const soonLots = (lots || []).filter((l) => l.expiry_date && l.expiry_date >= now && l.expiry_date <= addDays(now, 30))
+  const soonKg = soonLots.reduce((sum, l) => sum + Number(l.quantity_kg || 0), 0)
+  const lastCount = (counts || [])
+    .filter((c) => c.status === 'posted')
+    .reduce((best, c) => (!best || c.count_date > best.count_date ? c : best), null)
+  const countLines = (lastCount?.lines || []).filter((l) => l.difference != null)
+  const expected = countLines.reduce((sum, l) => sum + l.expected, 0)
+  const variance = expected ? (countLines.reduce((sum, l) => sum + l.difference, 0) / expected) * 100 : null
+
+  const coverDays = selected && avgUse ? Math.floor(qty(selected) / avgUse) : null
+  const startMove = (next) => {
+    setMode(next)
+    formRef.current?.querySelector('#mv-qty')?.focus()
+  }
 
   return (
     <div className="flex flex-col gap-[28px]">
       <NavTabs tabs={inventoryTabs(t)} label={t('ops.tabs.inventory')} />
       <KpiStrip
         items={[
-          { label: t('ops.items.count'), value: items === undefined ? '—' : formatNumber(items.length), suffix: t('ops.items.nonFeed') },
           {
-            label: t('ops.items.belowReorder'),
-            value: items === undefined ? '—' : formatNumber(lowCount),
-            valueTone: lowCount ? 'warn' : undefined,
+            label: t('ops.stock.value'),
+            value:
+              items === undefined ? '—' : (
+                <KpiValue value={costed.length ? money(stockValue) : '—'} suffix={t('ops.feed.items', { count: items.length })} />
+              ),
           },
-          { label: t('ops.items.categories'), value: items === undefined ? '—' : formatNumber(categoriesPresent.length) },
+          { label: t('ops.items.belowReorder'), value: items === undefined ? '—' : formatNumber(lowCount) },
+          {
+            label: t('ops.lots.expiring30'),
+            value:
+              lots === undefined ? '—' : (
+                <KpiValue value={t('ops.items.lotCount', { count: soonLots.length })} suffix={soonLots.length ? `${formatNumber(soonKg)} kg` : null} />
+              ),
+          },
+          {
+            label: t('ops.items.lastCount'),
+            value:
+              counts === undefined || !lastCount ? '—' : (
+                <KpiValue
+                  value={shortDate(lastCount.count_date)}
+                  suffix={variance != null ? t('ops.items.variance', { pct: signedPct(variance) }) : null}
+                />
+              ),
+          },
         ]}
       />
 
@@ -205,29 +304,39 @@ function Items() {
           tabs={[{ value: 'all', label: t('ops.common.all') }, ...categoriesPresent.map(([k]) => ({ value: k, label: t(`ops.items.cat.${k}`) }))]}
           tab={category}
           onTabChange={setCategory}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={t('ops.items.search')}
           columns={[
             {
               key: 'name',
               header: t('ops.items.colItem'),
-              render: (i) => <span className={i.id === move.itemId ? 'font-medium text-pearl-cyan' : ''}>{i.name}</span>,
+              render: (i) => <span className={i.id === move.itemId ? 'font-medium' : ''}>{i.name}</span>,
               sub: (i) =>
-                [t(`ops.items.cat.${i.category}`), i.minimum_stock > 0 ? t('ops.items.reorderAt', { qty: fmt(i.minimum_stock), unit: i.unit }) : null, i.supplier_name]
+                [i.minimum_stock > 0 ? t('ops.items.reorderAt', { qty: fmt(i.minimum_stock), unit: i.unit }) : null, t(`ops.items.cat.${i.category}`), i.supplier_name]
                   .filter(Boolean)
                   .join(' · '),
             },
             {
               key: 'onHand',
               header: t('ops.col.onHand'),
-              width: 140,
+              width: 104,
               align: 'right',
-              render: (i) => `${fmt(qty(i))} ${i.unit}`,
+              render: (i) => <span className="whitespace-nowrap">{`${fmt(qty(i))} ${i.unit}`}</span>,
               sub: (i) => (i.site_quantity != null ? t('ops.items.allSites', { qty: fmt(i.total) }) : null),
             },
             {
+              key: 'value',
+              header: t('ops.items.colValue'),
+              width: 134,
+              align: 'right',
+              render: (i) => <span className="whitespace-nowrap">{value(i) == null ? '—' : money(value(i))}</span>,
+            },
+            {
               key: 'status',
-              header: t('ops.col.status'),
-              width: 110,
-              render: (i) => <Pill tone={i.low ? 'red' : 'green'}>{i.low ? t('ops.stock.low') : t('ops.stock.ok')}</Pill>,
+              header: t('ops.items.colStatus'),
+              width: 166,
+              render: (i) => <StatusPill low={i.low} t={t} days={i.id === selected?.id ? coverDays : null} />,
             },
           ]}
           rows={shownItems}
@@ -235,91 +344,158 @@ function Items() {
           empty={items === undefined ? t('ops.common.loading') : t('ops.items.empty')}
         />
 
-        <Panel
-          className="xl:grow xl:basis-0"
-          title={selected ? selected.name : t('ops.items.moveStock')}
-          titleId="it-detail"
-          meta={selected ? t(`ops.items.cat.${selected.category}`) : t('ops.items.atSite')}
-        >
-          {selected && (
-            <div className="mb-4 flex flex-col">
-              {selected.levels.map((l) => (
-                <ListRow
-                  key={l.location_id || l.location_name}
-                  dot={selected.low ? 'warn' : 'good'}
-                  dotLabel={selected.low ? t('ops.stock.low') : t('ops.stock.ok')}
-                  title={l.location_name}
-                  value={`${fmt(l.quantity)} ${selected.unit}`}
-                />
-              ))}
-            </div>
+        <Panel className="xl:grow xl:basis-0" bodyClassName="gap-1">
+          {selected ? (
+            <>
+              <div className="flex items-start justify-between gap-3 pb-[14px]">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="text-xs leading-4 text-muted">
+                    {t(`ops.items.cat.${selected.category}`)} · {t('ops.items.siteCount', { count: selected.levels.length })}
+                  </div>
+                  <h2 id="it-detail" className="text-[20px] font-semibold leading-6 text-text">
+                    {selected.name}
+                  </h2>
+                </div>
+                <span className="shrink-0">
+                  <StatusPill low={selected.low} days={coverDays} t={t} />
+                </span>
+              </div>
+              <div className="flex justify-between pb-[10px] pt-1 text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">
+                <span>{t('ops.items.bySite')}</span>
+                <span>{t('ops.col.onHand')}</span>
+              </div>
+              {selected.levels.map((l, idx) => {
+                const here = Boolean(activeLocationId) && l.location_id === activeLocationId
+                const last = idx === selected.levels.length - 1
+                return (
+                  <div
+                    key={l.location_id || l.location_name}
+                    className={`flex items-center gap-3 px-[14px] py-3 ${
+                      here
+                        ? `rounded-[14px] border border-[#1F3E6E] bg-[#9FE3E60D] ${LIGHT}:border-[#B9D3F5]`
+                        : last
+                          ? ''
+                          : 'border-b border-line'
+                    }`}
+                  >
+                    <div className={`min-w-0 grow basis-0 text-[14px] leading-[18px] ${here ? `text-sky-ink ${LIGHT}:text-text` : 'text-text'}`}>
+                      {l.location_name}
+                      {here && <span className="text-xs"> · {t('ops.items.thisSite')}</span>}
+                    </div>
+                    <div className="min-w-[76px] shrink-0 whitespace-nowrap text-right text-[13px] leading-4 text-text">
+                      {fmt(l.quantity)} {selected.unit}
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="flex flex-col gap-2 border-t border-line pt-3 text-[13px] leading-4">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">{t('ops.items.avgUse')}</span>
+                  <span className="text-text">
+                    {avgUse == null ? '—' : t('ops.items.perDay', { qty: fmt(avgUse), unit: selected.unit })}
+                  </span>
+                </div>
+                {selected.minimum_stock > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted">{t('ops.items.reorderLevel')}</span>
+                    <span className="text-text">
+                      {fmt(selected.minimum_stock)} {selected.unit}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-[10px] pt-[14px]">
+                <button
+                  type="button"
+                  onClick={() => startMove('issue')}
+                  className="whitespace-pre rounded-pill bg-button px-[18px] py-[10px] text-[13px] font-medium leading-4 text-button-text hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                >
+                  {t('ops.items.issueToCages')}
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => startMove('adjust')}
+                    className="whitespace-pre rounded-pill border border-line-strong px-[18px] py-[10px] text-[13px] leading-4 text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  >
+                    {t('ops.items.mode.adjust')}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <h2 id="it-detail" className="pb-[14px] text-[20px] font-semibold leading-6 text-text">
+              {t('ops.items.moveStock')}
+            </h2>
           )}
-          <div className="mb-4 overflow-x-auto">
-            <Segmented options={modes} value={mode} onChange={setMode} label={t('ops.items.moveStock')} />
-          </div>
-          <form onSubmit={submitMove} className="space-y-4">
-            <Field label={t('ops.col.item')} htmlFor="mv-item" required>
-              <Select id="mv-item" value={move.itemId} onChange={setM('itemId')} required>
-                <option value="">{t('ops.common.select')}</option>
-                {(items || []).map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name} ({fmt(qty(i))} {i.unit})
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field
-              label={`${mode === 'adjust' ? t('ops.items.change') : t('ops.items.quantity')}${selected ? ` (${selected.unit})` : ''}`}
-              htmlFor="mv-qty"
-              required
-            >
-              <Input id="mv-qty" type="number" inputMode="decimal" step="any" value={move.quantity} onChange={setM('quantity')} required />
-            </Field>
-            {mode === 'issue' && (
-              <Field label={t('ops.items.cage')} htmlFor="mv-cage">
-                <Select id="mv-cage" value={move.cageId} onChange={setM('cageId')}>
-                  <option value="">{t('ops.items.notForCage')}</option>
-                  {(cages || []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+          <div className="mt-[14px] border-t border-line pt-[14px]">
+            <div className="mb-4 overflow-x-auto">
+              <Segmented options={modes} value={mode} onChange={setMode} label={t('ops.items.moveStock')} />
+            </div>
+            <form ref={formRef} onSubmit={submitMove} className="space-y-4">
+              <Field label={t('ops.col.item')} htmlFor="mv-item" required>
+                <Select id="mv-item" value={move.itemId} onChange={setM('itemId')} required>
+                  <option value="">{t('ops.common.select')}</option>
+                  {(items || []).map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name} ({fmt(qty(i))} {i.unit})
                     </option>
                   ))}
                 </Select>
               </Field>
-            )}
-            {mode === 'receive' && (
-              <Field label={t('ops.items.unitCost')} htmlFor="mv-cost">
-                <Input id="mv-cost" type="number" inputMode="decimal" step="any" min="0" value={move.unitCost} onChange={setM('unitCost')} />
+              <Field
+                label={`${mode === 'adjust' ? t('ops.items.change') : t('ops.items.quantity')}${selected ? ` (${selected.unit})` : ''}`}
+                htmlFor="mv-qty"
+                required
+              >
+                <Input id="mv-qty" type="number" inputMode="decimal" step="any" value={move.quantity} onChange={setM('quantity')} required />
               </Field>
-            )}
-            {mode === 'adjust' && (
-              <Field label={t('ops.items.reason')} htmlFor="mv-reason" required>
-                <Input id="mv-reason" value={move.reason} onChange={setM('reason')} placeholder={t('ops.items.reasonHint')} required />
-              </Field>
-            )}
-            {mode === 'transfer' && (
-              <Field label={t('ops.items.toSite')} htmlFor="mv-to" required>
-                <Select id="mv-to" value={move.toLocationId} onChange={setM('toLocationId')} required>
-                  <option value="">{t('ops.common.select')}</option>
-                  {(locations || [])
-                    .filter((l) => (l.id || l._id) !== activeLocationId)
-                    .map((l) => (
-                      <option key={l.id || l._id} value={l.id || l._id}>
-                        {l.name}
+              {mode === 'issue' && (
+                <Field label={t('ops.items.cage')} htmlFor="mv-cage">
+                  <Select id="mv-cage" value={move.cageId} onChange={setM('cageId')}>
+                    <option value="">{t('ops.items.notForCage')}</option>
+                    {(cages || []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
                       </option>
                     ))}
-                </Select>
-              </Field>
-            )}
-            {mode !== 'adjust' && (
-              <Field label={t('ops.col.date')} htmlFor="mv-date">
-                <Input id="mv-date" type="date" value={move.date} onChange={setM('date')} />
-              </Field>
-            )}
-            <GradientButton type="submit" variant="solid" block disabled={busy}>
-              {busy ? t('ops.common.saving') : t('ops.common.save')}
-            </GradientButton>
-          </form>
+                  </Select>
+                </Field>
+              )}
+              {mode === 'receive' && (
+                <Field label={t('ops.items.unitCost')} htmlFor="mv-cost">
+                  <Input id="mv-cost" type="number" inputMode="decimal" step="any" min="0" value={move.unitCost} onChange={setM('unitCost')} />
+                </Field>
+              )}
+              {mode === 'adjust' && (
+                <Field label={t('ops.items.reason')} htmlFor="mv-reason" required>
+                  <Input id="mv-reason" value={move.reason} onChange={setM('reason')} placeholder={t('ops.items.reasonHint')} required />
+                </Field>
+              )}
+              {mode === 'transfer' && (
+                <Field label={t('ops.items.toSite')} htmlFor="mv-to" required>
+                  <Select id="mv-to" value={move.toLocationId} onChange={setM('toLocationId')} required>
+                    <option value="">{t('ops.common.select')}</option>
+                    {(locations || [])
+                      .filter((l) => (l.id || l._id) !== activeLocationId)
+                      .map((l) => (
+                        <option key={l.id || l._id} value={l.id || l._id}>
+                          {l.name}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+              )}
+              {mode !== 'adjust' && (
+                <Field label={t('ops.col.date')} htmlFor="mv-date">
+                  <Input id="mv-date" type="date" value={move.date} onChange={setM('date')} />
+                </Field>
+              )}
+              <GradientButton type="submit" variant="solid" block disabled={busy}>
+                {busy ? t('ops.common.saving') : t('ops.common.save')}
+              </GradientButton>
+            </form>
+          </div>
         </Panel>
       </div>
 
