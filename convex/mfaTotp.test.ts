@@ -65,7 +65,10 @@ describe('mfaTotp', () => {
     expect(JSON.stringify(row)).not.toContain(secret)
 
     expect(await a1.mutation(api.mfaTotp.confirmEnrolment, { code: '000000' })).toMatchObject({ ok: false })
-    const confirmed = await a1.mutation(api.mfaTotp.confirmEnrolment, { code: await codeAt(secret) })
+    // Keep the exact enrolment code: regenerating it later can land in the next
+    // 30 s step and yield a fresh, valid code (flaky replay check).
+    const enrolCode = await codeAt(secret)
+    const confirmed = await a1.mutation(api.mfaTotp.confirmEnrolment, { code: enrolCode })
     if (!confirmed.ok) throw new Error(confirmed.error)
     expect(confirmed.recoveryCodes).toHaveLength(10)
     // Recovery codes are stored hashed.
@@ -79,7 +82,7 @@ describe('mfaTotp', () => {
     expect(await a2.query(api.users.current, {})).toMatchObject({ mfaRequired: true, mfaTotp: true })
 
     // The code used to enrol cannot be replayed.
-    expect(await a2.mutation(api.mfaTotp.verify, { code: await codeAt(secret) })).toMatchObject({ ok: false })
+    expect(await a2.mutation(api.mfaTotp.verify, { code: enrolCode })).toMatchObject({ ok: false })
     expect(await a2.mutation(api.mfaTotp.verify, { code: await codeAt(secret, Date.now(), 1) })).toEqual({ ok: true, error: null })
     expect(await a2.query(api.users.listDirectory, {})).toBeTruthy()
 
