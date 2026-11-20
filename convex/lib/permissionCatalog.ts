@@ -49,6 +49,7 @@ export const PERMISSION_GROUPS = {
     'production.records.delete': 'Delete production records',
     'production.import': 'Bulk-import records',
     'production.plan.manage': 'Plan cycles: see, save and compare stocking plans with costs and margins',
+    'production.keepers.manage': 'Assign cage keepers, plan cover and nudge keepers who are behind',
   },
   Hatchery: {
     'hatchery.view': 'See broodstock, spawnings, incubation and larval batches',

@@ -100,4 +100,11 @@ crons.cron('prune bot inbound', '5 4 * * *', internal.bot.inbound.pruneInbound, 
 // Voice-note audio is kept 30 days (BOT-005); transcripts stay with the drafts.
 crons.cron('purge voice note audio', '15 4 * * *', internal.bot.voice.purgeOldAudio, {})
 
+// Cage keepers: the daily entry deadline (default 10:00 site time) and its
+// escalation to the backup, then managers. Each site in its own time zone.
+crons.interval('cage keeper deadline', { minutes: 15 }, internal.keepers.escalation.tick, {})
+// 02:15 UTC: the keeper scorecard (last 14 days), and alert markers older than 30 days.
+crons.cron('cage keeper scores', '15 2 * * *', internal.keepers.scores.refreshAll, {})
+crons.cron('prune cage keeper alerts', '55 3 * * *', internal.keepers.escalation.pruneAlerts, {})
+
 export default crons

@@ -17,6 +17,7 @@ import { missingToday } from './reads'
 import { REMINDER_TEMPLATES, t } from './i18n'
 import { chatMessage, targetValidator, type ChatMessageValue } from './validators'
 import { deliver } from './outbound'
+import { ownUnitIds } from '../keepers/escalation'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000
 /** A reminder is sent from its time until this many minutes later (cron runs every 15). */
@@ -76,7 +77,10 @@ export const compose = internalQuery({
     if (!checked.ok) return null
     const bound = checked.bound
     if (!can(bound.member, 'production.view')) return null
-    const { missing } = await missingToday(ctx, bound, Date.now())
+    const today = await missingToday(ctx, bound, Date.now())
+    // A cage keeper is reminded of their own units only (cover included).
+    const own = today.date ? await ownUnitIds(ctx, binding.companyId, binding.userId, today.date) : null
+    const missing = own ? today.missing.filter((u) => own.has(u._id)) : today.missing
     if (!missing.length) return null
     const s = t(bound.locale)
     const names = missing.slice(0, 15).map((u) => u.name).join(', ') + (missing.length > 15 ? ', …' : '')

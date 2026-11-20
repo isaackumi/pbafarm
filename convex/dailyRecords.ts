@@ -18,6 +18,7 @@ import {
   cumulativeMortalityPct,
 } from './lib/farmRules'
 import { requireMember } from './lib/permissions'
+import { assertMayLogUnit } from './keepers/ownCages'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 import { refreshUnitDays } from './lib/rollups'
@@ -423,6 +424,8 @@ export async function insertDailyRecord(
   if (args.date > today) {
     throw userError('VALIDATION', `Date ${args.date} is in the future for this site (today is ${today})`)
   }
+  // Cage keepers: the organization may limit field staff to their own units.
+  await assertMayLogUnit(ctx, user, cage, args.date)
 
   const existing = await ctx.db
     .query('dailyRecords')

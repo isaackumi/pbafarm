@@ -110,6 +110,8 @@ export const CHECKS: Record<string, CheckDef> = {
         done: logged.size,
         total: cages.length,
         cages: names,
+        /** Comma-separated unit ids (cage keepers route each keeper their own). */
+        unitIds: missing.map((c) => c._id).join(','),
         title: `Daily entry missing for ${plural(missing.length, 'cage')}`,
         message: `No feed or mortality logged on ${date} for ${names} (${logged.size} of ${cages.length} done).`,
         link: `/daily-entry?cages=${missing.map((c) => c._id).join(',')}`,

@@ -321,7 +321,7 @@ type Check = { field: (typeof CHECK_FIELDS)[number]; heard: string }[] | undefin
 function tools(env: ToolEnv) {
   const runRead = async (
     ctx: ActionCtx,
-    tool: 'units' | 'unit_detail' | 'feed_stock' | 'missing_today',
+    tool: 'units' | 'unit_detail' | 'feed_stock' | 'missing_today' | 'keepers_behind' | 'keeper_of',
     unit?: string,
   ): Promise<string> => {
     const r = await ctx.runQuery(internal.bot.reads.read, { bindingId: env.bindingId, tool, unit, now: Date.now() })
@@ -366,6 +366,16 @@ function tools(env: ToolEnv) {
       description: "Active units with no daily entry for today's farm date.",
       inputSchema: z.object({}),
       execute: async (ctx) => runRead(ctx, 'missing_today'),
+    }),
+    whoIsBehind: createTool({
+      description: "Cage keepers behind on today's daily entries, units without a keeper and keepers away (managers only).",
+      inputSchema: z.object({}),
+      execute: async (ctx) => runRead(ctx, 'keepers_behind'),
+    }),
+    keeperOf: createTool({
+      description: 'Who keeps a unit (keeper, backup, and who covers it today).',
+      inputSchema: z.object({ unit: z.string().max(60) }),
+      execute: async (ctx, input) => runRead(ctx, 'keeper_of', input.unit),
     }),
     proposeDailyEntry: createTool({
       description: "Draft a unit's daily entry (feed given, mortality, notes). The user confirms before it is saved.",

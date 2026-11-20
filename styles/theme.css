@@ -21,6 +21,7 @@
   --good: #4ade80;
   --warn: #fbbf24;
   --alert: #f87171;
+  --cover: #6aa8f5;
   /* Status dots (light theme uses brighter dots than text) */
   --dot-good: #4ade80;
   --dot-warn: #fbbf24;
@@ -154,6 +155,7 @@ html[data-theme='light'] {
   --good: #15803d;
   --warn: #b45309;
   --alert: #dc2626;
+  --cover: #2563c9;
   --dot-good: #22c55e;
   --dot-warn: #f59e0b;
   --dot-alert: #ef4444;

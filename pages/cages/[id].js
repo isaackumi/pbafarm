@@ -21,6 +21,7 @@ import { CustomFieldsCard } from '../../components/CustomFields'
 import RationSuggestion from '../../components/RationSuggestion'
 import GrowthForecastCard from '../../components/GrowthForecastCard'
 import FarmAlerts from '../../components/FarmAlerts'
+import KeeperChip from '../../components/keepers/KeeperChip'
 import { useT } from '../../lib/i18n/context'
 
 const n1 = (v, unit = '') =>
@@ -284,6 +285,8 @@ function CageDetails() {
         <UnitTabs unitId={cageId} active="overview" unitType={ws?.unitType} />
 
         <KpiStrip items={kpis} />
+
+        <KeeperChip unitId={cageId} />
 
         {(quick.length > 0 || canEdit || isAdmin) && (
           <div className="flex flex-wrap gap-2">

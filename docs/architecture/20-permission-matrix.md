@@ -20,6 +20,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `anowa/agent.ask` | `allowlisted` | see test | see test | see test | see test | see test |
 | `anowa/drafts.cancel` | `ai.use` | yes | yes | yes | no | no |
 | `anowa/drafts.confirm` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/drafts.draftKeeper` | `production.keepers.manage` | yes | yes | yes | no | no |
 | `anowa/drafts.get` | `ai.use` | yes | yes | yes | no | no |
 | `anowa/drafts.undo` | `ai.use` | yes | yes | yes | no | no |
 | `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
@@ -293,6 +294,16 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `invoices.recordPayment` | `finance.sales.correct` | yes | yes | no | no | no |
 | `invoices.removePayment` | `finance.sales.correct` | yes | yes | no | no | no |
 | `invoices.voidInvoice` | `finance.sales.correct` | yes | yes | no | no | no |
+| `keepers/board.board` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/board.coverPreview` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/board.people` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/board.row` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/board.siteKeepers` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/board.siteRows` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `keepers/views.forUnit` | `production.view` | yes | yes | yes | yes | yes |
+| `keepers/views.myCages` | `production.view` | yes | yes | yes | yes | yes |
+| `keepers/views.settings` | `production.view` | yes | yes | yes | yes | yes |
+| `keepers/views.updateSettings` | `production.keepers.manage` | yes | yes | yes | no | no |
 | `llmGateway.chat` | `allowlisted` | see test | see test | see test | see test | see test |
 | `llmGateway.orgKeyStatus` | `account` | self | self | self | self | self |
 | `llmGateway.overview` | `integrations.manage` | yes | yes | no | no | no |

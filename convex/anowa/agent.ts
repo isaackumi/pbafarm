@@ -211,7 +211,8 @@ export function instructions(p: { lang: 'en' | 'fr'; companyName: string; siteNa
     `Answer in ${p.lang === 'fr' ? 'French' : 'English'} unless the person writes in another language. Short: two to five sentences. Light Markdown only (bold, "- " bullets); no tables, links, images or code.`,
     `Organization: ${p.companyName}. Site: ${p.siteName ?? 'all sites the user can see'}. Today (farm date): ${p.today}.`,
     'Use the tools for every fact. Never invent numbers, units, feed types, suppliers or people.',
-    'To change anything call a propose tool: proposeDailyEntry, proposeMortality, proposeFeedIssue, proposePurchaseOrder, proposeTask, proposeProject, proposeMilestone, proposeProjectCost. They only add an item to a draft card the user reviews; nothing is saved until the user taps Confirm. Never say something is saved or done.',
+    'To change anything call a propose tool: proposeDailyEntry, proposeMortality, proposeFeedIssue, proposePurchaseOrder, proposeTask, proposeProject, proposeMilestone, proposeProjectCost, proposeAssignKeeper, proposeRebalance, proposeCover, proposeNudge. They only add an item to a draft card the user reviews; nothing is saved until the user taps Confirm. Never say something is saved or done.',
+    'Cage keepers: whoIsBehind answers "who is behind today?"; keeperOf says who keeps a unit. To give units or a row to someone call proposeAssignKeeper; to spread load or give keeperless units a keeper call proposeRebalance; for "X is away next week" call proposeCover (ask who covers if the user did not say); to remind keepers call proposeNudge. These are drafts too: nothing changes and no message is sent until the user confirms.',
     'Combine feed and mortality for the same unit and day into one proposeDailyEntry call. For "order feed so we do not run out" call proposePurchaseOrder without a quantity: it works out the 14-day need minus stock on hand.',
     'Before proposing, say in one short sentence what you checked. After proposing, say what the draft contains and that the user must confirm. If a tool returns an error, explain it plainly and ask for what is missing.',
     'For capex and farm-improvement projects (builds, equipment, certification): projectsOverview for what needs attention, projectStatus for one project. Dates you pass are YYYY-MM-DD farm dates.',
@@ -272,6 +273,61 @@ function tools(env: Env) {
       description: "Active units with no daily entry for today's farm date.",
       inputSchema: z.object({}),
       execute: async (ctx) => runRead(ctx, 'missing_today'),
+    }),
+    whoIsBehind: createTool({
+      description: "Cage keepers behind on today's daily entries, units without a keeper, keepers over capacity and keepers away (managers only).",
+      inputSchema: z.object({}),
+      execute: async (ctx) => {
+        const r: ReadResult = await ctx.runQuery(internal.keepers.ask.read, { siteId, tool: 'behind', now: Date.now() })
+        return r.ok ? r.data : `Error: ${r.error}`
+      },
+    }),
+    keeperOf: createTool({
+      description: 'Who keeps a unit (keeper, backup, and who covers it today).',
+      inputSchema: z.object({ unit: z.string().max(60) }),
+      execute: async (ctx, input) => {
+        const r: ReadResult = await ctx.runQuery(internal.keepers.ask.read, { siteId, tool: 'keeper_of', unit: input.unit, now: Date.now() })
+        return r.ok ? r.data : `Error: ${r.error}`
+      },
+    }),
+    proposeAssignKeeper: createTool({
+      description:
+        'Draft giving units to a keeper: name the units, or a row (e.g. "D") with its site. Optional backup who is told when the keeper misses the deadline.',
+      inputSchema: z.object({
+        keeper: z.string().min(1).max(80).describe('Person name as the user wrote it'),
+        units: z.array(z.string().max(60)).max(200).optional(),
+        row: z.string().max(40).optional().describe('Row letter or group, e.g. "D"'),
+        site: z.string().max(80).optional(),
+        backup: z.string().max(80).optional(),
+      }),
+      execute: async (ctx, input) => propose(ctx, { kind: 'keeper_assign', ...input }),
+    }),
+    proposeRebalance: createTool({
+      description:
+        'Draft Auto-balance: units without a keeper get one and keepers over capacity hand their extra units to the lightest keepers at the same site.',
+      inputSchema: z.object({
+        site: z.string().max(80).optional(),
+        keepers: z.array(z.string().max(80)).max(20).optional().describe('Only move these keepers\' units'),
+        unassignedOnly: z.boolean().optional().describe('Only give units without a keeper a keeper'),
+      }),
+      execute: async (ctx, input) => propose(ctx, { kind: 'keeper_rebalance', ...input }),
+    }),
+    proposeCover: createTool({
+      description: "Draft cover while a keeper is away: who covers their units, from which day to the day they are back. The cover is told on confirm.",
+      inputSchema: z.object({
+        keeper: z.string().min(1).max(80),
+        cover: z.string().min(1).max(80),
+        fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('First day away, default today'),
+        toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Day they are back'),
+        days: z.number().int().min(1).max(90).optional().describe('Days away, when no toDate'),
+        note: z.string().max(1000).optional().describe('Handover note'),
+      }),
+      execute: async (ctx, input) => propose(ctx, { kind: 'keeper_cover', ...input }),
+    }),
+    proposeNudge: createTool({
+      description: "Draft a WhatsApp and in-app nudge to keepers with units still not logged today (default: everyone behind).",
+      inputSchema: z.object({ keepers: z.array(z.string().max(80)).max(20).optional() }),
+      execute: async (ctx, input) => propose(ctx, { kind: 'keeper_nudge', ...input }),
     }),
     proposeDailyEntry: createTool({
       description: "Draft a unit's daily entry (feed given, mortality, notes). Added to the draft card; the user confirms.",

@@ -83,7 +83,10 @@
       "calendar": "Calendrier",
       "assistant": "Anowa",
       "cyclePlanner": "Planificateur de cycle",
-      "projects": "Projets"
+      "projects": "Projets",
+      "cageKeepers": "Gardiens de cages",
+      "myCages": "Mes cages",
+      "cageKeepersRow": "Rangée des gardiens"
     },
     "section": {
       "anowa": "Demander à Anowa",
@@ -6465,6 +6468,22 @@
         "projectCost": {
           "title": "Enregistrer un coût de projet",
           "meta": "Projet · {project}"
+        },
+        "keeperAssign": {
+          "title": "Attribuer des gardiens",
+          "meta": "Gardiens de cages"
+        },
+        "keeperRebalance": {
+          "title": "Rééquilibrer les gardiens",
+          "meta": "Gardiens de cages · Équilibrer"
+        },
+        "keeperCover": {
+          "title": "Prévoir un remplacement",
+          "meta": "Gardiens de cages · le remplaçant est prévenu sur WhatsApp"
+        },
+        "keeperNudge": {
+          "title": "Relancer les gardiens",
+          "meta": "WhatsApp et application · une fois par jour et par gardien"
         }
       },
       "fields": {
@@ -6494,7 +6513,27 @@
         "amount": "Montant",
         "spentAfter": "Dépensé après",
         "ofBudget": "({pct} % du budget)",
-        "note": "Note"
+        "note": "Note",
+        "units": "Cages",
+        "toKeeper": "À {name}",
+        "others": "Autres",
+        "moreKeepers": {
+          "one": "et 1 autre gardien",
+          "other": "et {count} autres gardiens"
+        },
+        "backup": "Suppléant",
+        "away": "Absent",
+        "cover": "Remplaçant",
+        "fromDate": "Du",
+        "backOn": "De retour le",
+        "keepers": "Gardiens",
+        "unitsDue": "Cages à saisir",
+        "who": "Qui",
+        "unplaced": {
+          "one": "1 cage n'a pas pu être placée : personne n'a de place sur son site.",
+          "other": "{count} cages n'ont pas pu être placées : personne n'a de place sur leur site."
+        },
+        "andMore": "et {count} de plus"
       },
       "bar": {
         "label": "Pourquoi cette quantité",
@@ -7606,6 +7645,373 @@
       "notes": "Notes",
       "created": "Projet créé",
       "updated": "Projet enregistré"
+    }
+  },
+  "keepers": {
+    "title": "Gardiens de cages",
+    "eyebrow": {
+      "one": "Cages · {site} · {units} cages · 1 gardien",
+      "other": "Cages · {site} · {units} cages · {count} gardiens"
+    },
+    "eyebrowShort": "Cages",
+    "allSites": "Tous les sites",
+    "loading": "Chargement…",
+    "error": "Le tableau des gardiens n'a pas pu se charger.",
+    "truncated": "Cette organisation a plus d'unités qu'un tableau n'en montre. Choisissez un site pour toutes les voir.",
+    "assignWithAnowa": "Attribuer avec Anowa",
+    "planCover": "Prévoir un remplacement",
+    "clear": "Effacer",
+    "openMyCages": "Ouvrir Mes cages",
+    "state": {
+      "logged": "Saisie faite",
+      "due": "À saisir avant {deadline}",
+      "none": "Sans gardien",
+      "cover": "Remplacé",
+      "idle": "Non empoissonnée"
+    },
+    "draft": {
+      "title": "Anowa a préparé ceci",
+      "description": "Vérifiez, puis confirmez. Rien ne change et personne n'est prévenu avant.",
+      "failedTitle": "Anowa n'a pas pu préparer ceci"
+    },
+    "brief": {
+      "label": "Point d'Anowa",
+      "title": {
+        "one": "1 point demande votre attention. Les autres cages sont à jour.",
+        "other": "{count} points demandent votre attention. Les autres cages sont à jour."
+      },
+      "allGood": "Rien à faire. Chaque cage a un gardien et est à jour.",
+      "updated": "Mis à jour à {time}",
+      "and": " et ",
+      "noneLead": {
+        "one": "1 cage",
+        "other": "{count} cages"
+      },
+      "noneAt": "de {site} rangée {row} n'ont pas de gardien : personne n'est rappelé.",
+      "noneSpread": "n'ont pas de gardien : personne n'est rappelé.",
+      "noneFix": "Les confier à {names} →",
+      "noneFixAny": "Leur trouver un gardien →",
+      "overLead": {
+        "one": "1 gardien",
+        "other": "{count} gardiens"
+      },
+      "overText": "ont chacun plus de {capacity} cages.",
+      "overFix": {
+        "one": "Rééquilibrer 1 cage →",
+        "other": "Rééquilibrer {count} cages →"
+      },
+      "dueLead": {
+        "one": "1 saisie",
+        "other": "{count} saisies"
+      },
+      "dueAt": "encore à faire avant {deadline}, surtout à {site}.",
+      "dueText": "encore à faire avant {deadline}.",
+      "dueFix": "Les relancer sur WhatsApp →",
+      "awayLead": {
+        "one": "1 gardien",
+        "other": "{count} gardiens"
+      },
+      "awayText": "absents cette semaine ou la suivante.",
+      "awayFix": "Prévoir un remplacement →",
+      "askPlaceholder": "Demandez à Anowa : « donne la rangée D de Kpong à Yaw », « qui est en retard aujourd'hui ? », « Kofi est absent la semaine prochaine »",
+      "askLabel": "Demander à Anowa",
+      "askSend": "Envoyer à Anowa"
+    },
+    "heatmap": {
+      "title": "Chaque cage, aujourd'hui",
+      "hint": "Un carré par cage. Faites glisser sur les carrés pour les choisir, puis attribuez.",
+      "gridLabel": "Cages de {site}",
+      "legend": "Légende",
+      "noSite": "Sans site",
+      "due": {
+        "one": "1 à saisir",
+        "other": "{count} à saisir"
+      },
+      "cover": {
+        "one": "1 remplacée",
+        "other": "{count} remplacées"
+      },
+      "none": {
+        "one": "1 sans gardien",
+        "other": "{count} sans gardien"
+      },
+      "allLogged": "Tout est saisi",
+      "empty": "Pas encore de cages.",
+      "selected": {
+        "one": "1 cage choisie",
+        "other": "{count} cages choisies"
+      },
+      "assign": "Attribuer…"
+    },
+    "list": {
+      "label": "Gardiens",
+      "search": "Chercher un gardien ou une cage, p. ex. B-12",
+      "site": "Site",
+      "allSites": "Tous les sites",
+      "filters": "Afficher",
+      "chipAttention": "À traiter · {count}",
+      "chipOver": "Plus de {capacity} cages · {count}",
+      "chipAway": "Absents · {count}",
+      "chipAll": "Tous {count}",
+      "colKeeper": "Gardien",
+      "colCages": "Cages",
+      "colToday": "Aujourd'hui",
+      "colWhy": "Pourquoi ici",
+      "select": "Choisir {name}",
+      "open": "Ouvrir la rangée de {name}",
+      "noKeeper": "Sans gardien",
+      "noKeeperRow": "Sans gardien, {site} rangée {row}",
+      "row": "rangée {row}",
+      "nobodyReminded": "Personne n'est rappelé",
+      "coverLogging": "{name} saisit",
+      "loggedOf": "{logged} sur {count}",
+      "nothingToLog": "Rien à saisir",
+      "assign": "Attribuer",
+      "showingAttention": "{shown} sur {count} à traiter",
+      "showing": "{shown} sur {count}",
+      "hidden": {
+        "one": "1 gardien à jour est masqué",
+        "other": "{count} gardiens à jour sont masqués"
+      },
+      "more": "Afficher plus",
+      "noMatch": "Aucun gardien ni aucune cage ne correspond.",
+      "allGood": "Personne n'a besoin d'attention pour le moment.",
+      "empty": "Pas encore de gardiens. Choisissez des cages à gauche pour les attribuer."
+    },
+    "reason": {
+      "over": "Trop de cages",
+      "overDue": {
+        "one": "Trop de cages, 1 à saisir",
+        "other": "Trop de cages, {count} à saisir"
+      },
+      "due": {
+        "one": "1 à saisir",
+        "other": "{count} à saisir"
+      },
+      "notStarted": {
+        "one": "Pas commencé, 1 à saisir",
+        "other": "Pas commencé, {count} à saisir"
+      },
+      "away": "Absent jusqu'au {date}, remplacé",
+      "covering": "Remplace {names}",
+      "onTrack": "À jour",
+      "stockedNoKeeper": "Empoissonnée le {date}, jamais attribuée",
+      "neverAssigned": "Jamais attribuée"
+    },
+    "bulk": {
+      "selected": {
+        "one": "1 choisi · {units} cages",
+        "other": "{count} choisis · {units} cages"
+      },
+      "nudge": "Relancer sur WhatsApp",
+      "rebalance": "Rééquilibrer avec Anowa"
+    },
+    "assign": {
+      "title": {
+        "one": "Qui garde cette cage ?",
+        "other": "Qui garde ces {count} cages ?"
+      },
+      "description": "Les gardiens déjà sur le site d'abord, les moins chargés en premier. Anowa prépare le changement, vous confirmez.",
+      "role": "Choisir",
+      "keeper": "Gardien : {name}",
+      "backup": "Suppléant : {name}",
+      "none": "aucun",
+      "search": "Chercher quelqu'un par son nom",
+      "people": "Personnes",
+      "hint": "Personne ne garde encore de cages sur ce site. Cherchez quelqu'un par son nom.",
+      "noMatch": "Personne de ce nom ne peut garder des cages ici.",
+      "load": "{count} cages maintenant, {after} ensuite",
+      "loadNow": {
+        "one": "1 cage maintenant",
+        "other": "{count} cages maintenant"
+      },
+      "heavy": "Trop chargé",
+      "submit": "Les confier à {name}",
+      "choose": "Choisir un gardien"
+    },
+    "cover": {
+      "eyebrow": "Prévoir un remplacement",
+      "title": {
+        "one": "Qui s'occupe de la cage de {name} ?",
+        "other": "Qui s'occupe des {count} cages de {name} ?"
+      },
+      "whoAway": "Qui est absent ?",
+      "findKeeper": "Chercher le gardien absent",
+      "noUnits": "{name} ne garde aucune cage pour le moment.",
+      "from": "Du",
+      "backOn": "De retour le",
+      "existing": "Déjà remplacé du {from} au {to}.",
+      "cover": "Remplaçant",
+      "noCandidates": "Personne d'autre ne garde de cages sur ces sites. Attribuez d'abord un gardien.",
+      "load": {
+        "one": "{now} cages maintenant, 1 pendant le remplacement",
+        "other": "{now} cages maintenant, {count} pendant le remplacement"
+      },
+      "sameRow": "même rangée",
+      "suggested": "Suggéré",
+      "heavy": "Trop chargé",
+      "split": "Partager entre deux personnes",
+      "noSplit": "Une seule personne remplace",
+      "splitWho": "Qui remplace pour {unit}",
+      "gets": "Pendant l'absence de {keeper}, {name} reçoit",
+      "getsUnits": {
+        "one": "La cage dans Mes cages, avec les rappels quotidiens",
+        "other": "Les {count} cages dans Mes cages, avec les rappels quotidiens"
+      },
+      "getsReminders": "Les rappels d'échéance et l'escalade pour ces cages",
+      "getsTasks": {
+        "one": "Tâches ouvertes sur ces cages : 1, dans la note de passation",
+        "other": "Tâches ouvertes sur ces cages : {count}, dans la note de passation"
+      },
+      "returns": "Le {date}, tout revient à {keeper}. Les saisies de {name} restent à son nom.",
+      "noteLabel": "Note de passation · rédigée par Anowa à partir des cages",
+      "note": {
+        "sampleDue": {
+          "one": "Échantillonnage à faire sur {units}.",
+          "other": "Échantillonnage à faire sur {units}."
+        },
+        "deaths": {
+          "one": "{unit} : 1 mort hier.",
+          "other": "{unit} : {count} morts hier."
+        },
+        "tasks": {
+          "one": "1 tâche ouverte sur ces cages.",
+          "other": "{count} tâches ouvertes sur ces cages."
+        },
+        "list": "{names} et {count} de plus"
+      },
+      "submit": "Confirmer et prévenir {name}",
+      "submitNone": "Prévoir le remplacement"
+    },
+    "row": {
+      "eyebrow": {
+        "one": "Cages · {site} · {count} cages, 1 gardien",
+        "other": "Cages · {site} · {count} cages, {keepers} gardiens"
+      },
+      "autoBalance": "Équilibrer",
+      "rows": "Rangées",
+      "noRow": "Sans rangée",
+      "back": "Tous les gardiens",
+      "kpiNone": "Cages sans gardien",
+      "kpiNoneHint": "Personne ne reçoit leurs rappels",
+      "kpiLogged": "Saisies du jour",
+      "kpiLoggedHint": {
+        "one": "1 à saisir avant {deadline}, puis le suppléant est prévenu",
+        "other": "{count} à saisir avant {deadline}, puis le suppléant est prévenu"
+      },
+      "kpiCover": "Remplacements cette semaine",
+      "kpiCoverHint": "{cover} remplace {keeper}, du {from} au {to}",
+      "kpiCoverNone": "Personne d'absent cette semaine",
+      "staged": {
+        "one": "1 changement prêt",
+        "other": "{count} changements prêts"
+      },
+      "undoMoves": "Annuler les déplacements",
+      "review": "Vérifier avec Anowa",
+      "stocked": "Empoissonnée le {date} · {count} poissons",
+      "dragHint": "Faites glisser une cage sur un gardien, ou utilisez Équilibrer.",
+      "away": "Absent du {from} au {to} · {name} remplace",
+      "colSub": {
+        "one": "1 cage · {fish}k poissons · {kg} kg/jour",
+        "other": "{count} cages · {fish}k poissons · {kg} kg/jour"
+      },
+      "today": "Aujourd'hui",
+      "more": "+ {count} de plus",
+      "less": "Afficher moins",
+      "backOn": "retour le {date}",
+      "backup": "suppléant : {name}",
+      "noBackup": "pas de suppléant",
+      "planCoverFor": "Prévoir un remplacement pour {name}",
+      "day": "Jour {count}",
+      "deadYesterday": {
+        "one": "1 mort hier",
+        "other": "{count} morts hier"
+      },
+      "due": "Avant {deadline}",
+      "moveTo": "Déplacer {unit} vers un autre gardien"
+    },
+    "score": {
+      "title": "Comment vont les cages de chaque gardien · ce cycle",
+      "subtitle": "Comparé à la moyenne de la ferme, pour accompagner, pas pour blâmer",
+      "pending": "Les scores sont calculés la nuit. Revenez demain.",
+      "keeper": "Gardien",
+      "onTime": "Saisies à l'heure",
+      "survival": "Survie",
+      "fcr": "IC",
+      "samplings": "Échantillonnages faits",
+      "sampled": "{done} sur {count}",
+      "avg": "moy.",
+      "better": "meilleur",
+      "high": "{unit} élevé",
+      "asOf": "14 derniers jours jusqu'au {date}."
+    },
+    "settings": {
+      "title": "Règles des gardiens",
+      "description": "Combien de cages par gardien, l'heure limite des saisies et qui est prévenu en cas de retard.",
+      "capacity": "Cages par gardien",
+      "deadline": "Saisies avant (heure du site)",
+      "backupAfter": "Prévenir le suppléant après (minutes)",
+      "managerAfter": "Prévenir les responsables après (minutes)",
+      "escalate": "Rappeler et escalader",
+      "escalateHint": "À l'heure limite, le gardien est rappelé, puis le suppléant, puis les responsables. Une fois chacun, sur WhatsApp et dans l'application.",
+      "ownCagesOnly": "Le personnel ne saisit que ses propres cages",
+      "ownCagesOnlyHint": "Le personnel peut saisir les cages qu'il garde, remplace ou supplée. Les responsables peuvent saisir toutes les cages."
+    },
+    "chip": {
+      "label": "Gardien",
+      "keeper": "Gardien : {name}",
+      "backup": "suppléant {name}",
+      "since": "depuis le {date}",
+      "range": "du {from} au {to}",
+      "covered": "{name} remplace jusqu'au {date}",
+      "none": "Sans gardien : personne n'est rappelé",
+      "whatsapp": "WhatsApp",
+      "history": {
+        "one": "Historique (1)",
+        "other": "Historique ({count})"
+      },
+      "change": "Changer",
+      "assign": "Attribuer un gardien",
+      "by": "par {name}"
+    },
+    "mine": {
+      "title": "Mes cages",
+      "progress": "{done} sur {count} saisies",
+      "left": {
+        "one": "1 restante avant {deadline}.",
+        "other": "{count} restantes avant {deadline}."
+      },
+      "allDone": "Tout est saisi aujourd'hui.",
+      "backup": "{name} est votre suppléant.",
+      "away": "Vous êtes absent. {name} s'occupe de vos cages jusqu'au {date}.",
+      "none": "Vous ne gardez pas encore de cages. Votre responsable les attribue sur la page Gardiens de cages.",
+      "offline": "Pas de connexion : liste de votre dernière visite.",
+      "todo": "À faire · {count}",
+      "done": "Fait · {count}",
+      "ration": "Ration {kg} kg",
+      "rationLabel": "Ration",
+      "fish": "Poissons",
+      "yesterday": "Hier",
+      "dead": {
+        "one": "1 mort",
+        "other": "{count} morts"
+      },
+      "deadYesterday": {
+        "one": "1 mort hier",
+        "other": "{count} morts hier"
+      },
+      "coverFor": "remplace {name}",
+      "sampleDue": "Échantillonnage aujourd'hui",
+      "log": "Saisir",
+      "logToday": "Saisir aujourd'hui",
+      "feedKg": "Aliment donné (kg)",
+      "deaths": "Poissons morts",
+      "voiceHint": "Note vocale : envoyez-la à Anowa sur WhatsApp (à connecter depuis votre compte)",
+      "fullForm": "Ouvrir la saisie journalière complète",
+      "saved": "{unit} saisie",
+      "waiting": "en attente d'envoi",
+      "invalid": "L'aliment et les morts doivent être 0 ou plus.",
+      "needFeedType": "Choisissez le type d'aliment dans la saisie complète la première fois."
     }
   }
 }

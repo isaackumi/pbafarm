@@ -8,11 +8,13 @@ import { useCurrency } from '../hooks/useCurrency'
 import { useLocale, useT } from '../lib/i18n/context'
 import { errorMessage } from '../lib/errorMessage'
 import {
+  canUndo,
   cardState,
   editHref,
   fishAfter,
   hoursLeft,
   itemKind,
+  movesByKeeper,
   orderBar,
   rowNumber,
   splitItems,
@@ -235,7 +237,7 @@ export default function DraftCard({ draftGroup }) {
             </button>
           </div>
         )}
-        {state === 'saved' && minutes > 0 && (
+        {state === 'saved' && minutes > 0 && canUndo(card) && (
           <button
             type="button"
             onClick={onUndo}
@@ -271,6 +273,7 @@ function DraftRow({ item, index, muted }) {
   const day = (d) =>
     d ? new Date(`${d}T12:00:00`).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' }) : t('askAnowa.draft.fields.noDue')
   const unitName = p.cageName || ''
+  const listUnits = (names) => (names.length > 6 ? `${names.slice(0, 6).join(', ')} ${t('askAnowa.draft.fields.andMore', { count: names.length - 6 })}` : names.join(', '))
   const meta = p.kind === 'project_milestone' || p.kind === 'project_cost'
     ? t(`askAnowa.draft.kinds.${kind}.meta`, { project: p.projectName })
     : p.kind === 'project_create'
@@ -332,6 +335,53 @@ function DraftRow({ item, index, muted }) {
         )}
       </>
     )
+  } else if (p.kind === 'keeper_assign') {
+    const groups = movesByKeeper(p.moves)
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.units')} mono>
+          {num(p.moves.length, 0)}
+        </Field>
+        {groups.slice(0, 4).map((g) => (
+          <Field key={g.name} label={t('askAnowa.draft.fields.toKeeper', { name: g.name })}>
+            {listUnits(g.units)}
+          </Field>
+        ))}
+        {groups.length > 4 && <Field label={t('askAnowa.draft.fields.others')}>{t('askAnowa.draft.fields.moreKeepers', { count: groups.length - 4 })}</Field>}
+        {p.backupName && <Field label={t('askAnowa.draft.fields.backup')}>{p.backupName}</Field>}
+      </>
+    )
+  } else if (p.kind === 'keeper_cover') {
+    const others = [...new Set((p.split || []).map((x) => x.coverName))]
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.away')}>{p.keeperName}</Field>
+        <Field label={t('askAnowa.draft.fields.cover')}>{[p.coverName, ...others].join(', ')}</Field>
+        <Field label={t('askAnowa.draft.fields.fromDate')}>{day(p.fromDate)}</Field>
+        <Field label={t('askAnowa.draft.fields.backOn')}>{day(p.toDate)}</Field>
+        <Field label={t('askAnowa.draft.fields.units')} mono>
+          {num(p.units, 0)}
+        </Field>
+      </>
+    )
+  } else if (p.kind === 'keeper_nudge') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.keepers')} mono>
+          {num(p.keepers.length, 0)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.unitsDue')} mono>
+          {num(p.keepers.reduce((n, k) => n + k.due, 0), 0)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.who')}>
+          {p.keepers
+            .slice(0, 5)
+            .map((k) => `${k.name} (${k.due})`)
+            .join(', ')}
+          {p.keepers.length > 5 ? ` ${t('askAnowa.draft.fields.moreKeepers', { count: p.keepers.length - 5 })}` : ''}
+        </Field>
+      </>
+    )
   } else if (p.kind === 'project_create') {
     fields = (
       <>
@@ -388,6 +438,7 @@ function DraftRow({ item, index, muted }) {
   }
 
   const bar = p.kind === 'purchase_order' ? orderBar(p) : null
+  const note = p.kind === 'keeper_cover' ? p.note : p.kind === 'keeper_assign' && p.unplaced ? t('askAnowa.draft.fields.unplaced', { count: p.unplaced }) : null
   return (
     <li className={`flex gap-4 border-b border-line p-5 ${muted ? 'opacity-60' : ''}`}>
       <span className="w-[22px] shrink-0 font-geist text-sm leading-[22px] text-faint" aria-hidden>
@@ -412,6 +463,7 @@ function DraftRow({ item, index, muted }) {
             </div>
           </div>
         )}
+        {note && <p className="text-sm leading-[18px] text-muted">{note}</p>}
         {item.problem && (
           <p className="flex items-start gap-2 text-sm leading-[18px] text-muted">
             <Ban size={14} className="mt-[2px] shrink-0" aria-hidden />

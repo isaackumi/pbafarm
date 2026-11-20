@@ -13,6 +13,7 @@ import { addDays } from '../lib/dates'
 import { round } from '../lib/kpi'
 import { cageGrowth } from '../lib/growth'
 import { siteStock } from '../lib/feedLedger'
+import { keeperRead } from '../keepers/ask'
 import { checkBinding, farmDate, matchUnit, unitsInScope, type MemberScope } from './scope'
 
 export const readTool = v.union(
@@ -20,6 +21,9 @@ export const readTool = v.union(
   v.literal('unit_detail'),
   v.literal('feed_stock'),
   v.literal('missing_today'),
+  // Cage keepers.
+  v.literal('keepers_behind'),
+  v.literal('keeper_of'),
 )
 
 const readResult = v.union(
@@ -145,6 +149,9 @@ export async function readFor(
   unit: string | undefined,
   now: number,
 ): Promise<Infer<typeof readResult>> {
+  if (tool === 'keepers_behind' || tool === 'keeper_of') {
+    return await keeperRead(ctx, bound, tool === 'keeper_of' ? 'keeper_of' : 'behind', unit, now)
+  }
   const permission = tool === 'feed_stock' ? 'inventory.view' : 'production.view'
   if (!can(bound.member, permission)) return { ok: false as const, error: `You do not have ${permission} permission.` }
   let data: unknown

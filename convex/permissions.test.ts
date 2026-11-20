@@ -37,6 +37,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireAssistantMember(ctx)': 'ai.use',
   'requireChatOwner(ctx': 'ai.use',
   'loadAnowaDraft(ctx': 'ai.use',
+  'requireKeeperManager(ctx': 'production.keepers.manage',
 }
 
 /** Functions without an organization guard, and why. */

@@ -21,6 +21,8 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-alert: var(--alert);
+  /* Cage keepers: "on cover" state, links and selection (Paper 54 to 57 sky) */
+  --color-cover: var(--cover);
   --color-dot-good: var(--dot-good);
   --color-dot-warn: var(--dot-warn);
   --color-dot-alert: var(--dot-alert);

@@ -83,7 +83,10 @@
       "calendar": "Calendar",
       "assistant": "Anowa",
       "cyclePlanner": "Cycle planner",
-      "projects": "Projects"
+      "projects": "Projects",
+      "cageKeepers": "Cage keepers",
+      "myCages": "My cages",
+      "cageKeepersRow": "Cage keepers row"
     },
     "section": {
       "anowa": "Ask Anowa",
@@ -6465,6 +6468,22 @@
         "projectCost": {
           "title": "Log a project cost",
           "meta": "Project · {project}"
+        },
+        "keeperAssign": {
+          "title": "Assign cage keepers",
+          "meta": "Cage keepers"
+        },
+        "keeperRebalance": {
+          "title": "Rebalance cage keepers",
+          "meta": "Cage keepers · Auto-balance"
+        },
+        "keeperCover": {
+          "title": "Plan cover",
+          "meta": "Cage keepers · the cover is told on WhatsApp"
+        },
+        "keeperNudge": {
+          "title": "Nudge keepers",
+          "meta": "WhatsApp and in-app · once a day per keeper"
         }
       },
       "fields": {
@@ -6494,7 +6513,27 @@
         "amount": "Amount",
         "spentAfter": "Spent after",
         "ofBudget": "({pct}% of budget)",
-        "note": "Note"
+        "note": "Note",
+        "units": "Cages",
+        "toKeeper": "To {name}",
+        "others": "Others",
+        "moreKeepers": {
+          "one": "and 1 more keeper",
+          "other": "and {count} more keepers"
+        },
+        "backup": "Backup",
+        "away": "Away",
+        "cover": "Cover",
+        "fromDate": "From",
+        "backOn": "Back on",
+        "keepers": "Keepers",
+        "unitsDue": "Cages due",
+        "who": "Who",
+        "unplaced": {
+          "one": "1 cage could not be placed: nobody at its site has room.",
+          "other": "{count} cages could not be placed: nobody at their site has room."
+        },
+        "andMore": "and {count} more"
       },
       "bar": {
         "label": "Why this amount",
@@ -7606,6 +7645,373 @@
       "notes": "Notes",
       "created": "Project created",
       "updated": "Project saved"
+    }
+  },
+  "keepers": {
+    "title": "Cage keepers",
+    "eyebrow": {
+      "one": "Cages · {site} · {units} cages · 1 keeper",
+      "other": "Cages · {site} · {units} cages · {count} keepers"
+    },
+    "eyebrowShort": "Cages",
+    "allSites": "All sites",
+    "loading": "Loading…",
+    "error": "The keeper board could not load.",
+    "truncated": "This organization has more units than one board shows. Pick a site to see them all.",
+    "assignWithAnowa": "Assign with Anowa",
+    "planCover": "Plan cover",
+    "clear": "Clear",
+    "openMyCages": "Open My cages",
+    "state": {
+      "logged": "Logged",
+      "due": "Due by {deadline}",
+      "none": "No keeper",
+      "cover": "On cover",
+      "idle": "Not stocked"
+    },
+    "draft": {
+      "title": "Anowa drafted this",
+      "description": "Check it, then confirm. Nothing changes and no one is told until you do.",
+      "failedTitle": "Anowa could not draft this"
+    },
+    "brief": {
+      "label": "Anowa brief",
+      "title": {
+        "one": "1 thing needs you. The other cages are on track.",
+        "other": "{count} things need you. The other cages are on track."
+      },
+      "allGood": "Nothing needs you. Every cage has a keeper and is on track.",
+      "updated": "Updated {time}",
+      "and": " and ",
+      "noneLead": {
+        "one": "1 cage",
+        "other": "{count} cages"
+      },
+      "noneAt": "on {site} row {row} have no keeper, so nobody is reminded.",
+      "noneSpread": "have no keeper, so nobody is reminded.",
+      "noneFix": "Give them to {names} →",
+      "noneFixAny": "Find them a keeper →",
+      "overLead": {
+        "one": "1 keeper",
+        "other": "{count} keepers"
+      },
+      "overText": "hold more than {capacity} cages each.",
+      "overFix": {
+        "one": "Rebalance 1 cage →",
+        "other": "Rebalance {count} cages →"
+      },
+      "dueLead": {
+        "one": "1 entry",
+        "other": "{count} entries"
+      },
+      "dueAt": "still due by {deadline}, most at {site}.",
+      "dueText": "still due by {deadline}.",
+      "dueFix": "Nudge them on WhatsApp →",
+      "awayLead": {
+        "one": "1 keeper",
+        "other": "{count} keepers"
+      },
+      "awayText": "away this week or next.",
+      "awayFix": "Plan cover →",
+      "askPlaceholder": "Ask or tell Anowa: \"give Kpong row D to Yaw\", \"who is behind today?\", \"Kofi is away next week\"",
+      "askLabel": "Ask or tell Anowa",
+      "askSend": "Send to Anowa"
+    },
+    "heatmap": {
+      "title": "Every cage, today",
+      "hint": "One square per cage. Drag across squares to select, then assign.",
+      "gridLabel": "Cages at {site}",
+      "legend": "Legend",
+      "noSite": "No site",
+      "due": {
+        "one": "1 due",
+        "other": "{count} due"
+      },
+      "cover": {
+        "one": "1 on cover",
+        "other": "{count} on cover"
+      },
+      "none": {
+        "one": "1 no keeper",
+        "other": "{count} no keeper"
+      },
+      "allLogged": "All logged",
+      "empty": "No cages yet.",
+      "selected": {
+        "one": "1 cage selected",
+        "other": "{count} cages selected"
+      },
+      "assign": "Assign…"
+    },
+    "list": {
+      "label": "Keepers",
+      "search": "Find a keeper or cage, e.g. B-12",
+      "site": "Site",
+      "allSites": "All sites",
+      "filters": "Show",
+      "chipAttention": "Needs attention · {count}",
+      "chipOver": "Over {capacity} cages · {count}",
+      "chipAway": "Away · {count}",
+      "chipAll": "All {count}",
+      "colKeeper": "Keeper",
+      "colCages": "Cages",
+      "colToday": "Today",
+      "colWhy": "Why it's here",
+      "select": "Select {name}",
+      "open": "Open {name}'s row",
+      "noKeeper": "No keeper",
+      "noKeeperRow": "No keeper, {site} row {row}",
+      "row": "row {row}",
+      "nobodyReminded": "Nobody reminded",
+      "coverLogging": "{name} is logging",
+      "loggedOf": "{logged} of {count}",
+      "nothingToLog": "Nothing to log",
+      "assign": "Assign",
+      "showingAttention": "Showing {shown} of {count} that need attention",
+      "showing": "Showing {shown} of {count}",
+      "hidden": {
+        "one": "1 keeper on track is hidden",
+        "other": "{count} keepers on track are hidden"
+      },
+      "more": "Show more",
+      "noMatch": "No keeper or cage matches.",
+      "allGood": "Nobody needs attention right now.",
+      "empty": "No keepers yet. Select cages on the left to assign them."
+    },
+    "reason": {
+      "over": "Over capacity",
+      "overDue": {
+        "one": "Over capacity, 1 due",
+        "other": "Over capacity, {count} due"
+      },
+      "due": {
+        "one": "1 due",
+        "other": "{count} due"
+      },
+      "notStarted": {
+        "one": "Not started, 1 due",
+        "other": "Not started, {count} due"
+      },
+      "away": "Away to {date}, covered",
+      "covering": "Covering {names}",
+      "onTrack": "On track",
+      "stockedNoKeeper": "Stocked {date}, never assigned",
+      "neverAssigned": "Never assigned"
+    },
+    "bulk": {
+      "selected": {
+        "one": "1 selected · {units} cages",
+        "other": "{count} selected · {units} cages"
+      },
+      "nudge": "Nudge on WhatsApp",
+      "rebalance": "Rebalance with Anowa"
+    },
+    "assign": {
+      "title": {
+        "one": "Who keeps this cage?",
+        "other": "Who keeps these {count} cages?"
+      },
+      "description": "Keepers already at the site come first, lightest load first. Anowa drafts the change for you to confirm.",
+      "role": "Choose",
+      "keeper": "Keeper: {name}",
+      "backup": "Backup: {name}",
+      "none": "none",
+      "search": "Find someone by name",
+      "people": "People",
+      "hint": "Nobody keeps cages at this site yet. Find someone by name.",
+      "noMatch": "Nobody by that name can keep cages here.",
+      "load": "{count} cages now, {after} after",
+      "loadNow": {
+        "one": "1 cage now",
+        "other": "{count} cages now"
+      },
+      "heavy": "Heavy load",
+      "submit": "Give them to {name}",
+      "choose": "Choose a keeper"
+    },
+    "cover": {
+      "eyebrow": "Plan cover",
+      "title": {
+        "one": "Who looks after {name}'s cage?",
+        "other": "Who looks after {name}'s {count} cages?"
+      },
+      "whoAway": "Who is away?",
+      "findKeeper": "Find the keeper who is away",
+      "noUnits": "{name} keeps no cages right now.",
+      "from": "From",
+      "backOn": "Back on",
+      "existing": "Already covered from {from} to {to}.",
+      "cover": "Cover",
+      "noCandidates": "Nobody else keeps cages at these sites. Assign a keeper there first.",
+      "load": {
+        "one": "{now} cages now, 1 while covering",
+        "other": "{now} cages now, {count} while covering"
+      },
+      "sameRow": "same row",
+      "suggested": "Suggested",
+      "heavy": "Heavy load",
+      "split": "Split between two people",
+      "noSplit": "One person covers all",
+      "splitWho": "Who covers {unit}",
+      "gets": "While {keeper} is away, {name} gets",
+      "getsUnits": {
+        "one": "The cage in My cages, with daily reminders",
+        "other": "The {count} cages in My cages, with daily reminders"
+      },
+      "getsReminders": "The deadline reminders and escalation for these cages",
+      "getsTasks": {
+        "one": "Open tasks on these cages: 1, in the handover note",
+        "other": "Open tasks on these cages: {count}, in the handover note"
+      },
+      "returns": "On {date} everything goes back to {keeper}. Entries {name} makes stay in their name.",
+      "noteLabel": "Handover note · Anowa drafted it from the cages",
+      "note": {
+        "sampleDue": {
+          "one": "Sampling is due on {units}.",
+          "other": "Sampling is due on {units}."
+        },
+        "deaths": {
+          "one": "{unit} had 1 death yesterday.",
+          "other": "{unit} had {count} deaths yesterday."
+        },
+        "tasks": {
+          "one": "1 open task on these cages.",
+          "other": "{count} open tasks on these cages."
+        },
+        "list": "{names} and {count} more"
+      },
+      "submit": "Set cover and tell {name}",
+      "submitNone": "Set cover"
+    },
+    "row": {
+      "eyebrow": {
+        "one": "Cages · {site} · {count} cages, 1 keeper",
+        "other": "Cages · {site} · {count} cages, {keepers} keepers"
+      },
+      "autoBalance": "Auto-balance",
+      "rows": "Rows",
+      "noRow": "No row",
+      "back": "All keepers",
+      "kpiNone": "Cages with no keeper",
+      "kpiNoneHint": "Nobody gets their reminders",
+      "kpiLogged": "Logged today",
+      "kpiLoggedHint": {
+        "one": "1 due by {deadline}, then the backup is told",
+        "other": "{count} due by {deadline}, then the backup is told"
+      },
+      "kpiCover": "Cover this week",
+      "kpiCoverHint": "{cover} covers {keeper}, {from} to {to}",
+      "kpiCoverNone": "Nobody away this week",
+      "staged": {
+        "one": "1 change ready",
+        "other": "{count} changes ready"
+      },
+      "undoMoves": "Undo moves",
+      "review": "Review with Anowa",
+      "stocked": "Stocked {date} · {count} fish",
+      "dragHint": "Drag a cage onto a keeper, or use Auto-balance.",
+      "away": "Away {from} to {to} · {name} covers",
+      "colSub": {
+        "one": "1 cage · {fish}k fish · {kg} kg/day",
+        "other": "{count} cages · {fish}k fish · {kg} kg/day"
+      },
+      "today": "Today",
+      "more": "+ {count} more",
+      "less": "Show less",
+      "backOn": "back {date}",
+      "backup": "backup: {name}",
+      "noBackup": "no backup",
+      "planCoverFor": "Plan cover for {name}",
+      "day": "Day {count}",
+      "deadYesterday": {
+        "one": "1 death yesterday",
+        "other": "{count} deaths yesterday"
+      },
+      "due": "Due {deadline}",
+      "moveTo": "Move {unit} to another keeper"
+    },
+    "score": {
+      "title": "How each keeper's cages are doing · this cycle",
+      "subtitle": "Compared with the farm average, to coach, not to blame",
+      "pending": "Scores are worked out overnight. Check back tomorrow.",
+      "keeper": "Keeper",
+      "onTime": "Entries on time",
+      "survival": "Survival",
+      "fcr": "FCR",
+      "samplings": "Samplings done",
+      "sampled": "{done} of {count}",
+      "avg": "avg",
+      "better": "better",
+      "high": "{unit} high",
+      "asOf": "Last 14 days to {date}."
+    },
+    "settings": {
+      "title": "Keeper rules",
+      "description": "How many cages one keeper holds, when entries are due and who is told when they are late.",
+      "capacity": "Cages per keeper",
+      "deadline": "Entries due by (site time)",
+      "backupAfter": "Tell the backup after (minutes)",
+      "managerAfter": "Tell managers after (minutes)",
+      "escalate": "Remind and escalate",
+      "escalateHint": "At the deadline the keeper is reminded, then the backup, then managers. Once each, on WhatsApp and in the app.",
+      "ownCagesOnly": "Field staff log only their own cages",
+      "ownCagesOnlyHint": "Staff can log cages they keep, cover or back up. Managers can log any cage."
+    },
+    "chip": {
+      "label": "Keeper",
+      "keeper": "Keeper: {name}",
+      "backup": "backup {name}",
+      "since": "since {date}",
+      "range": "{from} to {to}",
+      "covered": "{name} covers until {date}",
+      "none": "No keeper: nobody is reminded",
+      "whatsapp": "WhatsApp",
+      "history": {
+        "one": "History (1)",
+        "other": "History ({count})"
+      },
+      "change": "Change",
+      "assign": "Assign a keeper",
+      "by": "by {name}"
+    },
+    "mine": {
+      "title": "My cages",
+      "progress": "{done} of {count} logged",
+      "left": {
+        "one": "1 left before {deadline}.",
+        "other": "{count} left before {deadline}."
+      },
+      "allDone": "All logged today.",
+      "backup": "{name} is your backup.",
+      "away": "You are away. {name} looks after your cages until {date}.",
+      "none": "You keep no cages yet. Your manager assigns them on the Cage keepers page.",
+      "offline": "No connection: showing the list from your last visit.",
+      "todo": "To do · {count}",
+      "done": "Done · {count}",
+      "ration": "Ration {kg} kg",
+      "rationLabel": "Ration",
+      "fish": "Fish",
+      "yesterday": "Yesterday",
+      "dead": {
+        "one": "1 dead",
+        "other": "{count} dead"
+      },
+      "deadYesterday": {
+        "one": "1 dead yesterday",
+        "other": "{count} dead yesterday"
+      },
+      "coverFor": "covering {name}",
+      "sampleDue": "Sampling due today",
+      "log": "Log",
+      "logToday": "Log today",
+      "feedKg": "Feed given (kg)",
+      "deaths": "Dead fish",
+      "voiceHint": "Voice note: send it to Anowa on WhatsApp (connect on your account page)",
+      "fullForm": "Open the full daily entry",
+      "saved": "{unit} logged",
+      "waiting": "waiting to send",
+      "invalid": "Feed and deaths must be 0 or more.",
+      "needFeedType": "Choose the feed type in the full daily entry the first time."
     }
   }
 }

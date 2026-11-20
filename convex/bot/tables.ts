@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { keeperAssignPayload, keeperCoverPayload, keeperNudgePayload } from '../keepers/validators'
 
 /**
  * Farm bot tables (BOT-001..004, doc 23). Spread into the schema like
@@ -123,6 +124,10 @@ export const pendingPayload = v.union(
   feedIssuePayload,
   purchaseOrderPayload,
   taskPayload,
+  // Cage keepers (Ask Anowa web drafts only).
+  keeperAssignPayload,
+  keeperCoverPayload,
+  keeperNudgePayload,
   projectCreatePayload,
   projectMilestonePayload,
   projectCostPayload,

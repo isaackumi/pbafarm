@@ -43,6 +43,14 @@ import {
 } from '../bot/pending'
 import { farmDate, inScope, matchUnit, unitsInScope } from '../bot/scope'
 import { anowaCtx, assertNotSupportAccess, webMember, type WebMember } from './scope'
+import { buildKeeper, commitKeeper, keeperItemProblem, keeperUndoable, undoKeeper } from '../keepers/drafts'
+import {
+  isKeeperKind,
+  keeperAssignInput,
+  keeperCoverInput,
+  keeperNudgeInput,
+  keeperRebalanceInput,
+} from '../keepers/validators'
 import { addCostAs, addMilestoneAs, createProjectAs, removeCostAs, removeMilestoneAs, removeProjectAs } from '../projects'
 import {
   buildProjectProposal,
@@ -80,10 +88,16 @@ export const webProposalInput = v.union(
   proposalInput,
   purchaseOrderInput,
   taskInput,
+  keeperAssignInput,
+  keeperRebalanceInput,
+  keeperCoverInput,
+  keeperNudgeInput,
   projectCreateInput,
   projectMilestoneInput,
   projectCostInput,
 )
+/** What a keeper screen may draft without the assistant (no model involved). */
+export const keeperProposalInput = v.union(keeperAssignInput, keeperRebalanceInput, keeperCoverInput, keeperNudgeInput)
 export type WebProposalInput = Infer<typeof webProposalInput>
 
 type Payload = Doc<'pendingBotActions'>['payload']
@@ -103,6 +117,9 @@ export const PERMISSION: Record<Payload['kind'], Permission> = {
   feed_issue: 'inventory.issue',
   purchase_order: 'inventory.purchase.record',
   task: 'automation.manage',
+  keeper_assign: 'production.keepers.manage',
+  keeper_cover: 'production.keepers.manage',
+  keeper_nudge: 'production.keepers.manage',
   project_create: 'projects.manage',
   project_milestone: 'projects.manage',
   project_cost: 'projects.manage',
@@ -113,6 +130,9 @@ const REFUSAL: Record<Payload['kind'], string> = {
   feed_issue: 'Your role cannot issue feed.',
   purchase_order: 'Your role cannot create purchase orders.',
   task: 'Your role cannot assign tasks.',
+  keeper_assign: 'Your role cannot assign cage keepers.',
+  keeper_cover: 'Your role cannot plan cover.',
+  keeper_nudge: 'Your role cannot nudge keepers.',
   project_create: 'Your role cannot create projects.',
   project_milestone: 'Your role cannot change projects.',
   project_cost: 'Your role cannot log project costs.',
@@ -341,16 +361,71 @@ async function groupRows(ctx: QueryCtx, userId: Id<'users'>, draftGroup: string)
  * against units, feed types and people the member can see. An item the role
  * may not do is still stored, with `refusal`, so the card can show why.
  */
+const proposeResult = v.union(
+  v.object({ ok: v.literal(true), itemId: v.id('pendingBotActions'), summary: v.string(), refused: v.union(v.string(), v.null()) }),
+  v.object({ ok: v.literal(false), error: v.string() }),
+)
+
+async function proposeAs(ctx: MutationCtx, w: WebMember, draftGroup: string, input: WebProposalInput) {
+  const existing = await groupRows(ctx, w.account._id, draftGroup)
+  if (existing.length >= MAX_ITEMS_PER_DRAFT) {
+    return { ok: false as const, error: 'Too many changes in one draft; ask the user to do the rest separately.' }
+  }
+  if (existing.some((r) => r.status !== 'pending' || r.companyId !== w.binding.companyId)) {
+    return { ok: false as const, error: 'This draft is closed.' }
+  }
+  const now = Date.now()
+  let built: Built | Failed
+  if (input.kind === 'daily_entry' || input.kind === 'feed_issue') {
+    built = await buildProposal(ctx, w, input, now)
+  } else if (input.kind === 'purchase_order') {
+    built = await buildPurchaseOrder(ctx, w, input)
+  } else if (input.kind === 'task') {
+    built = await buildTask(ctx, w, input)
+  } else if (input.kind === 'project_create' || input.kind === 'project_milestone' || input.kind === 'project_cost') {
+    built = await buildProjectProposal(ctx, w, input)
+  } else {
+    built = await buildKeeper(ctx, w, input)
+  }
+  if (!built.ok) return built
+  if (existing.some((r) => r.fingerprint === built.fingerprint)) {
+    return { ok: false as const, error: 'That change is already in this draft.' }
+  }
+  const refusal = can(w.member, PERMISSION[built.payload.kind]) ? undefined : REFUSAL[built.payload.kind]
+  const itemId = await ctx.db.insert('pendingBotActions', {
+    channel: 'web',
+    draftGroup,
+    userId: w.account._id,
+    companyId: w.binding.companyId,
+    siteId: built.siteId,
+    payload: built.payload,
+    date: built.date,
+    eventTime: now,
+    sourceMessageId: `web:${draftGroup}`,
+    summary: built.summary,
+    fingerprint: built.fingerprint,
+    refusal,
+    status: 'pending',
+    createdAt: now,
+    // Every item of a card shares the first item's expiry.
+    expiresAt: existing[0]?.expiresAt ?? now + DRAFT_TTL_MS,
+  })
+  return { ok: true as const, itemId, summary: built.summary, refused: refusal ?? null }
+}
+
+/**
+ * Store one draft item (an agent tool call). The member and scope come from
+ * the signed-in user, re-checked here; what the model typed is matched
+ * against units, feed types and people the member can see. An item the role
+ * may not do is still stored, with `refusal`, so the card can show why.
+ */
 export const propose = internalMutation({
   args: {
     draftGroup: v.string(),
     siteId: v.optional(v.id('farmLocations')),
     input: webProposalInput,
   },
-  returns: v.union(
-    v.object({ ok: v.literal(true), itemId: v.id('pendingBotActions'), summary: v.string(), refused: v.union(v.string(), v.null()) }),
-    v.object({ ok: v.literal(false), error: v.string() }),
-  ),
+  returns: proposeResult,
   handler: async (ctx, { draftGroup, siteId, input }) => {
     assertGroup(draftGroup)
     const w = await webMember(ctx, await requireMember(ctx, { permission: 'ai.use' }), siteId)
@@ -358,48 +433,29 @@ export const propose = internalMutation({
     if (w.company.settings?.aiAssistantEnabled !== true) {
       return { ok: false as const, error: 'The assistant is turned off for this organization.' }
     }
-    const existing = await groupRows(ctx, w.account._id, draftGroup)
-    if (existing.length >= MAX_ITEMS_PER_DRAFT) {
-      return { ok: false as const, error: 'Too many changes in one draft; ask the user to do the rest separately.' }
-    }
-    if (existing.some((r) => r.status !== 'pending' || r.companyId !== w.binding.companyId)) {
-      return { ok: false as const, error: 'This draft is closed.' }
-    }
-    const now = Date.now()
-    let built: Built | Failed
-    if (input.kind === 'daily_entry' || input.kind === 'feed_issue') {
-      built = await buildProposal(ctx, w, input, now)
-    } else if (input.kind === 'purchase_order') {
-      built = await buildPurchaseOrder(ctx, w, input)
-    } else if (input.kind === 'project_create' || input.kind === 'project_milestone' || input.kind === 'project_cost') {
-      built = await buildProjectProposal(ctx, w, input)
-    } else {
-      built = await buildTask(ctx, w, input)
-    }
-    if (!built.ok) return built
-    if (existing.some((r) => r.fingerprint === built.fingerprint)) {
-      return { ok: false as const, error: 'That change is already in this draft.' }
-    }
-    const refusal = can(w.member, PERMISSION[built.payload.kind]) ? undefined : REFUSAL[built.payload.kind]
-    const itemId = await ctx.db.insert('pendingBotActions', {
-      channel: 'web',
-      draftGroup,
-      userId: w.account._id,
-      companyId: w.binding.companyId,
-      siteId: built.siteId,
-      payload: built.payload,
-      date: built.date,
-      eventTime: now,
-      sourceMessageId: `web:${draftGroup}`,
-      summary: built.summary,
-      fingerprint: built.fingerprint,
-      refusal,
-      status: 'pending',
-      createdAt: now,
-      // Every item of a card shares the first item's expiry.
-      expiresAt: existing[0]?.expiresAt ?? now + DRAFT_TTL_MS,
-    })
-    return { ok: true as const, itemId, summary: built.summary, refused: refusal ?? null }
+    return await proposeAs(ctx, w, draftGroup, input)
+  },
+})
+
+/**
+ * Keeper screens (Paper 54 to 57) draft their changes into the same card the
+ * assistant uses: a brief fix, a drag between keepers, a bulk nudge or a
+ * cover sheet becomes a pending item the manager confirms; nothing is written
+ * here. No model is involved, so the assistant switch and ai.use do not apply;
+ * the manager needs production.keepers.manage. The browser mints the group id.
+ */
+export const draftKeeper = mutation({
+  args: {
+    draftGroup: v.string(),
+    siteId: v.optional(v.id('farmLocations')),
+    input: keeperProposalInput,
+  },
+  returns: proposeResult,
+  handler: async (ctx, { draftGroup, siteId, input }) => {
+    assertGroup(draftGroup)
+    const w = await webMember(ctx, await requireMember(ctx, { permission: 'production.keepers.manage' }), siteId)
+    assertNotSupportAccess(w)
+    return await proposeAs(ctx, w, draftGroup, input)
   },
 })
 
@@ -409,6 +465,7 @@ async function itemProblem(ctx: QueryCtx, w: WebMember, row: Doc<'pendingBotActi
   if (row.companyId !== w.binding.companyId) return 'Not in your organization.'
   if (!can(w.member, PERMISSION[p.kind])) return REFUSAL[p.kind]
   if (row.siteId && !inScope(w, row.siteId)) return 'That site is not in your access.'
+  if (isKeeperKind(p.kind)) return await keeperItemProblem(ctx, w, row)
   if (isProjectKind(p.kind)) return await projectItemProblem(ctx, w, p)
   const cageId = p.kind === 'daily_entry' || p.kind === 'feed_issue' || p.kind === 'task' ? p.cageId : undefined
   if (cageId) {
@@ -425,6 +482,26 @@ async function itemProblem(ctx: QueryCtx, w: WebMember, row: Doc<'pendingBotActi
     if (dup) return `${p.cageName} already has an entry for ${row.date}.`
   }
   return null
+}
+
+/**
+ * The reader of a draft card: a member with the assistant (any card) or a
+ * keeper manager (cards of keeper items only, drafted from the keeper
+ * screens). Rows of other kinds are hidden from a member without ai.use.
+ */
+async function draftReader(ctx: QueryCtx | MutationCtx) {
+  let member
+  try {
+    member = await requireMember(ctx, { permission: 'ai.use' })
+  } catch (err) {
+    member = await requireMember(ctx, { permission: 'production.keepers.manage' }).catch(() => {
+      throw err
+    })
+  }
+  const w = await webMember(ctx, member)
+  const visible = (r: Doc<'pendingBotActions'>) =>
+    r.channel === 'web' && r.companyId === w.binding.companyId && (can(member, 'ai.use') || isKeeperKind(r.payload.kind))
+  return { w, visible }
 }
 
 const itemView = v.object({
@@ -458,10 +535,8 @@ export const get = query({
   ),
   handler: async (ctx, { draftGroup }) => {
     assertGroup(draftGroup)
-    const w = await webMember(ctx, await requireMember(ctx, { permission: 'ai.use' }))
-    const rows = (await groupRows(ctx, w.account._id, draftGroup)).filter(
-      (r) => r.channel === 'web' && r.companyId === w.binding.companyId,
-    )
+    const { w, visible } = await draftReader(ctx)
+    const rows = (await groupRows(ctx, w.account._id, draftGroup)).filter(visible)
     if (!rows.length) return null
     const items = []
     for (const r of rows) {
@@ -494,11 +569,9 @@ const confirmResult = v.union(
 
 async function loadAnowaDraft(ctx: MutationCtx, draftGroup: string) {
   assertGroup(draftGroup)
-  const w = await webMember(ctx, await requireMember(ctx, { permission: 'ai.use' }))
+  const { w, visible } = await draftReader(ctx)
   assertNotSupportAccess(w)
-  const rows = (await groupRows(ctx, w.account._id, draftGroup)).filter(
-    (r) => r.channel === 'web' && r.companyId === w.binding.companyId,
-  )
+  const rows = (await groupRows(ctx, w.account._id, draftGroup)).filter(visible)
   if (!rows.length) throw userError('NOT_FOUND', 'Draft not found')
   return { w, rows }
 }
@@ -603,6 +676,8 @@ export const confirm = mutation({
         })
       } else if (p.kind === 'project_cost') {
         ids.projectCostId = await addCostAs(wctx, w.member, p.projectId, { amount: p.amount, date: r.date, note: p.note })
+      } else if (p.kind !== 'task') {
+        await commitKeeper(wctx, w, r, now)
       } else {
         ids.taskId = await createTaskAs(wctx, w.actor, {
           title: p.title,
@@ -668,6 +743,8 @@ export const undo = mutation({
       } else if (p.kind === 'task') {
         const task = r.taskId ? await ctx.db.get(r.taskId) : null
         if (!task || task.status !== 'open') return { status: 'too_late' as const }
+      } else if (isKeeperKind(p.kind)) {
+        if (!(await keeperUndoable(ctx, r))) return { status: 'too_late' as const }
       } else if (p.kind === 'project_create') {
         // Only an untouched project can be undone (no milestones or costs since).
         // Nothing changed since the confirm (no edit, milestone or cost by anyone).
@@ -715,6 +792,9 @@ export const undo = mutation({
       } else if (p.kind === 'task' && r.taskId) {
         await ctx.db.patch(r.taskId, { status: 'cancelled', updatedAt: now })
         await logAudit(wctx, { actionType: 'update', tableName: 'tasks', recordId: r.taskId, newValues: { status: 'cancelled' } })
+      } else if (isKeeperKind(p.kind)) {
+        // A nudge is a sent message: it stays sent.
+        await undoKeeper(wctx, w, r, now)
       }
       await ctx.db.patch(r._id, { status: 'undone' })
     }

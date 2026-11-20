@@ -7,7 +7,8 @@ import type { Doc, Id } from './_generated/dataModel'
 import { todayIn, zoneFor } from './lib/dates'
 import { requireMember } from './lib/permissions'
 import { mergeSettings } from './lib/farmRules'
-import { CHECKS } from './automation/checks'
+import { CHECKS, nameList } from './automation/checks'
+import { effectiveKeeper } from './keepers/model'
 import { onEngine } from './automation/rules'
 import { createRun } from './automation/engine'
 
@@ -74,10 +75,50 @@ async function digestForCompany(
       if (ok) sent += 1
     }
   }
-  if (missing.count) await send(people, 'missed-entry', missing)
+  if (missing.count) {
+    // Cage keepers: each effective keeper gets their own units; admins the
+    // whole list. Without keepers, everyone gets it as before.
+    const byKeeper = await missingByKeeper(ctx, companyId, String(missing.unitIds ?? ''), date)
+    if (byKeeper) {
+      for (const [userId, units] of byKeeper) {
+        const u = people.find((p) => p._id === userId)
+        if (!u || admins.includes(u)) continue
+        const ok = await notifyOnce(ctx, u, `missed-entry:${date}:${u._id}`, {
+          title: `Daily entry missing for ${units.length} of your unit${units.length === 1 ? '' : 's'}`,
+          message: `No feed or mortality logged on ${date} for ${nameList(units.map((x) => x.name))}.`,
+          link: `/daily-entry?cages=${units.map((x) => x._id).join(',')}`,
+          type: 'warning',
+        })
+        if (ok) sent += 1
+      }
+      await send(admins, 'missed-entry', missing)
+    } else {
+      await send(people, 'missed-entry', missing)
+    }
+  }
   if (low.count) await send(admins, 'low-stock', low)
   if (lowItems.count) await send(admins, 'low-items', lowItems)
   return { missingCages: missing.count, lowFeedTypes: low.count, lowItems: lowItems.count, sent }
+}
+
+/**
+ * Missing units grouped by the person who should log them (cage keepers), or
+ * null when the organization has no keepers yet.
+ */
+async function missingByKeeper(ctx: MutationCtx, companyId: Id<'companies'>, unitIds: string, date: string) {
+  const any = await ctx.db
+    .query('cageKeepers')
+    .withIndex('by_companyId_and_active', (q) => q.eq('companyId', companyId).eq('active', true))
+    .first()
+  if (!any) return null
+  const out = new Map<Id<'users'>, Doc<'cages'>[]>()
+  for (const id of unitIds.split(',').filter(Boolean).slice(0, 500)) {
+    const unit = await ctx.db.get(id as Id<'cages'>)
+    if (!unit || unit.companyId !== companyId) continue
+    const eff = await effectiveKeeper(ctx, unit, date)
+    if (eff) out.set(eff.keeperId, [...(out.get(eff.keeperId) ?? []), unit])
+  }
+  return out
 }
 
 /** Approved companies handled per dailyDigest run before it continues. */

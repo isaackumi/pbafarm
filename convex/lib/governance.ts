@@ -71,6 +71,12 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'dashboardLayouts', index: 'by_companyId_and_key_and_userId' },
   { table: 'feedingPlans', index: 'by_companyId_and_speciesKey' },
   { table: 'cyclePlans', index: 'by_companyId_and_updatedAt' },
+  // Cage keepers: assignments with history, covers, settings; scores and alert markers are derived.
+  { table: 'cageKeepers', index: 'by_companyId_and_active' },
+  { table: 'keeperCovers', index: 'by_companyId_and_toDate' },
+  { table: 'keeperSettings', index: 'by_companyId' },
+  { table: 'keeperScores', index: 'by_companyId_and_keeperId', export: false },
+  { table: 'keeperAlerts', index: 'by_companyId_and_createdAt', export: false },
   { table: 'feedPurchases', index: 'by_company' },
   { table: 'feedUsage', index: 'by_company' },
   { table: 'cageFeedBins', index: 'by_company' },
