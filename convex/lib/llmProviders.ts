@@ -57,6 +57,10 @@ export const ChatBody = Schema.Struct({
   temperature: Schema.optional(Schema.NullOr(Schema.Number)),
   /** Client's today (YYYY-MM-DD) for the farm context. */
   asOf: Schema.optional(Schema.NullOr(Schema.String)),
+  /** Ask Anowa scope (artboard 47): one site, a window in days, deep analysis. */
+  locationId: Schema.optional(Schema.NullOr(Schema.String)),
+  days: Schema.optional(Schema.NullOr(Schema.Number)),
+  deep: Schema.optional(Schema.NullOr(Schema.Boolean)),
 })
 export type ChatBody = typeof ChatBody.Type
 
@@ -67,7 +71,7 @@ export function decodeChatBody(
   const decoded = Schema.decodeUnknownOption(ChatBody)(body ?? {})
   return Option.isSome(decoded)
     ? { ok: true, value: decoded.value }
-    : { ok: false, error: 'Invalid request: provider, model and asOf must be text, temperature a number' }
+    : { ok: false, error: 'Invalid request: provider, model, asOf and locationId must be text, temperature and days numbers, deep true or false' }
 }
 
 const Text = Schema.optional(Schema.NullOr(Schema.String))

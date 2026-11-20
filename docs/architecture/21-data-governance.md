@@ -39,6 +39,7 @@ ENT-005 and TRACE-007. Code: `convex/governance.ts`, `convex/lib/governance.ts`,
 | Deletion request rows | indefinitely | evidence of the request and decision |
 | Domain events, idempotency keys, webhook deliveries, API idempotency keys | 30 days | existing prune crons (`convex/crons.ts`) |
 | File download tokens | until expiry | `files.pruneDownloadTokens` |
+| Ask Anowa conversations and saved answers (`assistantChats`, `assistantMessages`) | 365 days after the last message; deleted with the account | `assistantChats.prune` (daily); `assistantChats.purgeForUser` from `anonymizeUser` |
 
 Notifications and `feedInventoryTransactions` retention for live organizations (doc 04 F19) is not changed here.
 

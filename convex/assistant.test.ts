@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest'
 import schema from './schema'
 import { api, internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
+import { SOURCE_COUNT_CAP } from './assistant'
 import {
   fcrRises,
   forecastInsights,
@@ -227,5 +228,113 @@ describe('assistant site scope (PERM-004, audit C)', () => {
     // The all-sites owner still sees the site-B cycle.
     expect((await asOwner.query(api.assistant.forDashboard, { asOf: '2026-05-31' })).map((i) => i.kind)).toContain('mortality_spike')
     expect(await asOwner.query(api.reports.productionOverview, {})).toMatchObject({ occupancies: 1, live_fish: 1000 - 43 })
+  })
+})
+
+describe('Ask Anowa scope (artboard 47): site and date window narrow the context', () => {
+  async function scoped() {
+    const t = convexTest(schema, modules)
+    const now = Date.now()
+    const ids = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert('companies', { name: 'Lake', code: 'LAKE', status: 'approved', createdAt: now, settings: { aiAssistantEnabled: true } })
+      const siteA = await ctx.db.insert('farmLocations', { companyId, name: 'A', active: true, updatedAt: now })
+      const siteB = await ctx.db.insert('farmLocations', { companyId, name: 'B', active: true, updatedAt: now })
+      const growerRole = await ctx.db.insert('roles', { companyId, key: 'ai_grower', name: 'AI grower', permissions: ['org.view', 'production.view', 'ai.use'], archived: false, updatedAt: now })
+      const mk = async (email: string, roleKey: string, scopedTo: typeof siteA | null) => {
+        const userId = await ctx.db.insert('users', { email, role: roleKey === 'owner' ? 'admin' : 'user', companyId, ...(scopedTo ? { locationIds: [scopedTo] } : {}) })
+        await ctx.db.insert('memberships', { userId, companyId, roleKey, ...(roleKey === 'ai_grower' ? { roleId: growerRole } : {}), allLocations: !scopedTo, ...(scopedTo ? { locationIds: [scopedTo] } : {}), status: 'active', updatedAt: now })
+        return userId
+      }
+      const owner = await mk('o@x.com', 'owner', null)
+      const managerA = await mk('m@x.com', 'manager', siteA)
+      const grower = await mk('g@x.com', 'ai_grower', null)
+      const feedTypeId = await ctx.db.insert('feedTypes', { name: 'Grower', currentStock: 1000, minimumStock: 0, pricePerKg: 2, active: true, companyId, updatedAt: now })
+      const cageA = await ctx.db.insert('cages', { name: 'CAGE-A1', status: 'empty', currentCount: 0, capacity: 100000, companyId, locationId: siteA, updatedAt: now })
+      const cageB = await ctx.db.insert('cages', { name: 'SECRET-B2', status: 'empty', currentCount: 0, capacity: 100000, companyId, locationId: siteB, updatedAt: now })
+      for (const [site, saleDate] of [[siteA, '2026-05-20'], [siteB, '2026-05-21'], [siteB, '2026-03-10']] as const) {
+        await ctx.db.insert('sales', { companyId, locationId: site, saleDate, weightKg: 10, pricePerKg: 5, totalAmount: 50, updatedAt: now })
+      }
+      await ctx.db.insert('waterQualityReadings', { companyId, locationId: siteB, unitId: cageB, measuredAt: Date.parse('2026-05-25T08:00:00Z'), date: '2026-05-25', dissolvedOxygen: 3.1, source: 'manual' })
+      return { siteA, siteB, owner, managerA, grower, feedTypeId, cageA, cageB }
+    })
+    const asOwner = t.withIdentity({ subject: `${ids.owner}|s` })
+    for (const cage of [ids.cageA, ids.cageB]) {
+      const id = await asOwner.mutation(api.stocking.createStocking, { cageId: cage, stockingDate: '2026-05-04', fishCount: 1000, initialAbw: 10, initialBiomass: 10 })
+      await asOwner.mutation(api.stocking.approveStocking, { id })
+      await asOwner.mutation(api.dailyRecords.create, { cageId: cage, date: '2026-05-27', feedAmount: 10, feedTypeId: ids.feedTypeId, feedPrice: 2, feedCost: 20, mortality: 5 })
+    }
+    await t.mutation(internal.rollups.processDirty, {})
+    return {
+      ids,
+      asOwner,
+      asManagerA: t.withIdentity({ subject: `${ids.managerA}|s` }),
+      asGrower: t.withIdentity({ subject: `${ids.grower}|s` }),
+    }
+  }
+
+  test('a site outside the member scope is refused; an allowed site narrows the context', async () => {
+    const { ids, asOwner, asManagerA } = await scoped()
+    await expect(
+      asManagerA.query(api.assistant.context, { asOf: '2026-05-31', locationId: ids.siteB }),
+    ).rejects.toThrow(/access to this site/)
+    await expect(
+      asManagerA.query(api.assistant.sources, { asOf: '2026-05-31', locationId: ids.siteB }),
+    ).rejects.toThrow(/access to this site/)
+
+    const a = await asManagerA.query(api.assistant.context, { asOf: '2026-05-31', days: 30, locationId: ids.siteA })
+    expect(a.open_cycles.map((c) => c.unit)).toEqual(['CAGE-A1'])
+    expect(JSON.stringify(a)).not.toContain('SECRET')
+    expect(a.scope).toEqual({ site: 'A', from: '2026-05-02', to: '2026-05-31' })
+
+    const b = await asOwner.query(api.assistant.context, { asOf: '2026-05-31', days: 30, locationId: ids.siteB })
+    expect(b.open_cycles.map((c) => c.unit)).toEqual(['SECRET-B2'])
+    expect(b.sales).toEqual({ sales: 1, weight_kg: 10, amount: 50, unpaid_amount: 50 })
+    expect(b.water_quality).toMatchObject({ readings: 1, min_do_mg_l: 3.1, low_do_readings_below_4: 1 })
+    // Site B's own deaths only (site A also lost 5 that day).
+    expect((b as any).last_30_days.reduce((n: number, d: any) => n + d.deaths, 0)).toBe(5)
+
+    // Whole farm, 90 days: both sites and the March sale.
+    const all = await asOwner.query(api.assistant.context, { asOf: '2026-05-31', days: 400 })
+    expect(all.scope?.from).toBe('2026-03-03')
+    expect(all.open_cycles).toHaveLength(2)
+  })
+
+  test('the "Answers use" counts follow role, site and window', async () => {
+    const { ids, asOwner, asManagerA, asGrower } = await scoped()
+    const farm = await asOwner.query(api.assistant.sources, { asOf: '2026-05-31', days: 30 })
+    expect(farm).toMatchObject({
+      dailyRecords: { count: 2, capped: false },
+      waterReadings: { count: 1, capped: false },
+      sales: { count: 2, capped: false },
+    })
+    expect(farm.samplings).toEqual({ count: 0, capped: false })
+    expect(await asOwner.query(api.assistant.sources, { asOf: '2026-05-31', days: 90 })).toMatchObject({ sales: { count: 3 } })
+    // Site-A manager sees only site A, even without a site filter.
+    expect(await asManagerA.query(api.assistant.sources, { asOf: '2026-05-31', days: 30 })).toMatchObject({
+      dailyRecords: { count: 1 },
+      waterReadings: { count: 0 },
+      sales: { count: 1 },
+    })
+    // No finance.view: sales are neither counted nor given to the model.
+    const grower = await asGrower.query(api.assistant.sources, { asOf: '2026-05-31', days: 30, locationId: ids.siteB })
+    expect(grower.sales).toBeNull()
+    expect(grower.dailyRecords).toEqual({ count: 1, capped: false })
+    const ctx = await asGrower.query(api.assistant.context, { asOf: '2026-05-31', days: 30 })
+    expect(ctx.sales).toBeUndefined()
+  })
+
+  test('counts are bounded', async () => {
+    const t = convexTest(schema, modules)
+    const now = Date.now()
+    const { userId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert('companies', { name: 'Big', code: 'BIG', status: 'approved', createdAt: now, settings: { aiAssistantEnabled: true } })
+      const userId = await ctx.db.insert('users', { email: 'b@x.com', role: 'admin', companyId })
+      for (let i = 0; i < SOURCE_COUNT_CAP + 5; i++) {
+        await ctx.db.insert('sales', { companyId, saleDate: '2026-05-20', weightKg: 1, pricePerKg: 1, totalAmount: 1, updatedAt: now })
+      }
+      return { userId }
+    })
+    const res = await t.withIdentity({ subject: `${userId}|s` }).query(api.assistant.sources, { asOf: '2026-05-31' })
+    expect(res.sales).toEqual({ count: SOURCE_COUNT_CAP, capped: true })
   })
 })

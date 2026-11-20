@@ -132,6 +132,9 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'llmUsage', index: 'by_companyId_and_createdAt' },
   { table: 'farmAlerts', index: 'by_companyId_and_date' },
   { table: 'weeklyReports', index: 'by_companyId_and_weekEnd' },
+  // Ask Anowa history (artboard 47): each member's own conversations and saved answers.
+  { table: 'assistantChats', index: 'by_companyId_and_userId_and_lastMessageAt' },
+  { table: 'assistantMessages', index: 'by_companyId_and_chatId' },
   // Farm bot (doc 23): bindings and cost rows exported; codes and drafts are transient.
   { table: 'channelBindings', index: 'by_companyId' },
   { table: 'channelMessageCosts', index: 'by_companyId_and_sentAt' },

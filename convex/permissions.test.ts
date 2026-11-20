@@ -35,6 +35,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireInboundAdmin(ctx)': 'integrations.manage',
   'requireLlmAdmin(ctx)': 'integrations.manage',
   'requireAssistantMember(ctx)': 'ai.use',
+  'requireChatOwner(ctx': 'ai.use',
 }
 
 /** Functions without an organization guard, and why. */

@@ -4,7 +4,6 @@ import { useRouter } from 'next/router'
 import { ArrowUp, Check, Copy, Loader2, Maximize2, MessageCircle, Plus, Settings2, Sparkles, Workflow, X } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
-import { useLocation } from '../contexts/LocationContext'
 import { api } from '../lib/convexBridge'
 import {
   loadLlmSettings,
@@ -17,15 +16,12 @@ import {
 import { Field, GhostButton, GradientButton, Pill, Select } from './ui'
 import { isAutomationRequest } from '../lib/anowaIntent'
 import { describeDraft } from '../lib/anowaDraft'
-import Layout from './Layout'
-import DashboardInsights from './DashboardInsights'
 import { localToday } from '../lib/format'
 import { useT } from '../lib/i18n/context'
 
 /** Field entry screens with a save bar at the bottom: no floating button on phones. */
 const FIELD_ROUTES = ['/daily-entry', '/biweekly-entry', '/scan']
 const FULL_PAGE = '/assistant'
-const PROMPTS = ['losses', 'harvest', 'report']
 
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
@@ -360,8 +356,12 @@ function DraftCard({ message, compact }) {
   )
 }
 
-/** 17 message thread: user bubble right on surface-2, assistant with avatar on the left. */
-function Thread({ chat, compact = false }) {
+/**
+ * 17 message thread: user bubble right on surface-2, assistant with avatar on
+ * the left. `renderActions(message)` adds controls under an answer (Ask
+ * Anowa's Save answer).
+ */
+export function Thread({ chat, compact = false, renderActions }) {
   const t = useT()
   const bottomRef = useRef(null)
   useEffect(() => {
@@ -384,6 +384,7 @@ function Thread({ chat, compact = false }) {
               {i > 0 && <span className="sr-only">{t('assistantUi.srAssistant')} </span>}
               {m.content}
               {m.kind === 'draft' && <DraftCard message={m} compact={compact} />}
+              {renderActions && renderActions(m)}
             </div>
           </div>
         ),
@@ -575,131 +576,22 @@ export default function AiAssistant() {
   )
 }
 
-/** 17 Ask Anowa full page: chat on the left, insights and prompts on the right. */
-export function AssistantPage() {
+/**
+ * "Anowa is off" (company switch off, or the role lacks ai.use): admins who
+ * can turn it on get the button to Company settings.
+ */
+export function AssistantOff({ canTurnOn }) {
   const t = useT()
-  const { locationArgs } = useLocation()
-  const { loading, allowed, canDraft, canTurnOn } = useAssistantAccess()
-  const chat = useAssistantChat(allowed, { canDraft })
-  const startAutomation = () => {
-    chat.setInput(t('assistantUi.draft.prefix'))
-    inputRef.current?.focus()
-  }
-  const inputRef = useRef(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
-  const fresh = chat.messages.length === 1
-
   return (
-    <Layout
-      title={t('assistantUi.title')}
-      eyebrow={allowed ? `${t('assistantUi.eyebrow')} · ${chat.modelLine}` : t('assistantUi.eyebrow')}
-      actions={
-        allowed && (
-          <GradientButton icon={Plus} onClick={chat.reset} disabled={chat.busy}>
-            {t('assistantUi.newChat')}
-          </GradientButton>
-        )
-      }
-    >
-      {loading ? (
-        <div className={`${card} h-64 animate-pulse`} />
-      ) : !allowed ? (
-        <section className={`${card} flex flex-col items-center gap-3 px-6 py-14 text-center`}>
-          <Sparkles size={28} className="text-faint" aria-hidden />
-          <h2 className="text-[17px] font-semibold text-text">{t('assistantUi.offTitle')}</h2>
-          <p className="max-w-md text-[14px] text-muted">
-            {canTurnOn ? t('assistantUi.offAdmin') : t('assistantUi.offBody')}
-          </p>
-          {canTurnOn && (
-            <GradientButton icon={Sparkles} href="/company-settings" className="mt-2">
-              {t('assistantUi.turnOn')}
-            </GradientButton>
-          )}
-        </section>
-      ) : (
-        <div className="flex w-full flex-col items-start gap-5 xl:flex-row">
-          <section aria-label={t('assistantUi.dialog')} className={`${card} flex w-full min-w-0 flex-col gap-[22px] p-5 sm:p-7 xl:grow-[1.7] xl:basis-0`}>
-            <Thread chat={chat} />
-            {fresh && (
-              <div className="flex flex-wrap gap-[10px] pl-0 sm:pl-[46px]">
-                {PROMPTS.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => chat.send(t(`assistantUi.prompt.${k}`))}
-                    className={`rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 ${focusRing}`}
-                  >
-                    {t(`assistantUi.prompt.${k}`)}
-                  </button>
-                ))}
-                {canDraft && (
-                  <button
-                    type="button"
-                    onClick={startAutomation}
-                    className={`inline-flex items-center gap-1.5 rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 ${focusRing}`}
-                  >
-                    <Workflow size={14} className="text-cyan" aria-hidden />
-                    {t('assistantUi.draft.chip')}
-                  </button>
-                )}
-              </div>
-            )}
-            <Composer chat={chat} inputRef={inputRef} />
-            <div className="flex items-center justify-between gap-3 text-xs text-faint">
-              <span>{t('assistantUi.privacy')}</span>
-              <button
-                type="button"
-                onClick={() => setShowSettings((s) => !s)}
-                aria-expanded={showSettings}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-pill px-2 py-1 text-muted hover:text-text ${focusRing}`}
-              >
-                <Settings2 size={14} aria-hidden />
-                {t('assistantUi.settings')}
-              </button>
-            </div>
-            {showSettings && (
-              <div className="rounded-[14px] border border-line bg-bg p-4">
-                <ModelSettings chat={chat} idPrefix="ai-page" />
-              </div>
-            )}
-          </section>
-          <div className="flex w-full flex-col gap-5 xl:basis-0 xl:grow">
-            <DashboardInsights locationId={locationArgs?.locationId} aiEnabled title={t('assistantUi.insights')} />
-            <section aria-labelledby="ai-try-title" className={`${card} flex flex-col gap-[10px] px-[26px] py-6`}>
-              <h2 id="ai-try-title" className="pb-[6px] text-[15px] font-semibold leading-[18px] text-text">
-                {t('assistantUi.tryAsking')}
-              </h2>
-              {PROMPTS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => {
-                    chat.setInput(t(`assistantUi.prompt.${k}`))
-                    inputRef.current?.focus()
-                  }}
-                  className={`rounded-[12px] bg-surface-2 px-[14px] py-3 text-left text-[13px] leading-4 text-text hover:bg-line ${focusRing}`}
-                >
-                  {t(`assistantUi.prompt.${k}`)}
-                </button>
-              ))}
-              {canDraft && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    chat.setInput(t('assistantUi.draft.example'))
-                    inputRef.current?.focus()
-                  }}
-                  className={`flex items-center gap-2 rounded-[12px] bg-surface-2 px-[14px] py-3 text-left text-[13px] leading-4 text-text hover:bg-line ${focusRing}`}
-                >
-                  <Workflow size={14} className="shrink-0 text-cyan" aria-hidden />
-                  {t('assistantUi.draft.example')}
-                </button>
-              )}
-            </section>
-          </div>
-        </div>
+    <section className="flex flex-col items-center gap-3 rounded-card border border-line bg-surface px-6 py-14 text-center shadow-[var(--shadow-card)]">
+      <Sparkles size={28} className="text-faint" aria-hidden />
+      <h2 className="text-[17px] font-semibold text-text">{t('assistantUi.offTitle')}</h2>
+      <p className="max-w-md text-[14px] text-muted">{canTurnOn ? t('assistantUi.offAdmin') : t('assistantUi.offBody')}</p>
+      {canTurnOn && (
+        <GradientButton icon={Sparkles} href="/company-settings" className="mt-2">
+          {t('assistantUi.turnOn')}
+        </GradientButton>
       )}
-    </Layout>
+    </section>
   )
 }
