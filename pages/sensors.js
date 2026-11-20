@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
-import { SlidersHorizontal } from 'lucide-react'
+import { Filter, SlidersHorizontal } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -18,6 +18,7 @@ import {
   Table,
   Tabs,
 } from '../components/ui'
+import { sparkPath } from '../components/ui/Sparkline'
 import { api } from '../convex/_generated/api'
 import { useLocation } from '../contexts/LocationContext'
 import { errorMessage } from '../lib/errorMessage'
@@ -41,7 +42,9 @@ const RANGES = { '24h': 24 * HOUR, '7d': 7 * 24 * HOUR, '30d': 30 * 24 * HOUR }
 // A reading older than this is shown as "quiet": the device may be offline.
 const STALE_MS = 2 * HOUR
 const CARD = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
-const TONE_TEXT = { alert: 'text-alert', warn: 'text-warn', good: 'text-good', offline: 'text-muted' }
+// Paper 28 tile captions: in range is muted (sky for temperature), offline is faint.
+const TONE_TEXT = { alert: 'text-alert', warn: 'text-warn', good: 'text-muted', sky: 'text-sky-ink', offline: 'text-faint' }
+const TONE_STROKE = { alert: 'var(--alert)', warn: 'var(--warn)', good: 'var(--good)', offline: 'var(--faint)' }
 const TONE_PILL = { alert: 'red', warn: 'amber', good: 'green', offline: 'neutral' }
 
 function fmt(n) {
@@ -77,6 +80,50 @@ function rangeText(t, row) {
   if (r.max != null && row.last > r.max) return t('sensorsPage.above', { value: `${fmt(r.max)}${u}` })
   if (r.min != null && r.max != null) return t('sensorsPage.within', { min: fmt(r.min), max: fmt(r.max) })
   return r.min != null ? t('sensorsPage.atLeast', { value: `${fmt(r.min)}${u}` }) : t('sensorsPage.atMost', { value: `${fmt(r.max)}${u}` })
+}
+
+/** Compact age for the table's Last seen column (Paper 28: "30s", "1m", "2h"). */
+function agoShort(ms, now) {
+  if (!ms) return '—'
+  const s = Math.max(0, Math.round((now - ms) / 1000))
+  if (s < 60) return `${s}s`
+  if (s < 3600) return `${Math.round(s / 60)}m`
+  if (s < 86400) return `${Math.round(s / 3600)}h`
+  return `${Math.round(s / 86400)}d`
+}
+
+/** Tile tone: Paper 28 draws an in-range temperature in sky (dot, line and caption). */
+const tileTone = (row) => (row.status === 'good' && row.parameter === 'temperature_c' ? 'sky' : row.status)
+
+/**
+ * Paper 28 tile sparkline: 310×48, 2px round stroke, 4px inset; the sky line
+ * is the #1562D6 → #8EC2F7 gradient, offline a flat faint line at the bottom.
+ */
+function TileSpark({ unitId, parameter, from, to, tone, label }) {
+  const { data } = useSafeQuery(api.sensorAnalytics.series, { unitId, parameter, from, to })
+  const values = tone === 'offline' ? [] : (data?.buckets || []).map((b) => b.avg)
+  const d = values.length >= 2 ? sparkPath(values) : 'M0 44 L310 44'
+  const gradientId = `spark-${unitId}-${parameter}`
+  return (
+    <svg width="310" height="48" viewBox="0 0 310 48" preserveAspectRatio="none" className="block h-12 w-full shrink-0" role="img" aria-label={label}>
+      {tone === 'sky' && (
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="310" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#1562D6" />
+            <stop offset="1" stopColor="#8EC2F7" />
+          </linearGradient>
+        </defs>
+      )}
+      <path
+        d={d}
+        fill="none"
+        stroke={values.length < 2 ? TONE_STROKE.offline : tone === 'sky' ? `url(#${gradientId})` : TONE_STROKE[tone]}
+        strokeWidth={2}
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
 }
 
 function useSafeQuery(fn, args) {
@@ -146,21 +193,17 @@ function SensorsPage() {
           label: t('sensorsPage.kpi.reporting'),
           value: `${rows.length - quiet} / ${rows.length}`,
           suffix: quiet ? t('sensorsPage.kpi.quietN', { count: quiet }) : t('sensorsPage.kpi.unitsN', { count: data.units }),
-          suffixTone: quiet ? 'alert' : 'muted',
         },
         {
           key: 'breaches',
-          label: t('sensorsPage.kpi.breaches', { period: t(`integ.sensors.range${range}`) }),
+          label: t('sensorsPage.kpi.breaches', { period: t(`sensorsPage.period.${range}`) }),
           value: breaches,
-          valueTone: breaches ? 'alert' : undefined,
           suffix: lowDo ? t('sensorsPage.kpi.lowDo', { count: lowDo }) : undefined,
-          suffixTone: 'alert',
         },
         {
           key: 'breaching',
           label: t('integ.sensors.breachingUnits'),
           value: data.breachingUnits,
-          valueTone: data.breachingUnits ? 'warn' : 'good',
         },
         ...(temps.length
           ? [
@@ -204,7 +247,7 @@ function SensorsPage() {
       eyebrow={eyebrow}
       actions={
         canEditRules ? (
-          <GradientButton href="/water-quality" icon={SlidersHorizontal} variant="outline">
+          <GradientButton href="/water-quality" icon={Filter} ring="sky">
             {t('sensorsPage.alertRules')}
           </GradientButton>
         ) : null
@@ -254,6 +297,7 @@ function SensorsPage() {
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {tiles.map((r) => {
                 const active = selected && keyOf(selected) === keyOf(r)
+                const tone = tileTone(r)
                 return (
                   <button
                     key={keyOf(r)}
@@ -268,18 +312,28 @@ function SensorsPage() {
                       <span className="truncate text-[13px] leading-4 text-muted">
                         {r.unitName} · {r.label}
                       </span>
-                      <StatusDot tone={r.status} size={8} label={t(`sensorsPage.status.${r.status}`)} />
+                      <StatusDot
+                        tone={r.status}
+                        size={8}
+                        label={t(`sensorsPage.status.${r.status}`)}
+                        className={tone === 'sky' ? '!bg-sky-ink' : ''}
+                      />
                     </span>
                     <span className="flex items-baseline gap-[6px]">
                       <span className="text-[34px] font-semibold leading-[42px] tracking-tight tabular-nums text-text">
-                        {fmt(r.last)}
+                        {r.status === 'offline' ? '—' : fmt(r.last)}
                       </span>
-                      {r.unit && <span className="text-[14px] leading-[18px] text-muted">{r.unit}</span>}
+                      {r.unit && r.status !== 'offline' && <span className="text-[14px] leading-[18px] text-muted">{r.unit}</span>}
                     </span>
-                    <span className="text-xs leading-4 text-muted">
-                      {t('sensorsPage.minAvgMax', { min: fmt(r.min), avg: fmt(r.avg), max: fmt(r.max) })}
-                    </span>
-                    <span className={`text-xs leading-4 ${TONE_TEXT[r.status]}`}>
+                    <TileSpark
+                      unitId={r.unitId}
+                      parameter={r.parameter}
+                      from={from}
+                      to={to}
+                      tone={tone}
+                      label={t('sensorsPage.minAvgMax', { min: fmt(r.min), avg: fmt(r.avg), max: fmt(r.max) })}
+                    />
+                    <span className={`text-xs leading-4 ${TONE_TEXT[tone]}`}>
                       {r.status === 'offline'
                         ? t('sensorsPage.quietSince', { ago: ago(r.lastAt, now, locale) })
                         : r.status === 'warn'
@@ -340,7 +394,7 @@ function SensorsPage() {
                     key: 'seen',
                     header: t('sensorsPage.col.lastSeen'),
                     align: 'right',
-                    render: (r) => <span title={new Date(r.lastAt).toLocaleString(locale)}>{ago(r.lastAt, now, locale)}</span>,
+                    render: (r) => <span title={new Date(r.lastAt).toLocaleString(locale)}>{agoShort(r.lastAt, now)}</span>,
                   },
                   {
                     key: 'status',
@@ -360,7 +414,7 @@ function SensorsPage() {
                 ) : (
                   <ul>
                     {rules.map((r) => (
-                      <li key={r.parameter} className="flex flex-col gap-[2px] border-t border-line py-[11px]">
+                      <li key={r.parameter} className="flex flex-col gap-[2px] border-t border-line py-3">
                         <span className="text-[14px] leading-[18px] text-text">
                           {r.range.min != null && r.range.max != null
                             ? t('sensorsPage.ruleOutside', { label: r.label, min: fmt(r.range.min), max: fmt(r.range.max), unit: r.unit })

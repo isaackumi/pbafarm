@@ -1404,26 +1404,31 @@
     "eyebrow": "En direct · {readings} sur {units} · mis à jour {updated}",
     "eyebrowSite": "Capteurs · {site}",
     "readingsN": {
-      "one": "{count} mesure",
-      "other": "{count} mesures"
+      "one": "{count} capteur",
+      "other": "{count} capteurs"
     },
     "unitsOn": {
       "one": "{count} unité",
       "other": "{count} unités"
     },
     "alertRules": "Règles d'alerte",
+    "period": {
+      "24h": "24 h",
+      "7d": "7 j",
+      "30d": "30 j"
+    },
     "editThresholds": "Modifier les seuils",
     "kpi": {
-      "reporting": "Actifs",
+      "reporting": "En ligne",
       "quietN": {
-        "one": "{count} silencieux",
-        "other": "{count} silencieux"
+        "one": "{count} hors ligne",
+        "other": "{count} hors ligne"
       },
       "unitsN": {
         "one": "sur {count} unité",
         "other": "sur {count} unités"
       },
-      "breaches": "Dépassements · {period}",
+      "breaches": "Alertes · {period}",
       "lowDo": {
         "one": "{count} O₂ bas",
         "other": "{count} O₂ bas"
@@ -1438,7 +1443,7 @@
       "alert": "Alerte",
       "warn": "Dépassé",
       "good": "En ligne",
-      "offline": "Silencieux"
+      "offline": "Hors ligne"
     },
     "minAvgMax": "Min {min} · moy. {avg} · max {max}",
     "minMax": "{min} – {max}",
@@ -1458,7 +1463,7 @@
     "tab": {
       "all": "Toutes",
       "alerts": "Alertes",
-      "quiet": "Silencieuses"
+      "quiet": "Hors ligne"
     },
     "search": "Rechercher une unité ou un paramètre",
     "noMatch": "Aucune mesure ne correspond.",
@@ -1504,8 +1509,8 @@
     "grade": "calibre {grade}",
     "avgG": "moy. {g} g",
     "dispatchCount": {
-      "one": "{count} expédition",
-      "other": "{count} expéditions"
+      "one": "{count} camion",
+      "other": "{count} camions"
     },
     "openCount": {
       "one": "{count} ouvert",
@@ -2495,24 +2500,35 @@
   },
   "mapUi": {
     "title": "Carte de la ferme",
-    "eyebrow": {
-      "one": "Cages · {count} unité placée",
-      "other": "Cages · {count} unités placées"
+    "crumb": "Cages",
+    "unitCount": {
+      "one": "{count} unité",
+      "other": "{count} unités"
     },
+    "unitsOn": {
+      "one": "{count} unité sur {water}",
+      "other": "{count} unités sur {water}"
+    },
+    "addCage": "Ajouter une cage",
+    "editLayout": "Modifier la disposition",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "maintenance": "Entretien",
+    "checkOverdue": "Contrôle en retard",
     "loading": "Chargement de la carte…",
     "legendLabel": "Légende",
     "legend": {
       "inRange": "Dans la plage",
       "watch": "À surveiller",
       "alert": "Alerte",
-      "idle": "En jachère ou vide"
+      "idle": "En jachère"
     },
     "emptyTitle": "Rien à placer pour l’instant",
     "emptyBody": "Ajoutez une latitude et une longitude à vos unités, groupes ou sites pour les voir sur la carte.",
     "doShort": "{value} mg/L",
-    "do": "OD",
+    "do": "O₂ dissous",
     "biomass": "Biomasse",
-    "abw": "PMI",
+    "abw": "Poids moyen",
     "fish": "Poissons",
     "units": "Unités",
     "stocked": "Empoissonnées",
@@ -2636,16 +2652,62 @@
   },
   "equipmentUi": {
     "title": "Équipements",
-    "eyebrow": "Aérateurs, distributeurs, énergie, filets et amarrages",
+    "eyebrow": "Cages · Aérateurs, distributeurs, énergie, filets",
     "logInspection": "Saisir une inspection",
     "add": "Ajouter un équipement",
     "kpi": {
       "dueWeek": "À faire cette semaine",
       "overdue": "En retard",
       "faulty": "En panne ou en réparation",
+      "findings": "Constats ouverts",
       "inService": "En service"
     },
     "ofActive": "sur {count}",
+    "faultyCount": "{count} en panne ou en réparation",
+    "oldest": {
+      "one": "le plus ancien {count} jour",
+      "other": "le plus ancien {count} jours"
+    },
+    "critical": "{count} critique(s)",
+    "dueGroup": {
+      "aeration": {
+        "one": "{count} aérateur",
+        "other": "{count} aérateurs"
+      },
+      "power": {
+        "one": "{count} groupe électrogène",
+        "other": "{count} groupes électrogènes"
+      },
+      "nets": {
+        "one": "{count} filet",
+        "other": "{count} filets"
+      },
+      "misc": {
+        "one": "{count} autre",
+        "other": "{count} autres"
+      }
+    },
+    "statusPill": {
+      "overdue": "En retard {days} j",
+      "dueToday": "Dû aujourd'hui",
+      "dueSoon": "Bientôt dû",
+      "calibrateSoon": "À étalonner bientôt",
+      "findings": {
+        "one": "{count} constat",
+        "other": "{count} constats"
+      },
+      "ok": "OK"
+    },
+    "inspection": {
+      "pass": "Conforme",
+      "fail": "Échec",
+      "none": "Aucune inspection saisie.",
+      "noChecklist": "Dernière inspection le {date}, sans liste de contrôle.",
+      "finding": "Constat · {text}",
+      "fixBy": "à corriger avant le {date}",
+      "submit": "Saisir l'inspection",
+      "addFinding": "Ajouter un constat"
+    },
     "registry": "Équipements",
     "tab": {
       "all": "Tous",
@@ -2953,7 +3015,49 @@
     "coverage": "{planned} unités sur {total} ont une ration",
     "why": "Pourquoi",
     "countFrom": "Effectif : {stocked} empoissonnés + {transferredIn} entrés − {transferredOut} sortis − {harvested} récoltés − {mortality} morts − {unaccounted} non comptés = {count}.",
-    "neverApplied": "Simple suggestion : elle n'est jamais saisie à votre place. Ajustez selon l'appétit et la qualité de l'eau."
+    "neverApplied": "Simple suggestion : elle n'est jamais saisie à votre place. Ajustez selon l'appétit et la qualité de l'eau.",
+    "paper": {
+      "title": "Aliments et plans",
+      "eyebrow": "Aliments et stock · Rations par classe de poids",
+      "newPlan": "Nouveau plan",
+      "activePlans": "Plans actifs",
+      "cagesOnPlan": {
+        "one": "{count} cage sous plan",
+        "other": "{count} cages sous plan"
+      },
+      "rationToday": "Ration du jour",
+      "issuedSoFar": "{amount} distribués jusqu'ici",
+      "fcr30d": "IC de la ferme · 30 j",
+      "feedCover": "Couverture aliment",
+      "inStore": "{amount} en magasin",
+      "plans": "Plans",
+      "weightBand": "Classe de poids",
+      "pellet": "Granulé",
+      "feed": "Aliment",
+      "bwPerDay": "% PV / jour",
+      "meals": {
+        "one": "{count} repas",
+        "other": "{count} repas"
+      },
+      "cages": "Cages",
+      "band": "{from} – {to} g",
+      "bandOpen": "{from} g +",
+      "skus": {
+        "one": "{count} référence",
+        "other": "{count} références"
+      },
+      "bags": "sacs de {kg} kg",
+      "perBag": "{amount} / sac",
+      "today": "Aujourd'hui · {day}",
+      "biomass": "{kg} kg de biomasse · moy. {abw} g",
+      "planPct": "Plan · {pct} % du poids vif",
+      "tempCut": "Température de l'eau · {temp} °C",
+      "meal": "Repas {n}",
+      "fromStore": "Du magasin · {feed}",
+      "bagCount": "{count} sacs",
+      "issueTo": "Distribuer {amount} à {cage}",
+      "issueNote": "Enregistré dans le stock et le bac d'aliment de la cage"
+    }
   },
   "customizePage": {
     "tab": {
@@ -5659,6 +5763,7 @@
       "nothingToReorder": "Tous les aliments sont au-dessus du minimum.",
       "recentMovements": "Mouvements récents",
       "noMovements": "Aucun mouvement de stock.",
+      "searchMovements": "Rechercher un mouvement",
       "feedTypes": "Types d’aliment",
       "searchFeedTypes": "Rechercher un type d’aliment",
       "addFeedType": "Ajouter un type",
@@ -5766,6 +5871,28 @@
       "unit": "Unité",
       "reorderLevel": "Seuil de commande",
       "reorderHint": "Les administrateurs sont avertis à ce niveau ou en dessous.",
+      "colValue": "Valeur",
+      "colStatus": "Couverture · statut",
+      "search": "Rechercher des articles",
+      "statusDays": {
+        "one": "{status} · {count} jour",
+        "other": "{status} · {count} jours"
+      },
+      "lotCount": {
+        "one": "{count} lot",
+        "other": "{count} lots"
+      },
+      "siteCount": {
+        "one": "{count} site",
+        "other": "{count} sites"
+      },
+      "lastCount": "Dernier inventaire",
+      "variance": "écart {pct}",
+      "bySite": "Stock par site",
+      "thisSite": "ce site",
+      "avgUse": "Conso. moyenne · 14 j",
+      "perDay": "{qty} {unit}/jour",
+      "issueToCages": "Distribuer aux cages",
       "mode": {
         "issue": "Sortie",
         "receive": "Réception",
@@ -5796,6 +5923,7 @@
       "expiring30": "Périment · 30 j",
       "expired": "Périmés",
       "title": "Lots · ordre FEFO",
+      "issueNext": "à distribuer en premier",
       "batch": "Lot",
       "expires": "Péremption",
       "state": {
@@ -5966,6 +6094,7 @@
         "paid": "Payé",
         "overdue": "En retard {days} j",
         "partial": "Payé en partie · {pct} %",
+        "partialShort": "Payé en partie",
         "invoiced": "Facturé",
         "unpaid": "Impayé"
       },

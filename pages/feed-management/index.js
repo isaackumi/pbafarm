@@ -14,14 +14,13 @@ import {
   GhostButton,
   KpiStrip,
   Pill,
-  ProgressBar,
   Table,
 } from '../../components/ui'
 import NavTabs from '../../components/ui/NavTabs'
 import { Panel, ListRow } from '../../components/ui/Panel'
 import { feedTabs } from '../../lib/sectionTabs'
-import { buildFeedOverview, COVER_SCALE_DAYS, formatMass, movementKind, shortDate } from '../../lib/feedOverview'
-import { useMoney } from '../../lib/money'
+import { buildFeedOverview, COVER_SCALE_DAYS, feedMoney, formatMass, movementKind, shortDate, signedMass } from '../../lib/feedOverview'
+import { useCurrency } from '../../hooks/useCurrency'
 import { useT } from '../../lib/i18n/context'
 import { feedTypeCreateArgs, feedTypeUpdateArgs } from '../../lib/feedData'
 import { supplierCreateArgs } from '../../lib/supplierArgs'
@@ -33,13 +32,13 @@ import { api } from '../../convex/_generated/api'
 import { useToast } from '../../components/Toast'
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal'
 import FeedPurchaseModal from '../../components/FeedPurchaseModal'
-import { Plus, ArrowUpFromLine, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ArrowDownToLine, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { usePermission } from '../../hooks/usePermission'
 
 const FeedManagement = () => {
   const t = useT()
-  const money = useMoney()
+  const { currency } = useCurrency()
   const isAdmin = usePermission('inventory.adjust')
   const canIssue = usePermission('inventory.issue')
   const canPurchase = usePermission('inventory.purchase.record')
@@ -58,6 +57,7 @@ const FeedManagement = () => {
   const softDeleteFeedType = useMutation(api.feed.softDeleteFeedType)
   const createSupplier = useMutation(api.feed.createSupplier)
   const [searchTerm, setSearchTerm] = useState('')
+  const [movementSearch, setMovementSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingType, setEditingType] = useState(null)
@@ -273,7 +273,13 @@ const FeedManagement = () => {
   const overview = buildFeedOverview(stockLevels, usageStats?.rows, 30)
   const priceById = Object.fromEntries((stockLevels || []).map((r) => [r.feed_type_id, Number(r.price_per_kg || 0)]))
   const nameById = Object.fromEntries((stockLevels || []).map((r) => [r.feed_type_id, r.feed_type_name]))
+  const proteinById = Object.fromEntries(
+    feedTypes.map((f) => [f.id || f._id, f.protein_percentage ?? f.protein_content ?? null]),
+  )
   const coverText = (days) => (days == null ? '—' : t('ops.feed.days', { count: Math.round(days) }))
+  const movementItem = (r) => [nameById[r.feed_type_id] || '—', r.notes || r.batch_number].filter(Boolean).join(' · ')
+  const movementQuery = movementSearch.trim().toLowerCase()
+  const movementRows = (movements || []).filter((r) => !movementQuery || movementItem(r).toLowerCase().includes(movementQuery))
 
   return (
     <ProtectedRoute>
@@ -283,12 +289,12 @@ const FeedManagement = () => {
         actions={
           <>
             {canIssue && (
-              <GradientButton href="/feed-issue" icon={ArrowUpFromLine}>
+              <GradientButton variant="lime" href="/feed-issue" icon={ArrowDownToLine}>
                 {t('ops.feed.issueFeed')}
               </GradientButton>
             )}
             {canPurchase && (
-              <GradientButton reverse icon={Plus} onClick={() => setShowPurchaseModal(true)}>
+              <GradientButton ring="sky" icon={Plus} onClick={() => setShowPurchaseModal(true)}>
                 {t('ops.feed.newPurchase')}
               </GradientButton>
             )}
@@ -312,8 +318,8 @@ const FeedManagement = () => {
               },
               {
                 label: t('ops.feed.cost30d'),
-                value: statsLoading ? '—' : money(overview.costValue, { decimals: 0 }),
-                suffix: statsLoading || !overview.usedKg ? undefined : t('ops.feed.perKg', { amount: money(overview.costPerKg) }),
+                value: statsLoading ? '—' : feedMoney(overview.costValue, currency, { compact: true }),
+                suffix: statsLoading || !overview.usedKg ? undefined : t('ops.feed.perKg', { amount: feedMoney(overview.costPerKg, currency, { decimals: 1 }) }),
               },
               {
                 label: t('ops.feed.lowStock'),
@@ -335,27 +341,43 @@ const FeedManagement = () => {
               ) : overview.rows.length === 0 ? (
                 <p className="border-t border-line py-3 text-sm text-muted">{t('ops.feed.noStock')}</p>
               ) : (
-                overview.rows.map((row) => (
+                overview.rows.map((row) => {
+                  const protein = proteinById[row.id]
+                  const cover = Math.min(row.coverDays ?? 0, COVER_SCALE_DAYS)
+                  return (
                   <div key={row.id} className="flex items-center gap-4 border-t border-line py-3">
                     <div className="flex w-[170px] shrink-0 flex-col gap-[2px]">
-                      <span className="truncate text-sm leading-[18px] text-text">{row.name}</span>
-                      <span className="truncate text-xs leading-4 text-muted">{row.supplier || t('ops.feed.minKg', { amount: formatMass(row.minimumKg) })}</span>
+                      <span className="truncate text-[14px] leading-[18px] text-text">{row.name}</span>
+                      <span className="truncate text-xs leading-4 text-muted">
+                        {protein != null && protein !== '' ? t('ops.feed.protein', { pct: protein }) : row.supplier || t('ops.feed.minKg', { amount: formatMass(row.minimumKg) })}
+                      </span>
                     </div>
-                    <ProgressBar
-                      className="grow"
-                      value={Math.min(row.coverDays ?? 0, COVER_SCALE_DAYS)}
-                      max={COVER_SCALE_DAYS}
-                      tone={row.tone === 'good' ? 'brand' : row.tone}
-                      label={t('ops.feed.coverOf', { name: row.name })}
-                    />
-                    <span className={`w-[70px] shrink-0 text-right text-[13px] leading-4 ${row.tone === 'alert' ? 'text-alert' : 'text-muted'}`}>
+                    {/* Paper 09: 8px track; healthy cover is the sky gradient, low is warn, critical is alert. */}
+                    <div
+                      role="progressbar"
+                      aria-label={t('ops.feed.coverOf', { name: row.name })}
+                      aria-valuemin={0}
+                      aria-valuemax={COVER_SCALE_DAYS}
+                      aria-valuenow={Math.round(cover)}
+                      className="h-2 grow basis-0 overflow-hidden rounded-pill bg-line"
+                    >
+                      <div
+                        className={`h-2 rounded-pill ${row.tone === 'alert' ? 'bg-alert' : row.tone === 'warn' ? 'bg-warn' : ''}`}
+                        style={{
+                          width: `${(cover / COVER_SCALE_DAYS) * 100}%`,
+                          ...(row.tone === 'good' ? { backgroundImage: 'linear-gradient(in oklab 90deg, #1562D6 0%, #8EC2F7 100%)' } : {}),
+                        }}
+                      />
+                    </div>
+                    <span className="w-[70px] shrink-0 text-right text-[13px] leading-4 text-muted">
                       {coverText(row.coverDays)}
                     </span>
                     <span className="w-[70px] shrink-0 text-right text-sm font-medium leading-[18px] tabular-nums text-text">
                       {formatMass(row.stockKg)}
                     </span>
                   </div>
-                ))
+                  )
+                })
               )}
             </Panel>
 
@@ -387,13 +409,16 @@ const FeedManagement = () => {
 
           <Table
             title={t('ops.feed.recentMovements')}
+            search={movementSearch}
+            onSearchChange={setMovementSearch}
+            searchPlaceholder={t('ops.feed.searchMovements')}
             actions={
               <Link href="/inventory-transactions" className="rounded-sm text-sm text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan">
                 {t('ops.common.viewAll')}
               </Link>
             }
             columns={[
-              { key: 'date', header: t('ops.col.date'), width: 110, render: (r) => <span className="text-muted">{shortDate(r.transaction_date)}</span> },
+              { key: 'date', header: t('ops.col.date'), width: 110, render: (r) => shortDate(r.transaction_date) },
               {
                 key: 'type',
                 header: t('ops.col.type'),
@@ -406,18 +431,18 @@ const FeedManagement = () => {
               {
                 key: 'item',
                 header: t('ops.col.item'),
-                render: (r) => [nameById[r.feed_type_id] || '—', r.notes || r.batch_number].filter(Boolean).join(' · '),
+                render: movementItem,
               },
-              { key: 'qty', header: t('ops.col.qty'), width: 110, align: 'right', render: (r) => formatMass(r.quantity_kg) },
+              { key: 'qty', header: t('ops.col.qty'), width: 110, align: 'right', render: (r) => signedMass(r.quantity_kg) },
               {
                 key: 'value',
                 header: t('ops.col.value'),
                 width: 130,
                 align: 'right',
-                render: (r) => money(Number(r.quantity_kg || 0) * (priceById[r.feed_type_id] || 0), { decimals: 0 }),
+                render: (r) => feedMoney(Number(r.quantity_kg || 0) * (priceById[r.feed_type_id] || 0), currency),
               },
             ]}
-            rows={movements || []}
+            rows={movementRows}
             empty={movements === undefined ? t('ops.common.loading') : t('ops.feed.noMovements')}
           />
 

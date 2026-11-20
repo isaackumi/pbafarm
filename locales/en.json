@@ -1404,26 +1404,31 @@
     "eyebrow": "Live · {readings} on {units} · updated {updated}",
     "eyebrowSite": "Sensors · {site}",
     "readingsN": {
-      "one": "{count} reading",
-      "other": "{count} readings"
+      "one": "{count} sensor",
+      "other": "{count} sensors"
     },
     "unitsOn": {
       "one": "{count} unit",
       "other": "{count} units"
     },
     "alertRules": "Alert rules",
+    "period": {
+      "24h": "24h",
+      "7d": "7d",
+      "30d": "30d"
+    },
     "editThresholds": "Edit thresholds",
     "kpi": {
-      "reporting": "Reporting",
+      "reporting": "Online",
       "quietN": {
-        "one": "{count} quiet",
-        "other": "{count} quiet"
+        "one": "{count} offline",
+        "other": "{count} offline"
       },
       "unitsN": {
         "one": "on {count} unit",
         "other": "on {count} units"
       },
-      "breaches": "Breaches · {period}",
+      "breaches": "Alerts · {period}",
       "lowDo": {
         "one": "{count} low DO",
         "other": "{count} low DO"
@@ -1438,7 +1443,7 @@
       "alert": "Alert",
       "warn": "Breached",
       "good": "Online",
-      "offline": "Quiet"
+      "offline": "Offline"
     },
     "minAvgMax": "Min {min} · avg {avg} · max {max}",
     "minMax": "{min} – {max}",
@@ -1458,7 +1463,7 @@
     "tab": {
       "all": "All",
       "alerts": "Alerts",
-      "quiet": "Quiet"
+      "quiet": "Offline"
     },
     "search": "Search units or parameters",
     "noMatch": "No readings match.",
@@ -1504,8 +1509,8 @@
     "grade": "grade {grade}",
     "avgG": "avg {g} g",
     "dispatchCount": {
-      "one": "{count} dispatch",
-      "other": "{count} dispatches"
+      "one": "{count} truck",
+      "other": "{count} trucks"
     },
     "openCount": {
       "one": "{count} open",
@@ -2495,24 +2500,35 @@
   },
   "mapUi": {
     "title": "Farm map",
-    "eyebrow": {
-      "one": "Cages · {count} placed unit",
-      "other": "Cages · {count} placed units"
+    "crumb": "Cages",
+    "unitCount": {
+      "one": "{count} unit",
+      "other": "{count} units"
     },
+    "unitsOn": {
+      "one": "{count} unit on {water}",
+      "other": "{count} units on {water}"
+    },
+    "addCage": "Add cage",
+    "editLayout": "Edit layout",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "maintenance": "Maintenance",
+    "checkOverdue": "Check overdue",
     "loading": "Loading map…",
     "legendLabel": "Legend",
     "legend": {
       "inRange": "In range",
       "watch": "Watch",
       "alert": "Alert",
-      "idle": "Fallow or empty"
+      "idle": "Fallow"
     },
     "emptyTitle": "Nothing to place yet",
     "emptyBody": "Give your units, groups or sites a latitude and longitude to see them on the map.",
     "doShort": "{value} mg/L",
-    "do": "DO",
+    "do": "Dissolved O₂",
     "biomass": "Biomass",
-    "abw": "ABW",
+    "abw": "Avg weight",
     "fish": "Fish",
     "units": "Units",
     "stocked": "Stocked",
@@ -2636,16 +2652,62 @@
   },
   "equipmentUi": {
     "title": "Equipment",
-    "eyebrow": "Aerators, feeders, power, nets and moorings",
+    "eyebrow": "Cages · Aerators, feeders, power, nets",
     "logInspection": "Log inspection",
     "add": "Add equipment",
     "kpi": {
       "dueWeek": "Due this week",
       "overdue": "Overdue",
       "faulty": "Faulty or in repair",
+      "findings": "Open findings",
       "inService": "In service"
     },
     "ofActive": "of {count}",
+    "faultyCount": "{count} faulty or in repair",
+    "oldest": {
+      "one": "oldest {count} day",
+      "other": "oldest {count} days"
+    },
+    "critical": "{count} critical",
+    "dueGroup": {
+      "aeration": {
+        "one": "{count} aerator",
+        "other": "{count} aerators"
+      },
+      "power": {
+        "one": "{count} generator",
+        "other": "{count} generators"
+      },
+      "nets": {
+        "one": "{count} net",
+        "other": "{count} nets"
+      },
+      "misc": {
+        "one": "{count} other",
+        "other": "{count} other"
+      }
+    },
+    "statusPill": {
+      "overdue": "Overdue {days}d",
+      "dueToday": "Due today",
+      "dueSoon": "Due soon",
+      "calibrateSoon": "Calibrate soon",
+      "findings": {
+        "one": "{count} finding",
+        "other": "{count} findings"
+      },
+      "ok": "OK"
+    },
+    "inspection": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "none": "No inspection logged yet.",
+      "noChecklist": "Last inspected {date}, without a checklist.",
+      "finding": "Finding · {text}",
+      "fixBy": "fix by {date}",
+      "submit": "Submit inspection",
+      "addFinding": "Add finding"
+    },
     "registry": "Equipment",
     "tab": {
       "all": "All",
@@ -2953,7 +3015,49 @@
     "coverage": "{planned} of {total} units have a ration",
     "why": "Why",
     "countFrom": "Fish count: {stocked} stocked + {transferredIn} in − {transferredOut} out − {harvested} harvested − {mortality} dead − {unaccounted} unaccounted = {count}.",
-    "neverApplied": "A suggestion only: it is never entered for you. Adjust to appetite and water quality."
+    "neverApplied": "A suggestion only: it is never entered for you. Adjust to appetite and water quality.",
+    "paper": {
+      "title": "Feed types & plans",
+      "eyebrow": "Feed & inventory · Rations by weight band",
+      "newPlan": "New plan",
+      "activePlans": "Active plans",
+      "cagesOnPlan": {
+        "one": "{count} cage on plan",
+        "other": "{count} cages on plan"
+      },
+      "rationToday": "Ration today",
+      "issuedSoFar": "{amount} issued so far",
+      "fcr30d": "Farm FCR · 30d",
+      "feedCover": "Feed cover",
+      "inStore": "{amount} in store",
+      "plans": "Plans",
+      "weightBand": "Weight band",
+      "pellet": "Pellet",
+      "feed": "Feed",
+      "bwPerDay": "% BW / day",
+      "meals": {
+        "one": "{count} meal",
+        "other": "{count} meals"
+      },
+      "cages": "Cages",
+      "band": "{from} – {to} g",
+      "bandOpen": "{from} g +",
+      "skus": {
+        "one": "{count} SKU",
+        "other": "{count} SKUs"
+      },
+      "bags": "{kg} kg bags",
+      "perBag": "{amount} / bag",
+      "today": "Today · {day}",
+      "biomass": "{kg} kg biomass · avg {abw} g",
+      "planPct": "Plan · {pct}% body weight",
+      "tempCut": "Water temperature · {temp} °C",
+      "meal": "Meal {n}",
+      "fromStore": "From store · {feed}",
+      "bagCount": "{count} bags",
+      "issueTo": "Issue {amount} to {cage}",
+      "issueNote": "Logged to inventory and the cage's feed bin"
+    }
   },
   "customizePage": {
     "tab": {
@@ -5659,6 +5763,7 @@
       "nothingToReorder": "Every feed is above its minimum.",
       "recentMovements": "Recent movements",
       "noMovements": "No stock movements yet.",
+      "searchMovements": "Search movements",
       "feedTypes": "Feed types",
       "searchFeedTypes": "Search feed types",
       "addFeedType": "Add feed type",
@@ -5766,6 +5871,28 @@
       "unit": "Unit",
       "reorderLevel": "Reorder level",
       "reorderHint": "Admins get a low-stock reminder at or below this.",
+      "colValue": "Value",
+      "colStatus": "Cover · status",
+      "search": "Search items",
+      "statusDays": {
+        "one": "{status} · {count} day",
+        "other": "{status} · {count} days"
+      },
+      "lotCount": {
+        "one": "{count} lot",
+        "other": "{count} lots"
+      },
+      "siteCount": {
+        "one": "{count} site",
+        "other": "{count} sites"
+      },
+      "lastCount": "Last count",
+      "variance": "{pct} variance",
+      "bySite": "Stock by site",
+      "thisSite": "this site",
+      "avgUse": "Avg daily use · 14d",
+      "perDay": "{qty} {unit}/day",
+      "issueToCages": "Issue to cages",
       "mode": {
         "issue": "Issue",
         "receive": "Receive",
@@ -5796,6 +5923,7 @@
       "expiring30": "Expiring · 30d",
       "expired": "Expired",
       "title": "Lots · FEFO order",
+      "issueNext": "issue next",
       "batch": "Batch",
       "expires": "Expires",
       "state": {
@@ -5966,6 +6094,7 @@
         "paid": "Paid",
         "overdue": "Overdue {days}d",
         "partial": "Part paid · {pct}%",
+        "partialShort": "Part paid",
         "invoiced": "Invoiced",
         "unpaid": "Unpaid"
       },

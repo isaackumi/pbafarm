@@ -1,16 +1,17 @@
 import { formatDate, formatNumber } from '../../lib/format'
 
+/** Paper 26: hatchery lime, stocked and grow-out sky (#6AA8F5), treatment warn, harvest and dispatch good. */
 const DOT = {
-  pink: 'border-pearl-pink',
-  cyan: 'border-pearl-cyan',
+  lime: 'border-lime',
+  sky: 'border-sky-ink',
   warn: 'border-warn',
   good: 'border-good',
   alert: 'border-alert',
   neutral: 'border-line-strong',
 }
 const LABEL = {
-  pink: 'text-pearl-pink',
-  cyan: 'text-pearl-cyan',
+  lime: 'text-lime-ink',
+  sky: 'text-sky-ink',
   warn: 'text-warn',
   good: 'text-good',
   alert: 'text-alert',
@@ -29,7 +30,7 @@ export default function TraceTimeline({ items, label }) {
               <span className={`size-3 shrink-0 rounded-pill border-2 bg-surface ${DOT[it.tone] || DOT.neutral}`} />
               {!last && <span className="w-0 grow border-l-2 border-dashed border-line-strong" />}
             </div>
-            <div className={`flex min-w-0 grow basis-0 flex-col gap-[3px] ${last ? '' : 'pb-[22px]'}`}>
+            <div className="flex min-w-0 grow basis-0 flex-col gap-[3px] pb-[22px]">
               <span className={`text-xs uppercase leading-4 tracking-wide ${LABEL[it.tone] || LABEL.neutral}`}>{it.label}</span>
               <span className="text-[15px] font-medium leading-[18px] text-text">{it.title}</span>
               {it.sub && <span className="text-[13px] leading-4 text-muted">{it.sub}</span>}

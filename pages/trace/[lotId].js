@@ -30,7 +30,7 @@ import { lotTimeline, maxDispatchTemp, withdrawalSummary } from '../../lib/trace
 import { useLocale, useT } from '../../lib/i18n/context'
 
 const CARD = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
-const TONE_TEXT = { good: 'text-good', warn: 'text-warn', alert: 'text-alert', cyan: 'text-pearl-cyan', muted: 'text-muted' }
+const TONE_TEXT = { good: 'text-good', warn: 'text-warn', alert: 'text-alert', sky: 'text-sky-ink', muted: 'text-muted' }
 
 function CardHead({ title, meta }) {
   return (
@@ -247,7 +247,7 @@ function LotReport() {
     {
       key: 'stock',
       label: t('tracePage.check.remaining'),
-      tone: r.lot.remaining_kg > 0 ? 'cyan' : 'good',
+      tone: r.lot.remaining_kg > 0 ? 'sky' : 'good',
       value: r.lot.remaining_kg > 0 ? kg(r.lot.remaining_kg) : t('tracePage.allDispatched'),
     },
   ]
@@ -255,17 +255,17 @@ function LotReport() {
   return (
     <Layout
       title={t('tracePage.lotTitle', { code: r.lot.lot_code })}
-      eyebrow={[t('tracePage.eyebrowLot'), r.company, r.site].filter(Boolean).join(' · ')}
+      eyebrow={`${t('tracePage.eyebrowLot')} · ${r.lot.lot_code}`}
       actions={
         <div className="flex flex-wrap gap-3 print:hidden">
           {r.lot.remaining_kg > 0 && (
             <IfPermitted permission="production.harvest.record">
-              <GradientButton icon={Plus} onClick={() => setDispatching(true)}>
+              <GradientButton variant="lime" icon={Plus} onClick={() => setDispatching(true)}>
                 {t('tracePage.addDispatch')}
               </GradientButton>
             </IfPermitted>
           )}
-          <GradientButton reverse icon={Download} onClick={downloadCsv}>
+          <GradientButton ring="sky" icon={Download} onClick={downloadCsv}>
             {t('tracePage.exportRecall')}
           </GradientButton>
           <GhostButton icon={Printer} onClick={() => window.print()}>
