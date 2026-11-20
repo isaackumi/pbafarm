@@ -5,14 +5,17 @@ import { useAuthActions } from '@convex-dev/auth/react'
 import { useHumanCheck } from '../components/HumanCheck'
 import { useT } from '../lib/i18n/context'
 import {
+  AUTH_INPUT_CARD,
   AUTH_LINK,
   AuthAlert,
   AuthField,
   AuthHeading,
   AuthInput,
   AuthLayout,
+  AuthStateCard,
   AuthSubmit,
   PasswordInput,
+  StateIcon,
   StrengthBar,
 } from '../components/auth/AuthUi'
 
@@ -87,16 +90,13 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout title={t('authUi.reset.title')}>
-      <AuthHeading
-        title={step === 'email' ? t('authUi.reset.title') : t('authUi.reset.newTitle')}
-        subtitle={step === 'email' ? t('authUi.reset.emailIntro') : t('authUi.reset.codeIntro', { email })}
-      />
+      {step === 'email' && <AuthHeading title={t('authUi.reset.title')} subtitle={t('authUi.reset.emailIntro')} />}
 
       {error && <AuthAlert>{error}</AuthAlert>}
 
       {step === 'email' ? (
         <form className="flex flex-col gap-[22px]" onSubmit={sendCode}>
-          <AuthField label={t('auth.login.email')} htmlFor="email">
+          <AuthField label={t('authUi.login.workEmail')} htmlFor="email">
             <AuthInput
               id="email"
               type="email"
@@ -112,52 +112,58 @@ export default function ResetPassword() {
           </AuthSubmit>
         </form>
       ) : (
-        <form className="flex flex-col gap-[18px]" onSubmit={setNewPassword}>
-          <AuthField label={t('common.code')} htmlFor="code">
-            <AuthInput
-              id="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              className="font-mono tracking-[0.2em]"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-          </AuthField>
-          <AuthField label={t('authUi.reset.newPassword')} htmlFor="password">
-            <PasswordInput
-              id="password"
-              autoComplete="new-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <StrengthBar password={password} />
-          </AuthField>
-          <AuthField label={t('authUi.reset.confirm')} htmlFor="confirm">
-            <PasswordInput
-              id="confirm"
-              autoComplete="new-password"
-              required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-            />
-          </AuthField>
-          <AuthSubmit disabled={busy}>
-            {busy ? t('common.saving') : t('authUi.reset.submit')}
-          </AuthSubmit>
-          <button
-            type="button"
-            className={`self-start text-[13px] leading-4 ${AUTH_LINK}`}
-            onClick={() => {
-              setStep('email')
-              setCode('')
-              setError('')
-            }}
-          >
-            {t('common.sendNewCode')}
-          </button>
-        </form>
+        // Paper 61 "/reset-password" card. The emailed code field and the
+        // confirmation are this flow's own (the card draws a link-based reset).
+        <AuthStateCard icon={StateIcon.lock} title={t('authUi.reset.newTitle')} body={t('authUi.reset.sessionsNote')}>
+          <form className="flex flex-col gap-5" onSubmit={setNewPassword}>
+            <AuthField label={t('common.code')} htmlFor="code" hint={t('authUi.reset.codeIntro', { email })}>
+              <input
+                id="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                className={`${AUTH_INPUT_CARD} font-mono tracking-[0.2em]`}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </AuthField>
+            <AuthField label={t('authUi.reset.newPassword')} htmlFor="password">
+              <PasswordInput
+                id="password"
+                card
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <StrengthBar password={password} className="pt-0.5" />
+            </AuthField>
+            <AuthField label={t('authUi.reset.confirm')} htmlFor="confirm">
+              <PasswordInput
+                id="confirm"
+                card
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </AuthField>
+            <AuthSubmit size="md" lightSolid disabled={busy}>
+              {busy ? t('common.saving') : t('authUi.reset.saveSignIn')}
+            </AuthSubmit>
+            <button
+              type="button"
+              className={`self-start text-[13px] leading-4 ${AUTH_LINK}`}
+              onClick={() => {
+                setStep('email')
+                setCode('')
+                setError('')
+              }}
+            >
+              {t('common.sendNewCode')}
+            </button>
+          </form>
+        </AuthStateCard>
       )}
 
       <p className="text-[13px] leading-4 text-muted">

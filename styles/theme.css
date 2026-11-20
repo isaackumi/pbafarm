@@ -14,10 +14,13 @@
   --text: #f2f3f4;
   --muted: #8b9097;
   --faint: #5c6168;
-  --pink: #e8a6c8;
-  --pink-fill: #e8a6c8;
-  --cyan: #9fe3e6;
-  --cyan-fill: #9fe3e6;
+  /* Paper replaced the pink/cyan pair with lime/sky (01 Home, 69, 50). The
+     names stay so every page follows: "pink" is the lime accent, "cyan" the
+     sky accent (links, focus, checked states). */
+  --pink: #d7f75b;
+  --pink-fill: #d7f75b;
+  --cyan: #6aa8f5;
+  --cyan-fill: #6aa8f5;
   --good: #4ade80;
   --warn: #fbbf24;
   --alert: #f87171;
@@ -33,18 +36,29 @@
   --lime-ink: #d7f75b;
   --sky-ink: #6aa8f5;
   --gradient-sky: linear-gradient(in oklab 120deg, #1562d6 0%, #b9ddf9 100%);
-  --gradient-brand: linear-gradient(in oklab 120deg, var(--pink-fill) 0%, var(--cyan-fill) 100%);
-  --gradient-brand-rev: linear-gradient(in oklab 120deg, var(--cyan-fill) 0%, var(--pink-fill) 100%);
-  --gradient-bar: linear-gradient(in oklab 90deg, var(--pink-fill) 0%, var(--cyan-fill) 100%);
+  /* Button ring (7Z-0 "Issue feed"), bars (01 Home 15F-0) */
+  --gradient-brand: var(--gradient-sky);
+  /* Paper has no reversed ring: every outline button uses the sky ring. */
+  --gradient-brand-rev: var(--gradient-sky);
+  --gradient-bar: linear-gradient(in oklab 90deg, #1562d6 0%, #8ec2f7 100%);
   --shadow-card: none;
+  /* 01 Home area chart: stroke, fade fill and the lime last point */
+  --chart-line-start: #1562d6;
+  --chart-line-end: #8ec2f7;
+  --chart-area: #3d8bf0;
+  --chart-area-opacity: 0.22;
+  --chart-point: #d7f75b;
+  --chart-point-halo: rgb(215 247 91 / 0.18);
+  --chart-point-stroke: transparent;
 
   /* Pill tones: border / text */
   --pill-neutral-border: #2a2e33;
   --pill-neutral-text: #c4c8cd;
-  --pill-pink-border: #6b4a5c;
-  --pill-pink-text: #e8a6c8;
-  --pill-cyan-border: #2f5b5e;
-  --pill-cyan-text: #9fe3e6;
+  /* 01 Home activity pills: Transfer (lime), Stocking (sky) */
+  --pill-pink-border: #4a5a1c;
+  --pill-pink-text: #d7f75b;
+  --pill-cyan-border: #1f3e6e;
+  --pill-cyan-text: #6aa8f5;
   --pill-green-border: #2e5a3e;
   --pill-green-text: #86efac;
   --pill-amber-border: #5e4a1e;
@@ -55,10 +69,12 @@
   --unit-alert-border: #4a2a2a;
 
   /* Tinted fills for status badges and banners (Paper 62/63); derived so both themes follow */
-  --alert-tint-bg: color-mix(in srgb, var(--alert) 9%, var(--surface));
-  --alert-tint-border: color-mix(in srgb, var(--alert) 32%, var(--surface));
+  /* Paper 62 _error glyph, 63 confirm-delete icon */
+  --alert-tint-bg: #1a1112;
+  --alert-tint-border: #5a2a2a;
   --warn-tint-bg: color-mix(in srgb, var(--warn) 9%, var(--surface));
-  --warn-tint-border: color-mix(in srgb, var(--warn) 32%, var(--surface));
+  /* Paper 62 maintenance ring */
+  --warn-tint-border: #5e4a1e;
   --banner-pink-bg: color-mix(in srgb, var(--pink-fill) 7%, var(--bg));
   --backdrop: rgb(0 0 0 / 0.66);
   /* Auth lake scene (Paper 15 visual side) */
@@ -100,7 +116,7 @@
   --chart-ink: var(--text);
   --waterline: var(--muted);
   --lake: var(--cyan);
-  --lake-soft: rgba(159, 227, 230, 0.12);
+  --lake-soft: rgba(106, 168, 245, 0.12);
 
   /* Charts (dataviz reference palette, validated on --surface in both modes) */
   --series-1: #3987e5;
@@ -144,18 +160,28 @@
 
 html[data-theme='light'] {
   color-scheme: light;
-  --bg: #f5f6f7;
+  /* L · 01 Home (6E2-0) */
+  --bg: #f4f7fb;
   --surface: #ffffff;
-  --surface-2: #eef0f2;
-  --line: #e5e8eb;
-  --line-strong: #d5d9de;
+  --surface-2: #eaf1fa;
+  --line: #dfe6ef;
+  --line-strong: #cbd6e3;
   --text: #0e1012;
   --muted: #5f656d;
   --faint: #8a9098;
-  --pink: #b83f7e;
-  --pink-fill: #d86aa6;
-  --cyan: #12838a;
-  --cyan-fill: #3bb3ba;
+  --pink: #4f6b00;
+  --pink-fill: #d7f75b;
+  --cyan: #1562d6;
+  --cyan-fill: #1562d6;
+  --lime-ink: #4f6b00;
+  --sky-ink: #1562d6;
+  --gradient-sky: linear-gradient(in oklab 120deg, #1562d6 0%, #7db6f2 100%);
+  --gradient-bar: linear-gradient(in oklab 90deg, #1562d6 0%, #5fa0ee 100%);
+  --chart-line-end: #5fa0ee;
+  --chart-area: #3d86e6;
+  --chart-area-opacity: 0.16;
+  --chart-point-halo: rgb(168 201 58 / 0.25);
+  --chart-point-stroke: #4f6b00;
   --good: #15803d;
   --warn: #b45309;
   --alert: #dc2626;
@@ -167,6 +193,9 @@ html[data-theme='light'] {
   --button-text: #ffffff;
   --shadow-card: 0 1px 2px #1018281a;
   --backdrop: rgb(16 24 40 / 0.3);
+  --alert-tint-bg: #fef2f2;
+  --alert-tint-border: #f5c2c2;
+  --warn-tint-border: #f3d9a4;
   --scene-bg: #eef3f5;
   --scene-sky-1: #eaf3fd;
   --scene-sky-2: #cfe5fb;
@@ -192,12 +221,12 @@ html[data-theme='light'] {
   --scene-card-shadow: 0 20px 40px rgb(16 24 40 / 0.1);
   --scene-card-ok: #15803d;
 
-  --pill-neutral-border: #d5d9de;
+  --pill-neutral-border: #cbd6e3;
   --pill-neutral-text: #4a5057;
-  --pill-pink-border: #f1c4db;
-  --pill-pink-text: #b83f7e;
-  --pill-cyan-border: #bfe6e8;
-  --pill-cyan-text: #12838a;
+  --pill-pink-border: #c9dc7a;
+  --pill-pink-text: #4f6b00;
+  --pill-cyan-border: #b9d3f5;
+  --pill-cyan-text: #1562d6;
   --pill-green-border: #bde5ca;
   --pill-green-text: #15803d;
   /* Not in Paper: derived from the warn token like the other light tones */
@@ -209,7 +238,7 @@ html[data-theme='light'] {
 
   --kelp-soft: #22c55e;
   --signal-soft: #fca5a5;
-  --lake-soft: rgba(18, 131, 138, 0.1);
+  --lake-soft: rgba(21, 98, 214, 0.1);
 
   --series-1: #2a78d6;
   --series-2: #eb6834;
@@ -833,16 +862,13 @@ html:not([data-theme='light']) .home-sky-cloud {
   stroke: var(--sky-ripple);
   stroke-width: 1;
 }
-/* Date line: 82% white at night; 92% by day so it stays >= 4.5:1 on the bright sky. */
+/* Date line: 82% white (L · 01 Home #FFFFFFD1). */
 .home-sky-eyebrow {
   color: rgba(255, 255, 255, 0.82);
 }
-html[data-theme='light'] .home-sky-eyebrow {
-  color: rgba(255, 255, 255, 0.92);
-}
 .home-sky-btn-lime {
   background: #d7f75b;
-  color: #0b0d10;
+  color: #0e1012;
   box-shadow: 0 10px 24px -10px rgba(11, 13, 16, 0.45);
 }
 .home-sky-btn-glass {

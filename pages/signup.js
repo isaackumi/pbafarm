@@ -6,8 +6,8 @@ import { safeNextPath } from '../lib/safeRedirect'
 import { useHumanCheck } from '../components/HumanCheck'
 import { useT } from '../lib/i18n/context'
 import {
-  AUTH_LINK,
   AuthAlert,
+  AuthCheckbox,
   AuthField,
   AuthHeading,
   AuthInput,
@@ -25,6 +25,7 @@ export default function SignUp() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { signUpWithEmail, user } = useAuth()
@@ -91,15 +92,12 @@ export default function SignUp() {
   }
 
   return (
-    <AuthLayout
-      title={t('authUi.signup.title')}
-      eyebrow={t('authUi.panel.signupEyebrow')}
-      headline={t('authUi.panel.signupHeadline')}
-    >
+    <AuthLayout title={t('authUi.signup.title')} scene="signup" gap="gap-[18px]">
       <AuthHeading title={t('authUi.signup.title')} subtitle={t('authUi.signup.subtitle')} />
 
       {error && <AuthAlert>{error}</AuthAlert>}
 
+      {/* Paper 60: one 18px rhythm from the heading to "Already have an account?" */}
       <form className="flex flex-col gap-[18px]" onSubmit={handleSignUp}>
         <AuthField label={t('authUi.signup.fullName')} htmlFor="fullName">
           <AuthInput
@@ -113,7 +111,7 @@ export default function SignUp() {
           />
         </AuthField>
 
-        <AuthField label={t('auth.login.email')} htmlFor="email">
+        <AuthField label={t('authUi.login.workEmail')} htmlFor="email">
           <AuthInput
             id="email"
             name="email"
@@ -134,8 +132,8 @@ export default function SignUp() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <StrengthBar password={password} />
         </AuthField>
+        <StrengthBar password={password} />
 
         <AuthField label={t('authUi.signup.confirm')} htmlFor="confirmPassword">
           <PasswordInput
@@ -150,17 +148,38 @@ export default function SignUp() {
 
         {human.widget}
 
-        <AuthSubmit disabled={loading || (!human.ready && !keptTicket)}>
+        {/* Dark: muted sentence, Terms and Privacy policy in the text colour; light: all text colour. */}
+        <AuthCheckbox
+          id="agree"
+          required
+          checked={agreed}
+          onChange={setAgreed}
+          labelClassName="text-muted [html[data-theme=light]_&]:text-text"
+        >
+          {t('authUi.signup.agreeBefore')}{' '}
+          <Link href="/terms" target="_blank" className="text-text hover:underline underline-offset-2">
+            {t('authUi.signup.agreeTerms')}
+          </Link>{' '}
+          {t('authUi.signup.agreeAnd')}{' '}
+          <Link href="/privacy" target="_blank" className="text-text hover:underline underline-offset-2">
+            {t('authUi.signup.agreePrivacy')}
+          </Link>
+        </AuthCheckbox>
+
+        <AuthSubmit disabled={loading || !agreed || (!human.ready && !keptTicket)}>
           {loading ? t('authUi.signup.creating') : t('authUi.signup.create')}
         </AuthSubmit>
-      </form>
 
-      <p className="text-[13px] leading-4 text-muted">
-        {t('authUi.signup.haveAccount')}{' '}
-        <Link href="/login" className={`font-medium ${AUTH_LINK.replace('text-cyan', 'text-text')}`}>
-          {t('auth.login.signIn')} →
-        </Link>
-      </p>
+        <p className="text-[13px] leading-4 text-muted [html[data-theme=light]_&]:text-text">
+          {t('authUi.signup.haveAccount')}{' '}
+          <Link
+            href="/login"
+            className="rounded-sm font-medium text-text hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
+          >
+            {t('auth.login.signIn')} →
+          </Link>
+        </p>
+      </form>
     </AuthLayout>
   )
 }

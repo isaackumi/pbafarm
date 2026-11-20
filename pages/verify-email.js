@@ -1,15 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import {
-  AUTH_LINK,
   AuthAlert,
+  AuthGhost,
   AuthHeading,
   AuthLayout,
+  AuthSolid,
+  AuthStateCard,
   AuthSubmit,
+  DarkEmphasis,
   OtpInput,
+  StateIcon,
+  clock,
 } from '../components/auth/AuthUi'
+
+const RESEND_SECONDS = 30
+/** Paper 61 "Open Gmail": offered when the address is a Gmail one. */
+const isGmail = (email) => /@(gmail|googlemail)\.com$/i.test(email || '')
 import { safeNextPath } from '../lib/safeRedirect'
 import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
@@ -25,7 +34,14 @@ export default function VerifyEmail() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
   const next = safeNextPath(router.query.next, '/dashboard')
+
+  useEffect(() => {
+    if (cooldown <= 0) return undefined
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
 
   const send = async () => {
     setBusy(true)
@@ -33,6 +49,7 @@ export default function VerifyEmail() {
     try {
       await requestCode({})
       setSent(true)
+      setCooldown(RESEND_SECONDS)
     } catch (err) {
       setError(errorMessage(err, t('auth.verifyEmail.couldNotSend')))
     } finally {
@@ -55,37 +72,77 @@ export default function VerifyEmail() {
     }
   }
 
+  const email = status?.email || ''
   return (
     <AuthLayout title={t('auth.verifyEmail.title')}>
-      <AuthHeading title={t('auth.verifyEmail.title')} subtitle={status?.email || undefined} />
-
       {error && <AuthAlert>{error}</AuthAlert>}
 
       {status?.verified ? (
         <>
+          <AuthHeading title={t('auth.verifyEmail.title')} subtitle={email || undefined} />
           <AuthAlert tone="good">{t('auth.verifyEmail.verified')}</AuthAlert>
           <AuthSubmit type="button" onClick={() => router.push(next)}>
             {t('common.continue')}
           </AuthSubmit>
         </>
       ) : !sent ? (
-        <>
-          <p className="text-sm leading-5 text-muted">{t('auth.verifyEmail.intro')}</p>
-          <AuthSubmit type="button" disabled={busy || !status} onClick={send}>
-            {busy ? t('common.sending') : t('auth.verifyEmail.emailMe')}
-          </AuthSubmit>
-        </>
+        <AuthStateCard
+          icon={StateIcon.mail}
+          title={t('auth.verifyEmail.title')}
+          body={
+            <>
+              {email && (
+                <>
+                  <DarkEmphasis>{email}</DarkEmphasis>
+                  <br />
+                </>
+              )}
+              {t('auth.verifyEmail.intro')}
+            </>
+          }
+        >
+          <div className="pt-1">
+            <AuthSolid disabled={busy || !status} onClick={send}>
+              {busy ? t('common.sending') : t('auth.verifyEmail.emailMe')}
+            </AuthSolid>
+          </div>
+        </AuthStateCard>
       ) : (
-        <form className="flex flex-col gap-[22px]" onSubmit={submit}>
-          <OtpInput id="code" label={t('common.code')} value={code} onChange={setCode} autoFocus />
-          <p className="text-xs leading-4 text-muted">{t('auth.verifyEmail.expires')}</p>
-          <AuthSubmit disabled={busy || code.length !== 6}>
-            {busy ? t('common.checking') : t('common.verify')}
-          </AuthSubmit>
-          <button type="button" className={`self-start text-[13px] leading-4 ${AUTH_LINK}`} onClick={send} disabled={busy}>
-            {t('common.sendNewCode')}
-          </button>
-        </form>
+        // Paper 61 "/verify-email" card; this flow confirms with a 6-digit code.
+        <AuthStateCard
+          icon={StateIcon.mail}
+          title={t('authUi.verifyEmail.sentTitle')}
+          body={
+            <>
+              {t('authUi.verifyEmail.sentBefore')} <DarkEmphasis>{email}</DarkEmphasis>. {t('authUi.verifyEmail.sentAfter')}
+            </>
+          }
+        >
+          <form className="flex flex-col gap-5" onSubmit={submit}>
+            <OtpInput id="code" card label={t('common.code')} value={code} onChange={setCode} autoFocus />
+            <div className="flex flex-col gap-2.5 pt-1">
+              <AuthSolid type="submit" disabled={busy || code.length !== 6}>
+                {busy ? t('common.checking') : t('common.verify')}
+              </AuthSolid>
+              {isGmail(email) && (
+                <AuthGhost href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">
+                  {t('authUi.verifyEmail.openGmail')}
+                </AuthGhost>
+              )}
+              {/* Drawn at full strength while counting down (Paper 61 "Resend in 0:42"). */}
+              <AuthGhost
+                onClick={cooldown > 0 ? undefined : send}
+                aria-disabled={cooldown > 0}
+                disabled={busy}
+                className="aria-disabled:cursor-default aria-disabled:hover:bg-transparent"
+              >
+                {cooldown > 0
+                  ? t('authUi.verifyEmail.resendIn', { time: clock(cooldown) })
+                  : t('authUi.verifyEmail.resend')}
+              </AuthGhost>
+            </div>
+          </form>
+        </AuthStateCard>
       )}
     </AuthLayout>
   )

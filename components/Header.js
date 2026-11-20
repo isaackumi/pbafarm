@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import {
-  Bell,
   Building2,
   Check,
   CircleHelp,
@@ -33,6 +32,7 @@ import { Toggle } from './ui/Toggle'
 import LanguageSwitcher from './LanguageSwitcher'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { AnowaMark } from './brand/AnowaLogo'
+import { BellIcon } from '../lib/navIcons'
 import { useToast } from './Toast'
 import { useActiveOrganization } from '../lib/useActiveOrganization'
 
@@ -386,7 +386,7 @@ const TopBar = ({ onOpenMenu }) => {
               onClick={() => setNotifDropdownOpen((open) => !open)}
             >
               <span className="relative size-5">
-                <Bell size={20} strokeWidth={1.8} aria-hidden />
+                <BellIcon size={20} strokeWidth={1.8} aria-hidden />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -right-2 flex size-4 items-center justify-center rounded-pill bg-button text-[10px] font-semibold leading-3 text-button-text tabular-nums">
                     {unreadCount > 9 ? '9+' : unreadCount}

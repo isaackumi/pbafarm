@@ -1,5 +1,5 @@
 import { forwardRef } from 'react'
-import { Search } from 'lucide-react'
+import { SearchIcon } from '../../lib/navIcons'
 
 /** Pill search input (Paper top bar 7Z-0): 320×36, faint icon, optional ⌘K hint. */
 export const SearchField = forwardRef(function SearchField(
@@ -10,7 +10,7 @@ export const SearchField = forwardRef(function SearchField(
     <label
       className={`flex h-9 w-full items-center gap-2.5 rounded-pill border border-line bg-surface px-3.5 focus-within:border-line-strong ${className}`}
     >
-      <Search size={14} strokeWidth={2} className="shrink-0 text-faint" aria-hidden />
+      <SearchIcon size={14} strokeWidth={2} className="shrink-0 text-faint" aria-hidden />
       <input
         ref={ref}
         type="search"
