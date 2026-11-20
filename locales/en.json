@@ -7632,7 +7632,8 @@
       "none": "Save two or more plans to see the trade-off between them.",
       "same": "{name} sells first and earns the most margin, so it wins on both counts.",
       "tradeoff": "{fast} sells {weeks} weeks sooner, but {best} makes {gap} more margin. Per month in the water, {leader} earns more, about {perMonth}."
-    }
+    },
+    "at": "at"
   },
   "projectsPage": {
     "title": "Projects",

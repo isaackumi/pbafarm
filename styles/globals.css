@@ -28,6 +28,9 @@
   --color-dot-alert: var(--dot-alert);
   --color-button: var(--button);
   --color-button-text: var(--button-text);
+  /* Paper 50: lime as text (fills use --color-lime), sky links */
+  --color-lime-ink: var(--lime-ink);
+  --color-sky-ink: var(--sky-ink);
   /* Paper token names, so classes copied from get_jsx resolve too */
   --color-text-muted: var(--muted);
   --color-text-faint: var(--faint);
@@ -196,4 +199,52 @@ a {
 .focus\:border-indigo-500:focus {
   --tw-ring-color: rgba(24, 24, 27, 0.35);
   border-color: var(--lagoon-950);
+}
+
+/*
+ * Paper 50 "Harvest at" slider: 4px line-strong track, lime fill up to the
+ * thumb (--pct, set by the page), 16px thumb in the text colour with a 3px
+ * lime ring.
+ */
+.plan-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.plan-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #d7f75b 0, #d7f75b var(--pct, 0%), var(--line-strong) var(--pct, 0%));
+}
+.plan-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+.plan-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #d7f75b;
+}
+.plan-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: var(--text);
+  border: 3px solid #d7f75b;
+}
+.plan-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--text);
+  border: 3px solid #d7f75b;
+}
+.plan-range:focus-visible {
+  outline: 2px solid var(--sky-ink);
+  outline-offset: 4px;
 }
