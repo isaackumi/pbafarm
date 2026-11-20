@@ -137,9 +137,12 @@ describe('llm providers (PLAT-006)', () => {
     expect(decodeChatBody(undefined).ok).toBe(true)
     expect(decodeChatBody({ messages: [], provider: 42 })).toEqual({
       ok: false,
-      error: 'Invalid request: provider, model and asOf must be text, temperature a number',
+      error: 'Invalid request: provider, model, asOf and locationId must be text, temperature and days numbers, deep true or false',
     })
     expect(decodeChatBody({ messages: [], temperature: 'hot' }).ok).toBe(false)
+    // Ask Anowa scope (artboard 47).
+    expect(decodeChatBody({ messages: [], locationId: 'k57abc', days: 30, deep: true }).ok).toBe(true)
+    expect(decodeChatBody({ messages: [], deep: 'yes' }).ok).toBe(false)
   })
 
   test('token usage from each provider (INT-009); absent counts stay undefined', async () => {

@@ -4,6 +4,10 @@ Paper is the source of truth. The designer adds an entry here for every Paper ch
 
 Format: `date · artboard (node id) · change · status`
 
+## 2026-11-20
+
+- 47 Ask Anowa — Expanded (PJ0-0) and 47b Model menu open (POM-0), page "Anowa app · Console, bot & AI" · full-screen assistant at `/assistant`: rail (logo, collapse, New chat, Ask / Reports → `/weekly-report` / Automations → `/automations` / Saved answers, Recent conversations, "Back to the farm"), WhatsApp link (only when the bot is configured), model chip with Auto + the live model list (D-022, "Reads photos" hint), Instrument Serif headline, composer chips (Deep analysis, site, date range), topic tabs with 9 questions each (en/fr), "Answers use …" strip with real counts. Chips narrow the server-built context (`assistant.context` `locationId` / `days` / `deep`, site checked in Convex). Not built: the photo chip (the chat proxy is text-only; logbook OCR is a separate draft flow) and "Show charts" (the message renderer has no chart blocks yet); lime accent of the active chip maps to the cyan token · built in this PR
+
 ## 2026-11-19
 
 - 01 Home · Light theme page, "L · 01 Home — Sky & lake (proposal v2)" (INK-0, layer "Sky & lake panel") · optional "Sky & lake" header: each user picks Plain or Sky & lake under Account → Preferences (`dashboard.homeHeader`, default plain); night variant for dark theme · built in #3

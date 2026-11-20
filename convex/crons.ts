@@ -46,6 +46,9 @@ crons.cron('prune webhook deliveries', '45 3 * * *', internal.webhooks.pruneDeli
 // Inbound webhook event log is kept 30 days (INT-003).
 crons.cron('prune inbound webhook events', '50 3 * * *', internal.inboundWebhooks.pruneEvents, {})
 
+// Ask Anowa conversations are kept 365 days after the last message (ENT-005).
+crons.cron('prune assistant chats', '5 4 * * *', internal.assistantChats.prune, {})
+
 // LLM usage log is kept 400 days (INT-009).
 crons.cron('prune llm usage', '55 3 * * *', internal.llmGateway.pruneUsage, {})
 

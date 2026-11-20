@@ -15,6 +15,7 @@ import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as approvalAlerts from "../approvalAlerts.js";
 import type * as assistant from "../assistant.js";
+import type * as assistantChats from "../assistantChats.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
 import type * as authGuard from "../authGuard.js";
@@ -262,6 +263,7 @@ declare const fullApi: ApiFromModules<{
   apiKeys: typeof apiKeys;
   approvalAlerts: typeof approvalAlerts;
   assistant: typeof assistant;
+  assistantChats: typeof assistantChats;
   audit: typeof audit;
   auth: typeof auth;
   authGuard: typeof authGuard;

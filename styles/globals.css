@@ -66,6 +66,8 @@
   --font-display: var(--font-inter, 'Inter'), system-ui, sans-serif;
   --font-sans: var(--font-inter, 'Inter'), system-ui, sans-serif;
   --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
+  /* Ask Anowa headline (Paper 47) */
+  --font-serif: var(--font-instrument-serif, 'Instrument Serif'), Georgia, serif;
 }
 
 body {

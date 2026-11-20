@@ -602,6 +602,8 @@ export async function anonymizeUser(ctx: MutationCtx, userId: Id<'users'>) {
   await revokeUserSessions(ctx, userId)
   await revokeBindingsForUser(ctx, userId, 'account_deleted')
   await deleteUserPreferences(ctx, userId)
+  // Ask Anowa conversations (artboard 47): deleted in batches.
+  await ctx.scheduler.runAfter(0, internal.assistantChats.purgeForUser, { userId })
   await ctx.db.patch(userId, {
     name: 'Deleted user',
     email: undefined,

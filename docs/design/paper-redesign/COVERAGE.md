@@ -73,7 +73,7 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper 
 | [x] | `/admin/admin`, `/admin/company-registrations`, `/global-settings` | P-SETTINGS · 25 queue |
 | [x] | `/404`, `_error` | P-SYSTEM |
 | [x] | `/calendar` | 18 Calendar |
-| [x] | `/assistant` | 17 (full page) |
+| [x] | `/assistant` (`?chat=<id>`, `?view=saved`) | 47 Ask Anowa — Expanded PJ0-0 · 47b model menu POM-0 (page "Anowa app · Console, bot & AI"); compact bubble stays 17 |
 | [x] | `/alerts`, `/weekly-report` | 30 feed list · 11 |
 | [x] | `/billing`, `/suspended` | P-SETTINGS · P-SYSTEM |
 | [x] | `/platform`, `/platform/tenants`, `/platform/tenants/[id]`, `/platform/admins`, `/platform/audit`, `/platform/billing`, `/platform/usage` | Platform console (P-LIST + P-SETTINGS) |

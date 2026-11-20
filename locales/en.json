@@ -6311,5 +6311,122 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "askAnowa": {
+    "title": "Ask Anowa",
+    "railLabel": "Ask Anowa navigation",
+    "collapse": "Back to the compact assistant",
+    "openMenu": "Open Ask Anowa menu",
+    "closeMenu": "Close menu",
+    "newChat": "New chat",
+    "nav": {
+      "ask": "Ask",
+      "reports": "Reports",
+      "automations": "Automations",
+      "saved": "Saved answers"
+    },
+    "recent": "Recent",
+    "noRecent": "Your conversations show here.",
+    "deleteChat": "Delete “{title}”",
+    "deleteFailed": "Could not delete the conversation: {message}",
+    "backToFarm": "Back to the farm",
+    "whatsapp": "Ask Anowa on WhatsApp",
+    "modelChip": "Model: {name}",
+    "modelMenu": "Choose the model",
+    "auto": "Auto",
+    "autoHint": "Best available model for the question",
+    "modelsAvailable": {
+      "one": "{provider} · {count} model available",
+      "other": "{provider} · {count} models available"
+    },
+    "readsPhotos": "Reads photos",
+    "defaultHint": "Default",
+    "liveNote": "Listed live from your provider. Retired models drop off on their own.",
+    "headline": "Anowa reads your farm records",
+    "subtitle": "Ask about cages, feed, deaths, growth or harvest timing. Every answer comes from what your team has recorded.",
+    "placeholder": "Ask about a cage, a site or this week…",
+    "inputLabel": "Question for Anowa",
+    "keyboardHint": "Enter sends · Shift+Enter adds a line",
+    "deep": "Deep analysis",
+    "siteLabel": "Site the answer covers",
+    "allSites": "All sites",
+    "rangeLabel": "Dates the answer covers",
+    "range": {
+      "d7": "Last 7 days",
+      "d14": "Last 14 days",
+      "d30": "Last 30 days",
+      "d90": "Last 90 days"
+    },
+    "send": "Send question",
+    "topicsLabel": "Suggested questions",
+    "topics": {
+      "growth": {
+        "label": "Growth",
+        "q1": "Which cages grow slowest?",
+        "q2": "FCR by cage this cycle",
+        "q3": "Compare growth between my sites",
+        "q4": "When will the next cage reach harvest weight?",
+        "q5": "Biomass on the farm today",
+        "q6": "Sampling overdue this week",
+        "q7": "Growth against the target curve",
+        "q8": "Best-performing batch",
+        "q9": "Explain this week in 3 lines"
+      },
+      "feed": {
+        "label": "Feed",
+        "q1": "How much feed did we use this week?",
+        "q2": "Which cages have the worst FCR?",
+        "q3": "Feed stock against the next 30 days",
+        "q4": "Which feeds are running low?",
+        "q5": "Feed per cage over the last 14 days",
+        "q6": "Did feeding drop anywhere?",
+        "q7": "Feed cost per kg gained",
+        "q8": "Cages fed above the plan",
+        "q9": "Summarise feed in 3 lines"
+      },
+      "health": {
+        "label": "Health & water",
+        "q1": "Which cages lost the most fish?",
+        "q2": "Any oxygen readings below 4 mg/L?",
+        "q3": "Open early warnings",
+        "q4": "Mortality trend over the last weeks",
+        "q5": "Water temperature this week",
+        "q6": "Readings outside the thresholds",
+        "q7": "Where did deaths spike?",
+        "q8": "What should I check today?",
+        "q9": "Summarise health in 3 lines"
+      },
+      "harvest": {
+        "label": "Harvest & sales",
+        "q1": "Which units are closest to harvest weight?",
+        "q2": "Harvest plan for next month",
+        "q3": "Sales in this period",
+        "q4": "Unpaid sales to follow up",
+        "q5": "Kilograms sold and average price",
+        "q6": "Projected biomass in 30 days",
+        "q7": "Which batches are ready to sell?",
+        "q8": "Survival of the cycles near harvest",
+        "q9": "Summarise sales in 3 lines"
+      }
+    },
+    "answersUse": "Answers use",
+    "sources": {
+      "daily": "daily records",
+      "samplings": "samplings",
+      "water": "water readings",
+      "sales": "sales"
+    },
+    "onlyYourRole": "· only what your role can see",
+    "saveAnswer": "Save answer",
+    "unsaveAnswer": "Remove from saved answers",
+    "savedBadge": "Saved",
+    "historyFailed": "This answer was not saved to your history: {message}",
+    "chatFull": "This conversation is full. Start a new chat to keep asking.",
+    "loadingChat": "Loading conversation…",
+    "chatMissing": "That conversation is no longer available.",
+    "savedTitle": "Saved answers",
+    "savedEmpty": "Save an answer and it stays here, with the conversation it came from.",
+    "openConversation": "Open conversation",
+    "historyNote": "Your conversations are private to you and kept for a year."
   }
 }

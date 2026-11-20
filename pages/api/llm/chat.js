@@ -6,7 +6,7 @@ import {
   createRateLimiter,
   validateMessages,
 } from '../../../lib/llmProxyGuard'
-import { assistantSystemPrompt, businessDateOr, resolveProvider } from '../../../lib/llmServer'
+import { assistantSystemPrompt, businessDateOr, chatScope, resolveProvider } from '../../../lib/llmServer'
 import { decodeChatBody } from '../../../convex/lib/llmProviders'
 import { chatWithOrgKey, chatWithServerKey, gatewayError } from '../../../lib/llmGatewayRoute'
 
@@ -17,7 +17,8 @@ import { chatWithOrgKey, chatWithServerKey, gatewayError } from '../../../lib/ll
  * provider.
  *
  * The farm context is loaded here with the user's own token
- * (assistant.context: company-scoped rollups, last N days), so the model only
+ * (assistant.context: company-scoped rollups, last N days, optionally one
+ * site; Convex refuses a site outside the member's scope), so the model only
  * sees what this user may see. System messages from the client are dropped.
  *
  * Guards: Convex session token verified (requireApiUser), deactivated users
@@ -39,8 +40,9 @@ const companyPerHour = createRateLimiter({ limit: 500, windowMs: 60 * 60_000 })
 
 export const config = { api: { bodyParser: { sizeLimit: '256kb' } } }
 
-/** Keep the last turns of the conversation, user and assistant only. */
+/** Keep the last turns of the conversation, user and assistant only (more for deep analysis). */
 const HISTORY = 9
+const DEEP_HISTORY = 17
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -81,7 +83,8 @@ export default async function handler(req, res) {
 
     const checked = validateMessages(body.value.messages)
     if (checked.error) return res.status(400).json({ error: checked.error })
-    const turns = checked.messages.filter((m) => m.role !== 'system').slice(-HISTORY)
+    const scope = chatScope(body.value)
+    const turns = checked.messages.filter((m) => m.role !== 'system').slice(-(scope.deep ? DEEP_HISTORY : HISTORY))
     if (!turns.length || turns[turns.length - 1].role !== 'user') {
       return res.status(400).json({ error: 'The last message must be a question' })
     }
@@ -90,13 +93,20 @@ export default async function handler(req, res) {
     try {
       context = await auth.client.query(api.assistant.context, {
         asOf: businessDateOr(body.value.asOf),
-        days: 14,
+        days: scope.days,
+        deep: scope.deep,
+        ...(scope.locationId ? { locationId: scope.locationId } : {}),
       })
     } catch (err) {
+      // A site outside the member's scope (or another company's) is refused, not answered without data.
+      const code = err?.data?.code
+      if (scope.locationId && (code === 'FORBIDDEN' || code === 'NOT_FOUND' || /site/i.test(err?.message || ''))) {
+        return res.status(403).json({ error: err?.data?.message || 'You do not have access to this site' })
+      }
       context = { error: err?.data?.message || err?.message || 'Could not load farm context' }
     }
 
-    const messages = [{ role: 'system', content: assistantSystemPrompt(context) }, ...turns]
+    const messages = [{ role: 'system', content: assistantSystemPrompt(context, { deep: scope.deep }) }, ...turns]
     const temperature = clampTemperature(body.value.temperature ?? undefined)
     const referer = req.headers.origin || undefined
 

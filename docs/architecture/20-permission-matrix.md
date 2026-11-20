@@ -24,6 +24,13 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `approvalAlerts.updateSettings` | `automation.manage` | yes | yes | no | no | no |
 | `assistant.context` | `ai.use` | yes | yes | yes | no | no |
 | `assistant.forDashboard` | `reports.view` | yes | yes | yes | yes | yes |
+| `assistant.sources` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.append` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.get` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.list` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.remove` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.saved` | `ai.use` | yes | yes | yes | no | no |
+| `assistantChats.setPinned` | `ai.use` | yes | yes | yes | no | no |
 | `audit.chainStatus` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getByTable` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.getByUser` | `org.audit.view` | yes | yes | no | no | no |

@@ -2962,6 +2962,39 @@ const schema = defineSchema({
     .index('by_companyId_and_createdAt', ['companyId', 'createdAt'])
     .index('by_scheduleId_and_slot', ['scheduleId', 'slot'])
     .index('by_createdAt', ['createdAt']),
+
+  /**
+   * Ask Anowa chat history (artboard 47): one row per conversation, private
+   * to the member who asked, in one organization. Kept 365 days after the
+   * last message (assistantChats.prune), deleted with the account
+   * (governance.anonymizeUser) and with the organization (ENT-005).
+   */
+  assistantChats: defineTable({
+    companyId: v.id('companies'),
+    userId: v.id('users'),
+    /** From the first question, at most 80 characters. */
+    title: v.string(),
+    messageCount: v.number(),
+    lastMessageAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_userId_and_lastMessageAt', ['companyId', 'userId', 'lastMessageAt'])
+    .index('by_userId', ['userId'])
+    .index('by_lastMessageAt', ['lastMessageAt']),
+
+  /** Turns of an assistantChats conversation; `pinnedAt` marks a saved answer. */
+  assistantMessages: defineTable({
+    companyId: v.id('companies'),
+    userId: v.id('users'),
+    chatId: v.id('assistantChats'),
+    role: v.union(v.literal('user'), v.literal('assistant')),
+    content: v.string(),
+    pinnedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_companyId_and_chatId', ['companyId', 'chatId'])
+    .index('by_chatId', ['chatId'])
+    .index('by_companyId_and_userId_and_pinnedAt', ['companyId', 'userId', 'pinnedAt']),
 })
 
 export default schema

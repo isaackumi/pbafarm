@@ -6311,5 +6311,122 @@
       "yes": "Oui",
       "no": "Non"
     }
+  },
+  "askAnowa": {
+    "title": "Demander à Anowa",
+    "railLabel": "Navigation de Demander à Anowa",
+    "collapse": "Revenir à l’assistant compact",
+    "openMenu": "Ouvrir le menu de Demander à Anowa",
+    "closeMenu": "Fermer le menu",
+    "newChat": "Nouvelle conversation",
+    "nav": {
+      "ask": "Demander",
+      "reports": "Rapports",
+      "automations": "Automatisations",
+      "saved": "Réponses enregistrées"
+    },
+    "recent": "Récentes",
+    "noRecent": "Vos conversations s’affichent ici.",
+    "deleteChat": "Supprimer « {title} »",
+    "deleteFailed": "Impossible de supprimer la conversation : {message}",
+    "backToFarm": "Retour à la ferme",
+    "whatsapp": "Demander à Anowa sur WhatsApp",
+    "modelChip": "Modèle : {name}",
+    "modelMenu": "Choisir le modèle",
+    "auto": "Auto",
+    "autoHint": "Le meilleur modèle disponible pour la question",
+    "modelsAvailable": {
+      "one": "{provider} · {count} modèle disponible",
+      "other": "{provider} · {count} modèles disponibles"
+    },
+    "readsPhotos": "Lit les photos",
+    "defaultHint": "Par défaut",
+    "liveNote": "Liste à jour chez votre fournisseur. Les modèles retirés disparaissent d’eux-mêmes.",
+    "headline": "Anowa lit les relevés de votre ferme",
+    "subtitle": "Posez vos questions sur les cages, l’aliment, la mortalité, la croissance ou la date de récolte. Chaque réponse vient de ce que votre équipe a enregistré.",
+    "placeholder": "Une question sur une cage, un site ou cette semaine…",
+    "inputLabel": "Question pour Anowa",
+    "keyboardHint": "Entrée envoie · Maj+Entrée ajoute une ligne",
+    "deep": "Analyse approfondie",
+    "siteLabel": "Site couvert par la réponse",
+    "allSites": "Tous les sites",
+    "rangeLabel": "Période couverte par la réponse",
+    "range": {
+      "d7": "7 derniers jours",
+      "d14": "14 derniers jours",
+      "d30": "30 derniers jours",
+      "d90": "90 derniers jours"
+    },
+    "send": "Envoyer la question",
+    "topicsLabel": "Questions suggérées",
+    "topics": {
+      "growth": {
+        "label": "Croissance",
+        "q1": "Quelles cages grandissent le moins vite ?",
+        "q2": "IC par cage sur ce cycle",
+        "q3": "Comparer la croissance entre mes sites",
+        "q4": "Quand la prochaine cage atteindra-t-elle le poids de récolte ?",
+        "q5": "Biomasse de la ferme aujourd’hui",
+        "q6": "Échantillonnages en retard cette semaine",
+        "q7": "Croissance par rapport à la courbe cible",
+        "q8": "Lot le plus performant",
+        "q9": "Résumer la semaine en 3 lignes"
+      },
+      "feed": {
+        "label": "Aliment",
+        "q1": "Quelle quantité d’aliment cette semaine ?",
+        "q2": "Quelles cages ont le pire IC ?",
+        "q3": "Stock d’aliment pour les 30 prochains jours",
+        "q4": "Quels aliments sont bientôt épuisés ?",
+        "q5": "Aliment par cage sur 14 jours",
+        "q6": "L’alimentation a-t-elle baissé quelque part ?",
+        "q7": "Coût de l’aliment par kg gagné",
+        "q8": "Cages nourries au-dessus du plan",
+        "q9": "Résumer l’aliment en 3 lignes"
+      },
+      "health": {
+        "label": "Santé et eau",
+        "q1": "Quelles cages ont perdu le plus de poissons ?",
+        "q2": "Des mesures d’oxygène sous 4 mg/L ?",
+        "q3": "Alertes précoces ouvertes",
+        "q4": "Tendance de la mortalité ces dernières semaines",
+        "q5": "Température de l’eau cette semaine",
+        "q6": "Mesures hors des seuils",
+        "q7": "Où la mortalité a-t-elle bondi ?",
+        "q8": "Que dois-je vérifier aujourd’hui ?",
+        "q9": "Résumer la santé en 3 lignes"
+      },
+      "harvest": {
+        "label": "Récolte et ventes",
+        "q1": "Quelles unités sont proches du poids de récolte ?",
+        "q2": "Plan de récolte du mois prochain",
+        "q3": "Ventes sur la période",
+        "q4": "Ventes impayées à relancer",
+        "q5": "Kilos vendus et prix moyen",
+        "q6": "Biomasse prévue dans 30 jours",
+        "q7": "Quels lots sont prêts à vendre ?",
+        "q8": "Survie des cycles proches de la récolte",
+        "q9": "Résumer les ventes en 3 lignes"
+      }
+    },
+    "answersUse": "Les réponses utilisent",
+    "sources": {
+      "daily": "relevés journaliers",
+      "samplings": "échantillonnages",
+      "water": "mesures d’eau",
+      "sales": "ventes"
+    },
+    "onlyYourRole": "· uniquement ce que votre rôle peut voir",
+    "saveAnswer": "Enregistrer la réponse",
+    "unsaveAnswer": "Retirer des réponses enregistrées",
+    "savedBadge": "Enregistrée",
+    "historyFailed": "Cette réponse n’a pas été enregistrée dans votre historique : {message}",
+    "chatFull": "Cette conversation est pleine. Commencez-en une nouvelle pour continuer.",
+    "loadingChat": "Chargement de la conversation…",
+    "chatMissing": "Cette conversation n’est plus disponible.",
+    "savedTitle": "Réponses enregistrées",
+    "savedEmpty": "Enregistrez une réponse : elle reste ici, avec la conversation d’où elle vient.",
+    "openConversation": "Ouvrir la conversation",
+    "historyNote": "Vos conversations ne sont visibles que par vous et sont conservées un an."
   }
 }
