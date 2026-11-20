@@ -5115,7 +5115,12 @@
       "signupEyebrow": "Nouvel espace",
       "signupHeadline": "Configurez votre ferme en un après-midi.",
       "inviteEyebrow": "Vous êtes invité",
-      "inviteHeadline": "Votre équipe gère déjà sa ferme ici."
+      "inviteHeadline": "Votre équipe gère déjà sa ferme ici.",
+      "cardAutomationLabel": "Automatisation résolue",
+      "cardAutomationTitle": "Oxygène de C-07 revenu à 6,0 mg/L",
+      "cardAutomationMeta": "Tâche aérateur close par Kofi A. · 06:31",
+      "cardOvernightLabel": "Cette nuit",
+      "cardOvernightMeta": "cages saisies · 7 à faire avant 09:00"
     },
     "login": {
       "title": "Bon retour",
