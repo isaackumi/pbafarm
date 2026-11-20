@@ -161,6 +161,8 @@ export async function createVoiceNote(
   })
 }
 
+const STARTING = 'starting'
+
 /** Claim a queued note for its single workflow run (false when already started). */
 export const claimNote = internalMutation({
   args: { voiceNoteId: v.id('voiceNotes'), workflowId: v.optional(v.string()) },
@@ -168,8 +170,13 @@ export const claimNote = internalMutation({
   handler: async (ctx, { voiceNoteId, workflowId }) => {
     const note = await ctx.db.get(voiceNoteId)
     if (!note || note.status !== 'queued') return false
-    if (workflowId === undefined) return !note.workflowId
-    if (note.workflowId) return false
+    // First call claims the note in its own transaction; the second records the run.
+    if (workflowId === undefined) {
+      if (note.workflowId) return false
+      await ctx.db.patch(voiceNoteId, { workflowId: STARTING })
+      return true
+    }
+    if (note.workflowId !== STARTING) return false
     await ctx.db.patch(voiceNoteId, { workflowId })
     return true
   },

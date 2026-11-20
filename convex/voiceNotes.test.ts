@@ -276,7 +276,7 @@ describe('BOT-005 voice notes', () => {
     expect(msg).toContain('Mortality: Not said, saved as blank')
     expect(msg).toContain('I heard "thirty" (30 kg) for C10 but the line was noisy.')
     expect(msg).toMatch(/Saving for today, \d{4}-\d{2}-\d{2}\./)
-    expect(msg).not.toMatch(/—/)
+    expect(msg).not.toMatch(/\u2014/)
     expect(replies[0].buttons).toEqual([`vsa:${note._id}`, `vse:${note._id}`, `vsx:${note._id}`])
 
     await postWhatsApp(s, waButton(`vsa:${note._id}`))
