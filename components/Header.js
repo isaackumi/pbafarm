@@ -12,10 +12,10 @@ import {
   Menu,
   Moon,
   ScanLine,
-  Sparkles,
   Sun,
   UserRound,
 } from 'lucide-react'
+import { AnowaPulseIcon } from './brand/AnowaPulseIcon'
 import { useAuth } from '../contexts/AuthContext'
 import { useT } from '../lib/i18n/context'
 import { useTheme } from '../contexts/ThemeContext'
@@ -207,7 +207,7 @@ function AskAnowaButton() {
       className="inline-flex h-9 shrink-0 items-center gap-2 rounded-pill border border-line-strong px-3 text-[13px] font-medium leading-4 text-text transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan sm:px-3.5"
       aria-label={t('assistantUi.ask')}
     >
-      <Sparkles size={15} strokeWidth={2} className="shrink-0 text-cyan" aria-hidden />
+      <AnowaPulseIcon size={16} strokeWidth={2} className="shrink-0 text-text" />
       <span className="hidden sm:inline">{t('assistantUi.ask')}</span>
     </Link>
   )
