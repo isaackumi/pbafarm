@@ -23,7 +23,7 @@
  * Nothing is written until a tap; Save all commits each draft through the
  * normal `pending.commit` (re-checked, once per draft).
  */
-import { v } from 'convex/values'
+import { v, type Infer } from 'convex/values'
 import * as Effect from 'effect/Effect'
 import { internalMutation, internalQuery } from '../_generated/server'
 import type { ActionCtx, MutationCtx } from '../_generated/server'
@@ -37,8 +37,11 @@ import { assertPlanLimit, hasFeature } from '../lib/planLimits'
 import { isUserError } from '../lib/errors'
 import { logAudit } from '../lib/tenancy'
 import { PROVIDERS, llmCredentialAad } from '../lib/llmGateway'
-import { listedPrice } from '../lib/llmModels'
-import { chooseModel, providerBaseUrl } from '../llmModels'
+import { providerBaseUrl } from '../llmModels'
+import { admitCall } from '../aiGuard'
+import { runGuarded } from '../lib/aiGuard'
+import { modelPicker, releaseLease, type KeyTarget } from '../lib/aiCall'
+import type { ChatUsage } from '../lib/llmProviders'
 import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { addDays, todayIn, zoneFor } from '../lib/dates'
 import { runEffect } from '../lib/effect'
@@ -146,6 +149,11 @@ const prepared = v.union(
     credentialId: v.union(v.id('llmCredentials'), v.null()),
     ciphertext: v.union(v.string(), v.null()),
     iv: v.union(v.string(), v.null()),
+    /** AI protections (D-023). */
+    leaseId: v.id('aiLeases'),
+    deadlineAt: v.number(),
+    attemptMs: v.number(),
+    blocked: v.array(v.string()),
   }),
   v.object({
     ok: v.literal(false),
@@ -156,6 +164,8 @@ const prepared = v.union(
       v.literal('disabled'),
       v.literal('quota'),
       v.literal('unavailable'),
+      v.literal('busy'),
+      v.literal('budget'),
     ),
     message: v.string(),
   }),
@@ -231,6 +241,20 @@ export const prepareScan = internalMutation({
       const verdict = await rateLimiter.check(ctx, 'llmDailyPerMember', daily)
       if (!verdict.ok) return { ok: false as const, reason: 'quota' as const, message: t(bound.locale).aiQuota(retryAfterText(verdict.retryAfter)) }
     }
+    // AI protections (D-023): budget and concurrency, before quota is spent.
+    const admitted = await admitCall(ctx, {
+      companyId,
+      userId: binding.userId,
+      server: !useOrgKey,
+      feature: 'ocr',
+      providerId: useOrgKey ? cred!.providerId : serverId,
+      credentialId: useOrgKey ? cred!._id : null,
+    })
+    if (!admitted.ok) {
+      return admitted.kind === 'budget'
+        ? { ok: false as const, reason: 'budget' as const, message: t(bound.locale).aiBudget }
+        : { ok: false as const, reason: 'busy' as const, message: t(bound.locale).aiBusy }
+    }
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
     if (daily) await rateLimiter.limit(ctx, 'llmDailyPerMember', daily)
 
@@ -257,7 +281,18 @@ export const prepareScan = internalMutation({
       status: 'processing',
       createdAt: Date.now(),
     })
-    const base = { ok: true as const, scanId, userId: binding.userId, companyId, locale: bound.locale, prompt }
+    const base = {
+      ok: true as const,
+      scanId,
+      userId: binding.userId,
+      companyId,
+      locale: bound.locale,
+      prompt,
+      leaseId: admitted.leaseId,
+      deadlineAt: admitted.deadlineAt,
+      attemptMs: admitted.attemptMs,
+      blocked: admitted.blocked,
+    }
     if (useOrgKey && cred && secret) {
       return {
         ...base,
@@ -352,6 +387,7 @@ export const recordScanUsage = internalMutation({
     model: v.string(),
     ok: v.boolean(),
     error: v.optional(v.string()),
+    status: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
@@ -584,6 +620,16 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
     sourceMessageId: plan.sourceMessageId,
   })
   if (!p.ok) return p.reason === 'duplicate' ? [] : [text(p.message)]
+  try {
+    return await readScan(ctx, plan, p)
+  } finally {
+    await releaseLease(ctx, p.leaseId)
+  }
+}
+
+type PreparedScan = Extract<Infer<typeof prepared>, { ok: true }>
+
+async function readScan(ctx: ActionCtx, plan: LogbookPlan, p: PreparedScan): Promise<ChatMessageValue[]> {
   const s = lt(p.locale)
   const fail = async (error: string, reply: string) => {
     await ctx.runMutation(internal.bot.logbook.failScan, { scanId: p.scanId, error })
@@ -649,54 +695,89 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
   const kind = PROVIDERS[p.providerId]?.kind ?? 'openai'
   const baseUrl = kind === 'openai' ? openAiBaseUrl(p.providerId, p.baseUrl) : null
   if (!apiKey || (kind === 'openai' && !baseUrl)) return await fail('no_key', s.unavailable)
-  const { choice, models } = await chooseModel(ctx, {
-    target: { providerId: p.providerId, kind, baseUrl: providerBaseUrl(p.providerId, p.baseUrl), apiKey },
-    scope: p.source === 'org_key' ? p.companyId : 'server',
+  // Image-capable models from the live list, skipping open breakers; one Auto fallback (D-023).
+  const picker = modelPicker(ctx, {
+    sources: [
+      {
+        providerId: p.providerId,
+        kind,
+        listBaseUrl: providerBaseUrl(p.providerId, p.baseUrl),
+        callBaseUrl: baseUrl ?? undefined,
+        apiKey,
+        scope: p.source === 'org_key' ? p.companyId : 'server',
+        source: p.source,
+      },
+    ],
     saved: p.model,
     vision: true,
+    blocked: new Set(p.blocked),
+    explicit: false,
   })
-  if (!choice.ok) return await fail(choice.error, s.unavailable)
-  const model = choice.model
-  const started = Date.now()
-  const reading = await runEffect(
-    readLogbookPhoto({
-      kind,
-      providerId: p.providerId,
-      baseUrl: baseUrl ?? undefined,
-      apiKey,
-      model,
-      image: { bytes: photo.bytes, mime: photo.mime },
-      prompt: p.prompt,
-    }).pipe(
-      Effect.map((r) => ({ ok: true as const, ...r })),
-      Effect.catchTags({
-        LlmError: (e) => Effect.succeed({ ok: false as const, decode: false, error: e.message, usage: undefined }),
-        LogbookDecodeError: (e) => Effect.succeed({ ok: false as const, decode: true, error: e.message, usage: e.usage }),
-      }),
-      Effect.provide(FetchLive),
-    ),
-  )
-  await ctx.runMutation(internal.bot.logbook.recordScanUsage, {
-    companyId: p.companyId,
-    userId: p.userId,
-    source: p.source,
-    providerId: p.providerId,
-    model,
-    ok: reading.ok,
-    error: reading.ok ? undefined : reading.error.slice(0, 200),
-    inputTokens: reading.usage?.inputTokens,
-    outputTokens: reading.usage?.outputTokens,
-    durationMs: Date.now() - started,
-    ...(listedPrice(models, model) ?? {}),
+  type Reading =
+    | { ok: true; extraction: LogbookExtraction; usage?: ChatUsage }
+    | { ok: false; error: string; usage?: ChatUsage }
+  const guarded = await runGuarded({
+    now: Date.now,
+    deadlineAt: p.deadlineAt,
+    attemptMs: p.attemptMs,
+    explicit: false,
+    blocked: new Set(p.blocked),
+    first: picker.first,
+    next: picker.next,
+    attempt: async (t: KeyTarget, signal): Promise<Reading> => {
+      const r = await Effect.runPromise(
+        readLogbookPhoto({
+          kind: t.kind,
+          providerId: t.providerId,
+          baseUrl: t.callBaseUrl,
+          apiKey: t.apiKey,
+          model: t.model,
+          image: { bytes: photo.bytes, mime: photo.mime },
+          prompt: p.prompt,
+        }).pipe(
+          Effect.map((ok): Reading | { llm: { message: string; status?: number } } => ({ ok: true as const, ...ok })),
+          Effect.catchTags({
+            // The model answered but not with rows: no fallback, still metered.
+            LogbookDecodeError: (e) => Effect.succeed({ ok: false as const, error: e.message, usage: e.usage }),
+            LlmError: (e) => Effect.succeed({ llm: { message: e.message, status: e.status } }),
+          }),
+          Effect.provide(FetchLive),
+        ),
+        { signal },
+      )
+      if ('llm' in r) throw Object.assign(new Error(r.llm.message), { status: r.llm.status })
+      return r
+    },
+    record: async (t, r) => {
+      const reading = r.value
+      await ctx.runMutation(internal.bot.logbook.recordScanUsage, {
+        companyId: p.companyId,
+        userId: p.userId,
+        source: p.source,
+        providerId: t.providerId,
+        model: t.model,
+        ok: r.ok && !!reading?.ok,
+        error: !r.ok ? (r.message ?? 'error').slice(0, 200) : reading && !reading.ok ? reading.error.slice(0, 200) : undefined,
+        status: typeof r.status === 'number' ? r.status : undefined,
+        inputTokens: reading?.usage?.inputTokens,
+        outputTokens: reading?.usage?.outputTokens,
+        durationMs: r.durationMs,
+        ...(t.price ?? {}),
+      })
+    },
   })
-  if (!reading.ok) return await fail(reading.error, reading.decode ? s.unreadable : s.unavailable)
+  if (!guarded.ok) return await fail(guarded.message.slice(0, 200), s.unavailable)
+  const reading = guarded.value
+  if (!reading.ok) return await fail(reading.error, s.unreadable)
+  const model = guarded.target.model
+  const providerId = guarded.target.providerId
 
   // 4. Drafts.
   const result = await ctx.runMutation(internal.bot.logbook.createScanDrafts, {
     scanId: p.scanId,
     bindingId: plan.bindingId,
     sentAt: plan.sentAt,
-    providerId: p.providerId,
+    providerId,
     model,
     extraction: toExtractionValue(reading.extraction),
   })

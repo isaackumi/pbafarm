@@ -31,6 +31,8 @@ import { internal } from '../_generated/api'
 import { workflow } from '../workflow'
 import { can } from '../lib/permissions'
 import { rateLimiter, retryAfterText } from '../lib/rateLimits'
+import { releaseLease } from '../lib/aiCall'
+import { deadlineTestHooks } from '../lib/aiGuard'
 import { isUserError } from '../lib/errors'
 import { logAudit } from '../lib/tenancy'
 import { todayIn, zoneFor } from '../lib/dates'
@@ -451,6 +453,7 @@ const noteContext = v.union(
     note: v.object({
       _id: v.id('voiceNotes'),
       companyId: v.id('companies'),
+      userId: v.id('users'),
       bindingId: v.id('channelBindings'),
       provider: v.union(v.literal('whatsapp'), v.literal('telegram')),
       mediaId: v.string(),
@@ -487,6 +490,7 @@ export const noteForStep = internalQuery({
       note: {
         _id: note._id,
         companyId: note.companyId,
+        userId: note.userId,
         bindingId: note.bindingId,
         provider: note.provider,
         mediaId: note.mediaId,
@@ -692,14 +696,35 @@ export const transcribeNote = internalAction({
     if (!layer) return await fail('speech_not_configured', s.voiceNotSetUp(s.languageNames[language]))
     const bytes = await readAudio(ctx, c.file)
     if (!bytes) return await fail('audio_missing', s.voiceUnavailable)
-    const heard = await runEffect(
-      transcribe({ bytes, mime: c.file.mime }, language).pipe(
-        Effect.map((r) => ({ ok: true as const, r })),
-        Effect.catchTag('SpeechError', (e) => Effect.succeed({ ok: false as const, reason: e.reason, status: e.status })),
-        Effect.provide(layer),
-        Effect.provide(FetchLive),
-      ),
-    )
+    // AI protections (D-023): the speech vendor is a shared platform key, so
+    // the same concurrency caps and monthly budget apply before it is called.
+    const admitted = await ctx.runMutation(internal.aiGuard.admit, {
+      companyId: c.note.companyId,
+      userId: c.note.userId,
+      server: true,
+      feature: 'voice',
+    })
+    if (!admitted.ok) return await fail(`ai_${admitted.kind}`, admitted.kind === 'budget' ? s.aiBudget : s.aiBusy)
+    let heard
+    try {
+      heard = await runEffect(
+        transcribe({ bytes, mime: c.file.mime }, language).pipe(
+          Effect.map((r) => ({ ok: true as const, r })),
+          Effect.catchTag('SpeechError', (e) => Effect.succeed({ ok: false as const, reason: e.reason, status: e.status })),
+          // The question's deadline bounds the vendor call too.
+          deadlineTestHooks.disabled
+            ? (e) => e
+            : Effect.timeoutOrElse({
+                duration: Math.max(1_000, admitted.deadlineAt - Date.now()),
+                orElse: () => Effect.succeed({ ok: false as const, reason: 'timeout' as const, status: undefined }),
+              }),
+          Effect.provide(layer),
+          Effect.provide(FetchLive),
+        ),
+      )
+    } finally {
+      await releaseLease(ctx, admitted.leaseId)
+    }
     if (!heard.ok) return await fail(`speech_${heard.reason}${heard.status ? `_${heard.status}` : ''}`, s.voiceUnavailable)
     if (!heard.r.text.trim()) return await fail('speech_empty', s.voiceEmpty)
     await ctx.runMutation(internal.bot.voice.saveTranscript, {

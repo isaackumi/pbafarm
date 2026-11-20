@@ -531,15 +531,23 @@ export function resolveModel(o: {
   env: Env
   vision?: boolean
   listError?: string
+  /**
+   * Model ids not to pick (open circuit breakers, a model that just failed):
+   * an excluded requested/saved id falls back to the next best default.
+   */
+  exclude?: Iterable<string>
 }): ModelChoice {
   const label = o.label ?? o.providerId
-  const extras = extraModels(o.env)
-  const envDefault = envDefaultModel(o.providerId, o.env, { vision: o.vision })
-  const live = o.models ? (o.vision ? o.models.filter((m) => m.vision) : o.models).map((m) => m.id) : []
+  const skip = new Set(o.exclude ?? [])
+  const extras = extraModels(o.env).filter((m) => !skip.has(m))
+  const envDefaultRaw = envDefaultModel(o.providerId, o.env, { vision: o.vision })
+  const envDefault = envDefaultRaw && !skip.has(envDefaultRaw) ? envDefaultRaw : null
+  const pool = o.models ? o.models.filter((m) => !skip.has(m.id)) : null
+  const live = pool ? (o.vision ? pool.filter((m) => m.vision) : pool).map((m) => m.id) : []
   const allowed = new Set([...live, ...extras])
 
   let defaultModel: string | null
-  if (o.models === null) {
+  if (pool === null) {
     defaultModel = envDefault
     if (envDefault) allowed.add(envDefault)
     if (!defaultModel) {
@@ -549,7 +557,7 @@ export function resolveModel(o: {
       }
     }
   } else {
-    defaultModel = envDefault && allowed.has(envDefault) ? envDefault : pickDefaultModel(o.models, { vision: o.vision })
+    defaultModel = envDefault && allowed.has(envDefault) ? envDefault : pickDefaultModel(pool, { vision: o.vision })
     if (!defaultModel) {
       return {
         ok: false,

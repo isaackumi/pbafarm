@@ -30,6 +30,8 @@ const en = {
     'The assistant is not enabled for your organization, so I can only take buttons and commands (HELP). An administrator can enable it in Settings → AI.',
   aiUnavailable: 'The assistant is not available right now. Please try again later.',
   aiQuota: (retry: string) => `You have used the assistant a lot recently. ${retry}`,
+  aiBusy: 'The assistant is still answering your other messages. Try again in a few seconds.',
+  aiBudget: "Your organization has used this month's AI budget. Ask an admin to raise it in AI settings.",
   help:
     'Tell me what happened today, e.g. "Cage A3: fed 25 kg, 2 dead". I will show a summary to Save or Cancel. Ask "what is missing today?" or "feed stock". Commands: SITE (change site), ORG (change organization), STOP (disconnect), HELP.',
   save: 'Save',
@@ -157,6 +159,8 @@ const fr: Strings = {
     "L'assistant n'est pas activé pour votre organisation : je ne traite que les boutons et les commandes (AIDE). Un administrateur peut l'activer dans Paramètres → IA.",
   aiUnavailable: "L'assistant n'est pas disponible pour le moment. Réessayez plus tard.",
   aiQuota: (retry: string) => `Vous avez beaucoup utilisé l'assistant récemment. ${retry}`,
+  aiBusy: "L'assistant répond encore à vos autres messages. Réessayez dans quelques secondes.",
+  aiBudget: "Votre organisation a utilisé le budget IA du mois. Demandez à un admin de l'augmenter dans les paramètres IA.",
   help:
     "Dites-moi ce qui s'est passé aujourd'hui, par ex. « Cage A3 : 25 kg d'aliment, 2 morts ». Je vous montre un résumé à Enregistrer ou Annuler. Demandez « qu'est-ce qui manque aujourd'hui ? » ou « stock d'aliment ». Commandes : SITE, ORG, STOP (déconnecter), AIDE.",
   save: 'Enregistrer',

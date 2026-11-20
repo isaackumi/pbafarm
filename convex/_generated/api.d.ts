@@ -10,6 +10,7 @@
 
 import type * as accountingExport from "../accountingExport.js";
 import type * as actAs from "../actAs.js";
+import type * as aiGuard from "../aiGuard.js";
 import type * as aiReports from "../aiReports.js";
 import type * as analytics from "../analytics.js";
 import type * as anowa_agent from "../anowa/agent.js";
@@ -123,6 +124,8 @@ import type * as keepers_views from "../keepers/views.js";
 import type * as legacyData from "../legacyData.js";
 import type * as lib_accountingExport from "../lib/accountingExport.js";
 import type * as lib_actAs from "../lib/actAs.js";
+import type * as lib_aiCall from "../lib/aiCall.js";
+import type * as lib_aiGuard from "../lib/aiGuard.js";
 import type * as lib_aiPolicy from "../lib/aiPolicy.js";
 import type * as lib_aiPolicyShared from "../lib/aiPolicyShared.js";
 import type * as lib_analytics from "../lib/analytics.js";
@@ -151,6 +154,11 @@ import type * as lib_earlyWarning from "../lib/earlyWarning.js";
 import type * as lib_effect from "../lib/effect.js";
 import type * as lib_effectHttp from "../lib/effectHttp.js";
 import type * as lib_email from "../lib/email.js";
+import type * as lib_emailTemplates_escape from "../lib/emailTemplates/escape.js";
+import type * as lib_emailTemplates_index from "../lib/emailTemplates/index.js";
+import type * as lib_emailTemplates_layout from "../lib/emailTemplates/layout.js";
+import type * as lib_emailTemplates_samples from "../lib/emailTemplates/samples.js";
+import type * as lib_emailTemplates_templates from "../lib/emailTemplates/templates.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_events from "../lib/events.js";
 import type * as lib_farmRules from "../lib/farmRules.js";
@@ -174,6 +182,7 @@ import type * as lib_llmProviders from "../lib/llmProviders.js";
 import type * as lib_llmVision from "../lib/llmVision.js";
 import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_monitoring from "../lib/monitoring.js";
+import type * as lib_notificationEmail from "../lib/notificationEmail.js";
 import type * as lib_notify from "../lib/notify.js";
 import type * as lib_orgProfile from "../lib/orgProfile.js";
 import type * as lib_permissionCatalog from "../lib/permissionCatalog.js";
@@ -289,6 +298,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   accountingExport: typeof accountingExport;
   actAs: typeof actAs;
+  aiGuard: typeof aiGuard;
   aiReports: typeof aiReports;
   analytics: typeof analytics;
   "anowa/agent": typeof anowa_agent;
@@ -402,6 +412,8 @@ declare const fullApi: ApiFromModules<{
   legacyData: typeof legacyData;
   "lib/accountingExport": typeof lib_accountingExport;
   "lib/actAs": typeof lib_actAs;
+  "lib/aiCall": typeof lib_aiCall;
+  "lib/aiGuard": typeof lib_aiGuard;
   "lib/aiPolicy": typeof lib_aiPolicy;
   "lib/aiPolicyShared": typeof lib_aiPolicyShared;
   "lib/analytics": typeof lib_analytics;
@@ -430,6 +442,11 @@ declare const fullApi: ApiFromModules<{
   "lib/effect": typeof lib_effect;
   "lib/effectHttp": typeof lib_effectHttp;
   "lib/email": typeof lib_email;
+  "lib/emailTemplates/escape": typeof lib_emailTemplates_escape;
+  "lib/emailTemplates/index": typeof lib_emailTemplates_index;
+  "lib/emailTemplates/layout": typeof lib_emailTemplates_layout;
+  "lib/emailTemplates/samples": typeof lib_emailTemplates_samples;
+  "lib/emailTemplates/templates": typeof lib_emailTemplates_templates;
   "lib/errors": typeof lib_errors;
   "lib/events": typeof lib_events;
   "lib/farmRules": typeof lib_farmRules;
@@ -453,6 +470,7 @@ declare const fullApi: ApiFromModules<{
   "lib/llmVision": typeof lib_llmVision;
   "lib/memberships": typeof lib_memberships;
   "lib/monitoring": typeof lib_monitoring;
+  "lib/notificationEmail": typeof lib_notificationEmail;
   "lib/notify": typeof lib_notify;
   "lib/orgProfile": typeof lib_orgProfile;
   "lib/permissionCatalog": typeof lib_permissionCatalog;

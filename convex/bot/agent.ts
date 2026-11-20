@@ -26,8 +26,10 @@ import { components, internal } from '../_generated/api'
 import { can } from '../lib/permissions'
 import { rateLimiter, retryAfterText } from '../lib/rateLimits'
 import { PROVIDERS, llmCredentialAad } from '../lib/llmGateway'
-import { listedPrice, type Price } from '../lib/llmModels'
-import { chooseModel, providerBaseUrl } from '../llmModels'
+import { providerBaseUrl } from '../llmModels'
+import { admitCall } from '../aiGuard'
+import { runGuarded, type GuardedResult } from '../lib/aiGuard'
+import { modelPicker, releaseLease, type KeySource, type KeyTarget } from '../lib/aiCall'
 import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { companyCredentials, insertUsage, pickCredential } from '../llmGateway'
 import { todayIn, zoneFor } from '../lib/dates'
@@ -89,6 +91,11 @@ const prepared = v.union(
     credentialId: v.union(v.id('llmCredentials'), v.null()),
     ciphertext: v.union(v.string(), v.null()),
     iv: v.union(v.string(), v.null()),
+    /** AI protections (D-023). */
+    leaseId: v.id('aiLeases'),
+    deadlineAt: v.number(),
+    attemptMs: v.number(),
+    blocked: v.array(v.string()),
   }),
   v.object({
     ok: v.literal(false),
@@ -98,6 +105,8 @@ const prepared = v.union(
       v.literal('disabled'),
       v.literal('quota'),
       v.literal('unavailable'),
+      v.literal('busy'),
+      v.literal('budget'),
     ),
     message: v.string(),
   }),
@@ -144,7 +153,22 @@ export const prepare = internalMutation({
         return { ok: false as const, reason: 'quota' as const, message: s.aiQuota(retryAfterText(verdict.retryAfter)) }
       }
     }
+    // AI protections: budget and concurrency refuse before anything is spent.
+    const admitted = await admitCall(ctx, {
+      companyId: binding.companyId,
+      userId: binding.userId,
+      server: !secret,
+      feature: 'bot',
+      providerId: cred && secret ? cred.providerId : serverId,
+      credentialId: cred && secret ? cred._id : null,
+    })
+    if (!admitted.ok) {
+      return admitted.kind === 'budget'
+        ? { ok: false as const, reason: 'budget' as const, message: s.aiBudget }
+        : { ok: false as const, reason: 'busy' as const, message: s.aiBusy }
+    }
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
+    const lease = { leaseId: admitted.leaseId, deadlineAt: admitted.deadlineAt, attemptMs: admitted.attemptMs, blocked: admitted.blocked }
 
     let threadId = binding.threadId
     if (!threadId) {
@@ -154,6 +178,7 @@ export const prepare = internalMutation({
     const today = todayIn(zoneFor(bound.site, bound.company))
     const base = {
       ok: true as const,
+      ...lease,
       threadId,
       userId: binding.userId,
       companyId: binding.companyId,
@@ -269,6 +294,7 @@ export const recordUsage = internalMutation({
     model: v.string(),
     ok: v.boolean(),
     error: v.optional(v.string()),
+    status: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
@@ -497,43 +523,6 @@ export async function agentTurn(ctx: ActionCtx, turn: AgentTurn): Promise<AgentT
   const s = t(p.locale)
   const fail = (message: string): AgentTurnResult => ({ ok: false, locale: p.locale, message })
 
-  let model = testHooks.languageModel
-  let modelId = p.model
-  let price: Price | undefined
-  if (!model) {
-    let apiKey = ''
-    if (p.source === 'org_key') {
-      const key = readEncryptionKey()
-      if (key && p.ciphertext && p.iv && p.credentialId) {
-        apiKey = (
-          await decryptJson<{ apiKey: string }>(
-            { ciphertext: p.ciphertext, iv: p.iv },
-            llmCredentialAad(p.companyId, p.credentialId),
-            key,
-          )
-        ).apiKey
-      }
-    } else {
-      apiKey = serverKey(p.providerId)
-    }
-    const baseURL = openAiBaseUrl(p.providerId, p.baseUrl)
-    const provider = PROVIDERS[p.providerId]
-    if (!apiKey || !baseURL || !provider) return fail(s.aiUnavailable)
-    // A saved or BOT_LLM_MODEL id the provider no longer lists falls back to its default.
-    const { choice, models } = await chooseModel(ctx, {
-      target: { providerId: provider.id, kind: provider.kind, baseUrl: providerBaseUrl(provider.id, p.baseUrl), apiKey },
-      scope: p.source === 'org_key' ? p.companyId : 'server',
-      saved: p.model,
-    })
-    if (!choice.ok) {
-      console.warn(`[bot] ${choice.error}`)
-      return fail(s.aiUnavailable)
-    }
-    modelId = choice.model
-    price = listedPrice(models, modelId)
-    model = createOpenAICompatible({ name: p.providerId, baseURL, apiKey }).chatModel(modelId)
-  }
-
   const env: ToolEnv = {
     bindingId: turn.bindingId,
     sourceMessageId: turn.sourceMessageId,
@@ -541,44 +530,45 @@ export async function agentTurn(ctx: ActionCtx, turn: AgentTurn): Promise<AgentT
     voiceNoteId: turn.voice?.voiceNoteId,
     drafts: [],
   }
-  const agent = new Agent(components.agent, {
-    name: 'farm-bot',
-    languageModel: model,
-    instructions: instructions(p, turn.voice?.language),
-    tools: tools(env),
-    stopWhen: stepCountIs(5),
-    contextOptions: { recentMessages: 12 },
+  const result = await runAgentGuarded(ctx, p, {
+    explicit: false,
+    run: async (model, signal) => {
+      const agent = new Agent(components.agent, {
+        name: 'farm-bot',
+        languageModel: model,
+        instructions: instructions(p, turn.voice?.language),
+        tools: tools(env),
+        stopWhen: stepCountIs(5),
+        contextOptions: { recentMessages: 12 },
+      })
+      return await agent.generateText(ctx, { threadId: p.threadId, userId: p.userId }, { prompt: turn.text, abortSignal: signal })
+    },
+    record: async (t, r) => {
+      await ctx.runMutation(internal.bot.agent.recordUsage, {
+        companyId: p.companyId,
+        userId: p.userId,
+        source: t.source,
+        providerId: t.providerId,
+        model: t.model,
+        ok: r.ok,
+        error: r.ok ? undefined : (r.message ?? 'error').slice(0, 200),
+        status: typeof r.status === 'number' ? r.status : undefined,
+        inputTokens: r.value?.totalUsage?.inputTokens ?? undefined,
+        outputTokens: r.value?.totalUsage?.outputTokens ?? undefined,
+        durationMs: r.durationMs,
+        ...(t.price ?? {}),
+      })
+    },
+    // Drafts already stored: never run the turn again on another model.
+    canRetry: () => env.drafts.length === 0,
   })
-  const started = Date.now()
-  const usage = {
-    companyId: p.companyId,
-    userId: p.userId,
-    source: p.source,
-    providerId: p.providerId,
-    model: modelId,
-    ...(price ?? {}),
-  }
-  let reply = ''
-  try {
-    const result = await agent.generateText(ctx, { threadId: p.threadId, userId: p.userId }, { prompt: turn.text })
-    reply = (result.text || '').trim()
-    await ctx.runMutation(internal.bot.agent.recordUsage, {
-      ...usage,
-      ok: true,
-      inputTokens: result.totalUsage?.inputTokens ?? undefined,
-      outputTokens: result.totalUsage?.outputTokens ?? undefined,
-      durationMs: Date.now() - started,
-    })
-  } catch (err) {
-    await ctx.runMutation(internal.bot.agent.recordUsage, {
-      ...usage,
-      ok: false,
-      error: err instanceof Error ? err.message.slice(0, 200) : 'error',
-      durationMs: Date.now() - started,
-    })
+  if (!result.ok) {
+    // Provider text stays in the log; the chat gets a plain sentence.
+    console.warn(`[bot] ${result.kind}: ${result.message.slice(0, 300)}`)
     if (!env.drafts.length) return fail(s.aiUnavailable)
+    return { ok: true, locale: p.locale, reply: '', drafts: env.drafts }
   }
-  return { ok: true, locale: p.locale, reply, drafts: env.drafts }
+  return { ok: true, locale: p.locale, reply: (result.value.text || '').trim(), drafts: env.drafts }
 }
 
 /** The key and model a prepared turn may use (bot or Ask Anowa web). */
@@ -593,46 +583,99 @@ export type ModelSource = {
   iv: string | null
 }
 
-/**
- * Build the language model for a prepared turn: the org key (decrypted here,
- * in the action) or the server key, and a model id the provider still lists
- * (D-022). Same steps as runAgent; null when no usable key or model.
- */
-export async function languageModelFor(
-  ctx: ActionCtx,
-  p: ModelSource,
-): Promise<{ model: LanguageModelV4; modelId: string; price: Price | undefined } | null> {
-  if (testHooks.languageModel) return { model: testHooks.languageModel, modelId: p.model || 'test', price: undefined }
-  let apiKey = ''
+/** A prepared turn with its AI-protection lease (bot or Ask Anowa web). */
+export type GuardedSource = ModelSource & {
+  leaseId: Id<'aiLeases'>
+  deadlineAt: number
+  attemptMs: number
+  blocked: string[]
+}
+
+/** The keys a prepared turn may use: its own (org or server), then other server keys for an Auto fallback. */
+export async function agentSources(p: ModelSource): Promise<KeySource[]> {
+  const source = (providerId: string, apiKey: string, scope: string, kind: 'org_key' | 'server_key', baseUrl: string | null): KeySource | null => {
+    const provider = PROVIDERS[providerId]
+    const callBaseUrl = openAiBaseUrl(providerId, baseUrl)
+    if (!provider || !apiKey || !callBaseUrl) return null
+    return { providerId, kind: provider.kind, listBaseUrl: providerBaseUrl(providerId, baseUrl), callBaseUrl, apiKey, scope, source: kind }
+  }
   if (p.source === 'org_key') {
     const key = readEncryptionKey()
-    if (key && p.ciphertext && p.iv && p.credentialId) {
-      apiKey = (
-        await decryptJson<{ apiKey: string }>(
-          { ciphertext: p.ciphertext, iv: p.iv },
-          llmCredentialAad(p.companyId, p.credentialId),
-          key,
-        )
-      ).apiKey
+    if (!key || !p.ciphertext || !p.iv || !p.credentialId) return []
+    const { apiKey } = await decryptJson<{ apiKey: string }>({ ciphertext: p.ciphertext, iv: p.iv }, llmCredentialAad(p.companyId, p.credentialId), key)
+    const own = source(p.providerId, apiKey, p.companyId, 'org_key', p.baseUrl)
+    return own ? [own] : []
+  }
+  const out: KeySource[] = []
+  for (const id of [p.providerId, ...Object.keys(SERVER_KEY_ENV).filter((x) => x !== p.providerId)]) {
+    const s = source(id, serverKey(id), 'server', 'server_key', null)
+    if (s) out.push(s)
+  }
+  return out
+}
+
+/**
+ * Run an agent turn with the AI protections (D-023): the deadline (the
+ * agent gets an abort signal), the open-breaker list, and one Auto fallback
+ * to the next best model when no tool has written anything yet. The lease
+ * from `prepare` is given back here.
+ */
+export async function runAgentGuarded<T>(
+  ctx: ActionCtx,
+  p: GuardedSource,
+  o: {
+    explicit: boolean
+    requested?: string | null
+    run: (model: LanguageModelV4, signal: AbortSignal) => Promise<T>
+    record: (t: KeyTarget, r: { ok: boolean; message?: string; status?: number | null; durationMs: number; value?: T }) => Promise<void>
+    canRetry: () => boolean
+  },
+): Promise<GuardedResult<T, KeyTarget>> {
+  try {
+    const test = testHooks.languageModel
+    if (test) {
+      const fake: KeyTarget = {
+        providerId: p.providerId,
+        model: p.model || 'test',
+        scope: p.source === 'org_key' ? p.companyId : 'server',
+        kind: 'openai',
+        listBaseUrl: '',
+        apiKey: 'test',
+        source: p.source,
+      }
+      return await runGuarded({
+        now: Date.now,
+        deadlineAt: p.deadlineAt,
+        attemptMs: p.attemptMs,
+        explicit: o.explicit,
+        blocked: new Set(p.blocked),
+        first: async () => fake,
+        next: async () => null,
+        attempt: (_t, signal) => o.run(test, signal),
+        record: o.record,
+        canRetry: o.canRetry,
+      })
     }
-  } else {
-    apiKey = serverKey(p.providerId)
-  }
-  const baseURL = openAiBaseUrl(p.providerId, p.baseUrl)
-  const provider = PROVIDERS[p.providerId]
-  if (!apiKey || !baseURL || !provider) return null
-  const { choice, models } = await chooseModel(ctx, {
-    target: { providerId: provider.id, kind: provider.kind, baseUrl: providerBaseUrl(provider.id, p.baseUrl), apiKey },
-    scope: p.source === 'org_key' ? p.companyId : 'server',
-    saved: p.model,
-  })
-  if (!choice.ok) {
-    console.warn(`[agent] ${choice.error}`)
-    return null
-  }
-  return {
-    model: createOpenAICompatible({ name: p.providerId, baseURL, apiKey }).chatModel(choice.model),
-    modelId: choice.model,
-    price: listedPrice(models, choice.model),
+    const picker = modelPicker(ctx, {
+      sources: await agentSources(p),
+      requested: o.requested,
+      saved: p.model,
+      blocked: new Set(p.blocked),
+      explicit: o.explicit,
+    })
+    return await runGuarded({
+      now: Date.now,
+      deadlineAt: p.deadlineAt,
+      attemptMs: p.attemptMs,
+      explicit: o.explicit,
+      blocked: new Set(p.blocked),
+      first: picker.first,
+      next: picker.next,
+      attempt: (t, signal) => o.run(createOpenAICompatible({ name: t.providerId, baseURL: t.callBaseUrl!, apiKey: t.apiKey }).chatModel(t.model), signal),
+      record: o.record,
+      canRetry: o.canRetry,
+    })
+  } finally {
+    await releaseLease(ctx, p.leaseId)
   }
 }

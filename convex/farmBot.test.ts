@@ -9,6 +9,7 @@ import { api, internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
 import { testHooks } from './bot/agent'
+import { deadlineTestHooks } from './lib/aiGuard'
 import { DRAFT_TTL_MS } from './bot/pending'
 import { revokeUserSessions } from './lib/authz'
 
@@ -45,6 +46,8 @@ beforeEach(() => {
     }),
   )
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  // runAllTimers would fire every AI deadline at once (D-023).
+  deadlineTestHooks.disabled = true
 })
 
 afterEach(() => {

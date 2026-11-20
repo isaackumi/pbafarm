@@ -5,6 +5,7 @@ import PlatformLayout, { SimpleTable } from '../../components/platform/PlatformL
 import { Card, CardHeader, LoadingState, StatCard } from '../../components/ui'
 import { formatDate, formatMinor } from '../../lib/billingFormat'
 import { useT } from '../../lib/i18n/context'
+import { AiHealthCard } from '../../components/platform/AiHealth'
 
 function moneyList(list) {
   if (!list || list.length === 0) return '—'
@@ -43,6 +44,7 @@ function Overview() {
         <StatCard label="Suspended" value={k.tenants.suspended} tone={k.tenants.suspended ? 'warn' : 'default'} />
         <StatCard label="Active users" value={k.activeUsers7d} hint={`${k.activeUsers30d} in 30 days`} unit="7d" />
       </div>
+      <AiHealthCard />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <StatCard label="MRR" value={moneyList(k.mrr)} />
         <StatCard label="ARR" value={moneyList(k.arr)} />

@@ -430,6 +430,152 @@ function AnowaPolicyCard() {
   )
 }
 
+/** Rounded to the hour so the subscription stays stable between renders (queries do not read the clock). */
+function useHourNow() {
+  return useMemo(() => Math.floor(Date.now() / 3_600_000) * 3_600_000, [])
+}
+
+/** Amount input → number, null for empty, undefined when invalid. */
+function parseAmount(text) {
+  const trimmed = String(text ?? '').trim()
+  if (trimmed === '') return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) && n > 0 ? n : undefined
+}
+
+/**
+ * Monthly AI budget (AI protections, D-023): this month's spend against the
+ * budget, the org's own limit (it can only lower the platform's), and an
+ * optional limit per provider key. At 80% and 100% admins are notified; at
+ * 100% Anowa stops answering until next month or until the budget is raised.
+ */
+function AiBudgetCard() {
+  const t = useT()
+  const toasts = useToasts()
+  const now = useHourNow()
+  const status = useQuery(api.aiGuard.budgetStatus, { now })
+  const setBudget = useMutation(api.aiGuard.setBudget)
+  const setKeyBudget = useMutation(api.aiGuard.setKeyBudget)
+  const [amount, setAmount] = useState('')
+  const [tokens, setTokens] = useState('')
+  const [keyAmounts, setKeyAmounts] = useState({})
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (!status) return
+    setAmount(status.monthlyBudgetUsd == null ? '' : String(status.monthlyBudgetUsd))
+    setTokens(status.monthlyTokenBudget == null ? '' : String(status.monthlyTokenBudget))
+    setKeyAmounts(Object.fromEntries(status.keys.map((k) => [k.credentialId, k.monthlyBudgetUsd == null ? '' : String(k.monthlyBudgetUsd)])))
+  }, [status])
+  if (!status) return null
+
+  const run = async (fn) => {
+    setBusy(true)
+    try {
+      await fn()
+      toasts.ok(t('settingsUi.ai.budget.saved'))
+    } catch (err) {
+      toasts.fail(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const saveBudget = (e) => {
+    e.preventDefault()
+    const usdValue = parseAmount(amount)
+    const tokenValue = parseAmount(tokens)
+    if (usdValue === undefined || tokenValue === undefined) return toasts.fail(new Error(t('settingsUi.ai.budget.invalid')))
+    run(() => setBudget({ monthlyBudgetUsd: usdValue, monthlyTokenBudget: tokenValue }))
+  }
+  const saveKey = (credentialId) => {
+    const value = parseAmount(keyAmounts[credentialId])
+    if (value === undefined) return toasts.fail(new Error(t('settingsUi.ai.budget.invalid')))
+    run(() => setKeyBudget({ credentialId, monthlyBudgetUsd: value }))
+  }
+  const pct = status.usedPct == null ? null : Math.min(100, status.usedPct)
+  const tone = status.refusing ? 'bg-alert' : (status.usedPct ?? 0) >= 80 ? 'bg-warn' : 'bg-cyan'
+
+  return (
+    <SettingsCard title={t('settingsUi.ai.budget.title')} meta={t('settingsUi.ai.budget.meta', { month: status.month })}>
+      <div className="flex flex-col gap-4">
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[20px] leading-6 tabular-nums text-text">{usd(status.spentUsd)}</span>
+            <span className="text-[13px] leading-4 tabular-nums text-muted">
+              {status.effectiveUsd == null
+                ? t('settingsUi.ai.budget.noBudget')
+                : t('settingsUi.ai.budget.ofBudget', { budget: usd(status.effectiveUsd), pct: status.usedPct ?? 0 })}
+            </span>
+          </div>
+          {pct != null && (
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('settingsUi.ai.budget.title')}>
+              <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
+            </div>
+          )}
+          {status.unpricedTokens > 0 && (
+            <p className="mt-2 text-[12px] leading-4 text-muted">
+              {t('settingsUi.ai.budget.unpriced', { tokens: status.unpricedTokens.toLocaleString() })}
+            </p>
+          )}
+          {status.refusing && (
+            <Notice tone="alert" role="alert">
+              {t('settingsUi.ai.budget.refusing')}
+            </Notice>
+          )}
+          {status.allowedOver && <p className="mt-2 text-[12px] leading-4 text-muted">{t('settingsUi.ai.budget.allowedOver')}</p>}
+        </div>
+        <form onSubmit={saveBudget} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label className="flex flex-col gap-1 text-[12px] leading-4 text-muted" htmlFor="ai-budget-usd">
+            {t('settingsUi.ai.budget.usd')}
+            <input id="ai-budget-usd" type="number" inputMode="decimal" min={0} step="0.01" placeholder={t('settingsUi.ai.budget.none')} value={amount} onChange={(e) => setAmount(e.target.value)} className={FIELD} />
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] leading-4 text-muted" htmlFor="ai-budget-tokens">
+            {t('settingsUi.ai.budget.tokens')}
+            <input id="ai-budget-tokens" type="number" inputMode="numeric" min={0} step="1000" placeholder={t('settingsUi.ai.budget.none')} value={tokens} onChange={(e) => setTokens(e.target.value)} className={FIELD} />
+          </label>
+          <GhostButton size="md" type="submit" disabled={busy}>
+            {t('common.save')}
+          </GhostButton>
+        </form>
+        <p className="text-[12px] leading-4 text-muted">{t('settingsUi.ai.budget.helper')}</p>
+        {status.keys.length > 0 && (
+          <ul className="flex flex-col border-t border-line">
+            {status.keys.map((k) => (
+              <li key={k.credentialId} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-2">
+                <span className="text-[13px] leading-4 text-text">
+                  {t('settingsUi.ai.budget.keyLabel', { provider: k.providerId })}{' '}
+                  <span className="tabular-nums text-muted">{usd(k.spentUsd)}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <input
+                    aria-label={t('settingsUi.ai.budget.keyLabel', { provider: k.providerId })}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    placeholder={t('settingsUi.ai.budget.none')}
+                    value={keyAmounts[k.credentialId] ?? ''}
+                    onChange={(e) => setKeyAmounts((m) => ({ ...m, [k.credentialId]: e.target.value }))}
+                    className={`${FIELD} w-28`}
+                  />
+                  <GhostButton size="sm" type="button" disabled={busy} onClick={() => saveKey(k.credentialId)}>
+                    {t('common.save')}
+                  </GhostButton>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </SettingsCard>
+  )
+}
+
+/** Only admins who manage organization settings see and set the budget. */
+function AiBudgetCardGate() {
+  const status = useQuery(api.companies.aiAssistantStatus, {})
+  return status?.canManage ? <AiBudgetCard /> : null
+}
+
 function AiSettingsPage() {
   const t = useT()
   // Rounded to the hour so the subscription is stable between renders.
@@ -459,6 +605,7 @@ function AiSettingsPage() {
         </Notice>
       )}
       <AnowaPolicyCard />
+      <AiBudgetCardGate />
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <SettingsCard title={t('settingsUi.ai.providerTitle')} meta={t('integ.ai.keysHint')}>
           <div className="flex flex-col gap-5">

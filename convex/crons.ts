@@ -51,6 +51,11 @@ crons.cron('prune assistant chats', '5 4 * * *', internal.assistantChats.prune, 
 // Streamed Ask Anowa replies are transient (the answer lives in assistantMessages).
 crons.interval('prune assistant streams', { minutes: 30 }, internal.anowa.stream.prune, {})
 
+// AI protections (D-023): error rate, p95 latency, spend spikes and open
+// breakers over the last 15 minutes; platform admins are alerted. Also frees
+// leases of crashed calls.
+crons.interval('ai health check', { minutes: 5 }, internal.aiGuard.checkHealth, {})
+
 // LLM usage log is kept 400 days (INT-009).
 crons.cron('prune llm usage', '55 3 * * *', internal.llmGateway.pruneUsage, {})
 

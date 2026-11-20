@@ -376,3 +376,37 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 - One extra (cached) provider request per key per hour; a provider outage of the list endpoint needs `LLM_DEFAULT_MODEL_<PROVIDER>` to keep calls going.
 - The default can change when a provider ships a new fast model; pin it with the env variable when that matters.
 - Cost estimates are unknown for direct OpenAI/Gemini/Anthropic/Groq keys unless `LLM_MODEL_PRICES` is set.
+
+## D-023 — AI protections: leases, budgets, breakers, alerts
+
+**Status.** Accepted (owner approved, 2026-11-20). Code: `convex/lib/aiGuard.ts` (pure rules), `convex/aiGuard.ts`, `convex/lib/aiCall.ts`, `lib/llmGatewayRoute.js` (`guardedServerChat`), every AI path. Env: `docs/ops/anowa-cutover.md` (AI protections).
+
+**Context.** Per-user/company rate limits, member daily caps and the usage log existed, but nothing stopped a burst of slow calls from piling up, a tenant from running up an unbounded bill, or a failing model from being retried by every member. Users waited up to ~90 s when a provider hung. At 1,000 cages and 1,000 users the shared server key is the bottleneck.
+
+**Decision.**
+- **Concurrency leases** in Convex (`aiLeases`): at most 2 in-flight calls per user, 10 per company, 40 on the shared server key (env). Taken in each path's gate mutation before any quota is spent, given back in a `finally`, and expiring with the call deadline + 30 s so a crashed call cannot leak a slot. Refusal = kind `busy` with a retry hint; no usage row, nothing charged.
+- **Monthly budgets** per company (org setting, can only be lower than the platform default `AI_COMPANY_MONTHLY_BUDGET_USD` or a per-tenant console override), per org key and for the server keys. Spend counters (`aiSpend`) move with every `llmUsage` row; models without a price count tokens against an optional token budget. Admins are told in-app and by email at 80% and 100%, once per threshold per month; at 100% new calls are refused (kind `budget`) unless a platform admin allowed the tenant over for the month.
+- **Circuit breaker** per key scope (server key, or the tenant's own key) + provider + model (`aiBreakers`): quota opens at once until the provider's retry-after (15 min minimum; "limit: 0" until the daily reset, so Auto stops picking that model); overload/5xx/timeout opens after 2 failures in 60 s for 60 s; half-open probe, doubling on failure. Question problems (too long, blocked, auth) never count.
+- **Auto fallback**: with Auto, one retry on the next best model of the same provider's live list (open breakers excluded), then another provider with a server key; never after an agent tool wrote a draft. An explicitly chosen model never switches: a paused one is refused up front ("pick Auto or another model", kind `model_paused`). Overall deadline per question 45 s (first attempt at most 28 s), enforced with an abort signal into the provider call.
+- **Per-minute limits** use a token bucket (burst 10, one more every 6 s) in Convex and in the Next proxy; hourly windows unchanged.
+- **Alerts**: every 5 minutes over the last 15 minutes of `llmUsage`, per provider and per tenant: error rate, p95 latency, spend spikes, plus open server-key breakers. Platform admins get them in-app and by email (deduped, at most hourly per alert). Console: `/platform/ai` and an AI health card on the overview (bounded, paginated reads).
+
+**Alternatives considered.**
+1. Rate limits only. Rejected: they bound volume, not concurrent slow calls or money.
+2. Counting spend by scanning `llmUsage` per call. Rejected: unbounded reads at scale; counters are O(1).
+3. In-memory breakers in the Next proxy. Rejected: per instance, and the Convex paths would not share them.
+4. Falling back on explicit model choices too. Rejected: members must not get answers from a model they did not pick without knowing.
+
+**Consequences.**
+- Every AI path does one extra mutation (lease release); the server-key lease range is a shared hot spot under heavy load (acceptable at 40 slots; shard if it shows in contention).
+- Spend counters and breakers are platform-scoped rows (not exported or purged with a tenant); budgets and leases are tenant tables.
+- Speech-to-text (voice notes) takes a lease and respects budgets but is not in `llmUsage`, so it does not count toward spend.
+- Streamed answers (Ask Anowa on the web agent and the `?stream=1` Next route) go through the same guard. Auto may fall back only before any text reached the member; after that a failure is final. Once a stream starts it may use the whole question deadline. The member's Stop is recorded as `stopped`, which never counts toward a breaker.
+- The Next proxy reports server-key usage through a member session (`recordServerUsage`). After an independent review of PR #38, such rows are trusted for usage only:
+  - They count toward the member's own company: its budget, and its share of the server key (`AI_SERVER_TENANT_SHARE`, default 25% of `AI_SERVER_MONTHLY_BUDGET_USD`).
+  - They never move the shared server-key spend pool and never open, extend or close a breaker. Breakers move only with calls Convex made itself (bot, web agent, OCR, reports, org keys).
+  - Each report must name the caller's own unexpired server lease (at most 2 reports per lease); tokens and prices are capped.
+  - Retry-after is capped: a quota breaker stays open at most 24 h, any other at most 10 min. Platform admins can reset a breaker in the console (MFA, audited as `ai.breaker_reset`).
+  - Trade-off: Next-proxy failures no longer pause models; they still feed the 5-minute health alerts (which a member could make noisy).
+  - Residual risk: a member can inflate their own company's spend and use up its server share; leases can be held without making calls (up to the 10 per company and 40 server caps, each for about 75 s), so one tenant can keep others busy within those caps. Plan: a dedicated Next→Convex server credential (Q-048).
+

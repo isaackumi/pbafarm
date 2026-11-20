@@ -39,9 +39,9 @@ import { PROVIDERS } from '../lib/llmGateway'
 import { todayIn, zoneFor } from '../lib/dates'
 import { sanitizeAnswer, sanitizeStreaming } from '../lib/llmAnswer'
 import { MAX_CHARTS, answerChartValidator, type AnswerChart } from '../lib/answerCharts'
-import { classifyLlmFailure } from '../lib/llmErrors'
 import { readFor, readTool } from '../bot/reads'
-import { languageModelFor, serverKey, serverProvider } from '../bot/agent'
+import { runAgentGuarded, serverKey, serverProvider } from '../bot/agent'
+import { admitCall } from '../aiGuard'
 import { webMember } from './scope'
 import { claimStream } from './stream'
 import { MAX_ITEMS_PER_DRAFT, type WebProposalInput } from './drafts'
@@ -76,6 +76,9 @@ const failure = v.object({
     v.literal('blocked'),
     v.literal('too_long'),
     v.literal('empty'),
+    v.literal('busy'),
+    v.literal('budget'),
+    v.literal('model_paused'),
     v.literal('unknown'),
   ),
   retryAfterSec: v.union(v.number(), v.null()),
@@ -96,6 +99,12 @@ const prepared = v.union(
     credentialId: v.union(v.id('llmCredentials'), v.null()),
     ciphertext: v.union(v.string(), v.null()),
     iv: v.union(v.string(), v.null()),
+    /** AI protections (D-023): lease, deadline, open breakers, explicit model. */
+    leaseId: v.id('aiLeases'),
+    deadlineAt: v.number(),
+    attemptMs: v.number(),
+    blocked: v.array(v.string()),
+    requestedModel: v.union(v.string(), v.null()),
   }),
   failure,
 )
@@ -173,10 +182,26 @@ export const prepare = internalMutation({
         }
       }
     }
+    // AI protections: budget and concurrency refuse before anything is spent.
+    const admitted = await admitCall(ctx, {
+      companyId,
+      userId,
+      server: !secret,
+      feature: 'ask',
+      providerId: cred && secret ? cred.providerId : serverId,
+      credentialId: cred && secret ? cred._id : null,
+    })
+    if (!admitted.ok) return { ok: false as const, code: admitted.kind, retryAfterSec: admitted.retryAfterSec }
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
 
     const base = {
       ok: true as const,
+      leaseId: admitted.leaseId,
+      deadlineAt: admitted.deadlineAt,
+      attemptMs: admitted.attemptMs,
+      blocked: admitted.blocked,
+      // The member's model chip (an explicit choice: never switched silently).
+      requestedModel: (secret || chosen) && args.model?.trim() ? args.model.trim().slice(0, 100) : null,
       userId,
       companyId,
       companyName: w.company.name,
@@ -228,6 +253,7 @@ export const recordUsage = internalMutation({
     model: v.string(),
     ok: v.boolean(),
     error: v.optional(v.string()),
+    status: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
@@ -792,8 +818,6 @@ export const ask = action({
     })
     // A row that is not this member's (or already used) is left alone.
     if (!p.ok) return p.code === 'invalid' && streamId ? p : await fail(p)
-    const built = await languageModelFor(ctx, p)
-    if (!built) return await fail({ ok: false as const, code: 'not_configured' as const, retryAfterSec: null })
 
     const env: Env = {
       siteId: args.siteId,
@@ -804,29 +828,6 @@ export const ask = action({
       attached: [],
     }
     const lang = String(args.lang || '').toLowerCase().startsWith('fr') ? 'fr' : 'en'
-    const agent = new Agent(components.agent, {
-      name: 'ask-anowa',
-      languageModel: built.model,
-      instructions: instructions({
-        lang,
-        companyName: p.companyName,
-        siteName: p.siteName,
-        today: p.today,
-        preferCharts: args.showCharts === true,
-      }),
-      tools: tools(env),
-      stopWhen: stepCountIs(6),
-      // History comes from the browser; never pull the member's bot threads in.
-      contextOptions: { recentMessages: 0, searchOtherThreads: false },
-    })
-    const usage = {
-      companyId: p.companyId,
-      userId: p.userId,
-      source: p.source,
-      providerId: p.providerId,
-      model: built.modelId,
-      ...(built.price ?? {}),
-    }
 
     // Streaming row writes: one at a time, at most every FLUSH_MS, always the latest state.
     const abort = new AbortController()
@@ -860,69 +861,102 @@ export const ask = action({
         }, POLL_MS)
       : null
 
-    const started = Date.now()
-    let failed: { message: string; status: number | null } | null = null
-    let inputTokens: number | undefined
-    let outputTokens: number | undefined
+    // No threadId: nothing is stored in the agent component.
+    const messages = [...history.map((m) => ({ role: m.role, content: m.content })), { role: 'user' as const, content: question }]
+    type Turn = { inputTokens?: number; outputTokens?: number; stopped: boolean }
+    let result
     try {
-      // No threadId: nothing is stored in the agent component.
-      const messages = [
-        ...history.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: question },
-      ]
-      if (!streamId) {
-        // Not streamed (callers without a row): one call, the final step's text.
-        const result = await agent.generateText(ctx, { userId: p.userId }, { messages })
-        raw = result.text || ''
-        inputTokens = result.totalUsage?.inputTokens ?? undefined
-        outputTokens = result.totalUsage?.outputTokens ?? undefined
-      } else {
-        const result = await agent.streamText(
-          ctx,
-          { userId: p.userId },
-          // Errors arrive as stream parts and are classified below; the SDK's own console log is not needed.
-          { messages, abortSignal: abort.signal, onError: () => undefined },
-          { saveStreamDeltas: false },
-        )
-        for await (const part of result.fullStream) {
-          if (part.type === 'text-delta') {
-            raw += part.text
-            await flush()
-          } else if (part.type === 'start-step') {
-            // Text before a tool call and the answer after it read as two paragraphs.
-            if (raw && !raw.endsWith('\n\n')) raw += '\n\n'
-          } else if (part.type === 'tool-call') {
-            activity = activityFor(part.toolName, part.input)
-            await flush(true)
-          } else if (part.type === 'tool-result' || part.type === 'tool-error') {
-            activity = null
-            await flush(true)
-          } else if (part.type === 'finish') {
-            inputTokens = part.totalUsage?.inputTokens ?? undefined
-            outputTokens = part.totalUsage?.outputTokens ?? undefined
-          } else if (part.type === 'error') {
-            throw part.error
+      // AI protections (D-023): lease, deadline, open breakers, and one Auto
+      // fallback while nothing has been drafted or streamed to the member.
+      // A streamed answer may use the whole question deadline once it starts.
+      const guarded = streamId ? { ...p, attemptMs: Math.max(p.attemptMs, p.deadlineAt - Date.now()) } : p
+      result = await runAgentGuarded<Turn>(ctx, guarded, {
+        explicit: !!p.requestedModel,
+        requested: p.requestedModel,
+        run: async (languageModel, signal) => {
+          const agent = new Agent(components.agent, {
+            name: 'ask-anowa',
+            languageModel,
+            instructions: instructions({
+              lang,
+              companyName: p.companyName,
+              siteName: p.siteName,
+              today: p.today,
+              preferCharts: args.showCharts === true,
+            }),
+            tools: tools(env),
+            stopWhen: stepCountIs(6),
+            // History comes from the browser; never pull the member's bot threads in.
+            contextOptions: { recentMessages: 0, searchOtherThreads: false },
+          })
+          if (!streamId) {
+            // Not streamed (callers without a row): one call, the final step's text.
+            const r = await agent.generateText(ctx, { userId: p.userId }, { messages, abortSignal: signal })
+            raw = r.text || ''
+            return { inputTokens: r.totalUsage?.inputTokens ?? undefined, outputTokens: r.totalUsage?.outputTokens ?? undefined, stopped: false }
           }
-        }
-      }
-    } catch (err) {
-      if (!abort.signal.aborted) {
-        const message = err instanceof Error ? err.message : String(err)
-        failed = { message, status: (err as { statusCode?: number })?.statusCode ?? null }
-      }
+          // The deadline and the member's Stop both end the call.
+          const both = AbortSignal.any([signal, abort.signal])
+          const turn: Turn = { stopped: false }
+          try {
+            const r = await agent.streamText(
+              ctx,
+              { userId: p.userId },
+              // Errors arrive as stream parts and are classified by the guard; the SDK's own console log is not needed.
+              { messages, abortSignal: both, onError: () => undefined },
+              { saveStreamDeltas: false },
+            )
+            for await (const part of r.fullStream) {
+              if (part.type === 'text-delta') {
+                raw += part.text
+                await flush()
+              } else if (part.type === 'start-step') {
+                // Text before a tool call and the answer after it read as two paragraphs.
+                if (raw && !raw.endsWith('\n\n')) raw += '\n\n'
+              } else if (part.type === 'tool-call') {
+                activity = activityFor(part.toolName, part.input)
+                await flush(true)
+              } else if (part.type === 'tool-result' || part.type === 'tool-error') {
+                activity = null
+                await flush(true)
+              } else if (part.type === 'finish') {
+                turn.inputTokens = part.totalUsage?.inputTokens ?? undefined
+                turn.outputTokens = part.totalUsage?.outputTokens ?? undefined
+              } else if (part.type === 'error') {
+                throw part.error
+              }
+            }
+          } catch (err) {
+            // The member's Stop is not a failure; anything else (deadline included) is.
+            if (!abort.signal.aborted) throw err
+          }
+          turn.stopped = abort.signal.aborted
+          return turn
+        },
+        record: async (t, r) => {
+          await ctx.runMutation(internal.anowa.agent.recordUsage, {
+            companyId: p.companyId,
+            userId: p.userId,
+            source: t.source,
+            providerId: t.providerId,
+            model: t.model,
+            ok: r.ok && !r.value?.stopped,
+            error: r.ok ? (r.value?.stopped ? 'stopped' : undefined) : (r.message ?? 'error').slice(0, 200),
+            status: typeof r.status === 'number' ? r.status : undefined,
+            inputTokens: r.value?.inputTokens,
+            outputTokens: r.value?.outputTokens,
+            durationMs: r.durationMs,
+            ...(t.price ?? {}),
+          })
+        },
+        canRetry: () => env.items === 0 && !raw,
+      })
     } finally {
       if (poll) clearInterval(poll)
       await writing.catch(() => undefined)
     }
-    const stopped = abort.signal.aborted
-    await ctx.runMutation(internal.anowa.agent.recordUsage, {
-      ...usage,
-      ok: !failed,
-      ...(failed ? { error: failed.message.slice(0, 200) } : stopped ? { error: 'stopped' } : {}),
-      inputTokens,
-      outputTokens,
-      durationMs: Date.now() - started,
-    })
+    const failed = !result.ok
+    const stopped = result.ok && result.value.stopped
 
     const reply = sanitizeAnswer(raw).slice(0, MAX_REPLY)
     const charts = attachedCharts(env)
@@ -930,13 +964,11 @@ export const ask = action({
     if (args.showCharts && !charts.length && env.offered.size && !failed) charts.push(env.offered.get('c1')!)
     const draftGroup = env.items ? env.draftGroup : null
 
-    if (failed && !env.items) {
+    if (!result.ok) {
       // Provider text stays in the log; the browser gets a kind.
-      console.warn('[anowa.ask]', failed.message.slice(0, 300))
-      const f = classifyLlmFailure({ status: failed.status, message: failed.message })
-      return await fail({ ok: false as const, code: f.kind, retryAfterSec: f.retryAfterSec })
+      console.warn('[anowa.ask]', result.message.slice(0, 300))
+      if (!env.items) return await fail({ ok: false as const, code: result.kind, retryAfterSec: result.retryAfterSec })
     }
-    if (failed) console.warn('[anowa.ask]', failed.message.slice(0, 300))
     if (!reply && !env.items && !stopped) return await fail({ ok: false as const, code: 'empty' as const, retryAfterSec: null })
 
     let saved: { chatId: Id<'assistantChats'>; messageIds: Id<'assistantMessages'>[] } | { error: string } | null = null

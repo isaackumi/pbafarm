@@ -2844,6 +2844,9 @@
       "forbidden": "You don't have access to that.",
       "invalid": "Anowa couldn't read that request. Try again.",
       "offline": "You seem to be offline. Your question wasn't sent; try again when you have signal.",
+      "busy": "Anowa is still working on other questions. Try again in a few seconds.",
+      "budget": "Your organization has used this month's AI budget, so Anowa can't answer new questions until next month.",
+      "model_paused": "The chosen model is having trouble right now. Pick Auto or another model in the model menu and ask again.",
       "unknown": "Anowa couldn't answer just now. Try again in a moment.",
       "retryHours": {
         "one": "Try again in about an hour.",
@@ -2858,7 +2861,8 @@
         "quota": "To keep going now, choose another model in the model menu, or add billing for your AI provider in AI settings.",
         "auth": "Open AI settings to check or replace the provider key.",
         "not_configured": "Open AI settings to add a provider key.",
-        "model_unavailable": "AI settings shows the models your key can use."
+        "model_unavailable": "AI settings shows the models your key can use.",
+        "budget": "Raise the monthly budget in AI settings to keep going."
       }
     }
   },
@@ -4059,7 +4063,23 @@
       "providerTitle": "Model provider",
       "usageTitle": "Usage",
       "last30": "Last 30 days",
-      "calls": "calls"
+      "calls": "calls",
+      "budget": {
+        "title": "Monthly AI budget",
+        "meta": "Spend in {month} (UTC), from the usage log",
+        "noBudget": "No budget set",
+        "ofBudget": "of {budget} ({pct}%)",
+        "unpriced": "{tokens} tokens on models without a known price count against the token budget.",
+        "refusing": "The budget is used up: Anowa is not answering new questions until next month. Raise the budget to continue.",
+        "allowedOver": "The platform team has allowed Anowa to keep answering past the budget this month.",
+        "usd": "Budget per month (USD)",
+        "tokens": "Token budget per month (unpriced models)",
+        "none": "No limit",
+        "helper": "Admins get an in-app and email notice at 80% and at 100%. At 100% Anowa stops answering until next month. Your budget can only be lower than the platform limit.",
+        "keyLabel": "{provider} key",
+        "saved": "AI budget updated",
+        "invalid": "Enter a positive amount, or leave it empty for no limit."
+      }
     },
     "integ": {
       "crumb": "API, webhooks, docs",
@@ -4799,7 +4819,8 @@
       "plans": "Plans",
       "usage": "AI usage",
       "audit": "Audit log",
-      "staff": "Staff"
+      "staff": "Staff",
+      "ai": "AI health"
     },
     "status": {
       "active": "Active",

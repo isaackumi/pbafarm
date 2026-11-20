@@ -141,6 +141,10 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'inboundWebhookEvents', index: 'by_companyId_and_receivedAt' },
   { table: 'llmCredentials', index: 'by_companyId' },
   { table: 'llmUsage', index: 'by_companyId_and_createdAt' },
+  /** AI protections (D-023): the organization's monthly AI budget. */
+  { table: 'aiBudgets', index: 'by_companyId' },
+  /** In-flight AI call leases: seconds-long, nothing to export. */
+  { table: 'aiLeases', index: 'by_companyId_and_expiresAt', export: false },
   { table: 'farmAlerts', index: 'by_companyId_and_date' },
   { table: 'weeklyReports', index: 'by_companyId_and_weekEnd' },
   // Ask Anowa history (artboard 47): each member's own conversations and saved answers.

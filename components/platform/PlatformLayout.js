@@ -17,6 +17,7 @@ const NAV = [
   { href: '/platform/billing?tab=invoices', key: 'billing' },
   { href: '/platform/billing?tab=plans', key: 'plans' },
   { href: '/platform/usage', key: 'usage' },
+  { href: '/platform/ai', key: 'ai' },
   { href: '/platform/audit', key: 'audit' },
   { href: '/platform/admins', key: 'staff' },
 ]

@@ -1,6 +1,4 @@
 import { v } from 'convex/values'
-import * as Effect from 'effect/Effect'
-import * as Result from 'effect/Result'
 import { action, internalAction, internalMutation, internalQuery, query } from './_generated/server'
 import type { ActionCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -33,11 +31,9 @@ import {
   type ReportPack,
 } from './lib/weeklyReport'
 import { decryptJson, readEncryptionKey } from './lib/crypto'
-import { FetchLive } from './lib/effectHttp'
 import { PROVIDERS, llmCredentialAad } from './lib/llmGateway'
-import { listedPrice } from './lib/llmModels'
-import { chooseModel } from './llmModels'
-import { chatWithUsage, type ChatReply } from './lib/llmProviders'
+import { runGuarded } from './lib/aiGuard'
+import { chatAttempt, modelPicker, releaseLease, type KeyTarget } from './lib/aiCall'
 import type { ReportBegin } from './llmGateway'
 
 /**
@@ -317,67 +313,71 @@ async function phrase(
     serverProviderId: server?.providerId,
   })
   if (begun.mode === 'none') return null
-  let apiKey = server?.apiKey ?? ''
-  let baseUrl = PROVIDERS[begun.providerId]?.baseUrl ?? ''
-  if (begun.mode === 'org_key') {
-    const key = readEncryptionKey()
-    if (!key) return null
-    try {
-      apiKey = (
-        await decryptJson<{ apiKey: string }>(
-          { ciphertext: begun.ciphertext, iv: begun.iv },
-          llmCredentialAad(companyId, begun.credentialId),
-          key,
-        )
-      ).apiKey
-    } catch {
+  try {
+    let apiKey = server?.apiKey ?? ''
+    let baseUrl = PROVIDERS[begun.providerId]?.baseUrl ?? ''
+    if (begun.mode === 'org_key') {
+      const key = readEncryptionKey()
+      if (!key) return null
+      try {
+        apiKey = (
+          await decryptJson<{ apiKey: string }>(
+            { ciphertext: begun.ciphertext, iv: begun.iv },
+            llmCredentialAad(companyId, begun.credentialId),
+            key,
+          )
+        ).apiKey
+      } catch {
+        return null
+      }
+      if (begun.providerId === 'custom') baseUrl = begun.baseUrl ?? ''
+    }
+    const provider = PROVIDERS[begun.providerId]
+    if (!provider || !apiKey) return null
+    // The model from the key's live list (D-022), skipping open breakers;
+    // one Auto fallback (D-023). None reachable → template.
+    const scope = begun.mode === 'org_key' ? companyId : 'server'
+    const picker = modelPicker(ctx, {
+      sources: [{ providerId: provider.id, kind: provider.kind, listBaseUrl: baseUrl, apiKey, scope, source: begun.mode }],
+      saved: begun.model,
+      blocked: new Set(begun.blocked),
+      explicit: false,
+    })
+    const result = await runGuarded({
+      now: Date.now,
+      deadlineAt: begun.deadlineAt,
+      attemptMs: begun.attemptMs,
+      explicit: false,
+      blocked: new Set(begun.blocked),
+      first: picker.first,
+      next: picker.next,
+      attempt: chatAttempt({ messages: reportMessages(pack, lang), temperature: 0.2 }),
+      record: async (t: KeyTarget, r) => {
+        await ctx.runMutation(internal.llmGateway.recordReportUsage, {
+          companyId,
+          userId,
+          source: begun.mode,
+          providerId: t.providerId,
+          model: t.model,
+          ok: r.ok,
+          error: r.ok ? undefined : r.message,
+          status: typeof r.status === 'number' ? r.status : undefined,
+          inputTokens: r.value?.usage.inputTokens,
+          outputTokens: r.value?.usage.outputTokens,
+          durationMs: r.durationMs,
+          ...(t.price ?? {}),
+        })
+      },
+    })
+    if (!result.ok) {
+      console.warn(`[aiReports] ${result.kind}: ${result.message.slice(0, 200)}`)
       return null
     }
-    if (begun.providerId === 'custom') baseUrl = begun.baseUrl ?? ''
+    const text = acceptReply(result.value.text, pack, lang)
+    return text ? { text, providerId: result.target.providerId, model: result.target.model } : null
+  } finally {
+    await releaseLease(ctx, begun.leaseId)
   }
-  const provider = PROVIDERS[begun.providerId]
-  if (!provider || !apiKey) return null
-  // The model from the key's live list (D-022); none reachable → template.
-  const { choice, models } = await chooseModel(ctx, {
-    target: { providerId: provider.id, kind: provider.kind, baseUrl, apiKey },
-    scope: begun.mode === 'org_key' ? companyId : 'server',
-    saved: begun.model,
-  })
-  if (!choice.ok) {
-    console.warn(`[aiReports] ${choice.error}`)
-    return null
-  }
-  const model = choice.model
-  const started = Date.now()
-  const outcome = await Effect.runPromise(
-    Effect.result(
-      chatWithUsage({
-        kind: provider.kind,
-        providerId: provider.id,
-        baseUrl,
-        apiKey,
-        model,
-        messages: reportMessages(pack, lang),
-        temperature: 0.2,
-      }),
-    ).pipe(Effect.provide(FetchLive)),
-  )
-  const reply: ChatReply | null = Result.isSuccess(outcome) ? outcome.success : null
-  await ctx.runMutation(internal.llmGateway.recordReportUsage, {
-    companyId,
-    userId,
-    source: begun.mode,
-    providerId: begun.providerId,
-    model,
-    ok: !!reply,
-    error: Result.isFailure(outcome) ? outcome.failure.message : undefined,
-    inputTokens: reply?.usage.inputTokens,
-    outputTokens: reply?.usage.outputTokens,
-    durationMs: Date.now() - started,
-    ...(listedPrice(models, model) ?? {}),
-  })
-  const text = reply ? acceptReply(reply.text, pack, lang) : null
-  return text ? { text, providerId: begun.providerId, model } : null
 }
 
 type GenerateArgs = {

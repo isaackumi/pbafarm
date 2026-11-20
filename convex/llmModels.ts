@@ -121,6 +121,8 @@ export async function chooseModel(
     requested?: string | null
     saved?: string | null
     vision?: boolean
+    /** Model ids not to pick (open breakers, a model that just failed). */
+    exclude?: Iterable<string>
   },
 ): Promise<{ choice: ModelChoice; models: ModelInfo[] | null }> {
   const live = await liveModels(ctx, o.target, o.scope)
@@ -133,6 +135,7 @@ export async function chooseModel(
     env: process.env,
     vision: o.vision,
     listError: live.error,
+    exclude: o.exclude,
   })
   return { choice, models: live.models }
 }

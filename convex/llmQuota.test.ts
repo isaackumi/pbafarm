@@ -31,10 +31,14 @@ async function setup() {
 describe('server-key assistant quota (SEC-004)', () => {
   test('per-user minute limit is enforced across calls, per user', async () => {
     const s = await setup()
-    for (let i = 0; i < 10; i++) await s.as(s.a).mutation(api.llmQuota.consumeServerKeyQuota, {})
+    for (let i = 0; i < 10; i++) {
+      // Each finished call gives its concurrency lease back (D-023).
+      const gate = await s.as(s.a).mutation(api.llmQuota.consumeServerKeyQuota, {})
+      await s.as(s.a).mutation(api.aiGuard.releaseLease, { leaseId: gate.leaseId })
+    }
     await expect(s.as(s.a).mutation(api.llmQuota.consumeServerKeyQuota, {})).rejects.toThrow(/Too many assistant requests/)
     // Another user of the company still has quota.
-    await expect(s.as(s.b).mutation(api.llmQuota.consumeServerKeyQuota, {})).resolves.toBeNull()
+    await expect(s.as(s.b).mutation(api.llmQuota.consumeServerKeyQuota, {})).resolves.toMatchObject({ blocked: [] })
   })
 
   test('requires ai.use', async () => {

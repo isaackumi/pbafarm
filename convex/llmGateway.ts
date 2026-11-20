@@ -1,7 +1,5 @@
 import { v } from 'convex/values'
 import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
-import * as Effect from 'effect/Effect'
-import * as Result from 'effect/Result'
 import { action, internalMutation, internalQuery, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -13,10 +11,7 @@ import { requireAccount, requireMember } from './lib/permissions'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { userError } from './lib/errors'
 import { LLM_FAILURE_TEXT, classifyLlmFailure } from './lib/llmErrors'
-import { runEffect } from './lib/effect'
-import { FetchLive } from './lib/effectHttp'
 import { MISSING_KEY_MESSAGE, decryptJson, encryptJson, encryptionConfigured, readEncryptionKey, secretHint } from './lib/crypto'
-import { chatWithUsage, type ChatReply, type LlmError } from './lib/llmProviders'
 import { webhookUrlProblem } from './integrations/webhookLogic'
 import {
   MAX_MODEL_CHARS,
@@ -28,8 +23,11 @@ import {
   modelProblem,
   tokenCount,
 } from './lib/llmGateway'
-import { extraModels, listedPrice, type Price } from './lib/llmModels'
-import { chooseModel, liveModels, providerBaseUrl } from './llmModels'
+import { extraModels } from './lib/llmModels'
+import { liveModels, providerBaseUrl } from './llmModels'
+import { admissionError, admitCall, afterUsage } from './aiGuard'
+import { runGuarded } from './lib/aiGuard'
+import { chatAttempt, modelPicker, releaseLease, statusOf, type KeyTarget } from './lib/aiCall'
 
 /**
  * LLM gateway on the credential model (INT-009, doc 09 §10).
@@ -487,6 +485,11 @@ export type BeginResult =
       baseUrl: string | null
       ciphertext: string
       iv: string
+      /** AI protections (D-023): the call's lease, deadline and open breakers. */
+      leaseId: Id<'aiLeases'>
+      deadlineAt: number
+      attemptMs: number
+      blocked: string[]
     }
 
 /**
@@ -509,6 +512,10 @@ export const begin = internalMutation({
       baseUrl: v.union(v.string(), v.null()),
       ciphertext: v.string(),
       iv: v.string(),
+      leaseId: v.id('aiLeases'),
+      deadlineAt: v.number(),
+      attemptMs: v.number(),
+      blocked: v.array(v.string()),
     }),
   ),
   handler: async (ctx, args): Promise<BeginResult> => {
@@ -537,10 +544,24 @@ export const begin = internalMutation({
         throw userError('RATE_LIMITED', `Too many assistant requests. ${retryAfterText(verdict.retryAfter)}`)
       }
     }
+    // AI protections: budget and concurrency refuse before anything is spent.
+    const admitted = await admitCall(ctx, {
+      companyId,
+      userId: user._id,
+      server: false,
+      feature: 'gateway',
+      providerId: cred.providerId,
+      credentialId: cred._id,
+    })
+    if (!admitted.ok) throw admissionError(admitted)
     // Admin's daily cap per member (AI-POLICY); refuses before anything is spent.
     await spendDailyQuestion(ctx, company, user._id)
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
     return {
+      leaseId: admitted.leaseId,
+      deadlineAt: admitted.deadlineAt,
+      attemptMs: admitted.attemptMs,
+      blocked: admitted.blocked,
       handled: true,
       companyId,
       userId: user._id,
@@ -561,6 +582,8 @@ const usageFields = {
   feature,
   ok: v.boolean(),
   error: v.optional(v.string()),
+  /** Provider HTTP status of a failure (circuit breaker). */
+  status: v.optional(v.number()),
   inputTokens: v.optional(v.number()),
   outputTokens: v.optional(v.number()),
   durationMs: v.optional(v.number()),
@@ -581,25 +604,44 @@ export async function insertUsage(
     feature: 'chat' | 'insights' | 'report' | 'bot' | 'ocr'
     ok: boolean
     error?: string
+    /** Provider HTTP status of a failure, when known (circuit breaker). */
+    status?: number
     inputTokens?: number
     outputTokens?: number
     durationMs?: number
     inputPerM?: number
     outputPerM?: number
+    /** A member's session reported this row (Next proxy, server key): not trusted for shared breakers. */
+    reportedBy?: Id<'users'>
   },
 ) {
-  const { inputPerM, outputPerM, ...fields } = row
+  const { inputPerM, outputPerM, status, reportedBy, ...fields } = row
   const inputTokens = tokenCount(row.inputTokens)
   const outputTokens = tokenCount(row.outputTokens)
+  const model = row.model.slice(0, MAX_MODEL_CHARS)
+  const costUsd = estimateCostUsd(row.model, inputTokens, outputTokens, cleanPrice(inputPerM, outputPerM))
   await ctx.db.insert('llmUsage', {
     ...fields,
-    model: row.model.slice(0, MAX_MODEL_CHARS),
+    model,
     error: row.error?.slice(0, 300),
     inputTokens,
     outputTokens,
     durationMs: tokenCount(row.durationMs),
-    costUsd: estimateCostUsd(row.model, inputTokens, outputTokens, cleanPrice(inputPerM, outputPerM)),
+    costUsd,
     createdAt: Date.now(),
+  })
+  // AI protections: monthly spend (budgets, warnings) and the model's circuit breaker.
+  await afterUsage(ctx, {
+    companyId: row.companyId,
+    source: row.source,
+    providerId: row.providerId,
+    model,
+    ok: row.ok,
+    error: row.error,
+    status: typeof status === 'number' ? status : undefined,
+    costUsd,
+    tokens: (inputTokens ?? 0) + (outputTokens ?? 0),
+    reporter: reportedBy,
   })
 }
 
@@ -613,23 +655,55 @@ export const recordUsage = internalMutation({
 })
 
 /** The Next proxy reports a call it made on the server's key. */
+/** Client-reported figures are capped (a member's session can call this directly). */
+const MAX_REPORTED_INPUT_TOKENS = 250_000
+const MAX_REPORTED_OUTPUT_TOKENS = 64_000
+const MAX_REPORTED_PRICE_PER_M = 20
+
+/**
+ * The Next proxy reports a call it made on the server key. The member's own
+ * session calls this, so it is bound to the caller's live server-key lease
+ * from `llmQuota.consumeServerKeyQuota` (at most two rows per lease: the
+ * first attempt and an Auto fallback), token counts and prices are capped.
+ * The row counts toward the member's own company (budget and its share of the
+ * server key) but never moves a breaker or the shared server-key pool (D-023,
+ * Q-048).
+ */
 export const recordServerUsage = mutation({
-  args: usageFields,
+  args: { ...usageFields, leaseId: v.id('aiLeases') },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, { leaseId, ...args }) => {
     const { user } = await requireMember(ctx, { permission: 'ai.use' })
     if (!user.companyId) return null
     if (!PROVIDERS[args.providerId]) throw userError('VALIDATION', 'Unknown provider')
+    const lease = await ctx.db.get(leaseId)
+    if (!lease || lease.userId !== user._id || lease.companyId !== user.companyId || !lease.server || lease.expiresAt < Date.now()) return null
+    if ((lease.reports ?? 0) >= 2) return null
     const verdict = await rateLimiter.limit(ctx, 'llmUsageReportPerUser', { key: user._id })
     if (!verdict.ok) return null
-    await insertUsage(ctx, { ...args, companyId: user.companyId, userId: user._id, source: 'server_key' })
+    await ctx.db.patch(lease._id, { reports: (lease.reports ?? 0) + 1 })
+    const price =
+      (args.inputPerM ?? 0) <= MAX_REPORTED_PRICE_PER_M && (args.outputPerM ?? 0) <= MAX_REPORTED_PRICE_PER_M
+        ? { inputPerM: args.inputPerM, outputPerM: args.outputPerM }
+        : { inputPerM: undefined, outputPerM: undefined }
+    await insertUsage(ctx, {
+      ...args,
+      ...price,
+      inputTokens: args.inputTokens === undefined ? undefined : Math.min(args.inputTokens, MAX_REPORTED_INPUT_TOKENS),
+      outputTokens: args.outputTokens === undefined ? undefined : Math.min(args.outputTokens, MAX_REPORTED_OUTPUT_TOKENS),
+      companyId: user.companyId,
+      userId: user._id,
+      source: 'server_key',
+      reportedBy: user._id,
+    })
     return null
   },
 })
 
+type ReportLease = { leaseId: Id<'aiLeases'>; deadlineAt: number; attemptMs: number; blocked: string[] }
 export type ReportBegin =
-  | { mode: 'none'; reason: 'disabled' | 'no_key' | 'rate_limited' }
-  | {
+  | { mode: 'none'; reason: 'disabled' | 'no_key' | 'rate_limited' | 'busy' | 'budget' }
+  | ({
       mode: 'org_key'
       credentialId: Id<'llmCredentials'>
       providerId: string
@@ -637,8 +711,10 @@ export type ReportBegin =
       baseUrl: string | null
       ciphertext: string
       iv: string
-    }
-  | { mode: 'server_key'; providerId: string; model: string }
+    } & ReportLease)
+  | ({ mode: 'server_key'; providerId: string; model: string } & ReportLease)
+
+const reportLease = { leaseId: v.id('aiLeases'), deadlineAt: v.number(), attemptMs: v.number(), blocked: v.array(v.string()) }
 
 /**
  * Internal: quota and key for a weekly report (AI-003). Same switches as
@@ -657,7 +733,7 @@ export const beginReport = internalMutation({
   returns: v.union(
     v.object({
       mode: v.literal('none'),
-      reason: v.union(v.literal('disabled'), v.literal('no_key'), v.literal('rate_limited')),
+      reason: v.union(v.literal('disabled'), v.literal('no_key'), v.literal('rate_limited'), v.literal('busy'), v.literal('budget')),
     }),
     v.object({
       mode: v.literal('org_key'),
@@ -667,8 +743,9 @@ export const beginReport = internalMutation({
       baseUrl: v.union(v.string(), v.null()),
       ciphertext: v.string(),
       iv: v.string(),
+      ...reportLease,
     }),
-    v.object({ mode: v.literal('server_key'), providerId: v.string(), model: v.string() }),
+    v.object({ mode: v.literal('server_key'), providerId: v.string(), model: v.string(), ...reportLease }),
   ),
   handler: async (ctx, { companyId, userId, serverProviderId }): Promise<ReportBegin> => {
     const company = await ctx.db.get(companyId)
@@ -689,9 +766,22 @@ export const beginReport = internalMutation({
     for (const [name, key] of limits) {
       if (!(await rateLimiter.check(ctx, name, { key })).ok) return { mode: 'none', reason: 'rate_limited' }
     }
+    // AI protections (D-023): budget and concurrency, before quota is spent.
+    const useOrg = !!(cred && secret)
+    const admitted = await admitCall(ctx, {
+      companyId,
+      userId: userId ?? null,
+      server: !useOrg,
+      feature: 'report',
+      providerId: useOrg ? cred!.providerId : server!.id,
+      credentialId: useOrg ? cred!._id : null,
+    })
+    if (!admitted.ok) return { mode: 'none', reason: admitted.kind }
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
+    const lease = { leaseId: admitted.leaseId, deadlineAt: admitted.deadlineAt, attemptMs: admitted.attemptMs, blocked: admitted.blocked }
     if (cred && secret) {
       return {
+        ...lease,
         mode: 'org_key',
         credentialId: cred._id,
         providerId: cred.providerId,
@@ -702,7 +792,7 @@ export const beginReport = internalMutation({
       }
     }
     // Model resolved by the action from the live list (D-022).
-    return { mode: 'server_key', providerId: server!.id, model: '' }
+    return { ...lease, mode: 'server_key', providerId: server!.id, model: '' }
   },
 })
 
@@ -716,6 +806,7 @@ export const recordReportUsage = internalMutation({
     model: v.string(),
     ok: v.boolean(),
     error: v.optional(v.string()),
+    status: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
@@ -778,82 +869,87 @@ export const chat = action({
       model: args.model,
     })
     if (!begun.handled) return { handled: false }
-    const key = readEncryptionKey()
-    if (!key) throw userError('UPSTREAM', 'The organization key cannot be read: encryption is not configured')
-    const { apiKey } = await decryptJson<{ apiKey: string }>(
-      { ciphertext: begun.ciphertext, iv: begun.iv },
-      llmCredentialAad(begun.companyId, begun.credentialId),
-      key,
-    )
-    const provider = PROVIDERS[begun.providerId]
-    const baseUrl = providerBaseUrl(provider.id, provider.id === 'custom' ? begun.baseUrl ?? '' : null)
-    // Only a model in the key's live list (or LLM_EXTRA_MODELS / env default) is called.
-    const { choice, models } = await chooseModel(ctx, {
-      target: { providerId: provider.id, kind: provider.kind, baseUrl, apiKey },
-      scope: begun.companyId,
-      requested: begun.requestedModel,
-      saved: begun.savedModel,
-    })
-    if (!choice.ok) {
-      // Raw provider text stays in the log; members get the kind's message (llmErrors).
-      console.warn(`[llm gateway] model choice: ${choice.error}`)
-      throw upstreamError(choice.error)
-    }
-    const model = choice.model
-    const price: Price | undefined = listedPrice(models, model)
-    const temperature =
-      typeof args.temperature === 'number' && Number.isFinite(args.temperature)
-        ? Math.min(1, Math.max(0, args.temperature))
-        : 0.3
-    const started = Date.now()
-    const program = Effect.gen(function* () {
-      const outcome = yield* Effect.result(
-        chatWithUsage({
-          kind: provider.kind,
-          providerId: provider.id,
-          // Only the admin's saved URL for custom; fixed endpoints otherwise.
-          baseUrl: provider.id === 'custom' ? begun.baseUrl ?? '' : provider.baseUrl,
-          apiKey,
-          model,
-          messages: args.messages,
-          temperature,
-          referer: args.referer,
-        }),
+    try {
+      const key = readEncryptionKey()
+      if (!key) throw userError('UPSTREAM', 'The organization key cannot be read: encryption is not configured')
+      const { apiKey } = await decryptJson<{ apiKey: string }>(
+        { ciphertext: begun.ciphertext, iv: begun.iv },
+        llmCredentialAad(begun.companyId, begun.credentialId),
+        key,
       )
-      const reply: ChatReply | null = Result.isSuccess(outcome) ? outcome.success : null
-      yield* Effect.promise(() =>
-        ctx.runMutation(internal.llmGateway.recordUsage, {
-          companyId: begun.companyId,
-          userId: begun.userId,
-          providerId: begun.providerId,
-          model,
-          feature: args.feature,
-          ok: !!reply,
-          error: Result.isFailure(outcome) ? outcome.failure.message : undefined,
-          inputTokens: reply?.usage.inputTokens,
-          outputTokens: reply?.usage.outputTokens,
-          durationMs: Date.now() - started,
-          ...(price ?? {}),
-        }),
-      )
-      if (Result.isFailure(outcome)) return yield* Effect.fail(outcome.failure)
-      return outcome.success
-    }).pipe(Effect.provide(FetchLive))
-    const reply = await runEffect(program, {
-      toUserError: (e: LlmError) => {
-        console.warn(`[llm gateway] ${begun.providerId}/${model}: ${e.status ?? '-'} ${e.message}`)
-        return upstreamError(e.message, e.status)
-      },
-    })
-    return {
-      handled: true,
-      text: reply.text,
-      providerId: begun.providerId,
-      model,
-      fallback: !!begun.requestedModel && model !== begun.requestedModel,
-      requestedModel: begun.requestedModel,
-      inputTokens: reply.usage.inputTokens ?? null,
-      outputTokens: reply.usage.outputTokens ?? null,
+      const provider = PROVIDERS[begun.providerId]
+      const temperature =
+        typeof args.temperature === 'number' && Number.isFinite(args.temperature)
+          ? Math.min(1, Math.max(0, args.temperature))
+          : 0.3
+      // Only a model in the key's live list (or LLM_EXTRA_MODELS / env default) is called.
+      const picker = modelPicker(ctx, {
+        sources: [
+          {
+            providerId: provider.id,
+            kind: provider.kind,
+            listBaseUrl: providerBaseUrl(provider.id, provider.id === 'custom' ? begun.baseUrl ?? '' : null),
+            // Only the admin's saved URL for custom; fixed endpoints otherwise.
+            callBaseUrl: provider.id === 'custom' ? begun.baseUrl ?? '' : provider.baseUrl,
+            apiKey,
+            scope: begun.companyId,
+            source: 'org_key',
+          },
+        ],
+        requested: begun.requestedModel,
+        saved: begun.savedModel,
+        blocked: new Set(begun.blocked),
+        explicit: !!begun.requestedModel,
+      })
+      const result = await runGuarded({
+        now: Date.now,
+        deadlineAt: begun.deadlineAt,
+        attemptMs: begun.attemptMs,
+        explicit: !!begun.requestedModel,
+        blocked: new Set(begun.blocked),
+        first: picker.first,
+        next: picker.next,
+        attempt: chatAttempt({ messages: args.messages, temperature, referer: args.referer }),
+        record: async (t: KeyTarget, o) => {
+          await ctx.runMutation(internal.llmGateway.recordUsage, {
+            companyId: begun.companyId,
+            userId: begun.userId,
+            providerId: t.providerId,
+            model: t.model,
+            feature: args.feature,
+            ok: o.ok,
+            error: o.ok ? undefined : o.message,
+            status: statusOf(o.status),
+            inputTokens: o.value?.usage.inputTokens,
+            outputTokens: o.value?.usage.outputTokens,
+            durationMs: o.durationMs,
+            ...(t.price ?? {}),
+          })
+        },
+      })
+      if (!result.ok) {
+        // Raw provider text stays in the log; members get the kind's message (llmErrors).
+        console.warn(`[llm gateway] ${begun.providerId}/${result.target?.model ?? '-'}: ${result.message}`)
+        if (result.kind === 'not_configured') throw upstreamError(picker.lastError() ?? result.message)
+        throw userError('UPSTREAM', LLM_FAILURE_TEXT[result.kind], {
+          kind: result.kind,
+          status: result.status,
+          retryAfterSec: result.retryAfterSec,
+        })
+      }
+      const model = result.target.model
+      return {
+        handled: true,
+        text: result.value.text,
+        providerId: result.target.providerId,
+        model,
+        fallback: result.fallback || (!!begun.requestedModel && model !== begun.requestedModel),
+        requestedModel: begun.requestedModel,
+        inputTokens: result.value.usage.inputTokens ?? null,
+        outputTokens: result.value.usage.outputTokens ?? null,
+      }
+    } finally {
+      await releaseLease(ctx, begun.leaseId)
     }
   },
 })

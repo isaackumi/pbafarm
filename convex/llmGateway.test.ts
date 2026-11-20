@@ -394,14 +394,16 @@ describe('gateway chat', () => {
 describe('server-key usage', () => {
   test('recorded for the caller, company-scoped, viewers refused', async () => {
     const s = await setup()
+    // Reports are bound to the caller's server-key lease (D-023).
+    const { leaseId } = await s.as(s.managerA).mutation(api.llmQuota.consumeServerKeyQuota, {})
     await s.as(s.managerA).mutation(api.llmGateway.recordServerUsage, {
-      providerId: 'gemini', model: 'gemini-2.0-flash', feature: 'chat', ok: true, inputTokens: 2000, outputTokens: 100,
+      leaseId, providerId: 'gemini', model: 'gemini-2.0-flash', feature: 'chat', ok: true, inputTokens: 2000, outputTokens: 100,
     })
     await expect(
-      s.as(s.viewerA).mutation(api.llmGateway.recordServerUsage, { providerId: 'gemini', model: 'gemini-2.0-flash', feature: 'chat', ok: true }),
+      s.as(s.viewerA).mutation(api.llmGateway.recordServerUsage, { leaseId, providerId: 'gemini', model: 'gemini-2.0-flash', feature: 'chat', ok: true }),
     ).rejects.toThrow()
     await expect(
-      s.as(s.managerA).mutation(api.llmGateway.recordServerUsage, { providerId: 'nope', model: 'x', feature: 'chat', ok: true }),
+      s.as(s.managerA).mutation(api.llmGateway.recordServerUsage, { leaseId, providerId: 'nope', model: 'x', feature: 'chat', ok: true }),
     ).rejects.toThrow()
     const rows = await usageRows(s)
     expect(rows).toHaveLength(1)

@@ -288,9 +288,10 @@ export function chat(o: ChatOptions): Effect.Effect<string, LlmError, Fetch> {
  * Run `chatWithUsage` at the route edge: text and token counts, or an Error
  * with the user-facing message (and `status` when the provider answered).
  */
-export async function runChatWithUsage(o: ChatOptions, fetchImpl?: FetchFn): Promise<ChatReply> {
+export async function runChatWithUsage(o: ChatOptions, fetchImpl?: FetchFn, run: { signal?: AbortSignal } = {}): Promise<ChatReply> {
   const impl: FetchFn = fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
-  const exit = await Effect.runPromiseExit(chatWithUsage(o).pipe(Effect.provide(fetchLayer(impl))))
+  // The question's deadline (AI protections) interrupts the call through `signal`.
+  const exit = await Effect.runPromiseExit(chatWithUsage(o).pipe(Effect.provide(fetchLayer(impl))), run.signal ? { signal: run.signal } : undefined)
   if (Exit.isSuccess(exit)) return exit.value
   throw failureToError(exit.cause)
 }

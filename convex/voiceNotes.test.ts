@@ -16,6 +16,7 @@ import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
 import { testHooks } from './bot/agent'
+import { deadlineTestHooks } from './lib/aiGuard'
 import { voiceMessages } from './bot/voice'
 import { rateLimiter } from './lib/rateLimits'
 
@@ -82,6 +83,8 @@ beforeEach(() => {
   )
   // Fake Date too: the workflow's workpool loop schedules by the clock.
   vi.useFakeTimers()
+  // runAllTimers would fire every AI deadline at once (D-023).
+  deadlineTestHooks.disabled = true
 })
 
 afterEach(() => {

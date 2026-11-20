@@ -1,8 +1,7 @@
 import { requireApiUser } from '../../../lib/llmApiAuth'
 import { api } from '../../../lib/convexBridge'
 import { assistantRefusal, createRateLimiter } from '../../../lib/llmProxyGuard'
-import { resolveProvider } from '../../../lib/llmServer'
-import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError } from '../../../lib/llmGatewayRoute'
+import { chatWithOrgKey, failureBody, gatewayError, guardedServerChat } from '../../../lib/llmGatewayRoute'
 import {
   MAX_REQUEST_CHARS,
   buildDraftSystemPrompt,
@@ -98,18 +97,20 @@ export default async function handler(req, res) {
         referer,
       })
       if (org.handled) return org.text
-      const resolved = await resolveProvider(provider, model)
-      if (resolved.error) {
-        const err = new Error(resolved.error)
-        err.status = resolved.status
+      const served = await guardedServerChat(auth.client, {
+        provider,
+        model,
+        messages,
+        temperature: TEMPERATURE,
+        referer,
+        feature: 'chat',
+      })
+      if (served.notConfigured) {
+        const err = new Error(served.error)
+        err.status = 400
         throw err
       }
-      return await chatWithServerKey(
-        auth.client,
-        { ...resolved.chat, messages, temperature: TEMPERATURE, referer },
-        'chat',
-        resolved.price,
-      )
+      return served.text
     }
 
     let result = { draft: null, explanation: '', problems: ['Anowa did not return a rule'] }

@@ -132,8 +132,11 @@ describe('companies.updateAiPolicy', () => {
 
   test('the daily cap refuses assistant calls past the limit', async () => {
     const { admin } = await setup({ aiPolicy: { dailyQuestionsPerMember: 2 } })
-    await admin.mutation(api.llmQuota.consumeServerKeyQuota, {})
-    await admin.mutation(api.llmQuota.consumeServerKeyQuota, {})
+    // Each finished call gives its concurrency lease back (AI protections, D-023).
+    for (let i = 0; i < 2; i++) {
+      const gate = await admin.mutation(api.llmQuota.consumeServerKeyQuota, {})
+      await admin.mutation(api.aiGuard.releaseLease, { leaseId: gate.leaseId })
+    }
     await expect(admin.mutation(api.llmQuota.consumeServerKeyQuota, {})).rejects.toThrow(/today's 2 Anowa questions/)
   })
 

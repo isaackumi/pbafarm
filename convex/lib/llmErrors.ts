@@ -26,6 +26,12 @@ export const LLM_FAILURE_KINDS = [
   'too_long',
   /** The model answered with nothing usable. */
   'empty',
+  /** Too many questions in flight for this person, organization or the platform (AI protections). */
+  'busy',
+  /** The organization's (or key's) monthly AI budget is used up. */
+  'budget',
+  /** The explicitly chosen model is paused after repeated failures (circuit breaker). */
+  'model_paused',
   'unknown',
 ] as const
 export type LlmFailureKind = (typeof LLM_FAILURE_KINDS)[number]
@@ -49,6 +55,9 @@ export const LLM_FAILURE_TEXT: Record<LlmFailureKind, string> = {
   blocked: 'The AI provider declined to answer that. Try rephrasing the question.',
   too_long: 'There is too much farm data for one answer. Pick one site or a shorter date range.',
   empty: 'Anowa did not get an answer back. Try again.',
+  busy: 'Anowa is still working on other questions. Try again in a few seconds.',
+  budget: "Your organization has used this month's AI budget. An admin can raise it in AI settings.",
+  model_paused: 'The chosen model is having trouble right now. Pick Auto or another model and ask again.',
   unknown: 'Anowa could not answer just now. Try again in a moment.',
 }
 
@@ -62,6 +71,9 @@ export const LLM_FAILURE_STATUS: Record<LlmFailureKind, number> = {
   blocked: 422,
   too_long: 413,
   empty: 502,
+  busy: 429,
+  budget: 402,
+  model_paused: 503,
   unknown: 502,
 }
 

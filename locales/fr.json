@@ -2844,6 +2844,9 @@
       "forbidden": "Vous n’avez pas accès à cela.",
       "invalid": "Anowa n’a pas pu lire cette demande. Réessayez.",
       "offline": "Vous semblez hors ligne. La question n’a pas été envoyée ; réessayez quand vous aurez du réseau.",
+      "busy": "Anowa traite encore d'autres questions. Réessayez dans quelques secondes.",
+      "budget": "Votre organisation a utilisé le budget IA du mois : Anowa ne peut pas répondre à de nouvelles questions avant le mois prochain.",
+      "model_paused": "Le modèle choisi rencontre des difficultés. Choisissez Auto ou un autre modèle dans le menu et reposez la question.",
       "unknown": "Anowa n’a pas pu répondre pour l’instant. Réessayez dans un moment.",
       "retryHours": {
         "one": "Réessayez dans environ une heure.",
@@ -2858,7 +2861,8 @@
         "quota": "Pour continuer tout de suite, choisissez un autre modèle dans le menu des modèles, ou activez la facturation chez votre fournisseur d’IA dans les paramètres IA.",
         "auth": "Ouvrez les paramètres IA pour vérifier ou remplacer la clé du fournisseur.",
         "not_configured": "Ouvrez les paramètres IA pour ajouter une clé de fournisseur.",
-        "model_unavailable": "Les paramètres IA indiquent les modèles que votre clé peut utiliser."
+        "model_unavailable": "Les paramètres IA indiquent les modèles que votre clé peut utiliser.",
+        "budget": "Augmentez le budget mensuel dans les paramètres IA pour continuer."
       }
     }
   },
@@ -4059,7 +4063,23 @@
       "providerTitle": "Fournisseur de modèle",
       "usageTitle": "Utilisation",
       "last30": "30 derniers jours",
-      "calls": "appels"
+      "calls": "appels",
+      "budget": {
+        "title": "Budget IA mensuel",
+        "meta": "Dépenses de {month} (UTC), d’après le journal d’utilisation",
+        "noBudget": "Aucun budget défini",
+        "ofBudget": "sur {budget} ({pct} %)",
+        "unpriced": "{tokens} jetons sur des modèles sans prix connu comptent dans le budget de jetons.",
+        "refusing": "Le budget est épuisé : Anowa ne répond plus aux nouvelles questions avant le mois prochain. Augmentez le budget pour continuer.",
+        "allowedOver": "L’équipe plateforme a autorisé Anowa à continuer au-delà du budget ce mois-ci.",
+        "usd": "Budget par mois (USD)",
+        "tokens": "Budget de jetons par mois (modèles sans prix)",
+        "none": "Sans limite",
+        "helper": "Les admins reçoivent un avis dans l’app et par e-mail à 80 % et à 100 %. À 100 %, Anowa cesse de répondre jusqu’au mois prochain. Votre budget ne peut être que plus bas que la limite de la plateforme.",
+        "keyLabel": "Clé {provider}",
+        "saved": "Budget IA mis à jour",
+        "invalid": "Saisissez un montant positif, ou laissez vide pour aucune limite."
+      }
     },
     "integ": {
       "crumb": "API, webhooks, documentation",
@@ -4799,7 +4819,8 @@
       "plans": "Abonnements",
       "usage": "Utilisation IA",
       "audit": "Journal d'audit",
-      "staff": "Équipe"
+      "staff": "Équipe",
+      "ai": "Santé IA"
     },
     "status": {
       "active": "Actif",

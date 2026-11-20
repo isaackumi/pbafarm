@@ -4,11 +4,12 @@ import {
   assistantRefusal,
   clampTemperature,
   createRateLimiter,
+  createTokenBucket,
   validateMessages,
 } from '../../../lib/llmProxyGuard'
-import { assistantSystemPrompt, businessDateOr, chatScope, resolveProvider } from '../../../lib/llmServer'
+import { assistantSystemPrompt, businessDateOr, chatScope } from '../../../lib/llmServer'
 import { decodeChatBody } from '../../../convex/lib/llmProviders'
-import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError, streamWithServerKey } from '../../../lib/llmGatewayRoute'
+import { chatWithOrgKey, failureBody, gatewayError, guardedServerChat, streamWithServerKey } from '../../../lib/llmGatewayRoute'
 import { ndjson } from '../../../lib/chatStream'
 import { sanitizeAnswer } from '../../../convex/lib/llmAnswer'
 import { LLM_FAILURE_TEXT } from '../../../convex/lib/llmErrors'
@@ -44,7 +45,8 @@ import { LLM_FAILURE_TEXT } from '../../../convex/lib/llmErrors'
  * used when set; otherwise the server key. Every call lands in the company's
  * usage log.
  */
-const perMinute = createRateLimiter({ limit: 10, windowMs: 60_000 })
+// Per minute: token bucket, refilled one request every 6 s (D-023).
+const perMinute = createTokenBucket({ rate: 10, periodMs: 60_000, capacity: 10 })
 const perHour = createRateLimiter({ limit: 100, windowMs: 60 * 60_000 })
 const companyPerHour = createRateLimiter({ limit: 500, windowMs: 60 * 60_000 })
 
@@ -148,38 +150,39 @@ export default async function handler(req, res) {
       })
     }
 
-    const resolved = await resolveProvider(body.value.provider, body.value.model)
-    if (resolved.error) {
-      // No server key (400): an admin adds one; the env var name is for the log, not the member.
-      if (resolved.status === 400) {
-        console.warn('[api/llm/chat]', resolved.error)
-        return res.status(503).json({ error: LLM_FAILURE_TEXT.auth, code: 'not_configured', retryAfterSec: null })
-      }
-      const failed = gatewayError({ status: resolved.status, message: resolved.error })
-      return res.status(failed.status).json(failureBody(failed))
+    const serverArgs = {
+      provider: body.value.provider ?? undefined,
+      model: body.value.model ?? undefined,
+      messages,
+      temperature,
+      referer,
+      feature: 'chat',
     }
-
     if (req.query?.stream === '1') {
-      return await streamAnswer(req, res, auth, resolved, { messages, temperature, referer })
+      return await streamAnswer(req, res, auth, serverArgs)
     }
 
-    let text
+    let served
     try {
-      text = sanitizeAnswer(
-        await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat', resolved.price),
-      )
+      served = await guardedServerChat(auth.client, serverArgs)
     } catch (err) {
       // Provider text (quota metrics, URLs, project ids) is logged, never returned (llmErrors).
       const failed = gatewayError(err)
       return res.status(failed.status).json(failureBody(failed))
     }
+    if (served.notConfigured) {
+      // No server key: an admin adds one; the env var name is for the log, not the member.
+      console.warn('[api/llm/chat]', served.error)
+      return res.status(503).json({ error: LLM_FAILURE_TEXT.auth, code: 'not_configured', retryAfterSec: null })
+    }
+    const text = sanitizeAnswer(served.text)
     if (!text) return res.status(502).json({ error: LLM_FAILURE_TEXT.empty, code: 'empty', retryAfterSec: null })
     return res.status(200).json({
       text,
-      provider: resolved.providerId,
-      model: resolved.model,
-      fallback: resolved.fallback,
-      requestedModel: resolved.requestedModel,
+      provider: served.providerId,
+      model: served.model,
+      fallback: served.fallback,
+      requestedModel: served.requestedModel,
       keySource: 'server',
     })
   } catch (err) {
@@ -189,7 +192,7 @@ export default async function handler(req, res) {
 }
 
 /** The server-key answer as NDJSON frames (see lib/chatStream). */
-async function streamAnswer(req, res, auth, resolved, { messages, temperature, referer }) {
+async function streamAnswer(req, res, auth, serverArgs) {
   const abort = new AbortController()
   // The member pressed Stop (or left): stop paying for tokens nobody reads.
   res.on('close', () => {
@@ -212,13 +215,15 @@ async function streamAnswer(req, res, auth, resolved, { messages, temperature, r
     res.write(ndjson(event))
   }
   try {
-    const reply = await streamWithServerKey(
-      auth.client,
-      { ...resolved.chat, messages, temperature, referer },
-      'chat',
-      resolved.price,
-      { signal: abort.signal, onText: (text) => send({ type: 'text', text }) },
-    )
+    // Lease, budget, breaker/Auto fallback and deadline as the unstreamed path (D-023).
+    const reply = await streamWithServerKey(auth.client, serverArgs, {
+      signal: abort.signal,
+      onText: (text) => send({ type: 'text', text }),
+    })
+    if (reply.notConfigured) {
+      console.warn('[api/llm/chat]', reply.error)
+      return res.status(503).json({ error: LLM_FAILURE_TEXT.auth, code: 'not_configured', retryAfterSec: null })
+    }
     if (reply.stopped || res.writableEnded) {
       if (!res.writableEnded) res.end()
       return
@@ -233,10 +238,10 @@ async function streamAnswer(req, res, auth, resolved, { messages, temperature, r
       ndjson({
         type: 'done',
         text: reply.text,
-        provider: resolved.providerId,
-        model: resolved.model,
-        fallback: resolved.fallback,
-        requestedModel: resolved.requestedModel,
+        provider: reply.providerId,
+        model: reply.model,
+        fallback: reply.fallback,
+        requestedModel: reply.requestedModel,
         keySource: 'server',
       }),
     )

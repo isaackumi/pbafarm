@@ -37,13 +37,17 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   inboundPerWebhook: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 200 },
   /** Rejected inbound requests written to the log, key = inbound webhook id. */
   inboundRejectLogPerWebhook: { kind: 'fixed window', rate: 60, period: HOUR },
-  /** Assistant calls on the organization's own key (INT-009), key = userId. Same as the Next proxy. */
-  llmPerUserMinute: { kind: 'fixed window', rate: 10, period: MINUTE },
+  /**
+   * Assistant calls (INT-009, SEC-004), key = userId. Same as the Next proxy.
+   * Per minute is a token bucket (D-023): a burst of 10, then one more every
+   * 6 s, instead of a fixed window that locks out until the minute ends.
+   */
+  llmPerUserMinute: { kind: 'token bucket', rate: 10, period: MINUTE, capacity: 10 },
   llmPerUserHour: { kind: 'fixed window', rate: 100, period: HOUR },
   /** key = companyId. */
   llmPerCompanyHour: { kind: 'fixed window', rate: 500, period: HOUR },
-  /** Usage rows reported by the Next proxy for server-key calls, key = userId. */
-  llmUsageReportPerUser: { kind: 'fixed window', rate: 150, period: HOUR },
+  /** Usage rows reported by the Next proxy for server-key calls (up to two per question with an Auto fallback), key = userId. */
+  llmUsageReportPerUser: { kind: 'fixed window', rate: 250, period: HOUR },
   /** Model-list lookups with a pasted key (AI settings), key = userId. */
   llmModelPreviewPerUser: { kind: 'fixed window', rate: 30, period: HOUR },
   /** Live model lists for the org's keys (assistant picker, AI settings), key = userId. */

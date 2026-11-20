@@ -323,3 +323,15 @@ Inbound replies (for example a worker replying "12 dead" on WhatsApp) are stored
 
 - `workers/iot-ingest` (Cloudflare Worker, TypeScript, not deployed): `POST /v1/readings` authenticates a device from the KV registry `DEVICES` (`device:<id>` → `{ companyLabel, secret? | tokenSha256?, cageId?, siteId?, disabled? }`) by HMAC (`X-Device-Signature`, same scheme as §13.5) or a bearer token compared by SHA-256; checks and batches up to 2000 readings (body ≤ 1 MB), pins the device's cage or site, and forwards in chunks of 500 to Convex `POST /ingest/v1/readings` with one `ingest:write` API key held as a Worker secret (`CONVEX_INGEST_KEY`). Retries only network errors, timeouts and 5xx (safe: Convex dedupes by device, parameter and time); 4xx comes back to the device.
 - The direct Convex endpoint stays live (rollback path). Deploy steps and follow-ups (Queues for bursts, registry management UI) are in `workers/iot-ingest/README.md`.
+
+## 14. AI protections (D-023)
+
+Every AI path goes through the same guard: the Next proxy (`pages/api/llm/*`, org key via `llmGateway.chat`, server key via `guardedServerChat`), Ask Anowa (`convex/anowa/agent.ts`), the farm bot and voice notes (`convex/bot/agent.ts`, `convex/bot/voice.ts`), logbook OCR (`convex/bot/logbook.ts`) and weekly reports (`convex/aiReports.ts`).
+
+1. **Gate** (the path's own mutation): permission, switch, rate limits, then `admitCall` (budget, concurrency lease, open breakers) before any quota is spent.
+2. **Call** (action): `runGuarded` picks the model from the live list without paused ones, enforces the deadline with an abort signal, and with Auto retries once on the next model. Each attempt is one `llmUsage` row.
+3. **After** (`insertUsage` → `afterUsage`): monthly spend counters, 80%/100% notices, breaker update. The lease is released in a `finally`.
+4. **Watch**: `aiGuard.checkHealth` every 5 minutes; `/platform/ai` for health, breakers, alerts and per-tenant budgets.
+
+Tables: `aiLeases`, `aiBreakers`, `aiSpend`, `aiBudgets`, `aiAlerts` (`convex/integrations/tables.ts`).
+

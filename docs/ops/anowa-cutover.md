@@ -86,6 +86,31 @@ Only the variables of the adapters actually used are needed.
 `BOT_LLM_MODEL` is a preference: if the provider no longer lists it, the bot
 uses the provider's default.
 
+**AI protections (D-023, all optional; set on Convex)**. Concurrency, budgets,
+circuit breaker and alerts apply to every AI path (Next proxy, Ask Anowa, bot,
+voice, logbook OCR, weekly reports). Defaults are safe without any of these.
+
+| Name | Default | Purpose |
+|---|---|---|
+| `AI_MAX_INFLIGHT_PER_USER` | `2` | AI calls one person may have in flight; more are refused as "busy" (nothing charged) |
+| `AI_MAX_INFLIGHT_PER_COMPANY` | `10` | Same, per organization (scheduled reports included) |
+| `AI_MAX_INFLIGHT_SERVER` | `40` | Same, for the platform's shared server keys across all tenants |
+| `AI_QUESTION_DEADLINE_MS` | `45000` | Overall deadline per question (first attempt plus an Auto fallback) |
+| `AI_ATTEMPT_TIMEOUT_MS` | `28000` | Most the first attempt may take, so a fallback still has time |
+| `AI_BREAKER_FAILURES` | `2` | Overload / 5xx / timeout failures within 60 s that pause a model (quota pauses at once) |
+| `AI_BREAKER_OPEN_MS` | `60000` | How long a model is paused; a failed probe doubles it (max 10 min) |
+| `AI_COMPANY_MONTHLY_BUDGET_USD` | none | Platform default monthly AI budget per tenant (USD). Admins can only set a lower one; platform admins can override per tenant in the console (`/platform/ai`) |
+| `AI_COMPANY_MONTHLY_TOKENS` | none | Token budget per tenant for models without a known price |
+| `AI_SERVER_MONTHLY_BUDGET_USD` | none | All server keys together, USD per month; at 100% server-key calls are refused |
+| `AI_SERVER_TENANT_SHARE` | 0.25 | Largest share (0.01–1) of `AI_SERVER_MONTHLY_BUDGET_USD` one tenant may use per month; applies only when that budget is set. The console's "Allow over budget" lifts it for the month |
+| `AI_SERVER_MONTHLY_BUDGET_USD_<PROVIDER>` | none | Per server key (e.g. `_GEMINI`) |
+| `AI_ALERT_ERROR_RATE` | `0.25` | Error share over 15 minutes that alerts platform admins |
+| `AI_ALERT_MIN_CALLS` | `20` | Calls needed in the window before error rate / latency count |
+| `AI_ALERT_P95_MS` | `30000` | p95 latency that alerts |
+| `AI_ALERT_COST_USD` | `5` | Spend in 15 minutes that alerts when it is also a spike |
+| `AI_ALERT_COST_SPIKE_X` | `4` | Spike = this many times the previous 15 minutes |
+| `PLATFORM_ALERT_EMAILS` | none | Comma-separated extra recipients for AI health alerts (platform admins always get them in-app and by email) |
+
 **Security and integrations**
 
 | Name | Purpose |

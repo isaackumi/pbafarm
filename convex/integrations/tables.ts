@@ -221,6 +221,8 @@ export const integrationTables = {
     keyHint: v.optional(v.string()),
     isDefault: v.boolean(),
     enabled: v.boolean(),
+    /** Monthly USD budget for calls on this key (AI protections); absent = none. */
+    monthlyBudgetUsd: v.optional(v.number()),
     updatedBy: v.id('users'),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -276,4 +278,109 @@ export const integrationTables = {
   })
     .index('by_fingerprint', ['fingerprint'])
     .index('by_fetchedAt', ['fetchedAt']),
+
+  /**
+   * AI protections (convex/aiGuard.ts): one row per AI call in flight. A
+   * call takes a lease before the provider is called and gives it back in a
+   * finally; `expiresAt` (the call's deadline plus a margin) frees the slot
+   * of a call that crashed. Counted per user, company and the server key.
+   */
+  aiLeases: defineTable({
+    companyId: v.id('companies'),
+    userId: v.optional(v.id('users')),
+    /** The call runs on the platform's shared key. */
+    server: v.boolean(),
+    feature: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    /** Usage rows the Next proxy reported against this lease (at most 2: first attempt + Auto fallback). */
+    reports: v.optional(v.number()),
+  })
+    .index('by_userId_and_expiresAt', ['userId', 'expiresAt'])
+    .index('by_companyId_and_expiresAt', ['companyId', 'expiresAt'])
+    .index('by_server_and_expiresAt', ['server', 'expiresAt'])
+    .index('by_expiresAt', ['expiresAt']),
+
+  /**
+   * Circuit breakers per key scope ('server' or the company id) + provider +
+   * model (lib/aiGuard nextBreaker). `openUntil` 0 = closed; in the past =
+   * half-open (the next call is the probe).
+   */
+  aiBreakers: defineTable({
+    scope: v.string(),
+    companyId: v.optional(v.id('companies')),
+    providerId: v.string(),
+    model: v.string(),
+    failures: v.number(),
+    windowStart: v.number(),
+    openUntil: v.number(),
+    opens: v.number(),
+    lastKind: v.optional(v.string()),
+    /** Quota "limit: 0": the key has no allowance for this model until the reset. */
+    refused: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  })
+    .index('by_scope_and_providerId_and_model', ['scope', 'providerId', 'model'])
+    .index('by_scope_and_openUntil', ['scope', 'openUntil'])
+    .index('by_openUntil', ['openUntil']),
+
+  /**
+   * Monthly AI spend counters, kept with every llmUsage row (insertUsage):
+   * kind 'company' (scope = company id), 'key' (an organization key, scope =
+   * `${companyId}:${providerId}`), 'server' (scope = provider id; Convex-side
+   * calls only), 'share' (scope = company id: that tenant's server-key spend,
+   * for AI_SERVER_TENANT_SHARE). Budget
+   * warnings are sent once per threshold per month (warned80 / warned100).
+   */
+  aiSpend: defineTable({
+    kind: v.union(v.literal('company'), v.literal('key'), v.literal('server'), v.literal('share')),
+    scope: v.string(),
+    companyId: v.optional(v.id('companies')),
+    month: v.string(),
+    calls: v.number(),
+    errors: v.number(),
+    costUsd: v.number(),
+    tokens: v.number(),
+    /** Tokens of calls whose model has no known price (counted against a token budget). */
+    unpricedTokens: v.number(),
+    warned80: v.optional(v.boolean()),
+    warned100: v.optional(v.boolean()),
+    updatedAt: v.number(),
+  })
+    .index('by_kind_and_scope_and_month', ['kind', 'scope', 'month'])
+    .index('by_kind_and_month_and_costUsd', ['kind', 'month', 'costUsd']),
+
+  /**
+   * An organization's monthly AI budget (admins, AI settings) and the
+   * platform's per-tenant override (console). Absent = the platform default
+   * from env (AI_COMPANY_MONTHLY_BUDGET_USD / _TOKENS).
+   */
+  aiBudgets: defineTable({
+    companyId: v.id('companies'),
+    monthlyBudgetUsd: v.optional(v.number()),
+    monthlyTokenBudget: v.optional(v.number()),
+    updatedBy: v.optional(v.id('users')),
+    updatedAt: v.number(),
+    /** Platform admin: a different budget for this tenant (replaces the env default). */
+    platformBudgetUsd: v.optional(v.number()),
+    /** Platform admin: keep answering past 100% until the end of this month ("YYYY-MM"). */
+    allowOverBudgetMonth: v.optional(v.string()),
+    platformUpdatedBy: v.optional(v.id('users')),
+    platformUpdatedAt: v.optional(v.number()),
+  }).index('by_companyId', ['companyId']),
+
+  /** Platform AI health alerts (5-minute check): one row per alert key, re-sent at most hourly. */
+  aiAlerts: defineTable({
+    key: v.string(),
+    kind: v.string(),
+    companyId: v.optional(v.id('companies')),
+    providerId: v.optional(v.string()),
+    message: v.string(),
+    active: v.boolean(),
+    firstAt: v.number(),
+    lastSeenAt: v.number(),
+    lastSentAt: v.number(),
+  })
+    .index('by_key', ['key'])
+    .index('by_active_and_lastSeenAt', ['active', 'lastSeenAt']),
 }

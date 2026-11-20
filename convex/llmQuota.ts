@@ -13,11 +13,24 @@ import { requireMember } from './lib/permissions'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { userError } from './lib/errors'
 import { spendDailyQuestion } from './lib/aiPolicy'
+import { admissionError, admitCall } from './aiGuard'
+import { PROVIDERS } from './lib/llmGateway'
 
+/**
+ * Also the AI protections' gate for server-key calls (D-023): refuses when
+ * the company's (or the server key's) monthly budget is used up or a
+ * concurrency cap is full, before any quota is spent, and returns the lease
+ * the proxy gives back (`aiGuard.releaseLease`) plus the open breakers.
+ */
 export const consumeServerKeyQuota = mutation({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx) => {
+  args: { providerId: v.optional(v.string()), feature: v.optional(v.string()) },
+  returns: v.object({
+    leaseId: v.id('aiLeases'),
+    deadlineAt: v.number(),
+    attemptMs: v.number(),
+    blocked: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'ai.use' })
     const companyId = user.companyId
     if (!companyId) throw userError('FORBIDDEN', 'Assistant is not available for your account')
@@ -33,9 +46,17 @@ export const consumeServerKeyQuota = mutation({
         throw userError('RATE_LIMITED', `Too many assistant requests. ${retryAfterText(verdict.retryAfter)}`)
       }
     }
+    const admitted = await admitCall(ctx, {
+      companyId,
+      userId: user._id,
+      server: true,
+      feature: (args.feature ?? 'proxy').slice(0, 40),
+      providerId: args.providerId && PROVIDERS[args.providerId] ? args.providerId : null,
+    })
+    if (!admitted.ok) throw admissionError(admitted)
     // Admin's daily cap per member (AI-POLICY); refuses before anything is spent.
     await spendDailyQuestion(ctx, await ctx.db.get(companyId), user._id)
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
-    return null
+    return { leaseId: admitted.leaseId, deadlineAt: admitted.deadlineAt, attemptMs: admitted.attemptMs, blocked: admitted.blocked }
   },
 })

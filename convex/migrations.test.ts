@@ -61,7 +61,9 @@ describe('M1 assignUnscopedToCompany', () => {
         // dataRequests: an account deletion of a company-less user has no company by design.
         // mfaSessions: a company-less account (super_admin) verifies in platform scope.
         // platformEvents: platform-wide console events have no company by design.
-        return name !== 'users' && name !== 'dataRequests' && name !== 'mfaSessions' && name !== 'platformEvents' && field && field.isOptional === 'optional'
+        // aiAlerts / aiBreakers / aiSpend (D-023): platform and server-key rows have no company by design.
+        const platformScope = ['users', 'dataRequests', 'mfaSessions', 'platformEvents', 'aiAlerts', 'aiBreakers', 'aiSpend']
+        return !platformScope.includes(name) && field && field.isOptional === 'optional'
       })
       .map(([name]) => name)
       .sort()
