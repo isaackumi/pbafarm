@@ -81,7 +81,8 @@
       "weeklyReport": "Weekly report",
       "alerts": "Alerts & insights",
       "calendar": "Calendar",
-      "assistant": "Anowa"
+      "assistant": "Anowa",
+      "cyclePlanner": "Cycle planner"
     },
     "section": {
       "anowa": "Ask Anowa",
@@ -7195,6 +7196,98 @@
     "meta": {
       "title": "The operating system for fish farms",
       "description": "Stocking to harvest, feed to finance. Anowa keeps every cage, pond and hatchery tank measured, fed and traceable. Even offline, even from WhatsApp."
+    }
+  },
+  "cyclePlanner": {
+    "title": "Plan the next cycle",
+    "eyebrow": "Production · Planning",
+    "savePlan": "Save plan",
+    "updatePlan": "Update plan",
+    "comparePlans": "Compare plans",
+    "saved": "Saved",
+    "draft": "Draft",
+    "deleted": "Plan deleted",
+    "saveFailed": "Could not save the plan",
+    "confirmDelete": "Delete plan {name}?",
+    "deletePlan": "Delete plan {name}",
+    "planName": "Plan name",
+    "planNamePlaceholder": "Plan A · Row A spring",
+    "stockShort": "Stock {date}",
+    "units": "Cages",
+    "unitCount": {
+      "one": "{count} cage",
+      "other": "{count} cages"
+    },
+    "pickUnits": "Choose the cages to plan",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "noUnits": "No cages to plan yet",
+    "noUnitsBody": "Add cages first, then plan their next cycle here.",
+    "unitsUnavailable": "These cages are not available to you any more. Choose others.",
+    "stockOn": "Stock on",
+    "fishPerUnit": "Fingerlings per cage",
+    "stockAbw": "Fingerling weight (g)",
+    "harvestAt": "Harvest at",
+    "feedPricePerBag": "Feed price / {kg} kg bag",
+    "salePricePerKg": "Sale price / kg",
+    "fingerlingPrice": "Price per fingerling",
+    "bagKg": "Bag size (kg)",
+    "fromCycles": {
+      "one": "From your last cycle",
+      "other": "From your last {count} cycles"
+    },
+    "fromDefaults": "Species defaults (no closed cycles yet)",
+    "fromMixed": "Your cycles and species defaults",
+    "survival": "Survival",
+    "fcr": "FCR",
+    "growth": "Growth curve",
+    "growthWater": "Your cycles, water {min} to {max}°C",
+    "growthTgc": "TGC {tgc} at {temp}°C",
+    "tgcHint": "Growth as a TGC: higher means faster growth at the same water temperature.",
+    "changeAssumptions": "Change assumptions",
+    "doneEditing": "Done",
+    "resetAssumptions": "Use my cycles again",
+    "source": {
+      "history": "your cycles",
+      "default": "default",
+      "edited": "edited"
+    },
+    "fixInputs": "Check the highlighted fields to see the plan.",
+    "ifYouStock": "If you stock on {date}, you harvest around",
+    "notReached": "Not within {days} days at this growth",
+    "fishAt": "{fish} fish at {g} g · day {day}",
+    "feedToBuy": "Feed to buy",
+    "bags": "{bags} bags · {cost}",
+    "cashNeeded": "Cash you'll need",
+    "lowPoint": {
+      "early": "lowest point early {month}",
+      "mid": "lowest point mid {month}",
+      "late": "lowest point late {month}"
+    },
+    "sales": "Sales",
+    "atPrice": "at {price}/kg",
+    "marginBeforeLabour": "Margin before labour",
+    "ofSales": "{pct}% of sales",
+    "chartTitle": "Feed each month, and how the fish grow",
+    "feedT": "Feed (t)",
+    "avgWeight": "Average weight (g)",
+    "harvest": "harvest",
+    "col": {
+      "plan": "Plan",
+      "harvest": "Harvest",
+      "tonnes": "Tonnes",
+      "cash": "Cash needed",
+      "margin": "Margin",
+      "actions": "Actions"
+    },
+    "planLine": "{fish} per cage, to {g} g",
+    "noPlans": "Save a plan to compare it with others here.",
+    "alsoSaved": "Also saved:",
+    "addPlan": "Add a plan",
+    "note": {
+      "none": "Save two or more plans to see the trade-off between them.",
+      "same": "{name} sells first and earns the most margin, so it wins on both counts.",
+      "tradeoff": "{fast} sells {weeks} weeks sooner, but {best} makes {gap} more margin. Per month in the water, {leader} earns more, about {perMonth}."
     }
   }
 }

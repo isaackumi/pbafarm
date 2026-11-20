@@ -70,6 +70,7 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'formLayouts', index: 'by_companyId_and_formKey' },
   { table: 'dashboardLayouts', index: 'by_companyId_and_key_and_userId' },
   { table: 'feedingPlans', index: 'by_companyId_and_speciesKey' },
+  { table: 'cyclePlans', index: 'by_companyId_and_updatedAt' },
   { table: 'feedPurchases', index: 'by_company' },
   { table: 'feedUsage', index: 'by_company' },
   { table: 'cageFeedBins', index: 'by_company' },

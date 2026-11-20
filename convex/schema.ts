@@ -225,6 +225,31 @@ export const feedBand = v.object({
   feedingsPerDay: v.number(),
   pelletMm: v.number(),
 })
+/** Cycle planner inputs (lib/cyclePlan PlanInputs, without the unit count). */
+export const cyclePlanInputs = v.object({
+  stockOn: v.string(),
+  fishPerUnit: v.number(),
+  stockAbwG: v.number(),
+  harvestAbwG: v.number(),
+  feedPricePerBag: v.number(),
+  bagKg: v.number(),
+  salePricePerKg: v.number(),
+  fingerlingPrice: v.number(),
+})
+const planSource = v.union(v.literal('history'), v.literal('default'), v.literal('edited'))
+/** Cycle planner assumptions as saved (lib/cyclePlan PlanAssumptions + where each came from). */
+export const cyclePlanAssumptions = v.object({
+  speciesKey: v.union(v.string(), v.null()),
+  survivalPct: v.number(),
+  fcr: v.number(),
+  tgc: v.number(),
+  tempC: v.number(),
+  /** 12 entries, Jan..Dec. */
+  monthlyTempC: v.union(v.array(v.union(v.number(), v.null())), v.null()),
+  sources: v.object({ survival: planSource, fcr: planSource, growth: planSource }),
+  /** Closed cycles the history figures came from. */
+  cycles: v.number(),
+})
 export const customCondition = v.object({
   field: v.string(),
   op: v.union(
@@ -2815,6 +2840,26 @@ const schema = defineSchema({
     updatedBy: v.id('users'),
     updatedAt: v.number(),
   }).index('by_companyId_and_speciesKey', ['companyId', 'speciesKey']),
+
+  /**
+   * Cycle planner (what if): a saved stocking plan and the assumptions it
+   * was made with (lib/cyclePlan). Results are recomputed from these, never
+   * stored, so the planner and the compare table always agree.
+   */
+  cyclePlans: defineTable({
+    companyId: v.id('companies'),
+    /** The units' common site; unset when they span sites. */
+    locationId: v.optional(v.id('farmLocations')),
+    name: v.string(),
+    /** ≤ PLAN_LIMITS.maxUnits. */
+    unitIds: v.array(v.id('cages')),
+    inputs: cyclePlanInputs,
+    assumptions: cyclePlanAssumptions,
+    createdBy: v.id('users'),
+    createdAt: v.number(),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_companyId_and_updatedAt', ['companyId', 'updatedAt']),
 
   /**
    * Early-warning alerts (AI-001, lib/earlyWarning): one live row per unit and

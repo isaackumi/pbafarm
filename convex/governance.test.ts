@@ -72,7 +72,10 @@ async function setup() {
   })
   const as = (userId: string) =>
     t.withIdentity({ subject: `${userId}|${userId === ids.platform ? ids.platformSession : 's'}` })
-  const drain = () => t.finishAllScheduledFunctions(vi.runAllTimers)
+  // One purge step per tenant table (lib/governance TENANT_TABLES), so allow more than the default 100.
+  // convex-test's runtime takes maxIterations as a second argument; its type declares one.
+  const finishAll = t.finishAllScheduledFunctions as (advance: () => void, maxIterations?: number) => Promise<void>
+  const drain = () => finishAll(vi.runAllTimers, 300)
   return { t, as, drain, ...ids }
 }
 

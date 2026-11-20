@@ -129,6 +129,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `customFields.save` | `customization.manage` | yes | yes | no | no | no |
 | `customFields.setArchived` | `customization.manage` | yes | yes | no | no | no |
 | `customFields.setValues` | `allowlisted` | see test | see test | see test | see test | see test |
+| `cyclePlans.assumptions` | `production.plan.manage` | yes | yes | yes | no | no |
+| `cyclePlans.get` | `production.plan.manage` | yes | yes | yes | no | no |
+| `cyclePlans.list` | `production.plan.manage` | yes | yes | yes | no | no |
+| `cyclePlans.remove` | `production.plan.manage` | yes | yes | yes | no | no |
+| `cyclePlans.save` | `production.plan.manage` | yes | yes | yes | no | no |
 | `dailyRecords.create` | `production.daily.record` | yes | yes | yes | yes | no |
 | `dailyRecords.createBatch` | `production.daily.record` | yes | yes | yes | yes | no |
 | `dailyRecords.createMany` | `production.import` | yes | yes | no | no | no |

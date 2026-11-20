@@ -33,6 +33,7 @@ const TITLE_BY_PREFIX = [
   ['/hatchery', 'Hatchery'],
   ['/compliance', 'Compliance'],
   ['/harvest', 'Harvest'],
+  ['/cycle-planner', 'Cycle planner'],
   ['/sales', 'Sales'],
   ['/health', 'Health & Treatments'],
   ['/pnl', 'Cage P&L'],
