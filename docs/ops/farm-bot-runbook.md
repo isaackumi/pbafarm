@@ -70,6 +70,30 @@ If the template is not yet approved, sends outside the window fail and are logge
 
 Template names and languages are set in `convex/bot/i18n.ts` (`REMINDER_TEMPLATES`). Change them there if Meta requires a different name.
 
+### Approval request template (BOT-007)
+
+Approvers with a bound chat get stocking, top-up and transfer requests with **Approve** / **Reject** buttons. Inside the 24 h window these are free-form reply buttons; outside it the bot sends this template. Telegram always uses an inline keyboard. Submit it like the reminder template:
+
+| Field | Value |
+|---|---|
+| Category | **Utility** |
+| Name | `farm_approval_request` |
+| Languages | English (`en`) and French (`fr`) |
+| Body (en) | `Approval needed: {{1}}. Requested by {{2}}: {{3}}. Tap a button to decide, or open Approvals in the app.` |
+| Body (fr) | `Approbation requise : {{1}}. Demandé par {{2}} : {{3}}. Touchez un bouton pour décider, ou ouvrez Approbations dans l'application.` |
+| Sample values | `{{1}}` = `Stocking`, `{{2}}` = `Esi`, `{{3}}` = `Stocking 5,000 fish into Cage 3` |
+| Buttons | 2 × **Quick reply**: en `Approve` / `Reject`; fr `Approuver` / `Rejeter` |
+
+The code fills the quick-reply payloads with `apr:<prompt id>` and `rej:<prompt id>` in that order, so keep **Approve** first. Name and languages are in `convex/bot/i18n.ts` (`APPROVAL_TEMPLATES`). Until the template is approved, prompts outside the window fail (`botApprovalPrompts.status` = `failed`, with the error in `note`); in-app and email approval alerts are unaffected.
+
+How it behaves (`convex/bot/approvals.ts`):
+- **Who gets it:** the members the approval alert notifies (approve permission at the request's site, not the requester), for each live chat bound to the request's organization. Needs approval alerts on (Automations → Approval alerts).
+- **Preferences:** a WhatsApp chat is skipped when the person turned WhatsApp notifications off (`note` = `whatsapp_notifications_off`). During their quiet hours (company time zone) the prompt is held until the quiet hours end.
+- **Approve:** re-checks the binding (membership, verified phone, organization), the approve permission and the member's sites, then calls the same helper as the web approval (`approveStockingAs`, `approveTopupAs`, `approveFishTransferAs`). Segregation of duties, farm rules and the audit row are therefore identical; the audit row has `channel` and `sourceMessageId`.
+- **Reject:** asks for a reason (a short list, or the next text message within 30 minutes; `CANCEL` leaves it pending), then calls the shared reject helper with that reason.
+- **Repeats:** a webhook retry is stored once; a second tap answers "already approved/rejected" and changes nothing. Once anyone decides (chat or web), the other prompts for that request close and answer who decided.
+- **Expiry:** buttons stop working 7 days after sending; the Approvals page still works.
+
 ## 4. LLM for the bot
 
 The bot uses the organization's own LLM key when one is set (Settings → AI). Otherwise it uses the server key. Configure at least one server key:
@@ -117,6 +141,7 @@ Usage is in `llmUsage` with feature `bot`, and counts against the same per-user 
 **Logs and data**
 - `channelInbound` keeps every message for 30 days, with status `queued`, `processed`, `ignored` or `failed` and an error field. It is pruned daily at 04:05 UTC.
 - Drafts are in `pendingBotActions`. Expiry runs hourly.
+- Approval prompts are in `botApprovalPrompts` (index `by_kind_and_recordId`): `queued` → `sent` → `approved` / `rejected`, or `closed`, `expired`, `skipped`, `failed`, with the reason in `note`.
 - Audit rows for bot writes have `channel` = `whatsapp` or `telegram`, plus `sourceMessageId`.
 
 **Costs**

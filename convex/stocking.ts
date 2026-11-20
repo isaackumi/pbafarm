@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { asOfDate, scopedPage, scopedRows, scopedRowsByStatus } from './lib/scope'
 import { assertOwns, listForCompany, listForCompanyAndLocation, writeCompanyId, logAudit } from './lib/tenancy'
@@ -678,66 +678,78 @@ export const approveStocking = mutation({
   returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
-    
-    const stocking = await ctx.db.get(id)
-    if (!stocking) throw new Error('Stocking record not found')
-    const allowed = await listForCompany(user, [stocking])
-    if (!allowed.length) throw new Error('Access denied')
-
-    if (stocking.status !== 'pending_approval') {
-      throw new Error('Only pending stockings can be approved')
-    }
-    await assertDifferentApprover(ctx, user, stocking)
-    await assertNotTransferLinked(ctx, { stockingId: id })
-
-    // Re-check against the cage as it is now: it may have been stocked since
-    // this request was made (doc 09 S9).
-    const cage = await ctx.db.get(stocking.cageId)
-    if (!cage) throw new Error('Cage not found')
-    const rules = await loadRules(ctx, stocking.companyId ?? cage.companyId)
-    assertStockingAllowed({
-      cage,
-      fishCount: stocking.fishCount,
-      abw: stocking.initialAbw,
-      rules: rules.stockingRules,
-      farmRules: rules.farmRules,
-    })
-    await assertNoOtherOpenStocking(ctx, cage, id)
-
-    const now = Date.now()
-
-    // Update stocking status
-    await ctx.db.patch(id, {
-      status: 'approved',
-      approvedBy: user._id,
-      approvedAt: now,
-    })
-
-    // Update cage with stocking information
-    const write = await beginStockWrite(ctx, [cage], user._id)
-    await ctx.db.patch(stocking.cageId, {
-      stockingDate: stocking.stockingDate,
-      initialCount: stocking.fishCount,
-      currentCount: stocking.fishCount,
-      initialAbw: stocking.initialAbw,
-      // New cycle: weight starts at the stocking ABW, not the last cycle's.
-      currentWeight: stocking.initialAbw,
-      status: 'active',
-      species: stocking.species,
-      updatedAt: now,
-    })
-    const approved = (await ctx.db.get(id))!
-    await write.post((o) => shadowStocking(ctx, approved, user._id, o))
-
-    await logAudit(ctx, {
-      actionType: 'approve',
-      tableName: 'stockingHistory',
-      recordId: id,
-      newValues: { status: 'approved' },
-    })
-    await onApprovalDecided(ctx, 'stocking', id, 'approved', user._id)
+    await approveStockingAs(ctx, user, id)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.stocking.approve' permission.
+ */
+export async function approveStockingAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'stockingHistory'>,
+): Promise<void> {
+  const stocking = await ctx.db.get(id)
+  if (!stocking) throw new Error('Stocking record not found')
+  const allowed = await listForCompany(user, [stocking])
+  if (!allowed.length) throw new Error('Access denied')
+
+  if (stocking.status !== 'pending_approval') {
+    throw new Error('Only pending stockings can be approved')
+  }
+  await assertDifferentApprover(ctx, user, stocking)
+  await assertNotTransferLinked(ctx, { stockingId: id })
+
+  // Re-check against the cage as it is now: it may have been stocked since
+  // this request was made (doc 09 S9).
+  const cage = await ctx.db.get(stocking.cageId)
+  if (!cage) throw new Error('Cage not found')
+  const rules = await loadRules(ctx, stocking.companyId ?? cage.companyId)
+  assertStockingAllowed({
+    cage,
+    fishCount: stocking.fishCount,
+    abw: stocking.initialAbw,
+    rules: rules.stockingRules,
+    farmRules: rules.farmRules,
+  })
+  await assertNoOtherOpenStocking(ctx, cage, id)
+
+  const now = Date.now()
+
+  // Update stocking status
+  await ctx.db.patch(id, {
+    status: 'approved',
+    approvedBy: user._id,
+    approvedAt: now,
+  })
+
+  // Update cage with stocking information
+  const write = await beginStockWrite(ctx, [cage], user._id)
+  await ctx.db.patch(stocking.cageId, {
+    stockingDate: stocking.stockingDate,
+    initialCount: stocking.fishCount,
+    currentCount: stocking.fishCount,
+    initialAbw: stocking.initialAbw,
+    // New cycle: weight starts at the stocking ABW, not the last cycle's.
+    currentWeight: stocking.initialAbw,
+    status: 'active',
+    species: stocking.species,
+    updatedAt: now,
+  })
+  const approved = (await ctx.db.get(id))!
+  await write.post((o) => shadowStocking(ctx, approved, user._id, o))
+
+  await logAudit(ctx, {
+    actionType: 'approve',
+    tableName: 'stockingHistory',
+    recordId: id,
+    newValues: { status: 'approved' },
+  })
+  await onApprovalDecided(ctx, 'stocking', id, 'approved', user._id)
+}
 
 export const rejectStocking = mutation({
   args: { 
@@ -747,33 +759,46 @@ export const rejectStocking = mutation({
   returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
-    
-    const stocking = await ctx.db.get(id)
-    if (!stocking) throw new Error('Stocking record not found')
-    const allowed = await listForCompany(user, [stocking])
-    if (!allowed.length) throw new Error('Access denied')
-
-    if (stocking.status !== 'pending_approval') {
-      throw new Error('Only pending stockings can be rejected')
-    }
-    await assertNotTransferLinked(ctx, { stockingId: id })
-
-    await ctx.db.patch(id, {
-      status: 'rejected',
-      notes: reason ? `${stocking.notes || ''}\nRejection reason: ${reason}` : stocking.notes,
-      approvedBy: user._id,
-      approvedAt: Date.now(),
-    })
-
-    await logAudit(ctx, {
-      actionType: 'reject',
-      tableName: 'stockingHistory',
-      recordId: id,
-      newValues: { status: 'rejected', reason },
-    })
-    await onApprovalDecided(ctx, 'stocking', id, 'rejected', user._id)
+    await rejectStockingAs(ctx, user, id, reason)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.stocking.approve' permission.
+ */
+export async function rejectStockingAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'stockingHistory'>,
+  reason?: string,
+): Promise<void> {
+  const stocking = await ctx.db.get(id)
+  if (!stocking) throw new Error('Stocking record not found')
+  const allowed = await listForCompany(user, [stocking])
+  if (!allowed.length) throw new Error('Access denied')
+
+  if (stocking.status !== 'pending_approval') {
+    throw new Error('Only pending stockings can be rejected')
+  }
+  await assertNotTransferLinked(ctx, { stockingId: id })
+
+  await ctx.db.patch(id, {
+    status: 'rejected',
+    notes: reason ? `${stocking.notes || ''}\nRejection reason: ${reason}` : stocking.notes,
+    approvedBy: user._id,
+    approvedAt: Date.now(),
+  })
+
+  await logAudit(ctx, {
+    actionType: 'reject',
+    tableName: 'stockingHistory',
+    recordId: id,
+    newValues: { status: 'rejected', reason },
+  })
+  await onApprovalDecided(ctx, 'stocking', id, 'rejected', user._id)
+}
 
 // TOPUP HISTORY
 export const listTopupHistory = query({
@@ -875,51 +900,63 @@ export const approveTopup = mutation({
   returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
-    
-    const topup = await ctx.db.get(id)
-    if (!topup) throw new Error('Topup record not found')
-    const allowed = await listForCompany(user, [topup])
-    if (!allowed.length) throw new Error('Access denied')
-
-    if (topup.status !== 'pending_approval') {
-      throw new Error('Only pending topups can be approved')
-    }
-    await assertDifferentApprover(ctx, user, topup)
-    await assertNotTransferLinked(ctx, { topupId: id })
-
-    const stocking = await ctx.db.get(topup.stockingId)
-    if (!stocking) throw new Error('Associated stocking record not found')
-
-    const now = Date.now()
-
-    // Update topup status
-    await ctx.db.patch(id, {
-      status: 'approved',
-      approvedBy: user._id,
-      approvedAt: now,
-    })
-
-    // Update cage current count
-    const cage = await ctx.db.get(stocking.cageId)
-    const write = await beginStockWrite(ctx, [cage], user._id)
-    if (cage) {
-      await ctx.db.patch(stocking.cageId, {
-        currentCount: (cage.currentCount || 0) + topup.fishCount,
-        updatedAt: now,
-      })
-    }
-    const approved = (await ctx.db.get(id))!
-    await write.post((o) => shadowTopup(ctx, approved, user._id, o))
-
-    await logAudit(ctx, {
-      actionType: 'approve',
-      tableName: 'topupHistory',
-      recordId: id,
-      newValues: { status: 'approved' },
-    })
-    await onApprovalDecided(ctx, 'topup', id, 'approved', user._id)
+    await approveTopupAs(ctx, user, id)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.stocking.approve' permission.
+ */
+export async function approveTopupAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'topupHistory'>,
+): Promise<void> {
+  const topup = await ctx.db.get(id)
+  if (!topup) throw new Error('Topup record not found')
+  const allowed = await listForCompany(user, [topup])
+  if (!allowed.length) throw new Error('Access denied')
+
+  if (topup.status !== 'pending_approval') {
+    throw new Error('Only pending topups can be approved')
+  }
+  await assertDifferentApprover(ctx, user, topup)
+  await assertNotTransferLinked(ctx, { topupId: id })
+
+  const stocking = await ctx.db.get(topup.stockingId)
+  if (!stocking) throw new Error('Associated stocking record not found')
+
+  const now = Date.now()
+
+  // Update topup status
+  await ctx.db.patch(id, {
+    status: 'approved',
+    approvedBy: user._id,
+    approvedAt: now,
+  })
+
+  // Update cage current count
+  const cage = await ctx.db.get(stocking.cageId)
+  const write = await beginStockWrite(ctx, [cage], user._id)
+  if (cage) {
+    await ctx.db.patch(stocking.cageId, {
+      currentCount: (cage.currentCount || 0) + topup.fishCount,
+      updatedAt: now,
+    })
+  }
+  const approved = (await ctx.db.get(id))!
+  await write.post((o) => shadowTopup(ctx, approved, user._id, o))
+
+  await logAudit(ctx, {
+    actionType: 'approve',
+    tableName: 'topupHistory',
+    recordId: id,
+    newValues: { status: 'approved' },
+  })
+  await onApprovalDecided(ctx, 'topup', id, 'approved', user._id)
+}
 
 export const rejectTopup = mutation({
   args: { 
@@ -929,33 +966,46 @@ export const rejectTopup = mutation({
   returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.approve' })
-    
-    const topup = await ctx.db.get(id)
-    if (!topup) throw new Error('Topup record not found')
-    const allowed = await listForCompany(user, [topup])
-    if (!allowed.length) throw new Error('Access denied')
-
-    if (topup.status !== 'pending_approval') {
-      throw new Error('Only pending topups can be rejected')
-    }
-    await assertNotTransferLinked(ctx, { topupId: id })
-
-    await ctx.db.patch(id, {
-      status: 'rejected',
-      notes: reason ? `${topup.notes || ''}\nRejection reason: ${reason}` : topup.notes,
-      approvedBy: user._id,
-      approvedAt: Date.now(),
-    })
-
-    await logAudit(ctx, {
-      actionType: 'reject',
-      tableName: 'topupHistory',
-      recordId: id,
-      newValues: { status: 'rejected', reason },
-    })
-    await onApprovalDecided(ctx, 'topup', id, 'rejected', user._id)
+    await rejectTopupAs(ctx, user, id, reason)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.stocking.approve' permission.
+ */
+export async function rejectTopupAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'topupHistory'>,
+  reason?: string,
+): Promise<void> {
+  const topup = await ctx.db.get(id)
+  if (!topup) throw new Error('Topup record not found')
+  const allowed = await listForCompany(user, [topup])
+  if (!allowed.length) throw new Error('Access denied')
+
+  if (topup.status !== 'pending_approval') {
+    throw new Error('Only pending topups can be rejected')
+  }
+  await assertNotTransferLinked(ctx, { topupId: id })
+
+  await ctx.db.patch(id, {
+    status: 'rejected',
+    notes: reason ? `${topup.notes || ''}\nRejection reason: ${reason}` : topup.notes,
+    approvedBy: user._id,
+    approvedAt: Date.now(),
+  })
+
+  await logAudit(ctx, {
+    actionType: 'reject',
+    tableName: 'topupHistory',
+    recordId: id,
+    newValues: { status: 'rejected', reason },
+  })
+  await onApprovalDecided(ctx, 'topup', id, 'rejected', user._id)
+}
 
 /** Live pending stocking + top-up queue for the approvals page. */
 export const listPendingApprovals = query({

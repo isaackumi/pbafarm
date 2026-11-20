@@ -22,6 +22,7 @@ import { checkBinding, type BoundMember } from './scope'
 import { codeHash, revokeBindingsForUser } from './bindings'
 import { closeDraft } from './pending'
 import { MAX_EVENT_AGE_MS } from './verify'
+import { REJECT_REASON_CODES, MAX_REASON_CHARS, askRejectReason, awaitingReason, keepPending } from './approvals'
 
 const inboundEvent = v.object({
   provider: botProvider,
@@ -364,6 +365,39 @@ export const route = internalMutation({
             messages: [text(s.companySet(company.name)), ...more],
           }
         }
+        // Approvals (BOT-007): the decision runs in its own mutation from the action.
+        case 'apr': {
+          const promptId = ctx.db.normalizeId('botApprovalPrompts', arg)
+          if (!promptId) break
+          return {
+            type: 'approval',
+            ...tgt,
+            bindingId: binding._id,
+            promptId,
+            decision: 'approve',
+            sourceMessageId: inbound.externalId,
+          }
+        }
+        case 'rej': {
+          const promptId = ctx.db.normalizeId('botApprovalPrompts', arg)
+          if (!promptId) break
+          return { type: 'reply', ...tgt, messages: await askRejectReason(ctx, promptId, binding._id, locale) }
+        }
+        case 'rr': {
+          const cut = arg.lastIndexOf(':')
+          const promptId = cut > 0 ? ctx.db.normalizeId('botApprovalPrompts', arg.slice(0, cut)) : null
+          const code = REJECT_REASON_CODES.find((c) => c === arg.slice(cut + 1))
+          if (!promptId || !code) break
+          return {
+            type: 'approval',
+            ...tgt,
+            bindingId: binding._id,
+            promptId,
+            decision: 'reject',
+            reason: s.rejectReasons[code],
+            sourceMessageId: inbound.externalId,
+          }
+        }
         case 'rem': {
           if (arg === 'stop') {
             await ctx.db.patch(binding._id, { reminderEnabled: false })
@@ -400,6 +434,23 @@ export const route = internalMutation({
       return { type: 'reply', ...tgt, messages: [text(s.disconnected)] }
     }
     if (!msgText) return { type: 'reply', ...tgt, messages: [text(s.help)] }
+    // After Reject (BOT-007) the next text message is the reason, or CANCEL.
+    const waiting = await awaitingReason(ctx, binding._id)
+    if (waiting) {
+      if (command === 'CANCEL' || command === '/CANCEL' || command === 'ANNULER') {
+        await keepPending(ctx, waiting._id)
+        return { type: 'reply', ...tgt, messages: [text(s.rejectKept)] }
+      }
+      return {
+        type: 'approval',
+        ...tgt,
+        bindingId: binding._id,
+        promptId: waiting._id,
+        decision: 'reject',
+        reason: msgText.slice(0, MAX_REASON_CHARS),
+        sourceMessageId: inbound.externalId,
+      }
+    }
     return {
       type: 'agent',
       ...tgt,

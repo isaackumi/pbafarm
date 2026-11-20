@@ -62,6 +62,34 @@ const en = {
     `${p.unit}, ${p.date}: feed ${p.feed}, mortality ${p.mortality}${p.notes ? `, notes: ${p.notes}` : ''}`,
   summaryIssue: (p: { qty: number; feedType: string; unit?: string; date: string }) =>
     `Feed issue ${p.date}: ${p.qty} kg ${p.feedType}${p.unit ? ` to ${p.unit}` : ''}`,
+  approvalKinds: { stocking: 'Stocking', topup: 'Top-up', transfer: 'Fish transfer' } as Record<
+    'stocking' | 'topup' | 'transfer',
+    string
+  >,
+  approvalNeeded: (label: string, who: string, subject: string) => `${label} needs your approval.\n${who}: ${subject}.`,
+  approve: 'Approve',
+  reject: 'Reject',
+  approvedDone: (subject: string) => `Approved: ${subject}.`,
+  rejectedDone: (subject: string) => `Rejected: ${subject}.`,
+  approvalAlready: (decision: 'approved' | 'rejected' | 'closed', by: string) =>
+    decision === 'closed'
+      ? 'This request is no longer pending.'
+      : `This request was already ${decision}${by ? ` by ${by}` : ''}.`,
+  approvalYouDecided: (decision: 'approved' | 'rejected') => `You already ${decision} this request.`,
+  approvalExpired: 'These buttons have expired. Open Approvals in the app to decide.',
+  approvalGone: 'This request no longer exists.',
+  approvalNotAllowed: 'You cannot approve this request.',
+  approvalFailed: (msg: string) => `Not done: ${msg}`,
+  rejectReasonPrompt: 'Why are you rejecting it? Pick a reason or type it. Send CANCEL to leave it pending.',
+  rejectReasonPick: 'Reason',
+  rejectKept: 'OK, the request is still pending.',
+  rejectReasons: {
+    count: 'Wrong fish count',
+    unit: 'Wrong unit',
+    date: 'Wrong date',
+    weight: 'Wrong weight (ABW)',
+    plan: 'Not in the plan',
+  } as Record<'count' | 'unit' | 'date' | 'weight' | 'plan', string>,
 }
 
 type Strings = typeof en
@@ -121,6 +149,31 @@ const fr: Strings = {
   summaryDaily: (p) =>
     `${p.unit}, ${p.date} : aliment ${p.feed}, mortalité ${p.mortality}${p.notes ? `, notes : ${p.notes}` : ''}`,
   summaryIssue: (p) => `Sortie d'aliment ${p.date} : ${p.qty} kg ${p.feedType}${p.unit ? ` vers ${p.unit}` : ''}`,
+  approvalKinds: { stocking: 'Empoissonnement', topup: 'Complément', transfer: 'Transfert de poissons' },
+  approvalNeeded: (label, who, subject) => `${label} : votre approbation est requise.\n${who} : ${subject}.`,
+  approve: 'Approuver',
+  reject: 'Rejeter',
+  approvedDone: (subject) => `Approuvé : ${subject}.`,
+  rejectedDone: (subject) => `Rejeté : ${subject}.`,
+  approvalAlready: (decision, by) =>
+    decision === 'closed'
+      ? "Cette demande n'est plus en attente."
+      : `Cette demande a déjà été ${decision === 'approved' ? 'approuvée' : 'rejetée'}${by ? ` par ${by}` : ''}.`,
+  approvalYouDecided: (decision) => `Vous avez déjà ${decision === 'approved' ? 'approuvé' : 'rejeté'} cette demande.`,
+  approvalExpired: "Ces boutons ont expiré. Ouvrez Approbations dans l'application pour décider.",
+  approvalGone: "Cette demande n'existe plus.",
+  approvalNotAllowed: 'Vous ne pouvez pas approuver cette demande.',
+  approvalFailed: (msg) => `Non effectué : ${msg}`,
+  rejectReasonPrompt: 'Pourquoi la rejeter ? Choisissez un motif ou écrivez-le. Envoyez ANNULER pour la laisser en attente.',
+  rejectReasonPick: 'Motif',
+  rejectKept: 'Entendu, la demande reste en attente.',
+  rejectReasons: {
+    count: 'Nombre de poissons faux',
+    unit: 'Mauvaise unité',
+    date: 'Mauvaise date',
+    weight: 'Poids moyen faux',
+    plan: 'Hors planning',
+  },
 }
 
 export function t(locale: BotLocale): Strings {
@@ -134,4 +187,13 @@ export function t(locale: BotLocale): Strings {
 export const REMINDER_TEMPLATES: Record<BotLocale, { name: string; language: string }> = {
   en: { name: 'farm_daily_reminder', language: 'en' },
   fr: { name: 'farm_daily_reminder', language: 'fr' },
+}
+
+/**
+ * Approval requests outside WhatsApp's 24-hour window (BOT-007, runbook §3).
+ * Body: {{1}} kind, {{2}} requester, {{3}} what; quick replies Approve, Reject.
+ */
+export const APPROVAL_TEMPLATES: Record<BotLocale, { name: string; language: string }> = {
+  en: { name: 'farm_approval_request', language: 'en' },
+  fr: { name: 'farm_approval_request', language: 'fr' },
 }

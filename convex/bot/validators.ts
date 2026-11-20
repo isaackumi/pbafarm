@@ -53,6 +53,15 @@ export const routePlan = v.union(
     sourceMessageId: v.string(),
   }),
   v.object({
+    type: v.literal('approval'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    promptId: v.id('botApprovalPrompts'),
+    decision: v.union(v.literal('approve'), v.literal('reject')),
+    reason: v.optional(v.string()),
+    sourceMessageId: v.string(),
+  }),
+  v.object({
     type: v.literal('agent'),
     ...target,
     bindingId: v.id('channelBindings'),

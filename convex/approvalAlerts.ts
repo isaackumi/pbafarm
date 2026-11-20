@@ -15,6 +15,7 @@ import {
   type Permission,
 } from './lib/permissions'
 import { logAudit } from './lib/tenancy'
+import { closeApprovalPrompts, queueApprovalPrompts } from './bot/approvals'
 
 /**
  * Approval notifications and escalation (AUTO-004, doc 07 §5 templates
@@ -27,6 +28,8 @@ import { logAudit } from './lib/tenancy'
  *   escalate (scheduled): still pending → notify approvers and organization
  *        admins on the escalation channels; otherwise nothing
  *   decision → onApprovalDecided: emit `approval.decided`; tell the requester
+ *   chat (BOT-007): approvers with a bound WhatsApp/Telegram chat also get
+ *        Approve / Reject buttons, see convex/bot/approvals.ts
  *
  * Built in rather than an automation rule: recipients are "members holding a
  * permission at this site", which rule recipients (everyone/roles/users)
@@ -229,6 +232,10 @@ export async function onApprovalRequested(ctx: MutationCtx, kind: ApprovalKind, 
     dedupeKey: `approval:${kind}:${recordId}`,
     source: 'approval.requested',
   })
+  // Approve / Reject buttons in the approvers' bound chats (BOT-007).
+  if (kind !== 'join_request') {
+    await queueApprovalPrompts(ctx, { kind, recordId, companyId: a.companyId, subject: a.subject, approvers })
+  }
   if (settings.escalateAfterHours > 0) {
     await ctx.scheduler.runAfter(settings.escalateAfterHours * 3_600_000, internal.approvalAlerts.escalate, {
       kind,
@@ -246,6 +253,7 @@ export async function onApprovalDecided(
   decision: 'approved' | 'rejected',
   decidedBy: Id<'users'>,
 ) {
+  await closeApprovalPrompts(ctx, kind, recordId)
   const a = await loadApproval(ctx, kind, recordId)
   if (!a) return
   await emitDomainEvent(

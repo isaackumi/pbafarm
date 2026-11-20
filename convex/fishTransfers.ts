@@ -484,43 +484,55 @@ export const approveFishTransfer = mutation({
   returns: v.null(),
   handler: async (ctx, { id }) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
-
-    const transfer = await ctx.db.get(id)
-    if (!transfer) throw new Error('Transfer not found')
-    const allowed = await listForCompany(user, [transfer])
-    if (!allowed.length) throw new Error('Access denied')
-    if (transfer.status !== 'pending_approval') {
-      throw new Error('Only pending transfers can be approved')
-    }
-    await assertDifferentApprover(ctx, user, transfer)
-
-    const now = Date.now()
-    await ctx.db.patch(id, {
-      status: 'approved',
-      approvedBy: user._id,
-      approvedAt: now,
-      updatedAt: now,
-    })
-
-    const updated = (await ctx.db.get(id))!
-    const write = await beginStockWrite(
-      ctx,
-      [await ctx.db.get(updated.sourceCageId), await ctx.db.get(updated.destinationCageId)],
-      user._id,
-    )
-    await applyFishTransfer(ctx, updated)
-    const posted = (await ctx.db.get(id))!
-    await write.post((o) => shadowTransfer(ctx, posted, user._id, o))
-
-    await logAudit(ctx, {
-      actionType: 'approve',
-      tableName: 'fishTransfers',
-      recordId: id,
-      newValues: { status: 'approved' },
-    })
-    await onApprovalDecided(ctx, 'transfer', id, 'approved', user._id)
+    await approveFishTransferAs(ctx, user, id)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.transfer.approve' permission.
+ */
+export async function approveFishTransferAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'fishTransfers'>,
+): Promise<void> {
+  const transfer = await ctx.db.get(id)
+  if (!transfer) throw new Error('Transfer not found')
+  const allowed = await listForCompany(user, [transfer])
+  if (!allowed.length) throw new Error('Access denied')
+  if (transfer.status !== 'pending_approval') {
+    throw new Error('Only pending transfers can be approved')
+  }
+  await assertDifferentApprover(ctx, user, transfer)
+
+  const now = Date.now()
+  await ctx.db.patch(id, {
+    status: 'approved',
+    approvedBy: user._id,
+    approvedAt: now,
+    updatedAt: now,
+  })
+
+  const updated = (await ctx.db.get(id))!
+  const write = await beginStockWrite(
+    ctx,
+    [await ctx.db.get(updated.sourceCageId), await ctx.db.get(updated.destinationCageId)],
+    user._id,
+  )
+  await applyFishTransfer(ctx, updated)
+  const posted = (await ctx.db.get(id))!
+  await write.post((o) => shadowTransfer(ctx, posted, user._id, o))
+
+  await logAudit(ctx, {
+    actionType: 'approve',
+    tableName: 'fishTransfers',
+    recordId: id,
+    newValues: { status: 'approved' },
+  })
+  await onApprovalDecided(ctx, 'transfer', id, 'approved', user._id)
+}
 
 export const rejectFishTransfer = mutation({
   args: {
@@ -530,56 +542,69 @@ export const rejectFishTransfer = mutation({
   returns: v.null(),
   handler: async (ctx, { id, reason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.approve' })
-
-    const transfer = await ctx.db.get(id)
-    if (!transfer) throw new Error('Transfer not found')
-    const allowed = await listForCompany(user, [transfer])
-    if (!allowed.length) throw new Error('Access denied')
-    if (transfer.status !== 'pending_approval') {
-      throw new Error('Only pending transfers can be rejected')
-    }
-
-    const now = Date.now()
-    await ctx.db.patch(id, {
-      status: 'rejected',
-      notes: reason
-        ? `${transfer.notes || ''}\nRejection reason: ${reason}`.trim()
-        : transfer.notes,
-      approvedBy: user._id,
-      approvedAt: now,
-      updatedAt: now,
-    })
-
-    if (transfer.destinationStockingId) {
-      const stocking = await ctx.db.get(transfer.destinationStockingId)
-      if (stocking?.status === 'pending_approval') {
-        await ctx.db.patch(transfer.destinationStockingId, {
-          status: 'rejected',
-          approvedBy: user._id,
-          approvedAt: now,
-        })
-      }
-    }
-    if (transfer.destinationTopupId) {
-      const topup = await ctx.db.get(transfer.destinationTopupId)
-      if (topup?.status === 'pending_approval') {
-        await ctx.db.patch(transfer.destinationTopupId, {
-          status: 'rejected',
-          approvedBy: user._id,
-          approvedAt: now,
-        })
-      }
-    }
-
-    await logAudit(ctx, {
-      actionType: 'reject',
-      tableName: 'fishTransfers',
-      recordId: id,
-      newValues: { status: 'rejected', reason },
-    })
-    await onApprovalDecided(ctx, 'transfer', id, 'rejected', user._id)
+    await rejectFishTransferAs(ctx, user, id, reason)
+    return null
   },
 })
+
+/**
+ * The decision itself, shared by the web mutation and the farm bot (BOT-007).
+ * The caller has already checked the member and the 'production.transfer.approve' permission.
+ */
+export async function rejectFishTransferAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  id: Id<'fishTransfers'>,
+  reason?: string,
+): Promise<void> {
+  const transfer = await ctx.db.get(id)
+  if (!transfer) throw new Error('Transfer not found')
+  const allowed = await listForCompany(user, [transfer])
+  if (!allowed.length) throw new Error('Access denied')
+  if (transfer.status !== 'pending_approval') {
+    throw new Error('Only pending transfers can be rejected')
+  }
+
+  const now = Date.now()
+  await ctx.db.patch(id, {
+    status: 'rejected',
+    notes: reason
+      ? `${transfer.notes || ''}\nRejection reason: ${reason}`.trim()
+      : transfer.notes,
+    approvedBy: user._id,
+    approvedAt: now,
+    updatedAt: now,
+  })
+
+  if (transfer.destinationStockingId) {
+    const stocking = await ctx.db.get(transfer.destinationStockingId)
+    if (stocking?.status === 'pending_approval') {
+      await ctx.db.patch(transfer.destinationStockingId, {
+        status: 'rejected',
+        approvedBy: user._id,
+        approvedAt: now,
+      })
+    }
+  }
+  if (transfer.destinationTopupId) {
+    const topup = await ctx.db.get(transfer.destinationTopupId)
+    if (topup?.status === 'pending_approval') {
+      await ctx.db.patch(transfer.destinationTopupId, {
+        status: 'rejected',
+        approvedBy: user._id,
+        approvedAt: now,
+      })
+    }
+  }
+
+  await logAudit(ctx, {
+    actionType: 'reject',
+    tableName: 'fishTransfers',
+    recordId: id,
+    newValues: { status: 'rejected', reason },
+  })
+  await onApprovalDecided(ctx, 'transfer', id, 'rejected', user._id)
+}
 
 /**
  * Reverse an approved transfer (doc 09 S1, PROD-007): the fish go back to the

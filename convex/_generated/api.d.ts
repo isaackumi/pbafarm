@@ -37,6 +37,7 @@ import type * as billing_tables from "../billing/tables.js";
 import type * as billing_tenant from "../billing/tenant.js";
 import type * as biweeklyRecords from "../biweeklyRecords.js";
 import type * as bot_agent from "../bot/agent.js";
+import type * as bot_approvals from "../bot/approvals.js";
 import type * as bot_bindings from "../bot/bindings.js";
 import type * as bot_http from "../bot/http.js";
 import type * as bot_i18n from "../bot/i18n.js";
@@ -271,6 +272,7 @@ declare const fullApi: ApiFromModules<{
   "billing/tenant": typeof billing_tenant;
   biweeklyRecords: typeof biweeklyRecords;
   "bot/agent": typeof bot_agent;
+  "bot/approvals": typeof bot_approvals;
   "bot/bindings": typeof bot_bindings;
   "bot/http": typeof bot_http;
   "bot/i18n": typeof bot_i18n;

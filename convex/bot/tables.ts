@@ -150,6 +150,49 @@ export const botTables = {
     .index('by_companyId', ['companyId']),
 
   /**
+   * An approval request (stocking, top-up, transfer) sent to one approver's
+   * bound chat with Approve / Reject buttons (BOT-007). One row per
+   * (request, binding); the decision itself goes through the same helper as
+   * the web approval and is audited there with the chat channel.
+   */
+  botApprovalPrompts: defineTable({
+    bindingId: v.id('channelBindings'),
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    provider: botProvider,
+    kind: v.union(v.literal('stocking'), v.literal('topup'), v.literal('transfer')),
+    /** stockingHistory / topupHistory / fishTransfers id. */
+    recordId: v.string(),
+    subject: v.string(),
+    status: v.union(
+      v.literal('queued'),
+      v.literal('sent'),
+      v.literal('awaiting_reason'),
+      v.literal('approved'),
+      v.literal('rejected'),
+      v.literal('closed'),
+      v.literal('expired'),
+      v.literal('skipped'),
+      v.literal('failed'),
+    ),
+    createdAt: v.number(),
+    /** Held until the approver's quiet hours end. */
+    sendAt: v.number(),
+    sentAt: v.optional(v.number()),
+    /** Buttons stop working after this; the web Approvals page still does. */
+    expiresAt: v.number(),
+    reasonAskedAt: v.optional(v.number()),
+    decidedAt: v.optional(v.number()),
+    /** The chat message (button tap or reason text) that carried the decision. */
+    sourceMessageId: v.optional(v.string()),
+    /** Why the prompt was skipped, closed or a tap was refused. */
+    note: v.optional(v.string()),
+  })
+    .index('by_kind_and_recordId', ['kind', 'recordId'])
+    .index('by_bindingId_and_status', ['bindingId', 'status'])
+    .index('by_companyId', ['companyId']),
+
+  /**
    * Messages the bot sent, with Meta's pricing from status webhooks, so
    * WhatsApp conversation cost is tracked per organization (BOT-001).
    */

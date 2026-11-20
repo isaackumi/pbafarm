@@ -13,6 +13,7 @@ import { t } from './i18n'
 import { runAgent } from './agent'
 import { deliver } from './outbound'
 import { UNDO_WINDOW_MS } from './pending'
+import { decideFromChat } from './approvals'
 import type { ChatMessageValue, RoutePlan } from './validators'
 
 function errorText(err: unknown): string {
@@ -80,6 +81,19 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
       }
       return []
     }
+    case 'approval':
+      return [
+        text(
+          await decideFromChat(ctx, {
+            promptId: plan.promptId,
+            bindingId: plan.bindingId,
+            sourceMessageId: plan.sourceMessageId,
+            decision: plan.decision,
+            reason: plan.reason,
+            locale: plan.locale,
+          }),
+        ),
+      ]
     case 'undo': {
       try {
         const r = await ctx.runMutation(internal.bot.pending.undo, {
