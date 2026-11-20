@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useMutation, useQuery } from 'convex/react'
+import { useQuery } from 'convex/react'
 import {
   Bell,
   Building2,
@@ -34,31 +34,24 @@ import LanguageSwitcher from './LanguageSwitcher'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { AnowaMark } from './brand/AnowaLogo'
 import { useToast } from './Toast'
+import { useActiveOrganization } from '../lib/useActiveOrganization'
 
 /**
  * Organizations I belong to (ORG-002). Shown in the profile menu; switching
  * reloads the app so every cached query and the site picker start fresh.
  */
 function OrganizationMenu({ onDone }) {
-  const { canUseApp } = useAuth()
-  const orgs = useQuery(api.memberships.listMine, canUseApp ? {} : 'skip')
-  const switchActive = useMutation(api.memberships.switchActive)
-  const [switching, setSwitching] = useState(null)
+  const t = useT()
+  const { orgs, switching, switchTo } = useActiveOrganization()
   if (!orgs || orgs.length === 0) return null
   const choose = async (org) => {
     if (org.isActive || switching) return
-    setSwitching(org.companyId)
-    try {
-      await switchActive({ companyId: org.companyId })
-      onDone?.()
-      window.location.assign('/dashboard')
-    } catch {
-      setSwitching(null)
-    }
+    // switchTo starts the reload on success; the menu shows "Switching…" until then.
+    if (await switchTo(org.companyId)) onDone?.()
   }
   return (
     <div className="border-b border-line py-1">
-      <div className="px-4 pt-1 pb-1 text-xs text-muted">Organization</div>
+      <div className="px-4 pt-1 pb-1 text-xs text-muted">{t('farmSwitcher.organization')}</div>
       {orgs.map((org) => (
         <button
           key={org.companyId}
@@ -69,8 +62,8 @@ function OrganizationMenu({ onDone }) {
         >
           <Building2 size={16} className="text-muted shrink-0" aria-hidden />
           <span className="truncate flex-1">{org.name}</span>
-          {org.isActive && <Check size={16} className="text-good shrink-0" aria-label="Active" />}
-          {switching === org.companyId && <span className="text-xs text-muted">Switching…</span>}
+          {org.isActive && <Check size={16} className="text-good shrink-0" aria-label={t('farmSwitcher.active')} />}
+          {switching === org.companyId && <span className="text-xs text-muted">{t('farmSwitcher.switching')}</span>}
         </button>
       ))}
       <Link
@@ -78,7 +71,7 @@ function OrganizationMenu({ onDone }) {
         onClick={onDone}
         className="block px-4 py-2 text-[13px] text-cyan hover:bg-surface-2"
       >
-        Register another organization
+        {t('farmSwitcher.registerAnother')}
       </Link>
     </div>
   )

@@ -19,6 +19,7 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import { installGlobalErrorHandlers } from '../lib/monitoring'
 import QueryBoundary from '../components/QueryBoundary'
 import { safeNextPath } from '../lib/safeRedirect'
+import { postSignInPath } from '../lib/activeOrganization'
 import { clearRetiredData } from '../lib/deviceData'
 import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
 import { fontVariablesCss } from '../lib/fonts'
@@ -212,7 +213,7 @@ function AuthWrapper({ children }) {
     }
 
     if (user && PUBLIC_ROUTES.includes(currentPath)) {
-      router.push(safeNextPath(router.query.next, restricted ? restricted.home : '/dashboard'))
+      router.push(restricted ? safeNextPath(router.query.next, restricted.home) : postSignInPath(router.query.next))
       return
     }
 
