@@ -97,5 +97,7 @@ crons.interval('bot reminders', { minutes: 15 }, internal.bot.reminders.tick, {}
 // Farm bot drafts expire after 24 h; inbound message log is kept 30 days.
 crons.interval('bot expire drafts', { hours: 1 }, internal.bot.pending.expireDrafts, {})
 crons.cron('prune bot inbound', '5 4 * * *', internal.bot.inbound.pruneInbound, {})
+// Voice-note audio is kept 30 days (BOT-005); transcripts stay with the drafts.
+crons.cron('purge voice note audio', '15 4 * * *', internal.bot.voice.purgeOldAudio, {})
 
 export default crons

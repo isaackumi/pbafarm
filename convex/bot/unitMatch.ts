@@ -80,3 +80,31 @@ export function fuzzyMatchUnit<U extends MatchableUnit>(units: U[], read: string
   }
   return { unit: null, confidence: 0, candidates: partial.slice(0, 5).map((u) => u.name) }
 }
+
+/**
+ * All units ranked by how close they are to what was heard (BOT-005 cage
+ * picker), best first, score in [0, 1]. Unlike fuzzyMatchUnit this never
+ * refuses: it orders the choices a worker picks from.
+ */
+export function rankUnits<U extends MatchableUnit>(units: U[], heard: string, limit = 10): Array<{ unit: U; score: number }> {
+  const key = unitKey(heard)
+  if (!key) return []
+  const folded = foldLookalikes(key)
+  const digits = key.replace(/\D/g, '')
+  const scoreKey = (k: string): number => {
+    if (k === key) return 1
+    if (key.length >= 2 && k.includes(key)) return 0.85
+    if (foldLookalikes(k) === folded) return 0.8
+    const fk = foldLookalikes(k)
+    const d = editDistance(fk, folded, 3)
+    let s = d <= 3 ? Math.max(0, 0.75 - 0.15 * d - 0.02 * Math.abs(fk.length - folded.length)) : 0
+    // Same number heard ("cage seven" vs "C-07"): a weak but useful hint.
+    if (digits && Number(k.replace(/\D/g, '') || NaN) === Number(digits)) s = Math.max(s, 0.5)
+    return s
+  }
+  return units
+    .map((unit) => ({ unit, score: Math.max(0, ...keysOf(unit).map(scoreKey)) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score || a.unit.name.localeCompare(b.unit.name))
+    .slice(0, limit)
+}

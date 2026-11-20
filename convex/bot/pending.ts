@@ -15,6 +15,7 @@ import { recordOutboundUsageAs } from '../feed'
 import { reverseTransactionAs } from '../inventory'
 import { botCtx, checkBinding, farmDate, inScope, matchUnit, unitsInScope, type BoundMember } from './scope'
 import { t, type BotLocale } from './i18n'
+import { CHECK_CONFIDENCE, fuzzyMatchUnit, rankUnits } from './unitMatch'
 import type { ChatMessageValue } from './validators'
 
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
@@ -101,12 +102,48 @@ export function draftMessage(locale: BotLocale, draft: Doc<'pendingBotActions'>)
 
 type ProposeResult = { ok: true; pendingId: Id<'pendingBotActions'>; summary: string } | { ok: false; error: string }
 
+export type ProposeOptions = {
+  /**
+   * Voice notes (BOT-005): a cage heard unclearly does not fail the draft.
+   * The closest unit is used, the draft is marked CHECK on 'unit' and keeps
+   * the closest matches for a picker; it cannot be saved until one is picked.
+   */
+  pickUnit?: boolean
+}
+
+/** Max cage choices kept on a draft (a WhatsApp list holds 10 rows). */
+export const MAX_UNIT_CHOICES = 10
+/** Commit refusal for a draft whose cage was not picked yet. */
+export const UNIT_UNCONFIRMED = 'unit_unconfirmed'
+
+type UnitPick =
+  | { unit: Doc<'cages'>; choices: Doc<'cages'>[] | null }
+  | { error: string }
+
+/** The unit for typed or heard text; with `pick`, a weak match keeps its closest alternatives. */
+function resolveUnit(units: Doc<'cages'>[], typed: string, pick: boolean): UnitPick {
+  if (pick) {
+    const m = fuzzyMatchUnit(units, typed)
+    if (m.unit && m.confidence >= CHECK_CONFIDENCE) return { unit: m.unit, choices: null }
+    const ranked = rankUnits(units, typed, MAX_UNIT_CHOICES).map((r) => r.unit)
+    const first = m.unit ?? ranked[0]
+    if (!first) return { error: `No unit called "${typed.slice(0, 40)}" at your site.` }
+    return { unit: first, choices: [first, ...ranked.filter((u) => u._id !== first._id)].slice(0, MAX_UNIT_CHOICES) }
+  }
+  const { unit, candidates } = matchUnit(units, typed)
+  if (unit) return { unit, choices: null }
+  return {
+    error: candidates.length ? `Which unit? Matches: ${candidates.join(', ')}` : `No unit called "${typed.slice(0, 40)}" at your site.`,
+  }
+}
+
 /** Validate and store a draft for the binding. Company and site come from the binding only. */
 export async function proposeFor(
   ctx: MutationCtx,
   bound: BoundMember,
   input: ProposalInput,
   source: { sourceMessageId: string; eventTime: number },
+  opts: ProposeOptions = {},
 ): Promise<ProposeResult> {
   const s = t(bound.locale)
   const daysAgo = input.daysAgo ?? 0
@@ -122,18 +159,14 @@ export async function proposeFor(
   let date: string
   let summary: string
   let fingerprint: string
+  let unitChoices: Doc<'cages'>[] | null = null
 
   if (input.kind === 'daily_entry') {
     if (!can(bound.member, 'production.daily.record')) return { ok: false, error: 'You do not have permission to record daily entries.' }
-    const { unit, candidates } = matchUnit(units, input.unit)
-    if (!unit) {
-      return {
-        ok: false,
-        error: candidates.length
-          ? `Which unit? Matches: ${candidates.join(', ')}`
-          : `No unit called "${input.unit.slice(0, 40)}" at your site.`,
-      }
-    }
+    const picked = resolveUnit(units, input.unit, !!opts.pickUnit)
+    if ('error' in picked) return { ok: false, error: picked.error }
+    const unit = picked.unit
+    unitChoices = picked.choices
     const feedKg = input.feedKg ?? 0
     const mortality = input.mortality ?? 0
     if (!(feedKg >= 0 && feedKg <= MAX_KG)) return { ok: false, error: 'Feed must be between 0 and 100000 kg.' }
@@ -213,9 +246,10 @@ export async function proposeFor(
     if (!(input.quantityKg > 0 && input.quantityKg <= MAX_KG)) return { ok: false, error: 'Quantity must be between 0 and 100000 kg.' }
     let unit: Doc<'cages'> | null = null
     if (input.unit) {
-      const m = matchUnit(units, input.unit)
-      if (!m.unit) return { ok: false, error: m.candidates.length ? `Which unit? Matches: ${m.candidates.join(', ')}` : `No unit called "${input.unit.slice(0, 40)}" at your site.` }
-      unit = m.unit
+      const picked = resolveUnit(units, input.unit, !!opts.pickUnit)
+      if ('error' in picked) return { ok: false, error: picked.error }
+      unit = picked.unit
+      unitChoices = picked.choices
     }
     siteId = unit?.locationId ?? bound.site?._id
     date = addDays(await farmDate(ctx, bound, siteId, source.eventTime), -daysAgo)
@@ -257,6 +291,9 @@ export async function proposeFor(
     status: 'pending',
     createdAt: now,
     expiresAt: now + DRAFT_TTL_MS,
+    ...(unitChoices
+      ? { needsCheck: ['unit'], unitChoices: unitChoices.map((u) => ({ cageId: u._id, name: u.name })) }
+      : {}),
   })
   return { ok: true, pendingId, summary }
 }
@@ -333,6 +370,8 @@ export const commit = internalMutation({
       return { status: 'expired' }
     }
     if (draft.duplicateOf && !args.confirmDuplicate) return { status: 'needs_confirm' }
+    // A cage heard unclearly (BOT-005) is saved only after the worker picks it.
+    if (draft.needsCheck?.includes('unit')) return { status: 'refused', message: UNIT_UNCONFIRMED }
     const problem = await writeProblem(ctx, bound, draft)
     if (problem) return { status: 'refused', message: problem }
 

@@ -78,6 +78,22 @@ export const routePlan = v.union(
     sourceMessageId: v.string(),
     sentAt: v.number(),
   }),
+  /** Save every draft heard in one voice note (BOT-005). */
+  v.object({
+    type: v.literal('voice_commit'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    voiceNoteId: v.id('voiceNotes'),
+    sourceMessageId: v.string(),
+  }),
+  /** Undo every saved draft of one voice note. */
+  v.object({
+    type: v.literal('voice_undo'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    voiceNoteId: v.id('voiceNotes'),
+    sourceMessageId: v.string(),
+  }),
   /** Save all drafts read from one logbook page. */
   v.object({
     type: v.literal('logbook_commit'),
