@@ -578,7 +578,7 @@ export const checkHealth = internalMutation({
         key: `breaker:${b.providerId}:${b.model}`,
         kind: 'breaker_open',
         providerId: b.providerId,
-        message: `Server key: ${b.providerId}/${b.model} is paused until ${new Date(b.openUntil).toISOString()} (${b.refused ? 'no quota for this model' : b.lastKind ?? 'failures'}).`,
+        message: `Server key: ${b.providerId}/${b.model} is paused until ${new Date(b.openUntil).toISOString().replace('T', ' ').slice(0, 16)} UTC (${b.refused ? 'no quota for this model' : b.lastKind ?? 'failures'}).`,
       })
     }
     // Alerts not seen for 10 minutes are resolved.

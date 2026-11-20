@@ -21,6 +21,8 @@ function useNow() {
 
 const money = (n) => `$${(n ?? 0).toFixed(2)}`
 const seconds = (ms) => (ms == null ? '—' : `${(ms / 1000).toFixed(1)} s`)
+/** The query's clock is rounded to 5 minutes: drop breakers that closed since. */
+const stillOpen = (breakers) => breakers.filter((b) => b.openUntil > Date.now())
 const percent = (x) => `${Math.round((x ?? 0) * 1000) / 10}%`
 const until = (ms) => new Date(ms).toISOString().slice(11, 16) + ' UTC'
 
@@ -46,7 +48,7 @@ export function AiHealthCard() {
         <div><dt className="text-muted">Errors</dt><dd className={`text-xl tabular-nums ${errorTone === 'warn' ? 'text-alert' : ''}`}>{percent(h.lastHour.errorRate)}</dd></div>
         <div><dt className="text-muted">p95</dt><dd className="text-xl tabular-nums">{seconds(h.lastHour.p95Ms)}</dd></div>
         <div><dt className="text-muted">Server key, month</dt><dd className="text-xl tabular-nums">{money(h.monthSpendUsd.server)}</dd></div>
-        <div><dt className="text-muted">Open breakers</dt><dd className={`text-xl tabular-nums ${h.breakers.length ? 'text-alert' : ''}`}>{h.breakers.length}</dd></div>
+        <div><dt className="text-muted">Open breakers</dt><dd className={`text-xl tabular-nums ${stillOpen(h.breakers).length ? 'text-alert' : ''}`}>{stillOpen(h.breakers).length}</dd></div>
       </dl>
       {h.alerts.length > 0 && (
         <ul className="mt-3 space-y-1 text-sm">
@@ -140,7 +142,7 @@ export function AiHealthDetails() {
           value={money(h.monthSpendUsd.server)}
           hint={h.monthSpendUsd.serverBudgetUsd == null ? 'No budget set' : `of ${money(h.monthSpendUsd.serverBudgetUsd)}`}
         />
-        <StatCard label="Open breakers" value={h.breakers.length} tone={h.breakers.length ? 'warn' : 'default'} />
+        <StatCard label="Open breakers" value={stillOpen(h.breakers).length} tone={stillOpen(h.breakers).length ? 'warn' : 'default'} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
@@ -162,7 +164,7 @@ export function AiHealthDetails() {
           <CardHeader title="Open breakers" subtitle="Models paused after failures; Auto skips them" />
           <SimpleTable
             rowKey={(r) => r.id}
-            rows={h.breakers}
+            rows={stillOpen(h.breakers)}
             empty="All models are closed (healthy)"
             columns={[
               { key: 'model', label: 'Model', render: (r) => `${r.providerId}/${r.model}` },
