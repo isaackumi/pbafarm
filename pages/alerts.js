@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Sparkles, SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
+import { AnowaPulseIcon } from '../components/brand/AnowaPulseIcon'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { AlertRow, useAlertActions, useAlertLang } from '../components/FarmAlerts'
@@ -49,7 +50,7 @@ export default function AlertsPage() {
               </GradientButton>
             </IfPermitted>
             <IfPermitted permission="reports.view">
-              <GradientButton href="/weekly-report" reverse icon={Sparkles}>
+              <GradientButton href="/weekly-report" reverse icon={AnowaPulseIcon}>
                 {t('alertsPage.weeklyReport')}
               </GradientButton>
             </IfPermitted>

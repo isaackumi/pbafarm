@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { ArrowUp, Check, Copy, Loader2, Maximize2, MessageCircle, Plus, Settings2, Sparkles, Workflow, X } from 'lucide-react'
+import { ArrowUp, Check, Copy, Loader2, Maximize2, MessageCircle, Plus, Settings2, Workflow, X } from 'lucide-react'
+import { AnowaPulseIcon } from './brand/AnowaPulseIcon'
 import { useMutation, useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../lib/convexBridge'
@@ -224,7 +225,7 @@ function TypingDots() {
 function Avatar({ size = 'size-8' }) {
   return (
     <span className={`flex shrink-0 items-center justify-center rounded-pill border border-line-strong bg-bg text-cyan ${size}`} aria-hidden>
-      <Sparkles size={14} />
+      <AnowaPulseIcon size={15} className="text-text" />
     </span>
   )
 }
@@ -581,11 +582,11 @@ export function AssistantOff({ canTurnOn }) {
   const t = useT()
   return (
     <section className="flex flex-col items-center gap-3 rounded-card border border-line bg-surface px-6 py-14 text-center shadow-[var(--shadow-card)]">
-      <Sparkles size={28} className="text-faint" aria-hidden />
+      <AnowaPulseIcon size={30} className="text-faint" />
       <h2 className="text-[17px] font-semibold text-text">{t('assistantUi.offTitle')}</h2>
       <p className="max-w-md text-[14px] text-muted">{canTurnOn ? t('assistantUi.offAdmin') : t('assistantUi.offBody')}</p>
       {canTurnOn && (
-        <GradientButton icon={Sparkles} href="/company-settings" className="mt-2">
+        <GradientButton icon={AnowaPulseIcon} href="/company-settings" className="mt-2">
           {t('assistantUi.turnOn')}
         </GradientButton>
       )}
