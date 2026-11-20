@@ -10,7 +10,9 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "graph:convex-edges": "node scripts/graphify-convex-edges.mjs"
+    "graph:convex-edges": "node scripts/graphify-convex-edges.mjs",
+    "email:assets": "node scripts/email/build-email-assets.mjs",
+    "email:preview": "vitest run convex/lib/emailTemplates/previews.test.ts && node scripts/email/screenshot-emails.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.93",
@@ -48,7 +50,9 @@
     "convex-test": "^0.0.67",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
+    "gifenc": "^1.0.3",
     "jose": "^6.2.4",
+    "playwright": "1.49.1",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.17",
     "vitest": "^3.2.4"

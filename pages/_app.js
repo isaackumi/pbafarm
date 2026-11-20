@@ -96,9 +96,10 @@ const PUBLIC_ROUTES = ['/login', '/signup', '/reset-password']
 /**
  * Open to signed-in and signed-out visitors (an invite link shows who invited
  * you; `/` is the landing page and sends signed-in visitors to the app; the
- * legal pages and the 404 are public marketing pages).
+ * legal pages and the 404 are public marketing pages; /dev/emails is sample
+ * data only and 404s in production).
  */
-const OPEN_ROUTES = ['/', '/invite/[token]', '/privacy', '/terms', '/cookies', '/security', '/404']
+const OPEN_ROUTES = ['/', '/invite/[token]', '/privacy', '/terms', '/cookies', '/security', '/404', '/dev/emails']
 
 /** Where each access state may go; everything else redirects to `home`. */
 const ACCESS_ROUTES = {

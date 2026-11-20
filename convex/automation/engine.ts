@@ -11,6 +11,7 @@ import { CHECKS } from './checks'
 import { evaluateConditions, renderTemplate, type RunContext } from './conditions'
 import { sendAll } from './deliver'
 import { queueRuleWebhook } from '../webhooks'
+import { notificationEmailReader, readingFromPayload, renderNotificationEmail } from '../lib/notificationEmail'
 import { inQuietHours, localParts, nextRunAt, zoneOrDefault } from './schedule'
 import type { AutomationRecipients, RunDelivery } from './validators'
 
@@ -225,7 +226,10 @@ function errorText(e: unknown) {
 
 type Plan = {
   companyId: Id<'companies'>
-  pending: { index: number; input: { channel: RunDelivery['channel']; to: string; subject: string; body: string } }[]
+  pending: {
+    index: number
+    input: { channel: RunDelivery['channel']; to: string; subject: string; body: string; html?: string }
+  }[]
 }
 
 /**
@@ -246,6 +250,7 @@ export const startRun = internalMutation({
             to: v.string(),
             subject: v.string(),
             body: v.string(),
+            html: v.optional(v.string()),
           }),
         }),
       ),
@@ -335,6 +340,7 @@ export const startRun = internalMutation({
           continue
         }
         const targets = pickRecipients(users, action.recipients)
+        const emailExtras = readingFromPayload(context.payload)
         if (action.kind === 'notify') {
           for (const u of targets) {
             const p = await prefs(u)
@@ -371,7 +377,14 @@ export const startRun = internalMutation({
                 continue
               }
               const to = channel === 'email' ? u.email : u.phone
-              const base = { channel, userId: u._id, to: to ?? '', subject: title, attempts: 0 }
+              const base = {
+                channel,
+                userId: u._id,
+                to: to ?? '',
+                subject: title,
+                attempts: 0,
+                ...(channel === 'email' ? { link, level: action.level ?? 'info', ...emailExtras } : {}),
+              }
               const body = channel === 'email' ? message : `${title}: ${message}`
               if (!to) {
                 deliveries.push({ ...base, body, status: 'skipped', error: channel === 'email' ? 'No email address' : 'No phone number' })
@@ -425,10 +438,23 @@ export const startRun = internalMutation({
       })
     }
 
-    const pending = deliveries
-      .map((d, index) => ({ d, index }))
-      .filter(({ d }) => d.status === 'pending')
-      .map(({ d, index }) => ({ index, input: { channel: d.channel, to: d.to, subject: d.subject, body: d.body } }))
+    const reader = await notificationEmailReader(ctx, run.companyId)
+    const pending: Plan['pending'] = []
+    for (const [index, d] of deliveries.entries()) {
+      if (d.status !== 'pending') continue
+      if (d.channel !== 'email') {
+        pending.push({ index, input: { channel: d.channel, to: d.to, subject: d.subject, body: d.body } })
+        continue
+      }
+      // HTML alert email (E5); the text part is the plain alternative.
+      const mail = renderNotificationEmail({
+        locale: await reader.locale(d.userId),
+        orgName: reader.orgName,
+        source: 'automation',
+        delivery: d,
+      })
+      pending.push({ index, input: { channel: 'email', to: d.to, subject: mail.subject, body: mail.text, html: mail.html } })
+    }
     if (!pending.length) {
       await settle(ctx, runId)
       return null

@@ -104,17 +104,56 @@ export const deliveryStatus = v.union(
   v.literal('skipped'),
 )
 
+/** Water-quality reading shown in an alert email (E5); from the breach event. */
+export const emailReading = v.object({
+  label: v.string(),
+  value: v.number(),
+  unit: v.optional(v.string()),
+  limit: v.number(),
+  direction: v.union(v.literal('low'), v.literal('high')),
+  at: v.optional(v.string()),
+})
+
 export const runDelivery = v.object({
   channel: v.union(v.literal('sms'), v.literal('whatsapp'), v.literal('email')),
   userId: v.id('users'),
   to: v.string(),
   subject: v.string(),
   body: v.string(),
+  /** Email only: what the HTML template needs (convex/lib/notificationEmail.ts). */
+  link: v.optional(v.string()),
+  level: v.optional(v.union(v.literal('info'), v.literal('warning'), v.literal('error'))),
+  unitName: v.optional(v.string()),
+  reading: v.optional(emailReading),
   status: deliveryStatus,
   attempts: v.number(),
   error: v.optional(v.string()),
   retryable: v.optional(v.boolean()),
   providerMessageId: v.optional(v.string()),
+})
+
+/** Per-notification email data (approval and weekly emails); the rest comes from each delivery. */
+export const dispatchEmail = v.object({
+  /** Farm alerts: what to do, one step per line (E5 "What to do"). */
+  alert: v.optional(v.object({ steps: v.array(v.string()) })),
+  approval: v.optional(
+    v.object({
+      kind: v.union(v.literal('stocking'), v.literal('topup'), v.literal('transfer'), v.literal('join_request')),
+      requesterName: v.string(),
+      summary: v.string(),
+      waitedHours: v.optional(v.number()),
+    }),
+  ),
+  weekly: v.optional(
+    v.object({
+      siteName: v.optional(v.string()),
+      weekStart: v.string(),
+      weekEnd: v.string(),
+      units: v.number(),
+      goodNumber: v.optional(v.object({ value: v.string(), label: v.string(), detail: v.optional(v.string()) })),
+      things: v.array(v.object({ lead: v.string(), detail: v.optional(v.string()) })),
+    }),
+  ),
 })
 
 export const quietHours = v.object({ start: v.string(), end: v.string() })
@@ -124,4 +163,6 @@ export type AutomationAction = Infer<typeof automationAction>
 export type AutomationTrigger = Infer<typeof automationTrigger>
 export type AutomationRecipients = Infer<typeof automationRecipients>
 export type RunDelivery = Infer<typeof runDelivery>
+export type EmailReading = Infer<typeof emailReading>
+export type DispatchEmail = Infer<typeof dispatchEmail>
 export type ConditionValue = Infer<typeof conditionValue>

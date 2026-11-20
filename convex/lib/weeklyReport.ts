@@ -284,3 +284,78 @@ export function weekStartOf(weekEnd: string): string {
   d.setUTCDate(d.getUTCDate() - 6)
   return d.toISOString().slice(0, 10)
 }
+
+/**
+ * The weekly email's "one good number" and "things to look at" (Paper E6),
+ * from a stored pack. Facts only: a line is left out when the pack lacks it.
+ */
+export type WeeklyHighlights = {
+  units: number
+  goodNumber?: { value: string; label: string; detail?: string }
+  things: Array<{ lead: string; detail?: string }>
+}
+
+export function weeklyEmailHighlights(packJson: string, lang: Lang): WeeklyHighlights | null {
+  let p: Partial<ReportPack>
+  try {
+    p = JSON.parse(packJson)
+  } catch {
+    return null
+  }
+  const w = p?.week
+  if (!w || typeof w !== 'object') return null
+  const fr = lang === 'fr'
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null)
+  const out: WeeklyHighlights = { units: n(w.units) ?? 0, things: [] }
+
+  const fcr = n(w.fcr)
+  const prevFcr = n(p.previous?.fcr)
+  const gain = n(w.gain_kg)
+  if (fcr != null && prevFcr != null && fcr > 0 && fcr < prevFcr) {
+    out.goodNumber = {
+      value: fmt(fcr, lang, 2),
+      label: fr ? 'FCR de la ferme cette semaine, meilleur que la semaine dernière' : 'Farm FCR this week, better than last week',
+      detail: fr ? `Contre ${fmt(prevFcr, lang, 2)} la semaine précédente.` : `Down from ${fmt(prevFcr, lang, 2)} the week before.`,
+    }
+  } else if (gain != null && gain > 0) {
+    out.goodNumber = {
+      value: `${fmt(gain, lang, 0)} kg`,
+      label: fr ? 'Poids gagné cette semaine' : 'Weight gained this week',
+    }
+  }
+
+  const alerts = Array.isArray(p.alerts?.items) ? p.alerts!.items : []
+  const ranked = [...alerts].sort((a, b) => Number(b.severity === 'critical') - Number(a.severity === 'critical'))
+  for (const a of ranked.slice(0, 2)) {
+    if (typeof a?.unit !== 'string' || typeof a?.title !== 'string') continue
+    out.things.push({
+      lead: `${a.unit}: ${a.title}`,
+      detail: a.severity === 'critical' ? (fr ? 'Alerte critique.' : 'Critical alert.') : undefined,
+    })
+  }
+  const worst = Array.isArray(p.units) ? p.units.find((u) => n(u?.mortality) != null && u.mortality > 0) : undefined
+  if (worst && typeof worst.name === 'string') {
+    out.things.push(
+      fr
+        ? { lead: `${worst.name} a perdu ${fmt(worst.mortality, lang, 0)} poissons cette semaine.`, detail: 'Le plus de toutes les unités.' }
+        : { lead: `${worst.name} lost ${fmt(worst.mortality, lang, 0)} fish this week.`, detail: 'The most of any unit.' },
+    )
+  }
+  const feedPct = n(w.feed_vs_suggested_pct)
+  if (feedPct != null && (feedPct > 110 || feedPct < 90)) {
+    const high = feedPct > 110
+    out.things.push(
+      fr
+        ? {
+            lead: `L'aliment a représenté ${fmt(feedPct, lang, 0)} % de la ration suggérée.`,
+            detail: high ? 'Au-dessus du plan : vérifiez le gaspillage.' : "En dessous du plan : vérifiez l'appétit.",
+          }
+        : {
+            lead: `Feed was ${fmt(feedPct, lang, 0)}% of the suggested ration.`,
+            detail: high ? 'Above the plan; check for feed waste.' : 'Below the plan; check appetite.',
+          },
+    )
+  }
+  out.things = out.things.slice(0, 3)
+  return out
+}

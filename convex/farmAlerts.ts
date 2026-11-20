@@ -366,6 +366,8 @@ async function notifyAlert(ctx: MutationCtx, alert: Doc<'farmAlerts'>) {
       level: alert.severity === 'critical' ? 'error' : 'warning',
       dedupeKey: `farm-alert:${alert._id}:${alert.severity}`,
       source: 'farm_alert',
+      unitName: alert.unitName,
+      email: { alert: { steps: text.actions.slice(0, 5) } },
     })
     notified += res.notified
   }

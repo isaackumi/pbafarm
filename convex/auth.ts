@@ -4,6 +4,7 @@ import { convexAuth } from '@convex-dev/auth/server'
 import type { DataModel } from './_generated/dataModel'
 import type { GenericActionCtx } from 'convex/server'
 import { pickEmailAdapter } from './lib/email'
+import { emailContext, passwordResetEmail } from './lib/emailTemplates'
 import { randomDigits } from './lib/tokens'
 import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
 import { authorizePhoneOtp } from './phoneAuth'
@@ -22,12 +23,14 @@ const PasswordReset = Email({
   async generateVerificationToken() {
     return randomDigits(8)
   },
-  async sendVerificationRequest({ identifier, token }) {
-    await pickEmailAdapter().send({
-      to: identifier,
-      subject: 'Reset your Anowa password',
-      text: `Your password reset code is ${token}. It expires in 15 minutes.\n\nIf you did not ask to reset your password, ignore this email.`,
-    })
+  async sendVerificationRequest({ identifier, token }, ctx?: unknown) {
+    // Convex Auth passes the action ctx as a second argument (not in its types).
+    const actionCtx = ctx as Partial<GenericActionCtx<DataModel>> | undefined
+    const locale = actionCtx?.runQuery
+      ? await actionCtx.runQuery(internal.emails.recipientLocale, { email: identifier }).catch(() => null)
+      : null
+    const mail = passwordResetEmail(emailContext(locale), { email: identifier, code: token, minutes: 15 })
+    await pickEmailAdapter().send({ to: identifier, subject: mail.subject, text: mail.text, html: mail.html })
   },
 })
 

@@ -81,6 +81,14 @@ function pickValues(row: Partial<Record<WqParameter, number | undefined>>): Part
   return out
 }
 
+/** First breach, for the alert email's reading band (lib/notificationEmail readingFromPayload). */
+function breachEmailFields(breaches: Breach[]) {
+  const b = breaches[0]
+  return b
+    ? { breachLabel: b.label, breachValue: b.value, breachUnit: b.unit, breachLimit: b.limit, breachDirection: b.direction }
+    : {}
+}
+
 /** Emit the reading event, and the breach event when any parameter is out of range. */
 async function emitReadingEvents(
   ctx: MutationCtx,
@@ -113,6 +121,7 @@ async function emitReadingEvents(
         parameters: breaches.map((b) => b.parameter).join(', '),
         summary: breachSummary(breaches),
         lowOxygen: breaches.some((b) => b.parameter === 'dissolvedOxygen' && b.direction === 'low'),
+        ...breachEmailFields(breaches),
       },
       { companyId: unit.companyId, locationId: unit.locationId },
     )
@@ -273,6 +282,7 @@ export async function evaluateSensorReadings(
         parameters: breaches.map((b) => b.parameter).join(', '),
         summary: breachSummary(breaches),
         lowOxygen: breaches.some((b) => b.parameter === 'dissolvedOxygen' && b.direction === 'low'),
+        ...breachEmailFields(breaches),
       },
       { companyId, locationId: unit.locationId },
     )

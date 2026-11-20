@@ -8,13 +8,13 @@ import { userError } from './lib/errors'
 import { can, memberContextIn, requireMember, requirePermission, type MemberContext } from './lib/permissions'
 import { logAudit } from './lib/tenancy'
 import { runEffect } from './lib/effect'
-import { siteUrl } from './lib/email'
 import { deliverMessage } from './messaging/deliver'
 import { sendAll } from './automation/deliver'
 import { MAX_ATTEMPTS, RETRY_BACKOFF_MIN, companyZone, prefsFor } from './automation/engine'
 import { inQuietHours, isValidTimeZone, localParts } from './automation/schedule'
 import { checkTiming, nextReportRun } from './lib/reportSchedule'
 import { base64Utf8, reportEmail } from './lib/reportEmail'
+import { emailLocale } from './lib/emailTemplates'
 import { reportDeliveryStatus, scheduleFrequency } from './lib/reportValidators'
 import { canReadDataset, canSeeReport } from './reportBuilder'
 
@@ -523,7 +523,11 @@ type Plan = {
   companyId: Id<'companies'>
   reportId: Id<'savedReports'>
   ownerId: Id<'users'>
-  pending: { index: number; to: string }[]
+  /** For the email footer ("Sent by a report schedule <owner> set up at <org>"). */
+  ownerName: string
+  orgName: string
+  /** `locale`: the recipient's app language, for the email copy. */
+  pending: { index: number; to: string; locale?: string }[]
 }
 
 /**
@@ -538,7 +542,9 @@ export const start = internalMutation({
       companyId: v.id('companies'),
       reportId: v.id('savedReports'),
       ownerId: v.id('users'),
-      pending: v.array(v.object({ index: v.number(), to: v.string() })),
+      ownerName: v.string(),
+      orgName: v.string(),
+      pending: v.array(v.object({ index: v.number(), to: v.string(), locale: v.optional(v.string()) })),
     }),
     v.null(),
   ),
@@ -580,13 +586,26 @@ export const start = internalMutation({
         recipients.push({ ...base, status: error ? ('skipped' as const) : ('pending' as const), error })
       }
     }
-    const pending = recipients.flatMap((x, index) => (x.status === 'pending' ? [{ index, to: x.to }] : []))
+    const pending: Plan['pending'] = []
+    for (const [index, x] of recipients.entries()) {
+      if (x.status !== 'pending') continue
+      pending.push({ index, to: x.to, locale: (await ctx.db.get(x.userId))?.locale })
+    }
     if (!pending.length) {
       await finalize(ctx, { ...d, recipients }, {})
       return null
     }
     await ctx.db.patch(deliveryId, { recipients, status: 'running', attempts: d.attempts + 1, nextAttemptAt: undefined })
-    return { companyId: d.companyId, reportId: d.reportId, ownerId: d.requestedBy!, pending }
+    const owner = d.requestedBy ? await ctx.db.get(d.requestedBy) : null
+    const company = await ctx.db.get(d.companyId)
+    return {
+      companyId: d.companyId,
+      reportId: d.reportId,
+      ownerId: d.requestedBy!,
+      ownerName: owner?.name ?? '',
+      orgName: company?.name ?? '',
+      pending,
+    }
   },
 })
 
@@ -705,21 +724,38 @@ export const send = internalAction({
       await fail(run.error)
       return null
     }
-    const email = reportEmail({
-      name: run.name,
-      dataset: run.dataset,
-      result: run.result,
-      link: `${siteUrl()}/reports?report=${plan.reportId}`,
-    })
-    const attachments = email.attach ? [{ filename: email.filename, content: base64Utf8(email.csv) }] : undefined
+    // One rendering per language; the CSV is the same for everyone.
+    const byLocale = new Map<string, ReturnType<typeof reportEmail>>()
+    const emailFor = (locale: string | undefined) => {
+      const key = emailLocale(locale)
+      let email = byLocale.get(key)
+      if (!email) {
+        email = reportEmail({
+          name: run.name,
+          dataset: run.dataset,
+          result: run.result,
+          path: `/reports?report=${plan.reportId}`,
+          locale: key,
+          ownerName: plan.ownerName,
+          orgName: plan.orgName,
+        })
+        byLocale.set(key, email)
+      }
+      return email
+    }
+    const first = emailFor(plan.pending[0]?.locale)
+    const attachments = first.attach ? [{ filename: first.filename, content: base64Utf8(first.csv) }] : undefined
     const companyId = plan.companyId
     const outcomes = await runEffect(
       sendAll(
         (input) => deliverMessage(ctx, companyId, input),
-        plan.pending.map(({ index, to }) => ({
-          index,
-          input: { channel: 'email' as const, to, subject: email.subject, body: email.body, attachments },
-        })),
+        plan.pending.map(({ index, to, locale }) => {
+          const email = emailFor(locale)
+          return {
+            index,
+            input: { channel: 'email' as const, to, subject: email.subject, body: email.body, html: email.html, attachments },
+          }
+        }),
       ),
     )
     await ctx.runMutation(internal.reportSchedules.finish, {

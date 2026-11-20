@@ -2,6 +2,7 @@ import * as Effect from 'effect/Effect'
 import * as Schema from 'effect/Schema'
 import { decodeBody, providerPost, runSend } from './send'
 import { providerError, type ProviderAdapter } from './types'
+import { cleanSubject } from '../../lib/emailTemplates/escape'
 
 /** Error body: { name, message, statusCode }. Success: { id }. */
 const ResendError = Schema.Struct({
@@ -15,7 +16,7 @@ const ResendSent = Schema.Struct({ id: Schema.optional(Schema.NullOr(Schema.Stri
  *
  * Verified 2026-11-18 against:
  * - https://resend.com/docs/api-reference/emails/send-email
- *   POST https://api.resend.com/emails, Bearer API key, JSON { from, to, subject, text };
+ *   POST https://api.resend.com/emails, Bearer API key, JSON { from, to, subject, text, html? };
  *   200 with { id }. Optional `attachments: [{ filename, content (base64) }]`,
  *   content type derived from the filename, 40 MB per email after encoding.
  * - https://resend.com/docs/api-reference/introduction: every request must
@@ -46,8 +47,10 @@ export const resend: ProviderAdapter = {
           body: JSON.stringify({
             from: config.senderId ?? '',
             to: [input.to],
-            subject: input.subject ?? 'Message from Anowa',
+            // One line only: a CR/LF from user data must never reach a header.
+            subject: cleanSubject(input.subject ?? 'Message from Anowa'),
             text: input.body,
+            ...(input.html ? { html: input.html } : {}),
             ...(input.attachments?.length
               ? {
                   attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })),

@@ -275,6 +275,7 @@ export const EVENT_TYPES: { type: string; label: string; fields: string[] }[] = 
     fields: [
       'unitName', 'unitType', 'date', 'source', 'breachCount', 'parameters', 'summary', 'lowOxygen',
       'dissolvedOxygen', 'temperatureC', 'ph', 'ammonia', 'nitrite',
+      'breachLabel', 'breachValue', 'breachUnit', 'breachLimit', 'breachDirection',
     ],
   },
   {

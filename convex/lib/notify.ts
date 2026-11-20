@@ -3,7 +3,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 import { internal } from '../_generated/api'
 import { MAX_ATTEMPTS, companyZone, prefsFor, safeLink } from '../automation/engine'
 import { inQuietHours } from '../automation/schedule'
-import type { RunDelivery } from '../automation/validators'
+import type { DispatchEmail, EmailReading, RunDelivery } from '../automation/validators'
 
 /**
  * System notifications on every channel (AUTO-003), for server code that is
@@ -34,6 +34,10 @@ export async function notifyUsers(
     dedupeKey?: string
     /** Recorded on the dispatch, e.g. 'approval.requested'. */
     source: string
+    /** Email only: data for the HTML template (convex/lib/notificationEmail.ts). */
+    email?: DispatchEmail
+    unitName?: string
+    reading?: EmailReading
   },
 ): Promise<{ notified: number; deliveries: number; dispatchId: Id<'notificationDispatches'> | null }> {
   const { tz } = await companyZone(ctx, opts.companyId)
@@ -75,7 +79,17 @@ export async function notifyUsers(
       if (deliveries.length >= MAX_DISPATCH_DELIVERIES) break
       const to = channel === 'email' ? u.email : u.phone
       const body = channel === 'email' ? opts.message : `${opts.title}: ${opts.message}`
-      const base = { channel, userId: u._id, to: to ?? '', subject: opts.title, body, attempts: 0 }
+      const base = {
+        channel,
+        userId: u._id,
+        to: to ?? '',
+        subject: opts.title,
+        body,
+        attempts: 0,
+        ...(channel === 'email'
+          ? { link, level: opts.level ?? 'info', unitName: opts.unitName, reading: opts.reading }
+          : {}),
+      }
       if (!to) {
         deliveries.push({ ...base, status: 'skipped', error: channel === 'email' ? 'No email address' : 'No phone number' })
       } else if (inQuietHours(p.quietHours, now, tz)) {
@@ -96,6 +110,7 @@ export async function notifyUsers(
     attempts: 0,
     maxAttempts: MAX_ATTEMPTS,
     deliveries,
+    email: opts.email,
     createdAt: now,
     ...(pending ? {} : { finishedAt: now }),
   })

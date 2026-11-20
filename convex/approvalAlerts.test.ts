@@ -89,6 +89,33 @@ describe('approval notifications (AUTO-004)', () => {
     expect(events.map((e) => e.type)).toContain('approval.requested')
   })
 
+  test('the approval email is the HTML template (E4) with a text part and a sign-in link only', async () => {
+    const { t, as, staffId, cageId } = await setup()
+    vi.stubEnv('PLATFORM_EMAIL_PROVIDER', 'resend')
+    vi.stubEnv('PLATFORM_EMAIL_SENDER', 'Anowa <no-reply@mail.test>')
+    vi.stubEnv('PLATFORM_RESEND_API_KEY', 're_test')
+    vi.stubEnv('SITE_URL', 'https://app.example')
+    const sent: any[] = []
+    vi.stubGlobal('fetch', async (url: string, init: any) => {
+      fetchCalls.push(String(url))
+      sent.push(JSON.parse(init.body))
+      return new Response('{"id":"em_1"}', { status: 200 })
+    })
+    await requestStocking(as, staffId, cageId)
+    await t.finishAllScheduledFunctions(() => vi.advanceTimersByTime(1000))
+    expect(sent).toHaveLength(1)
+    const [mail] = sent
+    expect(mail.to).toEqual(['a@x.com'])
+    expect(mail.subject).toMatch(/^Needs your approval: Stocking 5,000 fish into N1/)
+    expect(mail.html).toContain('needs your yes.')
+    expect(mail.html).toContain('href="https://app.example/approvals"')
+    expect(mail.html).toContain('Lake Farm')
+    expect(mail.html).not.toMatch(/token|decision=/i)
+    expect(mail.text).toContain('Review and approve: https://app.example/approvals')
+    const [d] = await dispatches(t)
+    expect(d.status).toBe('succeeded')
+  })
+
   test('escalates after the delay when still pending; not once decided; requester hears the decision', async () => {
     const { t, as, adminId, staffId, cageId } = await setup()
     await as(adminId).mutation(api.approvalAlerts.updateSettings, {

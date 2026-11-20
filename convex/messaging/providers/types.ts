@@ -12,6 +12,8 @@ export type SendInput = {
   channel: MessagingChannel
   subject?: string
   otpCode?: string
+  /** Email only: the HTML part (convex/lib/emailTemplates); `body` stays the plain-text part. */
+  html?: string
   /** Email only (scheduled reports, ANLY-007); other channels ignore it. */
   attachments?: EmailAttachment[]
 }
