@@ -7632,7 +7632,8 @@
       "none": "Enregistrez au moins deux plans pour voir le compromis entre eux.",
       "same": "{name} vend en premier et dégage la plus forte marge : il gagne sur les deux tableaux.",
       "tradeoff": "{fast} vend {weeks} semaines plus tôt, mais {best} dégage {gap} de marge en plus. Par mois en cage, {leader} rapporte plus, environ {perMonth}."
-    }
+    },
+    "at": "à"
   },
   "projectsPage": {
     "title": "Projets",

@@ -22,6 +22,14 @@ const SIZE = {
 const FILL = {
   outline: 'bg-surface text-text font-medium',
   solid: 'bg-button text-button-text font-semibold',
+  /** Paper 50 "Save plan": lime fill and ring, ink text (the same on both themes). */
+  lime: 'bg-lime text-ink font-semibold',
+}
+/** The 1.5px ring: the brand gradient (default), its reverse, or Paper 50's sky gradient ("Compare plans"). */
+function ringStyle(variant, reverse, ring) {
+  if (variant === 'lime') return { backgroundColor: 'var(--color-lime)' }
+  if (ring === 'sky') return { backgroundImage: 'var(--gradient-sky)' }
+  return { backgroundImage: reverse ? 'var(--gradient-brand-rev)' : 'var(--gradient-brand)' }
 }
 
 function Base({ href, className, children, type = 'button', style, ...props }) {
@@ -43,6 +51,7 @@ export function GradientButton({
   variant = 'outline',
   size = 'md',
   reverse = false,
+  ring = 'brand',
   icon: Icon,
   block = false,
   children,
@@ -53,7 +62,7 @@ export function GradientButton({
   return (
     <Base
       className={`group ${block ? 'flex w-full' : 'inline-flex shrink-0'} rounded-pill p-[1.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-      style={{ backgroundImage: reverse ? 'var(--gradient-brand-rev)' : 'var(--gradient-brand)' }}
+      style={ringStyle(variant, reverse, ring)}
       {...props}
     >
       <span

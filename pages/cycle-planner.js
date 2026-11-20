@@ -36,7 +36,8 @@ export default function CyclePlannerPage() {
   )
 }
 
-const PLAN_DOTS = ['bg-cyan', 'bg-pink', 'bg-warn', 'bg-good']
+// Paper 50: A lime, B sky, C coral (#F2A07B); a fourth plan uses good.
+const PLAN_DOTS = ['bg-lime', 'bg-sky-ink', 'bg-[#F2A07B]', 'bg-good']
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 /** "A · Stock 2 Mar" → "A"; other names stay whole. */
 const shortName = (name) => name.split(' · ')[0]
@@ -231,10 +232,10 @@ function CyclePlanner({ title, eyebrow }) {
       eyebrow={eyebrow}
       actions={
         <>
-          <GradientButton variant="solid" icon={PenLine} onClick={onSave} disabled={busy || !result || !unitIds.length}>
+          <GradientButton variant="lime" icon={PenLine} onClick={onSave} disabled={busy || !result || !unitIds.length}>
             {planId ? t('cyclePlanner.updatePlan') : t('cyclePlanner.savePlan')}
           </GradientButton>
-          <GradientButton reverse icon={Columns2} onClick={() => compareRef.current?.scrollIntoView({ behavior: 'smooth' })}>
+          <GradientButton ring="sky" icon={Columns2} onClick={() => compareRef.current?.scrollIntoView({ behavior: 'smooth' })}>
             {t('cyclePlanner.comparePlans')}
           </GradientButton>
         </>
@@ -316,7 +317,9 @@ const fmt = (n, decimals = 0) =>
 const tonnes = (kg) => `${fmt(kg / 1000, 1)} t`
 
 const LABEL = 'text-xs leading-4 text-muted'
-const FIELD = 'font-data tabular-nums'
+/** Paper 50 fields: 42px, 12px radius, sky border when focused. */
+const BOX = 'h-[42px] rounded-[12px] px-3.5 text-[14px] leading-[18px] focus:border-sky-ink focus-visible:ring-0'
+const FIELD = `font-data tabular-nums ${BOX}`
 
 function InputsCard({
   name,
@@ -370,19 +373,40 @@ function InputsCard({
       </div>
 
       <div className="flex gap-2.5 py-2.5">
-        <label className="flex grow basis-0 flex-col gap-1.5">
+        <label className="flex min-w-0 grow basis-0 flex-col gap-1.5">
           <span className={LABEL}>{t('cyclePlanner.stockOn')}</span>
-          <Input type="date" value={form.stockOn} onChange={set('stockOn')} aria-invalid={bad('stockOn')} />
+          <Input type="date" className={BOX} value={form.stockOn} onChange={set('stockOn')} aria-invalid={bad('stockOn')} />
         </label>
-        <label className="flex grow basis-0 flex-col gap-1.5">
-          <span className={LABEL}>{t('cyclePlanner.fishPerUnit')}</span>
-          <Input inputMode="numeric" className={FIELD} value={form.fishPerUnit} onChange={set('fishPerUnit')} aria-invalid={bad('fishPerUnit')} />
-        </label>
+        <div className="flex min-w-0 grow basis-0 flex-col gap-1.5">
+          <label htmlFor="cp-fish" className={LABEL}>
+            {t('cyclePlanner.fishPerUnit')}
+          </label>
+          {/* Paper 50: the fingerling weight sits inside this field, "at 5 g". */}
+          <div className="flex h-[42px] items-center justify-between gap-2 rounded-[12px] border border-line-strong bg-bg px-3.5 focus-within:border-sky-ink">
+            <input
+              id="cp-fish"
+              inputMode="numeric"
+              value={form.fishPerUnit}
+              onChange={set('fishPerUnit')}
+              aria-invalid={bad('fishPerUnit')}
+              className="w-0 min-w-0 grow bg-transparent font-data text-[14px] leading-[18px] tabular-nums text-text focus:outline-none"
+            />
+            <span className="flex shrink-0 items-center gap-1 text-xs leading-4 text-faint">
+              {t('cyclePlanner.at')}
+              <input
+                inputMode="decimal"
+                aria-label={t('cyclePlanner.stockAbw')}
+                value={form.stockAbwG}
+                onChange={set('stockAbwG')}
+                aria-invalid={bad('stockAbwG')}
+                style={{ width: `${Math.max(1, String(form.stockAbwG).length)}ch` }}
+                className="bg-transparent text-right text-xs leading-4 text-faint focus:text-text focus:outline-none aria-[invalid=true]:text-alert"
+              />
+              g
+            </span>
+          </div>
+        </div>
       </div>
-      <label className="flex flex-col gap-1.5 pb-2.5">
-        <span className={LABEL}>{t('cyclePlanner.stockAbw')}</span>
-        <Input inputMode="decimal" className={FIELD} value={form.stockAbwG} onChange={set('stockAbwG')} aria-invalid={bad('stockAbwG')} />
-      </label>
 
       <div className="flex flex-col gap-2.5 py-2.5">
         <div className="flex justify-between">
@@ -399,7 +423,8 @@ function InputsCard({
           step={10}
           value={Math.min(max, Math.max(min, num(form.harvestAbwG) || min))}
           onChange={set('harvestAbwG')}
-          className="h-4 w-full cursor-pointer accent-[var(--cyan)]"
+          className="plan-range h-4 w-full cursor-pointer"
+          style={{ '--pct': `${((Math.min(max, Math.max(min, num(form.harvestAbwG) || min)) - min) / Math.max(1, max - min)) * 100}%` }}
         />
         <div className="flex justify-between text-[11px] leading-[14px] text-faint">
           <span>{min} g</span>
@@ -417,17 +442,6 @@ function InputsCard({
           <Input inputMode="decimal" className={FIELD} value={form.salePricePerKg} onChange={set('salePricePerKg')} placeholder={symbol} aria-invalid={bad('salePricePerKg')} />
         </label>
       </div>
-      <div className="flex gap-2.5 py-2.5">
-        <label className="flex grow basis-0 flex-col gap-1.5">
-          <span className={LABEL}>{t('cyclePlanner.fingerlingPrice')}</span>
-          <Input inputMode="decimal" className={FIELD} value={form.fingerlingPrice} onChange={set('fingerlingPrice')} placeholder={symbol} aria-invalid={bad('fingerlingPrice')} />
-        </label>
-        <label className="flex grow basis-0 flex-col gap-1.5">
-          <span className={LABEL}>{t('cyclePlanner.bagKg')}</span>
-          <Input inputMode="decimal" className={FIELD} value={form.bagKg} onChange={set('bagKg')} aria-invalid={bad('bagKg')} />
-        </label>
-      </div>
-
       {assumptions ? (
         <div className="mt-3 flex flex-col gap-2.5 rounded-[14px] bg-surface-2 p-4">
           <span className="font-data text-[11px] uppercase leading-[14px] tracking-[0.06em] text-muted">{sourceLabel}</span>
@@ -463,8 +477,21 @@ function InputsCard({
             invalid={problems.includes('tgc')}
             hint={editAssumptions ? t('cyclePlanner.tgcHint') : null}
           />
+          {/* Not on Paper 50's default view: edited with the other assumptions. */}
+          {editAssumptions ? (
+        <div className="flex gap-2.5 pt-1">
+          <label className="flex grow basis-0 flex-col gap-1.5">
+            <span className={LABEL}>{t('cyclePlanner.fingerlingPrice')}</span>
+            <Input inputMode="decimal" className={FIELD} value={form.fingerlingPrice} onChange={set('fingerlingPrice')} placeholder={symbol} aria-invalid={bad('fingerlingPrice')} />
+          </label>
+          <label className="flex grow basis-0 flex-col gap-1.5">
+            <span className={LABEL}>{t('cyclePlanner.bagKg')}</span>
+            <Input inputMode="decimal" className={FIELD} value={form.bagKg} onChange={set('bagKg')} aria-invalid={bad('bagKg')} />
+          </label>
+        </div>
+          ) : null}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <button type="button" onClick={() => setEditAssumptions((e) => !e)} className="text-left text-xs leading-[17px] text-cyan hover:underline">
+            <button type="button" onClick={() => setEditAssumptions((e) => !e)} className="text-left text-xs leading-[17px] text-sky-ink hover:underline">
               {editAssumptions ? t('cyclePlanner.doneEditing') : t('cyclePlanner.changeAssumptions')}
             </button>
             {Object.keys(overrides).length ? (
@@ -495,7 +522,7 @@ function AssumptionRow({ label, value, source, edit, raw, onChange, invalid, hin
             value={raw}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={invalid}
-            className="w-24 rounded-input border border-line-strong bg-bg px-2 py-1 text-right font-data text-sm text-text focus:border-pearl-cyan focus:outline-none aria-[invalid=true]:border-alert"
+            className="w-24 rounded-input border border-line-strong bg-bg px-2 py-1 text-right font-data text-sm text-text focus:border-sky-ink focus:outline-none aria-[invalid=true]:border-alert"
           />
         ) : (
           <span className="text-right font-data text-sm leading-4 text-text">{value}</span>
@@ -517,13 +544,13 @@ function UnitPicker({ cages, unitIds, setUnitIds, siteName }) {
     : t('cyclePlanner.pickUnits')
   return (
     <details ref={ref} className="group relative">
-      <summary className="flex h-[42px] cursor-pointer list-none items-center justify-between gap-2 rounded-input border border-line-strong bg-bg px-3.5 text-sm text-text [&::-webkit-details-marker]:hidden">
+      <summary className="flex h-[42px] cursor-pointer list-none items-center justify-between gap-2 rounded-[12px] border border-line-strong bg-bg px-3.5 text-[14px] leading-[18px] text-text group-open:border-sky-ink [&::-webkit-details-marker]:hidden">
         <span className="truncate">{summary}</span>
-        <ChevronDown size={14} className="shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+        <ChevronDown size={12} strokeWidth={1.7} className="shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
       </summary>
       <div className="absolute inset-x-0 top-[46px] z-30 max-h-72 overflow-y-auto rounded-[14px] border border-line-strong bg-surface p-2 shadow-[var(--shadow-card)]">
         <div className="flex justify-between px-2 pb-2 text-xs">
-          <button type="button" className="text-cyan hover:underline" onClick={() => setUnitIds(cages.slice(0, PLAN_LIMITS.maxUnits).map((c) => c._id))}>
+          <button type="button" className="text-sky-ink hover:underline" onClick={() => setUnitIds(cages.slice(0, PLAN_LIMITS.maxUnits).map((c) => c._id))}>
             {t('cyclePlanner.selectAll')}
           </button>
           <button type="button" className="text-muted hover:underline" onClick={() => setUnitIds([])}>
@@ -532,7 +559,7 @@ function UnitPicker({ cages, unitIds, setUnitIds, siteName }) {
         </div>
         {cages.map((c) => (
           <label key={c._id} className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm hover:bg-surface-2">
-            <input type="checkbox" checked={chosen.has(c._id)} onChange={() => toggle(c._id)} className="accent-[var(--cyan)]" />
+            <input type="checkbox" checked={chosen.has(c._id)} onChange={() => toggle(c._id)} className="accent-[var(--color-lime)]" />
             <span className="grow truncate">{c.name}</span>
             {c.location ? <span className="shrink-0 text-xs text-faint">{c.location}</span> : null}
           </label>
@@ -571,7 +598,7 @@ function Results({ result: r, inputs, money, shortDate, locale }) {
           )}
         </div>
         <div className="flex flex-col gap-1 pb-1.5 sm:items-end">
-          <span className="font-data text-[28px] leading-8 text-cyan">{tonnes(r.harvestKg)}</span>
+          <span className="font-data text-[28px] leading-8 text-lime-ink">{tonnes(r.harvestKg)}</span>
           <span className="text-sm leading-4 text-muted">
             {t('cyclePlanner.fishAt', { fish: fmt(r.fish), g: fmt(inputs.harvestAbwG), day: fmt(r.days) })}
           </span>
@@ -606,7 +633,7 @@ function Results({ result: r, inputs, money, shortDate, locale }) {
               {t('cyclePlanner.feedT')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3.5 bg-cyan" aria-hidden />
+              <span className="h-0.5 w-3.5 bg-lime" aria-hidden />
               {t('cyclePlanner.avgWeight')}
             </span>
           </div>
@@ -687,7 +714,7 @@ function CompareTable({ plans, compareIds, setCompareIds, currentId, money, shor
                       <button type="button" onClick={() => onOpen(p)} className="flex items-center gap-2.5 text-left">
                         <span className={`size-2 shrink-0 rounded-pill ${PLAN_DOTS[i % PLAN_DOTS.length]}`} aria-hidden />
                         <span className="flex flex-col gap-0.5">
-                          <span className="font-semibold leading-[18px] text-text hover:underline">{p.name}</span>
+                          <span className={`${p._id === currentId ? 'font-semibold' : 'font-medium'} text-[14px] leading-[18px] text-text hover:underline`}>{p.name}</span>
                           <span className="text-xs leading-4 text-muted">
                             {t('cyclePlanner.planLine', { fish: fmt(p.inputs.fishPerUnit), g: fmt(p.inputs.harvestAbwG) })}
                           </span>
@@ -731,7 +758,7 @@ function CompareTable({ plans, compareIds, setCompareIds, currentId, money, shor
       <div className="flex items-center gap-3 px-5 py-3.5">
         {note ? (
           <>
-            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-pill bg-cyan font-data text-[11px] font-semibold leading-3 text-bg" aria-hidden>
+            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-pill bg-lime font-data text-[11px] font-semibold leading-3 text-ink" aria-hidden>
               a
             </span>
             <p className="grow text-sm leading-[19px] text-muted">
@@ -750,7 +777,7 @@ function CompareTable({ plans, compareIds, setCompareIds, currentId, money, shor
         ) : (
           <p className="grow text-sm leading-[19px] text-muted">{t('cyclePlanner.note.none')}</p>
         )}
-        <button type="button" onClick={onNew} className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-[18px] text-cyan hover:underline">
+        <button type="button" onClick={onNew} className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-[18px] text-sky-ink hover:underline">
           <Plus size={14} aria-hidden />
           {t('cyclePlanner.addPlan')}
         </button>

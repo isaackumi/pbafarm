@@ -29,6 +29,10 @@
   /* Primary (light pill) button and the active nav pill */
   --button: #e4e6e8;
   --button-text: #0a0b0c;
+  /* Paper 50 (cycle planner): exact values from the artboard */
+  --lime-ink: #d7f75b;
+  --sky-ink: #6aa8f5;
+  --gradient-sky: linear-gradient(in oklab 120deg, #1562d6 0%, #b9ddf9 100%);
   --gradient-brand: linear-gradient(in oklab 120deg, var(--pink-fill) 0%, var(--cyan-fill) 100%);
   --gradient-brand-rev: linear-gradient(in oklab 120deg, var(--cyan-fill) 0%, var(--pink-fill) 100%);
   --gradient-bar: linear-gradient(in oklab 90deg, var(--pink-fill) 0%, var(--cyan-fill) 100%);
