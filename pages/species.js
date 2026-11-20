@@ -186,8 +186,9 @@ function SpeciesSettings() {
       eyebrow={t('species.description')}
       actions={
         <>
-          <GradientButton onClick={seed}>{t('species.addStandard')}</GradientButton>
-          <GradientButton reverse icon={Plus} onClick={() => setEditing('new')}>
+          {/* Paper 65: "Add species" is the lime action; the standard list (not in the artboard) rides the sky ring. */}
+          <GradientButton ring="sky" onClick={seed}>{t('species.addStandard')}</GradientButton>
+          <GradientButton variant="lime" icon={Plus} onClick={() => setEditing('new')}>
             {t('species.add')}
           </GradientButton>
         </>

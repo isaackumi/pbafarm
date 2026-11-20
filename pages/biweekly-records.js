@@ -16,7 +16,6 @@ import {
   KpiStrip,
   Table,
 } from '../components/ui'
-import { HeaderAction } from '../components/ui/HeaderAction'
 import { formatNumber } from '../lib/format'
 import { useT } from '../lib/i18n/context'
 import { api } from '../convex/_generated/api'
@@ -25,7 +24,6 @@ import { errorMessage } from '../lib/errorMessage'
 import { biweeklyPatchArgs } from '../lib/biweeklyArgs'
 import {
   Eye,
-  Download,
   Plus,
   Pencil,
   Trash2,
@@ -38,6 +36,19 @@ import { usePermission } from '../hooks/usePermission'
 const ICON_BTN =
   'inline-flex items-center justify-center size-9 rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Paper 05 "Export" glyph: an arrow down to a bar. */
+function ExportIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 4v12M6 10l6 6 6-6M5 20h14" />
+    </svg>
+  )
+}
+
+/** Paper 05 ABW bars: sampled in the last 14 days #8EC2F7 → #1562D6 (top to bottom); older samples line-strong. */
+const BAR_FRESH = 'bg-[linear-gradient(in_oklab_180deg,#8EC2F7_0%,#1562D6_100%)]'
+const BAR_STALE = 'bg-line-strong'
 
 const PAGE_SIZE = 20
 
@@ -125,11 +136,14 @@ function BiweeklyRecordsBody() {
       const last = list[list.length - 1]
       const lastGrowth = byId.get(last.id || last._id)
       if (lastGrowth?.adg != null) adgs.push(lastGrowth.adg)
-      if (new Date(last.date).getTime() >= cutoff) sampled14 += 1
+      const fresh = new Date(last.date).getTime() >= cutoff
+      if (fresh) sampled14 += 1
       latest.push({
         cageId,
         name: last.cages?.name || '—',
         abw: Number(last.average_body_weight) || 0,
+        date: String(last.date),
+        fresh,
       })
     }
     latest.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
@@ -138,6 +152,8 @@ function BiweeklyRecordsBody() {
       latest,
       sampled14,
       avgAbw: latest.length ? latest.reduce((s, l) => s + l.abw, 0) / latest.length : 0,
+      // Bi-weekly: the next round is 14 days after the latest sampling.
+      lastRound: latest.reduce((m, l) => (l.date > m ? l.date : m), ''),
       adg: adgs.length ? adgs.reduce((s, v) => s + v, 0) / adgs.length : null,
     }
   }, [allRecords])
@@ -246,29 +262,35 @@ function BiweeklyRecordsBody() {
       key: 'date',
       header: t('biweekly.records.colDate'),
       width: 110,
-      render: (r) => <span className="whitespace-nowrap tabular-nums">{format(new Date(r.date), 'd MMM yyyy')}</span>,
+      render: (r) => <span className="whitespace-nowrap tabular-nums">{format(new Date(r.date), 'MMM d')}</span>,
     },
     {
       key: 'cage',
       header: t('biweekly.records.colCage'),
-      width: 100,
-      render: (r) => <span className="font-semibold whitespace-nowrap">{r.cages?.name || t('biweekly.records.unknownCage')}</span>,
+      width: 90,
+      render: (r) => <span className="whitespace-nowrap">{r.cages?.name || t('biweekly.records.unknownCage')}</span>,
     },
-    { key: 'batch', header: t('biweekly.records.colBatch'), width: 140, render: (r) => <span className="text-muted">{r.batch_code}</span> },
+    { key: 'batch', header: t('biweekly.records.colBatch'), width: 140, render: (r) => r.batch_code },
     {
       key: 'sample',
       header: t('biweekly.records.colSample'),
       width: 90,
       align: 'right',
-      render: (r) => formatNumber(r.biweekly_sampling?.length || 0),
+      render: (r) => t('biweekly.records.fishN', { count: r.total_fish_count ?? 0, n: formatNumber(r.total_fish_count) }),
     },
-    { key: 'total', header: t('biweekly.records.colTotal'), width: 110, align: 'right', render: (r) => formatNumber(r.total_fish_count) },
+    {
+      key: 'weight',
+      header: t('biweekly.records.colWeight'),
+      width: 110,
+      align: 'right',
+      render: (r) => (r.total_weight ? `${formatNumber(r.total_weight / 1000, { decimals: 1 })} kg` : '—'),
+    },
     {
       key: 'abw',
       header: t('biweekly.records.colAbw'),
       width: 100,
       align: 'right',
-      render: (r) => `${formatNumber(r.average_body_weight, { decimals: 1 })} g`,
+      render: (r) => `${formatNumber(r.average_body_weight)} g`,
     },
     {
       key: 'gain',
@@ -281,7 +303,7 @@ function BiweeklyRecordsBody() {
         return (
           <span className={g.gain >= 0 ? 'text-good' : 'text-alert'}>
             {g.gain >= 0 ? '+' : ''}
-            {formatNumber(g.gain, { decimals: 1 })} g
+            {formatNumber(g.gain)} g
           </span>
         )
       },
@@ -327,6 +349,24 @@ function BiweeklyRecordsBody() {
     },
   ]
   const maxAbw = Math.max(1, ...growth.latest.map((l) => l.abw))
+  // Paper 05 "Next round · Nov 24 in 6 days": 14 days after the latest sampling.
+  const nextRoundKpi = (() => {
+    if (!growth.lastRound) return { key: 'next', label: t('biweekly.records.kpiNextRound'), value: '—' }
+    const next = new Date(new Date(growth.lastRound).getTime() + 14 * DAY_MS)
+    const days = Math.round((next.getTime() - new Date(new Date().toISOString().slice(0, 10)).getTime()) / DAY_MS)
+    return {
+      key: 'next',
+      label: t('biweekly.records.kpiNextRound'),
+      value: format(next, 'MMM d'),
+      suffix:
+        days > 0
+          ? t('biweekly.records.inDays', { count: days })
+          : days === 0
+            ? t('biweekly.records.dueToday')
+            : t('biweekly.records.overdue', { count: -days }),
+      suffixTone: days < 0 ? 'alert' : 'muted',
+    }
+  })()
 
   return (
     <Layout
@@ -334,10 +374,10 @@ function BiweeklyRecordsBody() {
       eyebrow={t('biweekly.records.eyebrow')}
       actions={
         <>
-          <HeaderAction icon={Plus} href="/biweekly-entry">
+          <GradientButton variant="lime" icon={Plus} href="/biweekly-entry">
             {t('biweekly.records.newSampling')}
-          </HeaderAction>
-          <GradientButton reverse icon={Download} onClick={exportData}>
+          </GradientButton>
+          <GradientButton ring="sky" icon={ExportIcon} onClick={exportData}>
             {t('biweekly.records.export')}
           </GradientButton>
         </>
@@ -349,14 +389,13 @@ function BiweeklyRecordsBody() {
             {
               key: 'abw',
               label: t('biweekly.records.kpiAvgAbw'),
-              value: growth.latest.length ? formatNumber(growth.avgAbw, { decimals: 1 }) : '—',
-              suffix: growth.latest.length ? 'g' : undefined,
+              value: growth.latest.length ? `${formatNumber(growth.avgAbw)} g` : '—',
+              suffix: growth.latest.length ? t('biweekly.records.allActive') : undefined,
             },
             {
               key: 'adg',
               label: t('biweekly.records.kpiAdg'),
-              value: growth.adg == null ? '—' : formatNumber(growth.adg, { decimals: 2 }),
-              suffix: growth.adg == null ? undefined : t('biweekly.records.gPerDay'),
+              value: growth.adg == null ? '—' : t('biweekly.records.gPerDayUnit', { value: formatNumber(growth.adg, { decimals: 1 }) }),
             },
             {
               key: 'sampled',
@@ -364,13 +403,14 @@ function BiweeklyRecordsBody() {
               value: formatNumber(growth.sampled14),
               suffix: t('biweekly.records.ofCages', { total: cages.length }),
             },
+            nextRoundKpi,
             { key: 'fish', label: t('biweekly.records.kpiFish'), value: formatNumber(stats.totalFish) },
           ]}
         />
 
         {growth.latest.length > 0 && (
           <Card padding={false} className="px-5 py-6 sm:px-[26px]">
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <div className="mb-4 flex flex-wrap justify-between gap-2">
               <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('biweekly.records.abwByCage')}</h2>
               <p className="text-xs leading-4 text-muted">{t('biweekly.records.abwByCageHint')}</p>
             </div>
@@ -383,11 +423,8 @@ function BiweeklyRecordsBody() {
                   <li key={l.cageId} className="flex h-full min-w-9 flex-1 flex-col items-center justify-end gap-1.5">
                     <span className="text-[11px] leading-[14px] text-muted tabular-nums">{formatNumber(l.abw, { decimals: 0 })}</span>
                     <div
-                      className="w-full rounded-t-[6px] rounded-b-[2px]"
-                      style={{
-                        height: `${Math.max(4, (l.abw / maxAbw) * 130)}px`,
-                        backgroundImage: 'linear-gradient(180deg, var(--cyan), var(--pink))',
-                      }}
+                      className={`w-full shrink-0 rounded-t-[6px] rounded-b-[2px] ${l.fresh ? BAR_FRESH : BAR_STALE}`}
+                      style={{ height: `${Math.max(4, (l.abw / maxAbw) * 130)}px` }}
                       aria-hidden
                     />
                     <span className="max-w-full truncate text-[11px] leading-[14px] text-faint">{l.name}</span>

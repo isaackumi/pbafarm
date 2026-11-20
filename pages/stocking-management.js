@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { useRouter } from 'next/router'
-import { ArrowLeftRight, ChevronDown, Edit, Trash2, Plus, AlertTriangle } from 'lucide-react'
+import { ChevronDown, Edit, Trash2, Plus, AlertTriangle } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -22,7 +22,9 @@ import {
 } from '../components/ui'
 import { HeaderAction } from '../components/ui/HeaderAction'
 import MovementStatus, { MovementTypePill } from '../components/MovementStatus'
-import { formatDate, formatDateTime, formatNumber } from '../lib/format'
+import { formatDate, formatDateTime, formatNumber, getActiveLocale } from '../lib/format'
+import { shortDate } from '../lib/projectsView'
+import { formatBiomassT } from '../components/units/UnitCard'
 import { useT } from '../lib/i18n/context'
 import FarmLocationSelect from '../components/FarmLocationSelect'
 import { api } from '../convex/_generated/api'
@@ -37,6 +39,20 @@ const ICON_BTN =
   'inline-flex items-center justify-center size-9 rounded-pill text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
 /** One pending stocking, top-up or transfer (Paper 06 approval card). */
+/** Paper 06 "New transfer" glyph (two opposed arrows, as on 03). */
+function TransferIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
+    </svg>
+  )
+}
+
+/** Paper 06 grams: "300 g", "25 g"; one decimal only when the weight has one. */
+const grams = (g) => `${formatNumber(g, { decimals: Number.isInteger(Number(g)) ? 0 : 1 })} g`
+/** Paper 06 biomass: "1.26 t" from a tonne, kilograms below. */
+const biomassText = (kg) => (kg >= 1000 ? formatBiomassT(kg / 1000) : `${formatNumber(kg, { decimals: 1 })} kg`)
+
 function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
   const t = useT()
   const typeLabel = t(`stocking.type.${record.type === 'fish_transfer' ? 'transfer' : record.type}`)
@@ -49,8 +65,8 @@ function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
         : '/fish-transfers'
   const stats = [
     { label: t('stocking.col.fish'), value: formatNumber(record.count) },
-    { label: t('stocking.mgmt.avgWeight'), value: `${formatNumber(record.abw, { decimals: 1 })} g` },
-    { label: t('stocking.mgmt.biomass'), value: `${formatNumber(record.biomass, { decimals: 1 })} kg` },
+    { label: t('stocking.mgmt.avgWeight'), value: grams(record.abw) },
+    { label: t('stocking.mgmt.biomass'), value: biomassText(record.biomass) },
   ]
   if (record.type !== 'fish_transfer') stats.push({ label: t('stocking.col.batch'), value: record.batchNumber })
   return (
@@ -77,7 +93,7 @@ function ApprovalCard({ record, canAct, busy, onApprove, onReject }) {
       <div className="flex flex-wrap items-center gap-2.5">
         {canAct && (
           <>
-            <GradientButton size="row" disabled={busy} onClick={onApprove}>
+            <GradientButton size="row" ring="sky" disabled={busy} onClick={onApprove}>
               {t('stocking.approve')}
             </GradientButton>
             <GhostButton size="row" disabled={busy} onClick={onReject}>
@@ -110,6 +126,7 @@ function StockingManagement() {
   const { showToast } = useToast()
   const { user } = useAuth()
   const isAdmin = usePermission('production.stocking.approve')
+  const canGrade = usePermission('production.stock.adjust')
   const canApprove = isAdmin
   const canApproveTransfer = usePermission('production.transfer.approve')
   const { locationArgs } = useLocation()
@@ -446,6 +463,8 @@ function StockingManagement() {
     { value: 'stockings', label: t('stocking.mgmt.tabStockings') },
     { value: 'transfers', label: t('stocking.mgmt.tabTransfers') },
     { value: 'topups', label: t('stocking.mgmt.tabTopups') },
+    // Paper 06 "Grading" tab: opens the grading screen (52).
+    ...(canGrade ? [{ value: 'grading', label: t('stocking.mgmt.tabGrading') }] : []),
   ]
   const activeTab = tabs.some((x) => x.value === tab) ? tab : tabs[0].value
 
@@ -468,16 +487,17 @@ function StockingManagement() {
       key: 'date',
       header: t('stocking.col.date'),
       width: 110,
-      render: (m) => <span className="whitespace-nowrap tabular-nums">{formatDate(m.date)}</span>,
+      render: (m) => <span className="whitespace-nowrap tabular-nums">{shortDate(m.date, getActiveLocale()) || '—'}</span>,
     },
     ...(withType
-      ? [{ key: 'type', header: t('stocking.col.type'), width: 120, render: (m) => <MovementTypePill type={m.type} /> }]
+      ? [{ key: 'type', header: t('stocking.col.type'), width: 130, render: (m) => <MovementTypePill type={m.type} /> }]
       : []),
+    // Paper 06 widths: 110 / 130 / grow / 150 / 110 / 90 / 170.
     { key: 'route', header: t('stocking.col.fromTo'), render: routeCell },
-    { key: 'batch', header: t('stocking.col.batch'), render: (m) => <span className="whitespace-nowrap">{m.batch}</span> },
-    { key: 'fish', header: t('stocking.col.fish'), align: 'right', render: (m) => formatNumber(m.fish) },
-    { key: 'abw', header: t('stocking.col.abw'), align: 'right', render: (m) => `${formatNumber(m.abw, { decimals: 1 })} g` },
-    { key: 'status', header: t('stocking.col.status'), render: (m) => <MovementStatus status={m.status} reversed={m.reversed} /> },
+    { key: 'batch', header: t('stocking.col.batch'), width: 150, render: (m) => <span className="whitespace-nowrap">{m.batch}</span> },
+    { key: 'fish', header: t('stocking.col.fish'), width: 110, align: 'right', render: (m) => formatNumber(m.fish) },
+    { key: 'abw', header: t('stocking.col.abw'), width: 90, align: 'right', render: (m) => grams(m.abw) },
+    { key: 'status', header: t('stocking.col.status'), width: 170, render: (m) => <MovementStatus status={m.status} reversed={m.reversed} /> },
   ]
   const historyRows = (type) => {
     const q = historySearch.trim().toLowerCase()
@@ -579,17 +599,23 @@ function StockingManagement() {
       eyebrow={t('stocking.mgmt.eyebrow')}
       actions={
         <>
-          <HeaderAction icon={Plus} href="/stocking">
+          <HeaderAction variant="lime" icon={Plus} href="/stocking">
             {t('stocking.mgmt.newStocking')}
           </HeaderAction>
-          <HeaderAction reverse icon={ArrowLeftRight} href="/fish-transfers" permission="production.transfer.request">
+          <HeaderAction ring="sky" icon={TransferIcon} href="/fish-transfers" permission="production.transfer.request">
             {t('stocking.mgmt.newTransfer')}
           </HeaderAction>
         </>
       }
     >
       <div className="flex flex-col gap-6 sm:gap-7">
-        <Tabs variant="page" label={t('stocking.mgmt.tabsLabel')} tabs={tabs} value={activeTab} onChange={setTab} />
+        <Tabs
+          variant="page"
+          label={t('stocking.mgmt.tabsLabel')}
+          tabs={tabs}
+          value={activeTab}
+          onChange={(v) => (v === 'grading' ? router.push('/grading') : setTab(v))}
+        />
 
         {activeTab === 'approvals' && (
           <>

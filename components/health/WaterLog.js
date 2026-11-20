@@ -66,7 +66,7 @@ export function waterLogColumns(t, locale) {
       render: (r) => (
         <Link
           href={`/units/${r.unit.id || r.unit._id}/water`}
-          className="font-medium text-text hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan rounded-sm"
+          className="text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan rounded-sm"
           title={unitLabel(r.unit)}
         >
           {r.unit.name}

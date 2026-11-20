@@ -7,7 +7,7 @@ const dayLabel = (iso, locale) =>
   )
 
 /**
- * "Dissolved oxygen · 7 days" card (Paper 07): daily average (cyan) and the
+ * "Dissolved oxygen · 7 days" card (Paper 07): daily average (sky #6AA8F5) and the
  * lowest unit (alert red) from daily records, with the DO alert limit as a
  * dashed line.
  */
@@ -21,7 +21,7 @@ export default function DoTrendCard({ points, threshold, loading, className = ''
       aria-labelledby="do-trend-title"
       className={`flex min-w-0 flex-col gap-4 rounded-card border border-line bg-surface px-[26px] py-6 shadow-[var(--shadow-card)] ${className}`}
     >
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex justify-between gap-3">
         <h2 id="do-trend-title" className="text-[15px] font-semibold leading-[18px] text-text">
           {t('healthWater.doChart.title')}
         </h2>
@@ -74,7 +74,7 @@ export default function DoTrendCard({ points, threshold, loading, className = ''
                 type="monotone"
                 dataKey="avg"
                 name={t('healthWater.doChart.avg')}
-                stroke="var(--cyan)"
+                stroke="var(--sky-ink)"
                 strokeWidth={2}
                 dot={false}
                 connectNulls
@@ -86,7 +86,7 @@ export default function DoTrendCard({ points, threshold, loading, className = ''
       )}
       <div className="flex flex-wrap gap-4 text-xs leading-4 text-muted">
         <span className="inline-flex items-center gap-2">
-          <span className="h-[2px] w-3 rounded-pill bg-cyan" aria-hidden />
+          <span className="h-[2px] w-3 rounded-pill bg-sky-ink" aria-hidden />
           {t('healthWater.doChart.avg')}
         </span>
         <span className="inline-flex items-center gap-2">

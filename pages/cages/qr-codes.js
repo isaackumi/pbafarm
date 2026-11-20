@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
 import QRCode from 'qrcode'
-import { Printer } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import { EmptyState, GradientButton, LoadingState } from '../../components/ui'
@@ -10,6 +9,15 @@ import { useT } from '../../lib/i18n/context'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
 import { labelUrl, shortCodeFor } from '../../lib/qrTarget'
+
+/** Paper 64 "Print labels" glyph (printer). */
+function PrinterIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M6 9V3h12v6M6 18H4a1 1 0 01-1-1v-6a2 2 0 012-2h14a2 2 0 012 2v6a1 1 0 01-1 1h-2M6 14h12v7H6z" />
+    </svg>
+  )
+}
 
 /**
  * Printable QR stickers, one per cage. Scanning a sticker opens daily entry
@@ -67,8 +75,8 @@ function CageQrSheet() {
       title={t('qrUi.title')}
       eyebrow={t('qrUi.eyebrow')}
       actions={
-        <GradientButton icon={Printer} onClick={() => window.print()} disabled={!cages?.length}>
-          {t('qrUi.print')}
+        <GradientButton ring="sky" icon={PrinterIcon} onClick={() => window.print()} disabled={!cages?.length}>
+          {cages?.length ? t('qrUi.printN', { count: cages.length }) : t('qrUi.print')}
         </GradientButton>
       }
     >

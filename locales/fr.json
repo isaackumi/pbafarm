@@ -291,7 +291,7 @@
     "logged": "Saisie",
     "selectAllOpen": "Sélectionner les cages ouvertes",
     "copying": "Copie…",
-    "sameAsYesterday": "Comme hier",
+    "sameAsYesterday": "Copier l'aliment d'hier",
     "clearAll": "Tout effacer",
     "qrCodes": "Codes QR des cages",
     "loggedCount": "{logged} cages sur {total} déjà saisies pour le {date}",
@@ -397,7 +397,12 @@
       "water": "Eau",
       "editAria": "Modifier {cage} du {date}",
       "deleteAria": "Supprimer {cage} du {date}"
-    }
+    },
+    "footerTotals": {
+      "one": "{feed} kg d’aliment · {count} mortalité",
+      "other": "{feed} kg d’aliment · {count} mortalités"
+    },
+    "speciesBiomass": "{species} · {biomass}"
   },
   "biweekly": {
     "pageTitle": "Saisie bimensuelle",
@@ -442,18 +447,18 @@
     "saveSamples": "Enregistrer les échantillons",
     "records": {
       "title": "Échantillonnage et croissance",
-      "eyebrow": "Production · Pesées bimensuelles",
+      "eyebrow": "Production · Échantillonnage bimensuel",
       "loading": "Chargement des échantillonnages…",
       "newSampling": "Nouvel échantillonnage",
       "export": "Exporter en CSV",
       "kpiAvgAbw": "PMI moyen",
-      "kpiAdg": "Gain quotidien",
+      "kpiAdg": "GMQ",
       "gPerDay": "g/jour",
-      "kpiSampled14": "Échantillonnées · 14 jours",
-      "ofCages": "sur {total}",
+      "kpiSampled14": "Échantillonnées · 14 j",
+      "ofCages": "sur {total} cages",
       "kpiFish": "Poissons comptés · cette page",
       "abwByCage": "PMI par cage",
-      "abwByCageHint": "Dernier échantillonnage, en grammes",
+      "abwByCageHint": "Dernier échantillon · grammes",
       "tableTitle": "Échantillonnages",
       "rangeAll": "Tout",
       "range30": "30 derniers jours",
@@ -463,7 +468,7 @@
       "colDate": "Date",
       "colCage": "Cage",
       "colBatch": "Lot",
-      "colSample": "Échantillons",
+      "colSample": "Échantillon",
       "colTotal": "Poissons",
       "colAbw": "PMI",
       "colGain": "Gain",
@@ -477,7 +482,21 @@
       "noMatch": "Aucun échantillonnage ne correspond à ces filtres.",
       "pageOf": "Page {page} sur {pages} · {total} relevés",
       "previous": "Précédent",
-      "next": "Suivant"
+      "next": "Suivant",
+      "allActive": "toutes les cages actives",
+      "kpiNextRound": "Prochaine tournée",
+      "inDays": {
+        "one": "dans {count} jour",
+        "other": "dans {count} jours"
+      },
+      "dueToday": "aujourd’hui",
+      "overdue": {
+        "one": "{count} jour de retard",
+        "other": "{count} jours de retard"
+      },
+      "colWeight": "Poids",
+      "fishN": "{n} poissons",
+      "gPerDayUnit": "{value} g/jour"
     },
     "eyebrow": "Production · Échantillonnage bimensuel"
   },
@@ -2432,7 +2451,7 @@
     "emptyTitle": "Aucune unité",
     "emptyBody": "Ajoutez vos cages, étangs ou bassins pour les voir ici.",
     "noMatch": "Aucune unité ne correspond à ces filtres.",
-    "eyebrow": "{stocked} empoissonnées · {idle} en jachère ou vides · {units} unités",
+    "eyebrow": "{stocked} actives · {idle} en jachère",
     "densityOfLimit": "Densité d’élevage, part de la limite",
     "signal": {
       "doLow": "OD {value} bas",
@@ -2448,7 +2467,10 @@
       "harvested": "Récoltée",
       "fallow": "Jachère",
       "maintenance": "Entretien"
-    }
+    },
+    "speciesDay": "{species} · Jour {day}",
+    "eyebrowSite": "{stocked} actives · {idle} en jachère · {site}",
+    "allRows": "Toutes les rangées"
   },
   "cagesTable": {
     "eyebrow": "{active} empoissonnées · {total} unités",
@@ -2721,8 +2743,8 @@
     "noLocation": "Aucun emplacement"
   },
   "qrUi": {
-    "title": "QR codes des cages",
-    "eyebrow": "Imprimer les étiquettes · une par unité",
+    "title": "Étiquettes QR",
+    "eyebrow": "Cages · Étiquettes d’unité à imprimer",
     "print": "Imprimer",
     "help": "Imprimez-les et fixez-en un sur chaque cage. Scanner un code ouvre la saisie journalière avec cette cage déjà remplie. Les codes restent valides si l’application change d’adresse ; les étiquettes déjà imprimées continuent de fonctionner.",
     "loading": "Chargement des cages…",
@@ -2730,7 +2752,11 @@
     "emptyDescription": "Créez d’abord une cage, puis revenez imprimer son code.",
     "create": "Créer une cage",
     "cage": "Cage",
-    "scanTo": "Scanner pour saisir l’aliment"
+    "scanTo": "Scanner pour saisir l’aliment",
+    "printN": {
+      "one": "Imprimer {count} étiquette",
+      "other": "Imprimer {count} étiquettes"
+    }
   },
   "tasksUi": {
     "title": "Mes tâches",
@@ -5504,7 +5530,8 @@
       "rejectFailed": "Refus impossible",
       "reasonRequired": "Indiquez la raison du refus",
       "rejectTitle": "Refuser {batch}",
-      "rejectReason": "Raison du refus"
+      "rejectReason": "Raison du refus",
+      "tabGrading": "Tri"
     },
     "detail": {
       "eyebrow": "Production · Empoissonnements et transferts",

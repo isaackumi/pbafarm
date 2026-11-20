@@ -1,9 +1,21 @@
 import Link from 'next/link'
 import { StatusDot } from '../ui'
 import { useT } from '../../lib/i18n/context'
-import { unitLabel } from '../../lib/format'
+import { daysBetween, unitLabel } from '../../lib/format'
 
 const IDLE = new Set(['fallow', 'empty', 'harvested'])
+
+/**
+ * Paper 02 bar fill: #1562D6 → #8EC2F7 (dark), → #5FA0EE (L · 02). Also the
+ * fill of the 04 round progress and the 08 size-grade bars.
+ */
+export const BAR_FILL =
+  'bg-[linear-gradient(in_oklab_90deg,#1562D6_0%,#8EC2F7_100%)] [html[data-theme=light]_&]:bg-[linear-gradient(in_oklab_90deg,#1562D6_0%,#5FA0EE_100%)]'
+
+/** Paper 02 biomass: one decimal ("12.4 t", "9.4 t"), two under a tonne ("0.36 t"). */
+export function formatBiomassT(t) {
+  return `${t < 1 ? t.toFixed(2) : t.toFixed(1)} t`
+}
 
 /** Biomass in tonnes from the board's fish count and ABW (grams). */
 export function unitBiomassT(u) {
@@ -41,6 +53,15 @@ export default function UnitCard({ u, wq, today }) {
   const idle = IDLE.has(u.status)
   const pct = Math.max(0, Math.min(100, u.densityPct ?? 0))
   const over = u.densityLevel === 'over'
+  // Paper 02: "Tilapia · Day 84" while stocked, the status ("Fallow") when idle.
+  const kind = u.species || unitLabel(u.unitType)
+  const subtitle = idle
+    ? t.or(`unitsUi.status.${u.status}`, u.statusLabel)
+    : u.stockingDate
+      ? t('unitsUi.speciesDay', { species: kind, day: daysBetween(u.stockingDate, today) })
+      : kind
+  // Idle: the subtitle already names the status, so the chip names the unit type (no cleaning note in the data).
+  const chipText = idle && signal.tone === 'neutral' ? unitLabel(u.unitType) : signal.text
   return (
     <Link
       href={`/cages/${u._id}`}
@@ -51,18 +72,18 @@ export default function UnitCard({ u, wq, today }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[17px] font-semibold leading-[22px] tracking-[-0.01em] text-text">{u.name}</span>
-          <span className="truncate text-xs leading-4 text-muted">{u.species || unitLabel(u.unitType)}</span>
+          <span className="truncate text-xs leading-4 text-muted">{subtitle}</span>
         </div>
         <span className="flex shrink-0 items-center gap-[6px]">
           <StatusDot tone={signal.tone} size={7} />
-          <span className="text-xs leading-4 text-muted">{signal.text}</span>
+          <span className="text-xs leading-4 text-muted">{chipText}</span>
         </span>
       </div>
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-text tabular-nums">
-          {biomass != null ? `${biomass < 10 ? biomass.toFixed(2) : biomass.toFixed(1)} t` : '—'}
+          {biomass != null ? formatBiomassT(biomass) : '—'}
         </span>
-        <span className={`text-xs leading-4 tabular-nums ${over ? 'text-warn' : 'text-muted'}`}>
+        <span className="text-xs leading-4 tabular-nums text-muted">
           {u.density != null ? `${u.density} ${u.densityUnit}` : '—'}
         </span>
       </div>
@@ -74,10 +95,7 @@ export default function UnitCard({ u, wq, today }) {
         aria-valuemax={100}
         aria-valuenow={Math.round(pct)}
       >
-        <div
-          className={`h-1 rounded-pill ${over ? 'bg-warn' : ''}`}
-          style={{ width: `${over ? 100 : pct}%`, backgroundImage: over ? undefined : 'var(--gradient-bar)' }}
-        />
+        <div className={`h-1 rounded-pill ${over ? 'bg-dot-warn' : BAR_FILL}`} style={{ width: `${over ? 100 : pct}%` }} />
       </div>
     </Link>
   )

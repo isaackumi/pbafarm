@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Trash2, Plus, Copy, QrCode, ScanLine, TriangleAlert, Check, Upload } from 'lucide-react'
+import { Trash2, Plus, Copy, QrCode, ScanLine, TriangleAlert, Check } from 'lucide-react'
 import { useConvex } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { cleanError } from '../lib/offlineOutbox'
@@ -26,6 +26,7 @@ import {
 } from './ui'
 import { ActionBar } from './ui/ActionBar'
 import { formatDate, formatNumber } from '../lib/format'
+import { BAR_FILL as ROUND_BAR, formatBiomassT } from './units/UnitCard'
 import DependencyEmpty from './DependencyEmpty'
 import FeedTypeField from './FeedTypeField'
 import LocationMetaField from './LocationMetaField'
@@ -79,6 +80,18 @@ const num = (v) => {
 const optNum = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? undefined : Number(v))
 const usableFeedTypes = (rows) => (rows || []).filter((f) => f.active !== false && !f.deleted_at)
 const NO_RECORDS = []
+
+/** Paper 04 "Upload sheet" glyph: an arrow up to a bar. */
+function UploadIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 20V8M6 14l6-6 6 6M5 4h14" />
+    </svg>
+  )
+}
+
+/** Paper 04 round pills ("Row C ▾", "Copy yesterday's feed"): 14px sides, 8px tall padding, 13/16. */
+const ROUND_PILL = 'min-h-11 sm:min-h-0 sm:!px-[14px] sm:!py-2'
 
 const DailyUploadPage = () => {
   const router = useRouter()
@@ -612,6 +625,7 @@ const DailyUploadPage = () => {
             <GradientButton
               type="submit"
               form="daily-entry-form"
+              variant="lime"
               icon={Check}
               disabled={submitDisabled}
               className="max-sm:hidden"
@@ -619,7 +633,7 @@ const DailyUploadPage = () => {
               {submitLabel}
             </GradientButton>
             <IfPermitted permission="production.import">
-              <GradientButton reverse href="/bulk-upload" icon={Upload}>
+              <GradientButton ring="sky" href="/bulk-upload" icon={UploadIcon}>
                 {t('daily.uploadSheet')}
               </GradientButton>
             </IfPermitted>
@@ -679,11 +693,8 @@ const DailyUploadPage = () => {
             className="h-1.5 w-full overflow-hidden rounded-pill bg-line-strong"
           >
             <div
-              className="h-full rounded-pill"
-              style={{
-                width: `${cages.length ? Math.min(100, (loggedCount / cages.length) * 100) : 0}%`,
-                backgroundImage: 'var(--gradient-bar)',
-              }}
+              className={`h-full rounded-pill ${ROUND_BAR}`}
+              style={{ width: `${cages.length ? Math.min(100, (loggedCount / cages.length) * 100) : 0}%` }}
             />
           </div>
           <div className="flex justify-between gap-3 whitespace-nowrap text-xs leading-4 text-faint tabular-nums">
@@ -692,21 +703,21 @@ const DailyUploadPage = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <GhostButton onClick={selectAllCages} disabled={!openCages.length} className="min-h-11 sm:min-h-0">
+          <GhostButton onClick={selectAllCages} disabled={!openCages.length} className={ROUND_PILL}>
             {t('daily.selectAllOpen')}
           </GhostButton>
           <GhostButton
             icon={Copy}
             onClick={copyYesterday}
             disabled={copying || !cages.length}
-            className="min-h-11 sm:min-h-0"
+            className={ROUND_PILL}
           >
             {copying ? t('daily.copying') : t('daily.sameAsYesterday')}
           </GhostButton>
-          <GhostButton icon={ScanLine} onClick={() => setScanOpen(true)} className="min-h-11 sm:min-h-0">
+          <GhostButton icon={ScanLine} onClick={() => setScanOpen(true)} className={ROUND_PILL}>
             {t('entry.scanCage')}
           </GhostButton>
-          <GhostButton icon={QrCode} href="/cages/qr-codes" className="min-h-11 sm:min-h-0">
+          <GhostButton icon={QrCode} href="/cages/qr-codes" className={ROUND_PILL}>
             {t('daily.qrCodes')}
           </GhostButton>
         </div>
@@ -900,7 +911,13 @@ const DailyUploadPage = () => {
                         </p>
                         {cage?.current_count != null && (
                           <p className="mt-0.5 text-xs leading-4 text-muted tabular-nums">
-                            {t('daily.fishCount', { count: formatNumber(cage.current_count) })}
+                            {/* Paper 04: "Tilapia · 9.4 t" (species and biomass); the fish count when either is missing. */}
+                            {cage.species && cage.current_weight
+                              ? t('daily.speciesBiomass', {
+                                  species: cage.species,
+                                  biomass: formatBiomassT((cage.current_count * cage.current_weight) / 1e6),
+                                })
+                              : t('daily.fishCount', { count: formatNumber(cage.current_count) })}
                           </p>
                         )}
                       </>
@@ -1035,7 +1052,7 @@ const DailyUploadPage = () => {
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 sm:px-6">
             <p className="text-[13px] leading-4 text-muted tabular-nums">
               {lines.length
-                ? t('daily.totals', { count: lines.length, feed: totals.feed.toFixed(1), dead: totals.mort })
+                ? t('daily.footerTotals', { count: totals.mort, feed: formatNumber(totals.feed) })
                 : t('common.noCagesSelected')}
             </p>
             <p className="hidden text-[13px] leading-4 text-text sm:block">{t('daily.keyboardHint')}</p>

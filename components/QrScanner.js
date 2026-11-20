@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { Field, Input, StatusDot } from './ui'
 import { useT } from '../lib/i18n/context'
+import { useLocation } from '../contexts/LocationContext'
 
 /** True when this browser can read QR codes from the camera itself. */
 export function canScanInApp() {
@@ -21,6 +22,7 @@ export function canScanInApp() {
 export default function QrScanner({ open, onClose, onResult, title }) {
   const t = useT()
   const heading = title || t('scan.labelTitle')
+  const { activeLocation } = useLocation()
   const videoRef = useRef(null)
   const [status, setStatus] = useState('idle') // idle | starting | scanning | fallback
   const [reason, setReason] = useState('')
@@ -112,16 +114,19 @@ export default function QrScanner({ open, onClose, onResult, title }) {
     >
       <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <span className="h-11 w-11" aria-hidden />
-        <p className="text-[17px] font-semibold leading-[22px]">{heading}</p>
+        {/* Paper 54 header: 17/22 title, the site under it in 12/16 muted. */}
+        <div className="flex flex-col items-center gap-[2px]">
+          <p className="text-[17px] font-semibold leading-[22px]">{heading}</p>
+          {activeLocation?.name && <p className="text-xs leading-4 text-muted">{activeLocation.name}</p>}
+        </div>
         <button type="button" onClick={onClose} aria-label={t('scan.close')} className={iconBtn}>
           <X size={20} aria-hidden />
         </button>
       </div>
 
       <div
-        className="relative mx-4 flex-1 overflow-hidden rounded-[24px] bg-surface"
-        // Paper 54 viewfinder: a dark teal pool, the same in both themes (it sits behind the camera feed).
-        style={{ backgroundImage: 'radial-gradient(circle farthest-corner at 50% 40%, #1E3A3D 0%, #0F1A1C 55%, #070A0B 100%)' }}
+        // Paper 54 viewfinder: a navy pool behind the camera feed (54 — Light: #183457 / #0D1A2B / #070A0F).
+        className="relative mx-4 flex-1 overflow-hidden rounded-[24px] bg-surface bg-[radial-gradient(circle_farthest-corner_at_50%_40%_in_oklab,#15305A_0%,#0C1728_55%,#07090C_100%)] [html[data-theme=light]_&]:bg-[radial-gradient(circle_farthest-corner_at_50%_40%_in_oklab,#183457_0%,#0D1A2B_55%,#070A0F_100%)]"
       >
         <video
           ref={videoRef}
@@ -169,16 +174,16 @@ export default function QrScanner({ open, onClose, onResult, title }) {
   )
 }
 
-/** Corner brackets from 54 Mobile Scan: cyan on the left, pink on the right. */
+/** Corner brackets from 54 Mobile Scan: sky (#6AA8F5) on dark, lime on 54 — Light. */
 export function ScanFrame({ className = 'h-40 w-40' }) {
-  // Paper H85-0: 36px corners, 3px strokes, 16px radius; cyan fades to pink clockwise.
-  const corner = 'absolute size-9 border-[3px]'
+  // Paper H85-0 / MFM-0: 36px corners, 3px strokes, 16px radius.
+  const corner = 'absolute size-9 border-[3px] border-sky-ink [html[data-theme=light]_&]:border-lime'
   return (
     <div className={`relative ${className}`} aria-hidden>
-      <span className={`${corner} left-0 top-0 rounded-tl-[16px] border-b-0 border-r-0 border-cyan`} />
-      <span className={`${corner} right-0 top-0 rounded-tr-[16px] border-b-0 border-l-0 border-t-cyan border-r-pink`} />
-      <span className={`${corner} bottom-0 left-0 rounded-bl-[16px] border-r-0 border-t-0 border-l-cyan border-b-pink`} />
-      <span className={`${corner} bottom-0 right-0 rounded-br-[16px] border-l-0 border-t-0 border-pink`} />
+      <span className={`${corner} left-0 top-0 rounded-tl-[16px] border-b-0 border-r-0`} />
+      <span className={`${corner} right-0 top-0 rounded-tr-[16px] border-b-0 border-l-0`} />
+      <span className={`${corner} bottom-0 left-0 rounded-bl-[16px] border-r-0 border-t-0`} />
+      <span className={`${corner} bottom-0 right-0 rounded-br-[16px] border-l-0 border-t-0`} />
     </div>
   )
 }

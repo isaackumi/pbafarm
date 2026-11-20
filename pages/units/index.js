@@ -53,7 +53,7 @@ function Board({ data, latest }) {
         <div className="flex flex-wrap gap-2">
           {data.sections.length > 1 && (
             <FilterSelect label={t('unitsUi.filterGroup')} value={groupValue} onChange={setGroup}>
-              <option value="">{t('unitsUi.allGroups')}</option>
+              <option value="">{t('unitsUi.allRows')}</option>
               {data.sections.map((s) => (
                 <option key={s.groupId || 'none'} value={s.groupId || 'none'}>
                   {s.name}
