@@ -1,5 +1,5 @@
 // components/Sidebar.js — Paper shell sidebar (docs/design/paper-redesign, Shell 7Z-0)
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
@@ -26,6 +26,16 @@ import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import { addDays, localToday } from '../lib/format'
 import { Avatar } from './ui/Avatar'
 import { AnowaLockup, AnowaMark } from './brand/AnowaLogo'
+import {
+  getExpandedSections,
+  getSidebarScroll,
+  scrollToReveal,
+  setExpandedSections as rememberExpanded,
+  setSidebarScroll,
+} from '../lib/sidebarState'
+
+// useLayoutEffect warns during server rendering; the effect only matters in the browser.
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 
 /**
@@ -113,7 +123,10 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   const router = useRouter()
   // Production stays open like the Paper shell; the section holding the
   // current page also opens on navigation (UX-004).
-  const [expandedSections, setExpandedSections] = useState({ production: true })
+  // Each page renders its own Layout, so this component remounts on every
+  // navigation: open groups and the scroll offset come from lib/sidebarState.
+  const [expandedSections, setExpandedSections] = useState(() => getExpandedSections({ production: true }))
+  const asideRef = useRef(null)
   const t = useT()
   const term = useTerm()
 
@@ -169,6 +182,41 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     }
   }, [router.pathname])
 
+  useEffect(() => {
+    rememberExpanded(expandedSections)
+  }, [expandedSections])
+
+  // Restore the scroll offset before paint (once per mount), then bring the
+  // current page's link into view. The link can appear a render later, when
+  // the group holding it opens, so the reveal waits for it.
+  const pendingReveal = useRef(true)
+  useIsoLayoutEffect(() => {
+    if (asideRef.current) asideRef.current.scrollTop = getSidebarScroll()
+  }, [])
+  useEffect(() => {
+    pendingReveal.current = true
+  }, [router.pathname, collapsed])
+  useIsoLayoutEffect(() => {
+    const aside = asideRef.current
+    if (!aside || !pendingReveal.current) return
+    const current = aside.querySelector('[aria-current="page"]')
+    if (!current) return
+    pendingReveal.current = false
+    const asideBox = aside.getBoundingClientRect()
+    const itemBox = current.getBoundingClientRect()
+    const itemTop = itemBox.top - asideBox.top + aside.scrollTop
+    const next = scrollToReveal({
+      scrollTop: aside.scrollTop,
+      viewHeight: aside.clientHeight,
+      itemTop,
+      itemBottom: itemTop + itemBox.height,
+    })
+    if (next !== aside.scrollTop) {
+      aside.scrollTop = next
+      setSidebarScroll(next)
+    }
+  })
+
   const toggleSection = (section) => {
     if (collapsed) return
     setExpandedSections((prev) => ({
@@ -206,6 +254,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
 
   return (
     <aside
+      ref={asideRef}
+      onScroll={(e) => setSidebarScroll(e.currentTarget.scrollTop)}
       className={`print:hidden fixed top-0 left-0 z-40 flex h-screen flex-col overflow-y-auto border-r border-line bg-bg text-text transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'w-[4.5rem] gap-6 px-3 py-7' : 'w-72 gap-7 px-5 py-7 lg:w-sidebar'}`}
