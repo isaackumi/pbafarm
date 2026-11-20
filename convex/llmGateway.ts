@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import * as Effect from 'effect/Effect'
 import * as Result from 'effect/Result'
-import { action, internalMutation, mutation, query } from './_generated/server'
+import { action, internalMutation, internalQuery, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
@@ -20,13 +20,15 @@ import { webhookUrlProblem } from './integrations/webhookLogic'
 import {
   MAX_MODEL_CHARS,
   PROVIDERS,
+  cleanPrice,
   estimateCostUsd,
-  gatewayModel,
   llmCredentialAad,
   messagesProblem,
   modelProblem,
   tokenCount,
 } from './lib/llmGateway'
+import { extraModels, listedPrice, type Price } from './lib/llmModels'
+import { chooseModel, liveModels, providerBaseUrl } from './llmModels'
 
 /**
  * LLM gateway on the credential model (INT-009, doc 09 §10).
@@ -120,14 +122,7 @@ export const overview = query({
   args: { since: v.number() },
   returns: v.object({
     encryptionReady: v.boolean(),
-    providers: v.array(
-      v.object({
-        id: v.string(),
-        label: v.string(),
-        defaultModel: v.string(),
-        models: v.array(v.string()),
-      }),
-    ),
+    providers: v.array(v.object({ id: v.string(), label: v.string() })),
     credentials: v.array(
       v.object({
         id: v.id('llmCredentials'),
@@ -201,7 +196,7 @@ export const overview = query({
     }
     return {
       encryptionReady: encryptionConfigured(),
-      providers: Object.values(PROVIDERS).map((p) => ({ id: p.id, label: p.label, defaultModel: p.defaultModel, models: p.models })),
+      providers: Object.values(PROVIDERS).map((p) => ({ id: p.id, label: p.label })),
       credentials: credentials.map(credentialToClient),
       usage: {
         calls: rows.length,
@@ -267,6 +262,13 @@ export const usage = query({
     }
     return { ...res, page }
   },
+})
+
+/** Internal: the admin's company (integrations.manage). */
+export const adminCompany = internalQuery({
+  args: {},
+  returns: v.id('companies'),
+  handler: async (ctx) => (await requireLlmAdmin(ctx)).companyId,
 })
 
 /** Internal: create or update the organization's credential row for a provider. */
@@ -347,6 +349,23 @@ export const saveCredential = action({
     if (!key) throw new Error(MISSING_KEY_MESSAGE)
     const apiKey = args.apiKey.trim()
     if (apiKey.length < 8 || apiKey.length > 500 || /\s/.test(apiKey)) throw userError('VALIDATION', 'Paste the provider API key')
+    const provider = PROVIDERS[args.providerId]
+    if (!provider) throw userError('VALIDATION', 'Unknown provider')
+    const problem = modelProblem(args.providerId, args.model)
+    if (problem) throw userError('VALIDATION', problem)
+    // The key's live model list: a refused key (4xx) is not saved; a chosen
+    // model the provider does not offer is refused. An unreachable provider
+    // does not block saving (calls fall back to the default later).
+    const adminCompany: Id<'companies'> = await ctx.runQuery(internal.llmGateway.adminCompany, {})
+    const baseUrl = args.providerId === 'custom' ? cleanBaseUrl('custom', args.baseUrl) ?? '' : provider.baseUrl
+    const live = await liveModels(ctx, { providerId: provider.id, kind: provider.kind, baseUrl, apiKey }, adminCompany)
+    if (!live.models && live.status && live.status >= 400 && live.status < 500) {
+      throw userError('VALIDATION', `${provider.label} refused the key: ${live.error}`)
+    }
+    const model = args.model.trim()
+    if (model && live.models && !live.models.some((m) => m.id === model) && !extraModels(process.env).includes(model)) {
+      throw userError('VALIDATION', `Model "${model}" is not offered for ${provider.label}`)
+    }
     const { id, companyId }: { id: Id<'llmCredentials'>; companyId: Id<'companies'> } = await ctx.runMutation(
       internal.llmGateway.upsertCredentialRow,
       { providerId: args.providerId, model: args.model, baseUrl: args.baseUrl, makeDefault: args.makeDefault ?? false },
@@ -446,7 +465,10 @@ export type BeginResult =
       userId: Id<'users'>
       credentialId: Id<'llmCredentials'>
       providerId: string
-      model: string
+      /** The credential's saved model ('' = automatic). */
+      savedModel: string
+      /** What the browser asked for, if anything. */
+      requestedModel: string | null
       baseUrl: string | null
       ciphertext: string
       iv: string
@@ -467,7 +489,8 @@ export const begin = internalMutation({
       userId: v.id('users'),
       credentialId: v.id('llmCredentials'),
       providerId: v.string(),
-      model: v.string(),
+      savedModel: v.string(),
+      requestedModel: v.union(v.string(), v.null()),
       baseUrl: v.union(v.string(), v.null()),
       ciphertext: v.string(),
       iv: v.string(),
@@ -508,7 +531,8 @@ export const begin = internalMutation({
       userId: user._id,
       credentialId: cred._id,
       providerId: cred.providerId,
-      model: gatewayModel(cred.providerId, cred.model, args.model),
+      savedModel: cred.model,
+      requestedModel: args.model?.trim().slice(0, MAX_MODEL_CHARS) || null,
       baseUrl: cred.baseUrl ?? null,
       ciphertext: secret.ciphertext,
       iv: secret.iv,
@@ -525,6 +549,9 @@ const usageFields = {
   inputTokens: v.optional(v.number()),
   outputTokens: v.optional(v.number()),
   durationMs: v.optional(v.number()),
+  /** USD per million tokens as the provider listed them (OpenRouter), for the estimate. */
+  inputPerM: v.optional(v.number()),
+  outputPerM: v.optional(v.number()),
 }
 
 /** Also used by the farm bot (BOT-002) for its own calls. */
@@ -542,18 +569,21 @@ export async function insertUsage(
     inputTokens?: number
     outputTokens?: number
     durationMs?: number
+    inputPerM?: number
+    outputPerM?: number
   },
 ) {
+  const { inputPerM, outputPerM, ...fields } = row
   const inputTokens = tokenCount(row.inputTokens)
   const outputTokens = tokenCount(row.outputTokens)
   await ctx.db.insert('llmUsage', {
-    ...row,
+    ...fields,
     model: row.model.slice(0, MAX_MODEL_CHARS),
     error: row.error?.slice(0, 300),
     inputTokens,
     outputTokens,
     durationMs: tokenCount(row.durationMs),
-    costUsd: estimateCostUsd(row.model, inputTokens, outputTokens),
+    costUsd: estimateCostUsd(row.model, inputTokens, outputTokens, cleanPrice(inputPerM, outputPerM)),
     createdAt: Date.now(),
   })
 }
@@ -650,13 +680,14 @@ export const beginReport = internalMutation({
         mode: 'org_key',
         credentialId: cred._id,
         providerId: cred.providerId,
-        model: gatewayModel(cred.providerId, cred.model),
+        model: cred.model,
         baseUrl: cred.baseUrl ?? null,
         ciphertext: secret.ciphertext,
         iv: secret.iv,
       }
     }
-    return { mode: 'server_key', providerId: server!.id, model: server!.defaultModel }
+    // Model resolved by the action from the live list (D-022).
+    return { mode: 'server_key', providerId: server!.id, model: '' }
   },
 })
 
@@ -673,6 +704,8 @@ export const recordReportUsage = internalMutation({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
+    inputPerM: v.optional(v.number()),
+    outputPerM: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -683,7 +716,18 @@ export const recordReportUsage = internalMutation({
 
 export type GatewayReply =
   | { handled: false }
-  | { handled: true; text: string; providerId: string; model: string; inputTokens: number | null; outputTokens: number | null }
+  | {
+      handled: true
+      text: string
+      providerId: string
+      /** The model actually used. */
+      model: string
+      /** The requested model was unavailable and `model` replaced it. */
+      fallback: boolean
+      requestedModel: string | null
+      inputTokens: number | null
+      outputTokens: number | null
+    }
 
 /**
  * One chat completion on the organization's key, or `{ handled: false }`
@@ -705,6 +749,8 @@ export const chat = action({
       text: v.string(),
       providerId: v.string(),
       model: v.string(),
+      fallback: v.boolean(),
+      requestedModel: v.union(v.string(), v.null()),
       inputTokens: v.union(v.number(), v.null()),
       outputTokens: v.union(v.number(), v.null()),
     }),
@@ -725,6 +771,17 @@ export const chat = action({
       key,
     )
     const provider = PROVIDERS[begun.providerId]
+    const baseUrl = providerBaseUrl(provider.id, provider.id === 'custom' ? begun.baseUrl ?? '' : null)
+    // Only a model in the key's live list (or LLM_EXTRA_MODELS / env default) is called.
+    const { choice, models } = await chooseModel(ctx, {
+      target: { providerId: provider.id, kind: provider.kind, baseUrl, apiKey },
+      scope: begun.companyId,
+      requested: begun.requestedModel,
+      saved: begun.savedModel,
+    })
+    if (!choice.ok) throw userError('UPSTREAM', choice.error)
+    const model = choice.model
+    const price: Price | undefined = listedPrice(models, model)
     const temperature =
       typeof args.temperature === 'number' && Number.isFinite(args.temperature)
         ? Math.min(1, Math.max(0, args.temperature))
@@ -738,7 +795,7 @@ export const chat = action({
           // Only the admin's saved URL for custom; fixed endpoints otherwise.
           baseUrl: provider.id === 'custom' ? begun.baseUrl ?? '' : provider.baseUrl,
           apiKey,
-          model: begun.model,
+          model,
           messages: args.messages,
           temperature,
           referer: args.referer,
@@ -750,13 +807,14 @@ export const chat = action({
           companyId: begun.companyId,
           userId: begun.userId,
           providerId: begun.providerId,
-          model: begun.model,
+          model,
           feature: args.feature,
           ok: !!reply,
           error: Result.isFailure(outcome) ? outcome.failure.message : undefined,
           inputTokens: reply?.usage.inputTokens,
           outputTokens: reply?.usage.outputTokens,
           durationMs: Date.now() - started,
+          ...(price ?? {}),
         }),
       )
       if (Result.isFailure(outcome)) return yield* Effect.fail(outcome.failure)
@@ -769,7 +827,9 @@ export const chat = action({
       handled: true,
       text: reply.text,
       providerId: begun.providerId,
-      model: begun.model,
+      model,
+      fallback: !!begun.requestedModel && model !== begun.requestedModel,
+      requestedModel: begun.requestedModel,
       inputTokens: reply.usage.inputTokens ?? null,
       outputTokens: reply.usage.outputTokens ?? null,
     }

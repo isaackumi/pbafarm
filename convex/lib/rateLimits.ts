@@ -44,6 +44,10 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   llmPerCompanyHour: { kind: 'fixed window', rate: 500, period: HOUR },
   /** Usage rows reported by the Next proxy for server-key calls, key = userId. */
   llmUsageReportPerUser: { kind: 'fixed window', rate: 150, period: HOUR },
+  /** Model-list lookups with a pasted key (AI settings), key = userId. */
+  llmModelPreviewPerUser: { kind: 'fixed window', rate: 30, period: HOUR },
+  /** Live model lists for the org's keys (assistant picker, AI settings), key = userId. */
+  llmModelListPerUser: { kind: 'fixed window', rate: 120, period: HOUR },
   /**
    * Attachment upload URLs (CF-005), key = userId / companyId. Bounds orphaned
    * R2 objects. An image with a thumbnail (CF-004) takes two tokens, so the

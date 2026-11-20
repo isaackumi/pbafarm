@@ -70,6 +70,22 @@ Only the variables of the adapters actually used are needed.
 `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `CUSTOM_LLM_API_KEY`,
 `CUSTOM_LLM_BASE_URL`, `LLM_DEFAULT_PROVIDER`.
 
+**LLM models (D-022: model ids are discovered, not hardcoded).** All optional, on
+**both** Convex (org keys, bot, logbook OCR, weekly reports) and Vercel
+(`pages/api/llm/*`, server keys). Each provider's model list is fetched live
+(cached 1 h per provider + key fingerprint) and the default is picked from it.
+
+| Name | Purpose |
+|---|---|
+| `LLM_DEFAULT_MODEL_<PROVIDER>` (e.g. `LLM_DEFAULT_MODEL_GEMINI`, `_OPENAI`, `_OPENROUTER`, `_ANTHROPIC`, `_GROQ`, `_CUSTOM`) | Preferred default for that provider. Used when the live list has it; **also the only model used when the list cannot be fetched** (otherwise calls fail with "Can't reach … set LLM_DEFAULT_MODEL_<PROVIDER>") |
+| `LLM_DEFAULT_MODEL` | Same, for any provider without its own variable |
+| `LLM_VISION_MODEL_<PROVIDER>`, `LLM_VISION_MODEL` | Logbook OCR model (must read images). `BOT_VISION_MODEL` still works as the last fallback |
+| `LLM_EXTRA_MODELS` | Comma-separated ids allowed in addition to the live list (fine-tunes, unlisted aliases) |
+| `LLM_MODEL_PRICES` | JSON `{"<model id>": [inputUsdPerM, outputUsdPerM]}` for the usage view's cost estimate. Without it, only OpenRouter's listed prices are used; other models show no estimate. Set on **Convex** (the estimate is computed there) |
+
+`BOT_LLM_MODEL` is a preference: if the provider no longer lists it, the bot
+uses the provider's default.
+
 **Security and integrations**
 
 | Name | Purpose |
@@ -130,6 +146,7 @@ enabled for (Paystack: GHS, NGN, KES, ZAR, USD; XOF is not offered) stay manual.
 | `NEXT_PUBLIC_AUTH_OIDC_NAME` | SSO button label, if SSO is on |
 | `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_APP_ENV` | Optional browser monitoring |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `CUSTOM_LLM_API_KEY`, `CUSTOM_LLM_BASE_URL`, `LLM_DEFAULT_PROVIDER`, `LLM_EXTRA_MODELS` | Server-side keys for `pages/api/llm/*` (in-app assistant) |
+| `LLM_DEFAULT_MODEL_<PROVIDER>`, `LLM_DEFAULT_MODEL` | Optional default model (see the LLM models table in (a)); the assistant lists models live from `/api/llm/models` |
 | `NEXT_PUBLIC_CUSTOM_LLM_BASE_URL` and `NEXT_PUBLIC_*_API_KEY` | Legacy browser-exposed fallbacks; leave unset |
 
 `NEXT_PUBLIC_VERCEL_ENV`, `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` and `NODE_ENV` are set

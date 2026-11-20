@@ -1,13 +1,15 @@
 /**
  * LLM gateway rules (INT-009): providers an organization may store a key for,
- * model allow-list, message caps, and the cost estimate written to llmUsage.
- * Pure; shared by convex/llmGateway.ts and the Next proxy routes.
+ * message caps, and the cost estimate written to llmUsage. Pure; shared by
+ * convex/llmGateway.ts and the Next proxy routes.
  *
- * PROVIDERS mirrors lib/llmClient.js LLM_PROVIDERS (llmGateway.test.ts checks
- * they match). The caps mirror lib/llmProxyGuard.js (SEC-004).
+ * PROVIDERS mirrors lib/llmClient.js LLM_PROVIDERS (lib/llmClient.test.js
+ * checks they match). It holds provider metadata only: model ids are
+ * discovered from each provider at run time (./llmModels, D-022), never
+ * listed here. The caps mirror lib/llmProxyGuard.js (SEC-004).
  */
-import type { ProviderKind } from './llmProviders'
-import { currentModel } from './llmModels'
+import type { ProviderKind } from './llmModels'
+import { envModelPrices, type Price } from './llmModels'
 
 export type GatewayProvider = {
   id: string
@@ -15,91 +17,30 @@ export type GatewayProvider = {
   kind: ProviderKind
   /** Fixed endpoint; '' for custom (the admin's saved base URL, never the browser's). */
   baseUrl: string
-  defaultModel: string
-  models: string[]
 }
 
 export const PROVIDERS: Record<string, GatewayProvider> = {
-  openai: {
-    id: 'openai',
-    label: 'ChatGPT (OpenAI)',
-    kind: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'o4-mini'],
-  },
-  gemini: {
-    id: 'gemini',
-    label: 'Gemini (Google)',
-    kind: 'gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: 'gemini-3.8-flash',
-    models: ['gemini-3.8-flash'],
-  },
-  openrouter: {
-    id: 'openrouter',
-    label: 'OpenRouter',
-    kind: 'openai',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'openai/gpt-4o-mini',
-    models: [
-      'openai/gpt-4o-mini',
-      'openai/gpt-4o',
-      'google/gemini-2.0-flash-001',
-      'anthropic/claude-3.5-sonnet',
-      'meta-llama/llama-3.1-70b-instruct',
-    ],
-  },
-  anthropic: {
-    id: 'anthropic',
-    label: 'Claude (Anthropic)',
-    kind: 'anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    defaultModel: 'claude-3-5-sonnet-latest',
-    models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-sonnet-4-0'],
-  },
-  groq: {
-    id: 'groq',
-    label: 'Groq',
-    kind: 'openai',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    defaultModel: 'llama-3.3-70b-versatile',
-    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-  },
-  custom: {
-    id: 'custom',
-    label: 'Custom (OpenAI-compatible)',
-    kind: 'openai',
-    baseUrl: '',
-    defaultModel: 'gpt-4o-mini',
-    models: [],
-  },
+  openai: { id: 'openai', label: 'ChatGPT (OpenAI)', kind: 'openai', baseUrl: 'https://api.openai.com/v1' },
+  gemini: { id: 'gemini', label: 'Gemini (Google)', kind: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
+  openrouter: { id: 'openrouter', label: 'OpenRouter', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
+  anthropic: { id: 'anthropic', label: 'Claude (Anthropic)', kind: 'anthropic', baseUrl: 'https://api.anthropic.com/v1' },
+  groq: { id: 'groq', label: 'Groq', kind: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
+  custom: { id: 'custom', label: 'Custom (OpenAI-compatible)', kind: 'openai', baseUrl: '' },
 }
 
 export const MAX_MODEL_CHARS = 100
 
 /**
- * Model for a call on an org key: the requested one when the provider lists
- * it or it is the credential's saved model, else the saved model. Never an
- * arbitrary string from the browser (except the saved one for custom).
+ * A model id an admin may save: '' (automatic: the provider's default from
+ * the live list) or a sane id. Whether the provider offers it is checked
+ * against the live list when the key is saved, and again on every call (an
+ * id the provider dropped falls back to the default).
  */
-export function gatewayModel(providerId: string, savedModel: string, requested?: string | null): string {
-  const p = PROVIDERS[providerId]
-  const want = typeof requested === 'string' ? currentModel(providerId, requested) : ''
-  const saved = currentModel(providerId, savedModel)
-  if (want && (want === saved || p?.models.includes(want))) return want
-  return saved
-}
-
-/** Model an admin may save: listed for the provider, or any sane id for custom. */
 export function modelProblem(providerId: string, model: string): string | null {
-  const p = PROVIDERS[providerId]
-  if (!p) return 'Unknown provider'
+  if (!PROVIDERS[providerId]) return 'Unknown provider'
   const m = model.trim()
-  if (!m || m.length > MAX_MODEL_CHARS || !/^[A-Za-z0-9._:/@-]+$/.test(m)) return 'Enter a model id'
-  if (providerId !== 'custom' && m !== p.defaultModel && !p.models.includes(m)) {
-    return `Model "${m}" is not offered for ${p.label}`
-  }
+  if (!m) return null
+  if (m.length > MAX_MODEL_CHARS || !/^[A-Za-z0-9._:/@-]+$/.test(m)) return 'Enter a model id'
   return null
 }
 
@@ -132,37 +73,28 @@ export function messagesProblem(messages: { role: string; content: string }[]): 
 }
 
 /**
- * Indicative list prices, USD per million tokens [input, output]. An
- * estimate for the usage view, not a bill: the provider's invoice is the
- * truth. Unknown models get no estimate.
+ * Cost estimate for the usage view, not a bill: the provider's invoice is
+ * the truth. Price from LLM_MODEL_PRICES (env JSON, wins) or the price the
+ * provider listed (OpenRouter); otherwise undefined (no estimate). There is
+ * no built-in price table.
  */
-export const MODEL_PRICES: Record<string, [number, number]> = {
-  'gpt-4o-mini': [0.15, 0.6],
-  'gpt-4o': [2.5, 10],
-  'gpt-4.1-mini': [0.4, 1.6],
-  'o4-mini': [1.1, 4.4],
-  'gemini-2.0-flash': [0.1, 0.4],
-  'gemini-2.0-flash-lite': [0.075, 0.3],
-  'gemini-1.5-flash': [0.075, 0.3],
-  'gemini-1.5-pro': [1.25, 5],
-  'openai/gpt-4o-mini': [0.15, 0.6],
-  'openai/gpt-4o': [2.5, 10],
-  'google/gemini-2.0-flash-001': [0.1, 0.4],
-  'anthropic/claude-3.5-sonnet': [3, 15],
-  'meta-llama/llama-3.1-70b-instruct': [0.4, 0.4],
-  'claude-3-5-sonnet-latest': [3, 15],
-  'claude-3-5-haiku-latest': [0.8, 4],
-  'claude-sonnet-4-0': [3, 15],
-  'llama-3.3-70b-versatile': [0.59, 0.79],
-  'llama-3.1-8b-instant': [0.05, 0.08],
-  'mixtral-8x7b-32768': [0.24, 0.24],
+export function estimateCostUsd(
+  model: string,
+  inputTokens?: number,
+  outputTokens?: number,
+  listed?: Price,
+  envPrices: string | undefined = process.env.LLM_MODEL_PRICES,
+): number | undefined {
+  const price = envModelPrices(envPrices)[model] ?? listed
+  if (!price || (inputTokens === undefined && outputTokens === undefined)) return undefined
+  const cost = ((inputTokens ?? 0) * price.inputPerM + (outputTokens ?? 0) * price.outputPerM) / 1_000_000
+  return Math.round(cost * 1_000_000) / 1_000_000
 }
 
-export function estimateCostUsd(model: string, inputTokens?: number, outputTokens?: number): number | undefined {
-  const price = MODEL_PRICES[model]
-  if (!price || (inputTokens === undefined && outputTokens === undefined)) return undefined
-  const cost = ((inputTokens ?? 0) * price[0] + (outputTokens ?? 0) * price[1]) / 1_000_000
-  return Math.round(cost * 1_000_000) / 1_000_000
+/** A per-million price passed in by a caller, bounded; undefined when absent or absurd. */
+export function cleanPrice(inputPerM?: number, outputPerM?: number): Price | undefined {
+  const ok = (n?: number) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 10_000
+  return ok(inputPerM) && ok(outputPerM) ? { inputPerM: inputPerM!, outputPerM: outputPerM! } : undefined
 }
 
 /** A non-negative integer token count, or undefined. */

@@ -50,9 +50,9 @@ export default async function handler(req, res) {
     if (org.handled) {
       reply = org.text
     } else {
-      const resolved = resolveProvider(undefined, undefined)
+      const resolved = await resolveProvider(undefined, undefined)
       if (resolved.error) return res.status(200).json({ insights: plain, phrased: false })
-      reply = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature: 0.2, referer }, 'insights')
+      reply = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature: 0.2, referer }, 'insights', resolved.price)
     }
     const out = applyPhrasing(insights, reply)
     return res.status(200).json({ insights: out, phrased: out.some((i) => i.phrased) })

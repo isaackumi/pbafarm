@@ -194,6 +194,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `fishTransfers.listFishTransfersPage` | `production.view` | yes | yes | yes | yes | yes |
 | `fishTransfers.rejectFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
 | `fishTransfers.reverseFishTransfer` | `production.transfer.approve` | yes | yes | no | no | no |
+| `forecasts.accuracy` | `reports.view` | yes | yes | yes | yes | yes |
+| `forecasts.forUnit` | `production.view` | yes | yes | yes | yes | yes |
+| `forecasts.harvestPlanner` | `reports.view` | yes | yes | yes | yes | yes |
 | `formLayouts.get` | `org.view` | yes | yes | yes | yes | yes |
 | `formLayouts.listSaved` | `customization.manage` | yes | yes | no | no | no |
 | `formLayouts.reset` | `customization.manage` | yes | yes | no | no | no |
@@ -281,6 +284,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `llmGateway.saveCredential` | `allowlisted` | see test | see test | see test | see test | see test |
 | `llmGateway.updateCredential` | `integrations.manage` | yes | yes | no | no | no |
 | `llmGateway.usage` | `integrations.manage` | yes | yes | no | no | no |
+| `llmModels.list` | `allowlisted` | see test | see test | see test | see test | see test |
+| `llmModels.preview` | `allowlisted` | see test | see test | see test | see test | see test |
 | `llmQuota.consumeServerKeyQuota` | `ai.use` | yes | yes | yes | no | no |
 | `memberships.acceptInvite` | `account` | self | self | self | self | self |
 | `memberships.declineInvite` | `account` | self | self | self | self | self |

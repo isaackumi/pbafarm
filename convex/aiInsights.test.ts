@@ -238,6 +238,8 @@ describe('weekly report LLM phrasing (AI-003)', () => {
     const { t, ids } = await twoSiteFarm({ ai: true })
     vi.stubEnv('LLM_DEFAULT_PROVIDER', 'openai')
     vi.stubEnv('OPENAI_API_KEY', 'sk-test')
+    // The fake answers every URL with a chat reply, so the live model list is unreadable: the env default is used (D-022).
+    vi.stubEnv('LLM_DEFAULT_MODEL_OPENAI', 'gpt-test')
     const pack = await t.query(internal.aiReports.buildPack, { companyId: ids.companyId, locationId: ids.siteA, weekEnd: '2026-05-10', lang: 'en' })
     const p = JSON.parse(pack!.packJson)
     const grounded = `Week ${p.weekStart} to ${p.weekEnd}: ${p.week.mortality} fish died and the farm fed ${p.week.feed_kg} kg across ${p.week.units} unit.`

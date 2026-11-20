@@ -2817,7 +2817,14 @@
       "losses": "Quelles cages ont perdu le plus de poissons ce cycle ?",
       "harvest": "Quelles unités sont les plus proches du poids de récolte ?",
       "report": "Résume l’aliment et la mortalité de cette semaine"
-    }
+    },
+    "modelsLoading": "Chargement des modèles…",
+    "modelsError": "Modèles indisponibles",
+    "modelsErrorDetail": "Impossible de charger la liste des modèles : {message}",
+    "modelsRetry": "Réessayer",
+    "modelUnavailable": "aucun modèle disponible",
+    "vision": "lit les photos",
+    "defaultModel": "par défaut"
   },
   "calendarUi": {
     "title": "Calendrier",
@@ -3264,7 +3271,17 @@
       "topUsers": "Principaux utilisateurs (30 jours)",
       "callsCount": "{count} appels",
       "logTitle": "Journal d’utilisation",
-      "logHint": "Les coûts sont estimés à partir des tarifs publics."
+      "logHint": "Les coûts sont estimés à partir des tarifs publics.",
+      "modelAuto": "Automatique (modèle par défaut du fournisseur)",
+      "modelAutoWith": "Automatique : {model}",
+      "loadModels": "Charger les modèles",
+      "loadingModels": "Chargement des modèles…",
+      "modelsFound": "{count} modèles disponibles",
+      "modelsFailed": "Impossible de lister les modèles : {message}",
+      "modelHint": "Laissez vide pour utiliser le modèle par défaut du fournisseur. Collez la clé, puis chargez la liste pour choisir.",
+      "vision": "lit les photos",
+      "visionHint": "Les modèles marqués « lit les photos » peuvent lire les pages du registre (OCR).",
+      "modelGone": "{model} n’est plus proposé ; les appels utilisent {fallback}"
     },
     "sensors": {
       "title": "Capteurs",

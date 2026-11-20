@@ -36,7 +36,9 @@ import { aiPolicyOf } from '../lib/aiPolicyShared'
 import { assertPlanLimit, hasFeature } from '../lib/planLimits'
 import { isUserError } from '../lib/errors'
 import { logAudit } from '../lib/tenancy'
-import { PROVIDERS, gatewayModel, llmCredentialAad } from '../lib/llmGateway'
+import { PROVIDERS, llmCredentialAad } from '../lib/llmGateway'
+import { listedPrice } from '../lib/llmModels'
+import { chooseModel, providerBaseUrl } from '../llmModels'
 import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { addDays, todayIn, zoneFor } from '../lib/dates'
 import { runEffect } from '../lib/effect'
@@ -261,7 +263,8 @@ export const prepareScan = internalMutation({
         ...base,
         source: 'org_key' as const,
         providerId: cred.providerId,
-        model: gatewayModel(cred.providerId, cred.model),
+        // Used only if the live list says it reads images (D-022).
+        model: cred.model,
         baseUrl: cred.baseUrl ?? null,
         credentialId: cred._id,
         ciphertext: secret.ciphertext,
@@ -273,7 +276,8 @@ export const prepareScan = internalMutation({
       ...base,
       source: 'server_key' as const,
       providerId,
-      model: process.env.BOT_VISION_MODEL || PROVIDERS[providerId]?.defaultModel || 'gpt-4o-mini',
+      // Picked from the live list: LLM_VISION_MODEL[_<PROVIDER>] / BOT_VISION_MODEL, else a vision-capable default.
+      model: '',
       baseUrl: null,
       credentialId: null,
       ciphertext: null,
@@ -351,6 +355,8 @@ export const recordScanUsage = internalMutation({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
+    inputPerM: v.optional(v.number()),
+    outputPerM: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -643,6 +649,14 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
   const kind = PROVIDERS[p.providerId]?.kind ?? 'openai'
   const baseUrl = kind === 'openai' ? openAiBaseUrl(p.providerId, p.baseUrl) : null
   if (!apiKey || (kind === 'openai' && !baseUrl)) return await fail('no_key', s.unavailable)
+  const { choice, models } = await chooseModel(ctx, {
+    target: { providerId: p.providerId, kind, baseUrl: providerBaseUrl(p.providerId, p.baseUrl), apiKey },
+    scope: p.source === 'org_key' ? p.companyId : 'server',
+    saved: p.model,
+    vision: true,
+  })
+  if (!choice.ok) return await fail(choice.error, s.unavailable)
+  const model = choice.model
   const started = Date.now()
   const reading = await runEffect(
     readLogbookPhoto({
@@ -650,7 +664,7 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
       providerId: p.providerId,
       baseUrl: baseUrl ?? undefined,
       apiKey,
-      model: p.model,
+      model,
       image: { bytes: photo.bytes, mime: photo.mime },
       prompt: p.prompt,
     }).pipe(
@@ -667,12 +681,13 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
     userId: p.userId,
     source: p.source,
     providerId: p.providerId,
-    model: p.model,
+    model,
     ok: reading.ok,
     error: reading.ok ? undefined : reading.error.slice(0, 200),
     inputTokens: reading.usage?.inputTokens,
     outputTokens: reading.usage?.outputTokens,
     durationMs: Date.now() - started,
+    ...(listedPrice(models, model) ?? {}),
   })
   if (!reading.ok) return await fail(reading.error, reading.decode ? s.unreadable : s.unavailable)
 
@@ -682,7 +697,7 @@ export async function runLogbook(ctx: ActionCtx, plan: LogbookPlan): Promise<Cha
     bindingId: plan.bindingId,
     sentAt: plan.sentAt,
     providerId: p.providerId,
-    model: p.model,
+    model,
     extraction: toExtractionValue(reading.extraction),
   })
   if (!result) return [text(t(p.locale).bindingInactive)]

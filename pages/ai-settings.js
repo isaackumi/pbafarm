@@ -14,9 +14,16 @@ import { useT } from '../lib/i18n/context'
  * AI provider keys and usage (INT-009). A company can bring its own key per
  * provider (encrypted at rest); the assistant uses the default enabled key
  * and falls back to the server key. Every call lands in the usage log.
+ * Models come from each provider's live list (D-022): nothing is hardcoded,
+ * '' means "automatic" (the provider's default).
  */
 
 const DAY = 24 * 60 * 60 * 1000
+
+function modelText(m, t) {
+  const name = m.label && m.label !== m.id ? `${m.label} (${m.id})` : m.id
+  return m.vision ? `${name} · ${t('integ.ai.vision')}` : name
+}
 
 function formatTime(ms) {
   if (!ms) return '—'
@@ -44,13 +51,27 @@ function AddKey({ providers, disabled }) {
   const t = useT()
   const toasts = useToasts()
   const save = useAction(api.llmGateway.saveCredential)
+  const preview = useAction(api.llmModels.preview)
   const [providerId, setProviderId] = useState(providers[0]?.id || '')
-  const provider = providers.find((p) => p.id === providerId)
   const [model, setModel] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [makeDefault, setMakeDefault] = useState(true)
   const [busy, setBusy] = useState(false)
+  // Live models for the pasted key: { loading, models, defaultModel, error }.
+  const [list, setList] = useState(null)
+
+  useEffect(() => setList(null), [providerId, apiKey, baseUrl])
+
+  const loadModels = async () => {
+    setList({ loading: true, models: [], defaultModel: null, error: '' })
+    try {
+      const r = await preview({ providerId, apiKey, ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}) })
+      setList({ loading: false, models: r.models, defaultModel: r.defaultModel, error: r.error || '' })
+    } catch (err) {
+      setList({ loading: false, models: [], defaultModel: null, error: errorMessage(err) })
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -58,7 +79,8 @@ function AddKey({ providers, disabled }) {
     try {
       await save({
         providerId,
-        model: model.trim() || provider?.defaultModel || '',
+        // '' = automatic: the provider's default from its live list.
+        model: model.trim(),
         apiKey,
         ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
         makeDefault,
@@ -102,7 +124,6 @@ function AddKey({ providers, disabled }) {
                   />
                   <span className="text-[14px] leading-[18px] text-text">{p.label}</span>
                 </span>
-                {p.defaultModel && <span className="block truncate text-[12px] leading-4 text-muted">{p.defaultModel}</span>}
               </span>
             </button>
           )
@@ -110,12 +131,40 @@ function AddKey({ providers, disabled }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <SettingsField label={t('integ.ai.model')} htmlFor="ai-model">
-          <input id="ai-model" list="ai-models" className={FIELD} value={model} placeholder={provider?.defaultModel || ''} onChange={(e) => setModel(e.target.value)} />
-          <datalist id="ai-models">
-            {(provider?.models || []).map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          {list?.models?.length ? (
+            <select id="ai-model" className={FIELD} value={model} onChange={(e) => setModel(e.target.value)}>
+              <option value="">
+                {list.defaultModel ? t('integ.ai.modelAutoWith', { model: list.defaultModel }) : t('integ.ai.modelAuto')}
+              </option>
+              {list.models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {modelText(m, t)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="ai-model"
+              className={FIELD}
+              value={model}
+              placeholder={t('integ.ai.modelAuto')}
+              onChange={(e) => setModel(e.target.value)}
+            />
+          )}
+          <span className="mt-1 flex flex-wrap items-center gap-2 text-[12px] leading-4 text-muted" aria-live="polite">
+            <GhostButton
+              size="sm"
+              type="button"
+              onClick={loadModels}
+              disabled={disabled || list?.loading || apiKey.trim().length < 8 || (providerId === 'custom' && !baseUrl.trim())}
+            >
+              {list?.loading ? t('integ.ai.loadingModels') : t('integ.ai.loadModels')}
+            </GhostButton>
+            {list && !list.loading && !list.error && t('integ.ai.modelsFound', { count: list.models.length })}
+            {list?.error && <span className="text-alert">{t('integ.ai.modelsFailed', { message: list.error })}</span>}
+            {!list && t('integ.ai.modelHint')}
+          </span>
+          {list?.models?.some((m) => m.vision) && <span className="mt-1 block text-[12px] leading-4 text-muted">{t('integ.ai.visionHint')}</span>}
         </SettingsField>
         <SettingsField label={t('integ.ai.baseUrl')} htmlFor="ai-base">
           <input id="ai-base" type="url" className={FIELD} value={baseUrl} placeholder="https://" onChange={(e) => setBaseUrl(e.target.value)} />
@@ -145,7 +194,7 @@ function AddKey({ providers, disabled }) {
   )
 }
 
-function CredentialRow({ cred }) {
+function CredentialRow({ cred, live }) {
   const t = useT()
   const toasts = useToasts()
   const update = useMutation(api.llmGateway.updateCredential)
@@ -171,9 +220,31 @@ function CredentialRow({ cred }) {
           <Pill tone={cred.enabled ? 'green' : 'neutral'}>{cred.enabled ? t('integ.common.on') : t('integ.common.off')}</Pill>
         </div>
         <p className="mt-1 font-mono text-[12px] leading-4 text-muted">
-          {cred.model} · {t('integ.ai.keyEnding', { hint: cred.keyHint || '—' })}
+          {cred.model || t('integ.ai.modelAutoWith', { model: live?.model || '…' })} ·{' '}
+          {t('integ.ai.keyEnding', { hint: cred.keyHint || '—' })}
           {cred.baseUrl ? ` · ${cred.baseUrl}` : ''}
         </p>
+        {cred.model && live?.model && live.models.length > 0 && live.model !== cred.model && (
+          <p className="mt-1 text-[12px] leading-4 text-[var(--pill-amber-text)]">
+            {t('integ.ai.modelGone', { model: cred.model, fallback: live.model })}
+          </p>
+        )}
+        {live?.error && <p className="mt-1 text-[12px] leading-4 text-alert">{t('integ.ai.modelsFailed', { message: live.error })}</p>}
+        {live?.models?.length > 0 && (
+          <select
+            aria-label={t('integ.ai.model')}
+            className={`${FIELD} mt-2 max-w-md`}
+            value={live.models.some((m) => m.id === cred.model) ? cred.model : ''}
+            onChange={(e) => act(() => update({ credentialId: cred.id, model: e.target.value }), t('integ.ai.saved'))}
+          >
+            <option value="">{t('integ.ai.modelAutoWith', { model: live.defaultModel || '…' })}</option>
+            {live.models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {modelText(m, t)}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         {!cred.isDefault && (
@@ -364,6 +435,20 @@ function AiSettingsPage() {
   // Rounded to the hour so the subscription is stable between renders.
   const since = useMemo(() => Math.floor((Date.now() - 30 * DAY) / 3_600_000) * 3_600_000, [])
   const data = useQuery(api.llmGateway.overview, { since })
+  // Live models per saved key (keys stay in Convex). Reloaded when keys change.
+  const listModels = useAction(api.llmModels.list)
+  const [live, setLive] = useState({})
+  const credKey = (data?.credentials || []).map((c) => `${c.id}:${c.enabled}:${c.updatedAt}`).join(',')
+  useEffect(() => {
+    if (!credKey) return
+    let on = true
+    listModels({})
+      .then((r) => on && setLive(Object.fromEntries(r.providers.map((p) => [p.id, p]))))
+      .catch((err) => on && setLive({ _error: errorMessage(err) }))
+    return () => {
+      on = false
+    }
+  }, [credKey, listModels])
 
   if (data === undefined) return <Skeleton className="h-40" />
   return (
@@ -385,7 +470,7 @@ function AiSettingsPage() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {data.credentials.map((c) => (
-                  <CredentialRow key={c.id} cred={c} />
+                  <CredentialRow key={c.id} cred={c} live={live[c.providerId]} />
                 ))}
               </ul>
             )}

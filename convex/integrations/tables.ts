@@ -210,7 +210,11 @@ export const integrationTables = {
     companyId: v.id('companies'),
     /** lib/llmClient.js LLM_PROVIDERS id (convex/lib/llmGateway.ts mirror). */
     providerId: v.string(),
-    /** Default model for this key. */
+    /**
+     * Preferred model for this key; '' = automatic (the provider's default
+     * from its live model list, D-022). An id the provider no longer lists
+     * falls back to that default at call time.
+     */
     model: v.string(),
     /** Custom (OpenAI-compatible) provider only. */
     baseUrl: v.optional(v.string()),
@@ -238,11 +242,38 @@ export const integrationTables = {
     error: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    /** USD estimate from convex/lib/llmGateway.ts MODEL_PRICES; absent when unknown. */
+    /**
+     * USD estimate (convex/lib/llmGateway.ts estimateCostUsd: LLM_MODEL_PRICES
+     * or the provider's listed price); absent when unknown. Older rows used a
+     * built-in table; they stay as written.
+     */
     costUsd: v.optional(v.number()),
     durationMs: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index('by_companyId_and_createdAt', ['companyId', 'createdAt'])
     .index('by_createdAt', ['createdAt']),
+
+  /**
+   * Live model lists (D-022), cached for an hour per fingerprint: SHA-256 of
+   * scope (company id or 'server') + provider + base URL + key. The key is
+   * never stored. Internal only.
+   */
+  llmModelCache: defineTable({
+    fingerprint: v.string(),
+    providerId: v.string(),
+    models: v.array(
+      v.object({
+        id: v.string(),
+        label: v.optional(v.string()),
+        vision: v.boolean(),
+        created: v.optional(v.number()),
+        inputPerM: v.optional(v.number()),
+        outputPerM: v.optional(v.number()),
+      }),
+    ),
+    fetchedAt: v.number(),
+  })
+    .index('by_fingerprint', ['fingerprint'])
+    .index('by_fetchedAt', ['fetchedAt']),
 }

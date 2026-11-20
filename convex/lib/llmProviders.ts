@@ -22,7 +22,6 @@ import * as Exit from 'effect/Exit'
 import * as Option from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Schema from 'effect/Schema'
-import { currentModel } from './llmModels'
 import {
   type Fetch,
   type FetchFn,
@@ -33,7 +32,8 @@ import {
 } from './effectHttp'
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
-export type ProviderKind = 'openai' | 'gemini' | 'anthropic'
+export type { ProviderKind } from './llmModels'
+import type { ProviderKind } from './llmModels'
 
 /** A provider failed or answered without text; `message` is shown to the user. */
 export class LlmError extends Data.TaggedError('LlmError')<{
@@ -206,9 +206,7 @@ function chatGemini(o: ChatOptions) {
       generationConfig: { temperature: o.temperature ?? 0.3 },
     }
     if (system) payload.systemInstruction = { parts: [{ text: system }] }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      currentModel('gemini', o.model),
-    )}:generateContent?key=${encodeURIComponent(o.apiKey)}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(o.model)}:generateContent?key=${encodeURIComponent(o.apiKey)}`
     const res = yield* post(
       url,
       {},

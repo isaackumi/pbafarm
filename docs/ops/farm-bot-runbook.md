@@ -102,7 +102,7 @@ The bot uses the organization's own LLM key when one is set (Settings → AI). O
 |---|---|
 | `GEMINI_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` / `GROQ_API_KEY` / `CUSTOM_LLM_API_KEY` (+ `CUSTOM_LLM_BASE_URL`) | Server key, same as the web assistant |
 | `BOT_LLM_PROVIDER` | Optional: provider id to use for the bot (`gemini`, `openai`, …) |
-| `BOT_LLM_MODEL` | Optional: model id; otherwise the provider's default |
+| `BOT_LLM_MODEL` | Optional preferred model id; used while the provider lists it, otherwise the provider's default from its live model list (D-022) |
 
 The organization must turn on the AI assistant (Settings → AI, `aiAssistantEnabled`). Without it, buttons, commands and reminders work, but free text gets *the assistant is off*.
 
@@ -161,7 +161,7 @@ A worker sends a photo of a paper daily-logbook page. The bot reads it with a vi
 
 **Model**
 - If the organization has its own key, that key and its saved model are used. A Groq key cannot read images, so the server key is used instead.
-- Otherwise the server key is used: `BOT_VISION_PROVIDER` when set and keyed, else the same order as the bot (`BOT_LLM_PROVIDER`, `LLM_DEFAULT_PROVIDER`, Gemini, any keyed provider). `BOT_VISION_MODEL` overrides the model; the default is the provider's default model (Gemini `gemini-2.0-flash`, OpenAI `gpt-4o-mini`), and both read images.
+- Otherwise the server key is used: `BOT_VISION_PROVIDER` when set and keyed, else the same order as the bot (`BOT_LLM_PROVIDER`, `LLM_DEFAULT_PROVIDER`, Gemini, any keyed provider). The model is picked from the provider's live list among models that read images: `LLM_VISION_MODEL_<PROVIDER>`, `LLM_VISION_MODEL` or `BOT_VISION_MODEL` when listed, else the default-pick rule (D-022) over the vision-capable models. No model id is built in.
 - Each call writes an `llmUsage` row with feature `ocr`, including failed reads. The PLAT-110 nightly rollup counts these rows.
 
 **Media**

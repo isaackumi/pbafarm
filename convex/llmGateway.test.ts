@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
 import { api } from './_generated/api'
 import { toBase64 } from './lib/crypto'
-import { estimateCostUsd, gatewayModel, messagesProblem, modelProblem } from './lib/llmGateway'
+import { estimateCostUsd, messagesProblem, modelProblem } from './lib/llmGateway'
 
 const modules = import.meta.glob('./**/*.ts')
 const TEST_KEY = toBase64(new Uint8Array(32).map((_, i) => i + 11))
@@ -37,16 +37,27 @@ async function setup() {
 type S = Awaited<ReturnType<typeof setup>>
 
 type Step = (url: string, init?: RequestInit) => Response | Promise<Response>
+const json = (status: number, body: unknown): Step => () =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+
+/** What GET .../models answers (live model lists, D-022). */
+const OPENAI_MODELS = { data: [{ id: 'gpt-4o-mini', created: 1 }, { id: 'gpt-4o', created: 2 }, { id: 'text-embedding-3-small', created: 3 }] }
+let listStep: Step = json(200, OPENAI_MODELS)
+let listCalls: { url: string; headers: any }[] = []
+
+/** Scripted provider: model-list GETs go to `listStep`, chat calls to `steps` in order. */
 function stubFetch(steps: Step[]) {
   const calls: { url: string; headers: any; body: any }[] = []
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if ((init?.method ?? 'GET') === 'GET' && /\/models(\?|$)/.test(String(url))) {
+      listCalls.push({ url: String(url), headers: init?.headers })
+      return listStep(String(url), init)
+    }
     calls.push({ url: String(url), headers: init?.headers, body: init?.body ? JSON.parse(String(init.body)) : null })
     return steps[Math.min(calls.length - 1, steps.length - 1)](String(url), init)
   })
   return calls
 }
-const json = (status: number, body: unknown): Step => () =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const OPENAI_OK = json(200, { usage: { prompt_tokens: 1000, completion_tokens: 500 }, choices: [{ message: { content: 'FCR is 1.4' } }] })
 
 const MESSAGES = [
@@ -59,7 +70,12 @@ async function saveKey(s: S, providerId = 'openai', model = 'gpt-4o-mini') {
 }
 const usageRows = (s: S) => s.t.run((ctx) => ctx.db.query('llmUsage').collect())
 
-beforeEach(() => vi.stubEnv('INTEGRATIONS_ENCRYPTION_KEY', TEST_KEY))
+beforeEach(() => {
+  vi.stubEnv('INTEGRATIONS_ENCRYPTION_KEY', TEST_KEY)
+  listStep = json(200, OPENAI_MODELS)
+  listCalls = []
+  stubFetch([json(500, {})])
+})
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
@@ -67,19 +83,21 @@ afterEach(() => {
 
 describe('gateway rules', () => {
   test('models, caps and cost estimate', () => {
-    expect(gatewayModel('openai', 'gpt-4o-mini', 'gpt-4o')).toBe('gpt-4o')
-    expect(gatewayModel('openai', 'gpt-4o-mini', 'evil-model')).toBe('gpt-4o-mini')
-    expect(gatewayModel('custom', 'my-model', 'other')).toBe('my-model')
+    // Syntax only: whether the provider offers it is checked against the live list.
     expect(modelProblem('openai', 'gpt-4o')).toBeNull()
-    expect(modelProblem('openai', 'nope')).toContain('not offered')
+    expect(modelProblem('openai', '')).toBeNull()
+    expect(modelProblem('openai', 'bad id with spaces')).toBe('Enter a model id')
     expect(modelProblem('custom', 'llama3:8b')).toBeNull()
     expect(modelProblem('nope', 'x')).toBe('Unknown provider')
     expect(messagesProblem([])).toBe('messages are required')
     expect(messagesProblem([{ role: 'user', content: 'x'.repeat(60_001) }])).toContain('too long')
     expect(messagesProblem([{ role: 'system', content: 'x'.repeat(100_000) }, { role: 'user', content: 'q' }])).toBeNull()
     expect(messagesProblem([{ role: 'system', content: 'x'.repeat(400_001) }])).toContain('too large')
-    expect(estimateCostUsd('gpt-4o-mini', 1000, 500)).toBeCloseTo(0.00045, 8)
-    expect(estimateCostUsd('unknown', 1000, 500)).toBeUndefined()
+    // No built-in price table: unknown unless listed (OpenRouter) or set in LLM_MODEL_PRICES.
+    expect(estimateCostUsd('gpt-4o-mini', 1000, 500, undefined, '')).toBeUndefined()
+    expect(estimateCostUsd('gpt-4o-mini', 1000, 500, { inputPerM: 0.15, outputPerM: 0.6 }, '')).toBeCloseTo(0.00045, 8)
+    expect(estimateCostUsd('gpt-4o-mini', 1000, 500, { inputPerM: 9, outputPerM: 9 }, '{"gpt-4o-mini":[0.15,0.6]}')).toBeCloseTo(0.00045, 8)
+    expect(estimateCostUsd('gpt-4o-mini', 1000, 500, undefined, 'not json')).toBeUndefined()
   })
 })
 
@@ -113,12 +131,166 @@ describe('organization keys', () => {
     await expect(
       s.as(s.adminA).action(api.llmGateway.saveCredential, { providerId: 'openai', model: 'made-up', apiKey: ORG_KEY }),
     ).rejects.toThrow()
+    listStep = json(200, { data: [{ id: 'llama3' }] })
     await s.as(s.adminA).action(api.llmGateway.saveCredential, {
       providerId: 'custom', model: 'llama3', apiKey: ORG_KEY, baseUrl: 'https://llm.example.com/v1/',
     })
+    expect(listCalls[listCalls.length - 1]?.url).toBe('https://llm.example.com/v1/models')
     const calls = stubFetch([OPENAI_OK])
     await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
     expect(calls[0].url).toBe('https://llm.example.com/v1/chat/completions')
+    expect(calls[0].body.model).toBe('llama3')
+  })
+
+  test('a key the provider refuses (4xx on the model list) is not saved; the list is not retried', async () => {
+    const s = await setup()
+    listStep = json(401, { error: { message: 'Incorrect API key provided' } })
+    await expect(saveKey(s)).rejects.toThrow('Incorrect API key provided')
+    expect(listCalls).toHaveLength(1)
+    expect(await s.t.run((ctx) => ctx.db.query('llmCredentials').collect())).toHaveLength(0)
+  })
+
+  test('an unreachable provider does not block saving', async () => {
+    const s = await setup()
+    listStep = json(503, {})
+    await saveKey(s)
+    expect(listCalls).toHaveLength(3) // first try + 2 retries on 5xx
+    expect(await s.t.run((ctx) => ctx.db.query('llmCredentials').collect())).toHaveLength(1)
+  })
+
+  test('automatic model: empty saved model uses the live default', async () => {
+    const s = await setup()
+    await saveKey(s, 'openai', '')
+    const calls = stubFetch([OPENAI_OK])
+    const reply = await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
+    expect(reply).toMatchObject({ handled: true, model: 'gpt-4o-mini', fallback: false })
+    expect(calls[0].body.model).toBe('gpt-4o-mini')
+  })
+})
+
+describe('live model list on the org key (D-022)', () => {
+  test('a stale requested or saved id falls back to the default and the reply says so', async () => {
+    const s = await setup()
+    await saveKey(s, 'openai', 'gpt-4o')
+    // The provider retires gpt-4o after it was saved.
+    await s.t.run(async (ctx) => {
+      for (const r of await ctx.db.query('llmModelCache').collect()) {
+        await ctx.db.patch(r._id, { models: [{ id: 'gpt-4o-mini', vision: true, created: 1 }] })
+      }
+    })
+    const calls = stubFetch([OPENAI_OK])
+    const reply = await s.as(s.managerA).action(api.llmGateway.chat, {
+      feature: 'chat', messages: MESSAGES, model: 'gemini-1.5-flash',
+    })
+    expect(reply).toMatchObject({ handled: true, model: 'gpt-4o-mini', fallback: true, requestedModel: 'gemini-1.5-flash' })
+    expect(calls[0].body.model).toBe('gpt-4o-mini')
+    expect((await usageRows(s))[0]).toMatchObject({ model: 'gpt-4o-mini' })
+  })
+
+  test('allow-list: an id the provider does not list is never sent; LLM_EXTRA_MODELS adds one', async () => {
+    const s = await setup()
+    await saveKey(s)
+    let calls = stubFetch([OPENAI_OK])
+    await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES, model: 'gpt-5-pro-expensive' })
+    expect(calls[0].body.model).toBe('gpt-4o-mini')
+    vi.stubEnv('LLM_EXTRA_MODELS', 'my-finetune')
+    calls = stubFetch([OPENAI_OK])
+    await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES, model: 'my-finetune' })
+    expect(calls[0].body.model).toBe('my-finetune')
+  })
+
+  test('cache: the list fetched when the key was saved serves later calls (no second fetch)', async () => {
+    const s = await setup()
+    await saveKey(s)
+    expect(listCalls).toHaveLength(1)
+    stubFetch([OPENAI_OK])
+    await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
+    await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
+    expect(listCalls).toHaveLength(1)
+    const rows = await s.t.run((ctx) => ctx.db.query('llmModelCache').collect())
+    expect(rows).toHaveLength(1)
+    expect(JSON.stringify(rows)).not.toContain(ORG_KEY)
+    expect(rows[0].models.map((m) => m.id)).toEqual(['gpt-4o-mini', 'gpt-4o'])
+  })
+
+  test('unreachable provider: clear error without an env default, the env default with one', async () => {
+    const s = await setup()
+    await saveKey(s)
+    await s.t.run(async (ctx) => {
+      for (const r of await ctx.db.query('llmModelCache').collect()) await ctx.db.delete(r._id)
+    })
+    listStep = () => {
+      throw new TypeError('fetch failed')
+    }
+    let calls = stubFetch([OPENAI_OK])
+    await expect(s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })).rejects.toThrow(
+      "Can't reach ChatGPT (OpenAI) to list models; set LLM_DEFAULT_MODEL_OPENAI",
+    )
+    expect(calls).toHaveLength(0)
+    vi.stubEnv('LLM_DEFAULT_MODEL_OPENAI', 'gpt-4o')
+    calls = stubFetch([OPENAI_OK])
+    const reply = await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES, model: 'gpt-4o-mini' })
+    expect(reply).toMatchObject({ model: 'gpt-4o', fallback: true })
+  })
+
+  test('tenant isolation: lists are per company and per key; members only; no key in the reply', async () => {
+    const s = await setup()
+    await saveKey(s)
+    const mine = await s.as(s.managerA).action(api.llmModels.list, {})
+    expect(mine).toMatchObject({ hasOrgKey: true })
+    expect(mine.providers[0]).toMatchObject({ id: 'openai', model: 'gpt-4o-mini', error: null })
+    expect(mine.providers[0].models.map((m) => m.id)).toEqual(['gpt-4o-mini', 'gpt-4o'])
+    expect(JSON.stringify(mine)).not.toContain(ORG_KEY)
+    // Company B sees none of A's keys or lists.
+    expect(await s.as(s.adminB).action(api.llmModels.list, {})).toEqual({ hasOrgKey: false, providers: [] })
+    // Viewers (no ai.use) are refused.
+    await expect(s.as(s.viewerA).action(api.llmModels.list, {})).rejects.toThrow()
+    // B saving the very same key does not reuse A's cached list.
+    const before = listCalls.length
+    await s.as(s.adminB).action(api.llmGateway.saveCredential, { providerId: 'openai', model: '', apiKey: ORG_KEY })
+    expect(listCalls.length).toBe(before + 1)
+    expect(await s.t.run((ctx) => ctx.db.query('llmModelCache').collect())).toHaveLength(2)
+  })
+
+  test('preview lists a pasted key for admins only and stores nothing', async () => {
+    const s = await setup()
+    await expect(
+      s.as(s.managerA).action(api.llmModels.preview, { providerId: 'openai', apiKey: ORG_KEY }),
+    ).rejects.toThrow()
+    const r = await s.as(s.adminA).action(api.llmModels.preview, { providerId: 'openai', apiKey: ORG_KEY })
+    expect(r).toEqual({
+      models: [
+        { id: 'gpt-4o-mini', label: null, vision: true },
+        { id: 'gpt-4o', label: null, vision: true },
+      ],
+      defaultModel: 'gpt-4o-mini',
+      error: null,
+    })
+    expect(listCalls[0].headers.Authorization).toBe(`Bearer ${ORG_KEY}`)
+    expect(await s.t.run((ctx) => ctx.db.query('llmCredentials').collect())).toHaveLength(0)
+    await expect(
+      s.as(s.adminA).action(api.llmModels.preview, { providerId: 'custom', apiKey: ORG_KEY, baseUrl: 'http://169.254.169.254/v1' }),
+    ).rejects.toThrow('Base URL')
+  })
+
+  test('OpenRouter: listed prices drive the cost estimate', async () => {
+    const s = await setup()
+    listStep = json(200, {
+      data: [
+        {
+          id: 'acme/fast-mini',
+          created: 10,
+          pricing: { prompt: '0.000001', completion: '0.000002' },
+          architecture: { input_modalities: ['text', 'image'], output_modalities: ['text'] },
+        },
+      ],
+    })
+    await saveKey(s, 'openrouter', '')
+    stubFetch([OPENAI_OK])
+    await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES })
+    const row = (await usageRows(s))[0]
+    expect(row.model).toBe('acme/fast-mini')
+    expect(row.costUsd).toBeCloseTo((1000 * 1 + 500 * 2) / 1_000_000, 8)
   })
 })
 
@@ -133,6 +305,7 @@ describe('gateway chat', () => {
 
   test('org key: provider called with the org key, usage logged with tokens and cost', async () => {
     const s = await setup()
+    vi.stubEnv('LLM_MODEL_PRICES', '{"gpt-4o":[2.5,10]}')
     await saveKey(s)
     const calls = stubFetch([OPENAI_OK])
     const reply = await s.as(s.managerA).action(api.llmGateway.chat, { feature: 'chat', messages: MESSAGES, model: 'gpt-4o' })

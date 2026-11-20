@@ -18,7 +18,6 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
-import { currentModel } from './llmModels'
 import { type Fetch, type HttpPolicy, requestJson } from './effectHttp'
 import { LlmError, type ChatUsage, type ProviderKind } from './llmProviders'
 
@@ -165,7 +164,7 @@ function visionText(o: VisionOptions): Effect.Effect<{ text: string; usage: Chat
   const policy = o.policy ?? VISION_POLICY
   const data = toBase64(o.image.bytes)
   if (o.kind === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(currentModel('gemini', o.model))}:generateContent?key=${encodeURIComponent(o.apiKey)}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(o.model)}:generateContent?key=${encodeURIComponent(o.apiKey)}`
     return post(
       url,
       {},

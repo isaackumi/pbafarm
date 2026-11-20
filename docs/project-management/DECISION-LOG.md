@@ -352,3 +352,27 @@ All entries below were proposed by the lead architect on 2026-11-18 after discov
 **Consequences.**
 - Revoking app access (membership, phone change, account deletion) ends chat access.
 - WhatsApp templates outside the 24 h window cost money per organization, tracked in `channelMessageCosts`.
+
+## D-022 — Model ids are discovered, not hardcoded
+
+**Status.** Accepted (owner request, 2026-11-20). Code: `convex/lib/llmModels.ts`, `convex/llmModels.ts`, `lib/llmModelsServer.js`, `pages/api/llm/models.js`.
+
+**Context.** Providers retire models on their own schedule. Hardcoded ids (a model list per provider, a default per provider, a price table and a "retired id → current id" map) went stale repeatedly: the assistant still showed and sent `gemini-1.5…` saved in browsers, org credentials and env vars.
+
+**Decision.**
+- No model id is written in the code. Provider metadata (id, label, API kind, base URL, key placeholder) stays; models do not.
+- Each provider's chat models are listed live from the provider (Gemini `GET /v1beta/models` with `generateContent`, OpenAI/Groq/custom `GET /models`, Anthropic `GET /v1/models`, OpenRouter `GET /api/v1/models`), server-side only, with the key that will be used, and filtered to chat models by provider metadata or conservative name rules. Lists are cached for an hour per fingerprint (SHA-256 of scope + provider + base URL + key; the key is never stored): in memory for the Next proxy, in the `llmModelCache` table for Convex (scope = company id for an org key).
+- Allow-list = live list + `LLM_EXTRA_MODELS`. A requested or saved id (browser, org credential, `BOT_LLM_MODEL`) that is not in it falls back to the default; the server reports the model it used and the browser saves that.
+- Default = `LLM_DEFAULT_MODEL_<PROVIDER>` / `LLM_DEFAULT_MODEL` if listed, else one rule (`pickDefaultModel`): stable over preview/experimental/"-latest"/":free", then the fast tier (flash/mini/haiku/instant), then newest by release time or version, then the shorter id. OCR picks among image-capable models (`LLM_VISION_MODEL[_<PROVIDER>]` override).
+- If a list cannot be fetched, only an env default is used; without one the call fails with "Can't reach <provider> to list models; set LLM_DEFAULT_MODEL_<PROVIDER>". Never a stale id.
+- No price table: OpenRouter's listed prices, or `LLM_MODEL_PRICES`; otherwise no estimate. Existing usage rows keep the estimate they were written with.
+
+**Alternatives considered.**
+1. Keep the lists and update them on each retirement (PR #21). Rejected: it failed twice and needs a deploy per retirement.
+2. Fetch lists in the browser. Rejected: keys must never reach the browser (SEC-004).
+3. A hand-curated allow-list in env only. Rejected as the main path: operators would face the same staleness; kept as `LLM_EXTRA_MODELS`.
+
+**Consequences.**
+- One extra (cached) provider request per key per hour; a provider outage of the list endpoint needs `LLM_DEFAULT_MODEL_<PROVIDER>` to keep calls going.
+- The default can change when a provider ships a new fast model; pin it with the env variable when that matters.
+- Cost estimates are unknown for direct OpenAI/Gemini/Anthropic/Groq keys unless `LLM_MODEL_PRICES` is set.

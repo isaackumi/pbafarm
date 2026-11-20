@@ -7,12 +7,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../lib/convexBridge'
 import {
-  LLM_PROVIDERS,
   loadLlmSettings,
   saveLlmSettings,
   chatCompletion,
   draftAutomation,
-  fetchLlmEnvStatus,
+  effectiveModel,
+  fetchLlmModels,
 } from '../lib/llmClient'
 import { Field, GhostButton, GradientButton, Pill, Select } from './ui'
 import { isAutomationRequest } from '../lib/anowaIntent'
@@ -49,29 +49,41 @@ export function useAssistantAccess() {
  * Chat state for the farm assistant (ANLY-005). Every question goes to the
  * server proxy (/api/llm/chat), which holds the provider keys and adds the
  * farm context this user may see (company rollups, last 14 days). The
- * browser only picks a provider and model among those the server has keys for.
+ * browser only picks a provider and model among those the server lists live
+ * from the providers (/api/llm/models, D-022); no model id is hardcoded.
+ * The model line shows the model the server actually used, and a saved
+ * choice the provider no longer offers is replaced by the server's default.
  */
 function useAssistantChat(active, { canDraft = false } = {}) {
   const t = useT()
   const welcome = useCallback(() => [{ role: 'assistant', content: t('assistantUi.welcome') }], [t])
   const [settings, setSettings] = useState(() => loadLlmSettings())
-  const [envStatus, setEnvStatus] = useState(null)
+  const [catalog, setCatalog] = useState(null)
+  const [catalogError, setCatalogError] = useState('')
+  const [lastUsed, setLastUsed] = useState(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [messages, setMessages] = useState(welcome)
 
-  const configured = envStatus?.providers || {}
-  const providerId = configured[settings.provider]
+  const available = catalog?.providers || []
+  const providerId = available.some((p) => p.id === settings.provider)
     ? settings.provider
-    : envStatus?.defaultProvider || settings.provider || 'gemini'
-  const provider = LLM_PROVIDERS[providerId] || LLM_PROVIDERS.gemini
-  const model = settings.models?.[providerId] || provider.defaultModel
+    : catalog?.defaultProvider || available[0]?.id || ''
+  const provider = available.find((p) => p.id === providerId) || null
+  const savedModel = settings.models?.[providerId] || ''
+  const model = effectiveModel(provider, savedModel)
 
-  // Only hit /api/llm/status once the chat is shown (avoids polling on every page).
+  // Load the live model list once the chat is shown (avoids calls on every page).
   useEffect(() => {
-    if (!active || envStatus) return
-    fetchLlmEnvStatus().then((status) => status && setEnvStatus(status))
-  }, [active, envStatus])
+    if (!active || catalog || catalogError) return
+    let live = true
+    fetchLlmModels()
+      .then((c) => live && setCatalog(c))
+      .catch((err) => live && setCatalogError(String(err?.message || err)))
+    return () => {
+      live = false
+    }
+  }, [active, catalog, catalogError])
 
   const update = (patch) =>
     setSettings((prev) => {
@@ -79,6 +91,22 @@ function useAssistantChat(active, { canDraft = false } = {}) {
       saveLlmSettings(next)
       return next
     })
+
+  /** Forget a saved model the provider no longer offers (keeps the provider's default). */
+  const rememberModel = useCallback((pid, id) => {
+    if (!pid || !id) return
+    setSettings((prev) => {
+      if (prev.models?.[pid] === id) return prev
+      const next = { ...prev, models: { ...(prev.models || {}), [pid]: id } }
+      saveLlmSettings(next)
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!provider || provider.error || !provider.models?.length) return
+    if (savedModel && model && savedModel !== model) rememberModel(provider.id, model)
+  }, [provider, savedModel, model, rememberModel])
 
   const send = async (text) => {
     const question = (text ?? input).trim()
@@ -126,7 +154,12 @@ function useAssistantChat(active, { canDraft = false } = {}) {
         asOf: localToday(),
         messages: [...history, { role: 'user', content: question }],
       })
-      setMessages((m) => [...m, { role: 'assistant', content: reply }])
+      setMessages((m) => [...m, { role: 'assistant', content: reply.text }])
+      if (reply.model) {
+        setLastUsed({ provider: reply.provider || providerId, model: reply.model })
+        // The server used its default because the saved model is gone: save what it used.
+        if (reply.fallback) rememberModel(reply.provider || providerId, reply.model)
+      }
     } catch (err) {
       const msg = String(err?.message || err)
       setMessages((m) => [
@@ -147,10 +180,37 @@ function useAssistantChat(active, { canDraft = false } = {}) {
     setMessages(welcome())
   }
 
-  const available = Object.values(LLM_PROVIDERS).filter((p) => configured[p.id])
-  const modelLine = envStatus && !envStatus.hasAny ? t('assistantUi.noKey') : `${provider.label} · ${model}`
+  const usedModel = lastUsed && lastUsed.provider === providerId ? lastUsed.model : model
+  let modelLine
+  if (catalogError) modelLine = t('assistantUi.modelsError')
+  else if (!catalog) modelLine = t('assistantUi.modelsLoading')
+  else if (!available.length) modelLine = t('assistantUi.noKey')
+  else if (!usedModel) modelLine = `${provider?.label || providerId} · ${t('assistantUi.modelUnavailable')}`
+  else modelLine = `${provider?.label || providerId} · ${usedModel}`
 
-  return { input, setInput, busy, messages, send, reset, update, settings, providerId, provider, model, available, modelLine }
+  const retryModels = () => {
+    setCatalogError('')
+    setCatalog(null)
+  }
+
+  return {
+    input,
+    setInput,
+    busy,
+    messages,
+    send,
+    reset,
+    update,
+    settings,
+    providerId,
+    provider,
+    model,
+    available,
+    modelLine,
+    modelsLoading: !catalog && !catalogError,
+    modelsError: catalogError,
+    retryModels,
+  }
 }
 
 function TypingDots() {
@@ -373,7 +433,26 @@ function Composer({ chat, inputRef, compact = false }) {
 
 function ModelSettings({ chat, idPrefix }) {
   const t = useT()
+  if (chat.modelsLoading) {
+    return (
+      <p className="flex items-center gap-2 text-xs text-muted" role="status">
+        <Loader2 size={14} className="animate-spin" aria-hidden />
+        {t('assistantUi.modelsLoading')}
+      </p>
+    )
+  }
+  if (chat.modelsError) {
+    return (
+      <div className="flex flex-col gap-2" role="alert">
+        <p className="text-xs text-alert">{t('assistantUi.modelsErrorDetail', { message: chat.modelsError })}</p>
+        <GhostButton size="sm" onClick={chat.retryModels}>
+          {t('assistantUi.modelsRetry')}
+        </GhostButton>
+      </div>
+    )
+  }
   if (chat.available.length === 0) return <p className="text-xs text-muted">{t('assistantUi.noProvider')}</p>
+  const models = chat.provider?.models || []
   return (
     <div className="flex flex-col gap-3">
       <Field label={t('assistantUi.provider')} htmlFor={`${idPrefix}-provider`}>
@@ -385,16 +464,19 @@ function ModelSettings({ chat, idPrefix }) {
           ))}
         </Select>
       </Field>
-      {chat.provider.models.length > 0 && (
+      {chat.provider?.error && <p className="text-xs text-alert">{chat.provider.error}</p>}
+      {models.length > 0 && (
         <Field label={t('assistantUi.model')} htmlFor={`${idPrefix}-model`}>
           <Select
             id={`${idPrefix}-model`}
-            value={chat.model}
+            value={chat.model || ''}
             onChange={(e) => chat.update({ models: { ...chat.settings.models, [chat.providerId]: e.target.value } })}
           >
-            {chat.provider.models.map((m) => (
-              <option key={m} value={m}>
-                {m}
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label && m.label !== m.id ? `${m.label} (${m.id})` : m.id}
+                {m.vision ? ` · ${t('assistantUi.vision')}` : ''}
+                {m.id === chat.provider.defaultModel ? ` · ${t('assistantUi.defaultModel')}` : ''}
               </option>
             ))}
           </Select>

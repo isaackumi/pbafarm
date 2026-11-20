@@ -28,6 +28,8 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70])
 type Sent = { url: string; body: Record<string, unknown> }
 let sent: Sent[] = []
 let visionCalls = 0
+let visionUrls: string[] = []
+let modelListCalls = 0
 let mediaDownloads = 0
 /** What the vision model answers next. */
 let visionText = ''
@@ -37,13 +39,30 @@ beforeEach(() => {
   for (const [k, val] of Object.entries(ENV)) vi.stubEnv(k, val)
   sent = []
   visionCalls = 0
+  visionUrls = []
+  modelListCalls = 0
   mediaDownloads = 0
   mediaSize = JPEG.length
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input)
+      if (url.startsWith('https://generativelanguage.googleapis.com/v1beta/models?')) {
+        // Live model list (D-022): the vision model is picked from it.
+        modelListCalls++
+        return new Response(
+          JSON.stringify({
+            models: [
+              { name: 'models/gemini-9-flash', supportedGenerationMethods: ['generateContent'] },
+              { name: 'models/gemini-9-flash-preview', supportedGenerationMethods: ['generateContent'] },
+              { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
       if (url.startsWith('https://generativelanguage.googleapis.com/')) {
+        visionUrls.push(url.split('?')[0])
         visionCalls++
         return new Response(
           JSON.stringify({
@@ -227,6 +246,10 @@ describe('BOT-006 logbook photo OCR', () => {
     const replies = await drain(s)
 
     expect(visionCalls).toBe(1)
+    // Vision model from the live list: stable flash over preview, embeddings dropped (D-022).
+    expect(modelListCalls).toBe(1)
+    expect(visionUrls).toEqual(['https://generativelanguage.googleapis.com/v1beta/models/gemini-9-flash:generateContent'])
+    expect((await rows(s, 'llmUsage'))[0]).toMatchObject({ feature: 'ocr', model: 'gemini-9-flash' })
     const drafts = await rows(s, 'pendingBotActions')
     // A1 exact, CIO → C10 (look-alike). A2 is another site, B1 another organization, Z99 unknown.
     expect(drafts.map((d) => d.payload.kind === 'daily_entry' && d.payload.cageName).sort()).toEqual(['A1', 'C10'])

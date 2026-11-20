@@ -34,6 +34,8 @@ import {
 import { decryptJson, readEncryptionKey } from './lib/crypto'
 import { FetchLive } from './lib/effectHttp'
 import { PROVIDERS, llmCredentialAad } from './lib/llmGateway'
+import { listedPrice } from './lib/llmModels'
+import { chooseModel } from './llmModels'
 import { chatWithUsage, type ChatReply } from './lib/llmProviders'
 import type { ReportBegin } from './llmGateway'
 
@@ -334,6 +336,17 @@ async function phrase(
   }
   const provider = PROVIDERS[begun.providerId]
   if (!provider || !apiKey) return null
+  // The model from the key's live list (D-022); none reachable → template.
+  const { choice, models } = await chooseModel(ctx, {
+    target: { providerId: provider.id, kind: provider.kind, baseUrl, apiKey },
+    scope: begun.mode === 'org_key' ? companyId : 'server',
+    saved: begun.model,
+  })
+  if (!choice.ok) {
+    console.warn(`[aiReports] ${choice.error}`)
+    return null
+  }
+  const model = choice.model
   const started = Date.now()
   const outcome = await Effect.runPromise(
     Effect.result(
@@ -342,7 +355,7 @@ async function phrase(
         providerId: provider.id,
         baseUrl,
         apiKey,
-        model: begun.model,
+        model,
         messages: reportMessages(pack, lang),
         temperature: 0.2,
       }),
@@ -354,15 +367,16 @@ async function phrase(
     userId,
     source: begun.mode,
     providerId: begun.providerId,
-    model: begun.model,
+    model,
     ok: !!reply,
     error: Result.isFailure(outcome) ? outcome.failure.message : undefined,
     inputTokens: reply?.usage.inputTokens,
     outputTokens: reply?.usage.outputTokens,
     durationMs: Date.now() - started,
+    ...(listedPrice(models, model) ?? {}),
   })
   const text = reply ? acceptReply(reply.text, pack, lang) : null
-  return text ? { text, providerId: begun.providerId, model: begun.model } : null
+  return text ? { text, providerId: begun.providerId, model } : null
 }
 
 type GenerateArgs = {

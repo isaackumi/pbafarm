@@ -24,7 +24,9 @@ import type { Id } from '../_generated/dataModel'
 import { components, internal } from '../_generated/api'
 import { can } from '../lib/permissions'
 import { rateLimiter, retryAfterText } from '../lib/rateLimits'
-import { PROVIDERS, gatewayModel, llmCredentialAad } from '../lib/llmGateway'
+import { PROVIDERS, llmCredentialAad } from '../lib/llmGateway'
+import { listedPrice, type Price } from '../lib/llmModels'
+import { chooseModel, providerBaseUrl } from '../llmModels'
 import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { companyCredentials, insertUsage, pickCredential } from '../llmGateway'
 import { todayIn, zoneFor } from '../lib/dates'
@@ -163,7 +165,8 @@ export const prepare = internalMutation({
         ...base,
         source: 'org_key' as const,
         providerId: cred.providerId,
-        model: gatewayModel(cred.providerId, cred.model),
+        // Saved preference; the action resolves it against the live list (D-022).
+        model: cred.model,
         baseUrl: cred.baseUrl ?? null,
         credentialId: cred._id,
         ciphertext: secret.ciphertext,
@@ -175,7 +178,7 @@ export const prepare = internalMutation({
       ...base,
       source: 'server_key' as const,
       providerId,
-      model: process.env.BOT_LLM_MODEL || PROVIDERS[providerId]?.defaultModel || 'gpt-4o-mini',
+      model: process.env.BOT_LLM_MODEL || '',
       baseUrl: null,
       credentialId: null,
       ciphertext: null,
@@ -222,6 +225,8 @@ export const recordUsage = internalMutation({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     durationMs: v.optional(v.number()),
+    inputPerM: v.optional(v.number()),
+    outputPerM: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -353,6 +358,8 @@ export async function runAgent(ctx: ActionCtx, turn: AgentTurn): Promise<ChatMes
   const s = t(p.locale)
 
   let model = testHooks.languageModel
+  let modelId = p.model
+  let price: Price | undefined
   if (!model) {
     let apiKey = ''
     if (p.source === 'org_key') {
@@ -370,8 +377,21 @@ export async function runAgent(ctx: ActionCtx, turn: AgentTurn): Promise<ChatMes
       apiKey = serverKey(p.providerId)
     }
     const baseURL = openAiBaseUrl(p.providerId, p.baseUrl)
-    if (!apiKey || !baseURL) return [{ kind: 'text', text: s.aiUnavailable }]
-    model = createOpenAICompatible({ name: p.providerId, baseURL, apiKey }).chatModel(p.model)
+    const provider = PROVIDERS[p.providerId]
+    if (!apiKey || !baseURL || !provider) return [{ kind: 'text', text: s.aiUnavailable }]
+    // A saved or BOT_LLM_MODEL id the provider no longer lists falls back to its default.
+    const { choice, models } = await chooseModel(ctx, {
+      target: { providerId: provider.id, kind: provider.kind, baseUrl: providerBaseUrl(provider.id, p.baseUrl), apiKey },
+      scope: p.source === 'org_key' ? p.companyId : 'server',
+      saved: p.model,
+    })
+    if (!choice.ok) {
+      console.warn(`[bot] ${choice.error}`)
+      return [{ kind: 'text', text: s.aiUnavailable }]
+    }
+    modelId = choice.model
+    price = listedPrice(models, modelId)
+    model = createOpenAICompatible({ name: p.providerId, baseURL, apiKey }).chatModel(modelId)
   }
 
   const env: ToolEnv = { bindingId: turn.bindingId, sourceMessageId: turn.sourceMessageId, sentAt: turn.sentAt, drafts: [] }
@@ -389,7 +409,8 @@ export async function runAgent(ctx: ActionCtx, turn: AgentTurn): Promise<ChatMes
     userId: p.userId,
     source: p.source,
     providerId: p.providerId,
-    model: p.model,
+    model: modelId,
+    ...(price ?? {}),
   }
   let reply = ''
   try {

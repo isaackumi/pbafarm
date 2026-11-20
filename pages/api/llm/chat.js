@@ -114,20 +114,37 @@ export default async function handler(req, res) {
       const failed = gatewayError(err)
       return res.status(failed.status).json({ error: failed.error })
     }
-    if (org.handled) return res.status(200).json({ text: org.text, provider: org.providerId, keySource: 'org' })
+    // `model` is what was actually used; `fallback` tells the browser its saved choice is gone (D-022).
+    if (org.handled) {
+      return res.status(200).json({
+        text: org.text,
+        provider: org.providerId,
+        model: org.model,
+        fallback: org.fallback,
+        requestedModel: org.requestedModel,
+        keySource: 'org',
+      })
+    }
 
-    const resolved = resolveProvider(body.value.provider, body.value.model)
+    const resolved = await resolveProvider(body.value.provider, body.value.model)
     if (resolved.error) return res.status(resolved.status).json({ error: resolved.error })
 
     let text
     try {
-      text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat')
+      text = await chatWithServerKey(auth.client, { ...resolved.chat, messages, temperature, referer }, 'chat', resolved.price)
     } catch (err) {
       if (!err?.data) throw err
       const failed = gatewayError(err)
       return res.status(failed.status).json({ error: failed.error })
     }
-    return res.status(200).json({ text, provider: resolved.providerId, keySource: 'server' })
+    return res.status(200).json({
+      text,
+      provider: resolved.providerId,
+      model: resolved.model,
+      fallback: resolved.fallback,
+      requestedModel: resolved.requestedModel,
+      keySource: 'server',
+    })
   } catch (err) {
     console.error('[api/llm/chat]', err?.message)
     return res.status(500).json({ error: err?.message || 'Assistant request failed' })

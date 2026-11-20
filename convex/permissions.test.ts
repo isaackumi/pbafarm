@@ -59,6 +59,8 @@ const ALLOWLIST: Record<string, string> = {
   'inboundWebhooks.rotateSecret': 'action; guarded by requireInboundAdmin in internal.inboundWebhooks.owner',
   'llmGateway.saveCredential': 'action; guarded by requireLlmAdmin in internal.llmGateway.upsertCredentialRow',
   'llmGateway.chat': 'action; guarded by requireMember(ai.use) in internal.llmGateway.begin',
+  'llmModels.list': 'action; guarded by requireMember(ai.use) in internal.llmModels.orgSources',
+  'llmModels.preview': 'action; guarded by requireMember(integrations.manage) in internal.llmModels.beginPreview',
   'files.attachR2': 'action; guarded by requireMember(files.upload) + upload binding in internal.files.r2UploadForAttach / attachR2Object',
   'messaging/channels.sendTest': 'action; guarded by requireMessagingAdmin in internal.messaging.channels.prepareTest',
   'aiReports.generateNow': 'action; guarded by requireMember(reports.view) and the site scope in internal.aiReports.access',

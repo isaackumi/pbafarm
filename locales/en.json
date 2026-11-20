@@ -2817,7 +2817,14 @@
       "losses": "Which cages lost the most fish this cycle?",
       "harvest": "Which units are closest to harvest weight?",
       "report": "Summarise this week’s feed and mortality"
-    }
+    },
+    "modelsLoading": "Loading models…",
+    "modelsError": "Models unavailable",
+    "modelsErrorDetail": "Could not load the model list: {message}",
+    "modelsRetry": "Try again",
+    "modelUnavailable": "no model available",
+    "vision": "reads photos",
+    "defaultModel": "default"
   },
   "calendarUi": {
     "title": "Calendar",
@@ -3264,7 +3271,17 @@
       "topUsers": "Top users (30 days)",
       "callsCount": "{count} calls",
       "logTitle": "Usage log",
-      "logHint": "Costs are estimates from public list prices."
+      "logHint": "Costs are estimates from public list prices.",
+      "modelAuto": "Automatic (provider default)",
+      "modelAutoWith": "Automatic: {model}",
+      "loadModels": "Load models",
+      "loadingModels": "Loading models…",
+      "modelsFound": "{count} models available",
+      "modelsFailed": "Could not list models: {message}",
+      "modelHint": "Leave empty to use the provider’s default. Paste the key, then load the list to choose.",
+      "vision": "reads photos",
+      "visionHint": "Models marked “reads photos” can read logbook pages (OCR).",
+      "modelGone": "{model} is no longer offered; calls use {fallback}"
     },
     "sensors": {
       "title": "Sensors",

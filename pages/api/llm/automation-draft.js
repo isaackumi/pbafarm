@@ -98,7 +98,7 @@ export default async function handler(req, res) {
         referer,
       })
       if (org.handled) return org.text
-      const resolved = resolveProvider(provider, model)
+      const resolved = await resolveProvider(provider, model)
       if (resolved.error) {
         const err = new Error(resolved.error)
         err.status = resolved.status
@@ -108,6 +108,7 @@ export default async function handler(req, res) {
         auth.client,
         { ...resolved.chat, messages, temperature: TEMPERATURE, referer },
         'chat',
+        resolved.price,
       )
     }
 
