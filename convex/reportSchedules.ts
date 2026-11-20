@@ -312,6 +312,19 @@ export const create = mutation({
   returns: v.id('reportSchedules'),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'reports.manage' })
+    return await createScheduleAs(ctx, m, args)
+  },
+})
+
+/**
+ * A report schedule (ANLY-007), shared by the schedules page and Ask Anowa's
+ * schedule draft. `m` must hold 'reports.manage'; 'reports.export' is checked here.
+ */
+export async function createScheduleAs(
+  ctx: MutationCtx,
+  m: MemberContext,
+  args: TimingArgs & { reportId: Id<'savedReports'>; recipientIds: Id<'users'>[]; enabled: boolean },
+): Promise<Id<'reportSchedules'>> {
     requirePermission(m, 'reports.export')
     const companyId = companyOf(m)
     const report = await ctx.db.get(args.reportId)
@@ -344,8 +357,7 @@ export const create = mutation({
       newValues: { reportId: report._id, frequency: timing.frequency, recipients: recipientIds.length },
     })
     return id
-  },
-})
+}
 
 export const update = mutation({
   args: { scheduleId: v.id('reportSchedules'), ...timingArgs },

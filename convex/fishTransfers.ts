@@ -302,6 +302,28 @@ export const createFishTransfer = mutation({
   returns: v.id('fishTransfers'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.transfer.request' })
+    return await createFishTransferAs(ctx, user, args)
+  },
+})
+
+/**
+ * A fish transfer (to approval when the farm requires it), shared by the form
+ * and Ask Anowa's transfer draft. The caller has checked
+ * 'production.transfer.request'.
+ */
+export async function createFishTransferAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: {
+    sourceCageId: Id<'cages'>
+    destinationCageId: Id<'cages'>
+    transferDate: string
+    quantity: number
+    abw: number
+    transferSupervisor?: string
+    notes?: string
+  },
+): Promise<Id<'fishTransfers'>> {
     if (args.sourceCageId === args.destinationCageId) {
       throw new Error('Source and destination cages must be different')
     }
@@ -476,8 +498,7 @@ export const createFishTransfer = mutation({
     if (status === 'pending_approval') await onApprovalRequested(ctx, 'transfer', transferId)
 
     return transferId
-  },
-})
+}
 
 export const approveFishTransfer = mutation({
   args: { id: v.id('fishTransfers') },

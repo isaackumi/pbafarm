@@ -261,6 +261,19 @@ export const issueInvoice = mutation({
   returns: v.id('invoices'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
+    return await issueInvoiceAs(ctx, user, args)
+  },
+})
+
+/**
+ * Issue the next invoice number for a sale, shared by the sales page and Ask
+ * Anowa's sale draft. The caller has checked 'finance.sales.record'.
+ */
+export async function issueInvoiceAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: { saleId: Id<'sales'>; issueDate: string; dueDate?: string; notes?: string },
+): Promise<Id<'invoices'>> {
     const sale = await loadSale(ctx, user, args.saleId)
     checkDate(args.issueDate, 'Invoice date')
     if (args.dueDate) {
@@ -306,8 +319,7 @@ export const issueInvoice = mutation({
       locationId: sale.locationId,
     })
     return id
-  },
-})
+}
 
 export const voidInvoice = mutation({
   args: { invoiceId: v.id('invoices') },

@@ -8,8 +8,8 @@
  * like the other production modules: every unit of a plan must belong to the
  * caller's organization and be in their sites.
  */
-import { v } from 'convex/values'
-import { mutation, query, type QueryCtx } from './_generated/server'
+import { v, type Infer } from 'convex/values'
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireMember, type MemberContext } from './lib/permissions'
 import { userError } from './lib/errors'
@@ -145,7 +145,17 @@ export const assumptions = query({
   handler: async (ctx, args) => {
     if (!isBusinessDate(args.asOf)) throw userError('VALIDATION', 'As of must be a date (YYYY-MM-DD)')
     const m = await requireMember(ctx, { permission: 'production.plan.manage' })
+    return await planAssumptionsFor(ctx, m, args.unitIds, args.asOf)
+  },
+})
+
+/**
+ * Where a new plan starts for these units (see `assumptions`), shared with
+ * Ask Anowa's plan draft. Null when none of the units is the caller's.
+ */
+export async function planAssumptionsFor(ctx: QueryCtx, m: MemberContext, unitIds: Id<'cages'>[], asOf: string) {
     if (!m.companyId) return null
+    const args = { unitIds, asOf }
     const units = await scopedUnits(ctx, m, args.unitIds)
     if (!units.length) return null
     const site = commonSite(units)
@@ -212,8 +222,7 @@ export const assumptions = query({
       tempRange: known.length ? { min: Math.min(...known), max: Math.max(...known) } : null,
       cycles: cycles.map(({ feedKg: _f, gainKg: _g, ...c }) => c),
     }
-  },
-})
+}
 
 const planRow = v.object({
   _id: v.id('cyclePlans'),
@@ -291,6 +300,23 @@ export const save = mutation({
   returns: v.id('cyclePlans'),
   handler: async (ctx, args) => {
     const m = await requireMember(ctx, { permission: 'production.plan.manage' })
+    return await savePlanAs(ctx, m, args)
+  },
+})
+
+export type PlanSaveArgs = {
+  planId?: Id<'cyclePlans'>
+  name: string
+  unitIds: Id<'cages'>[]
+  inputs: Infer<typeof cyclePlanInputs>
+  assumptions: Infer<typeof cyclePlanAssumptions>
+}
+
+/**
+ * Create or replace a saved plan, shared by the planner page and Ask Anowa's
+ * plan draft. `m` must hold 'production.plan.manage'.
+ */
+export async function savePlanAs(ctx: MutationCtx, m: MemberContext, args: PlanSaveArgs): Promise<Id<'cyclePlans'>> {
     const companyId = m.companyId
     if (!companyId) throw userError('FORBIDDEN', 'Choose an organization first')
     const name = args.name.trim()
@@ -357,8 +383,7 @@ export const save = mutation({
       newValues: { name, unitIds: ids, inputs: args.inputs, assumptions: args.assumptions },
     })
     return id
-  },
-})
+}
 
 export const remove = mutation({
   args: { planId: v.id('cyclePlans') },

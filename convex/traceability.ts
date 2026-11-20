@@ -158,6 +158,27 @@ export const createLot = mutation({
   returns: v.object({ id: v.id('harvestLots'), lotCode: v.string() }),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
+    return await createLotAs(ctx, user, args)
+  },
+})
+
+/**
+ * A harvest lot (TRACE-001), shared by the lots form and Ask Anowa's harvest
+ * draft. The caller has checked 'production.harvest.record'.
+ */
+export async function createLotAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: {
+    harvestId: Id<'harvestRecords'>
+    lotCode?: string
+    weightKg: number
+    fishCount?: number
+    grade?: string
+    destination?: string
+    notes?: string
+  },
+): Promise<{ id: Id<'harvestLots'>; lotCode: string }> {
     const harvest = await ctx.db.get(args.harvestId)
     assertOwns(user, harvest, 'Harvest')
     const companyId = await writeCompanyId(user)
@@ -207,8 +228,7 @@ export const createLot = mutation({
       locationId: harvest.locationId,
     })
     return { id, lotCode }
-  },
-})
+}
 
 export const removeLot = mutation({
   args: { id: v.id('harvestLots') },

@@ -306,6 +306,22 @@ export const record = idempotentMutation('waterQuality.record', {
   },
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.daily.record' })
+    return await recordReadingAs(ctx, user, args)
+  },
+})
+
+export type WaterReadingArgs = {
+  unitId: Id<'cages'>
+  measuredAt?: number
+  sampleDepthM?: number
+  notes?: string
+} & Partial<Record<WqParameter, number>>
+
+/**
+ * The manual log itself, shared by the form and Ask Anowa's water reading
+ * draft. The caller has checked 'production.daily.record'.
+ */
+export async function recordReadingAs(ctx: MutationCtx, user: Doc<'users'>, args: WaterReadingArgs) {
     const unit = await loadUnit(ctx, user, args.unitId)
     if (unit.archivedAt) throw new Error('This unit is archived')
     const now = Date.now()
@@ -333,8 +349,7 @@ export const record = idempotentMutation('waterQuality.record', {
       locationId: unit.locationId,
     })
     return { id, breaches: breaches.map((b) => ({ parameter: b.parameter, label: b.label, value: b.value, direction: b.direction, limit: b.limit })) }
-  },
-})
+}
 
 /** Delete a manual reading (its author or an admin). Mirrors follow their record. */
 export const remove = mutation({

@@ -274,7 +274,21 @@ function DraftRow({ item, index, muted }) {
     d ? new Date(`${d}T12:00:00`).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' }) : t('askAnowa.draft.fields.noDue')
   const unitName = p.cageName || ''
   const listUnits = (names) => (names.length > 6 ? `${names.slice(0, 6).join(', ')} ${t('askAnowa.draft.fields.andMore', { count: names.length - 6 })}` : names.join(', '))
-  const meta = p.kind === 'project_milestone' || p.kind === 'project_cost'
+  const farmMeta =
+    p.kind === 'stocking' || p.kind === 'fish_transfer'
+      ? t(`askAnowa.draft.kinds.${kind}.${p.needsApproval ? 'metaApproval' : 'meta'}`, { unit: p.cageName || p.destinationName })
+      : p.kind === 'sale'
+        ? p.cageName
+          ? t('askAnowa.draft.kinds.sale.metaUnit', { unit: p.cageName })
+          : t('askAnowa.draft.kinds.sale.meta')
+        : p.kind === 'sampling' || p.kind === 'water_reading' || p.kind === 'harvest'
+          ? t(`askAnowa.draft.kinds.${kind}.meta`, { unit: unitName })
+          : p.kind === 'approval_decision' || p.kind === 'report_schedule' || p.kind === 'cycle_plan'
+            ? t(`askAnowa.draft.kinds.${kind}.meta`)
+            : null
+  const money = (n) => formatCurrency(n, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const weekday = (d) => new Date(Date.UTC(2023, 0, 1 + d)).toLocaleDateString(lang, { weekday: 'long', timeZone: 'UTC' })
+  const meta = farmMeta ?? (p.kind === 'project_milestone' || p.kind === 'project_cost'
     ? t(`askAnowa.draft.kinds.${kind}.meta`, { project: p.projectName })
     : p.kind === 'project_create'
       ? p.siteName
@@ -284,7 +298,7 @@ function DraftRow({ item, index, muted }) {
       ? unitName
         ? t(`askAnowa.draft.kinds.${kind}.metaUnit`, { unit: unitName })
         : t(`askAnowa.draft.kinds.${kind}.meta`)
-      : t(`askAnowa.draft.kinds.${kind}.meta`, { unit: unitName })
+      : t(`askAnowa.draft.kinds.${kind}.meta`, { unit: unitName }))
 
   let fields = null
   if (p.kind === 'daily_entry') {
@@ -425,6 +439,133 @@ function DraftRow({ item, index, muted }) {
           )}
         </Field>
         {p.note && <Field label={t('askAnowa.draft.fields.note')}>{p.note}</Field>}
+      </>
+    )
+  } else if (p.kind === 'sampling') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.fishCounted')} mono>
+          {num(p.fishCounted, 0)}
+        </Field>
+        <Field label={typeof p.abwBefore === 'number' ? t('askAnowa.draft.fields.abwAfter', { abw: num(p.abwBefore) }) : t('askAnowa.draft.fields.abw')} mono>
+          {num(p.abwG)} g
+        </Field>
+        <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
+      </>
+    )
+  } else if (p.kind === 'water_reading') {
+    const values = [
+      ['do', p.dissolvedOxygen, 'mg/L'],
+      ['temperature', p.temperatureC, '°C'],
+      ['ph', p.ph, ''],
+      ['ammonia', p.ammonia, 'mg/L'],
+      ['nitrite', p.nitrite, 'mg/L'],
+      ['secchi', p.secchiCm, 'cm'],
+    ].filter(([, x]) => typeof x === 'number')
+    fields = (
+      <>
+        {values.map(([k, x, unit]) => (
+          <Field key={k} label={t(`askAnowa.draft.fields.${k}`)} mono>
+            {num(x, 2)}
+            {unit ? ` ${unit}` : ''}
+          </Field>
+        ))}
+      </>
+    )
+  } else if (p.kind === 'harvest') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.weight')} mono>
+          {kg(p.totalWeightKg)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.fish')} mono>
+          {num(p.count, 0)} <span className="text-faint">· {num(p.abwG)} g</span>
+        </Field>
+        <Field label={t('askAnowa.draft.fields.type')}>{t(`askAnowa.draft.fields.${p.harvestType}`)}</Field>
+        {p.withLot && <Field label={t('askAnowa.draft.fields.lot')}>{p.lotCode || t('askAnowa.draft.fields.newLot')}</Field>}
+        <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
+      </>
+    )
+  } else if (p.kind === 'stocking') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.fish')} mono>
+          {num(p.fishCount, 0)} <span className="text-faint">· {num(p.abwG)} g</span>
+        </Field>
+        <Field label={t('askAnowa.draft.fields.biomass')} mono>
+          {kg(p.biomassKg)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
+      </>
+    )
+  } else if (p.kind === 'fish_transfer') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.fromUnit')}>{p.sourceName}</Field>
+        <Field label={t('askAnowa.draft.fields.toUnit')}>{p.destinationName}</Field>
+        <Field label={t('askAnowa.draft.fields.fish')} mono>
+          {num(p.quantity, 0)} <span className="text-faint">{t('askAnowa.draft.fields.from', { count: p.sourceCount })}</span>
+        </Field>
+        <Field label={t('askAnowa.draft.fields.date')}>{day(item.date)}</Field>
+      </>
+    )
+  } else if (p.kind === 'sale') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.buyer')}>{p.customerName}</Field>
+        <Field label={t('askAnowa.draft.fields.weight')} mono>
+          {kg(p.weightKg)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.price')} mono>
+          {money(p.pricePerKg)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.total')} mono>
+          {money(p.totalAmount)}
+        </Field>
+        {p.invoice && (
+          <Field label={t('askAnowa.draft.fields.invoice')}>
+            {p.dueDate ? t('askAnowa.draft.fields.invoiceDue', { date: day(p.dueDate) }) : t('askAnowa.draft.fields.invoiceYes')}
+          </Field>
+        )}
+      </>
+    )
+  } else if (p.kind === 'approval_decision') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.request')}>{p.subject}</Field>
+        {p.reason && <Field label={t('askAnowa.draft.fields.reason')}>{p.reason}</Field>}
+      </>
+    )
+  } else if (p.kind === 'report_schedule') {
+    const when =
+      p.frequency === 'weekly'
+        ? t('askAnowa.draft.fields.weekly', { day: weekday(p.weekday ?? 1) })
+        : p.frequency === 'monthly'
+          ? t('askAnowa.draft.fields.monthly', { day: p.dayOfMonth ?? 1 })
+          : t('askAnowa.draft.fields.daily')
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.report')}>{p.reportName}</Field>
+        <Field label={t('askAnowa.draft.fields.when')}>
+          {when} · {p.localTime}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.recipients')}>{listUnits(p.recipientNames)}</Field>
+      </>
+    )
+  } else if (p.kind === 'cycle_plan') {
+    fields = (
+      <>
+        <Field label={t('askAnowa.draft.fields.units')}>{listUnits(p.unitNames)}</Field>
+        <Field label={t('askAnowa.draft.fields.harvestOn')}>{p.harvestOn ? day(p.harvestOn) : t('askAnowa.draft.fields.notReached')}</Field>
+        <Field label={t('askAnowa.draft.fields.harvestKg')} mono>
+          {kg(p.harvestKg)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.margin')} mono>
+          {money(p.margin)}
+        </Field>
+        <Field label={t('askAnowa.draft.fields.cashNeeded')} mono>
+          {money(p.cashNeeded)}
+        </Field>
       </>
     )
   } else {

@@ -1,6 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { keeperAssignPayload, keeperCoverPayload, keeperNudgePayload } from '../keepers/validators'
+import { cyclePlanAssumptions, cyclePlanInputs } from '../lib/cyclePlanValidators'
 
 /**
  * Farm bot tables (BOT-001..004, doc 23). Spread into the schema like
@@ -119,6 +120,134 @@ export const projectCostPayload = v.object({
   budget: v.number(),
 })
 
+/**
+ * Farm records drafted by Ask Anowa (web, convex/anowa/farmDrafts.ts). Each
+ * confirm goes through the form's own helper (sampling, water log, harvest,
+ * stocking, transfer, sale, approval, report schedule, cycle plan).
+ */
+/** A bi-weekly sample: fish counted and their total weight; ABW = weight / count. */
+export const samplingPayload = v.object({
+  kind: v.literal('sampling'),
+  cageId: v.id('cages'),
+  cageName: v.string(),
+  fishCounted: v.number(),
+  totalWeightG: v.number(),
+  abwG: v.number(),
+  /** ABW on record before this sample (card: before / after). */
+  abwBefore: v.optional(v.number()),
+})
+
+export const waterReadingPayload = v.object({
+  kind: v.literal('water_reading'),
+  cageId: v.id('cages'),
+  cageName: v.string(),
+  dissolvedOxygen: v.optional(v.number()),
+  temperatureC: v.optional(v.number()),
+  ph: v.optional(v.number()),
+  ammonia: v.optional(v.number()),
+  nitrite: v.optional(v.number()),
+  secchiCm: v.optional(v.number()),
+  notes: v.optional(v.string()),
+})
+
+export const harvestPayload = v.object({
+  kind: v.literal('harvest'),
+  cageId: v.id('cages'),
+  cageName: v.string(),
+  harvestType: v.union(v.literal('complete'), v.literal('partial')),
+  totalWeightKg: v.number(),
+  abwG: v.number(),
+  count: v.number(),
+  fishBefore: v.optional(v.number()),
+  /** A lot for the whole harvest is created with it (TRACE-001); code generated when unset. */
+  withLot: v.boolean(),
+  lotCode: v.optional(v.string()),
+  grade: v.optional(v.string()),
+  destination: v.optional(v.string()),
+  notes: v.optional(v.string()),
+})
+
+export const stockingPayload = v.object({
+  kind: v.literal('stocking'),
+  cageId: v.id('cages'),
+  cageName: v.string(),
+  fishCount: v.number(),
+  abwG: v.number(),
+  biomassKg: v.number(),
+  species: v.optional(v.string()),
+  sourceLocation: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  /** The farm's rule when drafted: the request waits for an approver. */
+  needsApproval: v.boolean(),
+})
+
+export const fishTransferPayload = v.object({
+  kind: v.literal('fish_transfer'),
+  sourceCageId: v.id('cages'),
+  sourceName: v.string(),
+  destinationCageId: v.id('cages'),
+  destinationName: v.string(),
+  quantity: v.number(),
+  abwG: v.number(),
+  sourceCount: v.number(),
+  notes: v.optional(v.string()),
+  needsApproval: v.boolean(),
+})
+
+export const salePayload = v.object({
+  kind: v.literal('sale'),
+  customerId: v.optional(v.id('customers')),
+  customerName: v.string(),
+  weightKg: v.number(),
+  pricePerKg: v.number(),
+  totalAmount: v.number(),
+  currency: v.string(),
+  cageId: v.optional(v.id('cages')),
+  cageName: v.optional(v.string()),
+  harvestId: v.optional(v.id('harvestRecords')),
+  harvestDate: v.optional(v.string()),
+  /** Issue the next invoice number with the sale. */
+  invoice: v.boolean(),
+  dueDate: v.optional(v.string()),
+  notes: v.optional(v.string()),
+})
+
+export const approvalDecisionPayload = v.object({
+  kind: v.literal('approval_decision'),
+  approvalKind: v.union(v.literal('stocking'), v.literal('topup'), v.literal('transfer')),
+  recordId: v.string(),
+  subject: v.string(),
+  decision: v.union(v.literal('approve'), v.literal('reject')),
+  reason: v.optional(v.string()),
+})
+
+export const reportSchedulePayload = v.object({
+  kind: v.literal('report_schedule'),
+  reportId: v.id('savedReports'),
+  reportName: v.string(),
+  frequency: v.union(v.literal('daily'), v.literal('weekly'), v.literal('monthly')),
+  localTime: v.string(),
+  weekday: v.optional(v.number()),
+  dayOfMonth: v.optional(v.number()),
+  timezone: v.string(),
+  recipientIds: v.array(v.id('users')),
+  recipientNames: v.array(v.string()),
+})
+
+export const cyclePlanPayload = v.object({
+  kind: v.literal('cycle_plan'),
+  name: v.string(),
+  unitIds: v.array(v.id('cages')),
+  unitNames: v.array(v.string()),
+  inputs: cyclePlanInputs,
+  assumptions: cyclePlanAssumptions,
+  /** Headline of the plan as drafted (lib/cyclePlan), for the card. */
+  harvestOn: v.union(v.string(), v.null()),
+  harvestKg: v.number(),
+  margin: v.number(),
+  cashNeeded: v.number(),
+})
+
 export const pendingPayload = v.union(
   dailyEntryPayload,
   feedIssuePayload,
@@ -131,6 +260,15 @@ export const pendingPayload = v.union(
   projectCreatePayload,
   projectMilestonePayload,
   projectCostPayload,
+  samplingPayload,
+  waterReadingPayload,
+  harvestPayload,
+  stockingPayload,
+  fishTransferPayload,
+  salePayload,
+  approvalDecisionPayload,
+  reportSchedulePayload,
+  cyclePlanPayload,
 )
 
 export const botTables = {
@@ -264,6 +402,8 @@ export const botTables = {
     projectId: v.optional(v.id('projects')),
     projectMilestoneId: v.optional(v.id('projectMilestones')),
     projectCostId: v.optional(v.id('projectCosts')),
+    /** What a farm-record draft created on confirm: "table:id" (convex/anowa/farmDrafts.ts). */
+    recordRef: v.optional(v.string()),
   })
     .index('by_bindingId_and_status', ['bindingId', 'status'])
     .index('by_userId_and_draftGroup', ['userId', 'draftGroup'])

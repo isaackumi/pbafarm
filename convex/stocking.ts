@@ -500,6 +500,36 @@ export const createStocking = mutation({
   returns: v.id('stockingHistory'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.stocking.request' })
+    return await createStockingAs(ctx, user, args)
+  },
+})
+
+export type StockingCreateArgs = {
+  cageId: Id<'cages'>
+  batchNumber?: string
+  stockingDate: string
+  fishCount: number
+  initialAbw: number
+  initialBiomass: number
+  sourceLocation?: string
+  sourceCage?: string
+  transferSupervisor?: string
+  samplingSupervisor?: string
+  notes?: string
+  species?: string
+  custom?: Record<string, unknown>
+}
+
+/**
+ * A stocking request (goes to approval when the farm requires it), shared by
+ * the form and Ask Anowa's stocking draft. The caller has checked
+ * 'production.stocking.request'.
+ */
+export async function createStockingAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  args: StockingCreateArgs,
+): Promise<Id<'stockingHistory'>> {
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
 
@@ -569,8 +599,7 @@ export const createStocking = mutation({
     })
     if (status === 'pending_approval') await onApprovalRequested(ctx, 'stocking', id)
     return id
-  },
-})
+}
 
 /** Preview next auto batch number for a cage + date. */
 export const suggestBatchNumber = query({

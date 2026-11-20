@@ -58,6 +58,34 @@ Provider errors carry quota metric names, URLs, project and model ids and retry 
 
 The words live in `locales/*.json` under `assistantUi.errors`; `lib/assistantErrors.js` picks them. Failed turns are marked `failed` and are never sent back to the model as conversation history.
 
+## Tools (Ask Anowa in the app and the farm bot)
+
+When a message asks for live figures or a change, the web chat sends it to the agent with tools (`convex/anowa/agent.ts`; routing in `lib/anowaIntent.js`). The agent's instructions sit in that file and follow this page: cite every figure a tool returns with its unit and date, call a forecast an estimate with its range, say when a list is partial, and ask for a missing figure instead of guessing.
+
+Read tools (each re-checks the member's permission and sites; bounded):
+
+| Tool | Answers | Permission |
+|---|---|---|
+| `listUnits`, `unitStatus`, `missingEntries` | Units, one unit's KPIs, units with no entry today | `production.view` |
+| `feedStock` | Feed on hand vs minimum | `inventory.view` |
+| `whoIsBehind`, `keeperOf` | Cage keepers | `production.keepers.manage` / `production.view` |
+| `projectsOverview`, `projectStatus` | Capex projects | `projects.view` |
+| `forecast` | When a unit reaches a weight (expected, earliest, latest) | `production.view` |
+| `harvestPlanner` | Units reaching target in N weeks | `reports.view` |
+| `samplingHistory` | ABW trend and g/day between samples | `production.view` |
+| `waterQuality` | Latest reading, DO/temperature trend, low-DO events | `production.view` |
+| `salesSummary` | Harvests, sales, revenue and cost per kg, receivables, P&L | `finance.view` |
+| `stockingTransfers` | Stockings, top-ups and transfers in a period | `production.view` |
+| `pendingApprovals` | Requests the member can decide (`ref`, `youRequested`) | `production.stocking.approve` / `production.transfer.approve` |
+| `hatcherySummary` | Broodstock, spawns, eggs, fry output | `hatchery.view` |
+| `lotLookup` | A traceability lot by code | `production.view` |
+| `cyclePlans` | Saved cycle-planner plans | `production.plan.manage` |
+| `openAlerts` | Open early warnings and sensor alarms | `production.view` |
+
+Draft tools only add an item to a card the member confirms; Confirm writes through the form's own helper, so the form's rules apply: `proposeDailyEntry`, `proposeMortality`, `proposeFeedIssue`, `proposePurchaseOrder`, `proposeTask`, keeper and project drafts, and `proposeSampling`, `proposeWaterReading`, `proposeHarvest` (with its lot), `proposeStocking` and `proposeTransfer` (to approval as usual), `proposeSale` (optionally with its invoice), `proposeApproval` (refused for the requester when a different approver is required), `proposeReportSchedule`, `proposeCyclePlan`. Farm records (harvests, sales, approvals, …) have no 10-minute Undo; they are changed from their page.
+
+On WhatsApp and Telegram the bot (`convex/bot/agent.ts`) has the daily-entry drafts plus `forecast`, `waterQuality`, `pendingApprovals` and `salesSummary`; approvals are decided with the bot's Approve / Reject buttons (BOT-007).
+
 ## Sources
 
 - OWASP, [LLM05:2025 Improper Output Handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)

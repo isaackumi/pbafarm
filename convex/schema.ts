@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { aiPolicyValidator } from './lib/aiPolicyShared'
 import { v } from 'convex/values'
+import { cyclePlanAssumptions, cyclePlanInputs } from './lib/cyclePlanValidators'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
 import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
@@ -230,31 +231,7 @@ export const feedBand = v.object({
   feedingsPerDay: v.number(),
   pelletMm: v.number(),
 })
-/** Cycle planner inputs (lib/cyclePlan PlanInputs, without the unit count). */
-export const cyclePlanInputs = v.object({
-  stockOn: v.string(),
-  fishPerUnit: v.number(),
-  stockAbwG: v.number(),
-  harvestAbwG: v.number(),
-  feedPricePerBag: v.number(),
-  bagKg: v.number(),
-  salePricePerKg: v.number(),
-  fingerlingPrice: v.number(),
-})
-const planSource = v.union(v.literal('history'), v.literal('default'), v.literal('edited'))
-/** Cycle planner assumptions as saved (lib/cyclePlan PlanAssumptions + where each came from). */
-export const cyclePlanAssumptions = v.object({
-  speciesKey: v.union(v.string(), v.null()),
-  survivalPct: v.number(),
-  fcr: v.number(),
-  tgc: v.number(),
-  tempC: v.number(),
-  /** 12 entries, Jan..Dec. */
-  monthlyTempC: v.union(v.array(v.union(v.number(), v.null())), v.null()),
-  sources: v.object({ survival: planSource, fcr: planSource, growth: planSource }),
-  /** Closed cycles the history figures came from. */
-  cycles: v.number(),
-})
+export { cyclePlanAssumptions, cyclePlanInputs } from './lib/cyclePlanValidators'
 export const customCondition = v.object({
   field: v.string(),
   op: v.union(

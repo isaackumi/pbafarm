@@ -60,6 +60,17 @@ import {
   projectItemProblem,
   projectMilestoneInput,
 } from './projects'
+import {
+  FARM_PERMISSION,
+  FARM_REFUSAL,
+  buildFarmProposal,
+  commitFarm,
+  farmItemProblem,
+  farmProposalInputs,
+  farmRefusal,
+  isFarmKind,
+  type FarmProposalInput,
+} from './farmDrafts'
 
 /** Items one draft card may hold. */
 export const MAX_ITEMS_PER_DRAFT = 5
@@ -95,6 +106,7 @@ export const webProposalInput = v.union(
   projectCreateInput,
   projectMilestoneInput,
   projectCostInput,
+  ...farmProposalInputs,
 )
 /** What a keeper screen may draft without the assistant (no model involved). */
 export const keeperProposalInput = v.union(keeperAssignInput, keeperRebalanceInput, keeperCoverInput, keeperNudgeInput)
@@ -123,6 +135,7 @@ export const PERMISSION: Record<Payload['kind'], Permission> = {
   project_create: 'projects.manage',
   project_milestone: 'projects.manage',
   project_cost: 'projects.manage',
+  ...FARM_PERMISSION,
 }
 
 const REFUSAL: Record<Payload['kind'], string> = {
@@ -136,6 +149,13 @@ const REFUSAL: Record<Payload['kind'], string> = {
   project_create: 'Your role cannot create projects.',
   project_milestone: 'Your role cannot change projects.',
   project_cost: 'Your role cannot log project costs.',
+  ...FARM_REFUSAL,
+}
+
+/** Why the member's role may not do this item, or null (a farm approval depends on what it approves). */
+function roleRefusal(w: WebMember, p: Payload): string | null {
+  if (isFarmKind(p.kind)) return farmRefusal(w, p)
+  return can(w.member, PERMISSION[p.kind]) ? null : REFUSAL[p.kind]
 }
 
 const trimTo = (s: string | undefined, n: number) => s?.trim().slice(0, n) || undefined
@@ -384,14 +404,21 @@ async function proposeAs(ctx: MutationCtx, w: WebMember, draftGroup: string, inp
     built = await buildTask(ctx, w, input)
   } else if (input.kind === 'project_create' || input.kind === 'project_milestone' || input.kind === 'project_cost') {
     built = await buildProjectProposal(ctx, w, input)
-  } else {
+  } else if (
+    input.kind === 'keeper_assign' ||
+    input.kind === 'keeper_rebalance' ||
+    input.kind === 'keeper_cover' ||
+    input.kind === 'keeper_nudge'
+  ) {
     built = await buildKeeper(ctx, w, input)
+  } else {
+    built = await buildFarmProposal(ctx, w, input satisfies FarmProposalInput)
   }
   if (!built.ok) return built
   if (existing.some((r) => r.fingerprint === built.fingerprint)) {
     return { ok: false as const, error: 'That change is already in this draft.' }
   }
-  const refusal = can(w.member, PERMISSION[built.payload.kind]) ? undefined : REFUSAL[built.payload.kind]
+  const refusal = roleRefusal(w, built.payload) ?? undefined
   const itemId = await ctx.db.insert('pendingBotActions', {
     channel: 'web',
     draftGroup,
@@ -463,9 +490,11 @@ export const draftKeeper = mutation({
 async function itemProblem(ctx: QueryCtx, w: WebMember, row: Doc<'pendingBotActions'>): Promise<string | null> {
   const p = row.payload
   if (row.companyId !== w.binding.companyId) return 'Not in your organization.'
-  if (!can(w.member, PERMISSION[p.kind])) return REFUSAL[p.kind]
+  const refusal = roleRefusal(w, p)
+  if (refusal) return refusal
   if (row.siteId && !inScope(w, row.siteId)) return 'That site is not in your access.'
   if (isKeeperKind(p.kind)) return await keeperItemProblem(ctx, w, row)
+  if (isFarmKind(p.kind)) return await farmItemProblem(ctx, w, row)
   if (isProjectKind(p.kind)) return await projectItemProblem(ctx, w, p)
   const cageId = p.kind === 'daily_entry' || p.kind === 'feed_issue' || p.kind === 'task' ? p.cageId : undefined
   if (cageId) {
@@ -605,7 +634,8 @@ export const confirm = mutation({
     if (!allowed.length) return { status: 'nothing_allowed' as const }
 
     const wctx = anowaCtx(ctx, w, draftGroup)
-    const undoUntil = now + UNDO_WINDOW_MS
+    // Farm records (harvest, sale, approval, …) feed ledgers and approvals: no Undo on a card that has one.
+    const undoUntil = allowed.some((r) => isFarmKind(r.payload.kind)) ? now : now + UNDO_WINDOW_MS
     for (const r of allowed) {
       const idemKey = `anowa:${r._id}`
       const prior = await ctx.db
@@ -617,10 +647,19 @@ export const confirm = mutation({
       const ids: Partial<
         Pick<
           Doc<'pendingBotActions'>,
-          'dailyRecordId' | 'feedUsageId' | 'purchaseOrderId' | 'taskId' | 'projectId' | 'projectMilestoneId' | 'projectCostId'
+          | 'dailyRecordId'
+          | 'feedUsageId'
+          | 'purchaseOrderId'
+          | 'taskId'
+          | 'projectId'
+          | 'projectMilestoneId'
+          | 'projectCostId'
+          | 'recordRef'
         >
       > = {}
-      if (p.kind === 'daily_entry') {
+      if (isFarmKind(p.kind)) {
+        ids.recordRef = await commitFarm(wctx, w, r)
+      } else if (p.kind === 'daily_entry') {
         const [id] = await saveDailyBatch(wctx, w.actor, {
           date: r.date,
           records: [
@@ -729,7 +768,9 @@ export const undo = mutation({
     const { w, rows } = await loadAnowaDraft(ctx, draftGroup)
     const saved = rows.filter((r) => r.status === 'committed')
     const now = Date.now()
-    if (!saved.length || saved.some((r) => !r.undoUntil || r.undoUntil < now)) return { status: 'too_late' as const }
+    if (!saved.length || saved.some((r) => !r.undoUntil || r.undoUntil < now || isFarmKind(r.payload.kind))) {
+      return { status: 'too_late' as const }
+    }
     // Check every item before touching any.
     for (const r of saved) {
       if (await itemProblem(ctx, w, r)) return { status: 'too_late' as const }

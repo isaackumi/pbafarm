@@ -6350,10 +6350,10 @@
         "q1": "Quelles cages grandissent le moins vite ?",
         "q2": "IC par cage sur ce cycle",
         "q3": "Comparer la croissance entre mes sites",
-        "q4": "Quand la prochaine cage atteindra-t-elle le poids de récolte ?",
+        "q4": "Quand C-07 atteindra-t-elle 400 g ?",
         "q5": "Biomasse de la ferme aujourd’hui",
-        "q6": "Échantillonnages en retard cette semaine",
-        "q7": "Croissance par rapport à la courbe cible",
+        "q6": "Tendance du PMI sur les derniers échantillonnages",
+        "q7": "Quelles cages atteignent la cible dans 8 semaines ?",
         "q8": "Lot le plus performant",
         "q9": "Résumer la semaine en 3 lignes"
       },
@@ -6372,10 +6372,10 @@
       "health": {
         "label": "Santé et eau",
         "q1": "Quelles cages ont perdu le plus de poissons ?",
-        "q2": "Des mesures d’oxygène sous 4 mg/L ?",
-        "q3": "Alertes précoces ouvertes",
+        "q2": "Des épisodes d'oxygène bas cette semaine ?",
+        "q3": "Alertes et alarmes capteurs ouvertes",
         "q4": "Tendance de la mortalité ces dernières semaines",
-        "q5": "Température de l’eau cette semaine",
+        "q5": "Tendance de l'OD et de la température dans ma pire cage",
         "q6": "Mesures hors des seuils",
         "q7": "Où la mortalité a-t-elle bondi ?",
         "q8": "Que dois-je vérifier aujourd’hui ?",
@@ -6384,14 +6384,26 @@
       "harvest": {
         "label": "Récolte et ventes",
         "q1": "Quelles unités sont proches du poids de récolte ?",
-        "q2": "Plan de récolte du mois prochain",
+        "q2": "Plan de récolte des 8 prochaines semaines",
         "q3": "Ventes sur la période",
-        "q4": "Ventes impayées à relancer",
-        "q5": "Kilos vendus et prix moyen",
+        "q4": "Factures impayées à relancer",
+        "q5": "Chiffre d'affaires et coût au kg ce mois-ci",
         "q6": "Biomasse prévue dans 30 jours",
         "q7": "Quels lots sont prêts à vendre ?",
-        "q8": "Survie des cycles proches de la récolte",
+        "q8": "Compte de résultat du mois",
         "q9": "Résumer les ventes en 3 lignes"
+      },
+      "actions": {
+        "label": "Faire pour moi",
+        "q1": "Qu'est-ce qui attend mon approbation ?",
+        "q2": "Enregistrer un échantillonnage pour une cage",
+        "q3": "Saisir une mesure d'eau",
+        "q4": "Enregistrer une récolte avec son lot",
+        "q5": "Demander un transfert entre deux cages",
+        "q6": "Enregistrer une vente et émettre la facture",
+        "q7": "Envoyer le rapport hebdomadaire chaque lundi à 07:00",
+        "q8": "Planifier le prochain cycle de mes cages vides",
+        "q9": "Rechercher un code de lot"
       }
     },
     "answersUse": "Les réponses utilisent",
@@ -6484,6 +6496,49 @@
         "keeperNudge": {
           "title": "Relancer les gardiens",
           "meta": "WhatsApp et application · une fois par jour et par gardien"
+        },
+        "sampling": {
+          "title": "Enregistrer un échantillonnage",
+          "meta": "Échantillonnage bimensuel · {unit}"
+        },
+        "water": {
+          "title": "Saisir une mesure d'eau",
+          "meta": "Qualité de l'eau · {unit}"
+        },
+        "harvest": {
+          "title": "Enregistrer une récolte",
+          "meta": "Récolte · {unit}"
+        },
+        "stocking": {
+          "title": "Demander un empoissonnement",
+          "meta": "Empoissonnement · {unit}",
+          "metaApproval": "Empoissonnement · {unit} · soumis à approbation"
+        },
+        "transfer": {
+          "title": "Demander un transfert de poissons",
+          "meta": "Transfert · {unit}",
+          "metaApproval": "Transfert · {unit} · soumis à approbation"
+        },
+        "sale": {
+          "title": "Enregistrer une vente",
+          "meta": "Ventes",
+          "metaUnit": "Ventes · {unit}"
+        },
+        "approve": {
+          "title": "Approuver une demande",
+          "meta": "Approbations"
+        },
+        "reject": {
+          "title": "Rejeter une demande",
+          "meta": "Approbations"
+        },
+        "schedule": {
+          "title": "Programmer un rapport",
+          "meta": "Rapports · envoyé en CSV"
+        },
+        "plan": {
+          "title": "Enregistrer un plan de cycle",
+          "meta": "Planificateur de cycle"
         }
       },
       "fields": {
@@ -6533,7 +6588,45 @@
           "one": "1 cage n'a pas pu être placée : personne n'a de place sur son site.",
           "other": "{count} cages n'ont pas pu être placées : personne n'a de place sur leur site."
         },
-        "andMore": "et {count} de plus"
+        "andMore": "et {count} de plus",
+        "fishCounted": "Poissons comptés",
+        "abw": "PMI",
+        "abwAfter": "PMI (était {abw} g)",
+        "weight": "Poids",
+        "fish": "Poissons",
+        "type": "Type",
+        "complete": "Totale",
+        "partial": "Partielle",
+        "lot": "Lot",
+        "newLot": "Nouveau code",
+        "biomass": "Biomasse",
+        "fromUnit": "De",
+        "toUnit": "Vers",
+        "buyer": "Acheteur",
+        "price": "Prix au kg",
+        "total": "Total",
+        "invoice": "Facture",
+        "invoiceDue": "Émise, échéance {date}",
+        "invoiceYes": "Émise avec la vente",
+        "request": "Demande",
+        "reason": "Motif",
+        "report": "Rapport",
+        "when": "Quand",
+        "recipients": "Destinataires",
+        "harvestOn": "Récolte vers le",
+        "harvestKg": "Récolte",
+        "margin": "Marge",
+        "cashNeeded": "Trésorerie nécessaire",
+        "notReached": "Poids cible non atteint",
+        "do": "OD",
+        "temperature": "Température",
+        "ph": "pH",
+        "ammonia": "Ammoniac",
+        "nitrite": "Nitrite",
+        "secchi": "Secchi",
+        "daily": "Chaque jour",
+        "weekly": "Chaque semaine, {day}",
+        "monthly": "Chaque mois, le {day}"
       },
       "bar": {
         "label": "Pourquoi cette quantité",

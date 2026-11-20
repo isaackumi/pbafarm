@@ -134,46 +134,61 @@ export const forUnit = query({
     const m = await requireMember(ctx, { permission: 'production.view' })
     const cage = await ctx.db.get(args.unitId)
     if (!cage || !m.companyId || cage.companyId !== m.companyId || cage.archivedAt || !inScope(m, cage)) return null
-    const open = await openBatchOf(ctx, cage)
-    if (!open) return null
-    const f = await occupancyForecast(ctx, cage, open.batchId, args.asOf, { stats: open.stats })
-    if (!f) return null
-    const target = chooseTarget(args.targetAbwG, f, await farmTargetG(ctx, m.companyId))
-    const plan = planOut(f, args.asOf, target.g)
-    // Show the band to the latest harvest date (or 8 weeks), at most 26 weeks ahead.
-    const end = plan.latest ?? plan.expected ?? addDays(args.asOf, 56)
-    const weeks = Math.min(Math.ceil((daysBetween(f.forecast.start.date, end) + 7) / 7), Math.ceil(daysBetween(f.forecast.start.date, args.asOf) / 7) + 26)
-    const fc = f.forecast
-    return {
-      batch_id: f.batchId,
-      batch_number: f.batchNumber,
-      species_key: f.speciesKey,
-      species_name: f.species.name,
-      grades: f.species.grades
-        .filter((g) => g.minG != null && g.minG > 0)
-        .map((g) => ({ key: g.key, label: g.label, min_g: g.minG ?? null })),
-      as_of: args.asOf,
-      method: fc.method,
-      points: fc.points,
-      few_samples: fc.fewSamples,
-      start: { date: fc.start.date, abw_g: fc.start.abwG, measured: fc.start.measured },
-      tgc: fc.tgc,
-      temperature: fc.temperature,
-      feed: {
-        rate_pct_bw: fc.feed.ratePctBw,
-        fcr: fc.feed.fcr,
-        fcr_source: fc.feed.fcrSource,
-        limited: fc.feed.limited,
-      },
-      daily_mortality_pct: fc.dailyMortalityPct,
-      count: fc.count,
-      now: bandOn(fc, args.asOf),
-      series: bandSeries(fc, fc.start.date, Math.max(1, weeks)),
-      target_source: target.source,
-      plan,
-    }
+    return await unitForecast(ctx, m.companyId, cage, args.asOf, args.targetAbwG)
   },
 })
+
+/**
+ * The forecast of one unit the caller may already see (tenant and site
+ * checked by the caller): the cage page and Ask Anowa share it.
+ */
+export async function unitForecast(
+  ctx: QueryCtx,
+  companyId: Id<'companies'>,
+  cage: Doc<'cages'>,
+  asOf: string,
+  targetAbwG?: number,
+) {
+  const args = { asOf, targetAbwG }
+  const open = await openBatchOf(ctx, cage)
+  if (!open) return null
+  const f = await occupancyForecast(ctx, cage, open.batchId, args.asOf, { stats: open.stats })
+  if (!f) return null
+  const target = chooseTarget(args.targetAbwG, f, await farmTargetG(ctx, companyId))
+  const plan = planOut(f, args.asOf, target.g)
+  // Show the band to the latest harvest date (or 8 weeks), at most 26 weeks ahead.
+  const end = plan.latest ?? plan.expected ?? addDays(args.asOf, 56)
+  const weeks = Math.min(Math.ceil((daysBetween(f.forecast.start.date, end) + 7) / 7), Math.ceil(daysBetween(f.forecast.start.date, args.asOf) / 7) + 26)
+  const fc = f.forecast
+  return {
+    batch_id: f.batchId,
+    batch_number: f.batchNumber,
+    species_key: f.speciesKey,
+    species_name: f.species.name,
+    grades: f.species.grades
+      .filter((g) => g.minG != null && g.minG > 0)
+      .map((g) => ({ key: g.key, label: g.label, min_g: g.minG ?? null })),
+    as_of: args.asOf,
+    method: fc.method,
+    points: fc.points,
+    few_samples: fc.fewSamples,
+    start: { date: fc.start.date, abw_g: fc.start.abwG, measured: fc.start.measured },
+    tgc: fc.tgc,
+    temperature: fc.temperature,
+    feed: {
+      rate_pct_bw: fc.feed.ratePctBw,
+      fcr: fc.feed.fcr,
+      fcr_source: fc.feed.fcrSource,
+      limited: fc.feed.limited,
+    },
+    daily_mortality_pct: fc.dailyMortalityPct,
+    count: fc.count,
+    now: bandOn(fc, args.asOf),
+    series: bandSeries(fc, fc.start.date, Math.max(1, weeks)),
+    target_source: target.source,
+    plan,
+  }
+}
 
 /**
  * Farm harvest planner: every open occupancy with the dates it reaches the
@@ -211,51 +226,63 @@ export const harvestPlanner = query({
     assertDate(args.asOf, 'As of')
     const m = await requireMember(ctx, { permission: 'reports.view', locationId: args.locationId })
     if (!m.companyId) return { as_of: args.asOf, truncated: false, rows: [] }
-    const companyId = m.companyId
-    const open = await ctx.db
-      .query('batchStats')
-      .withIndex('by_companyId_and_open', (q) => q.eq('companyId', companyId).eq('open', true))
-      .take(2000)
-    const scoped = (await rollupRowsInSiteScope(ctx, m.user, open)).filter(
-      (s) => !args.locationId || s.locationId === args.locationId,
-    )
-    const farmG = await farmTargetG(ctx, companyId)
-    const siteNames = new Map<string, string>()
-    const rows = []
-    for (const s of scoped.slice(0, MAX_PLANNER_ROWS)) {
-      const cage = await ctx.db.get(s.unitId)
-      if (!cage || cage.archivedAt || cage.companyId !== companyId) continue
-      const f = await occupancyForecast(ctx, cage, s.batchId, args.asOf, { stats: s })
-      if (!f) continue
-      const target = chooseTarget(args.targetAbwG, f, farmG)
-      const locationId = s.locationId ?? cage.locationId
-      if (locationId && !siteNames.has(locationId)) {
-        siteNames.set(locationId, (await ctx.db.get(locationId))?.name ?? '')
-      }
-      rows.push({
-        unit_id: cage._id,
-        unit_name: cage.name,
-        site_name: locationId ? siteNames.get(locationId) || null : null,
-        batch_id: f.batchId,
-        batch_number: f.batchNumber,
-        species_key: f.speciesKey,
-        method: f.forecast.method,
-        few_samples: f.forecast.fewSamples,
-        abw_now_g: bandOn(f.forecast, args.asOf)?.expected ?? null,
-        count: f.forecast.count,
-        feed_limited: f.forecast.feed.limited,
-        target_source: target.source,
-        plan: planOut(f, args.asOf, target.g),
-      })
-    }
-    rows.sort(
-      (a, b) =>
-        (a.plan.expected ?? '9999').localeCompare(b.plan.expected ?? '9999') ||
-        a.unit_name.localeCompare(b.unit_name, undefined, { numeric: true }),
-    )
-    return { as_of: args.asOf, truncated: scoped.length > MAX_PLANNER_ROWS, rows }
+    const r = await plannerRows(ctx, m.companyId, (rows) => rollupRowsInSiteScope(ctx, m.user, rows), args)
+    return { as_of: r.as_of, truncated: r.truncated, rows: r.rows }
   },
 })
+
+/**
+ * The planner rows of a company's open occupancies that `filterRows` keeps
+ * (the caller's site scope), soonest first; at most `maxRows` forecasts.
+ */
+export async function plannerRows(
+  ctx: QueryCtx,
+  companyId: Id<'companies'>,
+  filterRows: (rows: Doc<'batchStats'>[]) => Promise<Doc<'batchStats'>[]>,
+  args: { asOf: string; targetAbwG?: number; locationId?: Id<'farmLocations'> },
+  maxRows = MAX_PLANNER_ROWS,
+) {
+  const open = await ctx.db
+    .query('batchStats')
+    .withIndex('by_companyId_and_open', (q) => q.eq('companyId', companyId).eq('open', true))
+    .take(2000)
+  const scoped = (await filterRows(open)).filter((s) => !args.locationId || s.locationId === args.locationId)
+  const farmG = await farmTargetG(ctx, companyId)
+  const siteNames = new Map<string, string>()
+  const rows = []
+  for (const s of scoped.slice(0, maxRows)) {
+    const cage = await ctx.db.get(s.unitId)
+    if (!cage || cage.archivedAt || cage.companyId !== companyId) continue
+    const f = await occupancyForecast(ctx, cage, s.batchId, args.asOf, { stats: s })
+    if (!f) continue
+    const target = chooseTarget(args.targetAbwG, f, farmG)
+    const locationId = s.locationId ?? cage.locationId
+    if (locationId && !siteNames.has(locationId)) {
+      siteNames.set(locationId, (await ctx.db.get(locationId))?.name ?? '')
+    }
+    rows.push({
+      unit_id: cage._id,
+      unit_name: cage.name,
+      site_name: locationId ? siteNames.get(locationId) || null : null,
+      batch_id: f.batchId,
+      batch_number: f.batchNumber,
+      species_key: f.speciesKey,
+      method: f.forecast.method,
+      few_samples: f.forecast.fewSamples,
+      abw_now_g: bandOn(f.forecast, args.asOf)?.expected ?? null,
+      count: f.forecast.count,
+      feed_limited: f.forecast.feed.limited,
+      target_source: target.source,
+      plan: planOut(f, args.asOf, target.g),
+    })
+  }
+  rows.sort(
+    (a, b) =>
+      (a.plan.expected ?? '9999').localeCompare(b.plan.expected ?? '9999') ||
+      a.unit_name.localeCompare(b.unit_name, undefined, { numeric: true }),
+  )
+  return { as_of: args.asOf, truncated: scoped.length > maxRows, total: scoped.length, rows }
+}
 
 /**
  * Forecast error against actual harvests (AI-004 acceptance): for each

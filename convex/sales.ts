@@ -1,8 +1,8 @@
 import { v } from 'convex/values'
 import { paginationResultValidator, paginationOptsValidator } from 'convex/server'
 import { query, mutation } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
-import type { Doc } from './_generated/dataModel'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
 import { scopedPageInRange, scopedRows, scopedRowsInRange } from './lib/scope'
 import { enforceWithdrawal } from './lib/traceability'
 import {
@@ -297,8 +297,36 @@ export const createSale = mutation({
     withdrawalOverrideReason: v.optional(v.string()),
   },
   returns: v.id('sales'),
-  handler: async (ctx, { withdrawalOverrideReason, ...args }) => {
+  handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'finance.sales.record' })
+    return await createSaleAs(ctx, user, args)
+  },
+})
+
+export type SaleCreateArgs = {
+  harvestId?: Id<'harvestRecords'>
+  cageId?: Id<'cages'>
+  customerId?: Id<'customers'>
+  customerName?: string
+  saleDate: string
+  weightKg: number
+  pricePerKg: number
+  paymentStatus?: 'pending' | 'partial' | 'paid'
+  notes?: string
+  locationId?: Id<'farmLocations'>
+  withdrawalOverrideReason?: string
+}
+
+/**
+ * A sale (withdrawal period, harvest remaining weight), shared by the sales
+ * form and Ask Anowa's sale draft. The caller has checked
+ * 'finance.sales.record'.
+ */
+export async function createSaleAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  { withdrawalOverrideReason, ...args }: SaleCreateArgs,
+): Promise<Id<'sales'>> {
     if (!(args.weightKg > 0)) throw new Error('Weight must be greater than zero')
     if (!(args.pricePerKg >= 0)) throw new Error('Price per kg must be zero or more')
 
@@ -394,8 +422,7 @@ export const createSale = mutation({
       locationId,
     })
     return id
-  },
-})
+}
 
 export const updateSale = mutation({
   args: {

@@ -365,8 +365,37 @@ export const create = idempotentMutation('harvest.create', {
     withdrawalOverrideReason: v.optional(v.string()),
     custom: v.optional(customValues),
   },
-  handler: async (ctx, { withdrawalOverrideReason, custom: rawCustom, ...args }) => {
+  handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'production.harvest.record' })
+    return await createHarvestAs(ctx, user, args)
+  },
+})
+
+export type HarvestCreateArgs = {
+  cageId: Id<'cages'>
+  harvestDate: string
+  averageBodyWeight: number
+  totalWeight: number
+  estimatedCount: number
+  fcr?: number
+  sizeBreakdown?: unknown
+  notes?: string
+  harvestType?: 'complete' | 'partial'
+  status?: 'completed' | 'in_progress'
+  withdrawalOverrideReason?: string
+  custom?: Record<string, unknown>
+}
+
+/**
+ * The harvest form's save, shared with Ask Anowa's harvest draft (withdrawal
+ * period, farm-rule warnings, stock ledger). The caller has checked
+ * 'production.harvest.record'.
+ */
+export async function createHarvestAs(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  { withdrawalOverrideReason, custom: rawCustom, ...args }: HarvestCreateArgs,
+) {
     const cage = await ctx.db.get(args.cageId)
     assertOwns(user, cage, 'Cage')
     const custom = await validateCustom(ctx, {
@@ -424,8 +453,7 @@ export const create = idempotentMutation('harvest.create', {
       locationId: cage.locationId,
     })
     return { id, warnings }
-  },
-})
+}
 
 export const update = mutation({
   args: {

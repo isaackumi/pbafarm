@@ -6350,10 +6350,10 @@
         "q1": "Which cages grow slowest?",
         "q2": "FCR by cage this cycle",
         "q3": "Compare growth between my sites",
-        "q4": "When will the next cage reach harvest weight?",
+        "q4": "When will C-07 reach 400 g?",
         "q5": "Biomass on the farm today",
-        "q6": "Sampling overdue this week",
-        "q7": "Growth against the target curve",
+        "q6": "ABW trend from the last samplings",
+        "q7": "Which cages reach target in 8 weeks?",
         "q8": "Best-performing batch",
         "q9": "Explain this week in 3 lines"
       },
@@ -6372,10 +6372,10 @@
       "health": {
         "label": "Health & water",
         "q1": "Which cages lost the most fish?",
-        "q2": "Any oxygen readings below 4 mg/L?",
-        "q3": "Open early warnings",
+        "q2": "Any low-oxygen events this week?",
+        "q3": "Open alerts and sensor alarms",
         "q4": "Mortality trend over the last weeks",
-        "q5": "Water temperature this week",
+        "q5": "DO and temperature trend in my worst cage",
         "q6": "Readings outside the thresholds",
         "q7": "Where did deaths spike?",
         "q8": "What should I check today?",
@@ -6384,14 +6384,26 @@
       "harvest": {
         "label": "Harvest & sales",
         "q1": "Which units are closest to harvest weight?",
-        "q2": "Harvest plan for next month",
+        "q2": "Harvest plan for the next 8 weeks",
         "q3": "Sales in this period",
-        "q4": "Unpaid sales to follow up",
-        "q5": "Kilograms sold and average price",
+        "q4": "Outstanding invoices to follow up",
+        "q5": "Revenue and cost per kg this month",
         "q6": "Projected biomass in 30 days",
         "q7": "Which batches are ready to sell?",
-        "q8": "Survival of the cycles near harvest",
+        "q8": "Profit and loss for this month",
         "q9": "Summarise sales in 3 lines"
+      },
+      "actions": {
+        "label": "Do it for me",
+        "q1": "What is waiting for my approval?",
+        "q2": "Record a sampling for a cage",
+        "q3": "Log a water reading",
+        "q4": "Record a harvest with its lot",
+        "q5": "Request a transfer between two cages",
+        "q6": "Record a sale and issue the invoice",
+        "q7": "Email the weekly report every Monday at 07:00",
+        "q8": "Plan the next cycle for my empty cages",
+        "q9": "Look up a lot code"
       }
     },
     "answersUse": "Answers use",
@@ -6484,6 +6496,49 @@
         "keeperNudge": {
           "title": "Nudge keepers",
           "meta": "WhatsApp and in-app · once a day per keeper"
+        },
+        "sampling": {
+          "title": "Record a sampling",
+          "meta": "Bi-weekly sampling · {unit}"
+        },
+        "water": {
+          "title": "Log a water reading",
+          "meta": "Water quality · {unit}"
+        },
+        "harvest": {
+          "title": "Record a harvest",
+          "meta": "Harvest · {unit}"
+        },
+        "stocking": {
+          "title": "Request a stocking",
+          "meta": "Stocking · {unit}",
+          "metaApproval": "Stocking · {unit} · goes to approval"
+        },
+        "transfer": {
+          "title": "Request a fish transfer",
+          "meta": "Transfer · {unit}",
+          "metaApproval": "Transfer · {unit} · goes to approval"
+        },
+        "sale": {
+          "title": "Record a sale",
+          "meta": "Sales",
+          "metaUnit": "Sales · {unit}"
+        },
+        "approve": {
+          "title": "Approve a request",
+          "meta": "Approvals"
+        },
+        "reject": {
+          "title": "Reject a request",
+          "meta": "Approvals"
+        },
+        "schedule": {
+          "title": "Schedule a report",
+          "meta": "Reports · emailed as CSV"
+        },
+        "plan": {
+          "title": "Save a cycle plan",
+          "meta": "Cycle planner"
         }
       },
       "fields": {
@@ -6533,7 +6588,45 @@
           "one": "1 cage could not be placed: nobody at its site has room.",
           "other": "{count} cages could not be placed: nobody at their site has room."
         },
-        "andMore": "and {count} more"
+        "andMore": "and {count} more",
+        "fishCounted": "Fish counted",
+        "abw": "ABW",
+        "abwAfter": "ABW (was {abw} g)",
+        "weight": "Weight",
+        "fish": "Fish",
+        "type": "Type",
+        "complete": "Complete",
+        "partial": "Partial",
+        "lot": "Lot",
+        "newLot": "New code",
+        "biomass": "Biomass",
+        "fromUnit": "From",
+        "toUnit": "To",
+        "buyer": "Buyer",
+        "price": "Price per kg",
+        "total": "Total",
+        "invoice": "Invoice",
+        "invoiceDue": "Issued, due {date}",
+        "invoiceYes": "Issued with the sale",
+        "request": "Request",
+        "reason": "Reason",
+        "report": "Report",
+        "when": "When",
+        "recipients": "Recipients",
+        "harvestOn": "Harvest about",
+        "harvestKg": "Harvest",
+        "margin": "Margin",
+        "cashNeeded": "Cash needed",
+        "notReached": "Target not reached",
+        "do": "DO",
+        "temperature": "Temperature",
+        "ph": "pH",
+        "ammonia": "Ammonia",
+        "nitrite": "Nitrite",
+        "secchi": "Secchi",
+        "daily": "Daily",
+        "weekly": "Weekly, {day}",
+        "monthly": "Monthly, day {day}"
       },
       "bar": {
         "label": "Why this amount",
