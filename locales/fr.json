@@ -6188,7 +6188,8 @@
         "growth": "Croissance et prévision",
         "feed": "Efficacité alimentaire",
         "mortality": "Mortalité",
-        "cycles": "Rentabilité"
+        "cycles": "Rentabilité",
+        "harvest": "Planification des récoltes"
       },
       "lastWeeks": {
         "one": "{count} dernière semaine",
@@ -6220,5 +6221,78 @@
     "newFarm": "Nouvelle ferme ?",
     "notYou": "Ce n’est pas vous ?",
     "signOut": "Se déconnecter"
+  },
+  "forecast": {
+    "title": "Prévision de croissance",
+    "estimate": "Estimation",
+    "actual": "PMI échantillonné",
+    "expected": "PMI prévu",
+    "band": "Fourchette probable",
+    "target": "Cible {g} g",
+    "today": "Aujourd'hui",
+    "reaches": "Atteint {g} g entre le {from} et le {to}",
+    "reachesAround": "Atteint {g} g vers le {date}",
+    "reachesFrom": "Atteint {g} g au plus tôt le {from}",
+    "ready": "Déjà à {g} g",
+    "notWithinYear": "Ne devrait pas atteindre {g} g d'ici un an au rythme actuel",
+    "targetWeight": "Poids cible",
+    "speciesTarget": "Cible de l'espèce ({g} g)",
+    "farmTarget": "Cible de la ferme ({g} g)",
+    "grade": "{label} (à partir de {g} g)",
+    "custom": "Autre poids…",
+    "grams": "Grammes",
+    "harvest": "Récolte prévue : {count} poissons, {kg} kg (de {low} à {high} kg)",
+    "fitted": "Ajusté sur {n} pesées de ce cycle, eau à {temp} °C.",
+    "speciesCurve": "Trop peu d'échantillons : courbe de croissance de l'espèce depuis le poids à l'empoissonnement. Enregistrez un échantillonnage pour ajuster ce cycle.",
+    "fewSamples": "Seulement {n} pesées enregistrées : la fourchette est large.",
+    "tempDefault": "Aucune température d'eau enregistrée : {temp} °C supposés.",
+    "feedLimited": "Limité par l'aliment : à {rate} % du poids vif par jour et un IC de {fcr}, les poissons ne peuvent pas grandir plus vite.",
+    "disclaimer": "Une estimation à partir des échantillons, de la température de l'eau, de l'aliment et des mortalités enregistrés, pas une garantie.",
+    "none": "Pas encore de prévision : cette unité n'a pas de poissons ou pas de poids enregistré.",
+    "planner": {
+      "title": "Planification des récoltes",
+      "description": "Unités qui atteignent le poids cible dans la période, d'après la prévision de croissance de chaque cycle. Les dates sont des estimations avec une fourchette.",
+      "within": "Atteignent la cible d'ici",
+      "weeksN": "{n} semaines",
+      "speciesDefault": "Cible de l'espèce",
+      "kpiUnits": "Unités atteignant la cible",
+      "kpiBiomass": "Biomasse prévue",
+      "kpiFish": "Poissons prévus",
+      "empty": "Aucune unité ne devrait atteindre la cible dans cette période.",
+      "truncated": "Affichage des {n} premières unités empoissonnées. Choisissez un site pour voir les autres.",
+      "readyNow": "Prête maintenant",
+      "beyond": "Au-delà d'un an",
+      "fittedTag": "Ajusté",
+      "speciesTag": "Courbe de l'espèce",
+      "feedTag": "Limité par l'aliment",
+      "col": {
+        "unit": "Unité",
+        "site": "Site",
+        "abw": "PMI actuel (est.)",
+        "target": "Cible",
+        "window": "Atteint la cible",
+        "biomass": "Récolte prévue",
+        "basis": "Base"
+      }
+    },
+    "accuracy": {
+      "title": "Précision des prévisions",
+      "description": "Chaque récolte comparée au PMI prévu {days} jours avant, recalculé à partir des données enregistrées jusqu'alors.",
+      "n": "Récoltes vérifiées",
+      "mape": "Erreur absolue moyenne",
+      "bias": "Biais",
+      "within": "Dans la fourchette",
+      "empty": "Aucune récolte vérifiée pour l'instant. La précision apparaît une fois des récoltes enregistrées sur des cycles avec prévision.",
+      "col": {
+        "unit": "Unité",
+        "date": "Date de récolte",
+        "predicted": "Prévision",
+        "actual": "PMI récolté",
+        "error": "Erreur",
+        "inBand": "Dans la fourchette"
+      },
+      "yes": "Oui",
+      "no": "Non"
+    }
   }
 }

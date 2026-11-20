@@ -6188,7 +6188,8 @@
         "growth": "Growth and forecast",
         "feed": "Feed efficiency",
         "mortality": "Mortality",
-        "cycles": "Profitability"
+        "cycles": "Profitability",
+        "harvest": "Harvest planner"
       },
       "lastWeeks": {
         "one": "Last {count} week",
@@ -6220,5 +6221,78 @@
     "newFarm": "Starting a new farm?",
     "notYou": "Not you?",
     "signOut": "Sign out"
+  },
+  "forecast": {
+    "title": "Growth forecast",
+    "estimate": "Estimate",
+    "actual": "Sampled ABW",
+    "expected": "Forecast ABW",
+    "band": "Likely range",
+    "target": "Target {g} g",
+    "today": "Today",
+    "reaches": "Reaches {g} g between {from} and {to}",
+    "reachesAround": "Reaches {g} g around {date}",
+    "reachesFrom": "Reaches {g} g from {from} at the earliest",
+    "ready": "Already at {g} g",
+    "notWithinYear": "Not expected to reach {g} g within a year at the current rate",
+    "targetWeight": "Target weight",
+    "speciesTarget": "Species target ({g} g)",
+    "farmTarget": "Farm target ({g} g)",
+    "grade": "{label} (from {g} g)",
+    "custom": "Other weight…",
+    "grams": "Grams",
+    "harvest": "Expected harvest: {count} fish, {kg} kg (range {low} to {high} kg)",
+    "fitted": "Fitted to {n} weights from this cycle, water at {temp} °C.",
+    "speciesCurve": "Too few samples: this uses the species growth curve from the stocking weight. Record a sampling to fit this cycle.",
+    "fewSamples": "Only {n} weights on record, so the range is wide.",
+    "tempDefault": "No water temperature on record: assumed {temp} °C.",
+    "feedLimited": "Held back by feed: at {rate}% body weight a day and FCR {fcr}, the fish cannot grow faster.",
+    "disclaimer": "An estimate from the samples, water temperature, feed and deaths on record, not a promise.",
+    "none": "No forecast yet: this unit has no fish or no weight on record.",
+    "planner": {
+      "title": "Harvest planner",
+      "description": "Units that reach the target weight in the window, from each cycle's own growth forecast. Dates are estimates with a range.",
+      "within": "Reaching target within",
+      "weeksN": "{n} weeks",
+      "speciesDefault": "Species target",
+      "kpiUnits": "Units reaching target",
+      "kpiBiomass": "Expected biomass",
+      "kpiFish": "Expected fish",
+      "empty": "No unit is expected to reach the target in this window.",
+      "truncated": "Showing the first {n} stocked units. Pick a site to see the rest.",
+      "readyNow": "Ready now",
+      "beyond": "Beyond a year",
+      "fittedTag": "Fitted",
+      "speciesTag": "Species curve",
+      "feedTag": "Feed-limited",
+      "col": {
+        "unit": "Unit",
+        "site": "Site",
+        "abw": "ABW now (est.)",
+        "target": "Target",
+        "window": "Reaches target",
+        "biomass": "Expected harvest",
+        "basis": "Basis"
+      }
+    },
+    "accuracy": {
+      "title": "Forecast accuracy",
+      "description": "Each harvest compared with the ABW forecast {days} days before it, rebuilt from the records dated up to then.",
+      "n": "Harvests checked",
+      "mape": "Mean absolute error",
+      "bias": "Bias",
+      "within": "Inside the range",
+      "empty": "No harvest checked yet. Accuracy appears once harvests are recorded on cycles with a forecast.",
+      "col": {
+        "unit": "Unit",
+        "date": "Harvest date",
+        "predicted": "Forecast",
+        "actual": "Harvested ABW",
+        "error": "Error",
+        "inBand": "In range"
+      },
+      "yes": "Yes",
+      "no": "No"
+    }
   }
 }

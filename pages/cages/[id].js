@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
@@ -20,13 +19,9 @@ import { usePermission, usePermissions } from '../../hooks/usePermission'
 import { routePermission } from '../../lib/routePermissions'
 import { CustomFieldsCard } from '../../components/CustomFields'
 import RationSuggestion from '../../components/RationSuggestion'
+import GrowthForecastCard from '../../components/GrowthForecastCard'
 import FarmAlerts from '../../components/FarmAlerts'
 import { useT } from '../../lib/i18n/context'
-
-const GrowthChart = dynamic(
-  () => import('../../components/charts/DashboardCharts').then((m) => m.FeedTrendChart),
-  { ssr: false, loading: () => <div className="h-full" /> },
-)
 
 const n1 = (v, unit = '') =>
   v == null ? '—' : `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}${unit}`
@@ -88,39 +83,6 @@ function WaterNow({ unitId }) {
             )
           })}
         </ul>
-      )}
-    </section>
-  )
-}
-
-/** Growth card (Paper 03 "Growth vs plan"): sampled ABW over the cycle. */
-function GrowthCard({ growth, samples }) {
-  const t = useT()
-  const points = useMemo(() => {
-    const rows = [...(samples || [])]
-      .filter((r) => (r.average_body_weight ?? r.averageBodyWeight) != null)
-      .map((r) => ({ date: r.date, abw: Number(r.average_body_weight ?? r.averageBodyWeight) }))
-      .filter((r) => !growth?.stocking_date || r.date >= growth.stocking_date)
-      .sort((a, b) => (a.date < b.date ? -1 : 1))
-    return rows.map((r) => ({ ...r, label: formatDate(r.date) }))
-  }, [samples, growth])
-  return (
-    <section aria-labelledby="growth-title" className={`flex min-w-0 flex-col gap-4 px-[26px] py-6 ${cardClass} lg:grow-[1.4] lg:basis-0`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="growth-title" className="text-[15px] font-semibold leading-[18px] text-text">
-          {t('cageDetail.growth')}
-        </h2>
-        <span className="flex items-center gap-2 text-xs text-muted">
-          <span aria-hidden className="h-[2px] w-4 rounded-pill" style={{ backgroundImage: 'var(--gradient-brand)' }} />
-          {t('cageDetail.actualAbw')}
-        </span>
-      </div>
-      {points.length < 2 ? (
-        <p className="py-10 text-center text-sm text-muted">{t('cageDetail.growthEmpty')}</p>
-      ) : (
-        <div className="h-56">
-          <GrowthChart feedTrend={points} dataKey="abw" name={t('cageDetail.abwG')} />
-        </div>
       )}
     </section>
   )
@@ -347,7 +309,7 @@ function CageDetails() {
         <FarmAlerts unitId={cageId} compact />
 
         <div className="flex flex-col gap-5 lg:flex-row">
-          <GrowthCard growth={growth} samples={recentBiweekly} />
+          <GrowthForecastCard unitId={cageId} samples={recentBiweekly} stockingDate={growth?.stocking_date} />
           <div className="flex min-w-0 flex-col lg:grow lg:basis-0">
             <WaterNow unitId={cageId} />
           </div>

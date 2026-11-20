@@ -14,6 +14,16 @@ import { assertUserCan, requireMember } from './lib/permissions'
 import { validateCustom } from './lib/customFields'
 import { customValues } from './schema'
 import { enforceWithdrawal } from './lib/traceability'
+import { deleteForecastChecks, recordForecastCheck } from './lib/forecastData'
+
+/** Forecast error check (AI-004): never blocks saving the harvest. */
+async function checkForecast(ctx: MutationCtx, id: Id<'harvestRecords'>) {
+  try {
+    await recordForecastCheck(ctx, id)
+  } catch (e) {
+    console.warn('forecast check skipped', id, e)
+  }
+}
 
 /** Client rows with the cage name/code (one `get` per distinct cage). */
 async function withCages(ctx: QueryCtx, records: Doc<'harvestRecords'>[]) {
@@ -404,6 +414,7 @@ export const create = idempotentMutation('harvest.create', {
     await write.post((o) => shadowHarvest(ctx, inserted, user._id, 'create', o))
     const fcr = (await ctx.db.get(id))!.fcr
     warnings.push(...harvestWarnings({ fcr: fcr || null, farmRules: rules.farmRules }))
+    await checkForecast(ctx, id)
 
     await logAudit(ctx, {
       actionType: 'create',
@@ -507,6 +518,7 @@ export const update = mutation({
     }
     // The stored FCR is the computed one, whatever an older client typed.
     await storeHarvestFcr(ctx, id)
+    await checkForecast(ctx, id)
     await logAudit(ctx, {
       actionType: 'update',
       tableName: 'harvestRecords',
@@ -548,6 +560,7 @@ export const remove = mutation({
       )
     }
     await write.post((o) => shadowHarvest(ctx, existing, user._id, 'remove', o))
+    await deleteForecastChecks(ctx, id)
     await ctx.db.delete(id)
     await logAudit(ctx, {
       actionType: 'delete',

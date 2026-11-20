@@ -2521,6 +2521,34 @@ const schema = defineSchema({
     .index('by_companyId_and_open', ['companyId', 'open'])
     .index('by_companyId_and_lastDate', ['companyId', 'lastDate']),
 
+  /**
+   * Forecast error of a harvest (AI-004): the growth forecast as it stood
+   * `horizonDays` before the harvest (rebuilt from the records dated up to
+   * then) against the ABW harvested. One row per harvest record, rewritten
+   * when the harvest is edited and removed with it.
+   */
+  harvestForecastChecks: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    harvestRecordId: v.id('harvestRecords'),
+    unitId: v.id('cages'),
+    batchId: v.id('batches'),
+    harvestDate: v.string(),
+    horizonDays: v.number(),
+    forecastMadeOn: v.string(),
+    method: v.union(v.literal('fitted'), v.literal('species_curve')),
+    predictedLowG: v.number(),
+    predictedAbwG: v.number(),
+    predictedHighG: v.number(),
+    actualAbwG: v.number(),
+    errorPct: v.number(),
+    absErrorPct: v.number(),
+    withinBand: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index('by_harvestRecordId', ['harvestRecordId'])
+    .index('by_companyId_and_harvestDate', ['companyId', 'harvestDate']),
+
   /** Occupancies whose batchStats must be recomputed (one row per pair). */
   rollupDirty: defineTable({
     companyId: v.id('companies'),

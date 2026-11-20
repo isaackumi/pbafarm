@@ -116,6 +116,7 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'unitDailyStats', index: 'by_companyId_and_date' },
   { table: 'batchStats', index: 'by_companyId_and_lastDate' },
   { table: 'harvestLots', index: 'by_companyId_and_harvestDate' },
+  { table: 'harvestForecastChecks', index: 'by_companyId_and_harvestDate' },
   { table: 'dispatches', index: 'by_companyId_and_dispatchDate' },
   { table: 'files', index: 'by_companyId_and_entityType_and_entityId' },
   { table: 'biosecurityLogs', index: 'by_companyId_and_date' },

@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic'
 import { useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { EmptyState, Field, GhostButton, Input, KpiStrip, Segmented, Select, Tabs } from '../../components/ui'
+import { Badge, EmptyState, Field, GhostButton, Input, KpiStrip, Segmented, Select, Tabs } from '../../components/ui'
 import NavTabs from '../../components/ui/NavTabs'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '../../contexts/AuthContext'
@@ -36,7 +36,7 @@ export default function AnalyticsPage() {
   )
 }
 
-const TABS = ['compare', 'growth', 'feed', 'mortality', 'cycles']
+const TABS = ['compare', 'growth', 'harvest', 'feed', 'mortality', 'cycles']
 const PERIODS = [4, 8, 12, 26]
 
 const addDays = (iso, n) => {
@@ -98,6 +98,7 @@ function Analytics() {
         </div>
         {tab === 'compare' && <Compare skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
         {tab === 'growth' && <Growth skip={skip} today={today} locationArgs={locationArgs} />}
+        {tab === 'harvest' && <HarvestPlanner skip={skip} today={today} locationArgs={locationArgs} />}
         {tab === 'feed' && <FeedEfficiency skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
         {tab === 'mortality' && <Mortality skip={skip} today={today} weeks={weeks} locationArgs={locationArgs} />}
         {tab === 'cycles' && <Cycles skip={skip} locationArgs={locationArgs} />}
@@ -426,6 +427,205 @@ function Growth({ skip, today, locationArgs }) {
             { key: 'ready', label: `Ready for ${data.target.harvest_abw_g} g`, render: (o) => dateLabel(o.forecast?.harvest_ready_on) },
           ]}
         />
+      </Card>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Harvest planner and forecast accuracy (AI-004)
+// ---------------------------------------------------------------------------
+
+const WINDOWS = [4, 8, 12, 26]
+
+function HarvestPlanner({ skip, today, locationArgs }) {
+  const t = useT()
+  const [weeks, setWeeks] = useState(8)
+  const [targetAbw, setTargetAbw] = useState('')
+  const plan = useQuery(
+    api.forecasts.harvestPlanner,
+    skip ? 'skip' : { asOf: today, ...(Number(targetAbw) > 0 ? { targetAbwG: Number(targetAbw) } : {}), ...locationArgs },
+  )
+  const accuracy = useQuery(
+    api.forecasts.accuracy,
+    skip ? 'skip' : { from: addDays(today, -365), to: today, ...locationArgs },
+  )
+  const end = addDays(today, weeks * 7)
+  const rows = useMemo(
+    () => (plan?.rows ?? []).filter((r) => r.plan.ready || (r.plan.earliest && r.plan.earliest <= end)),
+    [plan, end],
+  )
+  const windowText = (r) => {
+    const p = r.plan
+    if (p.ready) return t('forecast.planner.readyNow')
+    if (!p.expected) return t('forecast.planner.beyond')
+    if (!p.latest) return `${dateLabel(p.earliest)} →`
+    return p.earliest === p.latest ? dateLabel(p.expected) : `${dateLabel(p.earliest)} – ${dateLabel(p.latest)}`
+  }
+  const totalKg = rows.reduce((s, r) => s + (r.plan.expected_biomass_kg ?? 0), 0)
+  const totalFish = rows.reduce((s, r) => s + (r.plan.expected_count ?? 0), 0)
+
+  const exportCsv = () =>
+    downloadCsv(
+      `harvest-plan-${today}.csv`,
+      ['Unit', 'Site', 'Batch', 'ABW now g (est.)', 'Target g', 'Earliest', 'Expected', 'Latest', 'Fish', 'Biomass kg', 'Basis'],
+      rows.map((r) => [
+        r.unit_name,
+        r.site_name ?? '',
+        r.batch_number ?? '',
+        r.abw_now_g,
+        r.plan.target_g,
+        r.plan.earliest ?? '',
+        r.plan.expected ?? '',
+        r.plan.latest ?? '',
+        r.plan.expected_count,
+        r.plan.expected_biomass_kg,
+        r.method,
+      ]),
+    )
+
+  return (
+    <div className="space-y-6">
+      <Card padding={false}>
+        <div className="px-5 py-6 sm:px-[26px] space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2 text-[15px] font-semibold leading-[18px] text-text">
+                {t('forecast.planner.title')}
+                <Badge tone="cyan">{t('forecast.estimate')}</Badge>
+              </h2>
+              <p className="mt-1 max-w-2xl text-[13px] leading-5 text-muted">{t('forecast.planner.description')}</p>
+            </div>
+            {rows.length > 0 && <ExportButton onClick={exportCsv} />}
+          </div>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('forecast.planner.within')}</span>
+              <Segmented
+                label={t('forecast.planner.within')}
+                options={WINDOWS.map((w) => ({ value: w, label: t('forecast.planner.weeksN', { n: w }) }))}
+                value={weeks}
+                onChange={setWeeks}
+              />
+            </div>
+            <Field label={t('forecast.targetWeight')} htmlFor="planner-target" hint={t('forecast.planner.speciesDefault')}>
+              <Input
+                id="planner-target"
+                type="number"
+                inputMode="decimal"
+                min="1"
+                className="!w-32"
+                placeholder={t('forecast.grams')}
+                value={targetAbw}
+                onChange={(e) => setTargetAbw(e.target.value)}
+              />
+            </Field>
+          </div>
+          {plan && (
+            <KpiStrip
+              items={[
+                { label: t('forecast.planner.kpiUnits'), value: int(rows.length) },
+                { label: t('forecast.planner.kpiFish'), value: int(totalFish) },
+                { label: t('forecast.planner.kpiBiomass'), value: int(totalKg), suffix: 'kg', suffixTone: 'unit' },
+              ]}
+            />
+          )}
+          {plan?.truncated && <p className="text-xs text-warn">{t('forecast.planner.truncated', { n: 80 })}</p>}
+        </div>
+        {plan === undefined ? (
+          <div className="px-5 pb-6 sm:px-[26px]">
+            <Loading />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="px-5 pb-8 text-sm text-muted sm:px-[26px]">{t('forecast.planner.empty')}</p>
+        ) : (
+          <Table
+            caption={t('forecast.planner.title')}
+            rowKey={(r) => `${r.unit_id}|${r.batch_id}`}
+            rows={rows}
+            columns={[
+              { key: 'unit_name', label: t('forecast.planner.col.unit') },
+              { key: 'site_name', label: t('forecast.planner.col.site'), render: (r) => r.site_name ?? '—' },
+              { key: 'abw', label: t('forecast.planner.col.abw'), num: true, render: (r) => (r.abw_now_g == null ? '—' : `${int(r.abw_now_g)} g`) },
+              { key: 'target', label: t('forecast.planner.col.target'), num: true, render: (r) => `${int(r.plan.target_g)} g` },
+              { key: 'window', label: t('forecast.planner.col.window'), render: windowText },
+              {
+                key: 'biomass',
+                label: t('forecast.planner.col.biomass'),
+                num: true,
+                render: (r) => (r.plan.expected_biomass_kg == null ? '—' : `${int(r.plan.expected_biomass_kg)} kg`),
+              },
+              {
+                key: 'basis',
+                label: t('forecast.planner.col.basis'),
+                render: (r) => (
+                  <span className="flex gap-1">
+                    <Badge tone={r.method === 'fitted' ? 'neutral' : 'warn'}>
+                      {r.method === 'fitted' ? t('forecast.planner.fittedTag') : t('forecast.planner.speciesTag')}
+                    </Badge>
+                    {r.feed_limited && <Badge tone="warn">{t('forecast.planner.feedTag')}</Badge>}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Card>
+
+      <Card padding={false}>
+        <div className="px-5 py-6 sm:px-[26px] space-y-4">
+          <div>
+            <h2 className="text-[15px] font-semibold leading-[18px] text-text">{t('forecast.accuracy.title')}</h2>
+            <p className="mt-1 max-w-2xl text-[13px] leading-5 text-muted">
+              {t('forecast.accuracy.description', { days: accuracy?.horizon_days ?? 28 })}
+            </p>
+          </div>
+          {accuracy && accuracy.summary.n > 0 && (
+            <KpiStrip
+              items={[
+                { label: t('forecast.accuracy.n'), value: int(accuracy.summary.n) },
+                { label: t('forecast.accuracy.mape'), value: fmt(accuracy.summary.mapePct, 1), suffix: '%', suffixTone: 'unit' },
+                { label: t('forecast.accuracy.bias'), value: fmt(accuracy.summary.biasPct, 1), suffix: '%', suffixTone: 'unit' },
+                { label: t('forecast.accuracy.within'), value: fmt(accuracy.summary.withinBandPct, 0), suffix: '%', suffixTone: 'unit' },
+              ]}
+            />
+          )}
+        </div>
+        {accuracy === undefined ? (
+          <div className="px-5 pb-6 sm:px-[26px]">
+            <Loading />
+          </div>
+        ) : accuracy.rows.length === 0 ? (
+          <p className="px-5 pb-8 text-sm text-muted sm:px-[26px]">{t('forecast.accuracy.empty')}</p>
+        ) : (
+          <Table
+            caption={t('forecast.accuracy.title')}
+            rowKey={(r) => r.harvest_id}
+            rows={accuracy.rows}
+            columns={[
+              { key: 'unit_name', label: t('forecast.accuracy.col.unit') },
+              { key: 'harvest_date', label: t('forecast.accuracy.col.date'), render: (r) => dateLabel(r.harvest_date) },
+              {
+                key: 'predicted',
+                label: t('forecast.accuracy.col.predicted'),
+                num: true,
+                render: (r) => `${int(r.predicted_g)} g (${int(r.predicted_low_g)}–${int(r.predicted_high_g)})`,
+              },
+              { key: 'actual', label: t('forecast.accuracy.col.actual'), num: true, render: (r) => `${int(r.actual_g)} g` },
+              {
+                key: 'error',
+                label: t('forecast.accuracy.col.error'),
+                num: true,
+                render: (r) => `${r.error_pct > 0 ? '+' : ''}${fmt(r.error_pct, 1)}%`,
+              },
+              {
+                key: 'in',
+                label: t('forecast.accuracy.col.inBand'),
+                render: (r) => (r.within_band ? t('forecast.accuracy.yes') : t('forecast.accuracy.no')),
+              },
+            ]}
+          />
+        )}
       </Card>
     </div>
   )
