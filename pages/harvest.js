@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { Download, Pencil, Plus } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import {
@@ -28,6 +28,7 @@ import { api } from '../convex/_generated/api'
 import { harvestPatchArgs } from '../lib/recordArgs'
 import { errorMessage } from '../lib/errorMessage'
 import { formatDate, formatNumber, localToday } from '../lib/format'
+import { shortDate } from '../lib/projectsView'
 import {
   inDateRange,
   lastGradedHarvest,
@@ -248,12 +249,13 @@ const Harvest = ({ mode, setMode }) => {
 
   const linkBtn = 'rounded text-[13px] leading-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan hover:underline underline-offset-2'
   const columns = [
-    { key: 'date', header: t('harvestPage.col.date'), width: 110, render: (r) => formatDate(r.harvest_date, { locale }) },
-    { key: 'cage', header: t('harvestPage.col.cage'), width: 110, render: (r) => r.cage?.name || '—' },
+    // Paper 08 widths: 110 / 90 / 120 / 150 / 110 / 110 / grow.
+    { key: 'date', header: t('harvestPage.col.date'), width: 110, render: (r) => shortDate(r.harvest_date, locale) || '—' },
+    { key: 'cage', header: t('harvestPage.col.cage'), width: 90, render: (r) => r.cage?.name || '—' },
     {
       key: 'type',
       header: t('harvestPage.col.type'),
-      width: 110,
+      width: 120,
       render: (r) =>
         r.harvest_type === 'partial' ? (
           <Pill tone="neutral">{t('harvestPage.type.partial')}</Pill>
@@ -264,13 +266,14 @@ const Harvest = ({ mode, setMode }) => {
     {
       key: 'lot',
       header: t('harvestPage.col.lot'),
+      width: 150,
       render: (r) => {
         const codes = lotMap.get(r.id)?.codes || []
         return codes.length ? codes.join(', ') : <span className="text-faint">—</span>
       },
     },
-    { key: 'fish', header: t('harvestPage.col.fish'), align: 'right', render: (r) => (r.estimated_count ? formatNumber(r.estimated_count, { locale }) : '—') },
-    { key: 'weight', header: t('harvestPage.col.weight'), align: 'right', render: (r) => formatKg(r.total_weight, locale) },
+    { key: 'fish', header: t('harvestPage.col.fish'), width: 110, align: 'right', render: (r) => (r.estimated_count ? formatNumber(r.estimated_count, { locale }) : '—') },
+    { key: 'weight', header: t('harvestPage.col.weight'), width: 110, align: 'right', render: (r) => formatKg(r.total_weight, locale) },
     { key: 'status', header: t('harvestPage.col.status'), render: (r) => <LotStatus summary={lotMap.get(r.id)} locale={locale} t={t} /> },
     {
       key: 'actions',
@@ -322,7 +325,8 @@ const Harvest = ({ mode, setMode }) => {
           {
             key: 'month',
             label: t('harvestPage.kpi.harvested', { month: monthName }),
-            value: loading ? '—' : formatKg(totals.thisMonth, locale),
+            // Paper 08 "38.4 t": one decimal in the KPI.
+            value: loading ? '—' : totals.thisMonth >= 1000 ? `${formatNumber(totals.thisMonth / 1000, { locale, decimals: 1 })} t` : formatKg(totals.thisMonth, locale),
             suffix:
               !loading && totals.changePct != null
                 ? t('harvestPage.kpi.vsLast', { pct: `${totals.changePct > 0 ? '+' : ''}${totals.changePct}` })
@@ -338,7 +342,8 @@ const Harvest = ({ mode, setMode }) => {
             key: 'ready',
             label: t('harvestPage.kpi.ready'),
             value: readyResult === undefined ? '—' : t('harvestPage.kpi.cages', { count: ready.length }),
-            suffix: readyKg > 0 ? `~${formatKg(readyKg, locale)}` : null,
+            // Paper 08 "~46 t": a rounded estimate.
+            suffix: readyKg > 0 ? (readyKg >= 1000 ? `~${formatNumber(readyKg / 1000, { locale })} t` : `~${formatKg(readyKg, locale)}`) : null,
           },
           {
             key: 'lots',
@@ -417,6 +422,15 @@ const Harvest = ({ mode, setMode }) => {
   )
 }
 
+/** Paper 08 "Harvest sampling" glyph (pen and baseline). */
+function PenIcon({ size = 16, strokeWidth = 2, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+    </svg>
+  )
+}
+
 export default function HarvestPage() {
   const t = useT()
   // null (list), 'harvest' (new harvest form) or { sampling: record }.
@@ -428,10 +442,10 @@ export default function HarvestPage() {
         eyebrow={t('harvestPage.eyebrow')}
         actions={
           <IfPermitted permission="production.harvest.record">
-            <GradientButton icon={Plus} onClick={() => setMode('harvest')}>
+            <GradientButton variant="lime" icon={Plus} onClick={() => setMode('harvest')}>
               {t('harvestPage.record')}
             </GradientButton>
-            <GradientButton reverse icon={Pencil} href="/harvest-sampling">
+            <GradientButton ring="sky" icon={PenIcon} href="/harvest-sampling">
               {t('harvestPage.sampling')}
             </GradientButton>
           </IfPermitted>

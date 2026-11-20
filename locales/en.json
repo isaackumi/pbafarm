@@ -291,7 +291,7 @@
     "logged": "Logged",
     "selectAllOpen": "Select all open",
     "copying": "Copying…",
-    "sameAsYesterday": "Same as yesterday",
+    "sameAsYesterday": "Copy yesterday's feed",
     "clearAll": "Clear all",
     "qrCodes": "Cage QR codes",
     "loggedCount": "{logged} of {total} cages already logged for {date}",
@@ -397,7 +397,12 @@
       "water": "Water",
       "editAria": "Edit {cage} on {date}",
       "deleteAria": "Delete {cage} on {date}"
-    }
+    },
+    "footerTotals": {
+      "one": "{feed} kg feed · {count} mortality",
+      "other": "{feed} kg feed · {count} mortalities"
+    },
+    "speciesBiomass": "{species} · {biomass}"
   },
   "biweekly": {
     "pageTitle": "Bi-weekly entry",
@@ -442,18 +447,18 @@
     "saveSamples": "Save samples",
     "records": {
       "title": "Sampling & growth",
-      "eyebrow": "Production · Bi-weekly weigh-ins",
+      "eyebrow": "Production · Bi-weekly sampling",
       "loading": "Loading sampling records…",
       "newSampling": "New sampling",
       "export": "Export CSV",
-      "kpiAvgAbw": "Average ABW",
-      "kpiAdg": "Daily gain",
+      "kpiAvgAbw": "Avg ABW",
+      "kpiAdg": "ADG",
       "gPerDay": "g/day",
-      "kpiSampled14": "Sampled · 14 days",
-      "ofCages": "of {total}",
+      "kpiSampled14": "Sampled · 14d",
+      "ofCages": "of {total} cages",
       "kpiFish": "Fish counted · this page",
       "abwByCage": "ABW by cage",
-      "abwByCageHint": "Latest sampling, grams",
+      "abwByCageHint": "Last sample · grams",
       "tableTitle": "Samplings",
       "rangeAll": "All time",
       "range30": "Last 30 days",
@@ -463,7 +468,7 @@
       "colDate": "Date",
       "colCage": "Cage",
       "colBatch": "Batch",
-      "colSample": "Samples",
+      "colSample": "Sample",
       "colTotal": "Fish",
       "colAbw": "ABW",
       "colGain": "Gain",
@@ -477,7 +482,21 @@
       "noMatch": "No samplings match these filters.",
       "pageOf": "Page {page} of {pages} · {total} records",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "allActive": "all active cages",
+      "kpiNextRound": "Next round",
+      "inDays": {
+        "one": "in {count} day",
+        "other": "in {count} days"
+      },
+      "dueToday": "today",
+      "overdue": {
+        "one": "{count} day late",
+        "other": "{count} days late"
+      },
+      "colWeight": "Weight",
+      "fishN": "{n} fish",
+      "gPerDayUnit": "{value} g/day"
     },
     "eyebrow": "Production · Bi-weekly sampling"
   },
@@ -2442,12 +2461,12 @@
     "filterGroup": "Group",
     "allGroups": "All groups",
     "filterSpecies": "Species",
-    "anySpecies": "Species: any",
+    "anySpecies": "Species: Any",
     "alertsOnly": "Alerts only · {count}",
     "emptyTitle": "No units yet",
     "emptyBody": "Add your cages, ponds or tanks to see them here.",
     "noMatch": "No units match these filters.",
-    "eyebrow": "{stocked} stocked · {idle} fallow or empty · {units} units",
+    "eyebrow": "{stocked} active · {idle} fallow",
     "densityOfLimit": "Stocking density, share of the limit",
     "signal": {
       "doLow": "DO {value} low",
@@ -2463,7 +2482,10 @@
       "harvested": "Harvested",
       "fallow": "Fallow",
       "maintenance": "Maintenance"
-    }
+    },
+    "speciesDay": "{species} · Day {day}",
+    "eyebrowSite": "{stocked} active · {idle} fallow · {site}",
+    "allRows": "All rows"
   },
   "cagesTable": {
     "eyebrow": "{active} stocked · {total} units",
@@ -2793,8 +2815,8 @@
     "noLocation": "No location"
   },
   "qrUi": {
-    "title": "Cage QR codes",
-    "eyebrow": "Print labels · one per unit",
+    "title": "QR labels",
+    "eyebrow": "Cages · Printable unit labels",
     "print": "Print",
     "help": "Print these and fix one to each cage. Scanning a code opens daily entry with that cage filled in. Codes stay valid if the app moves to a new address; labels printed earlier keep working.",
     "loading": "Loading cages…",
@@ -2802,7 +2824,11 @@
     "emptyDescription": "Create a cage first, then come back to print its code.",
     "create": "Create a cage",
     "cage": "Cage",
-    "scanTo": "Scan to log feed"
+    "scanTo": "Scan to log feed",
+    "printN": {
+      "one": "Print {count} label",
+      "other": "Print {count} labels"
+    }
   },
   "tasksUi": {
     "title": "My tasks",
@@ -5686,7 +5712,8 @@
       "rejectFailed": "Could not reject",
       "reasonRequired": "Give a reason for rejecting",
       "rejectTitle": "Reject {batch}",
-      "rejectReason": "Reason for rejecting"
+      "rejectReason": "Reason for rejecting",
+      "tabGrading": "Grading"
     },
     "detail": {
       "eyebrow": "Production · Stocking & transfers",
