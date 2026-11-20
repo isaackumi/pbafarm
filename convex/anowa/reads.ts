@@ -23,6 +23,7 @@ import { amountPaidOf } from '../invoices'
 import { plannerRows, unitForecast } from '../forecasts'
 import { checkBinding, farmDate, inScope, matchUnit, unitsInScope, type MemberScope } from '../bot/scope'
 import { webMember } from './scope'
+import { abwChart, answerChartValidator, feedChart, forecastChart, moneyChart, waterChart, type AnswerChart } from '../lib/answerCharts'
 
 export const farmReadTool = v.union(
   v.literal('forecast_unit'),
@@ -51,10 +52,15 @@ export const farmReadArgs = v.object({
 
 export type FarmReadTool = Infer<typeof farmReadTool>
 export type FarmReadArgs = Infer<typeof farmReadArgs>
-type ReadOut = { ok: true; data: string } | { ok: false; error: string }
+type ReadOut = { ok: true; data: string; charts?: AnswerChart[] } | { ok: false; error: string }
 
+/**
+ * `charts`: trends the server drew from the same records (lib/answerCharts),
+ * kept out of `data` so the model never sees or writes the points; the web
+ * agent offers them by id (attachChart). The bot ignores them.
+ */
 const readResult = v.union(
-  v.object({ ok: v.literal(true), data: v.string() }),
+  v.object({ ok: v.literal(true), data: v.string(), charts: v.optional(v.array(answerChartValidator)) }),
   v.object({ ok: v.literal(false), error: v.string() }),
 )
 
@@ -145,6 +151,7 @@ async function forecastUnit(ctx: QueryCtx, bound: MemberScope, args: FarmReadArg
     samples: f.points,
     fewSamples: f.few_samples,
     feedLimited: f.feed.limited,
+    charts: [forecastChart(unit.name, f.series)],
   }
 }
 
@@ -261,6 +268,7 @@ async function samplingHistory(ctx: QueryCtx, bound: MemberScope, args: FarmRead
   const span = daysBetween(first.date, last.date)
   return {
     for: label,
+    charts: [abwChart(label, samples)],
     samples,
     trend: {
       from: first.date,
@@ -334,6 +342,7 @@ async function waterQuality(ctx: QueryCtx, bound: MemberScope, args: FarmReadArg
       lowDo: lowDo.slice(0, 10).map((r) => ({ date: r.date, at: new Date(r.measuredAt).toISOString(), doMgL: r.dissolvedOxygen })),
       readings: rows.length,
       partial: rows.length >= 500,
+      charts: [waterChart(unit.name, rows.map((r) => ({ date: r.date, doMgL: r.dissolvedOxygen, tempC: r.temperatureC })))],
     }
   }
   // Farm-wide: units with readings outside their thresholds in the period.
@@ -463,6 +472,14 @@ async function salesSummary(ctx: QueryCtx, bound: MemberScope, args: FarmReadArg
     },
     partial,
     note: 'Costs are recorded expenses plus feed at list price; fingerlings and labour count only when entered as expenses.',
+    charts: [
+      moneyChart(from, to, currency, [
+        ...sales.map((x) => ({ date: x.saleDate, revenue: x.totalAmount })),
+        ...expenses.map((e) => ({ date: e.date, cost: e.amount })),
+        ...days.map((d) => ({ date: d.date, cost: d.feedCostList })),
+      ]),
+      feedChart(days.map((d) => ({ date: d.date, feedKg: d.feedKg })), bound.site?.name ?? 'all sites in scope'),
+    ],
   }
 }
 
@@ -820,7 +837,9 @@ export async function farmReadFor(
     else if (tool === 'lot_lookup') data = await lotLookup(ctx, bound, args)
     else if (tool === 'cycle_plans') data = await cyclePlans(ctx, bound)
     else data = await sensorAlerts(ctx, bound, now)
-    return { ok: true as const, data: JSON.stringify(data) }
+    const { charts, ...rest } = data as { charts?: (AnswerChart | null)[] }
+    const drawn = (charts ?? []).filter((c): c is AnswerChart => c !== null)
+    return { ok: true as const, data: JSON.stringify(rest), ...(drawn.length ? { charts: drawn } : {}) }
   } catch (err) {
     if (err instanceof Refusal) return { ok: false as const, error: err.message }
     throw err

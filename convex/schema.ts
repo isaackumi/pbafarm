@@ -4,6 +4,7 @@ import { v } from 'convex/values'
 import { cyclePlanAssumptions, cyclePlanInputs } from './lib/cyclePlanValidators'
 import { authTables } from '@convex-dev/auth/server'
 import { messagingChannel, messagingProvider } from './messaging/validators'
+import { answerChartValidator } from './lib/answerCharts'
 import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
 import { billingTables } from './billing/tables'
@@ -3024,11 +3025,48 @@ const schema = defineSchema({
     role: v.union(v.literal('user'), v.literal('assistant')),
     content: v.string(),
     pinnedAt: v.optional(v.number()),
+    /** Charts the server drew for this answer (lib/answerCharts; never model-written). */
+    charts: v.optional(v.array(answerChartValidator)),
+    /** The draft card the answer proposed (convex/anowa/drafts). */
+    draftGroup: v.optional(v.string()),
+    /** The member pressed Stop: the answer is what had arrived. */
+    stopped: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index('by_companyId_and_chatId', ['companyId', 'chatId'])
     .index('by_chatId', ['chatId'])
     .index('by_companyId_and_userId_and_pinnedAt', ['companyId', 'userId', 'pinnedAt']),
+
+  /**
+   * One Ask Anowa reply while it streams (convex/anowa/stream.ts): the
+   * display-sanitised text so far, what the agent is doing, the draft card
+   * and charts once they exist. Only its member reads it. Transient: pruned
+   * an hour after it starts; the answer itself is saved in assistantMessages.
+   */
+  assistantStreams: defineTable({
+    companyId: v.id('companies'),
+    userId: v.id('users'),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('streaming'),
+      v.literal('done'),
+      v.literal('error'),
+      v.literal('cancelled'),
+    ),
+    text: v.string(),
+    /** The tool running now ("Checking water in C-07…"); the browser words it. */
+    activity: v.optional(v.object({ tool: v.string(), subject: v.union(v.string(), v.null()) })),
+    draftGroup: v.optional(v.string()),
+    charts: v.optional(v.array(answerChartValidator)),
+    errorCode: v.optional(v.string()),
+    retryAfterSec: v.optional(v.union(v.number(), v.null())),
+    cancelRequested: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_userId_and_createdAt', ['companyId', 'userId', 'createdAt'])
+    .index('by_userId', ['userId'])
+    .index('by_createdAt', ['createdAt']),
 })
 
 export default schema

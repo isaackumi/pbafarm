@@ -8,7 +8,8 @@ import {
 } from '../../../lib/llmProxyGuard'
 import { assistantSystemPrompt, businessDateOr, chatScope, resolveProvider } from '../../../lib/llmServer'
 import { decodeChatBody } from '../../../convex/lib/llmProviders'
-import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError } from '../../../lib/llmGatewayRoute'
+import { chatWithOrgKey, chatWithServerKey, failureBody, gatewayError, streamWithServerKey } from '../../../lib/llmGatewayRoute'
+import { ndjson } from '../../../lib/chatStream'
 import { sanitizeAnswer } from '../../../convex/lib/llmAnswer'
 import { LLM_FAILURE_TEXT } from '../../../convex/lib/llmErrors'
 
@@ -30,6 +31,13 @@ import { LLM_FAILURE_TEXT } from '../../../convex/lib/llmErrors'
  * (Effect: 30 s per attempt, transient-only retry, Schema-validated replies).
  *
  * Rate limits are in-memory per server instance (lib/llmProxyGuard.js).
+ *
+ * Streaming (`?stream=1`, Ask Anowa): on the server key the answer streams as
+ * NDJSON (lib/chatStream: display-sanitised text frames, then the final
+ * fully sanitised answer, or a classified error); closing the request (Stop)
+ * aborts the provider call. Refusals before the first frame stay JSON with
+ * their status. The organization key runs inside Convex, so its answer
+ * arrives whole, as JSON, as before.
  *
  * Keys (INT-009): the company's own provider key (llmGateway, encrypted in
  * Convex, with Convex-side rate limits and the same ai.use/toggle checks) is
@@ -151,6 +159,10 @@ export default async function handler(req, res) {
       return res.status(failed.status).json(failureBody(failed))
     }
 
+    if (req.query?.stream === '1') {
+      return await streamAnswer(req, res, auth, resolved, { messages, temperature, referer })
+    }
+
     let text
     try {
       text = sanitizeAnswer(
@@ -173,5 +185,66 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[api/llm/chat]', err?.message)
     return res.status(500).json({ error: LLM_FAILURE_TEXT.unknown, code: 'unknown', retryAfterSec: null })
+  }
+}
+
+/** The server-key answer as NDJSON frames (see lib/chatStream). */
+async function streamAnswer(req, res, auth, resolved, { messages, temperature, referer }) {
+  const abort = new AbortController()
+  // The member pressed Stop (or left): stop paying for tokens nobody reads.
+  res.on('close', () => {
+    if (!res.writableFinished) abort.abort()
+  })
+  let started = false
+  const begin = () => {
+    if (started) return
+    started = true
+    res.writeHead(200, {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      // no-transform keeps compression from buffering the frames.
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
+    })
+  }
+  const send = (event) => {
+    if (res.writableEnded || abort.signal.aborted) return
+    begin()
+    res.write(ndjson(event))
+  }
+  try {
+    const reply = await streamWithServerKey(
+      auth.client,
+      { ...resolved.chat, messages, temperature, referer },
+      'chat',
+      resolved.price,
+      { signal: abort.signal, onText: (text) => send({ type: 'text', text }) },
+    )
+    if (reply.stopped || res.writableEnded) {
+      if (!res.writableEnded) res.end()
+      return
+    }
+    if (!reply.text) {
+      const body = { error: LLM_FAILURE_TEXT.empty, code: 'empty', retryAfterSec: null }
+      if (started) return res.end(ndjson({ type: 'error', ...body }))
+      return res.status(502).json(body)
+    }
+    begin()
+    res.end(
+      ndjson({
+        type: 'done',
+        text: reply.text,
+        provider: resolved.providerId,
+        model: resolved.model,
+        fallback: resolved.fallback,
+        requestedModel: resolved.requestedModel,
+        keySource: 'server',
+      }),
+    )
+  } catch (err) {
+    // Mid-stream failures become a classified frame; provider text is logged only.
+    const failed = gatewayError(err)
+    if (res.writableEnded) return
+    if (started) return res.end(ndjson({ type: 'error', ...failureBody(failed) }))
+    return res.status(failed.status).json(failureBody(failed))
   }
 }

@@ -75,3 +75,26 @@ export function sanitizeAnswer(raw: string): string {
   }
   return text
 }
+
+/**
+ * Clean a reply that is still arriving, for display only (Ask Anowa
+ * streaming). Whatever has not finished yet is held back so it can never
+ * flash on screen: an unclosed `<think>` block, a half-written tag, a link or
+ * image whose `(url)` has not closed. Then the full `sanitizeAnswer` rules
+ * apply. The saved answer is always `sanitizeAnswer` of the final text.
+ */
+export function sanitizeStreaming(raw: string): string {
+  let text = String(raw ?? '')
+  // Reasoning still open: hide from its opening tag.
+  const lastOpen = text.search(/<think(?:ing)?>(?![\s\S]*<\/think(?:ing)?>)/i)
+  if (lastOpen >= 0) text = text.slice(0, lastOpen)
+  text = text
+    // A tag cut mid-way ("<scr", "<a href=").
+    .replace(/<\/?[a-z!][^<>]*$/i, '')
+    .replace(/<\/?$/, '')
+    // A link or image whose target has not closed: keep the label only.
+    .replace(/!?\[([^\]\n]*)\]\([^)\n]*$/, '$1')
+    // A label that has not closed yet ("[Open").
+    .replace(/!?\[([^\]\n]*)$/, '$1')
+  return sanitizeAnswer(text)
+}

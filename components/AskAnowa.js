@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useAction, useMutation } from 'convex/react'
 import {
@@ -7,6 +8,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Calendar,
+  ChartColumn,
   Check,
   ChevronDown,
   CornerDownRight,
@@ -18,6 +20,7 @@ import {
   Minimize2,
   Plus,
   Search,
+  Square,
   Trash2,
   X,
   Zap,
@@ -31,8 +34,8 @@ import { useCompanySettings } from '../contexts/CompanySettingsContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocale, useT } from '../lib/i18n/context'
 import { assistantErrorText } from '../lib/assistantErrors'
-import { chatCompletion, draftAutomation, fetchLlmModels } from '../lib/llmClient'
-import { isActionRequest, isAutomationRequest } from '../lib/anowaIntent'
+import { chatCompletionStream, draftAutomation, fetchLlmModels } from '../lib/llmClient'
+import { isActionRequest, isAutomationRequest, isChartRequest } from '../lib/anowaIntent'
 import { localToday } from '../lib/format'
 import { errorMessage } from '../lib/errorMessage'
 import {
@@ -51,7 +54,7 @@ import {
 import { AnowaLockup } from './brand/AnowaLogo'
 import { initials } from './ui'
 import Layout from './Layout'
-import { AssistantOff, Thread, useAssistantAccess } from './AiAssistant'
+import { AssistantOff, Thread, TypingDots, useAssistantAccess } from './AiAssistant'
 import AnswerText from './AnswerText'
 import DraftCard from './AnowaDraftCard'
 
@@ -67,6 +70,29 @@ import DraftCard from './AnowaDraftCard'
 
 const FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 const MODEL_KEY = 'anowa.askModel'
+const CHARTS_KEY = 'anowa.showCharts'
+
+// recharts only loads when an answer has a chart.
+const AnswerChart = dynamic(() => import('./AnswerChart'), {
+  ssr: false,
+  loading: () => <div className="mt-4 h-[290px] animate-pulse rounded-card border border-line bg-surface" aria-hidden />,
+})
+
+function loadFlag(key) {
+  try {
+    return typeof window !== 'undefined' && window.localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveFlag(key, on) {
+  try {
+    window.localStorage.setItem(key, on ? '1' : '0')
+  } catch {
+    // Private mode: the choice lasts for this visit only.
+  }
+}
 
 function loadChoice() {
   try {
@@ -124,6 +150,13 @@ function AskAnowa() {
   const [siteId, setSiteId] = useState(activeLocationId || '')
   const [days, setDays] = useState(DEFAULT_RANGE_DAYS)
   const [topic, setTopic] = useState(TOPICS[0])
+  // "Show charts" (artboard 47): answers prefer attaching a chart from the records.
+  const [showCharts, setShowChartsState] = useState(false)
+  useEffect(() => setShowChartsState(loadFlag(CHARTS_KEY)), [])
+  const setShowCharts = (on) => {
+    setShowChartsState(on)
+    saveFlag(CHARTS_KEY, on)
+  }
   useEffect(() => {
     if (activeLocationId) setSiteId((s) => s || activeLocationId)
   }, [activeLocationId])
@@ -157,6 +190,11 @@ function AskAnowa() {
   const inputRef = useRef(null)
   const append = useMutation(api.assistantChats.append)
   const askWithTools = useAction(api.anowa.agent.ask)
+  const startStream = useMutation(api.anowa.stream.start)
+  const cancelStream = useMutation(api.anowa.stream.cancel)
+  // The answer arriving now: how to stop it (Stop button).
+  const liveRef = useRef(null)
+  const [stoppable, setStoppable] = useState(false)
   const [hiddenFollowUps, setHiddenFollowUps] = useState(() => new Set())
   const setPinned = useMutation(api.assistantChats.setPinned)
   const removeChat = useMutation(api.assistantChats.remove)
@@ -227,10 +265,32 @@ function AskAnowa() {
       }
       return res.messageIds
     } catch (err) {
-      const full = err?.data?.reason === 'CHAT_FULL'
+      const full = (err?.data?.details?.reason ?? err?.data?.reason) === 'CHAT_FULL'
       setNotice(full ? t('askAnowa.chatFull') : t('askAnowa.historyFailed', { message: errorMessage(err) }))
       return null
     }
+  }
+
+  const replaceLive = (liveId, next) =>
+    setMessages((m) => (next ? m.map((x) => (x.liveId === liveId ? next : x)) : m.filter((x) => x.liveId !== liveId)))
+
+  /** The server saved this turn (streamed agent answers): adopt its conversation. */
+  const adoptSaved = (res) => {
+    if (res.historyError) {
+      setNotice(res.historyError === 'CHAT_FULL' ? t('askAnowa.chatFull') : t('askAnowa.historyNotSaved'))
+    }
+    if (res.chatId && !chatId) {
+      loadedRef.current = res.chatId
+      setChatId(res.chatId)
+      go({ chat: res.chatId })
+    }
+  }
+
+  const stop = () => {
+    const live = liveRef.current
+    if (!live) return
+    if (live.abort) live.abort.abort()
+    else if (live.streamId) cancelStream({ streamId: live.streamId }).catch(() => undefined)
   }
 
   const send = async (text) => {
@@ -243,7 +303,9 @@ function AskAnowa() {
     setMessages((m) => [...m, userMsg])
     setBusy(true)
     const { provider, model } = requestModel(effectiveChoice)
+    const liveId = `live-${Date.now()}`
     let answer
+    let savedByServer = false
     try {
       if (canDraft && isAutomationRequest(question)) {
         const result = await draftAutomation({ request: question, provider, model })
@@ -257,8 +319,16 @@ function AskAnowa() {
           startPaused: result.startPaused !== false,
           canSave: result.canSave === true,
         }
-      } else if (isActionRequest(question)) {
-        // "Does it for you" (artboard 48): the agent only drafts; the card confirms.
+      } else if (isActionRequest(question) || isChartRequest(question) || showCharts) {
+        // "Does it for you" (artboard 48) and charts: the agent with tools, streamed
+        // through a Convex row (convex/anowa/stream); it only drafts, the card confirms.
+        const streamId = await startStream({}).catch((err) => {
+          // Too many answers in flight: the same sentence as any rate limit.
+          throw err?.data?.code === 'RATE_LIMITED' ? Object.assign(new Error(''), { code: 'rate_limited' }) : err
+        })
+        liveRef.current = { streamId }
+        setStoppable(true)
+        setMessages((m) => [...m, { role: 'assistant', live: true, liveId, streamId, content: '' }])
         const res = await askWithTools({
           question,
           history,
@@ -266,37 +336,81 @@ function AskAnowa() {
           lang: locale,
           provider,
           model,
+          streamId,
+          ...(chatId ? { chatId } : {}),
+          showCharts,
         })
         if (!res.ok) throw Object.assign(new Error(''), { code: res.code, retryAfterSec: res.retryAfterSec })
+        savedByServer = true
+        adoptSaved(res)
+        const content = res.text || (res.draftGroup ? t('askAnowa.draft.intro') : '')
         answer = {
           role: 'assistant',
-          content: res.text || t('askAnowa.draft.intro'),
+          content: content || t('askAnowa.stoppedEmpty'),
           ...(res.draftGroup ? { kind: 'actions', draftGroup: res.draftGroup } : {}),
           ...(res.followUp ? { followUp: res.followUp } : {}),
+          ...(res.charts?.length ? { charts: res.charts } : {}),
+          ...(res.stopped ? { stopped: true } : {}),
+          ...(!content ? { failed: true } : {}),
+          ...(res.messageIds?.[1] ? { _id: res.messageIds[1], pinned: false } : {}),
+        }
+        if (res.messageIds?.[0]) {
+          setMessages((m) => m.map((x) => (x === userMsg ? { ...userMsg, _id: res.messageIds[0] } : x)))
         }
       } else {
-        const reply = await chatCompletion({
-          provider,
-          model,
-          temperature: 0.3,
-          asOf: localToday(),
-          days,
-          deep,
-          locationId: siteId || undefined,
-          lang: locale,
-          messages: [...history, userMsg],
-        })
-        answer = { role: 'assistant', content: reply.text }
+        // Plain answers stream from the chat route (lib/chatStream); Stop aborts the request.
+        const abort = new AbortController()
+        liveRef.current = { abort }
+        setStoppable(true)
+        setMessages((m) => [...m, { role: 'assistant', live: true, liveId, content: '' }])
+        let shown = ''
+        try {
+          const reply = await chatCompletionStream(
+            {
+              provider,
+              model,
+              temperature: 0.3,
+              asOf: localToday(),
+              days,
+              deep,
+              locationId: siteId || undefined,
+              lang: locale,
+              messages: [...history, userMsg],
+            },
+            {
+              signal: abort.signal,
+              onText: (next) => {
+                shown = next
+                setMessages((m) => m.map((x) => (x.liveId === liveId ? { ...x, content: next } : x)))
+              },
+            },
+          )
+          answer = { role: 'assistant', content: reply.text }
+        } catch (err) {
+          if (err?.name !== 'AbortError') throw err
+          answer = shown
+            ? { role: 'assistant', content: shown, stopped: true }
+            : { role: 'assistant', content: t('askAnowa.stoppedEmpty'), failed: true, stopped: true }
+        }
       }
     } catch (err) {
       // Never the raw error: the server sends a kind, shown as a sentence (lib/assistantErrors).
+      liveRef.current = null
+      setStoppable(false)
+      replaceLive(liveId, null)
       setMessages((m) => [...m, { role: 'assistant', failed: true, content: assistantErrorText(t, err, { canManage }) }])
       setBusy(false)
       return
     }
-    setMessages((m) => [...m, answer])
+    liveRef.current = null
+    setStoppable(false)
+    setMessages((m) => (m.some((x) => x.liveId === liveId) ? m.map((x) => (x.liveId === liveId ? answer : x)) : [...m, answer]))
+    if (savedByServer || answer.failed) {
+      setBusy(false)
+      return
+    }
     // Still busy while saving, so a quick follow-up joins this conversation instead of starting another.
-    const ids = await persist([userMsg, { role: 'assistant', content: answer.content }])
+    const ids = await persist([userMsg, { role: 'assistant', content: answer.content, ...(answer.stopped ? { stopped: true } : {}) }])
     setBusy(false)
     if (ids) {
       setMessages((m) => {
@@ -349,7 +463,7 @@ function AskAnowa() {
   const view = deepLink.view
   const started = messages.length > 0 || busy
   const chat = { messages, busy }
-  const scope = { deep, setDeep, siteId, setSiteId, days, setDays, locations }
+  const scope = { deep, setDeep, siteId, setSiteId, days, setDays, locations, showCharts, setShowCharts }
 
   const rail = (
     <Rail
@@ -404,9 +518,12 @@ function AskAnowa() {
               <div className="w-full max-w-[820px] py-4">
                 <Thread
                   chat={chat}
+                  renderLive={(m) => (m.streamId ? <AgentLive t={t} streamId={m.streamId} /> : <PlainLive text={m.content} />)}
                   renderActions={(m) =>
-                    m.role === 'assistant' ? (
+                    m.role === 'assistant' && !m.live ? (
                       <>
+                        {m.stopped && <p className="mt-2 text-xs leading-4 text-faint">{t('askAnowa.stoppedNote')}</p>}
+                        {m.charts?.map((c, i) => <AnswerChart key={i} chart={c} />)}
                         {m.draftGroup && <DraftCard draftGroup={m.draftGroup} />}
                         {m.followUp && m === messages[messages.length - 1] && !busy && !hiddenFollowUps.has(m.followUp) && (
                           <FollowUp
@@ -425,7 +542,7 @@ function AskAnowa() {
             </div>
             {notice && <Notice text={notice} />}
             <div className="w-full max-w-[820px] shrink-0 pt-3">
-              <Composer t={t} input={input} setInput={setInput} send={send} busy={busy} inputRef={inputRef} scope={scope} />
+              <Composer t={t} input={input} setInput={setInput} send={send} busy={busy} onStop={stoppable ? stop : null} inputRef={inputRef} scope={scope} />
             </div>
             <Sources t={t} days={days} siteId={siteId} className="mt-4" />
           </>
@@ -448,6 +565,44 @@ function AskAnowa() {
       </main>
     </div>
   )
+}
+
+/** A plain answer still arriving: its text so far (server-sanitised), or the typing dots. */
+function PlainLive({ text }) {
+  return text ? <AnswerText text={text} /> : <TypingDots />
+}
+
+/**
+ * An agent answer still arriving (convex/anowa/stream row, reactive): what it
+ * is checking, the text so far, then the draft card and charts as they appear.
+ */
+function AgentLive({ t, streamId }) {
+  const row = useOptionalQuery(api.anowa.stream.get, { streamId }, null)
+  const activity = row?.activity
+  return (
+    <>
+      {row?.text ? <AnswerText text={row.text} /> : !activity && <TypingDots />}
+      {activity && (
+        <p role="status" className="mt-2 flex items-center gap-2 text-[13px] leading-[18px] text-muted">
+          <Loader2 size={14} className="animate-spin text-cyan" aria-hidden />
+          {activityText(t, activity)}
+        </p>
+      )}
+      {row?.charts?.map((c, i) => <AnswerChart key={i} chart={c} />)}
+      {row?.draftGroup && <DraftCard draftGroup={row.draftGroup} />}
+    </>
+  )
+}
+
+/** "Checking water in C-07…": the tool's own line when there is one, else a generic one. */
+export function activityText(t, activity) {
+  const tool = String(activity?.tool || '')
+  const subject = activity?.subject || ''
+  const key = `askAnowa.activity.${tool}`
+  const line = subject ? t(`${key}Of`, { subject }) : t(key)
+  if (line && line !== `${key}Of` && line !== key) return line
+  if (tool.startsWith('propose')) return t('askAnowa.activity.drafting')
+  return subject ? t('askAnowa.activity.checkingOf', { subject }) : t('askAnowa.activity.checking')
 }
 
 /** One follow-up Anowa suggests under a draft (artboard 48 "Also noticed"): ask it, or not now. */
@@ -748,8 +903,8 @@ function ModelChip({ t, open, setOpen, catalog, catalogError, choice, setChoice 
 
 const CHIP = `relative flex shrink-0 items-center gap-2 rounded-pill border px-[14px] py-[9px] text-[14px] leading-[18px] ${FOCUS}`
 
-function Composer({ t, input, setInput, send, busy, inputRef, scope, autoFocus = false }) {
-  const { deep, setDeep, siteId, setSiteId, days, setDays, locations } = scope
+function Composer({ t, input, setInput, send, busy, onStop = null, inputRef, scope, autoFocus = false }) {
+  const { deep, setDeep, siteId, setSiteId, days, setDays, locations, showCharts, setShowCharts } = scope
   const siteName = locations.find((l) => (l.id || l._id) === siteId)?.name || t('askAnowa.allSites')
   const grow = (el) => {
     if (!el) return
@@ -799,6 +954,16 @@ function Composer({ t, input, setInput, send, busy, inputRef, scope, autoFocus =
             <Search size={16} strokeWidth={1.7} className={deep ? 'text-cyan' : ''} aria-hidden />
             {t('askAnowa.deep')}
           </button>
+          <button
+            type="button"
+            aria-pressed={showCharts}
+            onClick={() => setShowCharts(!showCharts)}
+            title={t('askAnowa.showChartsHint')}
+            className={`${CHIP} ${showCharts ? 'border-line-strong bg-surface-2 font-medium text-text' : 'border-transparent text-muted hover:text-text'}`}
+          >
+            <ChartColumn size={16} strokeWidth={1.7} className={showCharts ? 'text-cyan' : ''} aria-hidden />
+            {t('askAnowa.showCharts')}
+          </button>
           <label className={`${CHIP} cursor-pointer border-transparent text-muted hover:text-text`}>
             <MapPin size={16} strokeWidth={1.7} aria-hidden />
             <span className="max-w-[160px] truncate">{siteName}</span>
@@ -833,14 +998,26 @@ function Composer({ t, input, setInput, send, busy, inputRef, scope, autoFocus =
             </select>
           </label>
         </div>
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          aria-label={t('askAnowa.send')}
-          className={`flex size-10 shrink-0 items-center justify-center rounded-pill bg-button text-button-text disabled:bg-surface-2 disabled:text-faint ${FOCUS}`}
-        >
-          {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowUp size={16} strokeWidth={1.8} aria-hidden />}
-        </button>
+        {busy && onStop ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label={t('askAnowa.stop')}
+            title={t('askAnowa.stop')}
+            className={`flex size-10 shrink-0 items-center justify-center rounded-pill bg-button text-button-text ${FOCUS}`}
+          >
+            <Square size={14} fill="currentColor" strokeWidth={1.8} aria-hidden />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={busy || !input.trim()}
+            aria-label={t('askAnowa.send')}
+            className={`flex size-10 shrink-0 items-center justify-center rounded-pill bg-button text-button-text disabled:bg-surface-2 disabled:text-faint ${FOCUS}`}
+          >
+            {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowUp size={16} strokeWidth={1.8} aria-hidden />}
+          </button>
+        )}
       </div>
     </form>
   )

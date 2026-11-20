@@ -48,6 +48,8 @@ crons.cron('prune inbound webhook events', '50 3 * * *', internal.inboundWebhook
 
 // Ask Anowa conversations are kept 365 days after the last message (ENT-005).
 crons.cron('prune assistant chats', '5 4 * * *', internal.assistantChats.prune, {})
+// Streamed Ask Anowa replies are transient (the answer lives in assistantMessages).
+crons.interval('prune assistant streams', { minutes: 30 }, internal.anowa.stream.prune, {})
 
 // LLM usage log is kept 400 days (INT-009).
 crons.cron('prune llm usage', '55 3 * * *', internal.llmGateway.pruneUsage, {})

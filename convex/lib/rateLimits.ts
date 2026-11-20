@@ -49,6 +49,11 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   /** Live model lists for the org's keys (assistant picker, AI settings), key = userId. */
   llmModelListPerUser: { kind: 'fixed window', rate: 120, period: HOUR },
   /**
+   * Ask Anowa stream rows started (AI-009), key = userId. Bounds rows a member
+   * can create even when the turn fails before it spends LLM quota.
+   */
+  assistantStreamStartPerUser: { kind: 'token bucket', rate: 30, period: MINUTE, capacity: 10 },
+  /**
    * Attachment upload URLs (CF-005), key = userId / companyId. Bounds orphaned
    * R2 objects. An image with a thumbnail (CF-004) takes two tokens, so the
    * budget is 40 photos (80 documents) in a burst per user.

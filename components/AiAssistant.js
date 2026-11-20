@@ -9,7 +9,7 @@ import { api } from '../lib/convexBridge'
 import {
   loadLlmSettings,
   saveLlmSettings,
-  chatCompletion,
+  chatCompletionStream,
   draftAutomation,
   effectiveModel,
   fetchLlmModels,
@@ -146,15 +146,25 @@ function useAssistantChat(active, { canDraft = false, canManage = false } = {}) 
         .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.failed)
         .slice(-8)
         .map((m) => ({ role: m.role, content: m.content }))
-      const reply = await chatCompletion({
-        provider: providerId,
-        model,
-        temperature: 0.3,
-        asOf: localToday(),
-        lang: locale,
-        messages: [...history, { role: 'user', content: question }],
+      // Tokens show as they arrive (lib/chatStream); the final text replaces them.
+      const live = { role: 'assistant', live: true, content: '' }
+      const liveId = (live.liveId = `l${Date.now()}`)
+      setMessages((m) => [...m, live])
+      const reply = await chatCompletionStream(
+        {
+          provider: providerId,
+          model,
+          temperature: 0.3,
+          asOf: localToday(),
+          lang: locale,
+          messages: [...history, { role: 'user', content: question }],
+        },
+        { onText: (text) => setMessages((m) => m.map((x) => (x.liveId === liveId ? { ...x, content: text } : x))) },
+      ).catch((err) => {
+        setMessages((m) => m.filter((x) => x.liveId !== liveId))
+        throw err
       })
-      setMessages((m) => [...m, { role: 'assistant', content: reply.text }])
+      setMessages((m) => m.map((x) => (x.liveId === liveId ? { role: 'assistant', content: reply.text } : x)))
       if (reply.model) {
         setLastUsed({ provider: reply.provider || providerId, model: reply.model })
         // The server used its default because the saved model is gone: save what it used.
@@ -207,7 +217,7 @@ function useAssistantChat(active, { canDraft = false, canManage = false } = {}) 
   }
 }
 
-function TypingDots() {
+export function TypingDots() {
   const t = useT()
   return (
     <div className="flex items-center gap-1 py-2" aria-label={t('assistantUi.typing')} role="status">
@@ -359,7 +369,12 @@ function DraftCard({ message, compact }) {
  * the left. `renderActions(message)` adds controls under an answer (Ask
  * Anowa's Save answer).
  */
-export function Thread({ chat, compact = false, renderActions }) {
+/**
+ * The conversation. A message with `live: true` is an answer still arriving:
+ * `renderLive(m)` draws it (Ask Anowa's streamed rows), else its text so far
+ * with the typing dots until the first words.
+ */
+export function Thread({ chat, compact = false, renderActions, renderLive }) {
   const t = useT()
   const bottomRef = useRef(null)
   useEffect(() => {
@@ -378,16 +393,28 @@ export function Thread({ chat, compact = false, renderActions }) {
         ) : (
           <div key={i} className={`flex ${compact ? 'gap-3' : 'gap-[14px]'}`}>
             <Avatar size={compact ? 'size-7' : 'size-8'} />
-            <div className={`min-w-0 grow basis-0 pt-1 ${m.failed ? 'text-muted' : 'text-text'} ${text}`} role={m.failed ? 'alert' : undefined}>
+            <div className={`min-w-0 grow basis-0 pt-1 ${m.failed ? 'text-muted' : 'text-text'} ${text}`} role={m.failed ? 'alert' : undefined} aria-busy={m.live ? true : undefined}>
               {i > 0 && <span className="sr-only">{t('assistantUi.srAssistant')} </span>}
-              {m.failed ? <p className="whitespace-pre-wrap">{m.content}</p> : <AnswerText text={m.content} compact={compact} />}
+              {m.live ? (
+                renderLive ? (
+                  renderLive(m)
+                ) : m.content ? (
+                  <AnswerText text={m.content} compact={compact} />
+                ) : (
+                  <TypingDots />
+                )
+              ) : m.failed ? (
+                <p className="whitespace-pre-wrap">{m.content}</p>
+              ) : (
+                <AnswerText text={m.content} compact={compact} />
+              )}
               {m.kind === 'draft' && <DraftCard message={m} compact={compact} />}
               {renderActions && renderActions(m)}
             </div>
           </div>
         ),
       )}
-      {chat.busy && (
+      {chat.busy && !chat.messages[chat.messages.length - 1]?.live && (
         <div className={`flex ${compact ? 'gap-3' : 'gap-[14px]'}`}>
           <Avatar size={compact ? 'size-7' : 'size-8'} />
           <TypingDots />

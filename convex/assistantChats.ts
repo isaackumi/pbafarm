@@ -10,6 +10,7 @@ import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireMember } from './lib/permissions'
 import { userError } from './lib/errors'
+import { answerChartValidator, type AnswerChart } from './lib/answerCharts'
 
 /**
  * Ask Anowa chat history and saved answers (Paper artboard 47). Every
@@ -44,9 +45,21 @@ const messageView = v.object({
   content: v.string(),
   pinned: v.boolean(),
   createdAt: v.number(),
+  charts: v.optional(v.array(answerChartValidator)),
+  draftGroup: v.optional(v.string()),
+  stopped: v.optional(v.boolean()),
 })
 
-async function requireChatOwner(ctx: QueryCtx | MutationCtx, allowActAsReadOnly = false) {
+/** A turn to save. Charts and draft cards only come from the server (appendTurns callers), never from `append`. */
+export type NewTurn = {
+  role: 'user' | 'assistant'
+  content: string
+  charts?: AnswerChart[]
+  draftGroup?: string
+  stopped?: boolean
+}
+
+export async function requireChatOwner(ctx: QueryCtx | MutationCtx, allowActAsReadOnly = false) {
   const m = await requireMember(ctx, { permission: 'ai.use', allowActAsReadOnly })
   if (!m.companyId) throw userError('FORBIDDEN', 'Chat history needs an organization')
   return { userId: m.user._id, companyId: m.companyId }
@@ -116,6 +129,9 @@ export const get = query({
         content: m.content,
         pinned: m.pinnedAt !== undefined,
         createdAt: m.createdAt,
+        ...(m.charts?.length ? { charts: m.charts } : {}),
+        ...(m.draftGroup ? { draftGroup: m.draftGroup } : {}),
+        ...(m.stopped ? { stopped: true } : {}),
       })),
     }
   },
@@ -130,60 +146,83 @@ export const append = mutation({
   args: {
     chatId: v.optional(v.id('assistantChats')),
     messages: v.array(
-      v.object({ role: v.union(v.literal('user'), v.literal('assistant')), content: v.string() }),
+      v.object({
+        role: v.union(v.literal('user'), v.literal('assistant')),
+        content: v.string(),
+        /** The member pressed Stop on this answer. */
+        stopped: v.optional(v.boolean()),
+      }),
     ),
   },
   returns: v.object({ chatId: v.id('assistantChats'), messageIds: v.array(v.id('assistantMessages')) }),
   handler: async (ctx, args) => {
     const me = await requireChatOwner(ctx)
-    if (args.messages.length === 0 || args.messages.length > 4) {
-      throw userError('VALIDATION', 'Send one to four messages at a time')
-    }
-    for (const m of args.messages) {
-      if (!m.content.trim()) throw userError('VALIDATION', 'A message is empty')
-      if (m.content.length > MAX_CONTENT_CHARS) {
-        throw userError('VALIDATION', `A message is too long (max ${MAX_CONTENT_CHARS} characters)`)
-      }
-    }
-    const now = Date.now()
-    let chat: Doc<'assistantChats'>
-    if (args.chatId) {
-      chat = await ownChat(ctx, me, args.chatId)
-      if (chat.messageCount + args.messages.length > MAX_MESSAGES) {
-        throw userError('VALIDATION', 'This conversation is full. Start a new chat.', { reason: 'CHAT_FULL' })
-      }
-    } else {
-      const first = args.messages.find((m) => m.role === 'user') ?? args.messages[0]
-      const id = await ctx.db.insert('assistantChats', {
-        companyId: me.companyId,
-        userId: me.userId,
-        title: chatTitle(first.content),
-        messageCount: 0,
-        lastMessageAt: now,
-        createdAt: now,
-      })
-      chat = (await ctx.db.get(id))!
-    }
-    const messageIds: Id<'assistantMessages'>[] = []
-    for (const [i, m] of args.messages.entries()) {
-      messageIds.push(
-        await ctx.db.insert('assistantMessages', {
-          companyId: me.companyId,
-          userId: me.userId,
-          chatId: chat._id,
-          role: m.role,
-          content: m.content,
-          createdAt: now + i,
-        }),
-      )
-    }
-    await ctx.db.patch(chat._id, {
-      messageCount: chat.messageCount + args.messages.length,
-      lastMessageAt: now,
-    })
-    return { chatId: chat._id, messageIds }
+    return await appendTurns(ctx, me, args.chatId, args.messages)
   },
 })
+
+/**
+ * Save turns to one of the member's conversations (a new one without
+ * `chatId`). Shared by `append` (browser, text only) and the streamed Ask
+ * Anowa reply (convex/anowa/stream.finish), which adds the charts and the
+ * draft card the server produced.
+ */
+export async function appendTurns(
+  ctx: MutationCtx,
+  me: { userId: Id<'users'>; companyId: Id<'companies'> },
+  chatId: Id<'assistantChats'> | undefined,
+  turns: NewTurn[],
+) {
+  if (turns.length === 0 || turns.length > 4) {
+    throw userError('VALIDATION', 'Send one to four messages at a time')
+  }
+  for (const m of turns) {
+    if (!m.content.trim()) throw userError('VALIDATION', 'A message is empty')
+    if (m.content.length > MAX_CONTENT_CHARS) {
+      throw userError('VALIDATION', `A message is too long (max ${MAX_CONTENT_CHARS} characters)`)
+    }
+  }
+  const now = Date.now()
+  let chat: Doc<'assistantChats'>
+  if (chatId) {
+    chat = await ownChat(ctx, me, chatId)
+    if (chat.messageCount + turns.length > MAX_MESSAGES) {
+      throw userError('VALIDATION', 'This conversation is full. Start a new chat.', { reason: 'CHAT_FULL' })
+    }
+  } else {
+    const first = turns.find((m) => m.role === 'user') ?? turns[0]
+    const id = await ctx.db.insert('assistantChats', {
+      companyId: me.companyId,
+      userId: me.userId,
+      title: chatTitle(first.content),
+      messageCount: 0,
+      lastMessageAt: now,
+      createdAt: now,
+    })
+    chat = (await ctx.db.get(id))!
+  }
+  const messageIds: Id<'assistantMessages'>[] = []
+  for (const [i, m] of turns.entries()) {
+    messageIds.push(
+      await ctx.db.insert('assistantMessages', {
+        companyId: me.companyId,
+        userId: me.userId,
+        chatId: chat._id,
+        role: m.role,
+        content: m.content,
+        ...(m.role === 'assistant' && m.charts?.length ? { charts: m.charts } : {}),
+        ...(m.role === 'assistant' && m.draftGroup ? { draftGroup: m.draftGroup } : {}),
+        ...(m.role === 'assistant' && m.stopped ? { stopped: true } : {}),
+        createdAt: now + i,
+      }),
+    )
+  }
+  await ctx.db.patch(chat._id, {
+    messageCount: chat.messageCount + turns.length,
+    lastMessageAt: now,
+  })
+  return { chatId: chat._id, messageIds }
+}
 
 /** Delete one of the caller's conversations and its turns. */
 export const remove = mutation({
@@ -287,7 +326,12 @@ export const purgeForUser = internalMutation({
       .withIndex('by_userId', (q) => q.eq('userId', args.userId))
       .take(Math.max(1, Math.floor(PURGE_BATCH / 20)))
     for (const c of chats) await deleteChat(ctx, c._id)
-    if (chats.length > 0) {
+    const streams = await ctx.db
+      .query('assistantStreams')
+      .withIndex('by_userId', (q) => q.eq('userId', args.userId))
+      .take(PURGE_BATCH)
+    for (const s of streams) await ctx.db.delete(s._id)
+    if (chats.length > 0 || streams.length === PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.assistantChats.purgeForUser, { userId: args.userId })
     }
     return null

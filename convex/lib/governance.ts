@@ -146,6 +146,8 @@ export const TENANT_TABLES: TenantTable[] = [
   // Ask Anowa history (artboard 47): each member's own conversations and saved answers.
   { table: 'assistantChats', index: 'by_companyId_and_userId_and_lastMessageAt' },
   { table: 'assistantMessages', index: 'by_companyId_and_chatId' },
+  // Streamed replies in flight: transient, not exported.
+  { table: 'assistantStreams', index: 'by_companyId_and_userId_and_createdAt', export: false },
   // Farm bot (doc 23): bindings and cost rows exported; codes and drafts are transient.
   { table: 'channelBindings', index: 'by_companyId' },
   { table: 'channelMessageCosts', index: 'by_companyId_and_sentAt' },
