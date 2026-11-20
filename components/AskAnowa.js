@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useMutation } from 'convex/react'
+import { useAction, useMutation } from 'convex/react'
 import {
   ArrowUp,
   Bookmark,
@@ -32,7 +32,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocale, useT } from '../lib/i18n/context'
 import { assistantErrorText } from '../lib/assistantErrors'
 import { chatCompletion, draftAutomation, fetchLlmModels } from '../lib/llmClient'
-import { isAutomationRequest } from '../lib/anowaIntent'
+import { isActionRequest, isAutomationRequest } from '../lib/anowaIntent'
 import { localToday } from '../lib/format'
 import { errorMessage } from '../lib/errorMessage'
 import {
@@ -53,6 +53,7 @@ import { initials } from './ui'
 import Layout from './Layout'
 import { AssistantOff, Thread, useAssistantAccess } from './AiAssistant'
 import AnswerText from './AnswerText'
+import DraftCard from './AnowaDraftCard'
 
 /**
  * Ask Anowa, expanded (Paper artboards 47 and 47b): a full-screen assistant
@@ -155,6 +156,8 @@ function AskAnowa() {
   const loadedRef = useRef(null)
   const inputRef = useRef(null)
   const append = useMutation(api.assistantChats.append)
+  const askWithTools = useAction(api.anowa.agent.ask)
+  const [hiddenFollowUps, setHiddenFollowUps] = useState(() => new Set())
   const setPinned = useMutation(api.assistantChats.setPinned)
   const removeChat = useMutation(api.assistantChats.remove)
   const recent = useOptionalQuery(api.assistantChats.list, {}, [])
@@ -244,6 +247,23 @@ function AskAnowa() {
           catalog: result.catalog,
           startPaused: result.startPaused !== false,
           canSave: result.canSave === true,
+        }
+      } else if (isActionRequest(question)) {
+        // "Does it for you" (artboard 48): the agent only drafts; the card confirms.
+        const res = await askWithTools({
+          question,
+          history,
+          siteId: siteId || undefined,
+          lang: locale,
+          provider,
+          model,
+        })
+        if (!res.ok) throw Object.assign(new Error(''), { code: res.code, retryAfterSec: res.retryAfterSec })
+        answer = {
+          role: 'assistant',
+          content: res.text || t('askAnowa.draft.intro'),
+          ...(res.draftGroup ? { kind: 'actions', draftGroup: res.draftGroup } : {}),
+          ...(res.followUp ? { followUp: res.followUp } : {}),
         }
       } else {
         const reply = await chatCompletion({
@@ -376,7 +396,20 @@ function AskAnowa() {
                 <Thread
                   chat={chat}
                   renderActions={(m) =>
-                    m._id && m.role === 'assistant' ? <SaveButton t={t} message={m} onToggle={togglePin} /> : null
+                    m.role === 'assistant' ? (
+                      <>
+                        {m.draftGroup && <DraftCard draftGroup={m.draftGroup} />}
+                        {m.followUp && m === messages[messages.length - 1] && !busy && !hiddenFollowUps.has(m.followUp) && (
+                          <FollowUp
+                            t={t}
+                            text={m.followUp}
+                            onAsk={() => send(m.followUp)}
+                            onDismiss={() => setHiddenFollowUps((h) => new Set(h).add(m.followUp))}
+                          />
+                        )}
+                        {m._id && <SaveButton t={t} message={m} onToggle={togglePin} />}
+                      </>
+                    ) : null
                   }
                 />
               </div>
@@ -404,6 +437,28 @@ function AskAnowa() {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+/** One follow-up Anowa suggests under a draft (artboard 48 "Also noticed"): ask it, or not now. */
+function FollowUp({ t, text, onAsk, onDismiss }) {
+  return (
+    <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={t('askAnowa.draft.followUpLabel')}>
+      <button
+        type="button"
+        onClick={onAsk}
+        className={`rounded-pill border border-line-strong px-[14px] py-2 text-left text-sm leading-[18px] text-text hover:bg-surface-2 ${FOCUS}`}
+      >
+        {text}
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className={`rounded-pill border border-line-strong px-[14px] py-2 text-sm leading-[18px] text-muted hover:bg-surface-2 ${FOCUS}`}
+      >
+        {t('askAnowa.draft.notNow')}
+      </button>
     </div>
   )
 }

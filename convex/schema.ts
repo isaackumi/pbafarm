@@ -1462,8 +1462,11 @@ const schema = defineSchema({
     apiKeyId: v.optional(v.id('apiKeys')),
     /** Set when a super-admin wrote this during support access (ENT-006). */
     actAsSessionId: v.optional(v.id('actAsSessions')),
-    /** Set when the change came from the farm bot (BOT-003): chat channel and provider message id. */
-    channel: v.optional(v.union(v.literal('whatsapp'), v.literal('telegram'))),
+    /**
+     * Set when the change came from the farm bot (BOT-003): chat channel and
+     * provider message id; 'anowa' = confirmed from an Ask Anowa draft (web).
+     */
+    channel: v.optional(v.union(v.literal('whatsapp'), v.literal('telegram'), v.literal('anowa'))),
     sourceMessageId: v.optional(v.string()),
     /**
      * Hash chain per company (TRACE-007, convex/lib/auditChain.ts): position,

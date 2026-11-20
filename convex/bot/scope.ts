@@ -28,6 +28,20 @@ export type BoundMember = {
   locale: BotLocale
 }
 
+/**
+ * What scope checks and draft validation need: the company, the member's
+ * permissions and sites, an optional active site and the locale. A chat
+ * binding (BoundMember) is one; Ask Anowa in the web app builds one from the
+ * signed-in member (convex/anowa/scope.ts).
+ */
+export type MemberScope = {
+  binding: { companyId: Id<'companies'> }
+  member: MemberContext
+  company: Doc<'companies'>
+  site: Doc<'farmLocations'> | null
+  locale: BotLocale
+}
+
 /** The checks a binding must pass; WhatsApp also needs the bound number to still be the user's verified phone. */
 export async function checkBinding(
   ctx: Ctx,
@@ -65,7 +79,7 @@ export function botCtx(ctx: MutationCtx, bound: BoundMember, sourceMessageId: st
 }
 
 /** Units the binding may see: the active site, else every site in scope. Archived units excluded. */
-export async function unitsInScope(ctx: Ctx, bound: BoundMember, cap = 300): Promise<Doc<'cages'>[]> {
+export async function unitsInScope(ctx: Ctx, bound: MemberScope, cap = 300): Promise<Doc<'cages'>[]> {
   const companyId = bound.binding.companyId
   const rows = bound.site
     ? await ctx.db
@@ -79,7 +93,7 @@ export async function unitsInScope(ctx: Ctx, bound: BoundMember, cap = 300): Pro
   return rows.filter((c) => !c.archivedAt && inScope(bound, c.locationId))
 }
 
-export function inScope(bound: BoundMember, locationId: Id<'farmLocations'> | undefined): boolean {
+export function inScope(bound: MemberScope, locationId: Id<'farmLocations'> | undefined): boolean {
   if (bound.member.siteScope === 'all') return true
   return !!locationId && bound.member.siteScope.has(locationId)
 }
@@ -106,7 +120,7 @@ export function matchUnit(units: Doc<'cages'>[], typed: string): { unit: Doc<'ca
 }
 
 /** The farm date of a message: its timestamp in the unit's site timezone (or the company's). */
-export async function farmDate(ctx: Ctx, bound: BoundMember, locationId: Id<'farmLocations'> | undefined, at: number) {
+export async function farmDate(ctx: Ctx, bound: MemberScope, locationId: Id<'farmLocations'> | undefined, at: number) {
   const site = locationId ? await ctx.db.get(locationId) : bound.site
   return todayIn(zoneFor(site, bound.company), at)
 }

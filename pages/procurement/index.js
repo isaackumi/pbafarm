@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
@@ -23,6 +24,7 @@ import { formatMass, shortDate } from '../../lib/feedOverview'
 import { lineKg, summarizeProcurement, supplierSpend } from '../../lib/procurementSummary'
 import { useLocale, useT } from '../../lib/i18n/context'
 import { usePermission } from '../../hooks/usePermission'
+import { queryNumber, queryValue } from '../../lib/anowaDraftCard'
 
 export default function ProcurementPage() {
   return (
@@ -64,6 +66,22 @@ function PurchaseOrders() {
   const [form, setForm] = useState({ supplierId: '', expectedDate: '', notes: '', lines: [blankLine()] })
   const [receiving, setReceiving] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  // Ask Anowa's Edit (artboard 48): /procurement?newPo=1&supplier=…&feedType=…&qty=…&price=…
+  const router = useRouter()
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (!router.isReady || prefilled.current || router.query.newPo !== '1' || !canRecord) return
+    prefilled.current = true
+    const q = router.query
+    setForm({
+      supplierId: queryValue(q, 'supplier', 64),
+      expectedDate: '',
+      notes: '',
+      lines: [{ feedTypeId: queryValue(q, 'feedType', 64), quantityKg: queryNumber(q, 'qty'), pricePerKg: queryNumber(q, 'price') }],
+    })
+    setShowForm(true)
+  }, [router.isReady, router.query, canRecord])
 
   const run = async (fn, ok) => {
     setBusy(true)

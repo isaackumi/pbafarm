@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { useToast } from '../components/Toast'
@@ -26,6 +27,7 @@ import { useOnline } from '../hooks/useOutbox'
 import OutboxPanel from '../components/OutboxPanel'
 import { usePermission } from '../hooks/usePermission'
 import { useT } from '../lib/i18n/context'
+import { queryDate, queryNumber, queryValue } from '../lib/anowaDraftCard'
 import { useReferenceList } from '../hooks/useReferenceList'
 import FormLayout, { hiddenCoreKeys, useFormLayout } from '../components/FormLayout'
 
@@ -68,6 +70,24 @@ function FeedIssue() {
 
   const selected = feedTypes.find((f) => (f.id || f._id) === form.feedTypeId)
   const bagSize = selected?.bag_size_kg || 25
+
+  // Ask Anowa's Edit (artboard 48): /feed-issue?feedType=…&qty=…&cage=…&date=…
+  const router = useRouter()
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (!router.isReady || prefilled.current || !router.query.feedType) return
+    prefilled.current = true
+    const q = router.query
+    setForm((p) => ({
+      ...p,
+      feedTypeId: queryValue(q, 'feedType', 64),
+      cageId: queryValue(q, 'cage', 64),
+      quantityKg: queryNumber(q, 'qty'),
+      bags: '',
+      usageDate: queryDate(q, 'date') || p.usageDate,
+      notes: queryValue(q, 'notes', 500),
+    }))
+  }, [router.isReady, router.query])
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target

@@ -169,36 +169,52 @@ export const create = mutation({
   returns: v.id('purchaseOrders'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'inventory.purchase.record' })
-    const companyId = await writeCompanyId(user)
-    await validateSupplier(ctx, user, args.supplierId)
-    const lines = await validateLines(ctx, user, args.lines)
-    const locationId = args.locationId ? await writeLocationId(ctx, user, args.locationId) : undefined
-
-    // Sequential per company; concurrent creates conflict and retry.
-    const latest = await ctx.db
-      .query('purchaseOrders')
-      .withIndex('by_company', (q) => q.eq('companyId', companyId))
-      .order('desc')
-      .first()
-    const lastNo = latest ? Number(latest.poNumber.replace(/\D/g, '')) || 0 : 0
-    const poNumber = `PO-${String(lastNo + 1).padStart(4, '0')}`
-
-    const id = await ctx.db.insert('purchaseOrders', {
-      companyId,
-      poNumber,
-      supplierId: args.supplierId,
-      locationId,
-      status: 'draft',
-      lines,
-      expectedDate: args.expectedDate,
-      notes: args.notes?.trim() || undefined,
-      createdBy: user._id,
-      updatedAt: Date.now(),
-    })
-    await logAudit(ctx, { actionType: 'create', tableName: 'purchaseOrders', recordId: id, newValues: { ...args, poNumber }, locationId })
-    return id
+    return await createPurchaseOrderAs(ctx, user, args)
   },
 })
+
+export type PurchaseOrderInput = {
+  supplierId: Id<'feedSuppliers'>
+  locationId?: Id<'farmLocations'>
+  lines: LineInput[]
+  expectedDate?: string
+  notes?: string
+}
+
+/**
+ * Create a draft purchase order as `user` (the caller has checked
+ * inventory.purchase.record). Shared by the form and Ask Anowa's confirm.
+ */
+export async function createPurchaseOrderAs(ctx: MutationCtx, user: Doc<'users'>, args: PurchaseOrderInput) {
+  const companyId = await writeCompanyId(user)
+  await validateSupplier(ctx, user, args.supplierId)
+  const lines = await validateLines(ctx, user, args.lines)
+  const locationId = args.locationId ? await writeLocationId(ctx, user, args.locationId) : undefined
+
+  // Sequential per company; concurrent creates conflict and retry.
+  const latest = await ctx.db
+    .query('purchaseOrders')
+    .withIndex('by_company', (q) => q.eq('companyId', companyId))
+    .order('desc')
+    .first()
+  const lastNo = latest ? Number(latest.poNumber.replace(/\D/g, '')) || 0 : 0
+  const poNumber = `PO-${String(lastNo + 1).padStart(4, '0')}`
+
+  const id = await ctx.db.insert('purchaseOrders', {
+    companyId,
+    poNumber,
+    supplierId: args.supplierId,
+    locationId,
+    status: 'draft',
+    lines,
+    expectedDate: args.expectedDate,
+    notes: args.notes?.trim() || undefined,
+    createdBy: user._id,
+    updatedAt: Date.now(),
+  })
+  await logAudit(ctx, { actionType: 'create', tableName: 'purchaseOrders', recordId: id, newValues: { ...args, poNumber }, locationId })
+  return id
+}
 
 /** Edit a draft. Ordered, received and cancelled orders are fixed. */
 export const update = mutation({

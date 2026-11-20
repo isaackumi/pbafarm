@@ -38,6 +38,7 @@ import QrScanner from './QrScanner'
 import { usePermission } from '../hooks/usePermission'
 import { customPayload } from './CustomFields'
 import { useT } from '../lib/i18n/context'
+import { queryDate, queryNumber, queryValue } from '../lib/anowaDraftCard'
 
 const isoDay = (d = new Date()) => d.toISOString().split('T')[0]
 const dayBefore = (iso) => {
@@ -179,7 +180,23 @@ const DailyUploadPage = () => {
       .split(',')
       .map((s) => s.trim())
       .filter((id) => known.has(id) && !loggedCageIds.has(id))
-    if (ids.length) addCages(ids)
+    // Ask Anowa's Edit (artboard 48) also passes the drafted values for one cage.
+    const q = router.query
+    const extra = {}
+    if (queryNumber(q, 'mortality')) extra.mortality = queryNumber(q, 'mortality')
+    if (queryNumber(q, 'feed')) extra.feedQty = queryNumber(q, 'feed')
+    if (queryValue(q, 'cause', 30)) extra.mortalityCause = queryValue(q, 'cause', 30)
+    if (queryValue(q, 'notes', 500)) extra.notes = queryValue(q, 'notes', 500)
+    const date = queryDate(q, 'date')
+    const feedType = queryValue(q, 'feedType', 64)
+    if (date || extra.feedQty) {
+      setFormData((prev) => ({ ...prev, ...(date ? { date } : {}), ...(extra.feedQty ? { feedUnit: 'kg' } : {}) }))
+    }
+    if (ids.length === 1 && Object.keys(extra).length) {
+      const knownFeed = feedTypes.some((f) => idOf(f) === feedType)
+      setLines((ls) => (ls.some((l) => l.cageId === ids[0]) ? ls : [...ls, newLine(ids[0], knownFeed ? feedType : formData.defaultFeedTypeId, extra)]))
+    } else if (ids.length) addCages(ids)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lookupsReady, router.isReady, router.query, cages, addCages, loggedCageIds])
 
   const toggleCage = (cageId) => {

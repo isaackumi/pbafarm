@@ -2,8 +2,8 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { logAudit } from './lib/tenancy'
 import { can, memberContext, requireAccount, requireMember } from './lib/permissions'
-import type { QueryCtx } from './_generated/server'
-import type { Doc } from './_generated/dataModel'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { Doc, Id } from './_generated/dataModel'
 import { notifyUsers } from './lib/notify'
 import { isActiveMember, ownTeam, teamMemberRows, teamsOfUser } from './teams'
 import { docFields } from './lib/docValidators'
@@ -127,54 +127,68 @@ export const create = mutation({
   returns: v.id('tasks'),
   handler: async (ctx, args) => {
     const { user } = await requireMember(ctx, { permission: 'automation.manage' })
-    if (!user.companyId) throw new Error('Your account is not linked to a company')
-    const title = args.title.trim()
-    if (!title || title.length > 200) throw new Error('Title is required (up to 200 characters)')
-    if (args.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(args.dueDate)) throw new Error('Due date must be YYYY-MM-DD')
-    if (!args.assigneeUserId && !args.teamId) throw new Error('Choose a person or a team')
-    if (args.assigneeUserId && !(await isActiveMember(ctx, user.companyId, args.assigneeUserId))) {
-      throw new Error('Assignee must be a member of your company')
-    }
-    const team = args.teamId ? await ownTeam(ctx, user.companyId, args.teamId) : null
-    if (args.cageId) {
-      const cage = await ctx.db.get(args.cageId)
-      if (!cage || cage.companyId !== user.companyId) throw new Error('Cage not found')
-    }
-    const now = Date.now()
-    const id = await ctx.db.insert('tasks', {
-      companyId: user.companyId,
-      title,
-      description: args.description?.trim() || undefined,
-      assigneeUserId: args.assigneeUserId,
-      teamId: team?._id,
-      dueDate: args.dueDate || undefined,
-      cageId: args.cageId,
-      status: 'open',
-      createdBy: user._id,
-      createdAt: now,
-      updatedAt: now,
-    })
-    const recipients: Doc<'users'>[] = []
-    if (args.assigneeUserId) {
-      const assignee = await ctx.db.get(args.assigneeUserId)
-      if (assignee) recipients.push(assignee)
-    }
-    if (team) {
-      for (const r of await teamMemberRows(ctx, team._id)) {
-        const u = await ctx.db.get(r.userId)
-        if (u && u.active !== false && u.companyId === user.companyId) recipients.push(u)
-      }
-    }
-    await notifyUsers(ctx, {
-      companyId: user.companyId,
-      users: recipients,
-      channels: ['in_app'],
-      title: team ? `New task for ${team.name}` : 'New task',
-      message: title,
-      link: '/tasks',
-      source: 'task.assigned',
-    })
-    await logAudit(ctx, { actionType: 'create', tableName: 'tasks', recordId: id, newValues: { title, teamId: team?._id } })
-    return id
+    return await createTaskAs(ctx, user, args)
   },
 })
+
+export type TaskInput = {
+  title: string
+  description?: string
+  assigneeUserId?: Id<'users'>
+  teamId?: Id<'teams'>
+  dueDate?: string
+  cageId?: Id<'cages'>
+}
+
+/** Create and announce a task as `user` (the caller has checked automation.manage). Shared with Ask Anowa. */
+export async function createTaskAs(ctx: MutationCtx, user: Doc<'users'>, args: TaskInput) {
+  if (!user.companyId) throw new Error('Your account is not linked to a company')
+  const title = args.title.trim()
+  if (!title || title.length > 200) throw new Error('Title is required (up to 200 characters)')
+  if (args.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(args.dueDate)) throw new Error('Due date must be YYYY-MM-DD')
+  if (!args.assigneeUserId && !args.teamId) throw new Error('Choose a person or a team')
+  if (args.assigneeUserId && !(await isActiveMember(ctx, user.companyId, args.assigneeUserId))) {
+    throw new Error('Assignee must be a member of your company')
+  }
+  const team = args.teamId ? await ownTeam(ctx, user.companyId, args.teamId) : null
+  if (args.cageId) {
+    const cage = await ctx.db.get(args.cageId)
+    if (!cage || cage.companyId !== user.companyId) throw new Error('Cage not found')
+  }
+  const now = Date.now()
+  const id = await ctx.db.insert('tasks', {
+    companyId: user.companyId,
+    title,
+    description: args.description?.trim() || undefined,
+    assigneeUserId: args.assigneeUserId,
+    teamId: team?._id,
+    dueDate: args.dueDate || undefined,
+    cageId: args.cageId,
+    status: 'open',
+    createdBy: user._id,
+    createdAt: now,
+    updatedAt: now,
+  })
+  const recipients: Doc<'users'>[] = []
+  if (args.assigneeUserId) {
+    const assignee = await ctx.db.get(args.assigneeUserId)
+    if (assignee) recipients.push(assignee)
+  }
+  if (team) {
+    for (const r of await teamMemberRows(ctx, team._id)) {
+      const u = await ctx.db.get(r.userId)
+      if (u && u.active !== false && u.companyId === user.companyId) recipients.push(u)
+    }
+  }
+  await notifyUsers(ctx, {
+    companyId: user.companyId,
+    users: recipients,
+    channels: ['in_app'],
+    title: team ? `New task for ${team.name}` : 'New task',
+    message: title,
+    link: '/tasks',
+    source: 'task.assigned',
+  })
+  await logAudit(ctx, { actionType: 'create', tableName: 'tasks', recordId: id, newValues: { title, teamId: team?._id } })
+  return id
+}
