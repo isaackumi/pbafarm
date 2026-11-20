@@ -53,6 +53,7 @@ describe('listing per provider (parse + filter)', () => {
       json(200, {
         models: [
           { name: 'models/gemini-9-flash-image', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/antigravity-preview-09-2026', supportedGenerationMethods: ['generateContent'] },
           { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
           { name: 'models/aqa', supportedGenerationMethods: ['generateAnswer'] },
         ],
