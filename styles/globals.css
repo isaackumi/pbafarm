@@ -68,6 +68,17 @@
   --font-data: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, monospace;
   /* Ask Anowa headline (Paper 47) */
   --font-serif: var(--font-instrument-serif, 'Instrument Serif'), Georgia, serif;
+  /* Marketing site (Paper landing v4) */
+  --font-tight: var(--font-inter-tight, 'Inter Tight'), var(--font-inter, 'Inter'), system-ui, sans-serif;
+  --font-mono-dm: var(--font-dm-mono, 'DM Mono'), ui-monospace, monospace;
+  --font-geist: var(--font-geist-mono, 'Geist Mono'), ui-monospace, monospace;
+
+  /* Marketing palette (Paper landing v4 "Sky"); fixed brand colours, not theme tokens */
+  --color-lime: #d7f75b;
+  --color-ink: #0b0d10;
+  --color-sky: #2f86ea;
+  --color-sky-soft: #8cc6f6;
+  --color-mist: #f1f2f4;
 }
 
 body {

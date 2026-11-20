@@ -1,0 +1,142 @@
+/*
+ * Marketing site motion (Paper landing v4, legal pages, 404).
+ * Classes are prefixed `mk-`. Hooks in lib/marketing/motion.js decide when;
+ * this file decides how. Reduced motion turns everything off at the bottom.
+ */
+
+/* ── Scroll reveal ───────────────────────────────────────────────────── */
+.mk-reveal {
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--mk-delay, 0ms),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--mk-delay, 0ms),
+    filter 0.8s ease var(--mk-delay, 0ms);
+}
+.mk-reveal:not(.is-in) { opacity: 0; }
+.mk-reveal-up:not(.is-in) { transform: translateY(28px); }
+.mk-reveal-scale:not(.is-in) { transform: scale(0.96); filter: blur(6px); }
+.mk-reveal-left:not(.is-in) { transform: translateX(-32px); }
+.mk-reveal-right:not(.is-in) { transform: translateX(32px); }
+
+/* Children of a revealed `.mk-stagger` arrive one after another. */
+.mk-stagger > * {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.mk-reveal:not(.is-in).mk-stagger > *,
+.mk-reveal:not(.is-in) .mk-stagger > * { opacity: 0; transform: translateY(18px); }
+.mk-stagger > *:nth-child(1) { transition-delay: calc(var(--mk-delay, 0ms) + 60ms); }
+.mk-stagger > *:nth-child(2) { transition-delay: calc(var(--mk-delay, 0ms) + 140ms); }
+.mk-stagger > *:nth-child(3) { transition-delay: calc(var(--mk-delay, 0ms) + 220ms); }
+.mk-stagger > *:nth-child(4) { transition-delay: calc(var(--mk-delay, 0ms) + 300ms); }
+.mk-stagger > *:nth-child(5) { transition-delay: calc(var(--mk-delay, 0ms) + 380ms); }
+.mk-stagger > *:nth-child(6) { transition-delay: calc(var(--mk-delay, 0ms) + 460ms); }
+.mk-stagger > *:nth-child(7) { transition-delay: calc(var(--mk-delay, 0ms) + 540ms); }
+.mk-stagger > *:nth-child(8) { transition-delay: calc(var(--mk-delay, 0ms) + 620ms); }
+.mk-stagger > *:nth-child(n + 9) { transition-delay: calc(var(--mk-delay, 0ms) + 700ms); }
+
+/* ── Parallax (lib/marketing/motion useScrollProgress sets --mk-p) ───── */
+.mk-parallax-slow { transform: translate3d(0, calc((var(--mk-p, 0.5) - 0.5) * -60px), 0); }
+.mk-parallax-fast { transform: translate3d(0, calc((var(--mk-p, 0.5) - 0.5) * -140px), 0); }
+.mk-parallax-drift { transform: translate3d(calc((var(--mk-p, 0.5) - 0.5) * 80px), 0, 0); }
+
+/* ── Ambient loops ───────────────────────────────────────────────────── */
+@keyframes mk-float {
+  0%, 100% { transform: translateY(0) rotate(var(--mk-rot, 0deg)); }
+  50% { transform: translateY(-10px) rotate(var(--mk-rot, 0deg)); }
+}
+.mk-float { animation: mk-float var(--mk-dur, 6s) ease-in-out infinite; animation-delay: var(--mk-delay, 0s); }
+
+@keyframes mk-drift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(var(--mk-drift, 40px)); }
+  100% { transform: translateX(0); }
+}
+.mk-drift { animation: mk-drift var(--mk-dur, 28s) ease-in-out infinite; }
+
+@keyframes mk-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.mk-marquee { animation: mk-marquee var(--mk-dur, 40s) linear infinite; width: max-content; }
+.mk-marquee:hover { animation-play-state: paused; }
+
+@keyframes mk-swim {
+  0% { transform: translate(0, 0) scaleX(var(--mk-flip, 1)); }
+  25% { transform: translate(calc(var(--mk-dist, 120px) * 0.25), -6px) scaleX(var(--mk-flip, 1)); }
+  50% { transform: translate(calc(var(--mk-dist, 120px) * 0.5), 2px) scaleX(var(--mk-flip, 1)); }
+  75% { transform: translate(calc(var(--mk-dist, 120px) * 0.75), -4px) scaleX(var(--mk-flip, 1)); }
+  100% { transform: translate(var(--mk-dist, 120px), 0) scaleX(var(--mk-flip, 1)); }
+}
+.mk-swim { animation: mk-swim var(--mk-dur, 9s) ease-in-out infinite alternate; }
+
+@keyframes mk-tail {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
+.mk-tail { transform-box: fill-box; transform-origin: left center; animation: mk-tail 0.6s ease-in-out infinite; }
+
+@keyframes mk-bubble {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(var(--mk-rise, -120px)) scale(1.1); opacity: 0; }
+}
+.mk-bubble { animation: mk-bubble var(--mk-dur, 4s) ease-in infinite; animation-delay: var(--mk-delay, 0s); transform-box: fill-box; }
+
+@keyframes mk-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.mk-shimmer { background-size: 200% 100%; animation: mk-shimmer 7s linear infinite; }
+
+@keyframes mk-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(-6deg); }
+}
+.mk-bob { animation: mk-bob 3.2s ease-in-out infinite; }
+
+@keyframes mk-drip {
+  0%, 70%, 100% { transform: translateY(0) scale(1); }
+  80% { transform: translateY(3px) scale(1.06, 0.92); }
+  88% { transform: translateY(-2px) scale(0.97, 1.04); }
+}
+.mk-drip { animation: mk-drip 2.8s ease-in-out infinite; }
+
+@keyframes mk-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(215 247 91 / 0.55); }
+  100% { box-shadow: 0 0 0 14px rgb(215 247 91 / 0); }
+}
+.mk-pulse { animation: mk-pulse-ring 2.2s ease-out infinite; }
+
+@keyframes mk-caret { 50% { opacity: 0; } }
+.mk-caret { animation: mk-caret 1s steps(1) infinite; }
+
+@keyframes mk-sway {
+  0%, 100% { transform: rotate(var(--mk-rot, 0deg)) translateX(0); opacity: var(--mk-o, 0.5); }
+  50% { transform: rotate(calc(var(--mk-rot, 0deg) + 3deg)) translateX(12px); opacity: calc(var(--mk-o, 0.5) * 0.6); }
+}
+.mk-sway { animation: mk-sway var(--mk-dur, 9s) ease-in-out infinite; transform-origin: top center; }
+
+@keyframes mk-dash { to { stroke-dashoffset: 0; } }
+.mk-draw { stroke-dasharray: var(--mk-len, 400); stroke-dashoffset: var(--mk-len, 400); }
+.is-in .mk-draw, .mk-draw.is-in { animation: mk-dash 1.6s cubic-bezier(0.6, 0, 0.2, 1) forwards var(--mk-delay, 0s); }
+
+/* Lift on hover for cards and buttons. */
+.mk-lift { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s ease; }
+.mk-lift:hover { transform: translateY(-4px); }
+.mk-press { transition: transform 0.2s ease, filter 0.2s ease; }
+.mk-press:hover { filter: brightness(1.04); }
+.mk-press:active { transform: scale(0.97); }
+.mk-press:hover .mk-arrow { transform: rotate(45deg); }
+.mk-arrow { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+/* ── Reduced motion: no loops, no reveals ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .mk-reveal, .mk-reveal * { transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+  .mk-float, .mk-drift, .mk-marquee, .mk-swim, .mk-tail, .mk-bubble, .mk-shimmer, .mk-bob,
+  .mk-drip, .mk-pulse, .mk-caret, .mk-sway, .mk-draw, .mk-lift, .mk-press, .mk-arrow {
+    animation: none !important;
+    transition: none !important;
+  }
+  .mk-draw { stroke-dashoffset: 0 !important; }
+  .mk-parallax-slow, .mk-parallax-fast, .mk-parallax-drift { transform: none !important; }
+  .mk-bubble { opacity: 0 !important; }
+}

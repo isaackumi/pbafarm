@@ -24,7 +24,7 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper 
 
 | | Route | Artboard / pattern |
 |---|---|---|
-| [x] | `/` | Website Landing 3I0-0 |
+| [x] | `/` | Landing v4 Sky PTX-2 (page "Anowa · Marketing site"; v1 3I0-0 retired) |
 | [x] | `/login` | 15 / 15b |
 | [x] | `/signup`, `/verify`, `/verify-email`, `/reset-password`, `/invite/[token]` | P-AUTH (15 layout) |
 | [x] | `/register-company`, `/create-cage` | 16 Onboarding (stepper) |
@@ -71,7 +71,9 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` built and matches Paper 
 | [x] | `/api-keys`, `/webhooks`, `/inbound-webhooks`, `/api-docs` | P-SETTINGS + P-LIST |
 | [x] | `/audit-logs` | P-LIST + 23 access history rows |
 | [x] | `/admin/admin`, `/admin/company-registrations`, `/global-settings` | P-SETTINGS · 25 queue |
-| [x] | `/404`, `_error` | P-SYSTEM |
+| [x] | `/404` | 404 "This cage is empty" QMW-2 |
+| [x] | `_error` | P-SYSTEM |
+| [x] | `/privacy`, `/terms`, `/cookies`, `/security` | Legal QP5-2 · R2C-2 · QVV-2 · R8T-2 |
 | [x] | `/calendar` | 18 Calendar |
 | [x] | `/assistant` (`?chat=<id>`, `?view=saved`) | 47 Ask Anowa — Expanded PJ0-0 · 47b model menu POM-0 (page "Anowa app · Console, bot & AI"); compact bubble stays 17 |
 | [x] | `/alerts`, `/weekly-report` | 30 feed list · 11 |
