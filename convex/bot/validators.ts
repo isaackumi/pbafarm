@@ -78,6 +78,13 @@ export const routePlan = v.union(
     sourceMessageId: v.string(),
     sentAt: v.number(),
   }),
+  /** A voice note to transcribe into drafts (BOT-005): the action starts its workflow. */
+  v.object({
+    type: v.literal('voice'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    voiceNoteId: v.id('voiceNotes'),
+  }),
   /** Save every draft heard in one voice note (BOT-005). */
   v.object({
     type: v.literal('voice_commit'),

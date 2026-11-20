@@ -93,12 +93,12 @@ describe('platform console (PLAT-101..112)', () => {
       [api.platform.admins.demote, { userId: s.root }],
     ] as const
     for (const [fn, args] of queries) {
-      expect(await errorOf(s.asAdminA.query(fn as never, args as never))).toMatchObject({ code: 'FORBIDDEN' })
-      expect((await errorOf(s.asRootNoMfa.query(fn as never, args as never))).message).toContain('MFA_REQUIRED')
+      expect(await errorOf(s.asAdminA.query(fn as any, args as any))).toMatchObject({ code: 'FORBIDDEN' })
+      expect((await errorOf(s.asRootNoMfa.query(fn as any, args as any))).message).toContain('MFA_REQUIRED')
     }
     for (const [fn, args] of mutations) {
-      expect(await errorOf(s.asAdminA.mutation(fn as never, args as never))).toMatchObject({ code: 'FORBIDDEN' })
-      expect((await errorOf(s.asRootNoMfa.mutation(fn as never, args as never))).message).toContain('MFA_REQUIRED')
+      expect(await errorOf(s.asAdminA.mutation(fn as any, args as any))).toMatchObject({ code: 'FORBIDDEN' })
+      expect((await errorOf(s.asRootNoMfa.mutation(fn as any, args as any))).message).toContain('MFA_REQUIRED')
     }
     expect(await s.t.run((ctx) => ctx.db.query('billingPayments').collect())).toEqual([])
     expect(await s.t.run((ctx) => ctx.db.query('tenantNotes').collect())).toEqual([])
@@ -249,9 +249,13 @@ describe('platform console (PLAT-101..112)', () => {
       const owner = await ctx.db.insert('users', { email: 'new@farm.com' })
       return await ctx.db.insert('companies', { name: 'New Farm', code: 'NEW', status: 'pending', submittedByUserId: owner, createdAt: Date.now() })
     })
+    const approvedFrom = Date.now()
     await s.asRoot.mutation(api.companies.approve, { companyId: pending })
     const sub = await s.t.run((ctx) => ctx.db.query('subscriptions').withIndex('by_companyId', (q) => q.eq('companyId', pending)).first())
-    expect(sub).toMatchObject({ status: 'trialing', trialEndsAt: Date.now() + 14 * DAY_MS })
+    expect(sub).toMatchObject({ status: 'trialing' })
+    // 14 days from approval (convex-test's transaction clock can run a few ms ahead of the test's).
+    expect(sub!.trialEndsAt).toBeGreaterThanOrEqual(approvedFrom + 14 * DAY_MS)
+    expect(sub!.trialEndsAt).toBeLessThanOrEqual(Date.now() + 14 * DAY_MS + 1000)
   })
 
   test('platform admins: promote by email, never demote yourself or the last admin', async () => {

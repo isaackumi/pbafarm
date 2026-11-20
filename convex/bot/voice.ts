@@ -122,20 +122,20 @@ export async function voicePlan(
     if (!verdict.ok) return reply(s.aiQuota(retryAfterText(verdict.retryAfter)))
   }
   // The pipeline sends its own reply; a repeat of the same message does nothing.
-  await startVoiceNote(ctx, bound, {
+  const voiceNoteId = await createVoiceNote(ctx, bound, {
     sourceMessageId: inbound.externalId,
     mediaId: inbound.mediaId,
     sentAt: inbound.sentAt,
     language,
   })
-  return { type: 'none' }
+  return voiceNoteId ? { type: 'voice', ...tgt, voiceNoteId } : { type: 'none' }
 }
 
 /**
- * One voiceNotes row and one workflow run per (binding, message). Returns
- * null when the message was already taken (the idempotency guard).
+ * One voiceNotes row per (binding, message), the idempotency key of its
+ * workflow run. Returns null when the message was already taken.
  */
-export async function startVoiceNote(
+export async function createVoiceNote(
   ctx: MutationCtx,
   bound: BoundMember,
   note: { sourceMessageId: string; mediaId: string; sentAt: number; language: SpeechLanguage },
@@ -146,7 +146,7 @@ export async function startVoiceNote(
     .withIndex('by_bindingId_and_sourceMessageId', (q) => q.eq('bindingId', bindingId).eq('sourceMessageId', note.sourceMessageId))
     .first()
   if (prior) return null
-  const voiceNoteId = await ctx.db.insert('voiceNotes', {
+  return await ctx.db.insert('voiceNotes', {
     companyId: bound.binding.companyId,
     locationId: noteSite(bound),
     userId: bound.binding.userId,
@@ -159,9 +159,28 @@ export async function startVoiceNote(
     status: 'queued',
     createdAt: Date.now(),
   })
-  const workflowId = await workflow.start(ctx, internal.bot.voice.pipeline, { voiceNoteId })
-  await ctx.db.patch(voiceNoteId, { workflowId: String(workflowId) })
-  return voiceNoteId
+}
+
+/** Claim a queued note for its single workflow run (false when already started). */
+export const claimNote = internalMutation({
+  args: { voiceNoteId: v.id('voiceNotes'), workflowId: v.optional(v.string()) },
+  returns: v.boolean(),
+  handler: async (ctx, { voiceNoteId, workflowId }) => {
+    const note = await ctx.db.get(voiceNoteId)
+    if (!note || note.status !== 'queued') return false
+    if (workflowId === undefined) return !note.workflowId
+    if (note.workflowId) return false
+    await ctx.db.patch(voiceNoteId, { workflowId })
+    return true
+  },
+})
+
+/** From the processing action: start the note's workflow once. */
+export async function startVoice(ctx: ActionCtx, plan: Extract<RoutePlan, { type: 'voice' }>): Promise<ChatMessageValue[]> {
+  if (!(await ctx.runMutation(internal.bot.voice.claimNote, { voiceNoteId: plan.voiceNoteId }))) return []
+  const workflowId = await workflow.start(ctx, internal.bot.voice.pipeline, { voiceNoteId: plan.voiceNoteId })
+  await ctx.runMutation(internal.bot.voice.claimNote, { voiceNoteId: plan.voiceNoteId, workflowId: String(workflowId) })
+  return []
 }
 
 /** VOICE <language>: set the spoken language of this chat's voice notes. */

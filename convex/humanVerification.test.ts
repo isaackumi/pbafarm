@@ -89,7 +89,7 @@ describe('human checks', () => {
       const options = (PasswordProvider as unknown as {
         options: { authorize: (p: Record<string, unknown>, ctx: unknown) => Promise<unknown> }
       }).options
-      const ctx = { runMutation: (ref: never, args: never) => s.t.mutation(ref, args) }
+      const ctx = { runMutation: (ref: any, args: any) => s.t.mutation(ref, args) }
       await expect(options.authorize({ flow: 'signUp', email: 'a@b.c', password: 'secret12' }, ctx)).rejects.toThrow(
         /human check/,
       )
@@ -110,7 +110,7 @@ describe('human checks', () => {
 
 type Authorize = (p: Record<string, unknown>, ctx: unknown) => Promise<unknown>
 const authorizeOf = () => (PasswordProvider as unknown as { options: { authorize: Authorize } }).options.authorize
-const ctxOf = (s: Awaited<ReturnType<typeof setup>>) => ({ runMutation: (ref: never, args: never) => s.t.mutation(ref, args) })
+const ctxOf = (s: Awaited<ReturnType<typeof setup>>) => ({ runMutation: (ref: any, args: any) => s.t.mutation(ref, args) })
 const failures = (s: Awaited<ReturnType<typeof setup>>, email: string) =>
   s.t.run(async (ctx) => (await ctx.db.query('signInFailures').withIndex('by_email', (q) => q.eq('email', email)).unique())?.count ?? 0)
 

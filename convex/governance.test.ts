@@ -72,7 +72,7 @@ async function setup() {
   })
   const as = (userId: string) =>
     t.withIdentity({ subject: `${userId}|${userId === ids.platform ? ids.platformSession : 's'}` })
-  const drain = () => t.finishAllScheduledFunctions(vi.runAllTimers)
+  const drain = () => t.finishAllScheduledFunctions(vi.runAllTimers, 2000)
   return { t, as, drain, ...ids }
 }
 
