@@ -22,6 +22,7 @@ import * as inboundWebhooks from './inboundWebhooks'
 import * as llmGateway from './llmGateway'
 import * as governance from './governance'
 import * as botAgent from './bot/agent'
+import * as anowaAgent from './anowa/agent'
 import * as botLogbook from './bot/logbook'
 import * as llmModels from './llmModels'
 
@@ -498,7 +499,7 @@ describe('secrets stay server-side (doc 10 §10 meta-test)', () => {
       .map(([path]) => path)
       .sort()
     // governance.ts only deletes them, when an organization is purged (internal).
-    expect(users).toEqual(['./bot/agent.ts', './bot/logbook.ts', './governance.ts', './inboundWebhooks.ts', './llmGateway.ts', './llmModels.ts', './messaging/channels.ts', './messaging/deliver.ts', './webhooks.ts'])
+    expect(users).toEqual(['./anowa/agent.ts', './bot/agent.ts', './bot/logbook.ts', './governance.ts', './inboundWebhooks.ts', './llmGateway.ts', './llmModels.ts', './messaging/channels.ts', './messaging/deliver.ts', './webhooks.ts'])
     // Every function in those modules that returns secret material is internal.
     for (const fn of [
       channels.storeCredentials, channels.prepareTest, deliver.resolveRoute,
@@ -506,7 +507,7 @@ describe('secrets stay server-side (doc 10 §10 meta-test)', () => {
       governance.purgeCompanyBatch,
       inboundWebhooks.storeSecret, inboundWebhooks.lookup,
       llmGateway.storeCredentialSecret, llmGateway.begin,
-      botAgent.prepare, botLogbook.prepareScan,
+      botAgent.prepare, botLogbook.prepareScan, anowaAgent.prepare,
       llmModels.orgSources,
     ] as any[]) {
       expect(fn.isInternal).toBe(true)

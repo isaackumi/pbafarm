@@ -130,6 +130,7 @@ function AuditLogsContent() {
           className="rounded text-left text-text hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
         >
           {labels.action(log.action_type)} · {labels.table(log.table_name)}
+          {log.channel && <span className="text-muted"> · {t(`settingsUi.audit.via.${log.channel}`)}</span>}
         </button>
       ),
       sub: (log) => <span className="font-mono">{log.record_id || '—'}</span>,

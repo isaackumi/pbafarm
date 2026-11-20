@@ -13,7 +13,7 @@ import { addDays } from '../lib/dates'
 import { saveDailyBatch, removeDailyRecordAs } from '../dailyRecords'
 import { recordOutboundUsageAs } from '../feed'
 import { reverseTransactionAs } from '../inventory'
-import { botCtx, checkBinding, farmDate, inScope, matchUnit, unitsInScope, type BoundMember } from './scope'
+import { botCtx, checkBinding, farmDate, inScope, matchUnit, unitsInScope, type BoundMember, type MemberScope } from './scope'
 import { t, type BotLocale } from './i18n'
 import { CHECK_CONFIDENCE, fuzzyMatchUnit, rankUnits } from './unitMatch'
 import type { ChatMessageValue } from './validators'
@@ -56,7 +56,7 @@ function nameKey(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-async function feedTypesOf(ctx: MutationCtx, companyId: Id<'companies'>) {
+export async function feedTypesOf(ctx: MutationCtx, companyId: Id<'companies'>) {
   const rows = await ctx.db
     .query('feedTypes')
     .withIndex('by_company', (q) => q.eq('companyId', companyId))
@@ -64,7 +64,7 @@ async function feedTypesOf(ctx: MutationCtx, companyId: Id<'companies'>) {
   return rows.filter((f) => !f.deletedAt)
 }
 
-function matchFeedType(types: Doc<'feedTypes'>[], typed: string) {
+export function matchFeedType(types: Doc<'feedTypes'>[], typed: string) {
   const key = nameKey(typed)
   if (!key) return null
   const exact = types.filter((f) => nameKey(f.name) === key)
@@ -137,22 +137,37 @@ function resolveUnit(units: Doc<'cages'>[], typed: string, pick: boolean): UnitP
   }
 }
 
-/** Validate and store a draft for the binding. Company and site come from the binding only. */
-export async function proposeFor(
+/** A validated daily-entry or feed-issue draft, not stored yet. */
+export type BuiltProposal = {
+  ok: true
+  payload: Doc<'pendingBotActions'>['payload']
+  siteId: Id<'farmLocations'> | undefined
+  date: string
+  summary: string
+  fingerprint: string
+  /** Set when the unit was picked from a weak match (ProposeOptions.pickUnit). */
+  unitChoices: Doc<'cages'>[] | null
+}
+
+/**
+ * Validate a daily entry or feed issue against the member's scope and
+ * permissions. Shared by the chat bot (binding) and Ask Anowa (web member).
+ */
+export async function buildProposal(
   ctx: MutationCtx,
-  bound: BoundMember,
+  bound: MemberScope,
   input: ProposalInput,
-  source: { sourceMessageId: string; eventTime: number },
+  eventTime: number,
   opts: ProposeOptions = {},
-): Promise<ProposeResult> {
+): Promise<BuiltProposal | { ok: false; error: string }> {
   const s = t(bound.locale)
   const daysAgo = input.daysAgo ?? 0
   if (!Number.isInteger(daysAgo) || daysAgo < 0 || daysAgo > MAX_DAYS_AGO) {
     return { ok: false, error: `daysAgo must be a whole number from 0 to ${MAX_DAYS_AGO}` }
   }
   const units = await unitsInScope(ctx, bound)
-  const now = Date.now()
   const companyId = bound.binding.companyId
+  const source = { eventTime }
 
   let payload: Doc<'pendingBotActions'>['payload']
   let siteId: Id<'farmLocations'> | undefined
@@ -227,6 +242,7 @@ export async function proposeFor(
       notes,
       ...(dissolvedOxygen !== undefined ? { dissolvedOxygen } : {}),
       ...(temperatureC !== undefined ? { temperatureC } : {}),
+      ...(typeof unit.currentCount === 'number' ? { fishBefore: unit.currentCount } : {}),
     }
     summary = s.summaryDaily({
       unit: unit.name,
@@ -265,6 +281,22 @@ export async function proposeFor(
     summary = s.summaryIssue({ qty: input.quantityKg, feedType: feedType.name, unit: unit?.name, date })
     fingerprint = `issue|${feedType._id}|${unit?._id ?? '-'}|${date}|${input.quantityKg}`
   }
+  return { ok: true, payload, siteId, date, summary, fingerprint, unitChoices }
+}
+
+/** Validate and store a draft for the binding. Company and site come from the binding only. */
+export async function proposeFor(
+  ctx: MutationCtx,
+  bound: BoundMember,
+  input: ProposalInput,
+  source: { sourceMessageId: string; eventTime: number },
+  opts: ProposeOptions = {},
+): Promise<ProposeResult> {
+  const built = await buildProposal(ctx, bound, input, source.eventTime, opts)
+  if (!built.ok) return built
+  const { payload, siteId, date, summary, fingerprint, unitChoices } = built
+  const now = Date.now()
+  const companyId = bound.binding.companyId
 
   const recent = await ctx.db
     .query('pendingBotActions')
@@ -327,6 +359,8 @@ async function loadDraft(
 /** Whether the bound member may still write this draft: permission and site/unit scope. */
 async function writeProblem(ctx: MutationCtx, bound: BoundMember, draft: Doc<'pendingBotActions'>): Promise<string | null> {
   const p = draft.payload
+  // Purchase orders and tasks are web (Ask Anowa) drafts: never committed from a chat.
+  if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue') return 'not a chat draft'
   const permission = p.kind === 'daily_entry' ? 'production.daily.record' : 'inventory.issue'
   if (!can(bound.member, permission)) return `missing permission ${permission}`
   if (draft.siteId && !inScope(bound, draft.siteId)) return 'site not in your scope'
@@ -378,6 +412,7 @@ export const commit = internalMutation({
     // Audit rows carry the channel and the message that carried the entry.
     const wctx = botCtx(ctx, bound, draft.sourceMessageId)
     const p = draft.payload
+    if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue') return { status: 'refused', message: 'not a chat draft' }
     let dailyRecordId: Id<'dailyRecords'> | undefined
     let feedUsageId: Id<'feedUsage'> | undefined
     if (p.kind === 'daily_entry') {

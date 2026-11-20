@@ -197,7 +197,7 @@ async function latestTemperature(ctx: QueryCtx, cageId: Id<'cages'>, refDate: st
   return fresh[0] ?? null
 }
 
-async function cageRation(ctx: QueryCtx, cage: Doc<'cages'>, tables: Map<string, FeedBand[]>) {
+export async function cageRation(ctx: QueryCtx, cage: Doc<'cages'>, tables: Map<string, FeedBand[]>) {
   let speciesKey = cage.species ?? null
   const batch = cage.currentBatchId ? await ctx.db.get(cage.currentBatchId) : null
   if (!speciesKey) speciesKey = batch?.speciesCode ?? null

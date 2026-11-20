@@ -264,7 +264,7 @@ describe('BOT-005 voice notes', () => {
     const drafts = await rows(s, 'pendingBotActions')
     expect(drafts).toHaveLength(2)
     expect(drafts.every((d) => d.voiceNoteId === note._id && d.status === 'pending' && d.sourceMessageId === 'wamid.voice1')).toBe(true)
-    const c10 = drafts.find((d) => d.payload.cageId === s.cageC10)!
+    const c10 = drafts.find((d) => d.payload.kind === 'daily_entry' && d.payload.cageId === s.cageC10)!
     expect(c10).toMatchObject({ needsCheck: ['feedKg'], checkHeard: 'thirty', notSaid: ['mortality'] })
     expect(await rows(s, 'dailyRecords')).toHaveLength(0)
 
@@ -483,11 +483,13 @@ describe('BOT-005 voice notes', () => {
       for (let i = 0; i < 99; i++) await rateLimiter.limit(ctx, 'llmPerUserHour', { key: s.staff })
     })
     whisperReply = [400, { error: { message: 'bad audio' } }]
+    // Both before one drain: draining advances the faked clock and could cross the hour window.
     await postWhatsApp(s, waVoice())
-    await drain(s)
     await postWhatsApp(s, waVoice())
     const replies = await drain(s)
-    expect(replies[0].text).toMatch(/You have used the assistant a lot recently/)
+    expect(replies.map((r) => r.text)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/You have used the assistant a lot recently/)]),
+    )
     expect(speechCalls).toHaveLength(1)
     expect(await rows(s, 'voiceNotes')).toHaveLength(1)
   })

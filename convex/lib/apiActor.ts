@@ -28,7 +28,7 @@ export type ApiActor = {
    * The chat channel a farm-bot write came from (BOT-003, doc 23): recorded on
    * the audit row with the provider message id that carried the entry.
    */
-  readonly channel?: { readonly provider: 'whatsapp' | 'telegram'; readonly sourceMessageId: string }
+  readonly channel?: { readonly provider: 'whatsapp' | 'telegram' | 'anowa'; readonly sourceMessageId: string }
 }
 
 type WithActor = { readonly apiActor?: ApiActor }

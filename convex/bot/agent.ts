@@ -544,3 +544,59 @@ export async function agentTurn(ctx: ActionCtx, turn: AgentTurn): Promise<AgentT
   }
   return { ok: true, locale: p.locale, reply, drafts: env.drafts }
 }
+
+/** The key and model a prepared turn may use (bot or Ask Anowa web). */
+export type ModelSource = {
+  companyId: Id<'companies'>
+  source: 'org_key' | 'server_key'
+  providerId: string
+  model: string
+  baseUrl: string | null
+  credentialId: Id<'llmCredentials'> | null
+  ciphertext: string | null
+  iv: string | null
+}
+
+/**
+ * Build the language model for a prepared turn: the org key (decrypted here,
+ * in the action) or the server key, and a model id the provider still lists
+ * (D-022). Same steps as runAgent; null when no usable key or model.
+ */
+export async function languageModelFor(
+  ctx: ActionCtx,
+  p: ModelSource,
+): Promise<{ model: LanguageModelV4; modelId: string; price: Price | undefined } | null> {
+  if (testHooks.languageModel) return { model: testHooks.languageModel, modelId: p.model || 'test', price: undefined }
+  let apiKey = ''
+  if (p.source === 'org_key') {
+    const key = readEncryptionKey()
+    if (key && p.ciphertext && p.iv && p.credentialId) {
+      apiKey = (
+        await decryptJson<{ apiKey: string }>(
+          { ciphertext: p.ciphertext, iv: p.iv },
+          llmCredentialAad(p.companyId, p.credentialId),
+          key,
+        )
+      ).apiKey
+    }
+  } else {
+    apiKey = serverKey(p.providerId)
+  }
+  const baseURL = openAiBaseUrl(p.providerId, p.baseUrl)
+  const provider = PROVIDERS[p.providerId]
+  if (!apiKey || !baseURL || !provider) return null
+  const { choice, models } = await chooseModel(ctx, {
+    target: { providerId: provider.id, kind: provider.kind, baseUrl: providerBaseUrl(provider.id, p.baseUrl), apiKey },
+    scope: p.source === 'org_key' ? p.companyId : 'server',
+    saved: p.model,
+  })
+  if (!choice.ok) {
+    console.warn(`[agent] ${choice.error}`)
+    return null
+  }
+  return {
+    model: createOpenAICompatible({ name: p.providerId, baseURL, apiKey }).chatModel(choice.model),
+    modelId: choice.model,
+    price: listedPrice(models, choice.model),
+  }
+}

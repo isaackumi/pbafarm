@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
@@ -7,6 +8,7 @@ import { CardNote, FIELD, SettingsCard, SettingsField as Field, SettingsFrame, S
 import { useToast } from '../components/Toast'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
+import { queryDate, queryValue } from '../lib/anowaDraftCard'
 import { usePermission } from '../hooks/usePermission'
 import { errorMessage } from '../lib/errorMessage'
 import { localToday } from '../lib/format'
@@ -97,6 +99,13 @@ function TeamCard({ team, parentName, siteName, people, canManage, canAssign, is
   const [addUser, setAddUser] = useState('')
   const [msg, setMsg] = useState({ title: '', message: '' })
   const [task, setTask] = useState({ title: '', dueDate: localToday() })
+  // Ask Anowa's Edit (artboard 48): /teams?taskTitle=…&taskDue=… fills every team's task form.
+  const router = useRouter()
+  useEffect(() => {
+    if (!router.isReady) return
+    const title = queryValue(router.query, 'taskTitle')
+    if (title) setTask({ title, dueDate: queryDate(router.query, 'taskDue') || localToday() })
+  }, [router.isReady, router.query])
   const memberIds = new Set(team.members.map((m) => m.userId))
 
   return (

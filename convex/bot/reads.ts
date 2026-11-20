@@ -4,7 +4,7 @@
  * from `checkBinding`, never from the model. Results are compact JSON the
  * model rephrases.
  */
-import { v } from 'convex/values'
+import { v, type Infer } from 'convex/values'
 import { internalQuery } from '../_generated/server'
 import type { QueryCtx } from '../_generated/server'
 import type { Doc } from '../_generated/dataModel'
@@ -13,7 +13,7 @@ import { addDays } from '../lib/dates'
 import { round } from '../lib/kpi'
 import { cageGrowth } from '../lib/growth'
 import { siteStock } from '../lib/feedLedger'
-import { checkBinding, farmDate, matchUnit, unitsInScope, type BoundMember } from './scope'
+import { checkBinding, farmDate, matchUnit, unitsInScope, type MemberScope } from './scope'
 
 export const readTool = v.union(
   v.literal('units'),
@@ -28,7 +28,7 @@ const readResult = v.union(
 )
 
 /** Units in scope with no daily entry for today's farm date. */
-export async function missingToday(ctx: QueryCtx, bound: BoundMember, now: number) {
+export async function missingToday(ctx: QueryCtx, bound: MemberScope, now: number) {
   const units = (await unitsInScope(ctx, bound)).filter((u) => u.status === 'active')
   const missing: Array<Doc<'cages'>> = []
   let date = ''
@@ -44,7 +44,7 @@ export async function missingToday(ctx: QueryCtx, bound: BoundMember, now: numbe
   return { date, active: units.length, missing }
 }
 
-async function units(ctx: QueryCtx, bound: BoundMember, now: number) {
+async function units(ctx: QueryCtx, bound: MemberScope, now: number) {
   const rows = (await unitsInScope(ctx, bound, 100)).filter((u) => u.status !== 'empty' || (u.currentCount ?? 0) > 0)
   const out = []
   for (const u of rows.slice(0, 40)) {
@@ -66,7 +66,7 @@ async function units(ctx: QueryCtx, bound: BoundMember, now: number) {
   return { site: bound.site?.name ?? 'all sites in scope', units: out, more: rows.length > out.length }
 }
 
-async function unitDetail(ctx: QueryCtx, bound: BoundMember, typed: string, now: number) {
+async function unitDetail(ctx: QueryCtx, bound: MemberScope, typed: string, now: number) {
   const all = await unitsInScope(ctx, bound)
   const { unit, candidates } = matchUnit(all, typed)
   if (!unit) return { error: candidates.length ? `Ambiguous unit; matches: ${candidates.join(', ')}` : 'No such unit in scope.' }
@@ -99,7 +99,7 @@ async function unitDetail(ctx: QueryCtx, bound: BoundMember, typed: string, now:
   }
 }
 
-async function feedStock(ctx: QueryCtx, bound: BoundMember) {
+async function feedStock(ctx: QueryCtx, bound: MemberScope) {
   const types = (
     await ctx.db
       .query('feedTypes')
@@ -133,20 +133,30 @@ export const read = internalQuery({
     if (!binding) return { ok: false as const, error: 'not connected' }
     const checked = await checkBinding(ctx, binding)
     if (!checked.ok) return { ok: false as const, error: 'not connected' }
-    const bound = checked.bound
-    const permission = tool === 'feed_stock' ? 'inventory.view' : 'production.view'
-    if (!can(bound.member, permission)) return { ok: false as const, error: `You do not have ${permission} permission.` }
-    let data: unknown
-    if (tool === 'units') data = await units(ctx, bound, now)
-    else if (tool === 'unit_detail') {
-      const d = await unitDetail(ctx, bound, unit ?? '', now)
-      if ('error' in d && typeof d.error === 'string') return { ok: false as const, error: d.error }
-      data = d
-    } else if (tool === 'feed_stock') data = await feedStock(ctx, bound)
-    else {
-      const m = await missingToday(ctx, bound, now)
-      data = { date: m.date, activeUnits: m.active, missing: m.missing.map((u) => u.name) }
-    }
-    return { ok: true as const, data: JSON.stringify(data) }
+    return await readFor(ctx, checked.bound, tool, unit, now)
   },
 })
+
+/** One read tool for a member scope (chat binding or Ask Anowa web member). */
+export async function readFor(
+  ctx: QueryCtx,
+  bound: MemberScope,
+  tool: Infer<typeof readTool>,
+  unit: string | undefined,
+  now: number,
+): Promise<Infer<typeof readResult>> {
+  const permission = tool === 'feed_stock' ? 'inventory.view' : 'production.view'
+  if (!can(bound.member, permission)) return { ok: false as const, error: `You do not have ${permission} permission.` }
+  let data: unknown
+  if (tool === 'units') data = await units(ctx, bound, now)
+  else if (tool === 'unit_detail') {
+    const d = await unitDetail(ctx, bound, unit ?? '', now)
+    if ('error' in d && typeof d.error === 'string') return { ok: false as const, error: d.error }
+    data = d
+  } else if (tool === 'feed_stock') data = await feedStock(ctx, bound)
+  else {
+    const m = await missingToday(ctx, bound, now)
+    data = { date: m.date, activeUnits: m.active, missing: m.missing.map((u) => u.name) }
+  }
+  return { ok: true as const, data: JSON.stringify(data) }
+}

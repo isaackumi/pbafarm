@@ -4246,6 +4246,11 @@
         "head": "hachage de tête",
         "unchained": "{count} entrées plus anciennes non chaînées (écrites avant le contrôle d'intégrité)",
         "verify": "Vérifier maintenant"
+      },
+      "via": {
+        "anowa": "via Anowa",
+        "whatsapp": "via WhatsApp",
+        "telegram": "via Telegram"
       }
     },
     "auto": {
@@ -6398,7 +6403,116 @@
     "savedTitle": "Réponses enregistrées",
     "savedEmpty": "Enregistrez une réponse : elle reste ici, avec la conversation d’où elle vient.",
     "openConversation": "Ouvrir la conversation",
-    "historyNote": "Vos conversations ne sont visibles que par vous et sont conservées un an."
+    "historyNote": "Vos conversations ne sont visibles que par vous et sont conservées un an.",
+    "draft": {
+      "label": "Brouillon",
+      "intro": "J'ai préparé les changements ci-dessous. Rien n'est enregistré avant votre confirmation.",
+      "header": {
+        "one": "Brouillon · 1 changement · non enregistré",
+        "other": "Brouillon · {count} changements · non enregistrés"
+      },
+      "savedHeader": {
+        "one": "Enregistré · 1 changement",
+        "other": "Enregistré · {count} changements"
+      },
+      "undoneHeader": "Annulé · rien de conservé",
+      "cancelledHeader": "Abandonné · rien d'enregistré",
+      "expiredHeader": "Expiré · rien d'enregistré",
+      "expires": {
+        "one": "Expire dans 1 h",
+        "other": "Expire dans {count} h"
+      },
+      "loading": "Chargement du brouillon…",
+      "missing": "Ce brouillon n'est plus disponible.",
+      "kinds": {
+        "mortality": {
+          "title": "Enregistrer la mortalité",
+          "meta": "Relevé quotidien · {unit}"
+        },
+        "daily": {
+          "title": "Enregistrer un relevé quotidien",
+          "meta": "Relevé quotidien · {unit}"
+        },
+        "issue": {
+          "title": "Sortir de l'aliment",
+          "meta": "Magasin d'aliment",
+          "metaUnit": "Magasin d'aliment · {unit}"
+        },
+        "order": {
+          "title": "Préparer un bon de commande",
+          "meta": "Achats · passe en approbation"
+        },
+        "task": {
+          "title": "Assigner une tâche",
+          "meta": "Tâches",
+          "metaUnit": "Tâches · {unit}"
+        }
+      },
+      "fields": {
+        "dead": "Poissons morts",
+        "date": "Date",
+        "fishAfter": "Poissons dans l'unité après",
+        "from": "au lieu de {count}",
+        "feed": "Aliment",
+        "feedGiven": "Aliment distribué",
+        "quantity": "Quantité",
+        "bags": {
+          "one": "1 sac",
+          "other": "{count} sacs"
+        },
+        "supplier": "Fournisseur",
+        "cost": "Coût estimé",
+        "task": "Tâche",
+        "assignee": "Assignée à",
+        "due": "Échéance",
+        "noDue": "Sans échéance"
+      },
+      "bar": {
+        "label": "Pourquoi cette quantité",
+        "onHand": "{kg} en stock",
+        "needed": {
+          "one": "{kg} nécessaires pour {days} jours (plan d'alimentation, 1 unité)",
+          "other": "{kg} nécessaires pour {days} jours (plan d'alimentation, {count} unités)"
+        },
+        "toOrder": "{kg} à commander"
+      },
+      "notAllowed": "Non inclus : {reason}",
+      "role": {
+        "all": {
+          "one": "Votre rôle permet ce changement",
+          "other": "Votre rôle permet les {count}"
+        },
+        "both": "Votre rôle permet les deux",
+        "some": "Votre rôle permet {allowed} sur {count}",
+        "none": "Votre rôle ne permet pas ces changements",
+        "loggedAs": "journalisé comme",
+        "you": "vous, via Anowa"
+      },
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "editItem": "Modifier {n} : {title}",
+      "editHint": "Ouvre le formulaire avec ces valeurs. Ce brouillon est fermé.",
+      "confirm": "Confirmer",
+      "confirmBoth": "Confirmer les deux",
+      "confirmN": "Confirmer les {count}",
+      "saving": "Enregistrement…",
+      "savedNote": "Enregistré via Anowa. Annulation possible encore {minutes} min.",
+      "savedFinal": "Enregistré via Anowa. Retrouvez-le dans l'application comme d'habitude.",
+      "skipped": {
+        "one": "1 changement n'a pas été inclus.",
+        "other": "{count} changements n'ont pas été inclus."
+      },
+      "undo": "Annuler l'enregistrement",
+      "undoneNote": "Annulé. Rien de ce brouillon n'est conservé.",
+      "tooLate": "Trop tard pour annuler : un relevé enregistré a changé depuis. Modifiez-le dans l'application.",
+      "expiredNote": "Ce brouillon a expiré après 24 heures. Redemandez pour en créer un nouveau.",
+      "cancelledNote": "Abandonné. Rien n'a été enregistré.",
+      "nothingAllowed": "Aucun de ces changements n'est permis pour votre rôle.",
+      "already": "Déjà enregistré.",
+      "failed": "Enregistrement impossible : {message}",
+      "followUpLabel": "Suggestion",
+      "notNow": "Pas maintenant"
+    }
   },
   "marketing": {
     "nav": {

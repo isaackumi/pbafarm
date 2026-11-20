@@ -77,6 +77,12 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
 
 const text = (m: string): ChatMessageValue => ({ kind: 'text', text: m })
+
+/** Voice drafts are always chat kinds (daily entry, feed issue); web-only kinds never carry a voiceNoteId. */
+type ChatPayload = Extract<Doc<'pendingBotActions'>['payload'], { kind: 'daily_entry' | 'feed_issue' }>
+type ChatDraft = Doc<'pendingBotActions'> & { payload: ChatPayload }
+const isChatDraft = (d: Doc<'pendingBotActions'>): d is ChatDraft =>
+  d.payload.kind === 'daily_entry' || d.payload.kind === 'feed_issue'
 const isSpeechLanguage = (x: string): x is SpeechLanguage => (SPEECH_LANGUAGES as readonly string[]).includes(x)
 
 // ---------------------------------------------------------------------------
@@ -274,6 +280,7 @@ async function pickCage(
   if (!cage || cage.companyId !== bound.binding.companyId || cage.archivedAt || !inScope(bound, cage.locationId)) {
     return 'unit not found'
   }
+  if (!isChatDraft(draft)) return 'unit not found'
   const p = draft.payload
   const oldName = p.cageName ?? ''
   const oldId = p.cageId ? String(p.cageId) : '-'
@@ -304,9 +311,7 @@ export type VoiceView = {
   english: string | null
   language: SpeechLanguage
   today: string
-  drafts: Array<
-    Pick<Doc<'pendingBotActions'>, '_id' | 'payload' | 'date' | 'needsCheck' | 'checkHeard' | 'notSaid' | 'unitChoices' | 'duplicateOf'>
-  >
+  drafts: Array<Pick<ChatDraft, '_id' | 'payload' | 'date' | 'needsCheck' | 'checkHeard' | 'notSaid' | 'unitChoices' | 'duplicateOf'>>
 }
 
 function fmtKg(kg: number) {
@@ -406,7 +411,7 @@ export function splitEnglish(reply: string): { english: string | null; rest: str
 }
 
 async function groupMessages(ctx: MutationCtx, bound: BoundMember, note: Doc<'voiceNotes'>): Promise<ChatMessageValue[]> {
-  const drafts = (await noteDrafts(ctx, note._id)).filter((d) => d.status === 'pending')
+  const drafts = (await noteDrafts(ctx, note._id)).filter((d) => d.status === 'pending').filter(isChatDraft)
   if (!drafts.length) return []
   return voiceMessages(bound.locale, note._id, {
     transcript: note.transcript ?? '',
@@ -727,7 +732,7 @@ export const finishNote = internalMutation({
     if (!note || !checked?.ok || note.status !== 'transcribed') return []
     const bound = checked.bound
     const low = note.lowConfidence ?? []
-    const drafts = (await noteDrafts(ctx, note._id)).filter((d) => d.status === 'pending')
+    const drafts = (await noteDrafts(ctx, note._id)).filter((d) => d.status === 'pending').filter(isChatDraft)
     for (const d of drafts) {
       const p = d.payload
       const needs = new Set(d.needsCheck ?? [])
@@ -819,7 +824,7 @@ export const groupDrafts = internalQuery({
       .filter((d) => d.bindingId === bindingId && d.status === status)
       .map((d) => ({
         pendingId: d._id,
-        name: d.payload.cageName ?? d.payload.feedTypeName ?? '',
+        name: isChatDraft(d) ? (d.payload.cageName ?? (d.payload.kind === 'feed_issue' ? d.payload.feedTypeName : '')) : '',
         unitUnconfirmed: !!d.needsCheck?.includes('unit'),
         duplicate: !!d.duplicateOf,
       }))

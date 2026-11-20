@@ -11,6 +11,9 @@
 import type * as accountingExport from "../accountingExport.js";
 import type * as actAs from "../actAs.js";
 import type * as aiReports from "../aiReports.js";
+import type * as anowa_agent from "../anowa/agent.js";
+import type * as anowa_drafts from "../anowa/drafts.js";
+import type * as anowa_scope from "../anowa/scope.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as approvalAlerts from "../approvalAlerts.js";
@@ -135,6 +138,7 @@ import type * as lib_errors from "../lib/errors.js";
 import type * as lib_events from "../lib/events.js";
 import type * as lib_farmRules from "../lib/farmRules.js";
 import type * as lib_feedLedger from "../lib/feedLedger.js";
+import type * as lib_feedOrder from "../lib/feedOrder.js";
 import type * as lib_fishTransferLogic from "../lib/fishTransferLogic.js";
 import type * as lib_forecastData from "../lib/forecastData.js";
 import type * as lib_formLayouts from "../lib/formLayouts.js";
@@ -264,6 +268,9 @@ declare const fullApi: ApiFromModules<{
   accountingExport: typeof accountingExport;
   actAs: typeof actAs;
   aiReports: typeof aiReports;
+  "anowa/agent": typeof anowa_agent;
+  "anowa/drafts": typeof anowa_drafts;
+  "anowa/scope": typeof anowa_scope;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   approvalAlerts: typeof approvalAlerts;
@@ -388,6 +395,7 @@ declare const fullApi: ApiFromModules<{
   "lib/events": typeof lib_events;
   "lib/farmRules": typeof lib_farmRules;
   "lib/feedLedger": typeof lib_feedLedger;
+  "lib/feedOrder": typeof lib_feedOrder;
   "lib/fishTransferLogic": typeof lib_fishTransferLogic;
   "lib/forecastData": typeof lib_forecastData;
   "lib/formLayouts": typeof lib_formLayouts;
