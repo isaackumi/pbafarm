@@ -19,6 +19,7 @@ import {
   type AutomationTrigger,
 } from './validators'
 import { requireMember } from '../lib/permissions'
+import { MAX_ACTIONS, buildDraftCatalog, draftCatalogValidator } from './catalog'
 import { docValidator } from '../lib/docValidators'
 
 /**
@@ -27,10 +28,16 @@ import { docValidator } from '../lib/docValidators'
  */
 
 const MAX_RULES = 50
-const MAX_ACTIONS = 5
 
 async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const { user } = await requireMember(ctx, { permission: 'automation.manage' })
+  if (!user.companyId) throw new Error('Your account is not linked to a company')
+  return { user, companyId: user.companyId }
+}
+
+/** Members who may use Anowa (ai.use): its automation drafts (AI-AUTO-001). */
+async function requireAssistantMember(ctx: QueryCtx) {
+  const { user } = await requireMember(ctx, { permission: 'ai.use' })
   if (!user.companyId) throw new Error('Your account is not linked to a company')
   return { user, companyId: user.companyId }
 }
@@ -435,5 +442,61 @@ export const enableBuiltIns = mutation({
       await logAudit(ctx, { actionType: 'create', tableName: 'automationRules', newValues: { builtIns: created } })
     }
     return created
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Anowa drafts (AI-AUTO-001): the catalog a draft is built from, and a
+// dry run of the same validation `save` does, without writing anything.
+// Any member who may use Anowa can call these; saving still needs
+// automation.manage (`save`).
+// ---------------------------------------------------------------------------
+
+export const draftCatalog = query({
+  args: {},
+  returns: draftCatalogValidator,
+  handler: async (ctx) => {
+    const { companyId } = await requireAssistantMember(ctx)
+    const company = await ctx.db.get(companyId)
+    return buildDraftCatalog(zoneOrDefault(orgProfile(company).timezone))
+  },
+})
+
+/**
+ * Problems a member can act on in an AI draft, or none. Drafts reach people
+ * by role or everyone only (no named members) and never post to webhooks.
+ */
+export const checkDraft = query({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    trigger: automationTrigger,
+    match: v.optional(v.union(v.literal('all'), v.literal('any'))),
+    conditions: v.array(automationCondition),
+    actions: v.array(automationAction),
+  },
+  returns: v.object({ ok: v.boolean(), problems: v.array(v.string()) }),
+  handler: async (ctx, args) => {
+    const { companyId } = await requireAssistantMember(ctx)
+    const problems: string[] = []
+    for (const a of args.actions) {
+      if (a.kind === 'webhook') problems.push('Anowa cannot add webhook actions; add them in Automations')
+      else if (a.recipients.userIds?.length) problems.push('Choose recipients by role or everyone, not by name')
+      if (a.kind === 'notify' && a.link && !/^\/(?![/\\])[^\s\\]*$/.test(a.link)) {
+        problems.push('Links must be app paths starting with a single /')
+      }
+    }
+    const trigger = args.trigger
+    if (trigger.kind === 'event' && !EVENT_TYPES.some((e) => e.type === trigger.eventType)) {
+      problems.push(`Unknown event "${trigger.eventType}"`)
+    }
+    if (!problems.length) {
+      try {
+        await validateDraft(ctx, companyId, args)
+      } catch (err) {
+        problems.push(err instanceof Error ? err.message : String(err))
+      }
+    }
+    return { ok: problems.length === 0, problems }
   },
 })

@@ -6,6 +6,14 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import { requireUser, revokeUserSessions } from './lib/authz'
 import { logAudit } from './lib/tenancy'
+import {
+  DEFAULT_AI_POLICY,
+  MAX_DAILY_QUESTIONS,
+  MIN_DAILY_QUESTIONS,
+  aiPolicyOf,
+  cleanDailyCap,
+  resolvedAiPolicyValidator,
+} from './lib/aiPolicyShared'
 import { retimeScheduleRules } from './automation/engine'
 import { PLATFORM_SCAN_LIMIT } from './lib/scope'
 import { DEFAULT_CURRENCY_CODE, isCurrencyCode } from './lib/currencies'
@@ -384,6 +392,7 @@ function preservedSettings(settings: Doc<'companies'>['settings']) {
   if (settings?.defaultCountryCode !== undefined) out.defaultCountryCode = settings.defaultCountryCode
   if (settings?.messaging !== undefined) out.messaging = settings.messaging
   if (settings?.security !== undefined) out.security = settings.security
+  if (settings?.aiPolicy !== undefined) out.aiPolicy = settings.aiPolicy
   return out
 }
 
@@ -997,22 +1006,101 @@ export const applyCountryDefaults = mutation({
  */
 export const aiAssistantStatus = query({
   args: {},
-  returns: v.object({ enabled: v.boolean(), canManage: v.boolean(), canUse: v.boolean() }),
+  returns: v.object({
+    enabled: v.boolean(),
+    canManage: v.boolean(),
+    canUse: v.boolean(),
+    /** The company's Anowa policy with defaults filled in (AI-POLICY). */
+    policy: resolvedAiPolicyValidator,
+    /** Anowa may turn a request into an automation draft for this member. */
+    canDraftAutomations: v.boolean(),
+    /** This member may save a draft as a rule (automation.manage, as rules.save). */
+    canSaveAutomations: v.boolean(),
+  }),
   handler: async (ctx) => {
     const user = await requireAccount(ctx)
+    const none = { policy: DEFAULT_AI_POLICY, canDraftAutomations: false, canSaveAutomations: false }
     if ((user.role ?? 'user') === 'super_admin') {
       // Super admins without a company: allow for support; with company: follow setting
       if (!user.companyId) {
-        return { enabled: true, canManage: true, canUse: true }
+        return { enabled: true, canManage: true, canUse: true, ...none }
       }
     }
     if (!user.companyId) {
-      return { enabled: false, canManage: false, canUse: false }
+      return { enabled: false, canManage: false, canUse: false, ...none }
     }
     const company = await ctx.db.get(user.companyId)
     const enabled = company?.settings?.aiAssistantEnabled === true
     const m = await memberContext(ctx, user)
-    return { enabled, canManage: can(m, 'org.settings.manage'), canUse: can(m, 'ai.use') }
+    const canUse = can(m, 'ai.use')
+    const policy = aiPolicyOf(company)
+    const canSaveAutomations = can(m, 'automation.manage')
+    return {
+      enabled,
+      canManage: can(m, 'org.settings.manage'),
+      canUse,
+      policy,
+      canDraftAutomations: enabled && canUse && policy.allowAutomationDrafts,
+      canSaveAutomations,
+    }
+  },
+})
+
+/**
+ * Anowa policy (AI-POLICY): whether Anowa may draft automations, whether
+ * those start paused, and an optional daily request cap per member. Who may
+ * use Anowa at all is the `ai.use` role permission.
+ */
+export const updateAiPolicy = mutation({
+  args: {
+    allowAutomationDrafts: v.optional(v.boolean()),
+    draftsStartPaused: v.optional(v.boolean()),
+    /** null clears the cap. */
+    dailyQuestionsPerMember: v.optional(v.union(v.number(), v.null())),
+  },
+  returns: resolvedAiPolicyValidator,
+  handler: async (ctx, args) => {
+    const { user } = await requireMember(ctx, { permission: 'org.settings.manage' })
+    if (!user.companyId) throw new Error('No company linked to your account')
+    const company = await ctx.db.get(user.companyId)
+    if (!company) throw new Error('Company not found')
+    const before = aiPolicyOf(company)
+    let cap = before.dailyQuestionsPerMember
+    if (args.dailyQuestionsPerMember !== undefined) {
+      if (args.dailyQuestionsPerMember === null) cap = null
+      else {
+        cap = cleanDailyCap(args.dailyQuestionsPerMember)
+        if (cap === null) {
+          throw new Error(`Daily questions must be a whole number from ${MIN_DAILY_QUESTIONS} to ${MAX_DAILY_QUESTIONS}`)
+        }
+      }
+    }
+    const next = {
+      allowAutomationDrafts: args.allowAutomationDrafts ?? before.allowAutomationDrafts,
+      draftsStartPaused: args.draftsStartPaused ?? before.draftsStartPaused,
+      dailyQuestionsPerMember: cap,
+    }
+    const settings = company.settings ?? { aiAssistantEnabled: false }
+    await ctx.db.patch(company._id, {
+      settings: {
+        ...settings,
+        aiPolicy: {
+          allowAutomationDrafts: next.allowAutomationDrafts,
+          draftsStartPaused: next.draftsStartPaused,
+          ...(next.dailyQuestionsPerMember === null ? {} : { dailyQuestionsPerMember: next.dailyQuestionsPerMember }),
+          updatedAt: Date.now(),
+          updatedBy: user._id,
+        },
+      },
+    })
+    await logAudit(ctx, {
+      actionType: 'update',
+      tableName: 'companies',
+      recordId: company._id,
+      previousValues: { aiPolicy: before },
+      newValues: { aiPolicy: next },
+    })
+    return next
   },
 })
 

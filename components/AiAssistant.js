@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { ArrowUp, Loader2, Maximize2, MessageCircle, Plus, Settings2, Sparkles, X } from 'lucide-react'
-import { useQuery } from 'convex/react'
+import { ArrowUp, Check, Copy, Loader2, Maximize2, MessageCircle, Plus, Settings2, Sparkles, Workflow, X } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../lib/convexBridge'
@@ -11,9 +11,12 @@ import {
   loadLlmSettings,
   saveLlmSettings,
   chatCompletion,
+  draftAutomation,
   fetchLlmEnvStatus,
 } from '../lib/llmClient'
-import { Field, GradientButton, Select } from './ui'
+import { Field, GhostButton, GradientButton, Pill, Select } from './ui'
+import { isAutomationRequest } from '../lib/anowaIntent'
+import { describeDraft } from '../lib/anowaDraft'
 import Layout from './Layout'
 import DashboardInsights from './DashboardInsights'
 import { localToday } from '../lib/format'
@@ -35,6 +38,8 @@ export function useAssistantAccess() {
   return {
     loading: !!user && aiStatus === undefined,
     allowed: !!user && aiStatus?.enabled === true && aiStatus.canUse === true,
+    /** Anowa may draft automations for this member (company AI policy). */
+    canDraft: aiStatus?.canDraftAutomations === true,
   }
 }
 
@@ -44,7 +49,7 @@ export function useAssistantAccess() {
  * farm context this user may see (company rollups, last 14 days). The
  * browser only picks a provider and model among those the server has keys for.
  */
-function useAssistantChat(active) {
+function useAssistantChat(active, { canDraft = false } = {}) {
   const t = useT()
   const welcome = useCallback(() => [{ role: 'assistant', content: t('assistantUi.welcome') }], [t])
   const [settings, setSettings] = useState(() => loadLlmSettings())
@@ -79,6 +84,33 @@ function useAssistantChat(active) {
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: question }])
     setBusy(true)
+    // "Alert the managers when DO drops below 4": draft a rule to review (AI-AUTO-001).
+    if (canDraft && isAutomationRequest(question)) {
+      try {
+        const result = await draftAutomation({ request: question, provider: providerId, model })
+        setMessages((m) => [
+          ...m,
+          {
+            role: 'assistant',
+            kind: 'draft',
+            content: result.explanation || t('assistantUi.draft.intro'),
+            draft: result.draft,
+            problems: result.problems || [],
+            catalog: result.catalog,
+            startPaused: result.startPaused !== false,
+            canSave: result.canSave === true,
+          },
+        ])
+      } catch (err) {
+        setMessages((m) => [
+          ...m,
+          { role: 'assistant', content: t('assistantUi.failed', { message: String(err?.message || err) }) },
+        ])
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     try {
       const history = messages
         .slice(1)
@@ -142,6 +174,130 @@ function Avatar({ size = 'size-8' }) {
   )
 }
 
+/**
+ * An automation Anowa drafted from the conversation (AI-AUTO-001): the rule in
+ * plain words, any problems, and Create (paused unless the company's AI
+ * policy says otherwise). Members without automation.manage can copy it for
+ * an admin. Nothing is saved without the click.
+ */
+function DraftCard({ message, compact }) {
+  const t = useT()
+  const save = useMutation(api.automation.rules.save)
+  const [state, setState] = useState({ busy: false, created: false, error: '', copied: false })
+  const { draft, problems, catalog, startPaused, canSave } = message
+  const words = describeDraft(draft, catalog)
+  const ok = !!draft && problems.length === 0
+
+  const create = async () => {
+    setState((s) => ({ ...s, busy: true, error: '' }))
+    try {
+      await save({ ...draft, enabled: !startPaused })
+      setState((s) => ({ ...s, busy: false, created: true }))
+    } catch (err) {
+      setState((s) => ({ ...s, busy: false, error: String(err?.data?.message || err?.message || err) }))
+    }
+  }
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(draft, null, 2))
+      setState((s) => ({ ...s, copied: true }))
+    } catch {
+      setState((s) => ({ ...s, error: t('assistantUi.draft.copyFailed') }))
+    }
+  }
+
+  if (!draft) {
+    return (
+      <div className="mt-3 rounded-[14px] border border-line bg-bg p-4 text-[13px] leading-5 text-muted whitespace-normal">
+        {problems[0] || t('assistantUi.draft.none')}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`mt-3 flex flex-col gap-3 rounded-[14px] border border-line bg-bg whitespace-normal ${compact ? 'p-4' : 'p-5'}`}>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-pill border border-line-strong text-cyan" aria-hidden>
+          <Workflow size={15} />
+        </span>
+        <div className="min-w-0 grow basis-0">
+          <p className="text-[14px] font-semibold leading-[18px] text-text">{draft.name}</p>
+          <p className="mt-0.5 text-[12px] leading-4 text-muted">{words.trigger}</p>
+        </div>
+        <Pill tone={ok ? 'cyan' : 'amber'} size="sm">
+          {ok ? t('assistantUi.draft.badge') : t('assistantUi.draft.needsFix')}
+        </Pill>
+      </div>
+
+      {words.conditions.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">
+            {words.match === 'any' ? t('assistantUi.draft.ifAny') : t('assistantUi.draft.ifAll')}
+          </p>
+          <ul className="flex flex-col gap-1 text-[13px] leading-[18px] text-text">
+            {words.conditions.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <p className="text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint">{t('assistantUi.draft.then')}</p>
+        <ul className="flex flex-col gap-1 text-[13px] leading-[18px] text-text">
+          {words.actions.map((a, i) => (
+            <li key={i}>{a}</li>
+          ))}
+        </ul>
+      </div>
+
+      {problems.length > 0 && (
+        <ul className="flex flex-col gap-1 rounded-[12px] border border-[var(--pill-amber-border)] px-3 py-2 text-[12px] leading-4 text-[var(--pill-amber-text)]">
+          {problems.map((p, i) => (
+            <li key={i}>{p}</li>
+          ))}
+        </ul>
+      )}
+
+      {state.error && <p className="text-[12px] leading-4 text-alert">{state.error}</p>}
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {state.created ? (
+          <>
+            <Pill tone="green" size="sm">
+              <Check size={12} aria-hidden />
+              {startPaused ? t('assistantUi.draft.createdPaused') : t('assistantUi.draft.createdOn')}
+            </Pill>
+            <GhostButton size="sm" href="/automations">
+              {t('assistantUi.draft.open')}
+            </GhostButton>
+          </>
+        ) : canSave ? (
+          <>
+            <GradientButton variant="solid" size="sm" onClick={create} disabled={!ok || state.busy}>
+              {state.busy
+                ? t('assistantUi.draft.creating')
+                : startPaused
+                  ? t('assistantUi.draft.createPaused')
+                  : t('assistantUi.draft.createOn')}
+            </GradientButton>
+            <GhostButton size="sm" icon={state.copied ? Check : Copy} onClick={copy}>
+              {state.copied ? t('assistantUi.draft.copied') : t('assistantUi.draft.copy')}
+            </GhostButton>
+          </>
+        ) : (
+          <>
+            <p className="grow basis-full text-[12px] leading-4 text-muted">{t('assistantUi.draft.askAdmin')}</p>
+            <GhostButton size="sm" icon={state.copied ? Check : Copy} onClick={copy} disabled={!ok}>
+              {state.copied ? t('assistantUi.draft.copied') : t('assistantUi.draft.copy')}
+            </GhostButton>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /** 17 message thread: user bubble right on surface-2, assistant with avatar on the left. */
 function Thread({ chat, compact = false }) {
   const t = useT()
@@ -165,6 +321,7 @@ function Thread({ chat, compact = false }) {
             <div className={`min-w-0 grow basis-0 whitespace-pre-wrap pt-1 text-text ${text}`}>
               {i > 0 && <span className="sr-only">{t('assistantUi.srAssistant')} </span>}
               {m.content}
+              {m.kind === 'draft' && <DraftCard message={m} compact={compact} />}
             </div>
           </div>
         ),
@@ -268,10 +425,10 @@ export default function AiAssistant() {
   const router = useRouter()
   const pathname = router?.pathname
   const onFieldRoute = FIELD_ROUTES.includes(pathname)
-  const { allowed } = useAssistantAccess()
+  const { allowed, canDraft } = useAssistantAccess()
   const [open, setOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const chat = useAssistantChat(open)
+  const chat = useAssistantChat(open, { canDraft })
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -338,8 +495,12 @@ export default function AiAssistant() {
 export function AssistantPage() {
   const t = useT()
   const { locationArgs } = useLocation()
-  const { loading, allowed } = useAssistantAccess()
-  const chat = useAssistantChat(allowed)
+  const { loading, allowed, canDraft } = useAssistantAccess()
+  const chat = useAssistantChat(allowed, { canDraft })
+  const startAutomation = () => {
+    chat.setInput(t('assistantUi.draft.prefix'))
+    inputRef.current?.focus()
+  }
   const inputRef = useRef(null)
   const [showSettings, setShowSettings] = useState(false)
   const card = 'rounded-card border border-line bg-surface shadow-[var(--shadow-card)]'
@@ -381,6 +542,16 @@ export function AssistantPage() {
                     {t(`assistantUi.prompt.${k}`)}
                   </button>
                 ))}
+                {canDraft && (
+                  <button
+                    type="button"
+                    onClick={startAutomation}
+                    className={`inline-flex items-center gap-1.5 rounded-pill border border-line-strong px-[14px] py-2 text-[13px] leading-4 text-text hover:bg-surface-2 ${focusRing}`}
+                  >
+                    <Workflow size={14} className="text-cyan" aria-hidden />
+                    {t('assistantUi.draft.chip')}
+                  </button>
+                )}
               </div>
             )}
             <Composer chat={chat} inputRef={inputRef} />
@@ -421,6 +592,19 @@ export function AssistantPage() {
                   {t(`assistantUi.prompt.${k}`)}
                 </button>
               ))}
+              {canDraft && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    chat.setInput(t('assistantUi.draft.example'))
+                    inputRef.current?.focus()
+                  }}
+                  className={`flex items-center gap-2 rounded-[12px] bg-surface-2 px-[14px] py-3 text-left text-[13px] leading-4 text-text hover:bg-line ${focusRing}`}
+                >
+                  <Workflow size={14} className="shrink-0 text-cyan" aria-hidden />
+                  {t('assistantUi.draft.example')}
+                </button>
+              )}
             </section>
           </div>
         </div>

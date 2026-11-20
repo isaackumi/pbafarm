@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useAction, useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { GhostButton, GradientButton, Pill, Skeleton, Toggle } from '../components/ui'
-import { FIELD, Notice, SettingsCard, SettingsField, SettingsFrame, useSettingsEyebrow } from '../components/settings'
+import { FIELD, Notice, SettingsCard, SettingsField, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { errorMessage } from '../lib/errorMessage'
@@ -268,6 +269,96 @@ function UsageCard({ usage }) {
   )
 }
 
+/**
+ * Anowa policy (AI-POLICY): what Anowa may do beyond answering questions.
+ * Owners and admins with org.settings.manage only; who may use Anowa at all
+ * is the ai.use permission on roles.
+ */
+function AnowaPolicyCard() {
+  const t = useT()
+  const toasts = useToasts()
+  const status = useQuery(api.companies.aiAssistantStatus, {})
+  const update = useMutation(api.companies.updateAiPolicy)
+  const [busy, setBusy] = useState(false)
+  const [cap, setCap] = useState('')
+  const policy = status?.policy
+  useEffect(() => {
+    if (policy) setCap(policy.dailyQuestionsPerMember == null ? '' : String(policy.dailyQuestionsPerMember))
+  }, [policy])
+
+  if (!status?.canManage || !policy) return null
+
+  const save = async (patch, message) => {
+    setBusy(true)
+    try {
+      await update(patch)
+      toasts.ok(message)
+    } catch (err) {
+      toasts.fail(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const saveCap = (e) => {
+    e.preventDefault()
+    const trimmed = cap.trim()
+    save({ dailyQuestionsPerMember: trimmed === '' ? null : Number(trimmed) }, t('settingsUi.ai.policy.saved'))
+  }
+  const capDirty = cap.trim() !== (policy.dailyQuestionsPerMember == null ? '' : String(policy.dailyQuestionsPerMember))
+
+  return (
+    <SettingsCard title={t('settingsUi.ai.policy.title')} meta={t('settingsUi.ai.policy.meta')}>
+      <SettingsRow label={t('settingsUi.ai.policy.drafts')} helper={t('settingsUi.ai.policy.draftsHelper')}>
+        <Toggle
+          checked={policy.allowAutomationDrafts}
+          disabled={busy}
+          label={t('settingsUi.ai.policy.drafts')}
+          onChange={(next) => save({ allowAutomationDrafts: next }, t('settingsUi.ai.policy.saved'))}
+        />
+      </SettingsRow>
+      <SettingsRow label={t('settingsUi.ai.policy.paused')} helper={t('settingsUi.ai.policy.pausedHelper')}>
+        <Toggle
+          checked={policy.draftsStartPaused}
+          disabled={busy || !policy.allowAutomationDrafts}
+          label={t('settingsUi.ai.policy.paused')}
+          onChange={(next) => save({ draftsStartPaused: next }, t('settingsUi.ai.policy.saved'))}
+        />
+      </SettingsRow>
+      <SettingsRow
+        label={t('settingsUi.ai.policy.cap')}
+        helper={t('settingsUi.ai.policy.capHelper')}
+        htmlFor="anowa-daily-cap"
+      >
+        <form onSubmit={saveCap} className="flex items-center gap-2">
+          <div className="w-28">
+          <input
+            id="anowa-daily-cap"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={500}
+            step={1}
+            placeholder={t('settingsUi.ai.policy.noCap')}
+            value={cap}
+            onChange={(e) => setCap(e.target.value)}
+            className={FIELD}
+          />
+          </div>
+          <GhostButton size="md" type="submit" disabled={busy || !capDirty}>
+            {t('common.save')}
+          </GhostButton>
+        </form>
+      </SettingsRow>
+      <p className="border-t border-line pt-3 text-[12px] leading-4 text-muted">
+        {t('settingsUi.ai.policy.whoUses')}{' '}
+        <Link href="/users?view=roles" className="text-cyan hover:underline">
+          {t('settingsUi.ai.policy.rolesLink')}
+        </Link>
+      </p>
+    </SettingsCard>
+  )
+}
+
 function AiSettingsPage() {
   const t = useT()
   // Rounded to the hour so the subscription is stable between renders.
@@ -282,6 +373,7 @@ function AiSettingsPage() {
           {t('integ.common.encryptionMissing')}
         </Notice>
       )}
+      <AnowaPolicyCard />
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <SettingsCard title={t('settingsUi.ai.providerTitle')} meta={t('integ.ai.keysHint')}>
           <div className="flex flex-col gap-5">

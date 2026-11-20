@@ -31,7 +31,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `audit.list` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.listPage` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.verifyChain` | `org.audit.view` | yes | yes | no | no | no |
+| `automation/rules.checkDraft` | `ai.use` | yes | yes | yes | no | no |
 | `automation/rules.createFromTemplate` | `automation.manage` | yes | yes | no | no | no |
+| `automation/rules.draftCatalog` | `ai.use` | yes | yes | yes | no | no |
 | `automation/rules.enableBuiltIns` | `automation.manage` | yes | yes | no | no | no |
 | `automation/rules.overview` | `automation.manage` | yes | yes | no | no | no |
 | `automation/rules.remove` | `automation.manage` | yes | yes | no | no | no |
@@ -54,6 +56,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `biweeklyRecords.listPage` | `production.view` | yes | yes | yes | yes | yes |
 | `biweeklyRecords.remove` | `production.records.delete` | yes | yes | no | no | no |
 | `biweeklyRecords.update` | `production.sampling.correct` | yes | yes | yes | no | no |
+| `bot/bindings.createConnectCode` | `account` | self | self | self | self | self |
+| `bot/bindings.myChannels` | `account` | self | self | self | self | self |
+| `bot/bindings.revokeChannel` | `account` | self | self | self | self | self |
+| `bot/bindings.setReminder` | `account` | self | self | self | self | self |
 | `businessUnits.assignSites` | `org.structure.manage` | yes | yes | no | no | no |
 | `businessUnits.create` | `org.structure.manage` | yes | yes | no | no | no |
 | `businessUnits.list` | `org.view` | yes | yes | yes | yes | yes |
@@ -88,6 +94,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `companies.remove` | `platform` | no | no | no | no | no |
 | `companies.saveSettingsDraft` | `org.settings.manage` | yes | yes | no | no | no |
 | `companies.setLogo` | `org.settings.manage` | yes | yes | no | no | no |
+| `companies.updateAiPolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `companies.updateProfile` | `org.settings.manage` | yes | yes | no | no | no |
 | `companies.updateSettings` | `org.settings.manage` | yes | yes | no | no | no |
 | `companyLinks.end` | `org.structure.manage` | yes | yes | no | no | no |
@@ -237,6 +244,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `inboundWebhooks.remove` | `integrations.manage` | yes | yes | no | no | no |
 | `inboundWebhooks.rotateSecret` | `allowlisted` | see test | see test | see test | see test | see test |
 | `inboundWebhooks.update` | `integrations.manage` | yes | yes | no | no | no |
+| `inventory.coverSummary` | `inventory.view` | yes | yes | yes | yes | yes |
 | `inventory.createAdjustment` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.createTransfer` | `inventory.adjust` | yes | yes | no | no | no |
 | `inventory.listAlerts` | `inventory.view` | yes | yes | yes | yes | yes |

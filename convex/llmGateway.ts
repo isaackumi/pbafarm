@@ -8,6 +8,7 @@ import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
 import { AUTH_ERROR_MESSAGES } from './lib/authErrors'
 import { logAudit } from './lib/tenancy'
+import { spendDailyQuestion } from './lib/aiPolicy'
 import { requireAccount, requireMember } from './lib/permissions'
 import { rateLimiter, retryAfterText } from './lib/rateLimits'
 import { userError } from './lib/errors'
@@ -498,6 +499,8 @@ export const begin = internalMutation({
         throw userError('RATE_LIMITED', `Too many assistant requests. ${retryAfterText(verdict.retryAfter)}`)
       }
     }
+    // Admin's daily cap per member (AI-POLICY); refuses before anything is spent.
+    await spendDailyQuestion(ctx, company, user._id)
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
     return {
       handled: true,

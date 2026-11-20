@@ -34,6 +34,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireWebhookAdmin(ctx)': 'integrations.manage',
   'requireInboundAdmin(ctx)': 'integrations.manage',
   'requireLlmAdmin(ctx)': 'integrations.manage',
+  'requireAssistantMember(ctx)': 'ai.use',
 }
 
 /** Functions without an organization guard, and why. */
