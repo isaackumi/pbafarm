@@ -2464,7 +2464,7 @@ const schema = defineSchema({
         showCharts: v.boolean(),
         showMetrics: v.boolean(),
         showStockings: v.boolean(),
-        /** 'plain' | 'sky' (Home header style); absent = 'plain'. */
+        /** 'plain' | 'sky' (Home header style); absent = 'sky'. */
         homeHeader: v.optional(v.string()),
       }),
     ),

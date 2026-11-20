@@ -6,24 +6,17 @@ import { errorMessage } from '../lib/errorMessage'
 import { useT } from '../lib/i18n/context'
 import { Button, Field, GhostButton, GradientButton, Input, Pill } from './ui'
 import { SettingsRow, InlineError } from './settings'
+import { OtpInput } from './auth/AuthUi'
 
 /** Authenticator-app two-step verification (ENT-003). */
 
 function CodeInput({ id, value, onChange, label }) {
   const t = useT()
+  const text = label || t('settingsUi.totp.codeLabel')
   return (
-    <Field label={label || t('settingsUi.totp.codeLabel')} htmlFor={id}>
-      <Input
-        id={id}
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        pattern="[0-9]{6}"
-        maxLength={6}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        className="tracking-[0.4em] text-center text-lg"
-      />
+    <Field label={text} htmlFor={id}>
+      {/* One box per digit, like the SMS code on sign-in (OtpInput). */}
+      <OtpInput id={id} label={text} value={value} onChange={onChange} />
     </Field>
   )
 }

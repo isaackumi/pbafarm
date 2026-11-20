@@ -111,13 +111,22 @@ export default function VerifyPage() {
     }
   }
 
-  const title = enrolling ? t('auth.verify.titleEnrol') : t('auth.verify.titleConfirm')
+  // The heading names what this screen asks for right now: an authenticator
+  // code (or app set-up) in app mode, a phone number or texted code otherwise.
+  const heading =
+    mode === 'app'
+      ? user.mfaTotp
+        ? { title: t('auth.verify.titleApp'), subtitle: t('auth.verify.introApp') }
+        : { title: t('auth.verify.titleAppSetup'), subtitle: t('auth.verify.introAppSetup') }
+      : enrolling
+        ? { title: t('auth.verify.titleEnrol'), subtitle: t('auth.verify.introEnrol') }
+        : {
+            title: t('auth.verify.titleConfirm'),
+            subtitle: t('auth.verify.introConfirm', { phone: user.maskedPhone }),
+          }
   return (
-    <AuthLayout title={title}>
-      <AuthHeading
-        title={title}
-        subtitle={enrolling ? t('auth.verify.introEnrol') : t('auth.verify.introConfirm', { phone: user.maskedPhone })}
-      />
+    <AuthLayout title={heading.title}>
+      <AuthHeading title={heading.title} subtitle={heading.subtitle} />
 
       {error && <AuthAlert>{error}</AuthAlert>}
 

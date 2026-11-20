@@ -7,6 +7,7 @@ import Sidebar from './Sidebar'
 import MobileTabBar from './MobileTabBar'
 import { ActAsBanner } from './ActAs'
 import { PageTitle } from './ui/PageTitle'
+import { getSidebarCollapsed, peekSidebarCollapsed, setSidebarCollapsed } from '../lib/sidebarState'
 
 const TITLE_BY_PREFIX = [
   ['/admin/company-registrations', 'Company Registrations'],
@@ -62,7 +63,16 @@ const TITLE_BY_PREFIX = [
 const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = false }) => {
   const router = useRouter()
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Remembered across pages and reloads (lib/sidebarState): Layout remounts per page.
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState(peekSidebarCollapsed)
+  useEffect(() => {
+    setSidebarCollapsedState(getSidebarCollapsed())
+  }, [])
+  const toggleSidebar = () => {
+    const next = !sidebarCollapsed
+    setSidebarCollapsed(next)
+    setSidebarCollapsedState(next)
+  }
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
@@ -84,7 +94,7 @@ const Layout = ({ children, title: initialTitle, eyebrow, actions, hideTitle = f
     <div className="min-h-screen bg-bg font-sans text-text" data-tour="app-shell">
       <Sidebar
         collapsed={sidebarCollapsed && !mobileNavOpen}
-        onToggle={() => setSidebarCollapsed((c) => !c)}
+        onToggle={toggleSidebar}
         mobileOpen={mobileNavOpen}
         onMobileClose={() => setMobileNavOpen(false)}
       />
