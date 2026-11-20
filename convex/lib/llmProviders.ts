@@ -22,6 +22,7 @@ import * as Exit from 'effect/Exit'
 import * as Option from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Schema from 'effect/Schema'
+import { currentModel } from './llmModels'
 import {
   type Fetch,
   type FetchFn,
@@ -206,7 +207,7 @@ function chatGemini(o: ChatOptions) {
     }
     if (system) payload.systemInstruction = { parts: [{ text: system }] }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      o.model,
+      currentModel('gemini', o.model),
     )}:generateContent?key=${encodeURIComponent(o.apiKey)}`
     const res = yield* post(
       url,

@@ -7,6 +7,7 @@
  * they match). The caps mirror lib/llmProxyGuard.js (SEC-004).
  */
 import type { ProviderKind } from './llmProviders'
+import { currentModel } from './llmModels'
 
 export type GatewayProvider = {
   id: string
@@ -32,8 +33,8 @@ export const PROVIDERS: Record<string, GatewayProvider> = {
     label: 'Gemini (Google)',
     kind: 'gemini',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: 'gemini-2.0-flash',
-    models: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    defaultModel: 'gemini-3.8-flash',
+    models: ['gemini-3.8-flash'],
   },
   openrouter: {
     id: 'openrouter',
@@ -84,9 +85,10 @@ export const MAX_MODEL_CHARS = 100
  */
 export function gatewayModel(providerId: string, savedModel: string, requested?: string | null): string {
   const p = PROVIDERS[providerId]
-  const want = typeof requested === 'string' ? requested.trim() : ''
-  if (want && (want === savedModel || p?.models.includes(want))) return want
-  return savedModel
+  const want = typeof requested === 'string' ? currentModel(providerId, requested) : ''
+  const saved = currentModel(providerId, savedModel)
+  if (want && (want === saved || p?.models.includes(want))) return want
+  return saved
 }
 
 /** Model an admin may save: listed for the provider, or any sane id for custom. */
