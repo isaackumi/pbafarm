@@ -84,6 +84,7 @@
       "assistant": "Anowa"
     },
     "section": {
+      "anowa": "Demander à Anowa",
       "production": "Production",
       "records": "Registres",
       "finance": "Finances",
@@ -2805,8 +2806,11 @@
     "newChat": "Nouvelle conversation",
     "settings": "Réglages du modèle",
     "fullPage": "Ouvrir en pleine page",
-    "offTitle": "L’assistant est désactivé",
-    "offBody": "Un administrateur active l’assistant dans les paramètres IA, et votre rôle doit avoir le droit de l’utiliser.",
+    "offTitle": "Anowa est désactivé",
+    "offBody": "Un administrateur active Anowa dans les paramètres de l’entreprise, et votre rôle doit avoir le droit de l’utiliser.",
+    "offAdmin": "Anowa est désactivé pour votre entreprise. Activez-le dans les paramètres de l’entreprise pour poser des questions et créer des automatisations.",
+    "turnOn": "Activer Anowa",
+    "ask": "Demander à Anowa",
     "insights": "Points du jour",
     "tryAsking": "Essayez de demander",
     "prompt": {
@@ -3782,7 +3786,7 @@
         "sub": "Valeurs par défaut et règles des lots, achats et alertes de stock bas."
       },
       "cb": {
-        "ai": "Activer l'assistant IA pour cette entreprise",
+        "ai": "Activer Anowa (assistant IA) pour cette entreprise",
         "stock": "Exiger une approbation pour les nouvelles mises en charge",
         "topup": "Exiger une approbation pour les compléments",
         "transfer": "Exiger une approbation pour les transferts de poissons",

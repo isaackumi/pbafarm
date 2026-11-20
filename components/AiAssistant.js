@@ -40,6 +40,8 @@ export function useAssistantAccess() {
     allowed: !!user && aiStatus?.enabled === true && aiStatus.canUse === true,
     /** Anowa may draft automations for this member (company AI policy). */
     canDraft: aiStatus?.canDraftAutomations === true,
+    /** Company switch is off but this member can turn it on (Company settings). */
+    canTurnOn: !!user && aiStatus?.enabled === false && aiStatus.canManage === true,
   }
 }
 
@@ -495,7 +497,7 @@ export default function AiAssistant() {
 export function AssistantPage() {
   const t = useT()
   const { locationArgs } = useLocation()
-  const { loading, allowed, canDraft } = useAssistantAccess()
+  const { loading, allowed, canDraft, canTurnOn } = useAssistantAccess()
   const chat = useAssistantChat(allowed, { canDraft })
   const startAutomation = () => {
     chat.setInput(t('assistantUi.draft.prefix'))
@@ -524,7 +526,14 @@ export function AssistantPage() {
         <section className={`${card} flex flex-col items-center gap-3 px-6 py-14 text-center`}>
           <Sparkles size={28} className="text-faint" aria-hidden />
           <h2 className="text-[17px] font-semibold text-text">{t('assistantUi.offTitle')}</h2>
-          <p className="max-w-md text-[14px] text-muted">{t('assistantUi.offBody')}</p>
+          <p className="max-w-md text-[14px] text-muted">
+            {canTurnOn ? t('assistantUi.offAdmin') : t('assistantUi.offBody')}
+          </p>
+          {canTurnOn && (
+            <GradientButton icon={Sparkles} href="/company-settings" className="mt-2">
+              {t('assistantUi.turnOn')}
+            </GradientButton>
+          )}
         </section>
       ) : (
         <div className="flex w-full flex-col items-start gap-5 xl:flex-row">
