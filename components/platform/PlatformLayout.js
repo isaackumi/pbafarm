@@ -146,7 +146,7 @@ function Brand() {
   return (
     <span className="flex flex-col gap-[6px]">
       <AnowaLockup height={22} />
-      <span className="text-[11px] leading-[14px] tracking-[0.12em] text-pearl-cyan">PLATFORM CONSOLE</span>
+      <span className="text-[11px] leading-[14px] tracking-[0.12em] text-sky-ink">PLATFORM CONSOLE</span>
     </span>
   )
 }

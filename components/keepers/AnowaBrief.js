@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useAction } from 'convex/react'
-import { ArrowUp, Loader2, MessageCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import DraftCard from '../AnowaDraftCard'
 import AnswerText from '../AnswerText'
 import { useLocale, useT } from '../../lib/i18n/context'
 import { assistantErrorText } from '../../lib/assistantErrors'
 import { clock } from '../../lib/keepers'
+import { BubbleIcon, SendArrowIcon } from './icons'
 
 const FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
@@ -65,7 +66,7 @@ export default function AnowaBrief({ board, onFix, canAsk }) {
   return (
     <section className="flex flex-col gap-3.5 rounded-[20px] border border-line-strong bg-surface px-5 py-[18px]" aria-label={t('keepers.brief.label')}>
       <div className="flex items-center gap-2.5">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-pill bg-lime font-geist text-[13px] font-semibold text-ink" aria-hidden>
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-pill bg-lime font-geist text-xs font-semibold leading-[14px] text-ink" aria-hidden>
           a
         </span>
         <h2 className="text-[15px] font-semibold leading-5 text-text">
@@ -77,7 +78,7 @@ export default function AnowaBrief({ board, onFix, canAsk }) {
         <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((it) => (
             <li key={it.key} className="flex flex-col gap-2 rounded-[14px] border border-line bg-bg px-3.5 py-3">
-              <p className="text-[13px] leading-[18px] text-muted">
+              <p className="text-[13px] leading-[18px] text-text">
                 <span className={`font-semibold ${it.tone}`}>{it.lead}</span> {it.text}
               </p>
               <button type="button" onClick={() => onFix(it.key)} className={`mt-auto self-start text-left text-[13px] font-semibold leading-4 text-cover hover:underline ${FOCUS}`}>
@@ -120,23 +121,23 @@ function AskBar() {
 
   return (
     <div className="flex flex-col gap-2">
-      <form onSubmit={send} className="flex h-11 items-center gap-2.5 rounded-pill border border-line-strong bg-bg pl-4 pr-1.5 focus-within:border-text/40">
-        <MessageCircle size={16} className="shrink-0 text-faint" aria-hidden />
+      <form onSubmit={send} className="flex h-11 items-center gap-[10px] rounded-pill border border-line-strong bg-bg pl-4 pr-2 focus-within:border-text/40">
+        <BubbleIcon size={16} className="shrink-0 text-muted" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t('keepers.brief.askPlaceholder')}
           aria-label={t('keepers.brief.askLabel')}
           maxLength={2000}
-          className="min-w-0 grow border-0 bg-transparent p-0 text-[13px] text-text placeholder:text-faint focus:outline-none focus:ring-0"
+          className="min-w-0 grow border-0 bg-transparent p-0 text-[14px] leading-[18px] text-text placeholder:text-faint focus:outline-none focus:ring-0"
         />
         <button
           type="submit"
           disabled={busy || !q.trim()}
           aria-label={t('keepers.brief.askSend')}
-          className={`flex size-[30px] shrink-0 items-center justify-center rounded-pill bg-surface-2 text-text disabled:opacity-50 ${FOCUS}`}
+          className={`flex size-[30px] shrink-0 items-center justify-center rounded-pill bg-surface-2 text-muted disabled:opacity-50 ${FOCUS}`}
         >
-          {busy ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <ArrowUp size={14} aria-hidden />}
+          {busy ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <SendArrowIcon size={14} />}
         </button>
       </form>
       {answer && (

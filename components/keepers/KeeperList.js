@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { Check, ChevronRight } from 'lucide-react'
-import { Avatar, SearchField } from '../ui'
+import { SearchField } from '../ui'
+import KeeperAvatar from './KeeperAvatar'
 import { useLocale, useT } from '../../lib/i18n/context'
-import { capacityBar, rowStatus, shortDate } from '../../lib/keepers'
+import { capacityBar, nearDay, rowStatus } from '../../lib/keepers'
+import { localToday } from '../../lib/format'
 
 const FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 
@@ -37,23 +39,24 @@ export default function KeeperList({
     { key: 'all', label: t('keepers.list.chipAll', { count: board?.chips.all ?? 0 }) },
   ]
   const rows = board?.rows ?? []
+  const today = localToday()
 
   return (
     <section className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-line bg-surface" aria-label={t('keepers.list.label')}>
       <div className="flex flex-col gap-3 border-b border-line px-[18px] py-4">
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-[10px] sm:flex-row sm:items-center">
           <SearchField
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder={t('keepers.list.search')}
             aria-label={t('keepers.list.search')}
-            className="h-[38px] grow rounded-[10px] bg-bg"
+            className="!h-[38px] grow !gap-2 !rounded-[10px] !border-line-strong !bg-bg !px-3"
           />
           <select
             value={siteId || ''}
             onChange={(e) => onSite(e.target.value || null)}
             aria-label={t('keepers.list.site')}
-            className="h-[38px] rounded-[10px] border border-line-strong bg-bg px-3 text-[13px] text-text sm:w-44"
+            className="h-[38px] rounded-[10px] border border-line-strong bg-transparent px-3 text-[13px] leading-4 text-text"
           >
             <option value="">{t('keepers.list.allSites')}</option>
             {(locations || []).map((l) => (
@@ -63,7 +66,7 @@ export default function KeeperList({
             ))}
           </select>
         </div>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('keepers.list.filters')}>
+        <div className="flex flex-wrap gap-[6px]" role="radiogroup" aria-label={t('keepers.list.filters')}>
           {chips.map((c) => (
             <button
               key={c.key}
@@ -71,7 +74,7 @@ export default function KeeperList({
               role="radio"
               aria-checked={filter === c.key}
               onClick={() => onFilter(c.key)}
-              className={`rounded-pill px-3 py-1.5 text-xs leading-4 ${FOCUS} ${
+              className={`rounded-pill px-3 py-[6px] text-xs leading-4 ${FOCUS} ${
                 filter === c.key ? 'bg-text font-semibold text-bg' : 'border border-line-strong text-muted hover:text-text'
               }`}
             >
@@ -81,7 +84,7 @@ export default function KeeperList({
         </div>
       </div>
 
-      <div className="hidden items-center gap-3 border-b border-line px-[18px] py-2 text-[11px] uppercase leading-[14px] tracking-[0.04em] text-faint md:flex" aria-hidden>
+      <div className="hidden items-center gap-3 border-b border-line px-[18px] py-[9px] text-[11px] uppercase leading-[14px] tracking-[0.04em] text-faint md:flex" aria-hidden>
         <span className="w-4" />
         <span className="flex-[1.6]">{t('keepers.list.colKeeper')}</span>
         <span className="flex-[1.3]">{t('keepers.list.colCages')}</span>
@@ -101,7 +104,7 @@ export default function KeeperList({
             const st = rowStatus(r, board.capacity)
             const bar = capacityBar(r.units, board.capacity, { unassigned: gap, away: !!r.away })
             const on = selected.has(r.id)
-            const text = (x) => t(x.key, { ...(x.values || {}), date: x.values?.date ? shortDate(x.values.date, lang) : undefined })
+            const text = (x) => t(x.key, { ...(x.values || {}), date: x.values?.date ? nearDay(x.values.date, lang, today) : undefined })
             const href = r.siteId && r.row ? `/cage-keepers/row?site=${r.siteId}&row=${encodeURIComponent(r.row)}` : null
             return (
               <li key={r.id} className={`flex flex-wrap items-center gap-3 border-b border-line px-[18px] py-2.5 md:flex-nowrap ${on ? 'bg-cover/[0.06]' : ''}`}>
@@ -111,21 +114,21 @@ export default function KeeperList({
                   aria-checked={on}
                   aria-label={t('keepers.list.select', { name: gap ? t('keepers.list.noKeeperRow', { site: r.site, row: r.row }) : r.name })}
                   onClick={() => onToggle(r)}
-                  className={`flex size-4 shrink-0 items-center justify-center rounded-[4px] ${FOCUS} ${on ? 'border border-cover bg-cover text-bg' : 'border-[1.5px] border-line-strong'}`}
+                  className={`flex size-4 shrink-0 items-center justify-center rounded-[4px] ${FOCUS} ${on ? 'border-[1.5px] border-cover bg-cover text-bg' : 'border-[1.5px] border-line-strong'}`}
                 >
                   {on && <Check size={12} strokeWidth={3} aria-hidden />}
                 </button>
                 <div className="flex min-w-0 flex-[1.6] items-center gap-2.5">
                   {gap ? (
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-pill border-[1.5px] border-dashed border-alert text-xs text-alert" aria-hidden>
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-pill border-[1.5px] border-dashed border-alert text-[11px] font-semibold leading-3 text-text" aria-hidden>
                       –
                     </span>
                   ) : (
-                    <Avatar name={r.name} size={28} />
+                    <KeeperAvatar name={r.name} size={28} />
                   )}
-                  <div className="flex min-w-0 flex-col">
+                  <div className="flex min-w-0 flex-col gap-px">
                     <span className={`truncate text-[13px] font-semibold leading-4 ${gap ? 'text-alert' : 'text-text'}`}>{gap ? t('keepers.list.noKeeper') : r.name}</span>
-                    <span className="truncate text-xs leading-4 text-muted">{[r.site, r.row ? t('keepers.list.row', { row: r.row }) : null].filter(Boolean).join(' · ')}</span>
+                    <span className="truncate text-xs leading-[15px] text-muted">{[r.site, r.row ? t('keepers.list.row', { row: r.row }) : null].filter(Boolean).join(' · ')}</span>
                   </div>
                 </div>
                 <div className="flex min-w-[96px] flex-[1.3] items-center gap-2">
@@ -135,7 +138,7 @@ export default function KeeperList({
                   </span>
                 </div>
                 <span className={`flex-1 text-[13px] leading-4 ${st.today.tone}`}>{text(st.today)}</span>
-                <span className="flex-[1.4] text-[13px] leading-4 text-muted">{text(st.reason)}</span>
+                <span className="flex-[1.4] text-xs leading-4 text-muted">{text(st.reason)}</span>
                 {gap ? (
                   <button type="button" onClick={() => onAssignGap(r)} className={`shrink-0 text-[13px] font-semibold text-cover hover:underline ${FOCUS}`}>
                     {t('keepers.list.assign')}
@@ -153,7 +156,7 @@ export default function KeeperList({
         </ul>
       )}
 
-      <div className="mt-auto flex flex-col gap-3 px-[18px] py-3">
+      <div className="mt-auto flex flex-col gap-[10px] px-[18px] pb-4 pt-3">
         {board && (
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs leading-4 text-faint">
             <span>

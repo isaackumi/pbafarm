@@ -45,7 +45,7 @@ export async function missingToday(ctx: QueryCtx, bound: MemberScope, now: numbe
       .first()
     if (!rec) missing.push(u)
   }
-  return { date, active: units.length, missing }
+  return { date, active: units.length, units, missing }
 }
 
 async function units(ctx: QueryCtx, bound: MemberScope, now: number) {

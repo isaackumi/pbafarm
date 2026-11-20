@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
-import { CalendarDays, Settings2, SlidersHorizontal, X } from 'lucide-react'
+import { Settings2, X } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
 import { ErrorState, GhostButton, GradientButton } from '../../components/ui'
@@ -11,6 +11,7 @@ import AssignPicker from '../../components/keepers/AssignPicker'
 import PlanCoverSheet from '../../components/keepers/PlanCoverSheet'
 import KeeperSettings from '../../components/keepers/KeeperSettings'
 import LimeButton from '../../components/keepers/LimeButton'
+import { BalanceIcon, CoverCalendarIcon } from '../../components/keepers/icons'
 import { useKeeperDraft } from '../../components/keepers/KeeperDraft'
 import { api } from '../../convex/_generated/api'
 import { useLocation } from '../../contexts/LocationContext'
@@ -141,10 +142,10 @@ function Board({ t }) {
       eyebrow={eyebrow}
       actions={
         <>
-          <LimeButton icon={SlidersHorizontal} onClick={() => propose({ kind: 'keeper_rebalance' })} disabled={busy}>
+          <LimeButton icon={BalanceIcon} onClick={() => propose({ kind: 'keeper_rebalance' })} disabled={busy}>
             {t('keepers.assignWithAnowa')}
           </LimeButton>
-          <GradientButton icon={CalendarDays} reverse onClick={() => setCover({ keeperId: null })}>
+          <GradientButton icon={CoverCalendarIcon} ring="sky" onClick={() => setCover({ keeperId: null })}>
             {t('keepers.planCover')}
           </GradientButton>
         </>
@@ -175,7 +176,7 @@ function Board({ t }) {
             )}
             {squares.size > 0 && (
               <div className="flex flex-wrap items-center gap-2 rounded-[14px] bg-text py-2.5 pl-4 pr-3 text-bg">
-                <span className="grow text-[13px] font-semibold">{t('keepers.heatmap.selected', { count: squares.size })}</span>
+                <span className="grow text-[13px] font-semibold leading-4">{t('keepers.heatmap.selected', { count: squares.size })}</span>
                 <button type="button" onClick={() => setSquares(new Set())} className="rounded-pill border border-bg/25 px-3 py-[7px] text-xs font-medium">
                   <X size={12} className="mr-1 inline" aria-hidden />
                   {t('keepers.clear')}
@@ -208,12 +209,12 @@ function Board({ t }) {
               bulk={
                 selRows.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 rounded-[14px] bg-text py-2.5 pl-4 pr-3">
-                    <span className="grow text-[13px] font-semibold text-bg">{t('keepers.bulk.selected', { count: selRows.length, units: selUnits })}</span>
+                    <span className="grow text-[13px] font-semibold leading-4 text-bg">{t('keepers.bulk.selected', { count: selRows.length, units: selUnits })}</span>
                     <button
                       type="button"
                       disabled={busy || !selKeepers.length}
                       onClick={async () => (await propose({ kind: 'keeper_nudge', keeperIds: selKeepers.map((r) => r.id) })) && setRowsSel(new Map())}
-                      className="rounded-pill border border-bg/25 px-3 py-[7px] text-xs font-medium text-bg disabled:opacity-50"
+                      className="rounded-pill border border-bg/25 px-3 py-[7px] text-xs font-medium leading-4 text-bg disabled:opacity-50"
                     >
                       {t('keepers.bulk.nudge')}
                     </button>
@@ -227,7 +228,7 @@ function Board({ t }) {
                             : { kind: 'keeper_rebalance', unassignedOnly: true },
                         )) && setRowsSel(new Map())
                       }
-                      className="rounded-pill bg-lime px-3 py-[7px] text-xs font-semibold text-ink disabled:opacity-50"
+                      className="rounded-pill bg-lime px-3 py-[7px] text-xs font-semibold leading-4 text-ink disabled:opacity-50"
                     >
                       {t('keepers.bulk.rebalance')}
                     </button>

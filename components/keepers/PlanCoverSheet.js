@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
-import { Check } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
-import { Avatar, Modal, SearchField } from '../ui'
+import { Modal, SearchField } from '../ui'
 import LimeButton from './LimeButton'
+import KeeperAvatar from './KeeperAvatar'
+import { TickIcon } from './icons'
 import { useLocale, useT } from '../../lib/i18n/context'
-import { addDaysIso, coverLoad, handoverNote, nextMonday, shortDate } from '../../lib/keepers'
+import { addDaysIso, coverLoad, handoverNote, nearDate, nextMonday, shortDate } from '../../lib/keepers'
 import { localToday } from '../../lib/format'
 
 const FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
-const FIELD = 'h-11 w-full rounded-md border border-line-strong bg-bg px-3.5 text-sm text-text'
+const FIELD = 'h-11 w-full rounded-[12px] border border-line-strong bg-bg px-3.5 text-[14px] leading-[18px] text-text'
 
 /**
  * Plan cover (Paper 56): who looks after a keeper's units while they are
@@ -83,10 +84,10 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
   }
 
   return (
-    <Modal open={open} onClose={onClose} size="xl" showClose className="!bg-surface" bodyClassName="flex flex-col gap-[22px]" aria-label={t('keepers.cover.eyebrow')}>
-      <div className="flex flex-col gap-1">
+    <Modal open={open} onClose={onClose} size="xl" showClose className="!max-w-[560px] !bg-surface" bodyClassName="flex flex-col gap-[22px]" aria-label={t('keepers.cover.eyebrow')}>
+      <div className="flex flex-col gap-[6px]">
         <span className="text-[13px] leading-4 text-muted">{t('keepers.cover.eyebrow')}</span>
-        <h2 className="text-2xl font-semibold leading-[30px] tracking-tight text-text">
+        <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-text">
           {keeperId ? (preview ? t('keepers.cover.title', { name: keeperName, count: preview.units.length }) : t('keepers.loading')) : t('keepers.cover.whoAway')}
         </h2>
       </div>
@@ -98,7 +99,7 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
             {(people || []).map((p) => (
               <li key={p.id}>
                 <button type="button" onClick={() => setKeeperId(p.id)} className={`flex w-full items-center gap-3 rounded-[14px] border border-line px-3.5 py-2.5 text-left ${FOCUS}`}>
-                  <Avatar name={p.name} size={32} />
+                  <KeeperAvatar name={p.name} size={32} />
                   <span className="grow text-sm font-semibold text-text">{p.name}</span>
                   <span className="text-xs text-muted">{t('keepers.assign.loadNow', { count: p.units })}</span>
                 </button>
@@ -115,11 +116,11 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2.5">
-                <label className="flex flex-col gap-1.5 text-xs text-muted">
+                <label className="flex flex-col gap-[6px] text-xs leading-4 text-muted">
                   {t('keepers.cover.from')}
                   <input type="date" value={from} min={today} onChange={(e) => setFrom(e.target.value)} className={FIELD} />
                 </label>
-                <label className="flex flex-col gap-1.5 text-xs text-muted">
+                <label className="flex flex-col gap-[6px] text-xs leading-4 text-muted">
                   {t('keepers.cover.backOn')}
                   <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={FIELD} />
                 </label>
@@ -131,7 +132,7 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
               )}
 
               <div className="flex flex-col gap-2">
-                <span className="text-xs text-muted">{t('keepers.cover.cover')}</span>
+                <span className="text-xs leading-4 text-muted">{t('keepers.cover.cover')}</span>
                 {candidates.length === 0 && <p className="text-sm text-muted">{t('keepers.cover.noCandidates')}</p>}
                 <ul className="flex flex-col gap-2" role="radiogroup" aria-label={t('keepers.cover.cover')}>
                   {candidates.slice(0, 4).map((c) => {
@@ -145,18 +146,18 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
                           onClick={() => setCoverId(c.id)}
                           className={`flex w-full items-center gap-3 rounded-[14px] px-3.5 py-3 text-left ${FOCUS} ${on ? 'border-[1.5px] border-cover' : 'border border-line'}`}
                         >
-                          <Avatar name={c.name} size={32} />
-                          <span className="flex min-w-0 grow flex-col">
-                            <span className="truncate text-sm font-semibold text-text">{c.name}</span>
-                            <span className="text-xs text-muted">
+                          <KeeperAvatar name={c.name} size={32} />
+                          <span className="flex min-w-0 grow flex-col gap-[2px]">
+                            <span className="truncate text-[14px] font-semibold leading-[18px] text-text">{c.name}</span>
+                            <span className="text-xs leading-4 text-muted">
                               {t('keepers.cover.load', { now: c.now, count: c.during })}
                               {c.sameRow ? ` · ${t('keepers.cover.sameRow')}` : ''}
                             </span>
                           </span>
                           {c.heavy ? (
-                            <span className="shrink-0 text-xs text-warn">{t('keepers.cover.heavy')}</span>
+                            <span className="shrink-0 text-xs leading-4 text-warn">{t('keepers.cover.heavy')}</span>
                           ) : c.suggested ? (
-                            <span className="shrink-0 text-xs text-cover">{t('keepers.cover.suggested')}</span>
+                            <span className="shrink-0 text-xs leading-4 text-cover">{t('keepers.cover.suggested')}</span>
                           ) : null}
                         </button>
                       </li>
@@ -164,20 +165,20 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
                   })}
                 </ul>
                 {second && (
-                  <button type="button" onClick={() => setSplit((s) => !s)} className={`self-start text-[13px] text-cover hover:underline ${FOCUS}`} aria-expanded={split}>
+                  <button type="button" onClick={() => setSplit((s) => !s)} className={`self-start pl-[2px] text-[13px] leading-[18px] text-cover hover:underline ${FOCUS}`} aria-expanded={split}>
                     {split ? t('keepers.cover.noSplit') : t('keepers.cover.split')}
                   </button>
                 )}
                 {split && second && cover && (
                   <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {preview.units.map((u) => (
-                      <li key={u.id} className="flex items-center justify-between gap-2 rounded-md border border-line px-3 py-2 text-sm">
+                      <li key={u.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-line px-3 py-2 text-sm">
                         <span className="font-semibold text-text">{u.name}</span>
                         <select
                           value={splitTo[u.id] || cover.id}
                           onChange={(e) => setSplitTo((m) => ({ ...m, [u.id]: e.target.value }))}
                           aria-label={t('keepers.cover.splitWho', { unit: u.name })}
-                          className="rounded-md border border-line-strong bg-bg px-2 py-1 text-xs text-text"
+                          className="rounded-[8px] border border-line-strong bg-bg px-2 py-1 text-xs text-text"
                         >
                           <option value={cover.id}>{cover.name}</option>
                           <option value={second.id}>{second.name}</option>
@@ -190,22 +191,22 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
 
               {cover && (
                 <div className="flex flex-col gap-2.5 rounded-2xl bg-bg p-4">
-                  <span className="text-[13px] font-semibold text-text">{t('keepers.cover.gets', { keeper: keeperName, name: cover.name })}</span>
+                  <span className="text-[13px] font-semibold leading-[18px] text-text">{t('keepers.cover.gets', { keeper: keeperName, name: cover.name })}</span>
                   {[
                     t('keepers.cover.getsUnits', { count: preview.units.length }),
                     t('keepers.cover.getsReminders'),
                     t('keepers.cover.getsTasks', { count: preview.openTasks }),
                   ].map((line) => (
-                    <span key={line} className="flex items-start gap-2 text-[13px] leading-[18px] text-muted">
-                      <Check size={16} className="mt-px shrink-0 text-good" aria-hidden />
+                    <span key={line} className="flex items-center gap-[10px] text-[13px] leading-[18px] text-muted">
+                      <TickIcon size={16} className="shrink-0 text-good" />
                       {line}
                     </span>
                   ))}
-                  <span className="text-xs text-faint">{t('keepers.cover.returns', { date: shortDate(to, lang), keeper: keeperName, name: cover.name })}</span>
+                  <span className="pt-[2px] text-xs leading-[17px] text-faint">{t('keepers.cover.returns', { date: nearDate(to, lang, today), keeper: keeperName, name: cover.name })}</span>
                 </div>
               )}
 
-              <label className="flex flex-col gap-1.5 text-xs text-muted">
+              <label className="flex flex-col gap-[6px] text-xs leading-4 text-muted">
                 {t('keepers.cover.noteLabel')}
                 <textarea
                   value={note}
@@ -215,7 +216,7 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
                     setNote(e.target.value)
                     setNoteTouched(true)
                   }}
-                  className="rounded-md border border-line-strong bg-bg px-3.5 py-3 text-sm leading-[21px] text-text"
+                  className="rounded-[12px] border border-line-strong bg-bg px-3.5 py-3 text-[14px] leading-[21px] text-text"
                 />
               </label>
             </>
@@ -223,11 +224,11 @@ export default function PlanCoverSheet({ open, keeperId: initialKeeper, onClose,
         </>
       )}
 
-      <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
-        <button type="button" onClick={onClose} className={`rounded-pill px-4 py-2.5 text-sm font-medium text-muted hover:text-text ${FOCUS}`}>
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+        <button type="button" onClick={onClose} className={`rounded-pill px-[18px] py-[11px] text-[14px] font-medium leading-[18px] text-muted hover:text-text ${FOCUS}`}>
           {t('common.cancel')}
         </button>
-        <LimeButton size="sm" onClick={submit} disabled={!valid || busy}>
+        <LimeButton size="cta" onClick={submit} disabled={!valid || busy}>
           {cover ? t('keepers.cover.submit', { name: cover.name }) : t('keepers.cover.submitNone')}
         </LimeButton>
       </div>

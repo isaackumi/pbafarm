@@ -3,14 +3,31 @@ import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import PlatformLayout from '../../../components/platform/PlatformLayout'
-import { GhostButton, KpiStrip, LoadingState, Select, StatusDot, Table } from '../../../components/ui'
+import { GhostButton, KpiStrip, LoadingState, Select, Table } from '../../../components/ui'
 import { formatDate, formatMinor } from '../../../lib/billingFormat'
 import { useT } from '../../../lib/i18n/context'
-import { TENANT_TABS, planMix, tenantStatus, tenantTabCounts, tenantTabFilter, upcomingRenewals } from '../../../lib/platformConsole'
+import { TENANT_TABS, daysUntil, planMix, tenantStatus, tenantTabCounts, tenantTabFilter, upcomingRenewals } from '../../../lib/platformConsole'
 
-const DOT_TONE = { good: 'good', warn: 'warn', alert: 'alert', cyan: 'neutral', neutral: 'neutral' }
-const TEXT_TONE = { warn: 'text-warn', alert: 'text-alert', cyan: 'text-pearl-cyan' }
-const MIX_COLORS = ['bg-pearl-cyan', 'bg-pearl-pink', 'bg-text', 'bg-faint', 'bg-warn', 'bg-good']
+/**
+ * Paper 40 status column: a 7px dot (good / warn / lime for a trial / alert)
+ * and the label in text, warn or alert; a suspended tenant reads "Read-only".
+ */
+const DOT_CLASS = { good: 'bg-dot-good', warn: 'bg-dot-warn', alert: 'bg-dot-alert', trial: 'bg-lime', cyan: 'bg-faint', neutral: 'bg-faint' }
+const TEXT_TONE = { warn: 'text-warn', alert: 'text-alert' }
+/** Paper 40 plan mix: Free faint, Starter sky, Growth lime, Pro text, in that order; other plans after. */
+const PLAN_ORDER = ['free', 'starter', 'growth', 'pro']
+const PLAN_COLOR = { free: 'bg-faint', starter: 'bg-sky-ink', growth: 'bg-lime', pro: 'bg-text' }
+const EXTRA_COLORS = ['bg-warn', 'bg-good', 'bg-muted']
+
+function planRank(name) {
+  const i = PLAN_ORDER.indexOf(String(name || '').toLowerCase())
+  return i === -1 ? PLAN_ORDER.length : i
+}
+
+/** A suspended tenant's row is dimmed (Paper 40 "Tamale Fish Farms"). */
+function isReadOnly(r) {
+  return r.state === 'suspended' || r.subscriptionStatus === 'suspended'
+}
 
 function healthTone(score) {
   if (score >= 70) return 'text-good'
@@ -48,8 +65,7 @@ function Kpis({ k }) {
           key: 'wa',
           label: t('platform.tenants.kpi.whatsapp30d'),
           value: k.usage30d.whatsappSent.toLocaleString(),
-          suffix: t('platform.tenants.kpi.activeUsers', { count: k.activeUsers7d }),
-          suffixTone: 'cyan',
+          suffix: <span className="text-sky-ink">{t('platform.tenants.kpi.activeUsers', { count: k.activeUsers7d })}</span>,
         },
       ]}
     />
@@ -64,6 +80,7 @@ function TenantList({ k }) {
   const [planCode, setPlanCode] = useState('')
   const [sort, setSort] = useState('newest')
   const [offset, setOffset] = useState(0)
+  const [now] = useState(() => Date.now())
   const plans = useQuery(api.platform.billing.listPlans, {})
   const tabFilter = tenantTabFilter(tab)
   const data = useQuery(api.platform.tenants.list, {
@@ -146,26 +163,41 @@ function TenantList({ k }) {
             {
               key: 'name',
               header: t('platform.tenants.col.farm'),
+              width: 280,
               render: (r) => (
                 <Link
-                  className="rounded font-medium text-text hover:text-pearl-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                  className={`rounded font-medium hover:text-sky-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${isReadOnly(r) ? 'text-muted' : 'text-text'}`}
                   href={`/platform/tenants/${r.companyId}`}
                 >
                   {r.name}
                 </Link>
               ),
-              sub: (r) => r.contactEmail || '—',
+              sub: (r) => <span className={`mt-[1px] block ${isReadOnly(r) ? 'text-faint' : ''}`}>{r.contactEmail || '—'}</span>,
             },
-            { key: 'plan', header: t('platform.tenants.col.plan'), render: (r) => r.planName || '—' },
+            {
+              key: 'plan',
+              header: t('platform.tenants.col.plan'),
+              width: 120,
+              render: (r) => <span className={isReadOnly(r) ? 'text-muted' : ''}>{r.planName || '—'}</span>,
+            },
             {
               key: 'status',
               header: t('platform.tenants.col.status'),
+              width: 130,
               render: (r) => {
                 const s = tenantStatus(r.state, r.subscriptionStatus)
+                const trial = s.key === 'trialing'
+                const left = trial ? daysUntil(r.trialEndsAt, now) : null
+                const label =
+                  s.key === 'suspended'
+                    ? t('platform.tenants.readOnly')
+                    : trial && left !== null
+                      ? t('platform.tenants.trialLeft', { count: left })
+                      : t(`platform.status.${s.key}`)
                 return (
                   <span className={`inline-flex items-center gap-2 ${TEXT_TONE[s.tone] || 'text-text'}`}>
-                    <StatusDot tone={DOT_TONE[s.tone]} size={7} />
-                    {t(`platform.status.${s.key}`)}
+                    <span aria-hidden className={`size-[7px] shrink-0 rounded-pill ${DOT_CLASS[trial ? 'trial' : s.tone]}`} />
+                    {label}
                   </span>
                 )
               },
@@ -173,8 +205,9 @@ function TenantList({ k }) {
             {
               key: 'sitesUsers',
               header: t('platform.tenants.col.sitesUsers'),
+              width: 110,
               render: (r) => (
-                <span className="text-muted tabular-nums">
+                <span className={`tabular-nums ${isReadOnly(r) ? 'text-faint' : 'text-muted'}`}>
                   {r.sites} · {r.members}
                 </span>
               ),
@@ -226,7 +259,8 @@ function RenewalsAndMix() {
   const [now] = useState(() => Date.now())
   if (subs === undefined) return <LoadingState label={t('platform.tenants.loadingRenewals')} />
   const renewals = upcomingRenewals(subs, now)
-  const mix = planMix(subs)
+  const mix = planMix(subs).sort((a, b) => planRank(a.plan) - planRank(b.plan))
+  const mixColor = (plan, i) => PLAN_COLOR[String(plan || '').toLowerCase()] || EXTRA_COLORS[i % EXTRA_COLORS.length]
   const total = mix.reduce((n, m) => n + m.count, 0)
   const when = (r) =>
     r.status === 'trialing'
@@ -249,7 +283,7 @@ function RenewalsAndMix() {
           <ul>
             {renewals.map((r) => (
               <li key={r.id} className="flex flex-wrap justify-between gap-2 border-b border-line py-[10px] text-[13px] leading-4">
-                <Link className="text-text hover:text-pearl-cyan" href={`/platform/tenants/${r.companyId}`}>
+                <Link className="text-text hover:text-sky-ink" href={`/platform/tenants/${r.companyId}`}>
                   {r.companyName} · {r.planName}
                 </Link>
                 <span className={r.status === 'past_due' ? 'text-warn' : 'text-muted'}>{when(r)}</span>
@@ -268,13 +302,12 @@ function RenewalsAndMix() {
           <>
             <div className="flex h-[10px] gap-[2px] overflow-hidden rounded-pill" aria-hidden>
               {mix.map((m, i) => (
-                <div key={m.plan} className={MIX_COLORS[i % MIX_COLORS.length]} style={{ flexGrow: m.count, flexBasis: 0 }} />
+                <div key={m.plan} className={mixColor(m.plan, i)} style={{ flexGrow: m.count, flexBasis: 0 }} />
               ))}
             </div>
             <ul className="flex flex-wrap gap-x-4 gap-y-1">
-              {mix.map((m, i) => (
-                <li key={m.plan} className="flex items-center gap-[6px] text-xs leading-4 text-muted">
-                  <span className={`size-2 rounded-pill ${MIX_COLORS[i % MIX_COLORS.length]}`} aria-hidden />
+              {mix.map((m) => (
+                <li key={m.plan} className="text-xs leading-4 text-muted">
                   {m.plan} {m.count}
                 </li>
               ))}

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
-import { AnowaPulseIcon } from '../components/brand/AnowaPulseIcon'
+import { Download, PenLine } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import { AlertRow, useAlertActions, useAlertLang } from '../components/FarmAlerts'
@@ -28,10 +27,14 @@ export default function AlertsPage() {
   const locationId = locationArgs?.locationId
   const args = canUseApp ? (locationId ? { locationId } : {}) : 'skip'
   const rations = useOptionalQuery(api.feedingPlans.rations, args)
-  const today = new Date().toLocaleDateString(locale || undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+  const today = new Date().toLocaleDateString(String(locale || 'en').startsWith('fr') ? 'fr-FR' : 'en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  })
   const eyebrow = [
     today,
-    activeLocation?.name ?? t('alertsPage.allSites'),
+    activeLocation?.name ? t('alertsPage.site', { site: activeLocation.name }) : t('alertsPage.allSites'),
     rations ? t('alertsPage.units', { count: rations.rows.length }) : null,
   ]
     .filter(Boolean)
@@ -45,12 +48,12 @@ export default function AlertsPage() {
         actions={
           <>
             <IfPermitted permission="org.settings.manage">
-              <GradientButton href="/company-settings" icon={SlidersHorizontal}>
+              <GradientButton href="/company-settings" variant="lime" icon={PenLine}>
                 {t('alertsPage.alertRules')}
               </GradientButton>
             </IfPermitted>
             <IfPermitted permission="reports.view">
-              <GradientButton href="/weekly-report" reverse icon={AnowaPulseIcon}>
+              <GradientButton href="/weekly-report" ring="sky" icon={Download}>
                 {t('alertsPage.weeklyReport')}
               </GradientButton>
             </IfPermitted>
@@ -125,7 +128,7 @@ function AlertsAndInsights({ args, rations }) {
             onChange={setCategory}
             tabs={ALERT_CATEGORIES.map((c) => ({
               value: c,
-              label: `${t(`alertsPage.category.${c}`)} ${counts[c]}`,
+              label: c === 'all' ? `${t('alertsPage.category.all')} ${counts.all}` : t(`alertsPage.category.${c}`),
               controls: 'alerts-list',
             }))}
           />
@@ -153,14 +156,14 @@ function AlertsAndInsights({ args, rations }) {
         rows={rations?.rows ?? []}
         empty={rations === undefined ? t('ui.loading') : t('feedingPlan.noUnits')}
         columns={[
-          { key: 'cageName', header: t('feedingPlan.col.unit'), width: 152, render: (r) => <span className="font-medium text-text">{r.cageName}</span> },
-          { key: 'abwG', header: t('feedingPlan.col.abw'), width: 134, render: (r) => (r.abwG == null ? '—' : `${kg(r.abwG)} g`) },
+          { key: 'cageName', header: t('feedingPlan.col.unit'), width: 120, render: (r) => <span className="font-medium text-text">{r.cageName}</span> },
+          { key: 'abwG', header: t('feedingPlan.col.abw'), width: 110, render: (r) => (r.abwG == null ? '—' : `${kg(r.abwG)} g`) },
           {
             key: 'suggested',
             header: t('alertsPage.suggested'),
-            width: 144,
+            width: 120,
             render: (r) =>
-              r.ration.ok ? <span className="font-semibold text-pearl-cyan">{kg(r.ration.kgPerDay)} kg</span> : <span className="text-faint">—</span>,
+              r.ration.ok ? <span className="font-semibold text-sky-ink">{kg(r.ration.kgPerDay)} kg</span> : <span className="text-faint">—</span>,
           },
           { key: 'how', header: t('feedingPlan.col.how'), render: (r) => <span className="text-muted">{rationText(t, r.ration)}</span> },
           { key: 'why', header: t('feedingPlan.why'), render: (r) => <span className="text-muted">{rationWhy(r, locale) || '—'}</span> },

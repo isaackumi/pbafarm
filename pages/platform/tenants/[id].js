@@ -4,18 +4,32 @@ import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import PlatformLayout, { ConsoleHeader, SimpleTable, StatusPill } from '../../../components/platform/PlatformLayout'
-import { Badge, Button, Field, GhostButton, Input, LoadingState, Modal, Select, SolidButton, StatusDot, SummaryCard, Tabs, Textarea } from '../../../components/ui'
+import { Badge, Button, Field, GhostButton, Input, LoadingState, Modal, Select, SolidButton, SummaryCard, Tabs, Textarea } from '../../../components/ui'
 import { useToast } from '../../../components/Toast'
 import { errorMessage } from '../../../lib/errorMessage'
 import { formatDate, formatDateTime, formatMinor, minorDigits, toMinor } from '../../../lib/billingFormat'
 import { balanceDue } from '../../../lib/billingBalance'
 import { useT } from '../../../lib/i18n/context'
-import { daysUntil, limitOf, nextOpenInvoice, tenantStatus } from '../../../lib/platformConsole'
+import { getActiveLocale } from '../../../lib/format'
+import { formatMoney } from '../../../lib/money'
+import {
+  clockTime,
+  dayMonth,
+  dayMonthTime,
+  daysUntil,
+  isSameDay,
+  limitOf,
+  monthYear,
+  nextOpenInvoice,
+  planPrice,
+  tenantStatus,
+} from '../../../lib/platformConsole'
 
 const TABS = ['invoices', 'subscription', 'members', 'usage', 'audit', 'limits', 'notes', 'profile']
 const CURRENCIES = ['GHS', 'XOF', 'USD']
-const DOT_TONE = { good: 'good', warn: 'warn', alert: 'alert', cyan: 'neutral', neutral: 'neutral' }
-const SUMMARY_TONE = { good: 'good', warn: 'warn', alert: 'alert', cyan: 'cyan', neutral: 'default' }
+/** Paper 40/44 status: dot in good / warn / alert, lime for a trial; the figure in text unless warn or alert. */
+const DOT_CLASS = { good: 'bg-dot-good', warn: 'bg-dot-warn', alert: 'bg-dot-alert', trial: 'bg-lime', cyan: 'bg-faint', neutral: 'bg-faint' }
+const SUMMARY_TONE = { good: 'default', warn: 'warn', alert: 'alert', cyan: 'default', neutral: 'default' }
 const DAY = 24 * 60 * 60 * 1000
 
 function newKey() {
@@ -416,7 +430,7 @@ function StatusStrip({ d, now }) {
         tone={SUMMARY_TONE[status.tone]}
         value={
           <>
-            <StatusDot tone={DOT_TONE[status.tone]} size={8} />
+            <span aria-hidden className={`size-2 shrink-0 rounded-pill ${DOT_CLASS[status.key === 'trialing' ? 'trial' : status.tone]}`} />
             {t(`platform.status.${status.key}`)}
           </>
         }
@@ -426,50 +440,92 @@ function StatusStrip({ d, now }) {
         size="md"
         label={t('platform.detail.balanceDue')}
         value={due.length ? due.map(([c, m]) => formatMinor(m, c)).join(' · ') : formatMinor(0, d.subscription?.currency || d.company.currency || 'GHS')}
-        sub={next ? t('platform.detail.nextInvoice', { number: next.number, date: formatDate(next.dueAt) }) : t('platform.detail.nothingDue')}
+        sub={next ? t('platform.detail.nextInvoice', { number: next.number, date: dayMonth(next.dueAt, getActiveLocale()) }) : t('platform.detail.nothingDue')}
       />
       <SummaryCard size="md" label={t('platform.detail.sitesCagesUsers')} value={used} sub={t('platform.detail.limits', { limits: maxes })} />
       <SummaryCard
         size="md"
         label={t('platform.detail.lastActivity')}
-        value={d.lastActivityAt ? formatDateTime(d.lastActivityAt) : '—'}
+        value={
+          !d.lastActivityAt
+            ? '—'
+            : isSameDay(d.lastActivityAt, now)
+              ? t('platform.detail.today', { time: clockTime(d.lastActivityAt, getActiveLocale()) })
+              : dayMonthTime(d.lastActivityAt, getActiveLocale())
+        }
         sub={t('platform.detail.activity7d', { records: records7d, whatsapp: wa7d })}
       />
     </div>
   )
 }
 
-function invoiceBadge(t, inv, now) {
+function invoiceBadge(t, inv, now, payments) {
   if (inv.status === 'open' && inv.dueAt < now) {
     return <Badge tone="warn">{t('platform.detail.overdue', { count: Math.max(1, Math.floor((now - inv.dueAt) / DAY)) })}</Badge>
   }
-  const tone = { paid: 'good', open: 'cyan', void: 'neutral', uncollectible: 'alert' }[inv.status] || 'neutral'
+  if (inv.status === 'paid') {
+    // Paper 44: "Paid · MoMo 14 Oct" from the latest payment against the invoice.
+    const pay = payments.filter((p) => p.invoiceId === inv.id).sort((a, b) => b.receivedAt - a.receivedAt)[0]
+    if (pay) {
+      return (
+        <Badge tone="good">
+          {t('platform.detail.paidVia', { method: t(`platform.methodShort.${pay.method}`), date: dayMonth(pay.receivedAt, getActiveLocale()) })}
+        </Badge>
+      )
+    }
+  }
+  const tone = { paid: 'good', open: 'neutral', void: 'neutral', uncollectible: 'alert' }[inv.status] || 'neutral'
   return <Badge tone={tone}>{t(`billing.invoiceStatus.${inv.status}`)}</Badge>
 }
 
+/**
+ * Paper 44 invoices: full-bleed rows (20px edges, 10px header, 12px rows of
+ * 13/16), columns 130 / 120 / 120 / 110 / status; actions pinned to the card's foot.
+ */
+const INV_TH = 'shrink-0 text-[11px] uppercase leading-[14px] tracking-[0.08em] text-faint'
+
 function InvoicesTab({ d, now, onCreate, canBill }) {
   const t = useT()
+  const loc = getActiveLocale()
   return (
-    <div className="flex flex-col gap-6">
-      <SimpleTable
-        rows={d.invoices}
-        empty={t('platform.detail.noInvoices')}
-        columns={[
-          { key: 'number', label: t('platform.detail.col.invoice'), render: (r) => <span className="font-medium">{r.number}</span> },
-          { key: 'issuedAt', label: t('platform.detail.col.issued'), render: (r) => <span className="text-muted">{formatDate(r.issuedAt)}</span> },
-          { key: 'total', label: t('platform.detail.col.amount'), align: 'right', render: (r) => formatMinor(r.totalMinor, r.currency) },
-          { key: 'paid', label: t('platform.detail.col.paid'), align: 'right', render: (r) => formatMinor(r.paidMinor, r.currency) },
-          { key: 'dueAt', label: t('platform.detail.col.due'), render: (r) => <span className="text-muted">{formatDate(r.dueAt)}</span> },
-          { key: 'status', label: t('platform.detail.col.status'), render: (r) => invoiceBadge(t, r, now) },
-        ]}
-      />
-      <div>
-        <h3 className="mb-1 text-[11px] uppercase leading-[14px] tracking-[0.08em] text-muted">{t('platform.detail.payments')}</h3>
+    <div className="flex grow flex-col">
+      <div className="overflow-x-auto">
+        <div className="min-w-[640px]">
+          <div className="flex border-b border-line px-5 py-[10px]" role="row">
+            <div role="columnheader" className={`w-[130px] ${INV_TH}`}>{t('platform.detail.col.invoice')}</div>
+            <div role="columnheader" className={`w-[120px] ${INV_TH}`}>{t('platform.detail.col.issued')}</div>
+            <div role="columnheader" className={`w-[120px] ${INV_TH}`}>{t('platform.detail.col.amount')}</div>
+            <div role="columnheader" className={`w-[110px] ${INV_TH}`}>{t('platform.detail.col.paid')}</div>
+            <div role="columnheader" className={`w-[110px] ${INV_TH}`}>{t('platform.detail.col.due')}</div>
+            <div role="columnheader" className={`grow basis-0 ${INV_TH}`}>{t('platform.detail.col.status')}</div>
+          </div>
+          {d.invoices.length === 0 ? (
+            <p className="border-b border-line px-5 py-3 text-[13px] leading-4 text-muted">{t('platform.detail.noInvoices')}</p>
+          ) : (
+            d.invoices.map((r, i) => (
+              <div
+                key={r.id}
+                role="row"
+                className={`flex items-center px-5 py-3 text-[13px] leading-4 ${i === d.invoices.length - 1 ? '' : 'border-b border-line'}`}
+              >
+                <div role="cell" className="w-[130px] shrink-0 font-medium text-text">{r.number}</div>
+                <div role="cell" className="w-[120px] shrink-0 text-muted">{monthYear(r.issuedAt, loc)}</div>
+                <div role="cell" className="w-[120px] shrink-0 tabular-nums text-text">{formatMinor(r.totalMinor, r.currency)}</div>
+                <div role="cell" className="w-[110px] shrink-0 tabular-nums text-muted">{formatMinor(r.paidMinor, r.currency)}</div>
+                <div role="cell" className="w-[110px] shrink-0 text-muted">{dayMonth(r.dueAt, loc)}</div>
+                <div role="cell" className="grow basis-0">{invoiceBadge(t, r, now, d.payments)}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 border-t border-line px-5 pb-3 pt-4">
+        <h3 className="text-[11px] uppercase leading-[14px] tracking-[0.08em] text-muted">{t('platform.detail.payments')}</h3>
         <SimpleTable
           rows={d.payments}
           empty={t('platform.detail.noPayments')}
           columns={[
-            { key: 'receivedAt', label: t('platform.detail.col.received'), render: (r) => formatDate(r.receivedAt) },
+            { key: 'receivedAt', label: t('platform.detail.col.received'), render: (r) => dayMonth(r.receivedAt, loc) },
             { key: 'amount', label: t('platform.detail.col.amount'), align: 'right', render: (r) => formatMinor(r.amountMinor, r.currency) },
             { key: 'method', label: t('platform.detail.col.method'), render: (r) => t(`platform.method.${r.method}`) },
             { key: 'providerRef', label: t('platform.detail.col.reference'), render: (r) => r.providerRef || '—' },
@@ -477,8 +533,10 @@ function InvoicesTab({ d, now, onCreate, canBill }) {
         />
       </div>
       {canBill ? (
-        <div className="flex flex-wrap gap-2">
-          <GhostButton onClick={onCreate}>{t('platform.detail.createInvoice')}</GhostButton>
+        <div className="mx-5 mb-4 mt-auto flex flex-wrap gap-2 pt-4">
+          <GhostButton onClick={onCreate} className="px-[14px]! py-2!">
+            {t('platform.detail.createInvoice')}
+          </GhostButton>
         </div>
       ) : null}
     </div>
@@ -827,14 +885,25 @@ function ProfileTab({ d, onExport, canManage }) {
   )
 }
 
+function priceLabel(t, plan, currency) {
+  const p = planPrice(plan, currency)
+  if (!p) return null
+  const digits = minorDigits(p.currency)
+  const amount = formatMoney(p.amountMinor / 10 ** digits, p.currency, { decimals: p.amountMinor % 10 ** digits === 0 ? 0 : digits })
+  return t(p.interval === 'year' ? 'platform.detail.perYear' : 'platform.detail.perMonth', { amount })
+}
+
 function SubscriptionCard({ d, show, canManage }) {
   const t = useT()
+  const plans = useQuery(api.platform.billing.listPlans, {})
   const s = d.subscription
   const owner = d.members.find((m) => m.roleKey === 'owner')
+  const loc = getActiveLocale()
+  const price = s ? priceLabel(t, (plans ?? []).find((p) => p.id === s.planId), s.currency) : null
   const rows = s
     ? [
-        [t('platform.detail.plan'), s.planName],
-        [t('platform.detail.period'), `${formatDate(s.currentPeriodStart)} – ${formatDate(s.currentPeriodEnd)}`],
+        [t('platform.detail.plan'), price ? `${s.planName} · ${price}` : s.planName],
+        [t('platform.detail.period'), `${dayMonth(s.currentPeriodStart, loc)} – ${dayMonth(s.currentPeriodEnd, loc)}`],
         [t('platform.detail.billingContact'), owner ? `${owner.name} · ${owner.roleKey}` : d.company.contactEmail || '—'],
       ]
     : []
@@ -888,7 +957,7 @@ function RecentActivity({ d }) {
         <ul className="flex flex-col gap-[10px]">
           {recent.map((e) => (
             <li key={e.id} className="text-xs leading-[18px] text-muted">
-              {formatDateTime(e.at)} · {e.action.replace(/_/g, ' ')} · {e.actor || t('platform.detail.system')}
+              {dayMonthTime(e.at, getActiveLocale())} · {e.action.replace(/_/g, ' ')} · {e.actor || t('platform.detail.system')}
             </li>
           ))}
         </ul>
@@ -911,7 +980,7 @@ function TenantDetail({ d }) {
       </Link>
       <span aria-hidden>/</span>
       <span>
-        {[d.company.name, d.subscription ? t('platform.detail.planLabel', { plan: d.subscription.planName }) : null, t('platform.detail.since', { date: formatDate(d.company.createdAt) })]
+        {[d.company.name, d.subscription ? t('platform.detail.planLabel', { plan: d.subscription.planName }) : null, t('platform.detail.since', { date: monthYear(d.company.createdAt, getActiveLocale()) })]
           .filter(Boolean)
           .join(' · ')}
       </span>
@@ -933,7 +1002,7 @@ function TenantDetail({ d }) {
         </GhostButton>
       ) : null}
       {state === 'active' ? (
-        <GhostButton size="lg" tone="danger" onClick={() => show('suspend')}>
+        <GhostButton size="lg" onClick={() => show('suspend')}>
           {t('platform.detail.suspend')}
         </GhostButton>
       ) : null}
@@ -955,13 +1024,19 @@ function TenantDetail({ d }) {
           <div className="overflow-x-auto border-b border-line px-5">
             <Tabs
               variant="underline"
+              className="[&_[aria-selected=true]]:border-sky-ink"
               label={t('platform.detail.sections')}
               value={tab}
               onChange={setTab}
               tabs={TABS.map((x) => ({ value: x, id: `tenant-tab-${x}`, controls: 'tenant-panel', label: t(`platform.detail.tab.${x}`) }))}
             />
           </div>
-          <div id="tenant-panel" role="tabpanel" aria-labelledby={`tenant-tab-${tab}`} className="p-5">
+          <div
+            id="tenant-panel"
+            role="tabpanel"
+            aria-labelledby={`tenant-tab-${tab}`}
+            className={tab === 'invoices' ? 'flex grow flex-col' : 'p-5'}
+          >
             {tab === 'invoices' && <InvoicesTab d={d} now={now} canBill={canManage} onCreate={() => show('invoice')} />}
             {tab === 'subscription' && <SubscriptionTab d={d} />}
             {tab === 'members' && <MembersTab d={d} />}

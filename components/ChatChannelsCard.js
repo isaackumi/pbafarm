@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 import { useToast } from './Toast'
 import { errorMessage } from '../lib/errorMessage'
 import { useLocale, useT } from '../lib/i18n/context'
-import { Field, GradientButton, Input, Skeleton } from './ui'
+import { Field, Input, Skeleton } from './ui'
 
 const PROVIDERS = {
   // Third-party brand colours for the provider marks (not theme tokens).
@@ -83,7 +83,6 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
   const t = useT()
   const meta = PROVIDERS[provider]
   const connected = bindings.length > 0
-  const minutesLeft = pending ? Math.max(1, Math.round((pending.expiresAt - Date.now()) / 60000)) : 0
   const canConnect = config.configured && (provider !== 'whatsapp' || config.phoneVerified)
   const status = connected
     ? t('chatChannels.connected', {
@@ -123,10 +122,10 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
       {pending ? (
         <div role="status" className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3 rounded-[8px] border border-dashed border-line-strong px-4 py-[14px]">
-            <span className="font-mono text-[24px] font-bold leading-[30px] tracking-[0.2em] text-pearl-cyan">
+            <span className="font-mono text-[24px] font-bold leading-[30px] tracking-[0.2em] text-sky-ink">
               {provider === 'whatsapp' ? `LINK ${pending.code}` : pending.code}
             </span>
-            <span className="text-xs leading-4 text-muted">{t('chatChannels.minutesLeft', { count: minutesLeft })}</span>
+            <Countdown expiresAt={pending.expiresAt} />
           </div>
           <p className="text-xs leading-4 text-faint">
             {provider === 'whatsapp' ? t('chatChannels.sendCode') : pending.link ? t('chatChannels.tapStart') : t('chatChannels.telegramNoBot')}{' '}
@@ -138,9 +137,17 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
       {canConnect ? (
         <div className="flex flex-wrap gap-2">
           {pending?.link ? (
-            <GradientButton size="sm" ring="sky" href={pending.link} target="_blank" rel="noopener noreferrer">
-              {t('chatChannels.openIn', { app: meta.name })}
-            </GradientButton>
+            <a
+              href={pending.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 rounded-pill p-[1.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              style={{ backgroundImage: 'var(--gradient-sky)' }}
+            >
+              <span className="whitespace-nowrap rounded-pill bg-surface px-[14px] py-[7px] text-[13px] leading-4 text-text hover:bg-surface-2">
+                {t('chatChannels.openIn', { app: meta.name })}
+              </span>
+            </a>
           ) : null}
           <button type="button" className={OUTLINE} disabled={busy} onClick={onStart}>
             {pending ? t('chatChannels.newCode') : connected ? t('chatChannels.connectAnother') : t(`chatChannels.connect.${provider}`)}
@@ -148,6 +155,23 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
         </div>
       ) : null}
     </div>
+  )
+}
+
+/** "09:41 left" (Paper 43): the code's time left as mm:ss, ticking each second. */
+function Countdown({ expiresAt }) {
+  const t = useT()
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const left = Math.max(0, Math.floor((expiresAt - now) / 1000))
+  const mmss = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`
+  return (
+    <span className="text-xs leading-4 tabular-nums text-muted">
+      {left > 0 ? t('chatChannels.timeLeft', { time: mmss }) : t('chatChannels.codeExpired')}
+    </span>
   )
 }
 

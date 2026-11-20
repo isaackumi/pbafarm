@@ -34,7 +34,7 @@ import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { companyCredentials, insertUsage, pickCredential } from '../llmGateway'
 import { todayIn, zoneFor } from '../lib/dates'
 import { checkBinding } from './scope'
-import { proposalInput, proposeFor, draftButtons, type ProposalInput } from './pending'
+import { proposalInput, proposeFor, draftButtons, draftCard, type ProposalInput } from './pending'
 import { t, type BotLocale } from './i18n'
 import type { ChatMessageValue } from './validators'
 import type { SpeechLanguage } from '../lib/speech'
@@ -230,7 +230,14 @@ export const proposeFromAgent = internalMutation({
     ),
   },
   returns: v.union(
-    v.object({ ok: v.literal(true), pendingId: v.id('pendingBotActions'), summary: v.string(), duplicate: v.boolean() }),
+    v.object({
+      ok: v.literal(true),
+      pendingId: v.id('pendingBotActions'),
+      summary: v.string(),
+      /** The confirm text the user sees (artboard 41). */
+      card: v.string(),
+      duplicate: v.boolean(),
+    }),
     v.object({ ok: v.literal(false), error: v.string() }),
   ),
   handler: async (ctx, args) => {
@@ -251,7 +258,13 @@ export const proposeFromAgent = internalMutation({
     if (!r.ok) return r
     const draft = await ctx.db.get(r.pendingId)
     if (note && draft) await ctx.db.patch(draft._id, voiceMarks(draft, args.input, args.voice?.check ?? [], note._id))
-    return { ok: true as const, pendingId: r.pendingId, summary: r.summary, duplicate: !!draft?.duplicateOf }
+    return {
+      ok: true as const,
+      pendingId: r.pendingId,
+      summary: r.summary,
+      card: draft ? draftCard(checked.bound.locale, draft) : r.summary,
+      duplicate: !!draft?.duplicateOf,
+    }
   },
 })
 
@@ -341,7 +354,7 @@ type ToolEnv = {
   sourceMessageId: string
   sentAt: number
   voiceNoteId?: Id<'voiceNotes'>
-  drafts: Array<{ pendingId: Id<'pendingBotActions'>; summary: string; duplicate: boolean }>
+  drafts: Array<{ pendingId: Id<'pendingBotActions'>; summary: string; card: string; duplicate: boolean }>
 }
 
 type Check = { field: (typeof CHECK_FIELDS)[number]; heard: string }[] | undefined
@@ -365,7 +378,7 @@ function tools(env: ToolEnv) {
       ...(env.voiceNoteId ? { voice: { voiceNoteId: env.voiceNoteId, check: check?.slice(0, 4) } } : {}),
     })
     if (!r.ok) return `Error: ${r.error}`
-    env.drafts.push({ pendingId: r.pendingId, summary: r.summary, duplicate: r.duplicate })
+    env.drafts.push({ pendingId: r.pendingId, summary: r.summary, card: r.card, duplicate: r.duplicate })
     return `Draft created (not saved yet; the user will see Save/Cancel buttons): ${r.summary}`
   }
   const runFarmRead = async (ctx: ActionCtx, tool: FarmReadTool, args: FarmReadArgs = {}): Promise<string> => {
@@ -491,7 +504,7 @@ export type AgentTurn = {
   voice?: { voiceNoteId: Id<'voiceNotes'>; language: SpeechLanguage }
 }
 
-export type AgentDraft = { pendingId: Id<'pendingBotActions'>; summary: string; duplicate: boolean }
+export type AgentDraft = { pendingId: Id<'pendingBotActions'>; summary: string; card: string; duplicate: boolean }
 export type AgentTurnResult =
   | { ok: false; locale: BotLocale; message: string }
   | { ok: true; locale: BotLocale; reply: string; drafts: AgentDraft[] }
@@ -503,14 +516,11 @@ export async function runAgent(ctx: ActionCtx, turn: AgentTurn): Promise<ChatMes
   const s = t(r.locale)
   const out: ChatMessageValue[] = []
   if (r.reply) out.push({ kind: 'text', text: r.reply.slice(0, MAX_REPLY_CHARS) })
-  // The confirm text is our own summary of the stored draft, never the model's words.
+  // The confirm text is our own card of the stored draft, never the model's words.
   for (const d of r.drafts) {
     const b = draftButtons(r.locale, d.pendingId, d.duplicate)
     if (b.kind !== 'buttons') continue
-    const lines = [d.summary]
-    if (d.duplicate) lines.push(s.duplicateWarning)
-    lines.push(s.confirmPrompt)
-    out.push({ ...b, text: lines.join('\n') })
+    out.push({ ...b, text: d.card })
   }
   if (!out.length) out.push({ kind: 'text', text: s.help })
   return out

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { Check, Loader2, Mic } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import Layout from '../components/Layout'
 import LimeButton from '../components/keepers/LimeButton'
+import { DoneIcon, MicIcon } from '../components/keepers/icons'
 import { useToast } from '../components/Toast'
 import { api } from '../convex/_generated/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -86,11 +87,11 @@ function MyCages() {
           <p className="rounded-2xl border border-line bg-surface px-4 py-3.5 text-sm text-muted">{t('keepers.mine.none')}</p>
         ) : (
           <>
-            <div className="flex items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-3.5">
+            <div className="flex items-center gap-[14px] rounded-2xl border border-line bg-surface px-4 py-[14px]">
               <Ring done={done.length} total={total} />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-base font-semibold text-text">{t('keepers.mine.progress', { done: done.length, count: total })}</span>
-                <span className="text-[13px] leading-[18px] text-muted">
+              <div className="flex flex-col gap-[2px]">
+                <span className="text-[16px] font-semibold leading-5 text-text">{t('keepers.mine.progress', { done: done.length, count: total })}</span>
+                <span className="text-[13px] leading-[17px] text-muted">
                   {todo.length
                     ? t('keepers.mine.left', { count: todo.length, deadline: data.deadline })
                     : t('keepers.mine.allDone')}
@@ -101,8 +102,8 @@ function MyCages() {
             {!live && <p className="text-xs text-warn">{t('keepers.mine.offline')}</p>}
 
             {todo.length > 0 && (
-              <section className="flex flex-col gap-2.5" aria-label={t('keepers.mine.todo', { count: todo.length })}>
-                <h2 className="text-xs uppercase tracking-wide text-muted">{t('keepers.mine.todo', { count: todo.length })}</h2>
+              <section className="flex flex-col gap-[10px]" aria-label={t('keepers.mine.todo', { count: todo.length })}>
+                <h2 className="text-xs uppercase leading-4 tracking-[0.06em] text-muted">{t('keepers.mine.todo', { count: todo.length })}</h2>
                 {todo.map((c) => (
                   <TodoCard
                     key={c.id}
@@ -125,16 +126,14 @@ function MyCages() {
             )}
 
             {done.length > 0 && (
-              <section className="flex flex-col" aria-label={t('keepers.mine.done', { count: done.length })}>
-                <h2 className="pb-1 text-xs uppercase tracking-wide text-muted">{t('keepers.mine.done', { count: done.length })}</h2>
+              <section className="flex flex-col gap-[2px]" aria-label={t('keepers.mine.done', { count: done.length })}>
+                <h2 className="pb-2 text-xs uppercase leading-4 tracking-[0.06em] text-muted">{t('keepers.mine.done', { count: done.length })}</h2>
                 <ul>
                   {done.map((c, i) => (
                     <li key={c.id} className={`flex items-center gap-3 px-1 py-2.5 ${i < done.length - 1 ? 'border-b border-line' : ''}`}>
-                      <span className="flex size-[18px] items-center justify-center rounded-pill bg-good/15 text-good" aria-hidden>
-                        <Check size={12} strokeWidth={3} />
-                      </span>
-                      <span className="grow text-[15px] text-text">{c.name}</span>
-                      <span className="text-xs text-muted">
+                      <DoneIcon size={18} className="shrink-0 text-good" />
+                      <span className="grow text-[15px] leading-5 text-text">{c.name}</span>
+                      <span className="text-xs leading-4 text-muted">
                         {[
                           c.logged?.at ? clock(c.logged.at, lang) : t('keepers.mine.waiting'),
                           c.logged ? `${c.logged.feedKg} kg` : null,
@@ -156,7 +155,7 @@ function MyCages() {
 }
 
 function Ring({ done, total }) {
-  const r = 19.5
+  const r = 18
   const c = 2 * Math.PI * r
   const pct = total ? done / total : 0
   return (
@@ -209,15 +208,15 @@ function TodoCard({ card, featured, open, onOpen, canLog, date, userId, onSaved,
   }
 
   return (
-    <article className={`flex flex-col gap-3 rounded-[18px] bg-surface ${featured ? 'border border-line-strong p-4' : 'border border-line px-4 py-3.5'}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h3 className={`font-semibold text-text ${featured ? 'text-xl leading-6' : 'text-base'}`}>{card.name}</h3>
-          {!featured && meta.length > 0 && <span className="text-[13px] text-muted">{meta.join(' · ')}</span>}
+    <article className={`flex flex-col gap-3 rounded-[18px] bg-surface ${featured ? 'border border-line-strong p-4' : 'border border-line px-4 py-[14px]'}`}>
+      <div className={`flex justify-between gap-3 ${featured ? 'items-baseline' : 'items-center'}`}>
+        <div className="flex flex-col gap-[2px]">
+          <h3 className={`font-semibold text-text ${featured ? 'text-[20px] leading-6' : 'text-[16px] leading-5'}`}>{card.name}</h3>
+          {!featured && meta.length > 0 && <span className="text-xs leading-4 text-muted">{meta.join(' · ')}</span>}
         </div>
-        {card.sampleDue && <span className="shrink-0 text-xs text-warn">{t('keepers.mine.sampleDue')}</span>}
+        {card.sampleDue && <span className="shrink-0 text-xs leading-4 text-warn">{t('keepers.mine.sampleDue')}</span>}
         {!featured && !open && canLog && (
-          <button type="button" onClick={onOpen} className={`shrink-0 rounded-pill border border-line-strong px-4 py-1.5 text-sm font-medium text-text ${FOCUS}`}>
+          <button type="button" onClick={onOpen} className={`shrink-0 rounded-pill border border-line-strong px-4 py-[9px] text-[14px] font-medium leading-[18px] text-text ${FOCUS}`}>
             {t('keepers.mine.log')}
           </button>
         )}
@@ -229,9 +228,9 @@ function TodoCard({ card, featured, open, onOpen, canLog, date, userId, onSaved,
             [t('keepers.mine.fish'), card.fish != null ? card.fish.toLocaleString() : '–'],
             [t('keepers.mine.yesterday'), card.deadYesterday != null ? t('keepers.mine.dead', { count: card.deadYesterday }) : '–'],
           ].map(([k, v]) => (
-            <div key={k} className="flex flex-col gap-0.5">
-              <dt className="text-[11px] text-faint">{k}</dt>
-              <dd className="text-[15px] font-semibold text-text">{v}</dd>
+            <div key={k} className="flex flex-col gap-[2px]">
+              <dt className="text-[11px] leading-[14px] text-faint">{k}</dt>
+              <dd className="text-[15px] font-semibold leading-5 text-text">{v}</dd>
             </div>
           ))}
         </dl>
@@ -241,14 +240,14 @@ function TodoCard({ card, featured, open, onOpen, canLog, date, userId, onSaved,
           <div className="grid grid-cols-2 gap-2.5">
             <label className="flex flex-col gap-1 text-xs text-muted">
               {t('keepers.mine.feedKg')}
-              <input inputMode="decimal" value={feed} onChange={(e) => setFeed(e.target.value)} className="h-11 rounded-md border border-line-strong bg-bg px-3 text-base text-text" />
+              <input inputMode="decimal" value={feed} onChange={(e) => setFeed(e.target.value)} className="h-11 rounded-[12px] border border-line-strong bg-bg px-3 text-base text-text" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-muted">
               {t('keepers.mine.deaths')}
-              <input inputMode="numeric" value={dead} onChange={(e) => setDead(e.target.value)} className="h-11 rounded-md border border-line-strong bg-bg px-3 text-base text-text" />
+              <input inputMode="numeric" value={dead} onChange={(e) => setDead(e.target.value)} className="h-11 rounded-[12px] border border-line-strong bg-bg px-3 text-base text-text" />
             </label>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <LimeButton type="submit" size="lg" className="grow" disabled={busy}>
               {busy && <Loader2 size={16} className="animate-spin" aria-hidden />}
               {t('keepers.mine.logToday')}
@@ -259,7 +258,7 @@ function TodoCard({ card, featured, open, onOpen, canLog, date, userId, onSaved,
               aria-label={t('keepers.mine.voiceHint')}
               className={`flex size-11 shrink-0 items-center justify-center rounded-pill border border-line-strong text-text ${FOCUS}`}
             >
-              <Mic size={18} aria-hidden />
+              <MicIcon size={18} />
             </Link>
           </div>
           <Link href={`/daily-entry?cage=${card.id}&date=${date}`} className="self-start text-xs text-cover hover:underline">
