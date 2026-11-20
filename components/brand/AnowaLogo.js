@@ -53,3 +53,4 @@ export function AnowaLockup({ height = 24, className = '', title = 'Anowa' }) {
     </svg>
   )
 }
+
