@@ -223,7 +223,7 @@ export default function GradingForm({ initialCageId = '', formId = 'grading-form
                               value={g.batchNumber}
                               placeholder="Batch number (optional)"
                               onChange={(e) => setGrade(g.key, { batchNumber: e.target.value })}
-                              className="w-full min-w-0 max-w-[180px] bg-transparent text-xs leading-4 text-muted placeholder:text-faint focus:text-text focus:outline-none"
+                              className="w-full min-w-0 max-w-[180px] rounded-[4px] bg-transparent px-1 text-xs leading-4 text-muted placeholder:text-faint focus:text-text focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan"
                             />
                             <span aria-hidden>·</span>
                             <button

@@ -96,10 +96,37 @@ textarea {
   font-weight: 400;
 }
 
-input:not([type='checkbox']):not([type='radio']),
-select,
-textarea {
+input:not([type='checkbox']):not([type='radio']):not(.bg-transparent),
+select:not(.bg-transparent),
+textarea:not(.bg-transparent) {
   background-color: var(--input-bg);
+}
+
+/*
+ * A field that sits inside its own rounded wrapper (chat bar, search pill,
+ * filter pill, inline grade fields) is transparent and has no border class.
+ * The forms plugin and the focus rule below would still give it a square
+ * border, fill and focus glow, which shows as a rectangle inside the rounded
+ * wrapper. The wrapper draws the edge and the focus state (focus-within).
+ */
+input.bg-transparent:not([type='checkbox']):not([type='radio']):not(.border):not(.border-b),
+select.bg-transparent:not(.border):not(.border-b),
+textarea.bg-transparent:not(.border):not(.border-b) {
+  border-width: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+input.bg-transparent:not([type='checkbox']):not([type='radio']):not(.border):not(.border-b):focus,
+select.bg-transparent:not(.border):not(.border-b):focus,
+textarea.bg-transparent:not(.border):not(.border-b):focus {
+  box-shadow: none;
+}
+
+/* Wrapped selects draw their own chevron; drop the forms plugin arrow. */
+select.bg-transparent:not(.border):not(.border-b) {
+  background-image: none;
 }
 
 input::placeholder,
