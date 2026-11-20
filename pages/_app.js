@@ -25,6 +25,7 @@ import { SIGN_OUT_CODES, authErrorCode } from '../convex/lib/authErrors'
 import { fontVariablesCss } from '../lib/fonts'
 import '../styles/globals.css'
 import '../styles/tour.css'
+import '../styles/marketing.css'
 
 /** Lazy-load assistant so it does not block first paint / route transitions. */
 const AiAssistant = dynamic(() => import('../components/AiAssistant'), {
@@ -94,9 +95,10 @@ function AppWrapper({ Component, pageProps, router }) {
 const PUBLIC_ROUTES = ['/login', '/signup', '/reset-password']
 /**
  * Open to signed-in and signed-out visitors (an invite link shows who invited
- * you; `/` is the landing page and sends signed-in visitors to the app).
+ * you; `/` is the landing page and sends signed-in visitors to the app; the
+ * legal pages and the 404 are public marketing pages).
  */
-const OPEN_ROUTES = ['/', '/invite/[token]']
+const OPEN_ROUTES = ['/', '/invite/[token]', '/privacy', '/terms', '/cookies', '/security', '/404']
 
 /** Where each access state may go; everything else redirects to `home`. */
 const ACCESS_ROUTES = {

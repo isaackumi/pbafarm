@@ -5188,67 +5188,6 @@
     },
     "humanFirst": "Veuillez d'abord terminer la vérification humaine."
   },
-  "landing": {
-    "metaTitle": "Gestion de fermes piscicoles",
-    "navLabel": "Principal",
-    "nav": {
-      "product": "Produit",
-      "how": "Fonctionnement"
-    },
-    "newBadge": "Nouveau",
-    "newText": "Saisie quotidienne hors ligne pour les équipes terrain",
-    "heroTitle": "Gérez chaque cage comme si c'était la seule.",
-    "heroBody": "Anowa est le système d'exploitation des fermes piscicoles : de l'empoissonnement à la récolte, de l'aliment aux finances, sur chaque site et pour chaque équipe.",
-    "heroNote": "La saisie quotidienne fonctionne hors ligne sur téléphone",
-    "product": {
-      "eyebrow": "Produit",
-      "title": "Tout, de l'alevin à la facture",
-      "body": "Un seul système pour le bureau et le ponton. Fini les photos de carnets."
-    },
-    "features": {
-      "board": {
-        "title": "Tableau des unités",
-        "body": "Voyez chaque cage d'un coup d'œil : biomasse, densité, dernière saisie et alertes."
-      },
-      "entry": {
-        "title": "Saisie quotidienne rapide",
-        "body": "Aliment, mortalité et eau pour toute une rangée sur un seul écran. Fonctionne hors ligne et se synchronise au retour du réseau."
-      },
-      "pnl": {
-        "title": "Compte de résultat par cage",
-        "body": "Aliment, alevins et main-d'œuvre répartis par cage, pour savoir lesquelles sont rentables."
-      },
-      "feed": {
-        "title": "Jamais à court d'aliment",
-        "body": "Stocks par aliment, alertes de réapprovisionnement et suivi des achats."
-      },
-      "multi": {
-        "title": "Multi-site, multi-entreprise",
-        "body": "Un seul identifiant, plusieurs fermes. Rôles et données restent séparés par entreprise."
-      }
-    },
-    "how": {
-      "eyebrow": "Fonctionnement",
-      "title": "Opérationnel en une semaine, pas en une saison",
-      "setupTitle": "Configurez votre ferme",
-      "setupBody": "Ajoutez sites, cages et étangs. Importez l'historique d'empoissonnement depuis un tableur.",
-      "inviteTitle": "Invitez votre équipe",
-      "inviteBody": "Le personnel de terrain a une saisie quotidienne simple ; les responsables ont la vue d'ensemble.",
-      "runTitle": "Pilotez le cycle",
-      "runBody": "Saisissez, approuvez, récoltez et vendez. Rapports et compte de résultat se construisent seuls."
-    },
-    "cta": {
-      "title": "Votre prochain cycle commence sur Anowa.",
-      "body": "Configurez votre espace en un après-midi.",
-      "start": "Créer un espace"
-    },
-    "footer": {
-      "tagline": "Le système d'exploitation des fermes piscicoles.",
-      "label": "Pied de page",
-      "features": "Fonctionnalités",
-      "account": "Compte"
-    }
-  },
   "onboarding": {
     "eyebrow": "Configurez votre espace",
     "stepOf": "Étape {n} sur {total}",
@@ -6459,5 +6398,803 @@
     "savedEmpty": "Enregistrez une réponse : elle reste ici, avec la conversation d’où elle vient.",
     "openConversation": "Ouvrir la conversation",
     "historyNote": "Vos conversations ne sont visibles que par vous et sont conservées un an."
+  },
+  "marketing": {
+    "nav": {
+      "label": "Principal",
+      "product": "Produit",
+      "ask": "Demander à Anowa",
+      "pricing": "Tarifs",
+      "customers": "Clients",
+      "resources": "Ressources",
+      "signIn": "Se connecter",
+      "startFree": "Essai gratuit",
+      "menu": "Ouvrir le menu",
+      "close": "Fermer le menu"
+    },
+    "hero": {
+      "badgeNew": "Nouveau",
+      "badge": "Demandez à Anowa : des réponses tirées de vos propres relevés, sur le web et WhatsApp",
+      "titleLine1": "Cultivez l’eau avec",
+      "titleLine2": "des données, pas des",
+      "titleAccent": "suppositions",
+      "body": "De l’empoissonnement à la récolte, de l’aliment aux finances. Anowa suit chaque cage, étang et bac d’écloserie : mesuré, nourri et traçable. Même hors ligne, même depuis WhatsApp.",
+      "watchDemo": "Voir la démo",
+      "startTrial": "Essai gratuit",
+      "rating": "Noté 4,9/5 par plus de 320 fermes piscicoles",
+      "cards": {
+        "feedDay": "Aliment / jour",
+        "cages": "Cages",
+        "cagesActive": "38 actives",
+        "harvest": "Récolte A-01",
+        "gradeA": "Classe A",
+        "harvestValue": "4,73 t · 9 860 poissons",
+        "biomass": "Biomasse en place",
+        "anowaMessage": "L’oxygène baisse dans C-07. Réduisez l’aliment à 1,8 % et lancez l’aérateur. J’ai préparé la tâche.",
+        "createTask": "Créer la tâche",
+        "dailyEntry": "Saisie du jour",
+        "offline": "Hors ligne · synchronisé ensuite",
+        "survival": "Survie",
+        "stocked": "Empoissonnés",
+        "mortality": "Mortalité",
+        "harvested": "Récoltés",
+        "target": "objectif 1,5",
+        "alert": "Alerte",
+        "alertWhere": "C-07 · 2 min"
+      }
+    },
+    "logos": {
+      "label": "Fermes qui tournent avec Anowa"
+    },
+    "ticker": {
+      "label": "Activité en direct sur Anowa",
+      "live": "En direct · {count} fermes",
+      "events": {
+        "feedLogged": "Aliment saisi · C-12 · 84 kg",
+        "samplingDue": "Échantillonnage à faire · T-04",
+        "lotTraced": "Lot #A01-0412 tracé",
+        "lowOxygen": "OD 3,1 mg/L · aérateur en marche",
+        "harvest": "Récolte 4,7 t · Classe A",
+        "delivered": "Commande PO-118 livrée"
+      }
+    },
+    "about": {
+      "eyebrow": "Pourquoi Anowa",
+      "line1a": "De l’alevin",
+      "line1b": "à l’assiette, chaque cage",
+      "line2a": "mesurée, nourrie",
+      "line2b": "et traçable"
+    },
+    "showcase": {
+      "eyebrow": "Dans l’application",
+      "titleLead": "Voyez ce qui se passe",
+      "titleAccent": "sous la surface",
+      "shotAlt": "Le tableau de bord d’Anowa : biomasse en place, alertes et travail du jour pour chaque cage",
+      "chips": {
+        "doWhere": "B-12 · capteur en direct",
+        "anowa": "L’oxygène baisse dans C-07. Réduire l’aliment à 1,8 % et lancer l’aérateur ?",
+        "queued": "12 saisies en attente",
+        "queuedNote": "Hors ligne · envoi dès qu’il y a du réseau",
+        "traced": "Tracé jusqu’à la cage A-01"
+      }
+    },
+    "bento": {
+      "farmsBody": "cages, étangs et bacs gérés avec Anowa dans 3 pays.",
+      "onTimeLabel": "Saisies quotidiennes faites à temps",
+      "quote": "« Notre équipe saisit l’aliment et la mortalité sur téléphone, au bord de la cage, même sans réseau. Je le vois avant le petit-déjeuner. »",
+      "quoteBy": "Ama Owusu · Responsable de ferme, PBA Farm",
+      "readingsLabel": "Relevés enregistrés",
+      "readingsBody": "relevés d’aliment, d’eau et de croissance chaque mois : les données derrière chaque IC et chaque compte de résultat.",
+      "feedSaved": "Aliment économisé par cycle"
+    },
+    "features": {
+      "eyebrow": "Produit",
+      "titleLead": "Tout ce qui fait tourner votre ferme,",
+      "titleAccent": "au même endroit, en toute sérénité",
+      "offline": {
+        "title": "Saisir à la cage, même hors ligne",
+        "body": "Le personnel de terrain saisit aliment, mortalité et eau en quelques secondes. Les saisies attendent sur le téléphone et se synchronisent au retour du réseau."
+      },
+      "copilot": {
+        "title": "Anowa, votre copilote IA",
+        "body": "Posez une question sur n’importe quelle cage, en langage simple. Anowa lit vos données, explique pourquoi et prépare la tâche suivante."
+      },
+      "trace": {
+        "title": "Tracer chaque lot jusqu’à l’acheteur",
+        "body": "De l’écloserie à la récolte jusqu’au camion. Imprimez une étiquette QR et exportez un dossier de rappel en un clic."
+      }
+    },
+    "ask": {
+      "eyebrow": "Demander à Anowa",
+      "titleLead": "Posez une question à votre ferme.",
+      "titleAccent": "Recevez vos propres chiffres.",
+      "body": "Anowa répond à partir des relevés de votre équipe : aliment quotidien, échantillonnages, mesures d’eau et ventes. Il montre ce qu’il a utilisé et ne voit jamais plus que ce que votre rôle permet.",
+      "points": {
+        "site": "Choisissez un site et une période ; la réponse s’y limite",
+        "risk": "Vous alerte d’abord quand les poissons sont en danger",
+        "language": "Anglais ou français, et le fournisseur d’IA de votre choix"
+      },
+      "mockLabel": "Exemple : Anowa explique pourquoi la mortalité a augmenté dans la cage B2, à partir des relevés de la ferme.",
+      "model": "Modèle : Auto",
+      "question": "Pourquoi la mortalité a-t-elle augmenté dans la cage B2 cette semaine ?",
+      "answer1Bold": "B2 a perdu 40 poissons le 27 mai",
+      "answer1Rest": ", contre 1 ou 2 par jour avant.",
+      "answer2Pre": "L’oxygène était à ",
+      "answer2Bold": "3,1 mg/L",
+      "answer2Post": " ce matin-là, la mesure la plus basse du mois.",
+      "risk": "Vérifiez l’aérateur et réduisez l’aliment jusqu’à ce que l’oxygène repasse au-dessus de 4 mg/L.",
+      "save": "Enregistrer la réponse",
+      "placeholder": "Une question sur une cage, un site ou cette semaine…",
+      "chipSite": "Site de Kpong",
+      "chipDays": "30 derniers jours",
+      "chipDeep": "Analyse approfondie",
+      "answersUse": "Les réponses utilisent",
+      "sources": {
+        "daily": "relevés journaliers",
+        "samplings": "échantillonnages",
+        "water": "mesures d’eau"
+      },
+      "roleOnly": "· uniquement ce que votre rôle peut voir"
+    },
+    "whatsapp": {
+      "mockLabel": "Exemple : un employé saisit l’aliment et la mortalité sur WhatsApp et envoie une photo du cahier ; Anowa en fait des saisies à confirmer.",
+      "eyebrow": "Fonctionne sur WhatsApp",
+      "titleLead": "Saisissez la journée depuis la cage,",
+      "titleAccent": "dans la messagerie que vous utilisez déjà",
+      "body": "Le personnel envoie l’aliment et la mortalité par message, ou une photo du cahier papier. Anowa en fait des saisies à confirmer et envoie le rappel du soir.",
+      "facts": {
+        "signal": {
+          "value": "La 2G",
+          "label": "suffit. Les messages attendent le réseau."
+        },
+        "photo": {
+          "value": "1 photo",
+          "label": "du cahier devient les saisies du jour."
+        },
+        "confirm": {
+          "value": "Vous confirmez",
+          "label": "chaque saisie avant son enregistrement."
+        }
+      },
+      "cta": "Connecter WhatsApp",
+      "telegram": "Telegram fonctionne aussi"
+    },
+    "how": {
+      "eyebrow": "Un cycle, un système",
+      "titleLead": "De l’empoissonnement à la vente,",
+      "titleAccent": "sans tableurs",
+      "cta": "Voir le parcours",
+      "steps": {
+        "stock": {
+          "title": "Empoissonner",
+          "body": "Alevins reçus, lot créé, approbation enregistrée."
+        },
+        "feed": {
+          "title": "Nourrir",
+          "body": "Rations quotidiennes issues des plans IA, hors ligne à la cage."
+        },
+        "sample": {
+          "title": "Échantillonner",
+          "body": "Les pesées bimensuelles mettent à jour croissance et IC."
+        },
+        "harvest": {
+          "title": "Récolter",
+          "body": "Trier, peser et respecter les délais d’attente."
+        },
+        "sell": {
+          "title": "Vendre",
+          "body": "Facturer, être payé par MoMo, tracer le lot."
+        }
+      }
+    },
+    "testimonial": {
+      "eyebrow": "Au bord du lac",
+      "quote": "« Avant, on découvrait qu’une cage allait mal à la récolte. Maintenant, mon téléphone me le dit le matin même, avec quoi faire. »",
+      "name": "Kwame Asante",
+      "role": "Responsable de ferme · PBA Farm, 48 cages",
+      "stats": {
+        "feed": "de coût d’aliment par kg en un cycle",
+        "hours": "gagnées chaque semaine sur les rapports",
+        "missed": "jour d’échantillonnage manqué depuis le lancement",
+        "hoursUnit": " h"
+      }
+    },
+    "calculator": {
+      "eyebrow": "Faites le calcul",
+      "titleLead": "Ce que vaut 0,1 d’IC",
+      "titleAccent": "sur votre ferme",
+      "cages": "Cages ou étangs",
+      "tonnes": "Poisson récolté par cage et par an",
+      "price": "Prix de l’aliment",
+      "fcr": "IC actuel → avec Anowa",
+      "improvement": "Gain d’IC",
+      "resultLabel": "Aliment que vous n’achetez pas",
+      "perYear": "par an, chaque année",
+      "formula1": "{improvement} × {fish} t de poisson = {feed} t d’aliment en moins",
+      "formula2": "{feed} t × {price} GH₵/kg = {amount} GH₵",
+      "cta": "Voir sur votre ferme",
+      "note": "Une illustration à partir de vos chiffres, pas une promesse. Anowa montre l’aliment par cage chaque jour, pour voir où l’IC dérape."
+    },
+    "pondSide": {
+      "eyebrow": "Pensé pour le bord de l’étang",
+      "titleLead": "Conçu pour les fermes d’Afrique de l’Ouest,",
+      "titleAccent": "pas adapté après coup",
+      "items": {
+        "offline": {
+          "title": "Fonctionne hors ligne",
+          "body": "Les saisies restent sur le téléphone et se synchronisent au retour du réseau."
+        },
+        "language": {
+          "title": "Anglais et français",
+          "body": "Chacun choisit sa langue. Anowa y répond aussi."
+        },
+        "money": {
+          "title": "Votre monnaie, MoMo",
+          "body": "GH₵, ₦, CFA et plus. Enregistrez les paiements mobile money sur chaque vente."
+        },
+        "data": {
+          "title": "Léger en données",
+          "body": "Pages légères et photos compressées, faciles pour un forfait prépayé."
+        },
+        "ownership": {
+          "title": "Vos données restent à vous",
+          "body": "Exportez tout à tout moment. Chaque modification est dans un journal infalsifiable."
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Tarifs",
+      "title": "Facturé par cage,",
+      "titleAccent": "pas par utilisateur",
+      "popular": "Populaire",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "price": "Gratuit",
+          "per": "",
+          "blurb": "Jusqu’à 5 cages, 1 site",
+          "f1": "Saisie quotidienne + hors ligne",
+          "f2": "Croissance et IC",
+          "f3": "3 membres d’équipe",
+          "cta": "Commencer"
+        },
+        "farm": {
+          "name": "Ferme",
+          "price": "GH₵ 45",
+          "per": "/ cage / mois",
+          "blurb": "La plupart des fermes commencent ici",
+          "f1": "Tout Starter",
+          "f2": "Copilote IA Anowa",
+          "f3": "Ventes, factures, compte de résultat",
+          "f4": "Équipe et rôles illimités",
+          "cta": "Essai gratuit"
+        },
+        "enterprise": {
+          "name": "Entreprise",
+          "price": "Sur mesure",
+          "per": "",
+          "blurb": "Groupes, coopératives, transformateurs",
+          "f1": "Rapports de groupe multi-sociétés",
+          "f2": "SSO, chaîne d’audit, API",
+          "f3": "Accompagnement dédié",
+          "cta": "Parler aux ventes"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Vos questions,",
+      "titleAccent": "nos réponses",
+      "body": "Un doute ? Parlez à un spécialiste de l’élevage sur WhatsApp. Nous répondons en quelques minutes.",
+      "cta": "Écrivez-nous",
+      "items": {
+        "offline": {
+          "q": "Est-ce que ça marche sans réseau sur le lac ?",
+          "a": "Oui. Les saisies quotidiennes, échantillonnages et mortalités sont enregistrés sur le téléphone et se synchronisent dès que le réseau revient. Rien n’est perdu."
+        },
+        "spreadsheets": {
+          "q": "Puis-je importer mes anciens tableurs ?",
+          "a": "Oui. Importez vos fiches quotidiennes et d’échantillonnage en CSV : Anowa vérifie chaque ligne avant l’import, et votre historique vous suit."
+        },
+        "ponds": {
+          "q": "Comment sont comptés les étangs et les bacs ?",
+          "a": "Chaque unité empoissonnée compte de la même façon : une cage, un étang ou un bac d’écloserie vaut une unité dans votre forfait."
+        },
+        "financials": {
+          "q": "Qui peut voir nos finances ?",
+          "a": "Seules les personnes dont le rôle inclut les finances. Le personnel de terrain saisit l’aliment et la mortalité sans jamais voir les coûts, les ventes ni le compte de résultat."
+        },
+        "ai": {
+          "q": "Nos données servent-elles à entraîner l’IA ?",
+          "a": "Non. Anowa n’entraîne jamais de modèles d’IA sur vos relevés. Les fonctions IA sont désactivées tant qu’un administrateur ne les active pas, et les réponses n’utilisent que ce que la personne a le droit de voir."
+        }
+      }
+    },
+    "cta": {
+      "title": "Vos cages,",
+      "titleAccent": "enfin réunies",
+      "demo": "Réserver une démo",
+      "start": "Essai gratuit"
+    },
+    "footer": {
+      "tagline": "Le système d’exploitation des fermes piscicoles. Conçu à Accra pour les fermes du monde entier.",
+      "navLabel": "Pied de page",
+      "legal": {
+        "privacy": "Confidentialité",
+        "terms": "Conditions",
+        "cookies": "Cookies"
+      },
+      "columns": {
+        "product": {
+          "title": "Produit",
+          "dailyEntry": "Saisie quotidienne",
+          "growth": "Croissance et IC",
+          "anowa": "Anowa",
+          "automations": "Automatisations",
+          "traceability": "Traçabilité"
+        },
+        "solutions": {
+          "title": "Solutions",
+          "cages": "Fermes en cages",
+          "ponds": "Fermes en étangs",
+          "hatcheries": "Écloseries",
+          "coops": "Coopératives et groupes"
+        },
+        "company": {
+          "title": "Entreprise",
+          "about": "À propos",
+          "customers": "Clients",
+          "careers": "Carrières",
+          "contact": "Contact"
+        },
+        "resources": {
+          "title": "Ressources",
+          "help": "Centre d’aide",
+          "api": "Documentation API",
+          "status": "État du service",
+          "security": "Sécurité"
+        }
+      }
+    },
+    "notFound": {
+      "metaTitle": "Page introuvable · Anowa",
+      "srTitle": "Erreur 404 : page introuvable",
+      "signIn": "Se connecter",
+      "startFree": "Commencer",
+      "title": "Cette cage est vide.",
+      "titleAccent": "La page a filé.",
+      "body": "Le lien est peut-être ancien, ou la page n’a jamais été empoissonnée. Les données de votre ferme sont en sécurité ; rien n’a été perdu.",
+      "home": "Remonter à la surface",
+      "ask": "Demander à Anowa où elle est passée",
+      "linksLabel": "Liens utiles",
+      "code": "Erreur 404",
+      "links": {
+        "pricing": "Tarifs",
+        "whatsapp": "Bot WhatsApp",
+        "help": "Centre d’aide",
+        "status": "État du service"
+      }
+    },
+    "legal": {
+      "common": {
+        "nav": "Pages légales",
+        "tabs": {
+          "privacy": "Confidentialité",
+          "terms": "Conditions",
+          "cookies": "Cookies",
+          "security": "Sécurité"
+        },
+        "startFree": "Essai gratuit",
+        "updated": "Mis à jour le 20 nov. 2026",
+        "languages": "English · Français",
+        "onThisPage": "Sur cette page",
+        "downloadPdf": "Télécharger en PDF",
+        "shortVersion": "La version courte",
+        "shortAccent": "en quatre lignes",
+        "contactEyebrow": "Nous contacter",
+        "writeToUs": "Nous écrire",
+        "contactToc": "Nous contacter"
+      },
+      "privacy": {
+        "metaTitle": "Politique de confidentialité",
+        "eyebrow": "Légal · Politique de confidentialité",
+        "title": "Vos relevés,",
+        "accent": "vos règles.",
+        "subtitle": "Ce qu’Anowa collecte, pourquoi, qui nous aide à le faire fonctionner, et comment tout récupérer. Écrit pour être lu, pas survolé.",
+        "readTime": "7 min de lecture",
+        "shortNote": "C’est la politique complète ci-dessous qui fait foi.",
+        "cards": {
+          "c1": {
+            "title": "Nous ne vendons jamais vos données.",
+            "body": "Pas de publicité, pas de courtiers en données. Vous payez Anowa, vous n’êtes donc pas le produit."
+          },
+          "c2": {
+            "title": "Les relevés appartiennent à la ferme.",
+            "body": "Exportez tout à tout moment, dans des formats ouverts. Nous les gardons pour vous, ils ne sont pas à nous."
+          },
+          "c3": {
+            "title": "L’IA ne voit que ce que voit votre rôle.",
+            "body": "Demander à Anowa lit les relevés que vous pourriez ouvrir vous-même, et rien d’autre."
+          },
+          "c4": {
+            "title": "Supprimer veut dire supprimer.",
+            "body": "Sur demande, votre compte ou votre ferme est effacé après un délai de grâce de 30 jours que vous pouvez annuler."
+          }
+        },
+        "sections": {
+          "collect": {
+            "toc": "Ce que nous collectons",
+            "title": "Ce que nous collectons",
+            "intro": "Seulement ce dont Anowa a besoin pour gérer votre ferme avec vous. Rien n’est acheté à des tiers, et rien n’est collecté en arrière-plan.",
+            "rows": {
+              "account": {
+                "label": "Votre compte",
+                "body": "Nom, e-mail ou numéro de téléphone, langue, les organisations dont vous faites partie et votre rôle dans chacune."
+              },
+              "records": {
+                "label": "Relevés de la ferme",
+                "body": "Ce que votre équipe saisit : empoissonnements, aliment et mortalité du jour, échantillonnages, mesures d’eau, récoltes, ventes, dépenses et fichiers joints."
+              },
+              "messages": {
+                "label": "Messages à Anowa",
+                "body": "Les questions posées, les réponses enregistrées, et les messages ou photos de cahier envoyés au bot de la ferme sur WhatsApp ou Telegram."
+              },
+              "security": {
+                "label": "Signaux de sécurité",
+                "body": "Heures de connexion, tentatives échouées et vérification anti-robot, pour empêcher qu’on devine votre mot de passe."
+              }
+            }
+          },
+          "why": {
+            "toc": "Pourquoi nous l’utilisons",
+            "title": "Pourquoi nous l’utilisons",
+            "body": "Pour faire fonctionner le service auquel vous avez souscrit : afficher votre ferme, envoyer les alertes et rapports demandés, sécuriser les comptes, répondre au support et facturer votre organisation. Nous n’utilisons jamais vos relevés pour la publicité, et nous n’entraînons jamais de modèles d’IA avec.",
+            "callout": "Votre organisation décide qui voit quoi. Un propriétaire ou un administrateur définit le rôle et les sites de chaque membre ; Anowa l’applique sur chaque écran, chaque export et chaque réponse de l’IA."
+          },
+          "processors": {
+            "toc": "Qui nous aide",
+            "title": "Qui nous aide à faire fonctionner Anowa",
+            "intro": "Quelques entreprises de confiance traitent des données pour nous, sous contrat, uniquement pour fournir le service. Les voici toutes.",
+            "cols": {
+              "who": "Qui",
+              "what": "Pour quoi",
+              "when": "Quand"
+            },
+            "rows": {
+              "convex": {
+                "who": "Convex",
+                "what": "Base de données et serveur où vivent vos relevés",
+                "when": "Toujours"
+              },
+              "vercel": {
+                "who": "Vercel",
+                "what": "Sert l’application web ouverte dans votre navigateur",
+                "when": "Toujours"
+              },
+              "cloudflare": {
+                "who": "Cloudflare",
+                "what": "Vérification anti-robot à la connexion et à l’inscription, stockage des fichiers",
+                "when": "Toujours"
+              },
+              "ai": {
+                "who": "Google, OpenAI, Anthropic",
+                "what": "Rédigent les réponses de Demander à Anowa et lisent les photos de cahier",
+                "when": "Si votre organisation active l’IA"
+              },
+              "messaging": {
+                "who": "Meta (WhatsApp), Telegram",
+                "what": "Transportent les messages entre vous et le bot de la ferme",
+                "when": "Si vous le connectez"
+              },
+              "email": {
+                "who": "Envoi d’e-mails et de SMS",
+                "what": "Codes de connexion, alertes et rapports demandés",
+                "when": "Quand nous en envoyons"
+              }
+            }
+          },
+          "ai": {
+            "toc": "Demander à Anowa et l’IA",
+            "title": "Demander à Anowa et l’IA",
+            "p1": "L’IA est désactivée jusqu’à ce qu’un administrateur l’active. Une fois activée, Anowa prépare un résumé des relevés que vous avez le droit de voir, pour le site et la période choisis, et l’envoie avec votre question au fournisseur d’IA choisi par votre organisation. La réponse vous revient ; les détails d’erreur du fournisseur restent dans nos journaux.",
+            "p2": "Anowa n’entraîne pas de modèles d’IA avec vos relevés. Les fournisseurs suivent leurs propres conditions : les clés API payantes ne servent en général pas à l’entraînement, alors que certaines offres gratuites peuvent permettre au fournisseur de relire les demandes. Les administrateurs choisissent le fournisseur et la clé dans les paramètres IA.",
+            "p3": "Vos conversations ne sont visibles que par vous, conservées 365 jours après le dernier message, et supprimées avec votre compte."
+          },
+          "retention": {
+            "toc": "Durée de conservation",
+            "title": "Combien de temps nous conservons",
+            "items": {
+              "records": {
+                "label": "Relevés de la ferme",
+                "body": "Tant que votre organisation utilise Anowa."
+              },
+              "chats": {
+                "label": "Conversations avec Anowa",
+                "body": "365 jours après le dernier message."
+              },
+              "exports": {
+                "label": "Vos exports",
+                "body": "Le lien de téléchargement fonctionne 7 jours, puis le fichier est supprimé."
+              },
+              "deletion": {
+                "label": "Après une demande de suppression",
+                "body": "Un délai de grâce de 30 jours que vous pouvez annuler, puis tout est effacé."
+              },
+              "audit": {
+                "label": "Journal d’audit d’une organisation supprimée",
+                "body": "365 jours après l’effacement, comme preuve de ce qui s’est passé, puis supprimé."
+              }
+            }
+          },
+          "rights": {
+            "toc": "Vos droits",
+            "title": "Vos droits, en un clic",
+            "body": "Vous pouvez consulter, corriger, exporter et supprimer vos données. Vous pouvez faire l’essentiel vous-même dans Compte, Données et confidentialité. Pour le reste, écrivez-nous : nous répondons sous 30 jours.",
+            "chips": {
+              "see": "Voir ce que vous détenez",
+              "correct": "Corriger",
+              "export": "Tout exporter",
+              "delete": "Supprimer mon compte",
+              "object": "M’opposer ou me plaindre"
+            }
+          }
+        },
+        "contact": {
+          "title": "Une question sur vos données ?",
+          "accent": "Une personne vous répond."
+        }
+      },
+      "cookies": {
+        "metaTitle": "Politique de cookies",
+        "eyebrow": "Légal · Politique de cookies",
+        "title": "Aucun traceur.",
+        "accent": "Pas un seul.",
+        "subtitle": "Anowa mémorise vos réglages sur votre appareil et vérifie que vous êtes une personne à la connexion. C’est toute la liste. Pas de publicité, pas de statistiques, personne ne vous suit sur le web.",
+        "readTime": "2 min de lecture",
+        "shortNote": "Si un cookie n’est pas sur cette page, Anowa ne le dépose pas.",
+        "cards": {
+          "c1": {
+            "title": "Zéro cookie publicitaire ou statistique.",
+            "body": "Nous ne vous suivons pas sur le web, et personne d’autre ne peut le faire via Anowa."
+          },
+          "c2": {
+            "title": "Votre appareil retient vos choix.",
+            "body": "Langue, thème, site actif, et la session qui vous garde connecté."
+          },
+          "c3": {
+            "title": "Une seule vérification, à l’entrée.",
+            "body": "Une vérification anti-robot de Cloudflare à la connexion et à l’inscription empêche de deviner les mots de passe."
+          },
+          "c4": {
+            "title": "Pas de bandeau à cliquer.",
+            "body": "Il n’y a rien de facultatif à accepter. Si cela change un jour, nous vous demanderons d’abord."
+          }
+        },
+        "sections": {
+          "count": {
+            "toc": "Le compte à zéro",
+            "ads": "cookies publicitaires",
+            "analytics": "outils de statistiques ou de suivi",
+            "security": "vérification de sécurité, à la connexion"
+          },
+          "jar": {
+            "toc": "Tout ce qu’il y a dans le bocal",
+            "title": "Tout ce qu’il y a dans le bocal",
+            "intro": "L’essentiel est rangé dans le stockage de votre navigateur, pas dans des cookies, et ne quitte jamais votre appareil sauf pour vous connecter.",
+            "cols": {
+              "what": "Quoi",
+              "why": "Pourquoi",
+              "kind": "Type",
+              "lasts": "Durée"
+            },
+            "kinds": {
+              "essential": "Essentiel",
+              "security": "Sécurité",
+              "preference": "Préférence"
+            },
+            "rows": {
+              "session": {
+                "what": "Session de connexion",
+                "why": "Vous garde connecté sur cet appareil",
+                "lasts": "Jusqu’à la déconnexion"
+              },
+              "offline": {
+                "what": "File hors ligne",
+                "why": "Saisies faites sans réseau, en attente de synchronisation",
+                "lasts": "Jusqu’à la synchronisation"
+              },
+              "bot": {
+                "what": "Vérification anti-robot",
+                "why": "Cloudflare Turnstile prouve qu’une personne se connecte",
+                "lasts": "Quelques minutes"
+              },
+              "language": {
+                "what": "Langue et thème",
+                "why": "Anglais ou français, clair ou sombre, contraste",
+                "lasts": "Jusqu’à ce que vous changiez"
+              },
+              "site": {
+                "what": "Site actif",
+                "why": "Ouvre le site de la ferme utilisé en dernier",
+                "lasts": "Jusqu’à ce que vous changiez"
+              },
+              "menu": {
+                "what": "Menu et visites guidées",
+                "why": "Menu replié, visites guidées terminées, choix du modèle d’IA",
+                "lasts": "Jusqu’à ce que vous l’effaciez"
+              }
+            }
+          },
+          "controls": {
+            "toc": "Vous gardez la main",
+            "title": "Vous gardez la main",
+            "p1": "Effacez le stockage d’Anowa à tout moment dans les réglages de votre navigateur. Vous serez déconnecté et vos préférences réinitialisées. Sur un téléphone partagé, déconnectez-vous en partant : cela efface la session.",
+            "p2": "Si vous bloquez la vérification de sécurité, vous pouvez toujours lire ce site, mais la connexion ne fonctionnera pas tant qu’elle n’est pas autorisée."
+          },
+          "changes": {
+            "toc": "Si cela change un jour",
+            "title": "Si cela change un jour",
+            "p1": "Nous mettrons d’abord cette page à jour, et tout élément facultatif demandera votre accord avant de fonctionner. Rien n’est activé en douce."
+          }
+        },
+        "contact": {
+          "title": "Nous avons oublié quelque chose ?",
+          "accent": "Dites-le-nous."
+        }
+      },
+      "terms": {
+        "metaTitle": "Conditions d’utilisation",
+        "eyebrow": "Légal · Conditions d’utilisation",
+        "title": "Des conditions simples,",
+        "accent": "justes pour tous.",
+        "subtitle": "L’accord entre votre ferme et Anowa : ce que nous promettons, ce que nous vous demandons, et ce qui se passe si l’un de nous veut partir.",
+        "readTime": "6 min de lecture",
+        "shortNote": "Ce sont les conditions complètes ci-dessous qui engagent.",
+        "cards": {
+          "c1": {
+            "title": "Les données de votre ferme restent à vous.",
+            "body": "Vous nous accordez seulement les droits nécessaires pour les stocker, les montrer à votre équipe et faire fonctionner le service."
+          },
+          "c2": {
+            "title": "Utilisez-le loyalement.",
+            "body": "Ne pas enfreindre la loi, ne pas attaquer le service, ne pas fouiller dans les relevés d’une autre ferme."
+          },
+          "c3": {
+            "title": "Partez quand vous voulez.",
+            "body": "Résiliez à tout moment et exportez tout en partant. Aucun enfermement, aucun frais de sortie."
+          },
+          "c4": {
+            "title": "L’IA propose. Les gens décident.",
+            "body": "Les réponses et brouillons d’Anowa sont une aide, pas des ordres. Rien n’est enregistré sans la confirmation d’une personne."
+          }
+        },
+        "sections": {
+          "agreement": {
+            "toc": "L’accord",
+            "title": "L’accord",
+            "p1": "Ces conditions lient Anowa et l’organisation qui ouvre un espace : votre ferme, votre entreprise ou votre coopérative. La personne qui s’inscrit les accepte au nom de l’organisation et confirme en avoir le droit. Les membres invités ensuite utilisent Anowa selon les mêmes conditions."
+          },
+          "data": {
+            "toc": "Les données de votre ferme",
+            "title": "Les données de votre ferme",
+            "p1": "Tout ce que votre équipe enregistre reste la propriété de votre organisation. Vous nous permettez de le stocker, de le traiter et de l’afficher uniquement pour vous fournir Anowa, comme décrit dans la politique de confidentialité. Les administrateurs peuvent tout exporter à tout moment et décider qui voit quoi.",
+            "callout": "Les administrateurs sont responsables des personnes qu’ils invitent et des rôles qu’ils leur donnent. Gardez vos identifiants privés, et activez la connexion en deux étapes pour toute personne qui gère de l’argent."
+          },
+          "fairuse": {
+            "toc": "Usage loyal",
+            "title": "Usage loyal",
+            "intro": "Utilisez Anowa pour gérer de vraies fermes. Merci de ne pas :",
+            "donts": {
+              "law": "enfreindre la loi, ou enregistrer des poissons, ventes ou personnes sur lesquels vous n’avez aucun droit",
+              "reach": "tenter d’accéder aux relevés d’une autre organisation, ou contourner les rôles et les limites de site",
+              "probe": "surcharger, sonder ou copier le service, sauf via notre API publiée",
+              "spam": "utiliser le bot de la ferme ou les messages pour envoyer du spam"
+            },
+            "outro": "Vous avez trouvé une faille ? Prévenez-nous d’abord à security@getanowa.com : nous vous remercierons, sans vous poursuivre."
+          },
+          "ai": {
+            "toc": "Fonctions d’IA",
+            "title": "Fonctions d’IA",
+            "p1": "Demander à Anowa, les rapports, la lecture de cahier et les brouillons d’automatisation utilisent l’IA. Ils partent de vos relevés mais peuvent se tromper. Vérifiez les chiffres importants avant d’agir, et appelez un vétérinaire ou un agent de vulgarisation pour la santé des poissons. Brouillons et lectures de photos ne sont jamais enregistrés sans la confirmation d’une personne."
+          },
+          "plans": {
+            "toc": "Offres et paiement",
+            "title": "Offres et paiement",
+            "p1": "Votre offre et son prix sont affichés sur la page Facturation avant de payer. Les prix sont par ferme, dans votre monnaie, et incluent les fonctions listées pour cette offre. Nous vous prévenons avant tout changement de prix, et le nouveau prix s’applique à la période de facturation suivante.",
+            "p2": "Si une facture reste impayée après le délai de grâce, l’espace est mis en pause. Rien n’est supprimé : payez, et il rouvre exactement comme vous l’avez laissé."
+          },
+          "limits": {
+            "toc": "Limites et fin",
+            "title": "Limites et fin du contrat",
+            "p1": "Nous travaillons dur pour garder Anowa disponible et vos données en sécurité. Nous ne pouvons pas promettre qu’il ne s’arrêtera jamais, et notre responsabilité totale est limitée à ce que vous nous avez payé dans les 12 mois précédant une réclamation, sauf si la loi en dispose autrement.",
+            "p2": "Vous pouvez fermer votre espace à tout moment. Nous pouvons mettre fin à l’accord si ces conditions sont gravement enfreintes, après vous avoir expliqué pourquoi et laissé le temps d’exporter."
+          }
+        },
+        "contact": {
+          "title": "Un point flou dans ces conditions ?",
+          "accent": "Demandez-nous."
+        }
+      },
+      "security": {
+        "metaTitle": "Sécurité",
+        "eyebrow": "Confiance · Sécurité",
+        "title": "Votre ferme,",
+        "accent": "sous clé.",
+        "subtitle": "Comment Anowa garde les relevés honnêtes, chacun dans son couloir et les clés hors de portée. Sans jargon, et sans promesse que nous ne pouvons pas montrer.",
+        "readTime": "4 min de lecture",
+        "shortNote": "Une faille ? Écrivez à security@getanowa.com.",
+        "cards": {
+          "c1": {
+            "title": "Chaque modification laisse une trace.",
+            "body": "Chaque entrée d’audit est chaînée à la précédente, et la chaîne est vérifiée chaque nuit."
+          },
+          "c2": {
+            "title": "Les rôles appliqués côté serveur.",
+            "body": "Le personnel de terrain voit ses sites ; la finance reste à la finance. Vérifié à chaque requête, pas seulement masqué."
+          },
+          "c3": {
+            "title": "Connexion en deux étapes pour tous.",
+            "body": "Codes d’application d’authentification et codes de secours à usage unique sur chaque compte."
+          },
+          "c4": {
+            "title": "Les clés n’atteignent jamais le navigateur.",
+            "body": "Les clés d’IA et de messagerie sont chiffrées et restent sur nos serveurs."
+          }
+        },
+        "sections": {
+          "chain": {
+            "toc": "La chaîne d’audit",
+            "title": "La chaîne d’audit",
+            "p1": "Chaque approbation, correction et suppression est écrite dans votre journal d’audit. Chaque entrée porte l’empreinte de la précédente : retirer ou modifier une ancienne entrée casse la chaîne, et la vérification nocturne montre exactement où.",
+            "entry": "Entrée {n}",
+            "prev": "préc.",
+            "hash": "empreinte",
+            "events": {
+              "harvest": "Récolte approuvée, B2",
+              "daily": "Relevé journalier corrigé",
+              "role": "Rôle d’un membre modifié"
+            },
+            "verified": "Chaîne vérifiée chaque nuit. Les administrateurs voient le résultat sur la page Journal d’audit."
+          },
+          "access": {
+            "toc": "Qui voit quoi",
+            "title": "Qui voit quoi",
+            "p1": "Chaque membre a un rôle et, si vous le souhaitez, une liste de sites. Le serveur vérifie les deux à chaque requête, chaque export et chaque réponse de l’IA : un bouton masqué n’est jamais le seul verrou.",
+            "roles": {
+              "owner": "Propriétaire",
+              "admin": "Administrateur",
+              "manager": "Responsable",
+              "field": "Personnel de terrain",
+              "viewer": "Lecteur",
+              "custom": "+ vos propres rôles"
+            },
+            "p2": "Quand le support Anowa doit entrer dans un espace pour aider, la session est limitée dans le temps et enregistrée dans le journal d’audit de cette organisation."
+          },
+          "signin": {
+            "toc": "Se connecter",
+            "title": "Se connecter",
+            "p1": "Les mots de passe ne sont jamais stockés sous une forme lisible. La connexion en deux étapes fonctionne avec toute application d’authentification, avec des codes de secours à usage unique en cas de téléphone perdu. Les tentatives répétées sont ralenties, et une vérification anti-robot bloque les essais automatiques."
+          },
+          "transit": {
+            "toc": "Données en transit",
+            "title": "Données en transit",
+            "p1": "Tout ce qui circule entre votre téléphone et Anowa passe par HTTPS. Les clés des fournisseurs d’IA, WhatsApp et SMS sont chiffrées et utilisées uniquement sur nos serveurs. Les téléchargements de fichiers utilisent des liens de courte durée, et les exports expirent après 7 jours."
+          },
+          "report": {
+            "toc": "Signaler une faille",
+            "title": "Signaler une faille",
+            "p1": "Si vous trouvez un problème de sécurité, écrivez-nous avant d’en parler ailleurs, avec assez de détails pour le reproduire. Nous confirmons la réception, vous tenons informé pendant la correction, et vous citons si vous le souhaitez. Pendant vos tests, n’accédez pas aux données d’autrui et ne perturbez pas le service."
+          }
+        },
+        "contact": {
+          "title": "Vous avez trouvé une faille ?",
+          "accent": "Prévenez-nous d’abord."
+        }
+      }
+    },
+    "meta": {
+      "title": "Le système d’exploitation des fermes piscicoles",
+      "description": "De l’empoissonnement à la récolte, de l’aliment aux finances. Anowa suit chaque cage, étang et bac d’écloserie : mesuré, nourri et traçable. Même hors ligne, même depuis WhatsApp."
+    }
   }
 }

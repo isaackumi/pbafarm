@@ -5188,67 +5188,6 @@
     },
     "humanFirst": "Please complete the human check first."
   },
-  "landing": {
-    "metaTitle": "Fish farm management",
-    "navLabel": "Main",
-    "nav": {
-      "product": "Product",
-      "how": "How it works"
-    },
-    "newBadge": "New",
-    "newText": "Offline daily logging for field teams",
-    "heroTitle": "Run every cage like it's your only cage.",
-    "heroBody": "Anowa is the operating system for fish farms: stocking to harvest, feed to finance, across every site and every team.",
-    "heroNote": "Daily logging keeps working offline on phones",
-    "product": {
-      "eyebrow": "Product",
-      "title": "Everything between the fingerling and the invoice",
-      "body": "One system for the farm office and the jetty. No more photos of notebooks."
-    },
-    "features": {
-      "board": {
-        "title": "Unit board",
-        "body": "See every cage at a glance: biomass, density, last entry and alerts."
-      },
-      "entry": {
-        "title": "Fast daily entry",
-        "body": "Feed, mortality and water for a whole row on one screen. Works offline and syncs when back in signal."
-      },
-      "pnl": {
-        "title": "Cage-level P&L",
-        "body": "Feed, fingerlings and labour allocated to each cage, so you know which cages make money."
-      },
-      "feed": {
-        "title": "Feed that never runs out",
-        "body": "Stock levels per feed, reorder alerts and purchase records."
-      },
-      "multi": {
-        "title": "Multi-site, multi-company",
-        "body": "One login, many farms. Roles and data stay separate per company."
-      }
-    },
-    "how": {
-      "eyebrow": "How it works",
-      "title": "Live in a week, not a season",
-      "setupTitle": "Set up your farm",
-      "setupBody": "Add sites, cages and ponds. Import stocking history from a spreadsheet.",
-      "inviteTitle": "Invite your team",
-      "inviteBody": "Field staff get a simple daily-entry app; managers get the full picture.",
-      "runTitle": "Run the cycle",
-      "runBody": "Log, approve, harvest and sell. Reports and P&L build themselves."
-    },
-    "cta": {
-      "title": "Your next cycle starts on Anowa.",
-      "body": "Set up your workspace in an afternoon.",
-      "start": "Create a workspace"
-    },
-    "footer": {
-      "tagline": "The operating system for fish farms.",
-      "label": "Footer",
-      "features": "Features",
-      "account": "Account"
-    }
-  },
   "onboarding": {
     "eyebrow": "Set up your workspace",
     "stepOf": "Step {n} of {total}",
@@ -6459,5 +6398,803 @@
     "savedEmpty": "Save an answer and it stays here, with the conversation it came from.",
     "openConversation": "Open conversation",
     "historyNote": "Your conversations are private to you and kept for a year."
+  },
+  "marketing": {
+    "nav": {
+      "label": "Main",
+      "product": "Product",
+      "ask": "Ask Anowa",
+      "pricing": "Pricing",
+      "customers": "Customers",
+      "resources": "Resources",
+      "signIn": "Sign in",
+      "startFree": "Start free",
+      "menu": "Open menu",
+      "close": "Close menu"
+    },
+    "hero": {
+      "badgeNew": "New",
+      "badge": "Ask Anowa: answers from your own records, on the web and WhatsApp",
+      "titleLine1": "Farm the water with",
+      "titleLine2": "data, not",
+      "titleAccent": "guesswork",
+      "body": "Stocking to harvest, feed to finance. Anowa keeps every cage, pond and hatchery tank measured, fed and traceable. Even offline, even from WhatsApp.",
+      "watchDemo": "Watch demo",
+      "startTrial": "Start free trial",
+      "rating": "Rated 4.9/5 by 320+ fish farms",
+      "cards": {
+        "feedDay": "Feed / day",
+        "cages": "Cages",
+        "cagesActive": "38 active",
+        "harvest": "Harvest A-01",
+        "gradeA": "Grade A",
+        "harvestValue": "4.73 t · 9,860 fish",
+        "biomass": "Standing biomass",
+        "anowaMessage": "C-07 oxygen is dropping. Cut feed to 1.8% and start the aerator. I’ve drafted the task.",
+        "createTask": "Create task",
+        "dailyEntry": "Daily entry",
+        "offline": "Works offline · syncs later",
+        "survival": "Survival",
+        "stocked": "Stocked",
+        "mortality": "Mortality",
+        "harvested": "Harvested",
+        "target": "target 1.5",
+        "alert": "Alert",
+        "alertWhere": "C-07 · 2m"
+      }
+    },
+    "logos": {
+      "label": "Farms that run on Anowa"
+    },
+    "ticker": {
+      "label": "Live activity on Anowa",
+      "live": "Live · {count} farms",
+      "events": {
+        "feedLogged": "Feed logged · C-12 · 84 kg",
+        "samplingDue": "Sampling due · T-04",
+        "lotTraced": "Lot #A01-0412 traced",
+        "lowOxygen": "DO 3.1 mg/L · aerator on",
+        "harvest": "Harvest 4.7 t · Grade A",
+        "delivered": "PO-118 delivered"
+      }
+    },
+    "about": {
+      "eyebrow": "Why Anowa",
+      "line1a": "From fingerling",
+      "line1b": "to fork, every cage",
+      "line2a": "measured, fed",
+      "line2b": "and traceable"
+    },
+    "showcase": {
+      "eyebrow": "Inside the app",
+      "titleLead": "See what’s",
+      "titleAccent": "below the waterline",
+      "shotAlt": "The Anowa home dashboard: standing biomass, alerts and today’s work across every cage",
+      "chips": {
+        "doWhere": "B-12 · live sensor",
+        "anowa": "C-07 oxygen is falling. Cut feed to 1.8% and run the aerator?",
+        "queued": "12 entries queued",
+        "queuedNote": "Offline · syncs on signal",
+        "traced": "Traced to cage A-01"
+      }
+    },
+    "bento": {
+      "farmsBody": "cages, ponds and tanks run on Anowa across 3 countries.",
+      "onTimeLabel": "Daily entries logged on time",
+      "quote": "“Our field crew logs feed and mortality on their phones at the cage, even with no signal. I see it before breakfast.”",
+      "quoteBy": "Ama Owusu · Farm manager, PBA Farm",
+      "readingsLabel": "Readings logged",
+      "readingsBody": "feed, water and growth readings every month: the data behind every FCR and P&L.",
+      "feedSaved": "Feed saved per cycle"
+    },
+    "features": {
+      "eyebrow": "Product",
+      "titleLead": "Everything your farm runs on,",
+      "titleAccent": "in one calm place",
+      "offline": {
+        "title": "Log at the cage, even offline",
+        "body": "Field staff enter feed, mortality and water in seconds. Entries queue on the phone and sync when signal returns."
+      },
+      "copilot": {
+        "title": "Anowa, your AI co-pilot",
+        "body": "Ask about any cage in plain language. Anowa reads your data, explains the why and drafts the next task."
+      },
+      "trace": {
+        "title": "Trace every lot to the buyer",
+        "body": "Hatchery to harvest to truck. Print a QR label and export a recall pack in one click."
+      }
+    },
+    "ask": {
+      "eyebrow": "Ask Anowa",
+      "titleLead": "Ask your farm a question.",
+      "titleAccent": "Get your own numbers back.",
+      "body": "Anowa answers from the records your team keeps: daily feed, samplings, water readings and sales. It shows what it used, and never sees more than your role allows.",
+      "points": {
+        "site": "Pick a site and dates; the answer stays inside them",
+        "risk": "Warns you first when fish are at risk",
+        "language": "English or French, and your choice of AI provider"
+      },
+      "mockLabel": "Example: Anowa explains why deaths went up in cage B2, using the farm's own records.",
+      "model": "Model: Auto",
+      "question": "Why did deaths go up in cage B2 this week?",
+      "answer1Bold": "B2 lost 40 fish on 27 May",
+      "answer1Rest": ", against 1 or 2 a day before.",
+      "answer2Pre": "Oxygen was ",
+      "answer2Bold": "3.1 mg/L",
+      "answer2Post": " that morning, the lowest reading this month.",
+      "risk": "Check the aerator and feed less until oxygen is back above 4 mg/L.",
+      "save": "Save answer",
+      "placeholder": "Ask about a cage, a site or this week…",
+      "chipSite": "Kpong site",
+      "chipDays": "Last 30 days",
+      "chipDeep": "Deep analysis",
+      "answersUse": "Answers use",
+      "sources": {
+        "daily": "daily records",
+        "samplings": "samplings",
+        "water": "water readings"
+      },
+      "roleOnly": "· only what your role can see"
+    },
+    "whatsapp": {
+      "mockLabel": "Example: a farm worker logs feed and deaths on WhatsApp and sends a logbook photo; Anowa turns them into entries to confirm.",
+      "eyebrow": "Works on WhatsApp",
+      "titleLead": "Log the day from the cage,",
+      "titleAccent": "in the chat you already use",
+      "body": "Field staff text feed and deaths, or send a photo of the paper logbook. Anowa turns it into entries to confirm, and sends the evening reminder.",
+      "facts": {
+        "signal": {
+          "value": "2G",
+          "label": "is enough. Messages wait for signal."
+        },
+        "photo": {
+          "value": "1 photo",
+          "label": "of the logbook becomes a day's entries."
+        },
+        "confirm": {
+          "value": "You confirm",
+          "label": "every entry before it's saved."
+        }
+      },
+      "cta": "Connect WhatsApp",
+      "telegram": "Telegram works too"
+    },
+    "how": {
+      "eyebrow": "One cycle, one system",
+      "titleLead": "Stock to sale,",
+      "titleAccent": "without the spreadsheets",
+      "cta": "See the workflow",
+      "steps": {
+        "stock": {
+          "title": "Stock",
+          "body": "Fingerlings in, batch created, approval logged."
+        },
+        "feed": {
+          "title": "Feed",
+          "body": "Daily rations from AI plans, offline at the cage."
+        },
+        "sample": {
+          "title": "Sample",
+          "body": "Bi-weekly weights update growth and FCR."
+        },
+        "harvest": {
+          "title": "Harvest",
+          "body": "Grade, weigh and hold for withdrawal checks."
+        },
+        "sell": {
+          "title": "Sell",
+          "body": "Invoice, get paid by MoMo, trace the lot."
+        }
+      }
+    },
+    "testimonial": {
+      "eyebrow": "From the lake",
+      "quote": "“We used to find out a cage was in trouble at harvest. Now my phone tells me the same morning, and what to do about it.”",
+      "name": "Kwame Asante",
+      "role": "Farm manager · PBA Farm, 48 cages",
+      "stats": {
+        "feed": "feed cost per kg in one cycle",
+        "hours": "saved every week on reporting",
+        "missed": "missed sampling days since go-live",
+        "hoursUnit": " hrs"
+      }
+    },
+    "calculator": {
+      "eyebrow": "Do the maths",
+      "titleLead": "What 0.1 of FCR is worth",
+      "titleAccent": "on your farm",
+      "cages": "Cages or ponds",
+      "tonnes": "Fish harvested per cage, per year",
+      "price": "Feed price",
+      "fcr": "FCR today → with Anowa",
+      "improvement": "FCR improvement",
+      "resultLabel": "Feed you don't buy",
+      "perYear": "a year, every year",
+      "formula1": "{improvement} × {fish} t of fish = {feed} t less feed",
+      "formula2": "{feed} t × GH₵ {price}/kg = GH₵ {amount}",
+      "cta": "See it on your farm",
+      "note": "An illustration from your inputs, not a promise. Anowa shows feed per cage every day, so you see where FCR slips."
+    },
+    "pondSide": {
+      "eyebrow": "Built for the pond side",
+      "titleLead": "Made for farms in West Africa,",
+      "titleAccent": "not adapted later",
+      "items": {
+        "offline": {
+          "title": "Works offline",
+          "body": "Entries save on the phone and sync when the signal comes back."
+        },
+        "language": {
+          "title": "English and French",
+          "body": "Each person picks their language. Anowa answers in it too."
+        },
+        "money": {
+          "title": "Your currency, MoMo",
+          "body": "GH₵, ₦, CFA and more. Record mobile money payments on every sale."
+        },
+        "data": {
+          "title": "Light on data",
+          "body": "Small pages and compressed photos, kind to a prepaid bundle."
+        },
+        "ownership": {
+          "title": "Your data stays yours",
+          "body": "Export everything at any time. Every change is in a tamper-evident log."
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "Priced per cage,",
+      "titleAccent": "not per seat",
+      "popular": "Popular",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "price": "Free",
+          "per": "",
+          "blurb": "Up to 5 cages, 1 site",
+          "f1": "Daily entry + offline",
+          "f2": "Growth & FCR",
+          "f3": "3 team members",
+          "cta": "Get started"
+        },
+        "farm": {
+          "name": "Farm",
+          "price": "GH₵ 45",
+          "per": "/ cage / month",
+          "blurb": "Most farms start here",
+          "f1": "Everything in Starter",
+          "f2": "Anowa AI co-pilot",
+          "f3": "Sales, invoices, P&L",
+          "f4": "Unlimited team + roles",
+          "cta": "Start free trial"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Custom",
+          "per": "",
+          "blurb": "Groups, co-ops, processors",
+          "f1": "Multi-company group reports",
+          "f2": "SSO, audit chain, API",
+          "f3": "Dedicated onboarding",
+          "cta": "Talk to sales"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Questions,",
+      "titleAccent": "answered",
+      "body": "Still unsure? Talk to a farm specialist on WhatsApp. We reply in minutes.",
+      "cta": "Chat with us",
+      "items": {
+        "offline": {
+          "q": "Does it work without signal on the lake?",
+          "a": "Yes. Daily entries, sampling and mortality are saved on the phone and sync the moment a signal comes back. Nothing is lost."
+        },
+        "spreadsheets": {
+          "q": "Can I bring my old spreadsheets?",
+          "a": "Yes. Upload your daily and sampling sheets as CSV and Anowa checks every row before importing, so your history arrives with you."
+        },
+        "ponds": {
+          "q": "How is pricing counted for ponds and tanks?",
+          "a": "Every unit you stock counts the same way: a cage, a pond or a hatchery tank is one unit on your plan."
+        },
+        "financials": {
+          "q": "Who can see our financials?",
+          "a": "Only people whose role includes finance. Field staff record feed and deaths without ever seeing costs, sales or P&L."
+        },
+        "ai": {
+          "q": "Is our data used to train AI?",
+          "a": "No. Anowa never trains AI models on your records. AI features are off until an admin turns them on, and answers only use what the person asking may see."
+        }
+      }
+    },
+    "cta": {
+      "title": "Your cages,",
+      "titleAccent": "finally in one place",
+      "demo": "Book a demo",
+      "start": "Start free trial"
+    },
+    "footer": {
+      "tagline": "The operating system for fish farms. Made in Accra for farms everywhere.",
+      "navLabel": "Footer",
+      "legal": {
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "cookies": "Cookies"
+      },
+      "columns": {
+        "product": {
+          "title": "Product",
+          "dailyEntry": "Daily entry",
+          "growth": "Growth & FCR",
+          "anowa": "Anowa",
+          "automations": "Automations",
+          "traceability": "Traceability"
+        },
+        "solutions": {
+          "title": "Solutions",
+          "cages": "Cage farms",
+          "ponds": "Pond farms",
+          "hatcheries": "Hatcheries",
+          "coops": "Co-ops & groups"
+        },
+        "company": {
+          "title": "Company",
+          "about": "About",
+          "customers": "Customers",
+          "careers": "Careers",
+          "contact": "Contact"
+        },
+        "resources": {
+          "title": "Resources",
+          "help": "Help centre",
+          "api": "API docs",
+          "status": "Status",
+          "security": "Security"
+        }
+      }
+    },
+    "notFound": {
+      "metaTitle": "Page not found · Anowa",
+      "srTitle": "Error 404: page not found",
+      "signIn": "Sign in",
+      "startFree": "Start free",
+      "title": "This cage is empty.",
+      "titleAccent": "The page swam off.",
+      "body": "The link may be old, or the page was never stocked. Your farm data is safe; nothing was lost.",
+      "home": "Back to the surface",
+      "ask": "Ask Anowa where it went",
+      "linksLabel": "Helpful links",
+      "code": "Error 404",
+      "links": {
+        "pricing": "Pricing",
+        "whatsapp": "WhatsApp bot",
+        "help": "Help centre",
+        "status": "Status"
+      }
+    },
+    "legal": {
+      "common": {
+        "nav": "Legal pages",
+        "tabs": {
+          "privacy": "Privacy",
+          "terms": "Terms",
+          "cookies": "Cookies",
+          "security": "Security"
+        },
+        "startFree": "Start free",
+        "updated": "Updated 20 Nov 2026",
+        "languages": "English · Français",
+        "onThisPage": "On this page",
+        "downloadPdf": "Download as PDF",
+        "shortVersion": "The short version",
+        "shortAccent": "in four lines",
+        "contactEyebrow": "Contact us",
+        "writeToUs": "Write to us",
+        "contactToc": "Contact us"
+      },
+      "privacy": {
+        "metaTitle": "Privacy policy",
+        "eyebrow": "Legal · Privacy policy",
+        "title": "Your records,",
+        "accent": "your rules.",
+        "subtitle": "What Anowa collects, why, who helps us run it, and how you take it all back. Written to be read, not skimmed past.",
+        "readTime": "7 min read",
+        "shortNote": "The full policy below is what counts.",
+        "cards": {
+          "c1": {
+            "title": "We never sell your data.",
+            "body": "No ads, no data brokers. You pay for Anowa, so you are not the product."
+          },
+          "c2": {
+            "title": "Farm records belong to the farm.",
+            "body": "Export everything at any time, in open formats. We hold it for you, we don't own it."
+          },
+          "c3": {
+            "title": "The AI sees only what your role sees.",
+            "body": "Ask Anowa reads the records you could open yourself, and nothing else."
+          },
+          "c4": {
+            "title": "Delete means deleted.",
+            "body": "Ask, and your account or farm is erased after a 30-day grace period you can cancel."
+          }
+        },
+        "sections": {
+          "collect": {
+            "toc": "What we collect",
+            "title": "What we collect",
+            "intro": "Only what Anowa needs to run your farm with you. Nothing is bought from third parties, and nothing is collected in the background.",
+            "rows": {
+              "account": {
+                "label": "Your account",
+                "body": "Name, email or phone number, language, the organisations you belong to and your role in each."
+              },
+              "records": {
+                "label": "Farm records",
+                "body": "What your team enters: stockings, daily feed and deaths, samplings, water readings, harvests, sales, expenses and attached files."
+              },
+              "messages": {
+                "label": "Messages to Anowa",
+                "body": "Questions you ask, answers you save, and messages or logbook photos you send to the farm bot on WhatsApp or Telegram."
+              },
+              "security": {
+                "label": "Security signals",
+                "body": "Sign-in times, failed attempts and a bot check, so we can stop someone guessing your password."
+              }
+            }
+          },
+          "why": {
+            "toc": "Why we use it",
+            "title": "Why we use it",
+            "body": "To run the service you signed up for: show your farm, send the alerts and reports you asked for, keep accounts secure, answer support requests and bill your organisation. We never use your records for advertising, and we never train AI models on them.",
+            "callout": "Your organisation decides who sees what. An owner or admin sets each member's role and sites; Anowa enforces it on every screen, export and AI answer."
+          },
+          "processors": {
+            "toc": "Who helps us run Anowa",
+            "title": "Who helps us run Anowa",
+            "intro": "A few trusted companies process data for us, under contract, only to provide the service. Here is every one of them.",
+            "cols": {
+              "who": "Who",
+              "what": "What for",
+              "when": "When"
+            },
+            "rows": {
+              "convex": {
+                "who": "Convex",
+                "what": "Database and backend where your records live",
+                "when": "Always"
+              },
+              "vercel": {
+                "who": "Vercel",
+                "what": "Serves the web app you open in your browser",
+                "when": "Always"
+              },
+              "cloudflare": {
+                "who": "Cloudflare",
+                "what": "Bot check on sign-in and sign-up, file storage",
+                "when": "Always"
+              },
+              "ai": {
+                "who": "Google, OpenAI, Anthropic",
+                "what": "Write Ask Anowa's answers and read logbook photos",
+                "when": "If your organisation turns AI on"
+              },
+              "messaging": {
+                "who": "Meta (WhatsApp), Telegram",
+                "what": "Carry messages between you and the farm bot",
+                "when": "If you connect it"
+              },
+              "email": {
+                "who": "Email and SMS senders",
+                "what": "Sign-in codes, alerts and reports you asked for",
+                "when": "When we send one"
+              }
+            }
+          },
+          "ai": {
+            "toc": "Ask Anowa and AI",
+            "title": "Ask Anowa and AI",
+            "p1": "AI is off until an admin turns it on. When it is on, Anowa builds a summary of the records you are allowed to see, for the site and dates you picked, and sends it with your question to the AI provider your organisation chose. The answer comes back to you; provider error details stay in our logs.",
+            "p2": "Anowa does not train AI models on your records. Providers follow their own terms: paid API keys are generally not used for training, while some free plans may let the provider review prompts. Admins pick the provider and key in AI settings.",
+            "p3": "Your conversations are private to you, kept for 365 days after the last message, and deleted with your account."
+          },
+          "retention": {
+            "toc": "How long we keep it",
+            "title": "How long we keep it",
+            "items": {
+              "records": {
+                "label": "Farm records",
+                "body": "For as long as your organisation uses Anowa."
+              },
+              "chats": {
+                "label": "Ask Anowa conversations",
+                "body": "365 days after the last message."
+              },
+              "exports": {
+                "label": "Your exports",
+                "body": "The download link works for 7 days, then the file is deleted."
+              },
+              "deletion": {
+                "label": "After you ask to delete",
+                "body": "A 30-day grace period you can cancel, then everything is purged."
+              },
+              "audit": {
+                "label": "Audit log of a deleted organisation",
+                "body": "365 days after the purge, as evidence of what happened, then removed."
+              }
+            }
+          },
+          "rights": {
+            "toc": "Your rights",
+            "title": "Your rights, one click away",
+            "body": "You can see, correct, export and delete your data. Most of it you can do yourself under Account, Data and privacy. For anything else, write to us and we answer within 30 days.",
+            "chips": {
+              "see": "See what we hold",
+              "correct": "Correct it",
+              "export": "Export everything",
+              "delete": "Delete my account",
+              "object": "Object or complain"
+            }
+          }
+        },
+        "contact": {
+          "title": "A question about your data?",
+          "accent": "A person answers."
+        }
+      },
+      "cookies": {
+        "metaTitle": "Cookie policy",
+        "eyebrow": "Legal · Cookie policy",
+        "title": "No trackers.",
+        "accent": "Not one.",
+        "subtitle": "Anowa remembers your settings on your device and checks that you are a person at sign-in. That is the whole list. No ads, no analytics, no one following you around the web.",
+        "readTime": "2 min read",
+        "shortNote": "If a cookie isn't on this page, Anowa doesn't set it.",
+        "cards": {
+          "c1": {
+            "title": "Zero ad or analytics cookies.",
+            "body": "We don't track you across the web, and no one else can through Anowa."
+          },
+          "c2": {
+            "title": "Your device remembers your choices.",
+            "body": "Language, theme, your active site, and the session that keeps you signed in."
+          },
+          "c3": {
+            "title": "One security check, at the door.",
+            "body": "A Cloudflare bot check on sign-in and sign-up stops password guessing."
+          },
+          "c4": {
+            "title": "No banner to click.",
+            "body": "There is nothing optional to agree to. If that ever changes, we ask you first."
+          }
+        },
+        "sections": {
+          "count": {
+            "toc": "The zero count",
+            "ads": "advertising cookies",
+            "analytics": "analytics or tracking tools",
+            "security": "security check, at sign-in"
+          },
+          "jar": {
+            "toc": "Everything in the jar",
+            "title": "Everything in the jar",
+            "intro": "Most of this lives in your browser's own storage, not in cookies, and never leaves your device except to sign you in.",
+            "cols": {
+              "what": "What",
+              "why": "Why",
+              "kind": "Kind",
+              "lasts": "Lasts"
+            },
+            "kinds": {
+              "essential": "Essential",
+              "security": "Security",
+              "preference": "Preference"
+            },
+            "rows": {
+              "session": {
+                "what": "Sign-in session",
+                "why": "Keeps you signed in on this device",
+                "lasts": "Until you sign out"
+              },
+              "offline": {
+                "what": "Offline queue",
+                "why": "Entries saved without signal, waiting to sync",
+                "lasts": "Until they sync"
+              },
+              "bot": {
+                "what": "Bot check",
+                "why": "Cloudflare Turnstile proves a person is signing in",
+                "lasts": "Minutes"
+              },
+              "language": {
+                "what": "Language and theme",
+                "why": "English or French, light or dark, contrast",
+                "lasts": "Until you change it"
+              },
+              "site": {
+                "what": "Active site",
+                "why": "Opens the farm site you last worked on",
+                "lasts": "Until you change it"
+              },
+              "menu": {
+                "what": "Menu and tours",
+                "why": "Collapsed menu, guided tours you finished, AI model choice",
+                "lasts": "Until you clear it"
+              }
+            }
+          },
+          "controls": {
+            "toc": "You stay in control",
+            "title": "You stay in control",
+            "p1": "Clear Anowa's storage any time from your browser settings. You will be signed out and your preferences reset. On a shared phone, sign out when you finish: it clears the session.",
+            "p2": "If you block the security check, you can still read this site, but signing in will not work until it is allowed."
+          },
+          "changes": {
+            "toc": "If this ever changes",
+            "title": "If this ever changes",
+            "p1": "We will update this page first, and anything optional will ask for your consent before it runs. Nothing is switched on quietly."
+          }
+        },
+        "contact": {
+          "title": "Spotted something we missed?",
+          "accent": "Tell us."
+        }
+      },
+      "terms": {
+        "metaTitle": "Terms of service",
+        "eyebrow": "Legal · Terms of service",
+        "title": "Plain terms,",
+        "accent": "fair to both sides.",
+        "subtitle": "The deal between your farm and Anowa: what we promise, what we ask of you, and what happens if either of us wants out.",
+        "readTime": "6 min read",
+        "shortNote": "The full terms below are the binding version.",
+        "cards": {
+          "c1": {
+            "title": "Your farm data stays yours.",
+            "body": "You give us only the rights we need to store it, show it to your team and run the service."
+          },
+          "c2": {
+            "title": "Use it fairly.",
+            "body": "No breaking the law, no attacking the service, no reaching into another farm's records."
+          },
+          "c3": {
+            "title": "Leave whenever you like.",
+            "body": "Cancel any time and export everything on your way out. No lock-in, no exit fee."
+          },
+          "c4": {
+            "title": "AI suggests. People decide.",
+            "body": "Anowa's answers and drafts are help, not orders. Nothing is saved until a person confirms."
+          }
+        },
+        "sections": {
+          "agreement": {
+            "toc": "The agreement",
+            "title": "The agreement",
+            "p1": "These terms are between Anowa and the organisation that opens a workspace: your farm, company or co-op. The person who signs up accepts them for the organisation and confirms they are allowed to. Members invited later use Anowa under the same terms."
+          },
+          "data": {
+            "toc": "Your farm's data",
+            "title": "Your farm's data",
+            "p1": "Everything your team records stays the property of your organisation. You let us store, process and display it only to provide Anowa to you, as described in the Privacy policy. Admins can export it at any time and decide who may see what.",
+            "callout": "Admins are responsible for the people they invite and the roles they give them. Keep sign-in details private, and turn on two-step sign-in for anyone handling money."
+          },
+          "fairuse": {
+            "toc": "Fair use",
+            "title": "Fair use",
+            "intro": "Use Anowa to run real farms. Please don't:",
+            "donts": {
+              "law": "break the law, or record fish, sales or people you have no right to",
+              "reach": "try to reach another organisation's records, or get around roles and site limits",
+              "probe": "overload, probe or copy the service, except through our published API",
+              "spam": "use the farm bot or messages to send spam"
+            },
+            "outro": "Found a security issue? Tell us first at security@getanowa.com and we will thank you, not chase you."
+          },
+          "ai": {
+            "toc": "AI features",
+            "title": "AI features",
+            "p1": "Ask Anowa, reports, logbook reading and automation drafts use AI. They work from your records but can still be wrong. Check important numbers before acting on them, and call a vet or extension officer for fish health. Drafts and photo readings are never saved until a person confirms them."
+          },
+          "plans": {
+            "toc": "Plans and payment",
+            "title": "Plans and payment",
+            "p1": "Your plan and price are shown on the Billing page before you pay. Prices are per farm, in your currency, and include the features listed for that plan. We tell you before a price changes, and the new price starts at your next billing period.",
+            "p2": "If a bill stays unpaid after the grace period, the workspace is paused. Nothing is deleted: pay, and it opens again exactly as you left it."
+          },
+          "limits": {
+            "toc": "Limits and ending",
+            "title": "Limits and ending",
+            "p1": "We work hard to keep Anowa available and your data safe. We can't promise it will never stop, and our total liability is limited to what you paid us in the 12 months before a claim, except where the law says otherwise.",
+            "p2": "You can close your workspace at any time. We can end the agreement if these terms are seriously broken, after telling you why and giving you time to export."
+          }
+        },
+        "contact": {
+          "title": "Something unclear in these terms?",
+          "accent": "Ask us."
+        }
+      },
+      "security": {
+        "metaTitle": "Security",
+        "eyebrow": "Trust · Security",
+        "title": "Your farm,",
+        "accent": "under lock and key.",
+        "subtitle": "How Anowa keeps records honest, people in their lanes and keys out of reach. No jargon, and no claims we can't show you.",
+        "readTime": "4 min read",
+        "shortNote": "Found a weakness? Write to security@getanowa.com.",
+        "cards": {
+          "c1": {
+            "title": "Every change leaves a trace.",
+            "body": "Each audit entry is chained to the one before it, and the chain is checked every night."
+          },
+          "c2": {
+            "title": "Roles enforced on the server.",
+            "body": "Field staff see their sites; finance stays with finance. Checked on every request, not just hidden."
+          },
+          "c3": {
+            "title": "Two-step sign-in for everyone.",
+            "body": "Authenticator app codes and one-time recovery codes on every account."
+          },
+          "c4": {
+            "title": "Keys never reach the browser.",
+            "body": "AI and messaging keys are encrypted and stay on our servers."
+          }
+        },
+        "sections": {
+          "chain": {
+            "toc": "The audit chain",
+            "title": "The audit chain",
+            "p1": "Every approval, correction and deletion is written to your audit log. Each entry carries a fingerprint of the one before it, so removing or editing an old entry breaks the chain, and the nightly check shows exactly where.",
+            "entry": "Entry {n}",
+            "prev": "prev",
+            "hash": "hash",
+            "events": {
+              "harvest": "Harvest approved, B2",
+              "daily": "Daily record corrected",
+              "role": "Member role changed"
+            },
+            "verified": "Chain verified every night. Admins see the result on the Audit log page."
+          },
+          "access": {
+            "toc": "Who sees what",
+            "title": "Who sees what",
+            "p1": "Each member has a role and, if you choose, a list of sites. The server checks both on every request, every export and every AI answer, so a hidden button is never the only lock.",
+            "roles": {
+              "owner": "Owner",
+              "admin": "Admin",
+              "manager": "Manager",
+              "field": "Field staff",
+              "viewer": "Viewer",
+              "custom": "+ your own roles"
+            },
+            "p2": "When Anowa support needs to look inside a workspace to help, the session is time-limited and recorded in that organisation's own audit log."
+          },
+          "signin": {
+            "toc": "Signing in",
+            "title": "Signing in",
+            "p1": "Passwords are never stored in readable form. Two-step sign-in works with any authenticator app, with one-time recovery codes for a lost phone. Repeated failed attempts slow down, and a bot check stops automated guessing."
+          },
+          "transit": {
+            "toc": "Data on the move",
+            "title": "Data on the move",
+            "p1": "Everything between your phone and Anowa travels over HTTPS. Provider keys for AI, WhatsApp and SMS are encrypted and used only on our servers. File downloads use short-lived links, and data exports expire after 7 days."
+          },
+          "report": {
+            "toc": "Reporting a weakness",
+            "title": "Reporting a weakness",
+            "p1": "If you find a security problem, email us before sharing it anywhere else, with enough detail to reproduce it. We confirm we got it, keep you posted while we fix it, and credit you if you like. Please don't access other people's data or disrupt the service while testing."
+          }
+        },
+        "contact": {
+          "title": "Found a weakness?",
+          "accent": "Tell us first."
+        }
+      }
+    },
+    "meta": {
+      "title": "The operating system for fish farms",
+      "description": "Stocking to harvest, feed to finance. Anowa keeps every cage, pond and hatchery tank measured, fed and traceable. Even offline, even from WhatsApp."
+    }
   }
 }

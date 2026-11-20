@@ -1,15 +1,6 @@
-import Head from 'next/head'
-import { NotFoundCard, SystemPage } from '../components/system/SystemState'
-import { useT } from '../lib/i18n/context'
+import NotFound from '../components/marketing/NotFound'
 
+/** Paper "404 · This cage is empty": public, works signed in or out. */
 export default function Custom404() {
-  const t = useT()
-  return (
-    <SystemPage>
-      <Head>
-        <title>{`${t('system.notFound.title')} · Anowa`}</title>
-      </Head>
-      <NotFoundCard />
-    </SystemPage>
-  )
+  return <NotFound />
 }
