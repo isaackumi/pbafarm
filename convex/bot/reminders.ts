@@ -16,7 +16,7 @@ import { checkBinding } from './scope'
 import { missingToday } from './reads'
 import { REMINDER_TEMPLATES, t } from './i18n'
 import { chatMessage, targetValidator, type ChatMessageValue } from './validators'
-import { deliver } from './outbound'
+import { deliver, logProactive } from './outbound'
 import { ownUnitIds } from '../keepers/escalation'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000
@@ -122,7 +122,9 @@ export const send = internalAction({
   returns: v.null(),
   handler: async (ctx, { bindingId }) => {
     const r = await ctx.runQuery(internal.bot.reminders.compose, { bindingId })
-    if (r) await deliver(ctx, r.target, r.messages)
+    if (!r) return null
+    const out = await deliver(ctx, r.target, r.messages)
+    await logProactive(ctx, r.target, r.messages, out, 'bot_reminder')
     return null
   },
 })

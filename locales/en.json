@@ -840,20 +840,115 @@
   "gradingPage": {
     "title": "Grading",
     "eyebrow": "Production · Sort by size, split into cages",
-    "transfers": "Fish transfers",
     "adminsOnly": "Admins only",
     "adminsOnlyHint": "Ask a company admin to record a grading.",
-    "how": {
-      "title": "How grading works",
-      "body": "Sort a cage's fish by size into new batches, one per destination cage. The batch they came from is kept as their parent, and culls are logged as mortality."
+    "saveDraft": "Save draft",
+    "confirm": "Confirm grading",
+    "saving": "Saving…",
+    "draftSaved": "Draft saved",
+    "draftMark": "{name} · draft",
+    "kpi": {
+      "source": "Source",
+      "sourceAria": "Cage being graded",
+      "chooseCage": "Choose a cage",
+      "cageOption": "{name} ({count} fish)",
+      "day": "day {n}",
+      "counted": "Fish counted",
+      "of": "of ~{n}",
+      "avg": "Avg weight",
+      "biomass": "{t} t biomass",
+      "cv": "Size spread (CV)",
+      "cvAfter": "→ {pct}% after",
+      "cvEmpty": "weigh samples"
+    },
+    "split": {
+      "title": "Size-class split",
+      "graderBars": "Grader bars",
+      "graderBarsAria": "Grader bar spacing (mm)",
+      "mm": "mm",
+      "dateAria": "Grading date",
+      "addClass": "Add class",
+      "class": "Class",
+      "count": "Count",
+      "avgWt": "Avg wt",
+      "destination": "Destination",
+      "large": "Large",
+      "medium": "Medium",
+      "mediumN": "Medium {n}",
+      "small": "Small",
+      "classN": "Class {n}",
+      "above": "> {g} g",
+      "below": "< {g} g",
+      "between": "{lo}–{hi} g",
+      "share": "{pct}%",
+      "market": {
+        "one": "market in ~{count} week",
+        "other": "market in ~{count} weeks"
+      },
+      "marketNow": "at market weight",
+      "lowerDensity": "lower stocking density",
+      "countAria": "{name}: fish",
+      "abwAria": "{name}: average weight (g)",
+      "destAria": "{name}: goes to",
+      "stay": "Stay in {cage}",
+      "move": "Move to {cage}",
+      "chooseDest": "Choose a cage",
+      "remove": "Remove {name}",
+      "total": "Total",
+      "culls": "culls logged as mortality",
+      "cullsAria": "Culled fish, recorded as deaths",
+      "balance": "Counts balance",
+      "unaccounted": "{n} unaccounted",
+      "over": "{n} over"
+    },
+    "errors": {
+      "chooseCage": "Choose the cage being graded",
+      "addClass": "Add at least one class",
+      "classFields": "Each class needs a cage, a whole number of fish and an average weight",
+      "oneEach": "Each cage can take one class",
+      "saveFailed": "Could not save the grading",
+      "draftFailed": "Could not save the draft"
+    },
+    "graded": "Graded into {n} batches",
+    "gradedUnaccounted": "Graded into {n} batches; {u} fish unaccounted",
+    "sample": {
+      "title": "Sample check",
+      "rounds": "Sample check · {r} × {n} fish per class",
+      "weighed": "Sample check · {n} fish weighed",
+      "by": "Weighed by {name} · {time}",
+      "notYet": "Not weighed yet",
+      "add": "Add weights",
+      "editAria": "{name}: sample weights",
+      "editorLabel": "{name}: weights (g)",
+      "editorHint": "One weighing round per line. Separate weights with spaces.",
+      "done": "Done",
+      "empty": "Add a class to weigh a sample of its fish."
+    },
+    "beforeAfter": {
+      "title": "Before → after",
+      "sub": "Biomass per cage",
+      "before": "Before · {cage}",
+      "beforeValue": "{t} t · {n} fish",
+      "after": "After",
+      "afterValue": {
+        "one": "{t} t · {count} cage",
+        "other": "{t} t · {count} cages"
+      },
+      "noSource": "Choose the cage being graded.",
+      "noDest": "Give each class a count, a weight and a destination to see the split.",
+      "density": "Density after grading",
+      "densityEmpty": "Add a volume or area to the destination cages to see density.",
+      "limit": "limit {max} {unit}"
     },
     "recent": {
       "title": "Recent gradings",
-      "all": "All batches",
+      "all": "All →",
       "empty": "No grading recorded yet.",
-      "batches": {
-        "one": "{count} batch",
-        "other": "{count} batches"
+      "fish": "{n} fish",
+      "cv": "CV {before}% → {after}%",
+      "classes": {
+        "one": "{count} class",
+        "other": "{count} classes"
       }
     }
   },
@@ -1963,7 +2058,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Checking rows {done} of {total}…",
+    "checkFailed": "Rows could not be checked"
   },
   "scan": {
     "unknownCode": "No cage on this farm has the code {code}",
@@ -4385,7 +4482,9 @@
           "sms": "Use the platform SMS channel when we have none of our own",
           "whatsapp": "Use the platform WhatsApp channel when we have none of our own",
           "email": "Use the platform email channel when we have none of our own"
-        }
+        },
+        "budget": "Monthly budgets",
+        "budgetHint": "Messages per month behind the usage meters above. Sending is never blocked."
       },
       "platformChannel": "Platform channel",
       "notConfigured": "Not set up",
@@ -4393,13 +4492,68 @@
         "syncing": "Syncing…",
         "sync": "Sync now",
         "waiting": "Phone outbox: {count} entries waiting",
-        "open": "Open outbox"
+        "open": "Open outbox",
+        "lastSync": "last sync {ago}",
+        "neverSynced": "not synced yet",
+        "deviceOf": "{name}’s {device}",
+        "thisDevice": "this device",
+        "justNow": "just now"
       },
-      "crumb": "SMS, WhatsApp, email",
+      "crumb": "SMS, WhatsApp, Telegram, email",
       "title": "Messaging & outbox",
       "sendTestAction": "Send test message",
       "description": "Choose the SMS, WhatsApp and email providers your company sends with. A channel is used for sign-in codes only after a successful test message.",
-      "noKey": "Provider credentials cannot be saved yet: the platform encryption key is not set on the server. You can still set up channels; ask the platform operator to set the key."
+      "noKey": "Provider credentials cannot be saved yet: the platform encryption key is not set on the server. You can still set up channels; ask the platform operator to set the key.",
+      "tile": {
+        "connected": "Connected",
+        "verifyDomain": "Verify domain",
+        "monthUsage": "{month} usage",
+        "conversations": "Conversations",
+        "telegramLine": "Anowa bot · no setup needed",
+        "peopleLinked": "People linked",
+        "members": "members",
+        "fromAddress": "From address",
+        "businessNumber": "Business number · {via}",
+        "anowaBot": "Anowa bot",
+        "senderId": "{provider} · sender ID"
+      },
+      "outboxTable": {
+        "title": "Outbox",
+        "filters": "Show messages",
+        "filter": {
+          "all": "All",
+          "queued": "Queued",
+          "failed": "Failed"
+        },
+        "recipient": "Recipient",
+        "channel": "Channel",
+        "message": "Message",
+        "status": "Status",
+        "delivered": "Delivered",
+        "deliveredHint": "Accepted by the provider",
+        "queued": "Queued",
+        "queuedAt": "Queued · send {time}",
+        "failed": "Failed",
+        "retry": "Retry",
+        "retryLabel": "Retry the failed message to {name}",
+        "retried": "Message queued to send again.",
+        "code": "Sign-in code",
+        "search": "Search the outbox",
+        "closeSearch": "Close search",
+        "searchPlaceholder": "Name or message",
+        "loading": "Loading messages…",
+        "noMatch": "No messages match.",
+        "empty": {
+          "all": "No messages sent yet.",
+          "queued": "Nothing is waiting to send.",
+          "failed": "No failed messages."
+        },
+        "more": "Show more",
+        "recipientRole": {
+          "customer": "Customer",
+          "supplier": "Supplier"
+        }
+      }
     },
     "outbox": {
       "title": "Outbox",
@@ -5147,6 +5301,8 @@
     "whatsappHow": "From {phone}, send the one-time code to {bot}. Then log feed and mortality by text and get alerts and reminders.",
     "whatsappBotFallback": "the Anowa WhatsApp number",
     "telegramHow": "Open the one-time link on your phone and tap Start. Then log feed and mortality by text and get alerts and reminders.",
+    "telegramPending": "Open the link on your phone, or send this one-time code to the bot. It expires in 10 minutes.",
+    "telegramPendingNoLink": "Send this one-time code to the Anowa bot on Telegram. It expires in 10 minutes.",
     "telegramUnavailable": "Telegram is not available on this deployment yet.",
     "minutesLeft": {
       "one": "{count} minute left",
@@ -5155,8 +5311,6 @@
     "timeLeft": "{time} left",
     "codeExpired": "Code expired",
     "sendCode": "Send this message on WhatsApp from your verified number.",
-    "tapStart": "Open Telegram and tap Start.",
-    "telegramNoBot": "The Telegram bot name is not configured.",
     "doNotShare": "Works once. Do not share it.",
     "openIn": "Open in {app}",
     "newCode": "New code",

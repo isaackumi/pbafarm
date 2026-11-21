@@ -7,6 +7,7 @@ import { runEffect } from '../lib/effect'
 import { mergeSettings } from '../lib/farmRules'
 import { orgProfile } from '../lib/orgProfile'
 import { deliverMessage } from '../messaging/deliver'
+import { syncDeliveries } from '../messaging/outbox'
 import { CHECKS } from './checks'
 import { evaluateConditions, renderTemplate, type RunContext } from './conditions'
 import { sendAll } from './deliver'
@@ -459,6 +460,7 @@ export const startRun = internalMutation({
       await settle(ctx, runId)
       return null
     }
+    await syncDeliveries(ctx, { companyId: run.companyId, source: 'automation', parent: { runId }, deliveries })
     return { companyId: run.companyId, pending }
   },
 })
@@ -501,6 +503,7 @@ async function scheduleRetry(ctx: Ctx, run: Doc<'automationRuns'>, error?: strin
   const at = Date.now() + delayMin * 60_000
   await ctx.db.patch(run._id, { status: 'retrying', nextAttemptAt: at, error })
   await ctx.scheduler.runAt(at, internal.automation.engine.executeRun, { runId: run._id })
+  return at
 }
 
 /** Record send outcomes; retry transient failures with back-off, else settle. */
@@ -533,10 +536,12 @@ export const finishRun = internalMutation({
     if (retry && run.attempts < run.maxAttempts) {
       const next = deliveries.map((d) => (d.status === 'failed' && d.retryable ? { ...d, status: 'pending' as const } : d))
       await ctx.db.patch(runId, { deliveries: next })
-      await scheduleRetry(ctx, run, summarize(deliveries.filter((d) => d.status === 'failed')))
+      const at = await scheduleRetry(ctx, run, summarize(deliveries.filter((d) => d.status === 'failed')))
+      await syncDeliveries(ctx, { companyId: run.companyId, source: 'automation', parent: { runId }, deliveries: next, nextAttemptAt: at })
       return null
     }
     await ctx.db.patch(runId, { deliveries })
+    await syncDeliveries(ctx, { companyId: run.companyId, source: 'automation', parent: { runId }, deliveries })
     await settle(ctx, runId)
     return null
   },

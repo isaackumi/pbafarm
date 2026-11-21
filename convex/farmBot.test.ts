@@ -5,6 +5,7 @@ import agentTest from '@convex-dev/agent/test'
 import { mockModel } from '@convex-dev/agent'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
+import { rateLimiter } from './lib/rateLimits'
 import { api, internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
@@ -154,6 +155,33 @@ async function say(s: S, payload: unknown): Promise<string[]> {
   })
 }
 
+let tgUpdate = 1000
+
+/** Post one Telegram text from `chatId` without running the queue. */
+async function tgPost(s: S, chatId: number, msg: string) {
+  tgUpdate += 1
+  const res = await s.t.fetch('/channels/telegram', {
+    method: 'POST',
+    headers: { 'X-Telegram-Bot-Api-Secret-Token': 'tg-secret' },
+    body: JSON.stringify({
+      update_id: tgUpdate,
+      message: { message_id: tgUpdate, date: Math.floor(Date.now() / 1000), chat: { id: chatId, type: 'private' }, from: { id: chatId }, text: msg },
+    }),
+  })
+  expect(res.status).toBe(200)
+}
+
+/** Post a Telegram text, run the queue, return the texts sent back to that chat. */
+async function tgSay(s: S, chatId: number, msg: string): Promise<string[]> {
+  const before = sent.length
+  await tgPost(s, chatId, msg)
+  await s.t.finishAllScheduledFunctions(vi.runAllTimers)
+  return sent
+    .slice(before)
+    .filter((m) => m.url.includes('/sendMessage') && String((m.body as { chat_id?: unknown }).chat_id) === String(chatId))
+    .map((m) => String((m.body as { text?: string }).text ?? ''))
+}
+
 async function bindWhatsApp(s: S) {
   const { code } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'whatsapp' })
   const replies = await say(s, waText(PHONE, `LINK ${code}`))
@@ -263,21 +291,75 @@ describe('bindings', () => {
   })
 
   test('Telegram deep-link token binds the chat', async () => {
+    vi.stubEnv('TELEGRAM_BOT_USERNAME', 'AnowaBot')
     const s = await setup()
-    const { code } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
-    const res = await s.t.fetch('/channels/telegram', {
-      method: 'POST',
-      headers: { 'X-Telegram-Bot-Api-Secret-Token': 'tg-secret' },
-      body: JSON.stringify({
-        update_id: 7,
-        message: { message_id: 1, date: Math.floor(Date.now() / 1000), chat: { id: 99, type: 'private' }, from: { id: 99 }, text: `/start ${code}` },
-      }),
-    })
-    expect(res.status).toBe(200)
-    await s.t.finishAllScheduledFunctions(vi.runAllTimers)
+    const { code, link } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    // Paper 43: a short code on screen, the strong token only inside the link.
+    expect(code).toMatch(/^[2-9A-HJ-NP-Z]{3}-[2-9A-HJ-NP-Z]{3}$/)
+    const token = /\?start=([0-9a-f]{64})$/.exec(link ?? '')?.[1]
+    expect(token).toBeTruthy()
+    await tgSay(s, 99, `/start ${token}`)
     const b = (await rows(s, 'channelBindings')).find((x) => x.provider === 'telegram' && !x.revokedAt)
     expect(b).toMatchObject({ address: '99', userId: s.staff, companyId: s.companyA })
     expect(sent.some((m) => m.url.includes('/bottg-token/sendMessage'))).toBe(true)
+  })
+
+  test('Telegram short code typed to the bot binds the chat, once', async () => {
+    const s = await setup()
+    const { code } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    // Case, spaces and the dash are forgiven.
+    const typed = code.replace('-', ' ').toLowerCase()
+    expect((await tgSay(s, 101, typed)).join('\n')).toMatch(/Connected, Ama/)
+    const b = (await rows(s, 'channelBindings')).find((x) => x.provider === 'telegram' && !x.revokedAt)
+    expect(b).toMatchObject({ address: '101', userId: s.staff, companyId: s.companyA })
+    // Single use: another chat cannot reuse it.
+    await tgSay(s, 102, `link ${code}`)
+    const live = (await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)
+    expect(live.map((x) => x.address)).toEqual(['101'])
+  })
+
+  test('wrong Telegram short codes are capped platform-wide; the deep link still works', async () => {
+    vi.stubEnv('TELEGRAM_BOT_USERNAME', 'AnowaBot')
+    const s = await setup()
+    const { code, link } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    // 60 wrong guesses from 6 chats (10 each, the per-chat limit).
+    const wrong = code === 'ABC-234' ? 'ABD-234' : 'ABC-234'
+    for (let chat = 200; chat < 206; chat += 1) {
+      for (let i = 0; i < 10; i += 1) await tgPost(s, chat, wrong)
+    }
+    await s.t.finishAllScheduledFunctions(vi.runAllTimers)
+    // The right code is now refused too until the window passes, with a
+    // reply that points to the link instead of "bad code".
+    expect((await tgSay(s, 300, code)).join('\n')).toMatch(/paused/i)
+    expect((await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)).toHaveLength(0)
+    // The 64-hex deep link is not affected.
+    const token = /\?start=([0-9a-f]{64})$/.exec(link ?? '')?.[1]
+    await tgSay(s, 301, `/start ${token}`)
+    const b = (await rows(s, 'channelBindings')).find((x) => x.provider === 'telegram' && !x.revokedAt)
+    expect(b).toMatchObject({ address: '301', userId: s.staff })
+  })
+
+  test('a linked Telegram chat that pastes a fresh bare code re-links (the code never reaches the agent)', async () => {
+    const s = await setup()
+    const first = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    expect((await tgSay(s, 110, first.code)).join('\n')).toMatch(/Connected, Ama/)
+    const second = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    expect((await tgSay(s, 110, second.code)).join('\n')).toMatch(/Connected, Ama/)
+    const codes = await s.t.run(async (ctx) => await ctx.db.query('channelConnectCodes').collect())
+    expect(codes.every((c) => c.usedAt)).toBe(true)
+    const live = (await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)
+    expect(live.map((x) => x.address)).toEqual(['110'])
+  })
+
+  test('wrong typed codes are capped per chat per day', async () => {
+    const s = await setup()
+    const { code } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    // This chat has already used its 20 wrong guesses for the day.
+    await s.t.run(async (ctx) => {
+      for (let i = 0; i < 20; i += 1) await rateLimiter.limit(ctx, 'botLinkCodeFailPerChatDaily', { key: 'telegram:400' })
+    })
+    expect((await tgSay(s, 400, code)).join('\n')).toMatch(/paused/i)
+    expect((await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)).toHaveLength(0)
   })
 
   test('revoked binding is refused, and a phone change revokes it', async () => {

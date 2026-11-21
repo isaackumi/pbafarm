@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { flushOutbox, listOutbox, removeFromOutbox } from '../lib/offlineOutbox'
+import { flushOutbox, lastOutboxSync, listOutbox, removeFromOutbox } from '../lib/offlineOutbox'
 import { sendOutboxItem } from '../lib/outboxSenders'
 
 /**
@@ -12,9 +12,13 @@ export function useOutbox() {
   const { user } = useAuth()
   const userId = user?.id
   const [items, setItems] = useState([])
+  const [lastSyncAt, setLastSyncAt] = useState(null)
   const [sending, setSending] = useState(false)
 
-  const refresh = useCallback(() => setItems(listOutbox(userId)), [userId])
+  const refresh = useCallback(() => {
+    setItems(listOutbox(userId))
+    setLastSyncAt(lastOutboxSync(userId))
+  }, [userId])
 
   useEffect(() => {
     refresh()
@@ -52,7 +56,7 @@ export function useOutbox() {
     [userId, refresh],
   )
 
-  return { items, count: items.length, sending, send, discard, userId }
+  return { items, count: items.length, sending, send, discard, userId, lastSyncAt }
 }
 
 /** navigator.onLine, kept current. */

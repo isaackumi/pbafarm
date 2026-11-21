@@ -103,16 +103,21 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
           <p className={`text-xs leading-4 ${connected ? 'text-good' : 'text-muted'}`}>{status}</p>
         </div>
       </div>
-      <p className="text-sm leading-[19px] text-muted">
+      <p className="text-[13px] leading-[19px] text-muted">
         {provider === 'whatsapp'
           ? !config.configured
             ? t('chatChannels.whatsappUnavailable')
             : !config.phoneVerified
               ? t('chatChannels.whatsappVerifyPhone')
               : t('chatChannels.whatsappHow', { phone: config.phone, bot: config.botNumber || t('chatChannels.whatsappBotFallback') })
-          : config.configured
-            ? t('chatChannels.telegramHow')
-            : t('chatChannels.telegramUnavailable')}
+          : !config.configured
+            ? t('chatChannels.telegramUnavailable')
+            : pending
+              ? // Paper 43: the link or the short code, and when it runs out.
+                pending.link
+                ? t('chatChannels.telegramPending')
+                : t('chatChannels.telegramPendingNoLink')
+              : t('chatChannels.telegramHow')}
       </p>
 
       {bindings.map((b) => (
@@ -122,15 +127,17 @@ function ProviderCard({ provider, config, bindings, pending, busy, onStart }) {
       {pending ? (
         <div role="status" className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3 rounded-[8px] border border-dashed border-line-strong px-4 py-[14px]">
-            <span className="font-mono text-[24px] font-bold leading-[30px] tracking-[0.2em] text-sky-ink">
+            <span className="min-w-0 break-all font-mono text-[24px] font-bold leading-[30px] tracking-[0.2em] text-sky-ink">
               {provider === 'whatsapp' ? `LINK ${pending.code}` : pending.code}
             </span>
             <Countdown expiresAt={pending.expiresAt} />
           </div>
-          <p className="text-xs leading-4 text-faint">
-            {provider === 'whatsapp' ? t('chatChannels.sendCode') : pending.link ? t('chatChannels.tapStart') : t('chatChannels.telegramNoBot')}{' '}
-            {t('chatChannels.doNotShare')}
-          </p>
+          {/* Paper 43 shows no note under the Telegram code: its body line already says what to do. */}
+          {provider === 'whatsapp' ? (
+            <p className="text-xs leading-4 text-faint">
+              {t('chatChannels.sendCode')} {t('chatChannels.doNotShare')}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

@@ -840,20 +840,115 @@
   "gradingPage": {
     "title": "Calibrage",
     "eyebrow": "Production · Trier par taille, répartir en cages",
-    "transfers": "Transferts de poissons",
     "adminsOnly": "Réservé aux administrateurs",
     "adminsOnlyHint": "Demandez à un administrateur de l'entreprise d'enregistrer un calibrage.",
-    "how": {
-      "title": "Fonctionnement du calibrage",
-      "body": "Triez les poissons d'une cage par taille en nouveaux lots d'élevage, un par cage de destination. Le lot d'origine est conservé comme parent et les rebuts sont enregistrés comme mortalité."
+    "saveDraft": "Enregistrer le brouillon",
+    "confirm": "Valider le calibrage",
+    "saving": "Enregistrement…",
+    "draftSaved": "Brouillon enregistré",
+    "draftMark": "{name} · brouillon",
+    "kpi": {
+      "source": "Source",
+      "sourceAria": "Cage calibrée",
+      "chooseCage": "Choisir une cage",
+      "cageOption": "{name} ({count} poissons)",
+      "day": "jour {n}",
+      "counted": "Poissons comptés",
+      "of": "sur ~{n}",
+      "avg": "Poids moyen",
+      "biomass": "{t} t de biomasse",
+      "cv": "Dispersion (CV)",
+      "cvAfter": "→ {pct} % après",
+      "cvEmpty": "peser des échantillons"
+    },
+    "split": {
+      "title": "Répartition par classe de taille",
+      "graderBars": "Barres de la trieuse",
+      "graderBarsAria": "Écartement des barres de la trieuse (mm)",
+      "mm": "mm",
+      "dateAria": "Date du calibrage",
+      "addClass": "Ajouter une classe",
+      "class": "Classe",
+      "count": "Nombre",
+      "avgWt": "Poids moy.",
+      "destination": "Destination",
+      "large": "Gros",
+      "medium": "Moyens",
+      "mediumN": "Moyens {n}",
+      "small": "Petits",
+      "classN": "Classe {n}",
+      "above": "> {g} g",
+      "below": "< {g} g",
+      "between": "{lo}–{hi} g",
+      "share": "{pct} %",
+      "market": {
+        "one": "commercialisables dans ~{count} semaine",
+        "other": "commercialisables dans ~{count} semaines"
+      },
+      "marketNow": "au poids commercial",
+      "lowerDensity": "densité d'élevage plus faible",
+      "countAria": "{name} : poissons",
+      "abwAria": "{name} : poids moyen (g)",
+      "destAria": "{name} : destination",
+      "stay": "Rester en {cage}",
+      "move": "Vers {cage}",
+      "chooseDest": "Choisir une cage",
+      "remove": "Retirer {name}",
+      "total": "Total",
+      "culls": "rebuts enregistrés comme mortalité",
+      "cullsAria": "Poissons écartés, enregistrés comme morts",
+      "balance": "Comptes équilibrés",
+      "unaccounted": "{n} manquants",
+      "over": "{n} en trop"
+    },
+    "errors": {
+      "chooseCage": "Choisissez la cage calibrée",
+      "addClass": "Ajoutez au moins une classe",
+      "classFields": "Chaque classe doit avoir une cage, un nombre entier de poissons et un poids moyen",
+      "oneEach": "Chaque cage ne peut recevoir qu'une classe",
+      "saveFailed": "Impossible d'enregistrer le calibrage",
+      "draftFailed": "Impossible d'enregistrer le brouillon"
+    },
+    "graded": "Calibré en {n} lots",
+    "gradedUnaccounted": "Calibré en {n} lots ; {u} poissons manquants",
+    "sample": {
+      "title": "Contrôle par échantillon",
+      "rounds": "Contrôle par échantillon · {r} × {n} poissons par classe",
+      "weighed": "Contrôle par échantillon · {n} poissons pesés",
+      "by": "Pesé par {name} · {time}",
+      "notYet": "Pas encore pesé",
+      "add": "Ajouter des poids",
+      "editAria": "{name} : poids de l'échantillon",
+      "editorLabel": "{name} : poids (g)",
+      "editorHint": "Une pesée par ligne. Séparez les poids par des espaces.",
+      "done": "Terminé",
+      "empty": "Ajoutez une classe pour peser un échantillon de ses poissons."
+    },
+    "beforeAfter": {
+      "title": "Avant → après",
+      "sub": "Biomasse par cage",
+      "before": "Avant · {cage}",
+      "beforeValue": "{t} t · {n} poissons",
+      "after": "Après",
+      "afterValue": {
+        "one": "{t} t · {count} cage",
+        "other": "{t} t · {count} cages"
+      },
+      "noSource": "Choisissez la cage calibrée.",
+      "noDest": "Donnez à chaque classe un nombre, un poids et une destination pour voir la répartition.",
+      "density": "Densité après calibrage",
+      "densityEmpty": "Ajoutez un volume ou une surface aux cages de destination pour voir la densité.",
+      "limit": "limite {max} {unit}"
     },
     "recent": {
       "title": "Calibrages récents",
-      "all": "Tous les lots",
+      "all": "Tout →",
       "empty": "Aucun calibrage enregistré pour l'instant.",
-      "batches": {
-        "one": "{count} lot",
-        "other": "{count} lots"
+      "fish": "{n} poissons",
+      "cv": "CV {before} % → {after} %",
+      "classes": {
+        "one": "{count} classe",
+        "other": "{count} classes"
       }
     }
   },
@@ -1963,7 +2058,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Vérification des lignes {done} sur {total}…",
+    "checkFailed": "Les lignes n’ont pas pu être vérifiées"
   },
   "scan": {
     "unknownCode": "Aucune cage de cette ferme n'a le code {code}",
@@ -4385,7 +4482,9 @@
           "sms": "Utiliser le canal SMS de la plateforme si nous n'en avons pas",
           "whatsapp": "Utiliser le canal WhatsApp de la plateforme si nous n'en avons pas",
           "email": "Utiliser le canal e-mail de la plateforme si nous n'en avons pas"
-        }
+        },
+        "budget": "Budgets mensuels",
+        "budgetHint": "Messages par mois pour les jauges d'usage ci-dessus. L'envoi n'est jamais bloqué."
       },
       "platformChannel": "Canal de la plateforme",
       "notConfigured": "Non configuré",
@@ -4393,13 +4492,68 @@
         "syncing": "Synchronisation…",
         "sync": "Synchroniser",
         "waiting": "Boîte d'envoi du téléphone : {count} saisies en attente",
-        "open": "Ouvrir la boîte d'envoi"
+        "open": "Ouvrir la boîte d'envoi",
+        "lastSync": "dernière synchro {ago}",
+        "neverSynced": "pas encore synchronisé",
+        "deviceOf": "{device} de {name}",
+        "thisDevice": "cet appareil",
+        "justNow": "à l'instant"
       },
-      "crumb": "SMS, WhatsApp, e-mail",
+      "crumb": "SMS, WhatsApp, Telegram, e-mail",
       "title": "Messagerie et boîte d'envoi",
       "sendTestAction": "Envoyer un message de test",
       "description": "Choisissez les fournisseurs SMS, WhatsApp et e-mail de votre entreprise. Un canal ne sert aux codes de connexion qu'après un message de test réussi.",
-      "noKey": "Les identifiants des fournisseurs ne peuvent pas encore être enregistrés : la clé de chiffrement de la plateforme n'est pas définie sur le serveur. Vous pouvez quand même configurer les canaux ; demandez à l'opérateur de la plateforme de définir la clé."
+      "noKey": "Les identifiants des fournisseurs ne peuvent pas encore être enregistrés : la clé de chiffrement de la plateforme n'est pas définie sur le serveur. Vous pouvez quand même configurer les canaux ; demandez à l'opérateur de la plateforme de définir la clé.",
+      "tile": {
+        "connected": "Connecté",
+        "verifyDomain": "Vérifier le domaine",
+        "monthUsage": "Usage {month}",
+        "conversations": "Conversations",
+        "telegramLine": "Bot Anowa · aucune configuration",
+        "peopleLinked": "Personnes liées",
+        "members": "membres",
+        "fromAddress": "Adresse d'expédition",
+        "businessNumber": "Numéro professionnel · {via}",
+        "anowaBot": "Bot Anowa",
+        "senderId": "{provider} · ID d'expéditeur"
+      },
+      "outboxTable": {
+        "title": "Boîte d'envoi",
+        "filters": "Afficher les messages",
+        "filter": {
+          "all": "Tous",
+          "queued": "En attente",
+          "failed": "Échecs"
+        },
+        "recipient": "Destinataire",
+        "channel": "Canal",
+        "message": "Message",
+        "status": "Statut",
+        "delivered": "Remis",
+        "deliveredHint": "Accepté par le fournisseur",
+        "queued": "En attente",
+        "queuedAt": "En attente · envoi {time}",
+        "failed": "Échec",
+        "retry": "Réessayer",
+        "retryLabel": "Renvoyer le message en échec à {name}",
+        "retried": "Message remis en file pour un nouvel envoi.",
+        "code": "Code de connexion",
+        "search": "Rechercher dans la boîte d'envoi",
+        "closeSearch": "Fermer la recherche",
+        "searchPlaceholder": "Nom ou message",
+        "loading": "Chargement des messages…",
+        "noMatch": "Aucun message ne correspond.",
+        "empty": {
+          "all": "Aucun message envoyé pour l'instant.",
+          "queued": "Rien n'attend d'être envoyé.",
+          "failed": "Aucun message en échec."
+        },
+        "more": "Afficher plus",
+        "recipientRole": {
+          "customer": "Client",
+          "supplier": "Fournisseur"
+        }
+      }
     },
     "outbox": {
       "title": "Boîte d'envoi",
@@ -5147,6 +5301,8 @@
     "whatsappHow": "Depuis le {phone}, envoyez le code à usage unique au {bot}. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
     "whatsappBotFallback": "numéro WhatsApp d'Anowa",
     "telegramHow": "Ouvrez le lien à usage unique sur votre téléphone et appuyez sur Démarrer. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
+    "telegramPending": "Ouvrez le lien sur votre téléphone, ou envoyez ce code à usage unique au bot. Il expire dans 10 minutes.",
+    "telegramPendingNoLink": "Envoyez ce code à usage unique au bot Anowa sur Telegram. Il expire dans 10 minutes.",
     "telegramUnavailable": "Telegram n'est pas encore disponible sur ce déploiement.",
     "minutesLeft": {
       "one": "{count} minute restante",
@@ -5155,8 +5311,6 @@
     "timeLeft": "{time} restantes",
     "codeExpired": "Code expiré",
     "sendCode": "Envoyez ce message sur WhatsApp depuis votre numéro vérifié.",
-    "tapStart": "Ouvrez Telegram et appuyez sur Démarrer.",
-    "telegramNoBot": "Le nom du bot Telegram n'est pas configuré.",
     "doNotShare": "Valable une seule fois. Ne le partagez pas.",
     "openIn": "Ouvrir dans {app}",
     "newCode": "Nouveau code",

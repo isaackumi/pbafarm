@@ -110,6 +110,7 @@ export const issueLoginCode = internalMutation({
       channel,
       phone,
       code,
+      userId: user._id,
     })
     return null
   },
@@ -122,6 +123,7 @@ export const deliverLoginCode = internalAction({
     channel: v.union(v.literal('sms'), v.literal('whatsapp')),
     phone: v.string(),
     code: v.string(),
+    userId: v.optional(v.id('users')),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -133,6 +135,18 @@ export const deliverLoginCode = internalAction({
     })
     if (!result.ok) {
       console.warn(`Sign-in code not sent (${args.channel}, ${result.route}): ${result.error}`)
+    }
+    // The Outbox keeps that a code was sent, never the code (source 'code' has no body).
+    if (result.route !== 'none') {
+      await ctx.runMutation(internal.messaging.outbox.record, {
+        companyId: args.companyId,
+        channel: args.channel,
+        ok: result.ok,
+        source: 'code',
+        to: args.phone,
+        recipientUserId: args.userId,
+        error: result.ok ? undefined : result.error,
+      })
     }
     return null
   },
