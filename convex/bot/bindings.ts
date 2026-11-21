@@ -6,14 +6,17 @@
  * - WhatsApp: the sender's number is the user's verified phone (PR #88) AND
  *   the user sends the one-time code shown on /account ("LINK 123456").
  * - Telegram: the user opens t.me/<bot>?start=<one-time token> from /account
- *   (the token is 32 random bytes; only its hash is stored).
+ *   (the token is 32 random bytes; only its hash is stored), or types the
+ *   short code shown next to it ("K7Q-42P", Paper 43) to the bot. Typed codes
+ *   are guarded by the unbound-chat limits and a global failure limit
+ *   (inbound.ts).
  */
 import { v } from 'convex/values'
 import { internalMutation, mutation, query } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import { memberContextIn, requireAccount } from '../lib/permissions'
-import { randomDigits, randomToken, sha256Hex } from '../lib/tokens'
+import { formatShortCode, randomDigits, randomShortCode, randomToken, sha256Hex } from '../lib/tokens'
 import { rateLimiter, retryAfterText } from '../lib/rateLimits'
 import { userError } from '../lib/errors'
 import { isValidTimezone } from '../lib/orgProfile'
@@ -24,6 +27,11 @@ const MAX_BINDINGS_PER_USER = 10
 
 export function codeHash(provider: 'whatsapp' | 'telegram', code: string) {
   return sha256Hex(`bot-connect:${provider}:${code}`)
+}
+
+/** Hash of a Telegram short code ("K7Q42P", canonical form). */
+export function shortCodeHash(code: string) {
+  return sha256Hex(`bot-connect:telegram:short:${code}`)
 }
 
 /** Revoke a user's live bindings, optionally only one provider or one company. */
@@ -192,13 +200,18 @@ export const createConnectCode = mutation({
       else if (c.expiresAt < now - 24 * 60 * 60 * 1000) await ctx.db.delete(c._id)
     }
 
+    // WhatsApp: 6 digits, only redeemable from the user's verified phone.
+    // Telegram: a 64-hex token for the deep link, plus a short code to show
+    // and type (Paper 43 "K7Q-42P"), both single use, same expiry.
     const code = provider === 'whatsapp' ? randomDigits(6) : randomToken()
+    const shortCode = provider === 'telegram' ? randomShortCode() : null
     const expiresAt = now + CONNECT_CODE_TTL_MS
     await ctx.db.insert('channelConnectCodes', {
       userId: user._id,
       companyId,
       provider,
       codeHash: await codeHash(provider, code),
+      ...(shortCode ? { shortCodeHash: await shortCodeHash(shortCode) } : {}),
       expiresAt,
       createdAt: now,
     })
@@ -210,7 +223,7 @@ export const createConnectCode = mutation({
       const number = (process.env.WHATSAPP_BOT_DISPLAY_NUMBER || '').replace(/\D/g, '')
       link = number ? `https://wa.me/${number}?text=${encodeURIComponent(`LINK ${code}`)}` : null
     }
-    return { code, expiresAt, link }
+    return { code: shortCode ? formatShortCode(shortCode) : code, expiresAt, link }
   },
 })
 

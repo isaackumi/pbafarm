@@ -77,6 +77,13 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   botUnboundGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
   /** Connect codes from /account, key = userId. */
   botConnectCodePerUser: { kind: 'fixed window', rate: 10, period: HOUR },
+  /**
+   * Wrong Telegram short codes ("K7Q-42P") across the platform (no key). The
+   * short code is about 29.7 bits and lives 10 minutes, so capping wrong
+   * guesses at 60 an hour keeps a takeover by guessing out of reach. Once
+   * spent, typed codes wait for the next window; the deep link still works.
+   */
+  botLinkCodeFailGlobal: { kind: 'fixed window', rate: 60, period: HOUR },
 })
 
 /** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */
