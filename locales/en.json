@@ -5105,7 +5105,6 @@
     "signOut": "Sign out",
     "navLabel": "Platform console",
     "eyebrow": "console.getanowa.com · Super admin · MFA verified",
-    "loadError": "Could not load this console page",
     "nav": {
       "overview": "Overview",
       "tenants": "Tenants",

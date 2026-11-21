@@ -77,7 +77,7 @@ function farmHealthScore(metrics) {
 
 export default function Dashboard() {
   return (
-    <QueryBoundary title="The dashboard could not load">
+    <QueryBoundary>
       <DashboardView />
     </QueryBoundary>
   )

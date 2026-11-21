@@ -16,7 +16,7 @@ export default function BillingPage() {
   const { accessState } = useAuth()
   const router = useRouter()
   const body = (
-    <QueryBoundary title={t('billing.forbidden')} resetKey={router.asPath}>
+    <QueryBoundary title={t('billing.forbidden')} description={null} resetKey={router.asPath}>
       <TenantBilling />
     </QueryBoundary>
   )

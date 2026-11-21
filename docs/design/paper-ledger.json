@@ -988,13 +988,14 @@
         "pages/cages/index.js",
         "components/ProtectedRoute.js",
         "pages/platform/maintenance.js",
-        "convex/platform/maintenance.ts"
+        "convex/platform/maintenance.ts",
+        "components/QueryBoundary.js"
       ],
-      "status": "built",
+      "status": "partial",
       "jsxHash": "b8affe69664d067270b261ca92a459227cce5121e259040192bd723811b10ab5",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Rebuilt (build/import-system-states): 404 card (NotFoundState, in-app 404), _error card with error-id chip and sky-ring Try again (pages/_error.js + ErrorBoundary), /cages empty state, LoadingState skeleton, maintenance screen gated in ProtectedRoute from the console setting (/platform/maintenance). Specimen labels (_error, Empty · /cages, Loading · skeleton, Maintenance) are not shown in the app; the 404 eyebrow is. Not yet compared in a browser."
+      "notes": "Rebuilt (build/import-system-states): 404 card (NotFoundState, in-app 404), _error card with error-id chip and sky-ring Try again (pages/_error.js + ErrorBoundary), /cages empty state, LoadingState skeleton, maintenance screen gated in ProtectedRoute from the console setting (/platform/maintenance). Specimen labels (_error, Empty · /cages, Loading · skeleton, Maintenance) are not shown in the app; the 404 eyebrow is. Not yet compared in a browser. 2026-11-21 (fix/error-state-paper): failed data loads (QueryBoundary: Home, every page in Layout and _app, platform console, billing) now render this _error card too, with the err_ id chip and the same error report; before, they showed the old ui ErrorState (\"The dashboard could not load\", no body, no chip). _error card browser-checked at 1440 in dark and light against the artboard (title 22/28 600 -0.02em text, body 14/20 muted, chip surface-2 6/12, sky-ring Try again, card radius 20). \"We've been notified.\" shows only when NEXT_PUBLIC_SENTRY_DSN is set. Still to browser-check: 404, empty /cages, loading skeleton, maintenance; partial until then."
     },
     {
       "id": "HYV-0",
@@ -1433,13 +1434,14 @@
         "pages/cages/index.js",
         "components/ProtectedRoute.js",
         "pages/platform/maintenance.js",
-        "convex/platform/maintenance.ts"
+        "convex/platform/maintenance.ts",
+        "components/QueryBoundary.js"
       ],
-      "status": "built",
+      "status": "partial",
       "jsxHash": "d4195db6488a795a1b0049b18f78aec1dd694b56fc778271430d96e7deab7b3f",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Rebuilt (build/import-system-states): 404 card (NotFoundState, in-app 404), _error card with error-id chip and sky-ring Try again (pages/_error.js + ErrorBoundary), /cages empty state, LoadingState skeleton, maintenance screen gated in ProtectedRoute from the console setting (/platform/maintenance). Specimen labels (_error, Empty · /cages, Loading · skeleton, Maintenance) are not shown in the app; the 404 eyebrow is. Not yet compared in a browser."
+      "notes": "Rebuilt (build/import-system-states): 404 card (NotFoundState, in-app 404), _error card with error-id chip and sky-ring Try again (pages/_error.js + ErrorBoundary), /cages empty state, LoadingState skeleton, maintenance screen gated in ProtectedRoute from the console setting (/platform/maintenance). Specimen labels (_error, Empty · /cages, Loading · skeleton, Maintenance) are not shown in the app; the 404 eyebrow is. Not yet compared in a browser. 2026-11-21 (fix/error-state-paper): failed data loads (QueryBoundary: Home, every page in Layout and _app, platform console, billing) now render this _error card too, with the err_ id chip and the same error report; before, they showed the old ui ErrorState (\"The dashboard could not load\", no body, no chip). _error card browser-checked at 1440 in dark and light against the artboard (title 22/28 600 -0.02em text, body 14/20 muted, chip surface-2 6/12, sky-ring Try again, card radius 20). \"We've been notified.\" shows only when NEXT_PUBLIC_SENTRY_DSN is set. Still to browser-check: 404, empty /cages, loading skeleton, maintenance; partial until then."
     },
     {
       "id": "KTK-0",
