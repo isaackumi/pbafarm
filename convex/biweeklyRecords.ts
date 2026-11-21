@@ -416,6 +416,15 @@ export async function emitSamplingRecorded(
   )
 }
 
+export type BiweeklyImportRecord = {
+  cageId: Id<'cages'>
+  date: string
+  batchCode: string
+  averageBodyWeight: number
+  totalFishCount: number
+  totalWeight: number
+}
+
 export const createMany = mutation({
   args: {
     records: v.array(
@@ -433,8 +442,22 @@ export const createMany = mutation({
   handler: async (ctx, { records }) => {
     const { user } = await requireMember(ctx, { permission: 'production.import' })
     // Bulk import bypasses per-record review (doc 07 V9): production.import.
+    return await insertBiweeklyMany(ctx, user, records)
+  },
+})
+
+/**
+ * Bulk bi-weekly insert shared by createMany and the bulk import (Paper 53).
+ * The caller has checked 'production.import'. A batch code already used is
+ * skipped.
+ */
+export async function insertBiweeklyMany(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  records: BiweeklyImportRecord[],
+): Promise<Id<'biweeklyRecords'>[]> {
     const companyId = await writeCompanyId(user)
-    const ids = []
+    const ids: Id<'biweeklyRecords'>[] = []
     for (const record of records) {
       const cage = await ctx.db.get(record.cageId)
       assertOwns(user, cage, 'Cage')
@@ -463,8 +486,7 @@ export const createMany = mutation({
       newValues: { count: ids.length },
     })
     return ids
-  },
-})
+}
 
 export const update = mutation({
   args: {

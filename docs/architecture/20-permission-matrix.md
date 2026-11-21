@@ -11,6 +11,14 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `actAs.start` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.status` | `allowlisted` | see test | see test | see test | see test | see test |
 | `actAs.stop` | `allowlisted` | see test | see test | see test | see test | see test |
+| `aiGuard.budgetStatus` | `org.settings.manage` | yes | yes | no | no | no |
+| `aiGuard.platformHealth` | `platform` | no | no | no | no | no |
+| `aiGuard.releaseLease` | `account` | self | self | self | self | self |
+| `aiGuard.resetBreaker` | `platform` | no | no | no | no | no |
+| `aiGuard.setBudget` | `org.settings.manage` | yes | yes | no | no | no |
+| `aiGuard.setKeyBudget` | `integrations.manage` | yes | yes | no | no | no |
+| `aiGuard.setTenantOverride` | `platform` | no | no | no | no | no |
+| `aiGuard.tenantBudgets` | `platform` | no | no | no | no | no |
 | `aiReports.generateNow` | `allowlisted` | see test | see test | see test | see test | see test |
 | `aiReports.list` | `reports.view` | yes | yes | yes | yes | yes |
 | `analytics.comparison` | `reports.view` | yes | yes | yes | yes | yes |
@@ -23,6 +31,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `anowa/drafts.draftKeeper` | `production.keepers.manage` | yes | yes | yes | no | no |
 | `anowa/drafts.get` | `ai.use` | yes | yes | yes | no | no |
 | `anowa/drafts.undo` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/stream.cancel` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/stream.get` | `ai.use` | yes | yes | yes | no | no |
+| `anowa/stream.start` | `ai.use` | yes | yes | yes | no | no |
 | `apiKeys.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `apiKeys.overview` | `integrations.manage` | yes | yes | no | no | no |
 | `apiKeys.revoke` | `integrations.manage` | yes | yes | no | no | no |
@@ -75,6 +86,8 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `bot/bindings.myChannels` | `account` | self | self | self | self | self |
 | `bot/bindings.revokeChannel` | `account` | self | self | self | self | self |
 | `bot/bindings.setReminder` | `account` | self | self | self | self | self |
+| `bulkImport.check` | `production.import` | yes | yes | no | no | no |
+| `bulkImport.importRows` | `production.import` | yes | yes | no | no | no |
 | `businessUnits.assignSites` | `org.structure.manage` | yes | yes | no | no | no |
 | `businessUnits.create` | `org.structure.manage` | yes | yes | no | no | no |
 | `businessUnits.list` | `org.view` | yes | yes | yes | yes | yes |
@@ -382,6 +395,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `platform/billing.seedDefaultPlans` | `platform` | no | no | no | no | no |
 | `platform/billing.updatePlan` | `platform` | no | no | no | no | no |
 | `platform/billing.voidInvoice` | `platform` | no | no | no | no | no |
+| `platform/maintenance.clear` | `platform` | no | no | no | no | no |
+| `platform/maintenance.set` | `platform` | no | no | no | no | no |
+| `platform/maintenance.status` | `allowlisted` | see test | see test | see test | see test | see test |
 | `platform/overview.kpis` | `platform` | no | no | no | no | no |
 | `platform/tenants.addNote` | `platform` | no | no | no | no | no |
 | `platform/tenants.changePlan` | `platform` | no | no | no | no | no |

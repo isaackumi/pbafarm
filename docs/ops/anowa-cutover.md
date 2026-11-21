@@ -145,6 +145,10 @@ enabled for (Paystack: GHS, NGN, KES, ZAR, USD; XOF is not offered) stay manual.
 
 **Monitoring**: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`.
 
+**Status page** (optional): `STATUS_PAGE_URL`, an `https://` link to the public
+status page. The maintenance screen's **Status page** button opens it; when it is
+unset (or not an http(s) URL) the button is hidden. See *Maintenance mode* below.
+
 **Rollout flags** (copy the old values; unset = default): `WRITE_PERMISSION_MATRIX`,
 `PRODUCTION_ENGINE_CUTOVER`.
 
@@ -256,11 +260,33 @@ Browser data is unaffected by the domain move only if the origin stays the same.
 cache and outbox: **ask field staff to sync pending entries on the old URL before
 switching.**
 
+## Maintenance mode
+
+For planned work (migrations, a cutover), a platform admin can put the app into
+maintenance from the console: **console.getanowa.com → Maintenance**
+(`/platform/maintenance`).
+
+- Set a start, an end (entered in your own time zone, at most 7 days long) and an
+  optional message (up to 280 characters). **Schedule maintenance** saves it;
+  **End maintenance** clears it at any time. Both need a platform admin with a
+  verified two-step session (`requireConsoleAdmin`) and are written to the
+  platform audit log (`maintenance.set` / `maintenance.clear`, console → Audit).
+- While the window is open, every signed-in member who is not a platform admin
+  sees the Paper 62 maintenance screen instead of the page: "Back by HH:MM GMT"
+  (the window's end), the message or the default "Scheduled upgrade. Keep
+  logging: entries queue offline and sync after.", and **Status page** when
+  `STATUS_PAGE_URL` is set. Platform admins keep working normally.
+- The window opens and closes on each device's clock; nothing needs to be run at
+  the start or end. Public pages (landing, sign-in) are not affected.
+- Data: one row in the `systemMaintenance` table, read by the public query
+  `platform/maintenance:status` (window and status page URL only).
+
 ## Smoke test after cutover
 
 - `https://app.getanowa.com` shows the Anowa landing page; sign in, daily entry saves.
 - Password reset / verification email arrives from the Anowa sender; SMS code arrives.
 - `https://console.getanowa.com/platform` works for a platform admin with MFA.
+- Console → Maintenance: schedule a 5-minute window starting now; a member account sees the maintenance screen, then **End maintenance** brings the app back.
 - WhatsApp and Telegram bots reply ("This is the Anowa assistant").
 - PWA install shows the Anowa icon and name.
 - Billing (if Paystack is on): an owner sees **Pay** on an open invoice on `/billing`; a test-mode payment returns to `/billing` with "Payment received" and the invoice turns Paid.

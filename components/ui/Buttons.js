@@ -8,6 +8,7 @@ import Link from 'next/link'
  * draws the same ring (Paper has no reversed ring).
  * Sizes (inner height; the ring adds 3px):
  *   md  45px, 15/18 — page header actions (7Z-0)
+ *   bar 42px, 15/18 — 53 Bulk import "Download template" and "Import N rows"
  *   cta 40px, 14/18 — empty-state and card actions (62 "Stock a new cage")
  *   row 38px, 14/18 — Approve next to a 41px GhostButton row (06 Stocking)
  *   sm  34px, 13/16 — card footers, dialogs (25 Approvals)
@@ -17,6 +18,7 @@ import Link from 'next/link'
  */
 const SIZE = {
   md: 'h-[45px] px-[22px] gap-2.5 text-[15px] leading-[18px]',
+  bar: 'h-[42px] px-[22px] gap-2.5 text-[15px] leading-[18px]',
   cta: 'py-[11px] px-[22px] gap-2 text-[14px] leading-[18px]',
   row: 'h-[38px] px-5 gap-2 text-[14px] leading-[18px]',
   sm: 'py-[9px] px-[18px] gap-2 text-[13px] leading-4',
@@ -71,7 +73,7 @@ export function GradientButton({
       <span
         className={`flex items-center whitespace-nowrap rounded-pill transition-opacity group-hover:opacity-90 ${inner}`}
       >
-        {Icon && <Icon size={size === 'md' ? 16 : 14} strokeWidth={2} aria-hidden className="shrink-0" />}
+        {Icon && <Icon size={size === 'md' || size === 'bar' ? 16 : 14} strokeWidth={2} aria-hidden className="shrink-0" />}
         {children}
       </span>
     </Base>

@@ -1783,17 +1783,30 @@
     },
     "lineReason": "Line {line}: {reason}",
     "reason": {
-      "missingCage": "no cage name",
-      "unknownCage": "no cage named \"{value}\"",
-      "missingDate": "no date",
+      "missingCage": "No cage name",
+      "unknownCage": "No cage named \"{value}\"",
+      "missingDate": "No date",
       "badDate": "\"{value}\" is not a date (use YYYY-MM-DD)",
       "futureDate": "{value} is in the future",
       "badNumber": "{column} must be a number of 0 or more",
       "badWholeNumber": "{column} must be a whole number of 0 or more",
       "badPositive": "{column} must be more than 0",
-      "unknownFeedType": "no feed type named \"{value}\"",
-      "feedTypeRequired": "feed_type is required when feed_amount is more than 0",
-      "duplicateRow": "repeats an earlier row ({value})"
+      "unknownFeedType": "No feed type named \"{value}\"",
+      "feedTypeRequired": "feed_type is required when feed_kg is more than 0",
+      "duplicateRow": "Repeats an earlier row ({value})",
+      "cageNotAtSite": "Cage {value} not found at {site}",
+      "invalidDate": "Invalid date · use YYYY-MM-DD",
+      "badPositiveWhole": "{column} must be a whole number above 0",
+      "badRange": "{column} must be between {min} and {max}",
+      "alreadyRecorded": "{cage} already has a record on {date}",
+      "notEnoughStock": "Not enough {feed} in store ({have} kg left)",
+      "mortalityOutlier": "Mortality {times}× cage average",
+      "lowDo": "DO below {min} mg/L · will raise an alert",
+      "batchTaken": "Batch {value} is already used",
+      "stockStatus": "Cage is {status}; stocking needs {allowed}",
+      "stockAbwRange": "ABW {abw} g is outside {min}–{max} g",
+      "stockCapacity": "{fish} fish exceeds the cage capacity of {capacity}",
+      "stockDensity": "Density {density} {unit} is above the {max} limit"
     },
     "columnsLine": "Columns: {columns}",
     "dropTitle": "Drop a CSV file here",
@@ -1817,7 +1830,7 @@
       "tabAll": "All {count}",
       "tabOk": "OK {count}",
       "tabErrors": "Errors {count}",
-      "note": "Rows with errors are skipped; fix them in the sheet and upload again",
+      "note": "Errors are skipped · fix in the file and re-upload",
       "empty": "No rows in this view",
       "ok": "OK",
       "error": "Error",
@@ -1829,7 +1842,16 @@
       "colBatch": "Batch",
       "colAbw": "ABW",
       "colFish": "Fish",
-      "colStatus": "Status"
+      "colStatus": "Status",
+      "tabWarnings": "Warnings {count}",
+      "warning": "Warning",
+      "colDo": "DO",
+      "colWeight": "Weight",
+      "colBiomass": "Biomass",
+      "filter": "Filter rows",
+      "range": "{from}–{to} of {total}",
+      "prev": "Previous",
+      "next": "Next"
     },
     "page": {
       "title": "Bulk import",
@@ -1837,7 +1859,42 @@
       "template": "Download template",
       "kindLabel": "What to import",
       "kindDaily": "Daily records",
-      "kindBiweekly": "Bi-weekly sampling"
+      "kindBiweekly": "Biweekly sampling",
+      "kindStocking": "Stocking"
+    },
+    "dropHint": "Drag a CSV here or choose a file · up to {max} rows",
+    "fileMetaFull": {
+      "one": "{count} row · {size} · uploaded {when} · drop another file to replace",
+      "other": "{count} rows · {size} · uploaded {when} · drop another file to replace"
+    },
+    "justNow": "just now",
+    "unreadable": "The file could not be read.",
+    "missingColumns": "Missing columns: {columns}",
+    "tooMany": "{count} rows is over the {max}-row limit. Split the file and upload each part.",
+    "checking": "Checking…",
+    "importing": "Importing…",
+    "done": {
+      "one": "Imported {count} row",
+      "other": "Imported {count} rows"
+    },
+    "doneSkipped": {
+      "one": "{count} row skipped",
+      "other": "{count} rows skipped"
+    },
+    "bar": {
+      "ok": "{count} OK",
+      "warnings": {
+        "one": "{count} with warnings",
+        "other": "{count} with warnings"
+      },
+      "errors": {
+        "one": "{count} error will be skipped",
+        "other": "{count} errors will be skipped"
+      },
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      }
     }
   },
   "scan": {
@@ -4977,7 +5034,8 @@
       "usage": "AI usage",
       "audit": "Audit log",
       "staff": "Staff",
-      "ai": "AI health"
+      "ai": "AI health",
+      "maintenance": "Maintenance"
     },
     "status": {
       "active": "Active",
@@ -5274,6 +5332,27 @@
       "actAsStarted": "Support access started; open the tenant app signed in as yourself",
       "actAsReason": "Reason (ticket or request)",
       "minutes": "Minutes"
+    },
+    "maintenance": {
+      "formTitle": "Maintenance window",
+      "statusNone": "Nothing scheduled. Members use the app as normal.",
+      "statusScheduled": "Scheduled {start} to {end} GMT. Members will see the maintenance screen then.",
+      "statusActive": "Active now, until {end} GMT ({start} start). Members see the maintenance screen; platform admins keep working.",
+      "startsAt": "Starts (your time)",
+      "endsAt": "Ends (your time)",
+      "message": "Message (optional)",
+      "messageHint": "{count}/{max}. Replaces the default text on the maintenance screen.",
+      "statusPageSet": "\"Status page\" links to {url} (STATUS_PAGE_URL).",
+      "statusPageUnset": "STATUS_PAGE_URL is not set, so the \"Status page\" button is hidden.",
+      "schedule": "Schedule maintenance",
+      "update": "Update window",
+      "clear": "End maintenance",
+      "clearConfirm": "End or cancel this maintenance window now?",
+      "saved": "Maintenance window saved",
+      "cleared": "Maintenance window cleared",
+      "saveFailed": "Could not save the maintenance window",
+      "preview": "Preview",
+      "previewHint": "What members see while the window is open."
     }
   },
   "suspended": {
@@ -8436,6 +8515,18 @@
       "waiting": "waiting to send",
       "invalid": "Feed and deaths must be 0 or more.",
       "needFeedType": "Choose the feed type in the full daily entry the first time."
+    }
+  },
+  "systemStates": {
+    "emptyCages": {
+      "title": "No cages yet",
+      "body": "Stock your first cage to start tracking feed, growth and costs.",
+      "action": "Stock a new cage"
+    },
+    "maintenance": {
+      "backBy": "Back by {time} GMT",
+      "body": "Scheduled upgrade. Keep logging: entries queue offline and sync after.",
+      "statusPage": "Status page"
     }
   }
 }
