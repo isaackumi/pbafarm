@@ -3080,6 +3080,18 @@ const schema = defineSchema({
     .index('by_companyId_and_userId_and_createdAt', ['companyId', 'userId', 'createdAt'])
     .index('by_userId', ['userId'])
     .index('by_createdAt', ['createdAt']),
+
+  /** Cages, batches and pages a member opened recently (search palette "Recent"); ≤ 20 per member and company. */
+  navRecents: defineTable({
+    userId: v.id('users'),
+    companyId: v.id('companies'),
+    kind: v.union(v.literal('cage'), v.literal('batch'), v.literal('page')),
+    /** Document id (cage, batch) or page path. */
+    key: v.string(),
+    openedAt: v.number(),
+  })
+    .index('by_userId_and_companyId_and_openedAt', ['userId', 'companyId', 'openedAt'])
+    .index('by_userId_and_companyId_and_key', ['userId', 'companyId', 'key']),
 })
 
 export default schema

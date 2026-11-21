@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   Building2,
   Check,
@@ -22,17 +22,14 @@ import { useNotifications } from '../contexts/NotificationContext'
 import { useTour } from './TourProvider'
 import { useOutbox } from '../hooks/useOutbox'
 import { api } from '../convex/_generated/api'
-import { usePermissions } from '../hooks/usePermission'
-import { useTerm } from '../hooks/useTerm'
-import { navKey } from '../lib/i18n'
-import { NAV_ITEMS } from '../lib/navigation'
 import { Avatar } from './ui/Avatar'
-import { SearchField } from './ui/SearchField'
 import { Toggle } from './ui/Toggle'
 import LanguageSwitcher from './LanguageSwitcher'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { AnowaMark } from './brand/AnowaLogo'
-import { BellIcon } from '../lib/navIcons'
+import { BellIcon, SearchIcon } from '../lib/navIcons'
+import CommandPalette from './nav/CommandPalette'
+import { recentFromRoute } from '../lib/commandPalette'
 import { useToast } from './Toast'
 import { useActiveOrganization } from '../lib/useActiveOrganization'
 
@@ -78,115 +75,63 @@ function OrganizationMenu({ onDone }) {
 }
 
 /**
- * Top-bar search (Paper DC-0): jumps to any page the member may open.
- * ⌘K / Ctrl+K focuses it; arrows + Enter pick a result.
+ * Top-bar search (Paper 71 TSP-1): a 320px field that opens the search
+ * palette (Paper 72a / 72b, components/nav/CommandPalette). ⌘K / Ctrl+K opens
+ * it from anywhere. Each visit to a cage, batch or menu page is remembered
+ * for the palette's "Recent" list.
  */
 function NavSearch() {
   const router = useRouter()
   const t = useT()
-  const term = useTerm()
-  const { can } = usePermissions()
-  const inputRef = useRef(null)
-  const [query, setQuery] = useState('')
+  const { canUseApp } = useAuth()
   const [open, setOpen] = useState(false)
-  const [cursor, setCursor] = useState(0)
   const [isMac, setIsMac] = useState(true)
+  const recordRecent = useMutation(api.navSearch.recordRecent)
 
   useEffect(() => {
     setIsMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || ''))
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        inputRef.current?.focus()
-        setOpen(true)
+        setOpen((o) => !o)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return []
-    const seen = new Set()
-    return NAV_ITEMS.filter((item) => can(item.permission))
-      .map((item) => ({ ...item, label: term.text(t.or(item.labelKey || navKey(item.path), item.title)) }))
-      .filter((item) => {
-        if (seen.has(item.path)) return false
-        seen.add(item.path)
-        return item.label.toLowerCase().includes(q) || item.title.toLowerCase().includes(q)
-      })
-      .slice(0, 8)
-  }, [query, can, t, term])
-
-  const go = (item) => {
-    setOpen(false)
-    setQuery('')
-    inputRef.current?.blur()
-    router.push(item.path)
-  }
+  const visit = router.isReady ? recentFromRoute(router.pathname, router.query) : null
+  const visitKey = visit ? `${visit.kind}:${visit.key}` : null
+  useEffect(() => {
+    if (!visitKey || !canUseApp) return
+    const [kind, ...rest] = visitKey.split(':')
+    recordRecent({ kind, key: rest.join(':') }).catch(() => {})
+  }, [visitKey, canUseApp, recordRecent])
 
   return (
-    <div className="relative hidden md:block w-[320px]" id="nav-search">
-      <SearchField
-        ref={inputRef}
-        value={query}
-        placeholder="Search pages"
-        hint={isMac ? '⌘K' : 'Ctrl K'}
-        aria-label="Search pages"
-        aria-expanded={open && results.length > 0}
-        aria-controls="nav-search-results"
-        role="combobox"
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 120)}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          setCursor(0)
-          setOpen(true)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            setCursor((c) => Math.min(c + 1, results.length - 1))
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            setCursor((c) => Math.max(c - 1, 0))
-          } else if (e.key === 'Enter' && results[cursor]) {
-            e.preventDefault()
-            go(results[cursor])
-          } else if (e.key === 'Escape') {
-            setOpen(false)
-            inputRef.current?.blur()
-          }
-        }}
-      />
-      {open && results.length > 0 && (
-        <ul
-          id="nav-search-results"
-          role="listbox"
-          className="absolute left-0 right-0 mt-2 rounded-[14px] border border-line bg-surface py-1 shadow-[var(--shadow-md)] z-50"
-        >
-          {results.map((item, i) => {
-            const Icon = item.icon
-            return (
-              <li key={item.path} role="option" aria-selected={i === cursor}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => go(item)}
-                  className={`flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] leading-4 ${
-                    i === cursor ? 'bg-surface-2 text-text' : 'text-muted hover:bg-surface-2 hover:text-text'
-                  }`}
-                >
-                  {Icon && <Icon size={14} className="shrink-0" aria-hidden />}
-                  <span className="truncate">{item.label}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
+    <>
+      <button
+        type="button"
+        id="nav-search"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className="hidden h-9 w-[320px] items-center gap-2.5 rounded-pill border border-line bg-surface px-3.5 text-left hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan md:flex"
+      >
+        <SearchIcon size={14} strokeWidth={2} className="shrink-0 text-faint" aria-hidden />
+        <span className="min-w-0 grow truncate text-[13px] leading-4 text-faint">{t('navSearch.topbar')}</span>
+        <kbd className="shrink-0 font-sans text-[11px] leading-[14px] text-muted">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('navSearch.topbar')}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-pill text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan md:hidden"
+      >
+        <SearchIcon size={20} strokeWidth={1.8} aria-hidden />
+      </button>
+      <CommandPalette open={open} onClose={() => setOpen(false)} />
+    </>
   )
 }
 

@@ -8,7 +8,7 @@ import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 import { navKey } from '../lib/i18n'
 import { errorMessage } from '../lib/errorMessage'
-import { MAX_MOBILE_SHORTCUTS, MENU_SECTIONS, NAV_ITEMS, resolveShortcuts } from '../lib/navigation'
+import { EXTRA_DESTINATIONS, MAX_MOBILE_SHORTCUTS, MENU_SECTIONS, NAV_ITEMS, canOpenItem, resolveShortcuts } from '../lib/navigation'
 
 /** Choose the phone tab bar places (UX-004), saved on the account (CUSTOM-007). */
 export default function MobileShortcutsCard() {
@@ -36,7 +36,10 @@ export default function MobileShortcutsCard() {
     .map(([key, section]) => ({
       key,
       title: t.or(`nav.section.${key}`, section.title),
-      items: section.items.filter((item) => can(item.permission) && !chosen.includes(item.path)),
+      // Pages that left the sidebar (Paper 71) stay pinnable.
+      items: [...section.items, ...EXTRA_DESTINATIONS.filter((e) => e.section === key)].filter(
+        (item) => canOpenItem(item, can) && !chosen.includes(item.path),
+      ),
     }))
     .filter((group) => group.items.length > 0)
 

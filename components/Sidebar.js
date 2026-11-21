@@ -14,7 +14,8 @@ import { usePermissions } from '../hooks/usePermission'
 import { useTerm } from '../hooks/useTerm'
 import { useT } from '../lib/i18n/context'
 import { navKey } from '../lib/i18n'
-import { MENU_SECTIONS } from '../lib/navigation'
+import { MENU_SECTIONS, canOpenItem } from '../lib/navigation'
+import { legacyTabTarget } from '../lib/tabGroups'
 import { ChevronDownIcon, ChevronRightIcon } from '../lib/navIcons'
 import { routePermission } from '../lib/routePermissions'
 import { api } from '../convex/_generated/api'
@@ -72,6 +73,61 @@ function WorkspaceCard({ feedCover, canStock, showFarm }) {
   )
 }
 
+// Paper 71 (TRI-1): pages under 11px uppercase labels, 42px in, 26px rows,
+// 4px between groups; the current page sits on a surface-2 pill.
+const GROUP_LABEL = 'pt-1 pb-[2px] text-[11px] uppercase leading-[14px] tracking-[0.06em] text-faint'
+const SUB_ROW =
+  'flex h-[26px] shrink-0 items-center justify-between gap-2 rounded-pill text-[13px] leading-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
+
+/** Items of an open section, under group labels when it has two or more groups. */
+function SectionGroups({ section, sectionKey, isActive, label, groupLabel, counts }) {
+  const groups = section.groups?.length
+    ? section.groups
+        .map((group) => ({ ...group, items: section.items.filter((item) => item.group === group.key) }))
+        .filter((group) => group.items.length > 0)
+    : [{ key: sectionKey, items: section.items }]
+  const labelled = groups.length >= 2
+  return (
+    <div className="flex flex-col gap-1 pb-[2px] pl-[42px]">
+      {groups.map((group) => (
+        <ul key={group.key} className="flex flex-col" aria-label={labelled ? groupLabel(group) : undefined}>
+          {labelled && (
+            <li aria-hidden className={GROUP_LABEL}>
+              {groupLabel(group)}
+            </li>
+          )}
+          {group.items.map((item) => {
+            const active = isActive(item.path)
+            const count = item.count ? counts?.[item.count] : null
+            return (
+              <li key={item.path}>
+                <Link
+                  href={item.path}
+                  data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
+                  aria-current={active ? 'page' : undefined}
+                  className={`${SUB_ROW} ${
+                    active ? '-ml-[10px] bg-surface-2 px-[10px] font-medium text-text' : 'text-muted hover:text-text'
+                  }`}
+                >
+                  <span className="truncate">{label(item)}</span>
+                  {count > 0 &&
+                    (item.count === 'openAlerts' ? (
+                      <span className="shrink-0 rounded-pill bg-[color-mix(in_oklab,var(--alert)_12%,transparent)] px-[6px] py-px text-[11px] font-normal leading-[14px] text-alert">
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[11px] font-normal leading-[14px] text-faint">{count > 99 ? '99+' : count}</span>
+                    ))}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      ))}
+    </div>
+  )
+}
+
 const ROW =
   'flex h-10 w-full shrink-0 items-center gap-3 rounded-pill px-3.5 text-left text-[14px] leading-[18px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan'
 const ROW_ACTIVE = 'bg-button text-button-text font-medium'
@@ -80,10 +136,10 @@ const ROW_IDLE = 'text-text hover:bg-surface-2'
 const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }) => {
   const { user, canUseApp } = useAuth()
   const router = useRouter()
-  // Production stays open like the Paper shell; the section holding the
-  // current page also opens on navigation (UX-004).
+  // One section open at a time (Paper 71): Production by default, and the
+  // section holding the current page opens on navigation (UX-004).
   // Each page renders its own Layout, so this component remounts on every
-  // navigation: open groups and the scroll offset come from lib/sidebarState.
+  // navigation: the open section and the scroll offset come from lib/sidebarState.
   const [expandedSections, setExpandedSections] = useState(() => getExpandedSections({ production: true }))
   const asideRef = useRef(null)
   const t = useT()
@@ -94,6 +150,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   // Menu follows the member's permissions (PERM-003), not the legacy role.
   const { can } = usePermissions()
   const openTasks = useQuery(api.tasks.openCount, canUseApp ? {} : 'skip')
+  // Paper 71: red = open alerts, grey = approvals waiting for this member.
+  const navCounts = useOptionalQuery(api.navSearch.navCounts, canUseApp ? {} : 'skip')
   // Feed cover (Paper 7Z-0): stock vs the last 30 days' average use, for the
   // active site. Optional: the line is simply absent if it can't load.
   const { locationArgs } = useLocation()
@@ -121,7 +179,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
           ...section,
           items: section.items.filter((item) => {
             if (item.superAdminOnly && !isSuperAdmin) return false
-            return can(item.permission)
+            return canOpenItem(item, can)
           }),
         },
       ])
@@ -129,17 +187,20 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
     return Object.fromEntries(filtered)
   }, [can, isSuperAdmin])
 
+  // An old route of a joined page (Paper 71b) counts as its tabbed page.
+  const currentPath = legacyTabTarget(router.pathname, router.query)?.pathname || router.pathname
+
   useEffect(() => {
-    const path = router.pathname
+    const path = currentPath
     const sectionForPath = Object.entries(MENU_SECTIONS).find(([, section]) =>
       section.items.some(
         (item) => path === item.path || path.startsWith(`${item.path}/`)
       )
     )
-    if (sectionForPath) {
-      setExpandedSections((prev) => ({ ...prev, [sectionForPath[0]]: true }))
+    if (sectionForPath && !sectionForPath[1].direct) {
+      setExpandedSections({ [sectionForPath[0]]: true })
     }
-  }, [router.pathname])
+  }, [currentPath])
 
   useEffect(() => {
     rememberExpanded(expandedSections)
@@ -178,10 +239,8 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
 
   const toggleSection = (section) => {
     if (collapsed) return
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
+    // Opening a section closes the one that was open.
+    setExpandedSections((prev) => (prev[section] ? {} : { [section]: true }))
   }
 
   const allNavPaths = useMemo(
@@ -193,7 +252,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
   )
 
   const isActive = (path) => {
-    const current = router.pathname
+    const current = currentPath
     if (current === path) return true
     // Nested routes (e.g. /cages/[id], /cages/analytics/growth)
     if (!current.startsWith(`${path}/`)) return false
@@ -316,7 +375,7 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
                 onClick={() => {
                   if (collapsed) {
                     onToggle?.()
-                    setExpandedSections((prev) => ({ ...prev, [key]: true }))
+                    setExpandedSections({ [key]: true })
                     return
                   }
                   toggleSection(key)
@@ -345,25 +404,14 @@ const Sidebar = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClos
               </button>
 
               {open && (
-                <ul className="flex flex-col pl-[42px]">
-                  {section.items.map((item) => {
-                    const active = isActive(item.path)
-                    return (
-                      <li key={item.path}>
-                        <Link
-                          href={item.path}
-                          data-tour={item.tourId ? `nav-${item.tourId}` : undefined}
-                          aria-current={active ? 'page' : undefined}
-                          className={`-ml-3 flex h-[34px] items-center rounded-pill px-3 text-[13px] leading-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan ${
-                            active ? 'bg-surface-2 font-medium text-text' : 'text-muted hover:text-text'
-                          }`}
-                        >
-                          <span className="truncate">{label(item)}</span>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <SectionGroups
+                  section={section}
+                  sectionKey={key}
+                  isActive={isActive}
+                  label={label}
+                  groupLabel={(group) => t.or(`navSearch.group.${group.key}`, group.title)}
+                  counts={navCounts}
+                />
               )}
             </div>
           )

@@ -44,6 +44,11 @@ const HELPER_PERMISSIONS: Record<string, string> = {
 /** Functions without an organization guard, and why. */
 const ALLOWLIST: Record<string, string> = {
   'users.current': 'the signed-in account itself; must answer even when access is refused',
+  'navSearch.navCounts': 'sidebar badges; optionalMember, then can(production.view) / can(production.stocking.approve) per count (null otherwise)',
+  'navSearch.quickHints': 'search hints; optionalMember, then can(production.daily.record) / can(production.sampling.record) per hint (null otherwise)',
+  'navSearch.palette': 'search; optionalMember, then can(production.view) for cages/batches/lots and can(org.members.manage) for people, site-scoped',
+  'navSearch.recents': 'own recent visits; optionalMember, each entry re-checked with can(production.view) and site scope',
+  'navSearch.recordRecent': 'own recent visits; requireUser + memberContext (active member), ids checked against the caller company',
   'memberships.inviteInfo': 'public by design: the 64-hex invite token is the credential',
   'userAccounts.changePassword': 'own password; replaces a temporary password before requireUser passes',
   'mfa.startChallenge': 'own two-step code; guarded by requireUser({ allowPendingMfa }) in internal.mfa',

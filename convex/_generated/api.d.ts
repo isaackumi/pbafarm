@@ -245,6 +245,7 @@ import type * as messaging_validators from "../messaging/validators.js";
 import type * as mfa from "../mfa.js";
 import type * as mfaTotp from "../mfaTotp.js";
 import type * as migrations from "../migrations.js";
+import type * as navSearch from "../navSearch.js";
 import type * as notificationDispatch from "../notificationDispatch.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as notifications from "../notifications.js";
@@ -536,6 +537,7 @@ declare const fullApi: ApiFromModules<{
   mfa: typeof mfa;
   mfaTotp: typeof mfaTotp;
   migrations: typeof migrations;
+  navSearch: typeof navSearch;
   notificationDispatch: typeof notificationDispatch;
   notificationPreferences: typeof notificationPreferences;
   notifications: typeof notifications;

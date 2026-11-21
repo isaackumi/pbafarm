@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import { useMutation, useQuery } from 'convex/react'
 import { Pencil } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
@@ -120,6 +121,12 @@ function Overview() {
   const thresholds = useQuery(api.waterQuality.thresholds, user ? {} : 'skip')
   const [tab, setTab] = useState('all')
   const [search, setSearch] = useState('')
+  // Search's "Open water history for <cage>" links here as ?q=<cage name>.
+  const router = useRouter()
+  const presetQ = typeof router.query.q === 'string' ? router.query.q : ''
+  useEffect(() => {
+    if (presetQ) setSearch(presetQ)
+  }, [presetQ])
   const rows = useMemo(() => waterRows(units, latest, thresholds?.byUnitType), [units, latest, thresholds])
   const summary = useMemo(() => waterSummary(rows), [rows])
   const loaded = units !== undefined && latest !== undefined
