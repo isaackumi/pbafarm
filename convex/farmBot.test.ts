@@ -5,6 +5,7 @@ import agentTest from '@convex-dev/agent/test'
 import { mockModel } from '@convex-dev/agent'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import schema from './schema'
+import { rateLimiter } from './lib/rateLimits'
 import { api, internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { hmacSha256HexBytes } from './bot/verify'
@@ -327,14 +328,38 @@ describe('bindings', () => {
       for (let i = 0; i < 10; i += 1) await tgPost(s, chat, wrong)
     }
     await s.t.finishAllScheduledFunctions(vi.runAllTimers)
-    // The right code is now refused too until the window passes.
-    await tgSay(s, 300, code)
+    // The right code is now refused too until the window passes, with a
+    // reply that points to the link instead of "bad code".
+    expect((await tgSay(s, 300, code)).join('\n')).toMatch(/paused/i)
     expect((await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)).toHaveLength(0)
     // The 64-hex deep link is not affected.
     const token = /\?start=([0-9a-f]{64})$/.exec(link ?? '')?.[1]
     await tgSay(s, 301, `/start ${token}`)
     const b = (await rows(s, 'channelBindings')).find((x) => x.provider === 'telegram' && !x.revokedAt)
     expect(b).toMatchObject({ address: '301', userId: s.staff })
+  })
+
+  test('a linked Telegram chat that pastes a fresh bare code re-links (the code never reaches the agent)', async () => {
+    const s = await setup()
+    const first = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    expect((await tgSay(s, 110, first.code)).join('\n')).toMatch(/Connected, Ama/)
+    const second = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    expect((await tgSay(s, 110, second.code)).join('\n')).toMatch(/Connected, Ama/)
+    const codes = await s.t.run(async (ctx) => await ctx.db.query('channelConnectCodes').collect())
+    expect(codes.every((c) => c.usedAt)).toBe(true)
+    const live = (await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)
+    expect(live.map((x) => x.address)).toEqual(['110'])
+  })
+
+  test('wrong typed codes are capped per chat per day', async () => {
+    const s = await setup()
+    const { code } = await s.as(s.staff).mutation(api.bot.bindings.createConnectCode, { provider: 'telegram' })
+    // This chat has already used its 20 wrong guesses for the day.
+    await s.t.run(async (ctx) => {
+      for (let i = 0; i < 20; i += 1) await rateLimiter.limit(ctx, 'botLinkCodeFailPerChatDaily', { key: 'telegram:400' })
+    })
+    expect((await tgSay(s, 400, code)).join('\n')).toMatch(/paused/i)
+    expect((await rows(s, 'channelBindings')).filter((x) => x.provider === 'telegram' && !x.revokedAt)).toHaveLength(0)
   })
 
   test('revoked binding is refused, and a phone change revokes it', async () => {

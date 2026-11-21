@@ -84,6 +84,8 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
    * spent, typed codes wait for the next window; the deep link still works.
    */
   botLinkCodeFailGlobal: { kind: 'fixed window', rate: 60, period: HOUR },
+  /** Wrong typed Telegram codes per chat per day, key = telegram:<chat id>: rotating accounts costs more. */
+  botLinkCodeFailPerChatDaily: { kind: 'fixed window', rate: 20, period: 24 * HOUR },
 })
 
 /** Six-digit codes: lifetime, wrong tries allowed, and resend cooldown. */

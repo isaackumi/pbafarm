@@ -121,6 +121,18 @@ export function linkAttempt(provider: 'whatsapp' | 'telegram', msgText: string, 
   return short ? { kind: 'short', value: short } : null
 }
 
+async function liveBareShortCode(ctx: MutationCtx, msgText: string): Promise<LinkAttempt | null> {
+  const short = parseShortCode(msgText)
+  if (!short) return null
+  const now = Date.now()
+  const hash = await shortCodeHash(short)
+  const rows = await ctx.db
+    .query('channelConnectCodes')
+    .withIndex('by_provider_and_shortCodeHash', (q) => q.eq('provider', 'telegram').eq('shortCodeHash', hash))
+    .take(5)
+  return rows.some((c) => !c.usedAt && c.expiresAt > now) ? { kind: 'short', value: short } : null
+}
+
 function text(msg: string): ChatMessageValue {
   return { kind: 'text', text: msg }
 }
@@ -195,8 +207,14 @@ async function link(
   const now = Date.now()
   let locale: BotLocale = 'en'
   const isShort = attempt.kind === 'short'
-  if (isShort && !(await rateLimiter.check(ctx, 'botLinkCodeFailGlobal', { key: 'all' })).ok) {
-    return { type: 'reply', ...base, locale, messages: [text(t(locale).linkBadCode)] }
+  const chatKey = `${inbound.provider}:${inbound.address}`
+  if (
+    isShort &&
+    (!(await rateLimiter.check(ctx, 'botLinkCodeFailGlobal', { key: 'all' })).ok ||
+      !(await rateLimiter.check(ctx, 'botLinkCodeFailPerChatDaily', { key: chatKey })).ok)
+  ) {
+    // Paused, not "bad code": a real user learns to use the link instead.
+    return { type: 'reply', ...base, locale, messages: [text(t(locale).linkCodePaused)] }
   }
   const hash = isShort ? await shortCodeHash(attempt.value) : await codeHash(inbound.provider, attempt.value)
   const rows = isShort
@@ -222,7 +240,10 @@ async function link(
   }
   const code0 = candidates.length === 1 ? candidates[0] : null
   if (!code0) {
-    if (isShort) await rateLimiter.limit(ctx, 'botLinkCodeFailGlobal', { key: 'all' })
+    if (isShort) {
+      await rateLimiter.limit(ctx, 'botLinkCodeFailGlobal', { key: 'all' })
+      await rateLimiter.limit(ctx, 'botLinkCodeFailPerChatDaily', { key: chatKey })
+    }
     return { type: 'reply', ...base, locale, messages: [text(t(locale).linkBadCode)] }
   }
   await ctx.db.patch(code0._id, { usedAt: now })
@@ -299,7 +320,14 @@ export const route = internalMutation({
 
     const binding = await liveBinding(ctx, inbound.provider, inbound.address)
     // Link attempts come first: they replace any older binding of this chat.
-    const linkCode = inbound.kind === 'text' ? linkAttempt(inbound.provider, msgText, !!binding) : null
+    let linkCode = inbound.kind === 'text' ? linkAttempt(inbound.provider, msgText, !!binding) : null
+    // A linked chat may paste a fresh bare code (re-link or switch farm, as
+    // /account says): link only if a live code matches, so the code never
+    // reaches the agent or its transcript. No match: an ordinary message,
+    // and no failure is counted.
+    if (!linkCode && binding && inbound.kind === 'text' && inbound.provider === 'telegram') {
+      linkCode = await liveBareShortCode(ctx, msgText)
+    }
     if (!binding || linkCode) {
       // Unbound (or linking): strict limits, onboarding text only, no LLM.
       if (
