@@ -2,7 +2,7 @@
 
 Paper is the source of truth for the Anowa UI. Every artboard in scope is tracked in [paper-ledger.json](./paper-ledger.json), shown as a table in [paper-ledger.md](./paper-ledger.md) (generated, don't edit by hand).
 
-Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA`. Pages in scope: Anowa app · Desktop, Remaining screens, Light theme, Cage keepers (proposed), Console, bot & AI, and Anowa · Emails.
+Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA`. Pages in scope: Anowa app · Desktop, Remaining screens, Light theme, Cage keepers (proposed), Telegram (proposed), Console, bot & AI, and Anowa · Emails.
 
 ## Rules
 
