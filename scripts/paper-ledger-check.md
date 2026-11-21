@@ -14,6 +14,7 @@ Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA`. Call `get_basic_info({fileId, pageId})`
 | Anowa app · Remaining screens | `p-6-0` |
 | Anowa app · Light theme | `p-3-0` |
 | Anowa app · Cage keepers (proposed) | `p-D-2` |
+| Anowa app · Telegram (proposed) | `p-G-0` |
 | Anowa app · Console, bot & AI | `p-4-0` |
 | Anowa · Emails | `p-E-0` |
 
