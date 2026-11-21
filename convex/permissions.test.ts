@@ -38,6 +38,7 @@ const HELPER_PERMISSIONS: Record<string, string> = {
   'requireChatOwner(ctx': 'ai.use',
   'loadAnowaDraft(ctx': 'ai.use',
   'requireKeeperManager(ctx': 'production.keepers.manage',
+  'importMember(ctx': 'production.import',
 }
 
 /** Functions without an organization guard, and why. */
@@ -85,6 +86,7 @@ const ALLOWLIST: Record<string, string> = {
   'mfaTotp.redeemRecoveryCode': 'own recovery code; requireUser(OWN = { allowPendingMfa, ignoreActAs })',
   'mfaTotp.regenerateRecoveryCodes': 'own recovery codes; requireUser({ ignoreActAs })',
   'mfaTotp.disable': 'own authenticator app; requireUser({ ignoreActAs })',
+  'platform/maintenance.status': 'public by design: the maintenance window and status page link, read before sign-in; set/clear need requireConsoleAdmin',
 }
 
 type Guard = string // a permission, 'account', 'platform' or 'allowlisted'

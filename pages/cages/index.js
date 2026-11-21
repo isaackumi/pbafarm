@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
-import { Pencil, Archive } from 'lucide-react'
+import { Pencil, Archive, Plus } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Layout from '../../components/Layout'
-import { LoadingState, Pill, Table } from '../../components/ui'
+import { EmptyState, GradientButton, LoadingState, Pill, Table } from '../../components/ui'
 import CageManageModals from '../../components/CageManageModals'
 import UnitViewSwitch from '../../components/units/UnitViewSwitch'
 import { UnitsHeaderActions } from '../../components/units/UnitsHeader'
@@ -199,6 +199,28 @@ function CagesManagement({ cages }) {
     { value: 'empty', label: t('unitsUi.status.empty') },
     { value: 'harvested', label: t('unitsUi.status.harvested') },
   ]
+
+  // Paper 62 "Empty · /cages": no cages at all, not just none matching a filter.
+  if (cages.length === 0) {
+    return (
+      <div data-tour="page-cages" className="flex flex-col gap-7">
+        <UnitViewSwitch className="self-start" />
+        <section className="flex min-h-[340px] flex-col items-center justify-center rounded-card border border-line bg-surface p-8 shadow-[var(--shadow-card)]">
+          <EmptyState
+            title={t('systemStates.emptyCages.title')}
+            description={t('systemStates.emptyCages.body')}
+            action={
+              canEdit ? (
+                <GradientButton href="/create-cage" ring="sky" size="cta" icon={Plus}>
+                  {t('systemStates.emptyCages.action')}
+                </GradientButton>
+              ) : null
+            }
+          />
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div data-tour="page-cages" className="flex flex-col gap-7">

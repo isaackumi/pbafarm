@@ -19,6 +19,7 @@ const NAV = [
   { href: '/platform/usage', key: 'usage' },
   { href: '/platform/ai', key: 'ai' },
   { href: '/platform/audit', key: 'audit' },
+  { href: '/platform/maintenance', key: 'maintenance' },
   { href: '/platform/admins', key: 'staff' },
 ]
 

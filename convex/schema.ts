@@ -255,6 +255,19 @@ const schema = defineSchema({
   ...keeperTables,
   ...projectTables,
 
+  /**
+   * Platform maintenance window (Paper 62): one row, set from the console.
+   * While now is in [startsAt, endsAt) members see the maintenance screen;
+   * platform admins keep working.
+   */
+  systemMaintenance: defineTable({
+    startsAt: v.number(),
+    endsAt: v.number(),
+    message: v.optional(v.string()),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  }),
+
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),

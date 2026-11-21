@@ -356,6 +356,38 @@ export function densityExcess(
   return density > b.max ? { density, max: b.max, unit: b.unit } : null
 }
 
+export type StockingProblem =
+  | { code: 'stockStatus'; params: { status: string; allowed: string } }
+  | { code: 'stockAbwRange'; params: { abw: number; min: number; max: number } }
+  | { code: 'stockCapacity'; params: { fish: number; capacity: number } }
+  | { code: 'stockDensity'; params: { density: string; unit: string; max: number } }
+
+/** The first stocking rule a request breaks, or null (bulk import shows it per row). */
+export function stockingProblem(opts: {
+  cage: any
+  fishCount: number
+  abw: number
+  rules: EffectiveSettings['stockingRules']
+  farmRules: EffectiveSettings['farmRules']
+}): StockingProblem | null {
+  const { cage, fishCount, abw, rules, farmRules } = opts
+  const statuses = rules.allowStockOnlyEmptyStatuses || []
+  if (cage?.status && statuses.length && !statuses.includes(cage.status)) {
+    return { code: 'stockStatus', params: { status: cage.status, allowed: statuses.join(', ') } }
+  }
+  if (abw < rules.minInitialAbwG || abw > rules.maxInitialAbwG) {
+    return { code: 'stockAbwRange', params: { abw, min: rules.minInitialAbwG, max: rules.maxInitialAbwG } }
+  }
+  if (rules.enforceCageCapacity && cage?.capacity != null && fishCount > cage.capacity) {
+    return { code: 'stockCapacity', params: { fish: fishCount, capacity: cage.capacity } }
+  }
+  const over = densityExcess(cage, fishCount, farmRules)
+  if (over) {
+    return { code: 'stockDensity', params: { density: over.density.toFixed(1), unit: over.unit, max: over.max } }
+  }
+  return null
+}
+
 export function assertStockingAllowed(opts: {
   cage: any
   fishCount: number
@@ -363,28 +395,21 @@ export function assertStockingAllowed(opts: {
   rules: EffectiveSettings['stockingRules']
   farmRules: EffectiveSettings['farmRules']
 }) {
-  const { cage, fishCount, abw, rules, farmRules } = opts
-  const statuses = rules.allowStockOnlyEmptyStatuses || []
-  if (cage?.status && statuses.length && !statuses.includes(cage.status)) {
-    throw new Error(
-      `Cage status "${cage.status}" cannot be stocked. Allowed: ${statuses.join(', ')}`,
-    )
-  }
-  if (abw < rules.minInitialAbwG || abw > rules.maxInitialAbwG) {
-    throw new Error(
-      `Initial ABW must be between ${rules.minInitialAbwG}g and ${rules.maxInitialAbwG}g (got ${abw}g). Use grams, not kg — or widen the range in Company Settings → Stocking rules.`,
-    )
-  }
-  if (rules.enforceCageCapacity && cage?.capacity != null && fishCount > cage.capacity) {
-    throw new Error(
-      `Fish count ${fishCount} exceeds cage capacity ${cage.capacity}`,
-    )
-  }
-  const over = densityExcess(cage, fishCount, farmRules)
-  if (over) {
-    throw new Error(
-      `Density ${over.density.toFixed(1)} ${over.unit} exceeds max ${over.max}`,
-    )
+  const problem = stockingProblem(opts)
+  if (!problem) return
+  switch (problem.code) {
+    case 'stockStatus':
+      throw new Error(
+        `Cage status "${problem.params.status}" cannot be stocked. Allowed: ${problem.params.allowed}`,
+      )
+    case 'stockAbwRange':
+      throw new Error(
+        `Initial ABW must be between ${problem.params.min}g and ${problem.params.max}g (got ${problem.params.abw}g). Use grams, not kg — or widen the range in Company Settings → Stocking rules.`,
+      )
+    case 'stockCapacity':
+      throw new Error(`Fish count ${problem.params.fish} exceeds cage capacity ${problem.params.capacity}`)
+    case 'stockDensity':
+      throw new Error(`Density ${problem.params.density} ${problem.params.unit} exceeds max ${problem.params.max}`)
   }
 }
 

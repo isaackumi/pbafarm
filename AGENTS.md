@@ -12,6 +12,14 @@ Convex agent skills for common tasks can be installed by running
 
 <!-- convex-ai-end -->
 
+## Paper designs
+
+Paper is the source of truth for the UI; every app artboard is tracked in `docs/design/paper-ledger.json`. Follow [docs/design/README.md](docs/design/README.md):
+
+- Run the ledger check (`scripts/paper-ledger-check.md`) before UI work and at the end of each UI PR; rebuild any CHANGED artboard you touch.
+- Every UI PR names the artboard ids it implements and updates their ledger entries (`status`, `notes`, `verifiedAt`), then runs `node scripts/paper-ledger.mjs --md`.
+- `built` only after a browser comparison with the artboard's screenshot and JSX at its width and theme. Never from an agent report alone; when unsure, `partial` with what's missing.
+
 ## Security audits (security-audit skill)
 
 The Cloudflare `security-audit` skill is installed in `.agents/skills/security-audit` (symlinked into `.claude/skills`).
