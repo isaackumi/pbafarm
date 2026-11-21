@@ -715,13 +715,17 @@
       "route": "/grading",
       "implementation": [
         "pages/grading.js",
-        "components/GradingForm.js"
+        "components/GradingForm.js",
+        "components/ui/KpiStrip.js",
+        "convex/grading.ts",
+        "convex/lib/gradingMath.ts",
+        "convex/batches.ts"
       ],
       "status": "partial",
       "jsxHash": "8c7d5063ba6e442283d0f65f36037b3aa735144314a12fb8107bc3177b389e3a",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Has greeting+Confirm, KPI strip, size-class split table w/ Add class, totals+culls+Counts balance, Recent gradings. Missing: Save draft, CV/size-spread KPI (Unaccounted instead), Grader bars, Sample check, Before→after biomass, Density-after cards."
+      "notes": "Browser-checked 2026-11-21 at 1440 against the artboard screenshot and JSX (local seed: C-07 3 classes with 3 x 50 sample weights, C-04 past grading). Built: Save draft (gradingDrafts, one per cage, tenant + site checked, resumes on reload and opens the latest draft), Confirm grading, KPI strip incl. Size spread (CV) before -> after from sample weights, Grader bars, class rows with weight bounds / share / weeks to market (unit forecast TGC) / lower stocking density, culls + Counts balance, Sample check (rounds x fish, mean +- SD, weighed by + time), Before -> after biomass (before from stock record, after per destination), Density after grading (kg/m3 from net volume / volume, kg/m2 for ponds), Recent gradings (bounded query, CV stored on the operation). Differs from Paper: (1) a grading date field sits after Grader bars in the split header (Paper has no date control); (2) the density line ends with the farm's fish-count limit (e.g. 'limit 400 fish/m3') because the app has no kg/m3 limit, Paper shows 'limit 40'. Interaction-only extras: hover remove button per class row, sample weight editor under the cards. App shell (sidebar/topbar) and global Inter rendering of hyphens/arrows are outside this artboard."
     },
     {
       "id": "FBD-0",
@@ -1559,13 +1563,17 @@
       "route": "/grading",
       "implementation": [
         "pages/grading.js",
-        "components/GradingForm.js"
+        "components/GradingForm.js",
+        "components/ui/KpiStrip.js",
+        "convex/grading.ts",
+        "convex/lib/gradingMath.ts",
+        "convex/batches.ts"
       ],
       "status": "partial",
       "jsxHash": "4c052ef3f7a3d76c8a78f39eaa7e85cad16c94650dc6cdcc4974a38de22dd0eb",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Light variant of F45-0; same route, light via [data-theme=light]. Same gaps as F45-0: Has greeting+Confirm, KPI strip, size-class split table w/ Add class, totals+culls+Counts balance, Recent gradings. Missing: Save draft, CV/size-spread KPI (Unaccounted instead), Grader bars, Sample check, Before→after biomass, Density-after cards."
+      "notes": "Light variant of F45-0 via [data-theme=light]; light-only values from M1D-0 (KPI suffixes in body text, sample cards surface-2 #EAF1FA, before bar #A8C93A -> #3D86E6, lime-ink/sky-ink labels). Browser-checked 2026-11-21 at 1440 against the artboard screenshot and JSX (local seed: C-07 3 classes with 3 x 50 sample weights, C-04 past grading). Built: Save draft (gradingDrafts, one per cage, tenant + site checked, resumes on reload and opens the latest draft), Confirm grading, KPI strip incl. Size spread (CV) before -> after from sample weights, Grader bars, class rows with weight bounds / share / weeks to market (unit forecast TGC) / lower stocking density, culls + Counts balance, Sample check (rounds x fish, mean +- SD, weighed by + time), Before -> after biomass (before from stock record, after per destination), Density after grading (kg/m3 from net volume / volume, kg/m2 for ponds), Recent gradings (bounded query, CV stored on the operation). Differs from Paper: (1) a grading date field sits after Grader bars in the split header (Paper has no date control); (2) the density line ends with the farm's fish-count limit (e.g. 'limit 400 fish/m3') because the app has no kg/m3 limit, Paper shows 'limit 40'. Interaction-only extras: hover remove button per class row, sample weight editor under the cards. App shell (sidebar/topbar) and global Inter rendering of hyphens/arrows are outside this artboard."
     },
     {
       "id": "M7Z-0",

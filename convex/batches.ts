@@ -15,6 +15,7 @@ import { flowsOf, occupancyKpis, survivalPct, cumulativeMortalityPct, round } fr
 import { feedFor, stockingAt } from './lib/productionDualWrite'
 import { deriveTransferType, transferBiomassKg } from './lib/fishTransferLogic'
 import { requireMember } from './lib/permissions'
+import { GRADING_LIMITS, gradingCv, sampleStats } from './lib/gradingMath'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const EVENT_LIMIT = 200
@@ -601,10 +602,14 @@ export const grade = mutation({
         quantity: v.number(),
         abw: v.number(),
         batchNumber: v.optional(v.string()),
+        /** Sample check (Paper 52): weighing rounds of fish weights (g). */
+        samples: v.optional(v.array(v.array(v.number()))),
       }),
     ),
     culls: v.optional(v.number()),
     reason: v.optional(v.string()),
+    /** Grader bar spacing, e.g. "18 / 24 mm". */
+    graderBars: v.optional(v.string()),
   },
   returns: v.object({ operationId: v.id('stockOperations'), childBatchIds: v.array(v.id('batches')), unaccounted: v.number(), warnings: v.array(v.string()) }),
   handler: async (ctx, args) => {
@@ -619,11 +624,27 @@ export const grade = mutation({
       if (c.companyId !== cage.companyId) throw userError('NOT_FOUND', 'Cage not found')
       outCages.set(String(o.cageId), c)
     }
+    if ((args.graderBars ?? '').length > GRADING_LIMITS.graderBars) throw userError('VALIDATION', 'Grader bars are too long')
+    for (const o of args.outputs) {
+      const rounds = o.samples ?? []
+      if (rounds.length > GRADING_LIMITS.rounds || rounds.some((r) => r.length > GRADING_LIMITS.perRound)) {
+        throw userError('VALIDATION', `At most ${GRADING_LIMITS.rounds} rounds of ${GRADING_LIMITS.perRound} fish per class`)
+      }
+    }
+    const stats = args.outputs.map((o) => sampleStats(o.samples))
+    const cv = gradingCv(args.outputs.map((o, i) => ({ count: o.quantity, stats: stats[i] })))
     const companyId = cage.companyId!
     const opId = await ctx.db.insert('stockOperations', {
       companyId,
       locationId: cage.locationId,
       kind: 'grading_split',
+      grading: {
+        graderBars: args.graderBars?.trim() || undefined,
+        classes: args.outputs.length,
+        sampledFish: stats.reduce((s, x) => s + (x?.n ?? 0), 0),
+        cvBeforePct: cv ? Math.round(cv.beforePct * 10) / 10 : null,
+        cvAfterPct: cv ? Math.round(cv.afterPct * 10) / 10 : null,
+      },
       operationDate: args.date,
       status: 'approved',
       unitId: cage._id,
@@ -690,9 +711,24 @@ export const grade = mutation({
       actionType: 'create',
       tableName: 'stockOperations',
       recordId: opId,
-      newValues: { ...args, childBatchIds: result.childBatchIds, unaccounted: result.unaccounted },
+      newValues: {
+        cageId: args.cageId,
+        date: args.date,
+        outputs: args.outputs.map(({ samples: _samples, ...o }) => o),
+        culls: args.culls,
+        reason: args.reason,
+        graderBars: args.graderBars,
+        childBatchIds: result.childBatchIds,
+        unaccounted: result.unaccounted,
+      },
       locationId: cage.locationId,
     })
+    // The grading is confirmed: its draft is done.
+    const draft = await ctx.db
+      .query('gradingDrafts')
+      .withIndex('by_companyId_and_unitId', (q) => q.eq('companyId', companyId).eq('unitId', cage._id))
+      .unique()
+    if (draft) await ctx.db.delete(draft._id)
     return { operationId: opId, childBatchIds: result.childBatchIds, unaccounted: result.unaccounted, warnings: result.warnings }
   },
 })
