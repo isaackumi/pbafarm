@@ -1895,7 +1895,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Checking rows {done} of {total}…",
+    "checkFailed": "Rows could not be checked"
   },
   "scan": {
     "openingCode": "Opening cage {code}…",
