@@ -11,6 +11,12 @@ name: Deploy Convex
 #                      deploy wait for approval; see docs/ops/environments-and-deploys.md.
 #                      Waits for staging when staging is configured, so a
 #                      schema push that staging rejects never reaches prod.
+#                      Skipped on push once the repo variable
+#                      CONVEX_DEPLOYS_FROM_VERCEL is 'true': the Vercel build
+#                      (scripts/vercel-build.mjs) then deploys Convex right before
+#                      the frontend, and this job finishing minutes later could
+#                      roll the backend back to an older commit. Manual runs
+#                      with target production/both still deploy.
 #
 # Today CONVEX_DEPLOY_KEY still points at the dev deployment vibrant-stork-860;
 # swapping it for a prod: key is the OPS-001 owner step.
@@ -97,7 +103,8 @@ jobs:
       needs.verify.result == 'success' &&
       (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped') &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || inputs.target == 'production' || inputs.target == 'both')
+      ((github.event_name == 'push' && vars.CONVEX_DEPLOYS_FROM_VERCEL != 'true') ||
+       inputs.target == 'production' || inputs.target == 'both')
     runs-on: ubuntu-latest
     environment: production
     concurrency:
