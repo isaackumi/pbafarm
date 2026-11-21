@@ -275,6 +275,7 @@ import type * as reports from "../reports.js";
 import type * as roles from "../roles.js";
 import type * as rollups from "../rollups.js";
 import type * as sales from "../sales.js";
+import type * as scan from "../scan.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as sensorAnalytics from "../sensorAnalytics.js";
@@ -570,6 +571,7 @@ declare const fullApi: ApiFromModules<{
   roles: typeof roles;
   rollups: typeof rollups;
   sales: typeof sales;
+  scan: typeof scan;
   security: typeof security;
   seed: typeof seed;
   sensorAnalytics: typeof sensorAnalytics;

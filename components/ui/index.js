@@ -564,7 +564,7 @@ export function FormActions({ children, className = '' }) {
 export function StickyActions({ children, className = '' }) {
   return (
     <div
-      className={`sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 mt-8 -mx-5 -mb-5 sm:-mx-[26px] sm:-mb-6 px-5 sm:px-[26px] py-3.5 rounded-b-card border-t border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex flex-wrap items-center gap-3 print:hidden ${className}`}
+      className={`sticky bottom-[var(--tabbar-h)] lg:bottom-0 z-20 mt-8 -mx-5 -mb-5 sm:-mx-[26px] sm:-mb-6 px-5 sm:px-[26px] py-3.5 rounded-b-card border-t border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex flex-wrap items-center gap-3 print:hidden ${className}`}
     >
       {children}
     </div>

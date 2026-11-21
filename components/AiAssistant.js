@@ -552,7 +552,7 @@ export default function AiAssistant() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`${onFieldRoute && !open ? 'hidden lg:flex' : 'flex'} fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 size-14 items-center justify-center rounded-full bg-button text-button-text shadow-[var(--shadow-card)] transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg lg:bottom-6 lg:right-6`}
+        className={`${onFieldRoute && !open ? 'hidden lg:flex' : 'flex'} fixed bottom-[calc(var(--tabbar-h)+16px)] right-4 z-40 size-14 items-center justify-center rounded-full bg-button text-button-text shadow-[var(--shadow-card)] transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg lg:bottom-6 lg:right-6`}
         aria-label={open ? t('assistantUi.close') : t('assistantUi.open')}
         aria-expanded={open}
       >
@@ -561,7 +561,7 @@ export default function AiAssistant() {
 
       {open && (
         <div
-          className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex h-[min(72vh,34rem)] w-[min(100vw-2rem,24rem)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)] lg:bottom-24 lg:right-6"
+          className="fixed bottom-[calc(var(--tabbar-h)+88px)] right-4 z-50 flex h-[min(72vh,34rem)] w-[min(100vw-2rem,24rem)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-card)] lg:bottom-24 lg:right-6"
           role="dialog"
           aria-label={t('assistantUi.dialog')}
         >

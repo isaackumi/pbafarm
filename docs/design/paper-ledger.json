@@ -908,13 +908,17 @@
       "route": "/scan",
       "implementation": [
         "pages/scan.js",
-        "components/QrScanner.js"
+        "components/QrScanner.js",
+        "components/MobileTabBar.js",
+        "components/Layout.js",
+        "lib/navigation.js",
+        "convex/scan.ts"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "514d17383900f9540a48f2f41e7bf7f035ed587c83dff7b8990974adcc437f79",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner: not built yet (54 Mobile Scan & QR). Older /scan page + QrScanner exist."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built (PR build/scan-54). Browser-checked at 390x844 against the artboard screenshot and get_jsx: header (44px back, torch), 300px viewfinder (navy radial, 190px frame, label tile, status pill), cage card (CAGE · batch, 28/32 name, Fed today chip, Fish / Avg wt / DO with the farm low-DO threshold, Log feed / Water / Mortality) and the Paper tab bar (Scan active pill), which is now the default phone bar app-wide (Home, Tasks, Scan, Cages, More; Tasks active on /tasks and /daily-entry; custom shortcuts still honored). Computed styles match value for value. The torch button shows only when the camera reports a torch (verified with a torch-capable camera); Paper's 9:41 status bar is device chrome. Non-Paper states: Starting camera / Point at a cage label pill, Not fed yet today / Logged today / Offline chip, typed-code card while no cage is in view."
     },
     {
       "id": "H45-0",
@@ -1596,13 +1600,17 @@
       "route": "/scan",
       "implementation": [
         "pages/scan.js",
-        "pages/cages/qr-codes.js"
+        "components/QrScanner.js",
+        "components/MobileTabBar.js",
+        "components/Layout.js",
+        "lib/navigation.js",
+        "convex/scan.ts"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "5cb33d8fca735b08f8efa85dd467bc0755161f45051813dca4ca14a525481a88",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner fact: 54 Mobile Scan & QR not built. Older /scan and /cages/qr-codes pages exist."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built (PR build/scan-54). Browser-checked at 390x844 against the artboard screenshot and get_jsx: header (44px back, torch), 300px viewfinder (navy radial, 190px frame, label tile, status pill), cage card (CAGE · batch, 28/32 name, Fed today chip, Fish / Avg wt / DO with the farm low-DO threshold, Log feed / Water / Mortality) and the Paper tab bar (Scan active pill), which is now the default phone bar app-wide (Home, Tasks, Scan, Cages, More; Tasks active on /tasks and /daily-entry; custom shortcuts still honored). Computed styles match value for value. The torch button shows only when the camera reports a torch (verified with a torch-capable camera); Paper's 9:41 status bar is device chrome. Non-Paper states: Starting camera / Point at a cage label pill, Not fed yet today / Logged today / Offline chip, typed-code card while no cage is in view. Light: lime corners, #16A34A dot, #A7DDB8 chip border, white Water/Mortality tiles, 600 Log feed label."
     },
     {
       "id": "MGE-0",

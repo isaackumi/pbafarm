@@ -14,25 +14,28 @@ export function canScanInApp() {
 }
 
 /**
- * Full-screen cage label scanner (MOBILE-006). Uses the browser's
- * BarcodeDetector with the back camera; where that is missing (iOS Safari,
- * older Android WebViews) or the camera is refused, the person types the cage
- * code or name instead. Calls `onResult(text)` with the raw value once.
+ * The back camera reading QR codes (MOBILE-006), for the full-screen scanner
+ * and the Paper 54 viewfinder. While `active`, it streams into `videoRef` and
+ * calls `onResult(text)` once per start. `status` is idle | starting |
+ * scanning | fallback (`reason`: unsupported | denied | failed). `torch` is
+ * null unless the camera itself reports a torch it can switch.
  */
-export default function QrScanner({ open, onClose, onResult, title }) {
-  const t = useT()
-  const heading = title || t('scan.labelTitle')
-  const { activeLocation } = useLocation()
-  const videoRef = useRef(null)
-  const [status, setStatus] = useState('idle') // idle | starting | scanning | fallback
+export function useQrCamera({ active, videoRef, onResult }) {
+  const [status, setStatus] = useState('idle')
   const [reason, setReason] = useState('')
-  const [typed, setTyped] = useState('')
+  const [torch, setTorch] = useState(null) // null | { on: boolean }
+  const trackRef = useRef(null)
   const doneRef = useRef(false)
+  const resumeRef = useRef(null)
+  const onResultRef = useRef(onResult)
+  onResultRef.current = onResult
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!active) {
+      setStatus('idle')
+      return undefined
+    }
     doneRef.current = false
-    setTyped('')
     let stream = null
     let timer = null
     let cancelled = false
@@ -53,6 +56,11 @@ export default function QrScanner({ open, onClose, onResult, title }) {
           audio: false,
         })
         if (cancelled) return
+        const track = stream.getVideoTracks()[0] || null
+        trackRef.current = track
+        // Only a camera that says it has a torch gets the torch button.
+        const caps = track?.getCapabilities?.() || {}
+        setTorch(caps.torch ? { on: false } : null)
         const video = videoRef.current
         video.srcObject = stream
         await video.play()
@@ -65,13 +73,18 @@ export default function QrScanner({ open, onClose, onResult, title }) {
             if (value && !doneRef.current) {
               doneRef.current = true
               if (navigator.vibrate) navigator.vibrate(60)
-              onResult(value)
+              onResultRef.current(value)
               return
             }
           } catch {
             // frame not ready; try the next one
           }
           timer = setTimeout(tick, 200)
+        }
+        resumeRef.current = () => {
+          if (cancelled || !doneRef.current) return
+          doneRef.current = false
+          tick()
         }
         tick()
       } catch (err) {
@@ -86,10 +99,56 @@ export default function QrScanner({ open, onClose, onResult, title }) {
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
+      trackRef.current = null
+      resumeRef.current = null
+      setTorch(null)
       stream?.getTracks().forEach((track) => track.stop())
     }
-    // onResult is read once per scan; restarting the camera on every render is wasteful.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, videoRef])
+
+  const toggleTorch = async () => {
+    const track = trackRef.current
+    if (!track || !torch) return
+    const next = !torch.on
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] })
+      setTorch({ on: next })
+    } catch {
+      // The camera refused after all: drop the control rather than fake it.
+      setTorch(null)
+    }
+  }
+
+  /** Stop reading codes (the feed keeps running), e.g. once a cage is shown. */
+  const markDone = () => {
+    doneRef.current = true
+  }
+
+  /** Read codes again after markDone or a result, without restarting the camera. */
+  const resume = () => {
+    if (resumeRef.current) resumeRef.current()
+    else doneRef.current = false
+  }
+
+  return { status, reason, torch, toggleTorch, markDone, resume }
+}
+
+/**
+ * Full-screen cage label scanner (MOBILE-006). Uses the browser's
+ * BarcodeDetector with the back camera; where that is missing (iOS Safari,
+ * older Android WebViews) or the camera is refused, the person types the cage
+ * code or name instead. Calls `onResult(text)` with the raw value once.
+ */
+export default function QrScanner({ open, onClose, onResult, title }) {
+  const t = useT()
+  const heading = title || t('scan.labelTitle')
+  const { activeLocation } = useLocation()
+  const videoRef = useRef(null)
+  const [typed, setTyped] = useState('')
+  const { status, reason, markDone } = useQrCamera({ active: open, videoRef, onResult })
+
+  useEffect(() => {
+    if (open) setTyped('')
   }, [open])
 
   if (!open) return null
@@ -98,7 +157,7 @@ export default function QrScanner({ open, onClose, onResult, title }) {
     e.preventDefault()
     const value = typed.trim()
     if (!value) return
-    doneRef.current = true
+    markDone()
     onResult(value)
   }
 
@@ -175,15 +234,16 @@ export default function QrScanner({ open, onClose, onResult, title }) {
 }
 
 /** Corner brackets from 54 Mobile Scan: sky (#6AA8F5) on dark, lime on 54 — Light. */
-export function ScanFrame({ className = 'h-40 w-40' }) {
+export function ScanFrame({ className = 'h-40 w-40', children }) {
   // Paper H85-0 / MFM-0: 36px corners, 3px strokes, 16px radius.
   const corner = 'absolute size-9 border-[3px] border-sky-ink [html[data-theme=light]_&]:border-lime'
   return (
-    <div className={`relative ${className}`} aria-hidden>
+    <div className={`relative ${className}`} aria-hidden={children ? undefined : true}>
       <span className={`${corner} left-0 top-0 rounded-tl-[16px] border-b-0 border-r-0`} />
       <span className={`${corner} right-0 top-0 rounded-tr-[16px] border-b-0 border-l-0`} />
       <span className={`${corner} bottom-0 left-0 rounded-bl-[16px] border-r-0 border-t-0`} />
       <span className={`${corner} bottom-0 right-0 rounded-br-[16px] border-l-0 border-t-0`} />
+      {children}
     </div>
   )
 }
