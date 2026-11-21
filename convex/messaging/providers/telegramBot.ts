@@ -29,6 +29,18 @@ import type { ChatMessage } from './whatsappCloud'
  *   colour text or buttons, so the round card uses bold, monospace bars and
  *   leading markers instead.
  * - An inline keyboard is rows of buttons; we keep at most 100 buttons.
+ *
+ * Verified 2026-11-21 (group chats, VFQ-1):
+ * - sendMessage works the same in groups and supergroups (negative chat id).
+ *   reply_parameters { message_id, allow_sending_without_reply } quotes the
+ *   message being answered.
+ * - answerCallbackQuery { callback_query_id, text (0-200 chars), show_alert }
+ *   shows the text to the person who tapped only (a toast, or a dialog).
+ * - parse_mode HTML <a href="tg://user?id=123">Name</a> mentions a user
+ *   without a @username; they are notified when they are in the group.
+ * - Updates a bot gets with privacy mode on: /commands, @mentions, replies to
+ *   its own messages, service messages; my_chat_member when the bot is added
+ *   or removed (must be listed in setWebhook allowed_updates).
  */
 const TgError = Schema.Struct({ description: Schema.optional(Schema.String) })
 const TgSent = Schema.Struct({
@@ -109,27 +121,48 @@ function tgPost(token: string, method: string, body: unknown, policy?: HttpPolic
   )
 }
 
-/** Send a farm-bot message to a private chat. Never throws. */
+/** Send a farm-bot message to a private chat or a group (`replyTo` quotes a group message). Never throws. */
 export async function sendTelegramChat(
   token: string,
   chatId: string,
   message: ChatMessage,
   fetchImpl?: FetchFn,
+  opts: { replyTo?: number } = {},
 ): Promise<SendResult> {
+  const body = {
+    ...telegramPayload(chatId, message),
+    ...(opts.replyTo ? { reply_parameters: { message_id: opts.replyTo, allow_sending_without_reply: true } } : {}),
+  }
   const program = Effect.gen(function* () {
-    const res = yield* tgPost(token, 'sendMessage', telegramPayload(chatId, message))
+    const res = yield* tgPost(token, 'sendMessage', body)
     const id = decodeBody(TgSent, res)?.result?.message_id
     return { providerMessageId: id != null ? String(id) : undefined }
   })
   return runSend(program, fetchImpl)
 }
 
-/** Acknowledge a button tap (best effort). Never throws. */
-export async function answerTelegramCallback(token: string, callbackQueryId: string, fetchImpl?: FetchFn) {
-  return runSend(
-    tgPost(token, 'answerCallbackQuery', { callback_query_id: callbackQueryId }).pipe(Effect.as({})),
-    fetchImpl,
-  )
+/**
+ * Acknowledge a button tap (best effort), optionally with a note only the
+ * person who tapped sees ("Only Kofi can save this"). Never throws.
+ */
+export async function answerTelegramCallback(
+  token: string,
+  callbackQueryId: string,
+  fetchImpl?: FetchFn,
+  note?: { text: string; alert?: boolean },
+) {
+  const body = {
+    callback_query_id: callbackQueryId,
+    ...(note?.text ? { text: clip(note.text, 200), ...(note.alert ? { show_alert: true } : {}) } : {}),
+  }
+  return runSend(tgPost(token, 'answerCallbackQuery', body).pipe(Effect.as({})), fetchImpl)
+}
+
+/** Tag a person in a group: their @username, else an HTML text mention (parse_mode HTML). */
+export function telegramMention(p: { userId: string; username?: string | null; name: string }): string {
+  if (p.username && /^[A-Za-z0-9_]{5,32}$/.test(p.username)) return `@${p.username}`
+  if (!/^\d{1,20}$/.test(p.userId)) return escapeHtml(p.name)
+  return `<a href="tg://user?id=${p.userId}">${escapeHtml(p.name || 'there')}</a>`
 }
 
 /**

@@ -15,6 +15,7 @@ import {
   metaHandshake,
   parseTelegram,
   parseWhatsApp,
+  telegramBotSelf,
   verifyMetaSignature,
   verifyTelegramSecret,
 } from './verify'
@@ -62,7 +63,10 @@ export const telegramWebhook = httpAction(async (ctx, request) => {
   }
   const body = await rawBody(request)
   if (!body) return deny(413)
-  const event = parseTelegram(parseJson(body))
+  const event = parseTelegram(
+    parseJson(body),
+    telegramBotSelf(process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_BOT_USERNAME),
+  )
   if (event) await ctx.runMutation(internal.bot.inbound.ingest, { events: [event], statuses: [] })
   return ok()
 })

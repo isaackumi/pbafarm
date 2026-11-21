@@ -14,7 +14,8 @@ import { round } from '../lib/kpi'
 import { cageGrowth } from '../lib/growth'
 import { siteStock } from '../lib/feedLedger'
 import { keeperRead } from '../keepers/ask'
-import { checkBinding, farmDate, matchUnit, unitsInScope, type MemberScope } from './scope'
+import { farmDate, matchUnit, unitsInScope, type MemberScope } from './scope'
+import { boundFor } from './groupScope'
 
 export const readTool = v.union(
   v.literal('units'),
@@ -130,14 +131,15 @@ export const read = internalQuery({
     tool: readTool,
     unit: v.optional(v.string()),
     now: v.number(),
+    /** A Telegram group turn: the group's scope and capabilities narrow the binding (groupScope.ts). */
+    chatGroupId: v.optional(v.id('botChatGroups')),
+    siteId: v.optional(v.id('farmLocations')),
   },
   returns: readResult,
-  handler: async (ctx, { bindingId, tool, unit, now }) => {
-    const binding = await ctx.db.get(bindingId)
-    if (!binding) return { ok: false as const, error: 'not connected' }
-    const checked = await checkBinding(ctx, binding)
-    if (!checked.ok) return { ok: false as const, error: 'not connected' }
-    return await readFor(ctx, checked.bound, tool, unit, now)
+  handler: async (ctx, { bindingId, tool, unit, now, chatGroupId, siteId }) => {
+    const b = await boundFor(ctx, bindingId, { chatGroupId, siteId })
+    if (!b.ok) return { ok: false as const, error: b.error }
+    return await readFor(ctx, b.bound, tool, unit, now)
   },
 })
 

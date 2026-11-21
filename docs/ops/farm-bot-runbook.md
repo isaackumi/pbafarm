@@ -35,7 +35,8 @@ Every value below goes in the **Convex** deployment environment (Dashboard → S
    org - Choose the organization
    stop - Disconnect this chat
    ```
-   Leave **privacy mode** on; the bot ignores groups anyway.
+   Leave **privacy mode** on (`/setprivacy` → Enable): in groups the bot then only receives commands, @mentions and replies to its own messages, which is all it answers anyway (§2a).
+   Turn **`/setjoingroups`** → Enable so admins can add the bot to site groups.
 3. **Create the webhook secret.** Run `openssl rand -hex 32` and set the result as `TELEGRAM_WEBHOOK_SECRET`. Use only `A-Z a-z 0-9 _ -`, at most 256 characters.
 4. **Register the webhook:**
    ```bash
@@ -43,12 +44,21 @@ Every value below goes in the **Convex** deployment environment (Dashboard → S
      -H 'Content-Type: application/json' \
      -d '{"url":"https://<deployment>.convex.site/channels/telegram",
           "secret_token":"'"$TELEGRAM_WEBHOOK_SECRET"'",
-          "allowed_updates":["message","callback_query"],
+          "allowed_updates":["message","callback_query","my_chat_member"],
           "drop_pending_updates":true}'
    curl -sS "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"
    ```
    Telegram sends the secret in `X-Telegram-Bot-Api-Secret-Token`. Requests without it get 401.
 5. **Test.** On `/account`, tap *Connect Telegram*, open the link, and press **Start**.
+
+## 2a. Telegram site groups (BOT-009, Paper VFQ-1)
+
+1. Everyone links their own account first in a private chat with the bot (`/account` → *Connect Telegram*). In a group the bot knows people by their Telegram user id, which is their private chat id.
+2. An admin with **Configure messaging channels** (`integrations.manage`) adds the bot to the group and sends `/connect` there. If they admin several organizations, the bot asks which one. Then they tap the sites the group may see (or **All farm locations**, only for people who see every site) and **Done**.
+3. Defaults: questions, data entry and alerts on; money and buyers off. Change them with `/access` in the group or in **Settings › Messaging › Telegram groups**. Each person still sees only what their own role and sites allow: a group never widens anyone's access.
+4. The bot answers only when tagged (`@<bot>`), when someone replies to one of its messages, or for a `/command`. Drafts, `/t` and `/round` cards go to the sender's private chat; buttons only work for the person they are for.
+5. Unlink with `/disconnect` (admin), from the web page, or by removing the bot from the group. Removing needs `my_chat_member` in `allowed_updates` (step 4 above); re-run `setWebhook` on existing deployments to add it.
+6. People who are not linked get one short "message me privately" reply per 12 hours, with the deep link and no farm data.
 
 ## 3. WhatsApp message template (daily reminder)
 

@@ -170,6 +170,9 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'botRoundSettings', index: 'by_companyId' },
   { table: 'botRounds', index: 'by_companyId_and_date', export: false },
   { table: 'botDraftGroups', index: 'by_companyId', export: false },
+  // Telegram groups (VFQ-1): links exported; remembered summary scopes transient.
+  { table: 'botChatGroups', index: 'by_companyId' },
+  { table: 'botChatScopes', index: 'by_companyId', export: false },
   // Governance bookkeeping: purged, not exported.
   { table: 'dataExports', index: 'by_companyId', export: false },
   { table: 'auditChainVerifications', index: 'by_companyId', export: false, purge: 'keep' },

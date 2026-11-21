@@ -32,6 +32,21 @@ export const target = {
   companyId: v.optional(v.id('companies')),
   bindingId: v.optional(v.id('channelBindings')),
   locale: v.union(v.literal('en'), v.literal('fr')),
+  /** Telegram groups (chatGroups.ts): the linked group the message came from. */
+  chatGroupId: v.optional(v.id('botChatGroups')),
+  /** Group: the sender's private chat, where their drafts go. */
+  privateAddress: v.optional(v.string()),
+  /** Group: the sender's first name, for "Sent you the draft…, Esi". */
+  senderName: v.optional(v.string()),
+  /** Group: quote this message in the reply. */
+  replyTo: v.optional(v.number()),
+  /** Answer the button tap with this text (a toast, or a dialog with `toastAlert`). */
+  toast: v.optional(v.string()),
+  toastAlert: v.optional(v.boolean()),
+  /** Edit this bot message (the one the button sat on) with the first message instead of sending it. */
+  editMessageId: v.optional(v.number()),
+  /** A short note to another chat after the reply (group: "Sent you the draft in our private chat"). */
+  notice: v.optional(v.object({ address: v.string(), text: v.string(), replyTo: v.optional(v.number()) })),
 }
 
 /** What the processing action does next, decided by the `route` mutation. */
@@ -66,6 +81,8 @@ export const routePlan = v.union(
     type: v.literal('agent'),
     ...target,
     bindingId: v.id('channelBindings'),
+    /** The one site named in the message (scope resolver), when in reach. */
+    siteId: v.optional(v.id('farmLocations')),
     text: v.string(),
     sourceMessageId: v.string(),
     sentAt: v.number(),

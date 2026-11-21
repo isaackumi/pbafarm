@@ -34,6 +34,8 @@ import { decryptJson, readEncryptionKey } from '../lib/crypto'
 import { companyCredentials, insertUsage, pickCredential } from '../llmGateway'
 import { todayIn, zoneFor } from '../lib/dates'
 import { checkBinding } from './scope'
+import { boundFor } from './groupScope'
+import { gt } from './chatGroupI18n'
 import { proposalInput, proposeFor, draftButtons, draftCard, type ProposalInput } from './pending'
 import { t, type BotLocale } from './i18n'
 import type { ChatMessageValue } from './validators'
@@ -84,6 +86,8 @@ const prepared = v.union(
     companyName: v.string(),
     siteName: v.union(v.string(), v.null()),
     today: v.string(),
+    /** A Telegram group turn (VFQ-1): what the group lets the model see and do. */
+    group: v.union(v.null(), v.object({ title: v.string(), ask: v.boolean(), money: v.boolean(), log: v.boolean() })),
     source: v.union(v.literal('org_key'), v.literal('server_key')),
     providerId: v.string(),
     model: v.string(),
@@ -114,20 +118,31 @@ const prepared = v.union(
 
 /** Gate, spend the LLM quota and pick the key for one bot turn. */
 export const prepare = internalMutation({
-  args: { bindingId: v.id('channelBindings') },
+  args: {
+    bindingId: v.id('channelBindings'),
+    /** A Telegram group turn: the group's thread, scope and capabilities (groupScope.ts). */
+    chatGroupId: v.optional(v.id('botChatGroups')),
+    siteId: v.optional(v.id('farmLocations')),
+  },
   returns: prepared,
-  handler: async (ctx, { bindingId }) => {
+  handler: async (ctx, { bindingId, chatGroupId, siteId }) => {
     const binding = await ctx.db.get(bindingId)
     const checked = binding ? await checkBinding(ctx, binding) : null
     if (!binding || !checked || !checked.ok) {
       return { ok: false as const, reason: 'binding' as const, message: t(checked && !checked.ok ? checked.locale : 'en').bindingInactive }
     }
-    const bound = checked.bound
-    const s = t(bound.locale)
+    const s = t(checked.bound.locale)
+    const narrowed = await boundFor(ctx, bindingId, { chatGroupId, siteId })
+    if (!narrowed.ok) return { ok: false as const, reason: 'binding' as const, message: s.bindingInactive }
+    const bound = narrowed.bound
+    const group = narrowed.group
+    if (group && !group.caps.ask && !group.caps.log) {
+      return { ok: false as const, reason: 'disabled' as const, message: gt(bound.locale).askOff }
+    }
     // The org's assistant switch is the consent; the bot is a data-entry
     // tool, so field staff (production.daily.record, no ai.use) may use it too
     // (doc 23 §4, D-021). The SEC-004 quota below still applies per user.
-    const mayUse = can(bound.member, 'ai.use') || can(bound.member, 'production.daily.record')
+    const mayUse = can(checked.bound.member, 'ai.use') || can(checked.bound.member, 'production.daily.record')
     if (!mayUse || bound.company.settings?.aiAssistantEnabled !== true) {
       return { ok: false as const, reason: 'disabled' as const, message: s.aiDisabled }
     }
@@ -170,10 +185,16 @@ export const prepare = internalMutation({
     for (const [name, key] of limits) await rateLimiter.limit(ctx, name, { key })
     const lease = { leaseId: admitted.leaseId, deadlineAt: admitted.deadlineAt, attemptMs: admitted.attemptMs, blocked: admitted.blocked }
 
-    let threadId = binding.threadId
+    // A group has its own thread (per linked group, so per organization),
+    // never the sender's private one: nothing private leaks into the group.
+    let threadId = group ? group.threadId : binding.threadId
     if (!threadId) {
-      threadId = await createThread(ctx, components.agent, { userId: binding.userId, title: `${binding.provider} bot` })
-      await ctx.db.patch(binding._id, { threadId })
+      threadId = await createThread(ctx, components.agent, {
+        userId: binding.userId,
+        title: group ? `${binding.provider} group` : `${binding.provider} bot`,
+      })
+      if (group) await ctx.db.patch(group._id, { threadId })
+      else await ctx.db.patch(binding._id, { threadId })
     }
     const today = todayIn(zoneFor(bound.site, bound.company))
     const base = {
@@ -186,6 +207,7 @@ export const prepare = internalMutation({
       companyName: bound.company.name,
       siteName: bound.site?.name ?? null,
       today,
+      group: group ? { title: group.title, ask: group.caps.ask, money: group.caps.money, log: group.caps.log } : null,
     }
     if (cred && secret) {
       return {
@@ -221,6 +243,8 @@ export const proposeFromAgent = internalMutation({
     sourceMessageId: v.string(),
     eventTime: v.number(),
     input: proposalInput,
+    /** From a Telegram group: the draft is limited to the group's sites and needs its log capability. */
+    chatGroupId: v.optional(v.id('botChatGroups')),
     /** Voice notes (BOT-005): the note, and the fields the model says came from unsure words. */
     voice: v.optional(
       v.object({
@@ -248,9 +272,15 @@ export const proposeFromAgent = internalMutation({
     if (args.voice && (!note || note.bindingId !== args.bindingId || note.sourceMessageId !== args.sourceMessageId)) {
       return { ok: false as const, error: 'not connected' }
     }
+    let bound = checked.bound
+    if (args.chatGroupId) {
+      const g = await boundFor(ctx, args.bindingId, { chatGroupId: args.chatGroupId })
+      if (!g.ok || !g.group?.caps.log) return { ok: false as const, error: 'logging is off in this group' }
+      bound = g.bound
+    }
     const r = await proposeFor(
       ctx,
-      checked.bound,
+      bound,
       args.input,
       { sourceMessageId: args.sourceMessageId, eventTime: args.eventTime },
       { pickUnit: !!note },
@@ -262,7 +292,7 @@ export const proposeFromAgent = internalMutation({
       ok: true as const,
       pendingId: r.pendingId,
       summary: r.summary,
-      card: draft ? draftCard(checked.bound.locale, draft) : r.summary,
+      card: draft ? draftCard(bound.locale, draft) : r.summary,
       duplicate: !!draft?.duplicateOf,
     }
   },
@@ -334,9 +364,29 @@ function voiceInstructions(language: SpeechLanguage): string[] {
   ]
 }
 
-function instructions(p: { locale: BotLocale; companyName: string; siteName: string | null; today: string }, voice?: SpeechLanguage) {
+type InstructionInput = {
+  locale: BotLocale
+  companyName: string
+  siteName: string | null
+  today: string
+  group: { title: string; ask: boolean; money: boolean; log: boolean } | null
+}
+
+function groupInstructions(g: { title: string; ask: boolean; money: boolean; log: boolean }): string[] {
+  return [
+    `This is the Telegram group "${g.title}". Several people read your reply; the user is the person who tagged you.`,
+    g.ask ? '' : 'Questions are off in this group: only draft entries; for anything else say an admin can turn questions on with /access.',
+    g.money ? '' : 'Money is off in this group: never mention costs, prices, revenue, profit or amounts owed. Say the user can ask in a private chat.',
+    g.log
+      ? 'Drafts you create are sent to the user privately for Save; say so briefly.'
+      : 'Data entry is off in this group: you cannot draft entries; tell the user to send them in a private chat.',
+  ].filter(Boolean)
+}
+
+function instructions(p: InstructionInput, voice?: SpeechLanguage) {
   return [
     'You are the Anowa assistant in a WhatsApp/Telegram chat with a fish farm worker.',
+    ...(p.group ? groupInstructions(p.group) : []),
     `Reply in ${p.locale === 'fr' ? 'French' : 'English'}, in at most 3 short sentences, plain text without markdown tables.`,
     `Organization: ${p.companyName}. Site: ${p.siteName ?? 'all sites the user can see'}. Today (farm date): ${p.today}.`,
     'Use the tools for every fact; never invent numbers, units or feed types.',
@@ -351,9 +401,12 @@ function instructions(p: { locale: BotLocale; companyName: string; siteName: str
 
 type ToolEnv = {
   bindingId: Id<'channelBindings'>
+  chatGroupId?: Id<'botChatGroups'>
+  siteId?: Id<'farmLocations'>
   sourceMessageId: string
   sentAt: number
   voiceNoteId?: Id<'voiceNotes'>
+  group?: { ask: boolean; money: boolean; log: boolean } | null
   drafts: Array<{ pendingId: Id<'pendingBotActions'>; summary: string; card: string; duplicate: boolean }>
 }
 
@@ -365,7 +418,14 @@ function tools(env: ToolEnv) {
     tool: 'units' | 'unit_detail' | 'feed_stock' | 'missing_today' | 'keepers_behind' | 'keeper_of',
     unit?: string,
   ): Promise<string> => {
-    const r = await ctx.runQuery(internal.bot.reads.read, { bindingId: env.bindingId, tool, unit, now: Date.now() })
+    const r = await ctx.runQuery(internal.bot.reads.read, {
+      bindingId: env.bindingId,
+      tool,
+      unit,
+      now: Date.now(),
+      chatGroupId: env.chatGroupId,
+      siteId: env.siteId,
+    })
     return r.ok ? r.data : `Error: ${r.error}`
   }
   const propose = async (ctx: ActionCtx, input: ProposalInput, check?: Check): Promise<string> => {
@@ -375,6 +435,7 @@ function tools(env: ToolEnv) {
       sourceMessageId: env.sourceMessageId,
       eventTime: env.sentAt,
       input,
+      chatGroupId: env.chatGroupId,
       ...(env.voiceNoteId ? { voice: { voiceNoteId: env.voiceNoteId, check: check?.slice(0, 4) } } : {}),
     })
     if (!r.ok) return `Error: ${r.error}`
@@ -382,7 +443,14 @@ function tools(env: ToolEnv) {
     return `Draft created (not saved yet; the user will see Save/Cancel buttons): ${r.summary}`
   }
   const runFarmRead = async (ctx: ActionCtx, tool: FarmReadTool, args: FarmReadArgs = {}): Promise<string> => {
-    const r = await ctx.runQuery(internal.anowa.reads.botRead, { bindingId: env.bindingId, tool, args, now: Date.now() })
+    const r = await ctx.runQuery(internal.anowa.reads.botRead, {
+      bindingId: env.bindingId,
+      tool,
+      args,
+      now: Date.now(),
+      chatGroupId: env.chatGroupId,
+      siteId: env.siteId,
+    })
     return r.ok ? r.data : `Error: ${r.error}`
   }
   const daysAgo = z.number().int().min(0).max(7).optional().describe('0 = today (default), 1 = yesterday')
@@ -391,7 +459,7 @@ function tools(env: ToolEnv) {
     .max(4)
     .optional()
     .describe('Voice notes only: fields whose value came from a word marked [?word?], with the word as heard')
-  return {
+  const all = {
     listUnits: createTool({
       description: 'List the production units (cages/ponds/tanks) the user can see, with status and last entry date.',
       inputSchema: z.object({}),
@@ -493,6 +561,14 @@ function tools(env: ToolEnv) {
       execute: async (ctx, { check: c, ...input }) => propose(ctx, { kind: 'feed_issue', ...input }, c),
     }),
   }
+  if (!env.group) return all
+  // In a group the model never sees tools the group has switched off.
+  const { salesSummary, proposeDailyEntry, proposeMortality, proposeFeedIssue, ...reads } = all
+  return {
+    ...(env.group.ask ? reads : { listUnits: all.listUnits }),
+    ...(env.group.ask && env.group.money ? { salesSummary } : {}),
+    ...(env.group.log ? { proposeDailyEntry, proposeMortality, proposeFeedIssue } : {}),
+  }
 }
 
 export type AgentTurn = {
@@ -502,6 +578,10 @@ export type AgentTurn = {
   sentAt: number
   /** A voice-note transcript (BOT-005): drafts are tagged with the note and may carry CHECK marks. */
   voice?: { voiceNoteId: Id<'voiceNotes'>; language: SpeechLanguage }
+  /** A Telegram group turn (VFQ-1). */
+  chatGroupId?: Id<'botChatGroups'>
+  /** The one site the message named (scope resolver). */
+  siteId?: Id<'farmLocations'>
 }
 
 export type AgentDraft = { pendingId: Id<'pendingBotActions'>; summary: string; card: string; duplicate: boolean }
@@ -528,16 +608,23 @@ export async function runAgent(ctx: ActionCtx, turn: AgentTurn): Promise<ChatMes
 
 /** Run the agent for one user turn: the model's reply and the drafts its tools stored. */
 export async function agentTurn(ctx: ActionCtx, turn: AgentTurn): Promise<AgentTurnResult> {
-  const p = await ctx.runMutation(internal.bot.agent.prepare, { bindingId: turn.bindingId })
+  const p = await ctx.runMutation(internal.bot.agent.prepare, {
+    bindingId: turn.bindingId,
+    chatGroupId: turn.chatGroupId,
+    siteId: turn.siteId,
+  })
   if (!p.ok) return { ok: false, locale: 'en', message: p.message }
   const s = t(p.locale)
   const fail = (message: string): AgentTurnResult => ({ ok: false, locale: p.locale, message })
 
   const env: ToolEnv = {
     bindingId: turn.bindingId,
+    chatGroupId: turn.chatGroupId,
+    siteId: turn.siteId,
     sourceMessageId: turn.sourceMessageId,
     sentAt: turn.sentAt,
     voiceNoteId: turn.voice?.voiceNoteId,
+    group: p.group,
     drafts: [],
   }
   const result = await runAgentGuarded(ctx, p, {

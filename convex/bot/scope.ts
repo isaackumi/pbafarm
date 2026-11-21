@@ -124,3 +124,27 @@ export async function farmDate(ctx: Ctx, bound: MemberScope, locationId: Id<'far
   const site = locationId ? await ctx.db.get(locationId) : bound.site
   return todayIn(zoneFor(site, bound.company), at)
 }
+
+/** The chat's live binding (Telegram: a private chat id is the user id, so a group sender's id finds theirs). */
+export async function liveBinding(ctx: Ctx, provider: 'whatsapp' | 'telegram', address: string) {
+  const rows = await ctx.db
+    .query('channelBindings')
+    .withIndex('by_provider_and_address', (q) => q.eq('provider', provider).eq('address', address))
+    .take(20)
+  return rows.find((b) => !b.revokedAt) ?? null
+}
+
+/** Organizations the user is an active member of (approved companies only). */
+export async function companiesOf(ctx: Ctx, user: Doc<'users'>) {
+  const rows = await ctx.db
+    .query('memberships')
+    .withIndex('by_userId', (q) => q.eq('userId', user._id))
+    .take(50)
+  const out: Doc<'companies'>[] = []
+  for (const m of rows) {
+    if (m.status !== 'active') continue
+    const c = await ctx.db.get(m.companyId)
+    if (c && c.status === 'approved' && (await memberContextIn(ctx, user, c._id))) out.push(c)
+  }
+  return out
+}

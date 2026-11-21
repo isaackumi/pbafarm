@@ -20,6 +20,8 @@ import { internal } from '../_generated/api'
 import { todayIn, zoneFor } from '../lib/dates'
 import { notifyUsers } from '../lib/notify'
 import { nameList } from '../automation/checks'
+import { postGroupAlert } from '../bot/chatGroups'
+import { gt } from '../bot/chatGroupI18n'
 import { escalationStage } from './balance'
 import {
   MAX_UNITS,
@@ -197,8 +199,18 @@ export const company = internalMutation({
           link: '/my-cages',
           source: 'keepers.deadline',
         })
-      )
+      ) {
         sent += 1
+        // Linked Telegram site groups with alerts on: tag the keeper (VFQ-1).
+        for (const [locationId, siteRows] of group(rows, (m) => m.unit.locationId)) {
+          await postGroupAlert(ctx, {
+            companyId,
+            locationId,
+            mentionUserId: u._id,
+            text: (l) => gt(l).notLoggedAlert(names(siteRows), settings.deadline),
+          })
+        }
+      }
     }
     // Stage 2: the backup.
     for (const [id, all] of group(missing.filter((m) => m.site.stage >= 2), (m) => m.backupId)) {

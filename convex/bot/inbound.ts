@@ -9,16 +9,16 @@
 import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
-import type { Doc } from '../_generated/dataModel'
+import type { Doc, Id } from '../_generated/dataModel'
 import { internal } from '../_generated/api'
 import { memberContextIn } from '../lib/permissions'
 import { rateLimiter } from '../lib/rateLimits'
 import { siteUrl } from '../lib/email'
 import { todayIn } from '../lib/dates'
-import { botProvider } from './tables'
+import { botProvider, inboundGroupFields } from './tables'
 import { routePlan, type RoutePlan, type ChatMessageValue, type Target } from './validators'
 import { botLocale, t, type BotLocale } from './i18n'
-import { checkBinding, type BoundMember } from './scope'
+import { checkBinding, companiesOf, liveBinding, type BoundMember } from './scope'
 import { codeHash, revokeBindingsForUser, shortCodeHash } from './bindings'
 import { parseShortCode } from '../lib/tokens'
 import { closeDraft } from './pending'
@@ -28,13 +28,22 @@ import { roundButton, roundCommand } from './rounds'
 import { deadReply, groupButton } from './groups'
 import { awaitingInput, templateButton, templatesCommand } from './templates'
 import { MAX_EVENT_AGE_MS } from './verify'
+import { groupRoute } from './chatGroups'
+import { awaitingCage, namedSite, pruneScopes, recall, scopeButton, summaryPlan, wantsSummary, type ChatKey } from './summary'
 import { REJECT_REASON_CODES, MAX_REASON_CHARS, askRejectReason, awaitingReason, keepPending } from './approvals'
 
 const inboundEvent = v.object({
   provider: botProvider,
   externalId: v.string(),
   address: v.string(),
-  kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('audio'), v.literal('unsupported')),
+  kind: v.union(
+    v.literal('text'),
+    v.literal('button'),
+    v.literal('image'),
+    v.literal('audio'),
+    v.literal('member'),
+    v.literal('unsupported'),
+  ),
   text: v.optional(v.string()),
   buttonId: v.optional(v.string()),
   callbackQueryId: v.optional(v.string()),
@@ -42,6 +51,7 @@ const inboundEvent = v.object({
   mediaId: v.optional(v.string()),
   mediaMime: v.optional(v.string()),
   mediaSize: v.optional(v.number()),
+  ...inboundGroupFields,
   sentAt: v.number(),
 })
 
@@ -138,29 +148,6 @@ async function liveBareShortCode(ctx: MutationCtx, msgText: string): Promise<Lin
 
 function text(msg: string): ChatMessageValue {
   return { kind: 'text', text: msg }
-}
-
-async function liveBinding(ctx: MutationCtx, provider: 'whatsapp' | 'telegram', address: string) {
-  const rows = await ctx.db
-    .query('channelBindings')
-    .withIndex('by_provider_and_address', (q) => q.eq('provider', provider).eq('address', address))
-    .take(20)
-  return rows.find((b) => !b.revokedAt) ?? null
-}
-
-/** Organizations the user is an active member of (approved companies only). */
-async function companiesOf(ctx: MutationCtx, user: Doc<'users'>) {
-  const rows = await ctx.db
-    .query('memberships')
-    .withIndex('by_userId', (q) => q.eq('userId', user._id))
-    .take(50)
-  const out: Doc<'companies'>[] = []
-  for (const m of rows) {
-    if (m.status !== 'active') continue
-    const c = await ctx.db.get(m.companyId)
-    if (c && c.status === 'approved' && (await memberContextIn(ctx, user, c._id))) out.push(c)
-  }
-  return out
 }
 
 async function sitesFor(ctx: MutationCtx, bound: BoundMember) {
@@ -318,6 +305,8 @@ export const route = internalMutation({
     const inbound = await ctx.db.get(inboundId)
     if (!inbound || inbound.status !== 'queued') return { type: 'none' }
     await ctx.db.patch(inboundId, { status: 'processed' })
+    // Telegram groups (VFQ-1) have their own gate: sender's binding, the group's org and scope.
+    if (inbound.chatType === 'group' || inbound.kind === 'member') return await groupRoute(ctx, inbound)
     const base = { provider: inbound.provider, address: inbound.address, callbackQueryId: inbound.callbackQueryId }
     const msgText = (inbound.text ?? '').trim()
 
@@ -399,6 +388,10 @@ export const route = internalMutation({
       if (scanPlan) return scanPlan
       const voiceReply = await voiceButton(ctx, bound, verb, arg, { ...tgt, bindingId: binding._id }, inbound.externalId)
       if (voiceReply) return voiceReply
+      if (verb === 'sq') {
+        const r = await scopeButton(ctx, bound, arg, privateKey(inbound, binding.companyId), tgt)
+        if (r) return r
+      }
       switch (verb) {
         case 'ok':
         case 'dup':
@@ -552,16 +545,27 @@ export const route = internalMutation({
       (await awaitingInput(ctx, bound, msgText, { ...tgt, bindingId: binding._id }, { sourceMessageId: inbound.externalId, sentAt: inbound.sentAt })) ??
       (await deadReply(ctx, bound, msgText, { ...tgt, bindingId: binding._id }))
     if (flowText) return flowText
+    // "get me summary from offshore": the scope resolver, then a report from the records (no LLM).
+    const key = privateKey(inbound, binding.companyId)
+    const cage = await awaitingCage(ctx, bound, msgText, key, tgt)
+    if (cage) return cage
+    if (wantsSummary(msgText, await recall(ctx, key))) return await summaryPlan(ctx, bound, msgText, key, tgt)
     return {
       type: 'agent',
       ...tgt,
       bindingId: binding._id,
+      siteId: await namedSite(ctx, bound, msgText),
       text: msgText,
       sourceMessageId: inbound.externalId,
       sentAt: inbound.sentAt,
     }
   },
 })
+
+/** The memory key of a private chat: the chat address is the person. */
+function privateKey(inbound: Doc<'channelInbound'>, companyId: Id<'companies'>): ChatKey {
+  return { provider: inbound.provider, chatAddress: inbound.address, senderKey: inbound.address, senderName: inbound.profileName, companyId }
+}
 
 /** Close out an inbound message after processing. */
 export const finish = internalMutation({
@@ -611,7 +615,7 @@ export const pruneInbound = internalMutation({
       .withIndex('by_receivedAt', (q) => q.lt('receivedAt', cutoff))
       .take(500)
     for (const r of old) await ctx.db.delete(r._id)
-    return old.length
+    return old.length + (await pruneScopes(ctx))
   },
 })
 

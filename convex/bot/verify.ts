@@ -17,7 +17,7 @@ export type InboundEvent = {
   provider: BotProvider
   externalId: string
   address: string
-  kind: 'text' | 'button' | 'image' | 'audio' | 'unsupported'
+  kind: 'text' | 'button' | 'image' | 'audio' | 'member' | 'unsupported'
   text?: string
   buttonId?: string
   callbackQueryId?: string
@@ -26,7 +26,30 @@ export type InboundEvent = {
   mediaId?: string
   mediaMime?: string
   mediaSize?: number
+  /**
+   * Telegram group chats (groups and supergroups). Absent for a private chat,
+   * where the chat id is the sender's own id.
+   */
+  chatType?: 'group'
+  /** Telegram sender (from.id) and @username, untrusted display data except the id Telegram signs for us. */
+  senderId?: string
+  senderUsername?: string
+  chatTitle?: string
+  /** Group message id (quoted in the reply), or the bot message a button sat on (edited in place). */
+  messageId?: number
+  /** kind 'member': the bot was added to or removed from the group, or the group became a supergroup. */
+  member?: 'added' | 'removed' | 'migrated'
+  migrateTo?: string
   sentAt: number
+}
+
+/** The bot itself, to tell which group messages are meant for it. */
+export type TelegramBotSelf = { username?: string | null; id?: string | null }
+
+/** The bot's numeric id is the part of the token before the colon. */
+export function telegramBotSelf(token: string | undefined, username: string | undefined): TelegramBotSelf {
+  const id = token && /^\d+:/.test(token) ? token.slice(0, token.indexOf(':')) : null
+  return { username: username ? username.replace(/^@/, '') : null, id }
 }
 
 /** A WhatsApp delivery status with Meta's pricing block. */
@@ -245,54 +268,101 @@ function telegramAudio(message: Obj): { mediaId: string; mediaMime?: string; med
   return null
 }
 
+const escapeRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /**
- * One Telegram update. Private chats only: a bot added to a group must not
- * bind or answer the group (the binding is per person).
+ * Whether a group message is for the bot (Telegram privacy mode delivers
+ * these): an @mention of the bot, a reply to one of its messages, or a
+ * /command that is not addressed to another bot. Returns the text with the
+ * mention and the command's @bot suffix removed, or null when it is not
+ * for us.
  */
-export function parseTelegram(body: unknown): InboundEvent | null {
-  const u = obj(body)
-  const updateId = str(u?.update_id)
-  if (!u || !updateId) return null
-  const message = obj(u.message)
-  if (message) {
-    const chat = obj(message.chat)
+export function addressedText(message: Obj, bot: TelegramBotSelf): string | null {
+  const raw = str(message.text) ?? str(message.caption) ?? ''
+  const name = bot.username?.toLowerCase() ?? null
+  const entities = arr(message.entities ?? message.caption_entities).map(obj).filter((e): e is Obj => !!e)
+  let addressed = false
+  for (const e of entities) {
+    const at = Number(e.offset ?? -1)
+    const len = Number(e.length ?? 0)
+    if (at < 0 || len <= 0) continue
+    const piece = raw.slice(at, at + len)
+    if (e.type === 'mention' && name && piece.toLowerCase() === `@${name}`) addressed = true
+    if (e.type === 'bot_command' && at === 0) {
+      const target = piece.includes('@') ? piece.slice(piece.indexOf('@') + 1).toLowerCase() : null
+      if (target === null || (name && target === name)) addressed = true
+    }
+  }
+  // Without entities (edited clients, tests): the same rules on the text.
+  if (!entities.length) {
+    if (name && new RegExp(`(^|\\s)@${escapeRe(name)}\\b`, 'i').test(raw)) addressed = true
+    const cmd = /^\/[a-z0-9_]+(?:@([a-z0-9_]+))?/i.exec(raw)
+    if (cmd && (!cmd[1] || (name && cmd[1].toLowerCase() === name))) addressed = true
+  }
+  const replyFrom = obj(obj(message.reply_to_message)?.from)
+  if (replyFrom) {
+    const id = str(replyFrom.id)
+    const uname = str(replyFrom.username)?.toLowerCase()
+    if ((bot.id && id === bot.id) || (name && replyFrom.is_bot === true && uname === name)) addressed = true
+  }
+  if (!addressed) return null
+  let out = raw
+  if (name) {
+    out = out.replace(new RegExp(`^(\\/[a-z0-9_]+)@${escapeRe(name)}\\b`, 'i'), '$1')
+    out = out.replace(new RegExp(`(^|\\s)@${escapeRe(name)}\\b[:,]?`, 'gi'), '$1')
+  }
+  return out.replace(/\s+/g, ' ').trim()
+}
+
+function telegramGroup(updateId: string, u: Obj, bot: TelegramBotSelf): InboundEvent | null {
+  const mcm = obj(u.my_chat_member)
+  if (mcm) {
+    const chat = obj(mcm.chat)
     const chatId = str(chat?.id)
-    if (!chatId || chat?.type !== 'private') return null
-    const from = obj(message.from)
-    if (from?.is_bot === true) return null
-    const sentAt = Number(str(message.date) ?? '0') * 1000 || Date.now()
-    const photo = telegramPhoto(message)
-    if (photo) {
-      return {
-        provider: 'telegram',
-        externalId: updateId,
-        address: chatId,
-        kind: 'image',
-        ...photo,
-        text: cap(str(message.caption), MAX_TEXT_CHARS),
-        profileName: cap(str(from?.first_name), 80),
-        sentAt,
-      }
-    }
-    const audio = telegramAudio(message)
-    if (audio) {
-      return {
-        provider: 'telegram',
-        externalId: updateId,
-        address: chatId,
-        kind: 'audio',
-        ...audio,
-        profileName: cap(str(from?.first_name), 80),
-        sentAt,
-      }
-    }
-    const text = str(message.text)
+    if (!chatId || (chat?.type !== 'group' && chat?.type !== 'supergroup')) return null
+    const status = str(obj(mcm.new_chat_member)?.status)
+    const member = status === 'left' || status === 'kicked' ? 'removed' : status === 'member' || status === 'administrator' ? 'added' : null
+    if (!member) return null
+    const from = obj(mcm.from)
     return {
       provider: 'telegram',
       externalId: updateId,
       address: chatId,
-      kind: text !== undefined ? 'text' : 'unsupported',
+      kind: 'member',
+      member,
+      chatType: 'group',
+      senderId: cap(str(from?.id), 32),
+      chatTitle: cap(str(chat?.title), 120),
+      profileName: cap(str(from?.first_name), 80),
+      sentAt: Number(str(mcm.date) ?? '0') * 1000 || Date.now(),
+    }
+  }
+  const message = obj(u.message)
+  if (message) {
+    const chat = obj(message.chat)
+    const chatId = str(chat?.id)
+    const from = obj(message.from)
+    if (!chatId || from?.is_bot === true) return null
+    const sentAt = Number(str(message.date) ?? '0') * 1000 || Date.now()
+    const migrateTo = str(message.migrate_to_chat_id)
+    if (migrateTo) {
+      return { provider: 'telegram', externalId: updateId, address: chatId, kind: 'member', member: 'migrated', migrateTo: cap(migrateTo, 32), chatType: 'group', sentAt }
+    }
+    const text = addressedText(message, bot)
+    if (text === null) return null
+    const media = !!(message.photo || message.voice || message.audio || message.document || message.video)
+    return {
+      provider: 'telegram',
+      externalId: updateId,
+      address: chatId,
+      // Photos and voice notes are read in the private chat only.
+      kind: media ? 'unsupported' : str(message.text) !== undefined ? 'text' : 'unsupported',
       text: cap(text, MAX_TEXT_CHARS),
+      chatType: 'group',
+      senderId: cap(str(from?.id), 32),
+      senderUsername: cap(str(from?.username), 64),
+      chatTitle: cap(str(chat?.title), 120),
+      messageId: typeof message.message_id === 'number' ? message.message_id : undefined,
       profileName: cap(str(from?.first_name), 80),
       sentAt,
     }
@@ -304,7 +374,102 @@ export function parseTelegram(body: unknown): InboundEvent | null {
     const chatId = str(chat?.id)
     const data = cap(str(cb.data), MAX_BUTTON_ID_CHARS)
     const cbId = cap(str(cb.id), 100)
-    if (!chatId || !cbId || chat?.type !== 'private') return null
+    const from = obj(cb.from)
+    if (!chatId || !cbId) return null
+    return {
+      provider: 'telegram',
+      externalId: updateId,
+      address: chatId,
+      kind: data ? 'button' : 'unsupported',
+      buttonId: data,
+      callbackQueryId: cbId,
+      chatType: 'group',
+      senderId: cap(str(from?.id), 32),
+      senderUsername: cap(str(from?.username), 64),
+      chatTitle: cap(str(chat?.title), 120),
+      messageId: typeof msg?.message_id === 'number' ? msg.message_id : undefined,
+      profileName: cap(str(from?.first_name), 80),
+      sentAt: Date.now(),
+    }
+  }
+  return null
+}
+
+/** The chat type of an update: private, group (group or supergroup), or other (channels). */
+function chatKind(u: Obj): 'private' | 'group' | 'other' {
+  const chat = obj(obj(u.message)?.chat) ?? obj(obj(obj(u.callback_query)?.message)?.chat) ?? obj(obj(u.my_chat_member)?.chat)
+  const type = str(chat?.type)
+  if (type === 'private') return 'private'
+  if (type === 'group' || type === 'supergroup') return 'group'
+  return 'other'
+}
+
+/**
+ * One Telegram update. Private chats bind a person; groups and supergroups
+ * are handled by convex/bot/chatGroups.ts and only messages meant for the
+ * bot get through (see addressedText). Channels are ignored.
+ */
+export function parseTelegram(body: unknown, bot: TelegramBotSelf = {}): InboundEvent | null {
+  const u = obj(body)
+  const updateId = str(u?.update_id)
+  if (!u || !updateId) return null
+  const kind = chatKind(u)
+  if (kind === 'group') return telegramGroup(updateId, u, bot)
+  if (kind !== 'private') return null
+  const message = obj(u.message)
+  if (message) {
+    const chat = obj(message.chat)
+    const chatId = str(chat?.id)
+    if (!chatId) return null
+    const from = obj(message.from)
+    if (from?.is_bot === true) return null
+    const username = cap(str(from?.username), 64)
+    const who = { profileName: cap(str(from?.first_name), 80), ...(username ? { senderUsername: username } : {}) }
+    const sentAt = Number(str(message.date) ?? '0') * 1000 || Date.now()
+    const photo = telegramPhoto(message)
+    if (photo) {
+      return {
+        provider: 'telegram',
+        externalId: updateId,
+        address: chatId,
+        kind: 'image',
+        ...photo,
+        text: cap(str(message.caption), MAX_TEXT_CHARS),
+        ...who,
+        sentAt,
+      }
+    }
+    const audio = telegramAudio(message)
+    if (audio) {
+      return {
+        provider: 'telegram',
+        externalId: updateId,
+        address: chatId,
+        kind: 'audio',
+        ...audio,
+        ...who,
+        sentAt,
+      }
+    }
+    const text = str(message.text)
+    return {
+      provider: 'telegram',
+      externalId: updateId,
+      address: chatId,
+      kind: text !== undefined ? 'text' : 'unsupported',
+      text: cap(text, MAX_TEXT_CHARS),
+      ...who,
+      sentAt,
+    }
+  }
+  const cb = obj(u.callback_query)
+  if (cb) {
+    const msg = obj(cb.message)
+    const chat = obj(msg?.chat)
+    const chatId = str(chat?.id)
+    const data = cap(str(cb.data), MAX_BUTTON_ID_CHARS)
+    const cbId = cap(str(cb.id), 100)
+    if (!chatId || !cbId) return null
     return {
       provider: 'telegram',
       externalId: updateId,
