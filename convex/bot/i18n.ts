@@ -13,6 +13,7 @@ const en = {
     `Hello! This is the Anowa assistant. To use it, open ${appUrl}/account, choose "Connect WhatsApp / Telegram" and follow the steps.`,
   linkHowTo: 'Send the 6-digit code from your account page like this: LINK 123456',
   linkBadCode: 'That code is not valid or has expired. Create a new one on your account page.',
+  linkCodePaused: 'Typed codes are paused for now because of too many attempts. Open the link on your account page instead.',
   linkPhoneMismatch:
     'This WhatsApp number is not the verified phone on any account. Verify this number on your account page first, then create a code.',
   linked: (name: string, company: string) => `Connected, ${name}. You are working in ${company}.`,
@@ -150,6 +151,7 @@ const fr: Strings = {
     `Bonjour ! Ici l'assistant Anowa. Pour l'utiliser, ouvrez ${appUrl}/account, choisissez « Connecter WhatsApp / Telegram » et suivez les étapes.`,
   linkHowTo: 'Envoyez le code à 6 chiffres de votre page compte ainsi : LINK 123456',
   linkBadCode: "Ce code n'est pas valide ou a expiré. Créez-en un nouveau sur votre page compte.",
+  linkCodePaused: "Les codes saisis sont suspendus pour le moment après trop de tentatives. Ouvrez plutôt le lien depuis votre page compte.",
   linkPhoneMismatch:
     "Ce numéro WhatsApp n'est le téléphone vérifié d'aucun compte. Vérifiez d'abord ce numéro sur votre page compte, puis créez un code.",
   linked: (name: string, company: string) => `Connecté, ${name}. Vous travaillez dans ${company}.`,
