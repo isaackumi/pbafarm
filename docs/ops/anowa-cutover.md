@@ -211,6 +211,7 @@ Used by `.github/workflows/convex-deploy.yml` (`ci.yml` needs none):
 |---|---|---|
 | `CONVEX_DEPLOY_KEY` | Environment `production` (required reviewers = owner, branch `main`) | Production deploy key from (a) 3 |
 | `CONVEX_DEPLOY_KEY_STAGING` | Environment `staging` (optional) | Staging deploy key; when unset the staging job is skipped |
+| `CONVEX_DEPLOYS_FROM_VERCEL` | Repository **variable** (not a secret), `true` | Set once Vercel Production has `CONVEX_DEPLOY_KEY`: the Vercel build then deploys Convex right before the frontend and the Action skips its production deploy ([environments-and-deploys.md](environments-and-deploys.md#backend-and-frontend-ship-together-vercel-build)) |
 
 Settings → Environments → create `production` and `staging`, then add the secrets.
 Until `CONVEX_DEPLOY_KEY` exists, the production deploy job fails on purpose.

@@ -30,6 +30,39 @@ Cutover from `vibrant-stork-860` to the new production deployment:
 Manual runs: Actions → Deploy Convex → Run workflow → `target` =
 `staging` | `production` | `both`.
 
+### Backend and frontend ship together (Vercel build)
+
+Vercel publishes the frontend as soon as `main` moves, while the Action above
+deploys Convex only after lint, type-check and tests (about 5 minutes). Any
+merge that adds a Convex function therefore had a window where the live page
+called a function the backend did not have yet ("Could not find public
+function for 'home:overview'", 2026-11-21).
+
+`package.json` now has a `vercel-build` script (`scripts/vercel-build.mjs`,
+logic in `lib/vercelBuild.mjs`), which Vercel runs instead of `build`:
+
+| Vercel environment | `CONVEX_DEPLOY_KEY` in Vercel | What the build does |
+|---|---|---|
+| Production | set | `npx convex deploy --cmd 'npm run build'`: deploy Convex, then build the frontend against that deployment's URL. A failed backend deploy fails the build, so the old site stays up. |
+| Production | not set (today) | `npm run build` only, with a log line saying so. Convex is still deployed by the Action. |
+| Preview / development | any | `npm run build` only. A preview never pushes its branch's functions to the production backend. |
+
+Owner steps to switch it on (both are needed, in this order):
+
+1. Vercel → Project → Settings → Environment Variables: add
+   `CONVEX_DEPLOY_KEY` (the same key as the GitHub secret) scoped to
+   **Production only**. If the project's Build Command is overridden in the
+   dashboard, clear it so `vercel-build` is used.
+2. GitHub → Settings → Secrets and variables → Actions → Variables: add
+   `CONVEX_DEPLOYS_FROM_VERCEL` = `true` on every repo that runs this workflow
+   (`Hei-Tech-Inc/anowa` and `isaackumi/pbafarm`). The Action then still
+   verifies every push but skips its production deploy, so a run finishing
+   minutes after Vercel cannot roll the backend back to an older commit.
+   Manual runs with `target: production` still deploy.
+
+Pull request CI (`ci.yml`) still runs lint, type-check and tests before
+anything is merged.
+
 `convex deploy` itself type-checks and validates the schema against existing
 data, so a schema change that existing rows violate fails on staging (which
 holds a copy of live data) before production.

@@ -7,6 +7,7 @@
     "dev:webpack": "next dev",
     "dev:backend": "convex dev",
     "build": "next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",

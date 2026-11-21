@@ -4,16 +4,22 @@
  * targets); the full policy runs as Report-Only until it has been observed in
  * production, then moves to the enforced header.
  */
+import { createHash } from 'node:crypto'
+import { THEME_SCRIPT } from './lib/themeScript.mjs'
+
 const CONVEX = 'https://*.convex.cloud wss://*.convex.cloud https://*.convex.site'
 const TURNSTILE = 'https://challenges.cloudflare.com'
 const R2 = 'https://*.r2.cloudflarestorage.com'
 const VERCEL = 'https://vercel.live https://*.vercel-insights.com'
 
+// The only inline script: the pre-paint theme script in pages/_document.js.
+const THEME_SCRIPT_HASH = `'sha256-${createHash('sha256').update(THEME_SCRIPT).digest('base64')}'`
+
 const enforcedCsp = ["frame-ancestors 'none'", "base-uri 'self'", "object-src 'none'", "form-action 'self'"]
 
 const reportOnlyCsp = [
   "default-src 'self'",
-  `script-src 'self' ${TURNSTILE} https://vercel.live`,
+  `script-src 'self' ${THEME_SCRIPT_HASH} ${TURNSTILE} https://vercel.live`,
   // Runtime brand colours (CompanySettingsContext) set inline styles.
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https://*.convex.cloud https://*.convex.site ${R2}`,

@@ -1,9 +1,6 @@
 import { Html, Head, Main, NextScript } from 'next/document'
 import { BRAND } from '../lib/brand'
-
-// Runs before first paint: apply the saved theme (dark by default) and outdoor
-// contrast so the page never flashes the wrong palette. ThemeContext keeps it in sync.
-const THEME_SCRIPT = `(function(){try{var d=document.documentElement;var s=localStorage.getItem('theme');if(s!=='light'&&s!=='dark')s=localStorage.getItem('pbafarm:theme-default');var t=s==='light'?'light':'dark';d.dataset.theme=t;d.classList.toggle('dark',t==='dark');d.style.colorScheme=t;if(localStorage.getItem('pbafarm:contrast')==='high')d.dataset.contrast='high';var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='dark'?'#0a0b0c':'#f4f7fb');}catch(e){}})();`
+import { THEME_SCRIPT } from '../lib/themeScript.mjs'
 
 export default function Document() {
   return (
@@ -14,6 +11,7 @@ export default function Document() {
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#0a0b0c" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Anowa" />
         <meta name="application-name" content="Anowa" />
