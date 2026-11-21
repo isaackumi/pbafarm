@@ -40,6 +40,7 @@ const PATH_KEY = {
   '/api-docs': 'api-keys',
   '/messaging-settings': 'messaging',
   '/outbox': 'messaging',
+  '/bot-templates': 'messaging',
   '/ai-settings': 'ai',
   '/billing': 'billing',
 }

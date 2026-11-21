@@ -12,10 +12,13 @@ import { isUserError } from '../lib/errors'
 import { t } from './i18n'
 import { runAgent } from './agent'
 import { commitLogbook, runLogbook } from './logbook'
-import { deliver } from './outbound'
+import { deliver, telegramBotToken } from './outbound'
+import { answerTelegramCallback } from '../messaging/providers/telegramBot'
 import { UNDO_WINDOW_MS } from './pending'
 import { decideFromChat } from './approvals'
 import { commitVoice, startVoice, undoVoice } from './voice'
+import { pushCard } from './rounds'
+import { commitGroup, undoGroup } from './groups'
 import type { ChatMessageValue, RoutePlan } from './validators'
 
 function errorText(err: unknown): string {
@@ -41,6 +44,18 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
       return await commitVoice(ctx, plan)
     case 'voice_undo':
       return await undoVoice(ctx, plan)
+    case 'round': {
+      // The card first (edited in place, or sent anew), then any reply.
+      const r = await pushCard(ctx, plan.roundId, plan.fresh)
+      if (!r.ok && plan.fresh) return [text(r.error ?? 'not sent')]
+      return plan.messages
+    }
+    case 'group_commit':
+    case 'group_undo': {
+      const r = plan.type === 'group_commit' ? await commitGroup(ctx, plan) : await undoGroup(ctx, plan)
+      if (r.roundId) await pushCard(ctx, r.roundId, false, true)
+      return r.messages
+    }
     case 'agent':
       return await runAgent(ctx, {
         bindingId: plan.bindingId,
@@ -135,8 +150,11 @@ export const handle = internalAction({
     if (plan.type === 'none') return null
     let error: string | undefined
     try {
+      // Stop the Telegram button spinner first: the work below can edit a card or save several entries.
+      const token = plan.provider === 'telegram' && plan.callbackQueryId ? telegramBotToken() : null
+      if (token && plan.callbackQueryId) await answerTelegramCallback(token, plan.callbackQueryId)
       const messages = await messagesFor(ctx, plan)
-      const r = await deliver(ctx, plan, messages)
+      const r = await deliver(ctx, token ? { ...plan, callbackQueryId: undefined } : plan, messages)
       if (r.error) error = r.error
     } catch (err) {
       error = err instanceof Error ? err.message : 'processing failed'

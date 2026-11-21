@@ -7,6 +7,7 @@ const button = v.object({ id: v.string(), title: v.string() })
 export const chatMessage = v.union(
   v.object({ kind: v.literal('text'), text: v.string() }),
   v.object({ kind: v.literal('buttons'), text: v.string(), buttons: v.array(button) }),
+  v.object({ kind: v.literal('keyboard'), text: v.string(), html: v.optional(v.boolean()), rows: v.array(v.array(button)) }),
   v.object({
     kind: v.literal('list'),
     text: v.string(),
@@ -99,6 +100,31 @@ export const routePlan = v.union(
     ...target,
     bindingId: v.id('channelBindings'),
     voiceNoteId: v.id('voiceNotes'),
+    sourceMessageId: v.string(),
+  }),
+  /** Morning round (T1a/T1b): show the card (edit in place, or `fresh` = a new message), then `messages`. */
+  v.object({
+    type: v.literal('round'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    roundId: v.id('botRounds'),
+    fresh: v.boolean(),
+    messages: v.array(chatMessage),
+  }),
+  /** Save every open draft of a group (round Log all, template). */
+  v.object({
+    type: v.literal('group_commit'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    groupId: v.id('botDraftGroups'),
+    sourceMessageId: v.string(),
+  }),
+  /** Undo every saved draft of a group. */
+  v.object({
+    type: v.literal('group_undo'),
+    ...target,
+    bindingId: v.id('channelBindings'),
+    groupId: v.id('botDraftGroups'),
     sourceMessageId: v.string(),
   }),
   /** Save all drafts read from one logbook page. */

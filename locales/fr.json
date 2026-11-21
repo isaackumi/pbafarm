@@ -9009,5 +9009,115 @@
       "body": "Mise à niveau planifiée. Continuez à saisir : les entrées attendent hors ligne et se synchronisent ensuite.",
       "statusPage": "Page d’état"
     }
+  },
+  "botTemplates": {
+    "title": "Modèles du bot",
+    "eyebrow": "Paramètres · Messagerie · Telegram",
+    "new": "Nouveau modèle",
+    "range": "{first} à {last}",
+    "strip": {
+      "templates": "modèles",
+      "uses": "utilisations sur 30 jours",
+      "saved": "de saisie évitée ce mois-ci",
+      "hintBefore": "Les soigneurs tapent",
+      "hintAfter": "dans Telegram pour en choisir un. Chaque utilisation est un brouillon qu'ils vérifient et enregistrent."
+    },
+    "tabs": {
+      "all": "Tous",
+      "shared": "Partagés",
+      "personal": "Personnels · {count}"
+    },
+    "table": {
+      "title": "Modèles",
+      "sorted": "Triés par utilisation",
+      "template": "MODÈLE",
+      "fills": "REMPLIT",
+      "who": "QUI PEUT L'UTILISER",
+      "uses": "UTIL. 30 J",
+      "editing": "En cours",
+      "edit": "Modifier",
+      "view": "Voir",
+      "share": "Partager avec le site",
+      "personalBy": "{name} · personnel",
+      "empty": "Pas encore de modèle. Créez-en un avec Nouveau modèle, ou touchez Garder ma dernière saisie comme modèle dans Telegram."
+    },
+    "kind": {
+      "daily_plan": "Saisie du jour",
+      "daily_same": "Saisie du jour",
+      "water_check": "Mesure de l'eau",
+      "feed_issue": "Sortie d'aliment"
+    },
+    "kindLong": {
+      "daily_plan": "Saisie du jour",
+      "daily_same": "Saisie du jour, comme hier",
+      "water_check": "Mesure de l'eau",
+      "feed_issue": "Sortie d'aliment"
+    },
+    "fills": {
+      "plan": "plan",
+      "same": "comme hier",
+      "mine": "mes cages",
+      "cages": "{count} cages",
+      "issue": "{kg} kg"
+    },
+    "who": {
+      "only": "Seulement {name}",
+      "site": "{site} · {count}"
+    },
+    "cages": {
+      "mine": "Mes cages",
+      "mineHint": "Les cages de chaque soigneur ce jour-là",
+      "row": "Rangée {row}, toutes les cages",
+      "rowAt": "Rangée {row}, toutes les cages, {site}",
+      "rowHint": "{cages}, les nouvelles cages s'ajoutent seules",
+      "list": "{count} cages"
+    },
+    "src": {
+      "feedKg": "Aliment kg",
+      "feedPlan": "Du plan d'alimentation, par cage",
+      "feedSame": "Comme hier, par cage",
+      "feedType": "Type d'aliment",
+      "typePellet": "Le granulé actuel de la cage",
+      "typeSame": "L'aliment d'hier",
+      "dead": "Poissons morts",
+      "deadValue": "Demandé à chaque fois, 0 si non dit",
+      "do": "OD",
+      "doValue": "Tapé en une ligne, OD bas signalé",
+      "temp": "Température",
+      "tempValue": "Tapée en une ligne",
+      "shared": "Partagé avec"
+    },
+    "share": {
+      "only": "Vous seul",
+      "site": "Tout le site {site}"
+    },
+    "editor": {
+      "name": "Nom du modèle",
+      "namePlaceholder": "Nommez ce modèle",
+      "type": "Type",
+      "shortcut": "Raccourci",
+      "cages": "Cages",
+      "pickFeed": "Choisissez un aliment",
+      "quantity": "Quantité (kg)",
+      "delete": "Supprimer",
+      "save": "Enregistrer le modèle"
+    },
+    "preview": {
+      "title": "Aperçu dans Telegram",
+      "check": "Vérifiez avant que j'enregistre :",
+      "save": "Enregistrer",
+      "saveAll": "Enregistrer les {count}",
+      "edit": "Modifier",
+      "cancel": "Annuler",
+      "dead": "morts",
+      "temp": "temp.",
+      "pellet": "Granulé actuel",
+      "yesterdayKg": "kg d'hier"
+    },
+    "toast": {
+      "saved": "Modèle enregistré",
+      "deleted": "Modèle supprimé",
+      "shared": "Partagé avec {site}"
+    }
   }
 }
