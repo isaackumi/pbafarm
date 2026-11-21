@@ -86,7 +86,8 @@
       "projects": "Projets",
       "cageKeepers": "Gardiens de cages",
       "myCages": "Mes cages",
-      "cageKeepersRow": "Rangée des gardiens"
+      "cageKeepersRow": "Rangée des gardiens",
+      "scan": "Scanner une cage"
     },
     "section": {
       "anowa": "Demander à Anowa",
@@ -130,7 +131,9 @@
       "inventoryAnalytics": "Analyses stocks"
     },
     "feedCover": "Autonomie aliment",
-    "feedCoverDays": "{count} jours"
+    "feedCoverDays": "{count} jours",
+    "tasks": "Tâches",
+    "scan": "Scanner"
   },
   "common": {
     "language": "Langue",
@@ -2060,15 +2063,8 @@
     "checkFailed": "Les lignes n’ont pas pu être vérifiées"
   },
   "scan": {
-    "openingCode": "Ouverture de la cage {code}…",
     "unknownCode": "Aucune cage de cette ferme n'a le code {code}",
     "title": "Scanner une cage",
-    "eyebrow": "Pointez l’appareil photo vers l’étiquette de la cage",
-    "subtitle": "Ouvre l’écran choisi avec cette cage déjà sélectionnée.",
-    "openIn": "Ouvrir dans",
-    "daily": "Saisie journalière",
-    "biweekly": "Échantillonnage bimensuel",
-    "start": "Commencer le scan",
     "noMatch": "Aucune cage de cette ferme ne correspond à cette étiquette",
     "labelTitle": "Scanner l’étiquette de la cage",
     "close": "Fermer le scanner",
@@ -2081,7 +2077,29 @@
     },
     "typeLabel": "Ou saisissez le code ou le nom de la cage",
     "typePlaceholder": "ex. C-012 ou A3",
-    "openCage": "Ouvrir la cage"
+    "openCage": "Ouvrir la cage",
+    "back": "Retour",
+    "torchOn": "Allumer la lampe",
+    "torchOff": "Éteindre la lampe",
+    "recognised": "Cage {name} reconnue",
+    "scanAnother": "Scanner une autre cage",
+    "card": {
+      "cage": "Cage",
+      "fedToday": "Nourrie aujourd’hui · {time}",
+      "loggedToday": "Saisie aujourd’hui · {time}",
+      "notFed": "Pas encore nourrie aujourd’hui",
+      "offline": "Hors ligne",
+      "fish": "Poissons",
+      "avgWt": "Poids moy.",
+      "do": "OD",
+      "doLow": "{value} mg/L, sous le seuil d’alerte de {min} mg/L",
+      "doUnit": "{value} mg/L",
+      "actions": "Saisir pour cette cage",
+      "logFeed": "Aliment",
+      "water": "Eau",
+      "mortality": "Mortalité",
+      "noReading": "Pas encore de mesure"
+    }
   },
   "pwa": {
     "updateReady": "Une nouvelle version d'Anowa est prête.",

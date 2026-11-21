@@ -162,7 +162,7 @@ const Shell = ({ children, title: initialTitle, eyebrow, actions, hideTitle = fa
         ) : (
           <Header onOpenMenu={() => setMobileNavOpen(true)} />
         )}
-        <main className={`flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9 lg:pb-10 animate-fade-in bg-transparent${bareOnPhone ? ' max-md:!pt-0' : ''}`}>
+        <main className={`flex-1 px-4 pt-6 pb-28 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9 lg:pb-10 animate-fade-in bg-transparent${bareOnPhone ? ' max-md:!pt-0' : ''}`}>
           {!hideTitle && (
             <PageTitle
               className="mb-7 print:hidden"

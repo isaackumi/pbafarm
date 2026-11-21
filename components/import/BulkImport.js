@@ -611,7 +611,7 @@ export default function BulkImport({ kind, onKindChange }) {
 
       {rows && (
         <div
-          className={`sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex flex-col gap-3 rounded-[28px] border border-line-strong bg-surface-2 py-[14px] pl-6 pr-[14px] sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:rounded-pill lg:bottom-4 [html[data-theme=light]_&]:bg-surface [html[data-theme=light]_&]:shadow-[0_8px_24px_#1018281F,0_1px_2px_#1018281A] ${PROPORTIONAL}`}
+          className={`sticky bottom-[calc(var(--tabbar-h)+8px)] z-20 flex flex-col gap-3 rounded-[28px] border border-line-strong bg-surface-2 py-[14px] pl-6 pr-[14px] sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:rounded-pill lg:bottom-4 [html[data-theme=light]_&]:bg-surface [html[data-theme=light]_&]:shadow-[0_8px_24px_#1018281F,0_1px_2px_#1018281A] ${PROPORTIONAL}`}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1" aria-live="polite">
             <span className="flex items-center gap-2 text-[14px] leading-[18px] text-text">

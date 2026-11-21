@@ -86,7 +86,8 @@
       "projects": "Projects",
       "cageKeepers": "Cage keepers",
       "myCages": "My cages",
-      "cageKeepersRow": "Cage keepers row"
+      "cageKeepersRow": "Cage keepers row",
+      "scan": "Scan cage"
     },
     "section": {
       "anowa": "Ask Anowa",
@@ -130,7 +131,9 @@
       "inventoryAnalytics": "Inventory analytics"
     },
     "feedCover": "Feed cover",
-    "feedCoverDays": "{count} days"
+    "feedCoverDays": "{count} days",
+    "tasks": "Tasks",
+    "scan": "Scan"
   },
   "common": {
     "language": "Language",
@@ -2060,15 +2063,8 @@
     "checkFailed": "Rows could not be checked"
   },
   "scan": {
-    "openingCode": "Opening cage {code}…",
     "unknownCode": "No cage on this farm has the code {code}",
     "title": "Scan cage",
-    "eyebrow": "Point the camera at the label on the cage",
-    "subtitle": "Opens the chosen screen with that cage already selected.",
-    "openIn": "Open in",
-    "daily": "Daily entry",
-    "biweekly": "Bi-weekly sampling",
-    "start": "Start scanning",
     "noMatch": "No cage on this farm matches that label",
     "labelTitle": "Scan cage label",
     "close": "Close scanner",
@@ -2081,7 +2077,29 @@
     },
     "typeLabel": "Or type the cage code or name",
     "typePlaceholder": "e.g. C-012 or A3",
-    "openCage": "Open cage"
+    "openCage": "Open cage",
+    "back": "Back",
+    "torchOn": "Turn on the torch",
+    "torchOff": "Turn off the torch",
+    "recognised": "Cage {name} recognised",
+    "scanAnother": "Scan another cage",
+    "card": {
+      "cage": "Cage",
+      "fedToday": "Fed today · {time}",
+      "loggedToday": "Logged today · {time}",
+      "notFed": "Not fed yet today",
+      "offline": "Offline",
+      "fish": "Fish",
+      "avgWt": "Avg wt",
+      "do": "DO",
+      "doLow": "{value} mg/L, below the {min} mg/L alert level",
+      "doUnit": "{value} mg/L",
+      "actions": "Log for this cage",
+      "logFeed": "Log feed",
+      "water": "Water",
+      "mortality": "Mortality",
+      "noReading": "No reading yet"
+    }
   },
   "pwa": {
     "updateReady": "A new version of Anowa is ready.",

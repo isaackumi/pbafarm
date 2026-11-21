@@ -916,13 +916,17 @@
       "route": "/scan",
       "implementation": [
         "pages/scan.js",
-        "components/QrScanner.js"
+        "components/QrScanner.js",
+        "components/MobileTabBar.js",
+        "components/Layout.js",
+        "lib/navigation.js",
+        "convex/scan.ts"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "514d17383900f9540a48f2f41e7bf7f035ed587c83dff7b8990974adcc437f79",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner: not built yet (54 Mobile Scan & QR). Older /scan page + QrScanner exist."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built (PR build/scan-54). Browser-checked at 390x844 against the artboard screenshot and get_jsx: header (44px back, torch), 300px viewfinder (navy radial, 190px frame, label tile, status pill), cage card (CAGE · batch, 28/32 name, Fed today chip, Fish / Avg wt / DO with the farm low-DO threshold, Log feed / Water / Mortality) and the Paper tab bar (Scan active pill), which is now the default phone bar app-wide (Home, Tasks, Scan, Cages, More; Tasks active on /tasks and /daily-entry; custom shortcuts still honored). Computed styles match value for value. The torch button shows only when the camera reports a torch (verified with a torch-capable camera); Paper's 9:41 status bar is device chrome. Non-Paper states: Starting camera / Point at a cage label pill, Not fed yet today / Logged today / Offline chip, typed-code card while no cage is in view."
     },
     {
       "id": "H45-0",
@@ -938,11 +942,11 @@
         "components/Layout.js",
         "styles/theme.css"
       ],
-      "status": "partial",
+      "status": "built",
       "jsxHash": "038f0ff4f37ff688682ce290651f48caae1b3a6271099685891736f5a34b4fc5",
       "hashedAt": "2026-11-20",
       "verifiedAt": "2026-11-21",
-      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields."
+      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields. 2026-11-21 (Paper 54 PR #58): the phone tab bar is now Paper's Home · Tasks · Scan · Cages · More, 87px, with Tasks active on /daily-entry, browser-checked at 390 in dark and light, so the last difference is closed. Deliberate, owner rules: the date follows the org's locale, and empty values show an en dash because the project bans em dashes."
     },
     {
       "id": "H82-0",
@@ -1616,13 +1620,17 @@
       "route": "/scan",
       "implementation": [
         "pages/scan.js",
-        "pages/cages/qr-codes.js"
+        "components/QrScanner.js",
+        "components/MobileTabBar.js",
+        "components/Layout.js",
+        "lib/navigation.js",
+        "convex/scan.ts"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "5cb33d8fca735b08f8efa85dd467bc0755161f45051813dca4ca14a525481a88",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner fact: 54 Mobile Scan & QR not built. Older /scan and /cages/qr-codes pages exist."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built (PR build/scan-54). Browser-checked at 390x844 against the artboard screenshot and get_jsx: header (44px back, torch), 300px viewfinder (navy radial, 190px frame, label tile, status pill), cage card (CAGE · batch, 28/32 name, Fed today chip, Fish / Avg wt / DO with the farm low-DO threshold, Log feed / Water / Mortality) and the Paper tab bar (Scan active pill), which is now the default phone bar app-wide (Home, Tasks, Scan, Cages, More; Tasks active on /tasks and /daily-entry; custom shortcuts still honored). Computed styles match value for value. The torch button shows only when the camera reports a torch (verified with a torch-capable camera); Paper's 9:41 status bar is device chrome. Non-Paper states: Starting camera / Point at a cage label pill, Not fed yet today / Logged today / Offline chip, typed-code card while no cage is in view. Light: lime corners, #16A34A dot, #A7DDB8 chip border, white Water/Mortality tiles, 600 Log feed label."
     },
     {
       "id": "MGE-0",
@@ -1638,11 +1646,11 @@
         "components/Layout.js",
         "styles/theme.css"
       ],
-      "status": "partial",
+      "status": "built",
       "jsxHash": "7b73303da3aef8d1f54eb55560a3a2baaf257f514aa89c28092540de4a93b51b",
       "hashedAt": "2026-11-20",
       "verifiedAt": "2026-11-21",
-      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields."
+      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields. 2026-11-21 (Paper 54 PR #58): the phone tab bar is now Paper's Home · Tasks · Scan · Cages · More, 87px, with Tasks active on /daily-entry, browser-checked at 390 in dark and light, so the last difference is closed. Deliberate, owner rules: the date follows the org's locale, and empty values show an en dash because the project bans em dashes."
     },
     {
       "id": "S2H-2",
