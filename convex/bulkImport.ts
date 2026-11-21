@@ -23,15 +23,19 @@ import { insertBiweeklyMany } from './biweeklyRecords'
 import { createStockingAs } from './stocking'
 import { logAudit } from './lib/tenancy'
 import {
+  CHECK_CHUNK,
   IMPORT_CHUNK,
   MAX_IMPORT_ROWS,
-  MORTALITY_LOOKBACK_DAYS,
-  addDaysIso,
   checkBiweeklyRows,
   checkDailyRows,
   checkStockingRows,
+  datesByCage,
+  historyWindows,
+  newCheckState,
   rowSpan,
+  toCarry,
   type CageLite,
+  type CheckState,
   type ImportKind,
   type ImportRowInput,
   type RowResult,
@@ -72,6 +76,12 @@ const rowResult = v.object({
   cageId: v.optional(v.id('cages')),
 })
 
+const carryValidator = v.object({
+  seen: v.array(v.string()),
+  feedUsed: v.array(v.object({ id: v.string(), kg: v.number() })),
+  binUsed: v.array(v.object({ id: v.string(), kg: v.number() })),
+})
+
 type Ctx = QueryCtx | MutationCtx
 
 /** The member's import access: production.import, the site in scope, and stocking requests for stocking rows. */
@@ -81,11 +91,13 @@ async function importMember(ctx: Ctx, kind: ImportKind, locationId: Id<'farmLoca
   return m
 }
 
-function assertRowCount(rows: unknown[]) {
-  if (rows.length > MAX_IMPORT_ROWS) {
-    throw userError('VALIDATION', `An import holds at most ${MAX_IMPORT_ROWS} rows`, {
-      reason: 'TOO_MANY_ROWS',
-    })
+/** A check call takes one chunk of the file; the carry covers at most a whole file. */
+function assertCheckSize(rows: unknown[], carry: { seen: unknown[]; feedUsed: unknown[]; binUsed: unknown[] } | undefined) {
+  if (rows.length > CHECK_CHUNK) {
+    throw userError('VALIDATION', `Check at most ${CHECK_CHUNK} rows per call`, { reason: 'TOO_MANY_ROWS' })
+  }
+  if (carry && (carry.seen.length > MAX_IMPORT_ROWS || carry.feedUsed.length > MAX_IMPORT_ROWS || carry.binUsed.length > MAX_IMPORT_ROWS)) {
+    throw userError('VALIDATION', `An import holds at most ${MAX_IMPORT_ROWS} rows`, { reason: 'TOO_MANY_ROWS' })
   }
 }
 
@@ -94,6 +106,7 @@ async function evaluate(
   ctx: Ctx,
   m: MemberContext,
   args: { kind: ImportKind; locationId?: Id<'farmLocations'>; today: string; rows: ImportRowInput[] },
+  state?: CheckState,
 ): Promise<RowResult<any>[]> {
   const { user } = m
   if (!isBusinessDate(args.today)) throw userError('VALIDATION', 'today must be YYYY-MM-DD')
@@ -103,28 +116,28 @@ async function evaluate(
   )
   const cageById = new Map(cageDocs.map((c) => [String(c._id), c]))
   const cages: CageLite[] = cageDocs.map((c) => ({ id: String(c._id), name: c.name, status: c.status }))
-  const base = { cages, today: args.today, siteName: site?.name ?? null }
+  const base = { cages, today: args.today, siteName: site?.name ?? null, state }
   const span = rowSpan(args.rows, cages)
   const company = user.companyId ? await ctx.db.get(user.companyId) : null
   const settings = mergeSettings(company?.settings)
 
   if (args.kind === 'daily') {
     const feedDocs = (await scopedRows(ctx, user, 'feedTypes')).filter((f) => !f.deletedAt)
+    // Per cage, only the lookback before each row date: about 31 days a row,
+    // so one call reads at most CHECK_CHUNK × 31 days of history.
     const history = new Map<string, { date: string; mortality: number }[]>()
-    if (span.from && span.to) {
-      const from = addDaysIso(span.from, -MORTALITY_LOOKBACK_DAYS)
-      for (const cageId of span.cageIds) {
+    for (const [cageId, dates] of datesByCage(args.rows, cages)) {
+      const found: { date: string; mortality: number }[] = []
+      for (const w of historyWindows(dates)) {
         const rows = await ctx.db
           .query('dailyRecords')
           .withIndex('by_cage_date', (q) =>
-            q.eq('cageId', cageId as Id<'cages'>).gte('date', from).lte('date', span.to!),
+            q.eq('cageId', cageId as Id<'cages'>).gte('date', w.from).lte('date', w.to),
           )
-          .take(2000)
-        history.set(
-          cageId,
-          rows.map((r) => ({ date: r.date, mortality: Number(r.mortality) || 0 })),
-        )
+          .take(500)
+        for (const r of rows) found.push({ date: r.date, mortality: Number(r.mortality) || 0 })
       }
+      history.set(cageId, found)
     }
     const overrides = user.companyId ? await overridesFor(ctx, user.companyId) : []
     const bins = new Map<string, number>()
@@ -180,7 +193,7 @@ async function evaluate(
       .query('stockingHistory')
       .withIndex('by_cage', (q) => q.eq('cageId', cageId as Id<'cages'>))
       .order('desc')
-      .take(200)
+      .take(100)
     stockedOn.set(
       cageId,
       new Set(rows.filter((r) => r.status !== 'rejected').map((r) => r.stockingDate)),
@@ -211,9 +224,11 @@ const toClient = (r: RowResult<any>) => ({
 })
 
 /**
- * Check rows before import: each row's status (ok / warning / error), the
- * reason and the cell it points at. `today` is the client's business date
- * (queries have no clock).
+ * Check one chunk of a file (≤ CHECK_CHUNK rows) before import: each row's
+ * status (ok / warning / error), the reason and the cell it points at.
+ * `carry` is what the previous chunk returned, so duplicates and feed stock
+ * count across the whole file; pass the returned carry to the next chunk.
+ * `today` is the client's business date (queries have no clock).
  */
 export const check = query({
   args: {
@@ -221,13 +236,15 @@ export const check = query({
     locationId: v.optional(v.id('farmLocations')),
     today: v.string(),
     rows: v.array(rowInput),
+    carry: v.optional(carryValidator),
   },
-  returns: v.array(rowResult),
+  returns: v.object({ results: v.array(rowResult), carry: carryValidator }),
   handler: async (ctx, args) => {
-    assertRowCount(args.rows)
+    assertCheckSize(args.rows, args.carry)
     const m = await importMember(ctx, args.kind, args.locationId)
-    const results = await evaluate(ctx, m, args)
-    return results.map(toClient)
+    const state = newCheckState(args.carry)
+    const results = await evaluate(ctx, m, { kind: args.kind, locationId: args.locationId, today: args.today, rows: args.rows }, state)
+    return { results: results.map(toClient), carry: toCarry(state) }
   },
 })
 

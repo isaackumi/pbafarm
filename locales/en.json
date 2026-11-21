@@ -2055,7 +2055,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Checking rows {done} of {total}…",
+    "checkFailed": "Rows could not be checked"
   },
   "scan": {
     "openingCode": "Opening cage {code}…",
@@ -5224,6 +5226,8 @@
     "whatsappHow": "From {phone}, send the one-time code to {bot}. Then log feed and mortality by text and get alerts and reminders.",
     "whatsappBotFallback": "the Anowa WhatsApp number",
     "telegramHow": "Open the one-time link on your phone and tap Start. Then log feed and mortality by text and get alerts and reminders.",
+    "telegramPending": "Open the link on your phone, or send this one-time code to the bot. It expires in 10 minutes.",
+    "telegramPendingNoLink": "Send this one-time code to the Anowa bot on Telegram. It expires in 10 minutes.",
     "telegramUnavailable": "Telegram is not available on this deployment yet.",
     "minutesLeft": {
       "one": "{count} minute left",
@@ -5232,8 +5236,6 @@
     "timeLeft": "{time} left",
     "codeExpired": "Code expired",
     "sendCode": "Send this message on WhatsApp from your verified number.",
-    "tapStart": "Open Telegram and tap Start.",
-    "telegramNoBot": "The Telegram bot name is not configured.",
     "doNotShare": "Works once. Do not share it.",
     "openIn": "Open in {app}",
     "newCode": "New code",

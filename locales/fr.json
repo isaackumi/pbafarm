@@ -2055,7 +2055,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Vérification des lignes {done} sur {total}…",
+    "checkFailed": "Les lignes n’ont pas pu être vérifiées"
   },
   "scan": {
     "openingCode": "Ouverture de la cage {code}…",
@@ -5224,6 +5226,8 @@
     "whatsappHow": "Depuis le {phone}, envoyez le code à usage unique au {bot}. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
     "whatsappBotFallback": "numéro WhatsApp d'Anowa",
     "telegramHow": "Ouvrez le lien à usage unique sur votre téléphone et appuyez sur Démarrer. Saisissez ensuite l'alimentation et la mortalité par message et recevez alertes et rappels.",
+    "telegramPending": "Ouvrez le lien sur votre téléphone, ou envoyez ce code à usage unique au bot. Il expire dans 10 minutes.",
+    "telegramPendingNoLink": "Envoyez ce code à usage unique au bot Anowa sur Telegram. Il expire dans 10 minutes.",
     "telegramUnavailable": "Telegram n'est pas encore disponible sur ce déploiement.",
     "minutesLeft": {
       "one": "{count} minute restante",
@@ -5232,8 +5236,6 @@
     "timeLeft": "{time} restantes",
     "codeExpired": "Code expiré",
     "sendCode": "Envoyez ce message sur WhatsApp depuis votre numéro vérifié.",
-    "tapStart": "Ouvrez Telegram et appuyez sur Démarrer.",
-    "telegramNoBot": "Le nom du bot Telegram n'est pas configuré.",
     "doNotShare": "Valable une seule fois. Ne le partagez pas.",
     "openIn": "Ouvrir dans {app}",
     "newCode": "Nouveau code",
