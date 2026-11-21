@@ -3,22 +3,20 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../contexts/AuthContext'
 import { AppShellSkeleton } from '../components/ui'
-import Landing from '../components/marketing/Landing'
 
 /**
- * Signed-in visitors go to the app; everyone else sees the landing page.
- * The landing renders while auth is still loading (and on the server), so
- * the page has real content for first paint and search engines; only a
- * confirmed signed-in user gets the app skeleton while being redirected.
+ * app.getanowa.com is the product, not the marketing site (getanowa.com,
+ * repo Hei-Tech-Inc/anowa-website). The root sends signed-in users to the
+ * dashboard and everyone else to sign in, where farms can also sign up.
  */
 export default function Home() {
   const router = useRouter()
   const { user, loading } = useAuth()
 
   useEffect(() => {
-    if (!loading && user) router.replace('/dashboard')
+    if (loading) return
+    router.replace(user ? '/dashboard' : '/login')
   }, [user, loading, router])
 
-  if (user) return <AppShellSkeleton />
-  return <Landing />
+  return <AppShellSkeleton />
 }
