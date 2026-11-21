@@ -9,6 +9,7 @@ import { batchStatsFields, unitDailyStatsFields } from './lib/rollupSchema'
 import { integrationTables } from './integrations/tables'
 import { billingTables } from './billing/tables'
 import { botTables } from './bot/tables'
+import { outboxTables } from './messaging/outboxTables'
 import { keeperTables } from './keepers/tables'
 import { projectTables } from './lib/projectTables'
 import {
@@ -252,6 +253,7 @@ const schema = defineSchema({
   ...integrationTables,
   ...billingTables,
   ...botTables,
+  ...outboxTables,
   ...keeperTables,
   ...projectTables,
 
@@ -613,6 +615,14 @@ const schema = defineSchema({
             usePlatformDefaultSms: v.optional(v.boolean()),
             usePlatformDefaultWhatsapp: v.optional(v.boolean()),
             usePlatformDefaultEmail: v.optional(v.boolean()),
+            /** Monthly budget per channel for the usage meters (Paper 57b); not enforced. */
+            monthlyBudget: v.optional(
+              v.object({
+                sms: v.optional(v.number()),
+                whatsapp: v.optional(v.number()),
+                email: v.optional(v.number()),
+              }),
+            ),
           }),
         ),
         /** Approval notifications and escalation (AUTO-004). Defaults in convex/approvalAlerts.ts. */

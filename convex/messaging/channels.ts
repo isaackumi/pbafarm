@@ -27,6 +27,7 @@ import type { Credentials } from './providers'
 import { messagingChannel, messagingProvider, type MessagingChannel } from './validators'
 import { assertChannelChangeAllowed } from './policy'
 import { requireMember } from '../lib/permissions'
+import { logOutbound } from './outbox'
 
 /**
  * Company messaging channels (INT-001, doc 18).
@@ -341,6 +342,10 @@ export const updatePreferences = mutation({
     usePlatformDefaultSms: v.optional(v.boolean()),
     usePlatformDefaultWhatsapp: v.optional(v.boolean()),
     usePlatformDefaultEmail: v.optional(v.boolean()),
+    /** Monthly budgets for the usage meters (Paper 57b). */
+    monthlyBudget: v.optional(
+      v.object({ sms: v.optional(v.number()), whatsapp: v.optional(v.number()), email: v.optional(v.number()) }),
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -355,6 +360,16 @@ export const updatePreferences = mutation({
     if (args.usePlatformDefaultSms !== undefined) messaging.usePlatformDefaultSms = args.usePlatformDefaultSms
     if (args.usePlatformDefaultWhatsapp !== undefined) messaging.usePlatformDefaultWhatsapp = args.usePlatformDefaultWhatsapp
     if (args.usePlatformDefaultEmail !== undefined) messaging.usePlatformDefaultEmail = args.usePlatformDefaultEmail
+    if (args.monthlyBudget) {
+      const next = { ...(messaging.monthlyBudget ?? {}) }
+      for (const key of ['sms', 'whatsapp', 'email'] as const) {
+        const n = args.monthlyBudget[key]
+        if (n === undefined) continue
+        if (!Number.isInteger(n) || n < 1 || n > 10_000_000) throw new Error('A monthly budget is a whole number from 1 to 10,000,000')
+        next[key] = n
+      }
+      messaging.monthlyBudget = next
+    }
     if (args.usePlatformDefaultSms === false) await assertChannelChangeAllowed(ctx, companyId, 'sms', true)
     if (args.usePlatformDefaultWhatsapp === false) await assertChannelChangeAllowed(ctx, companyId, 'whatsapp', true)
     const next = {
@@ -547,6 +562,16 @@ export const recordTest = internalMutation({
       ...(args.ok && row.status === 'draft' ? { status: 'verified' as const } : {}),
       updatedBy: user._id,
       updatedAt: now,
+    })
+    await logOutbound(ctx, {
+      companyId,
+      channel: row.channel,
+      status: args.ok ? 'sent' : 'failed',
+      source: 'test',
+      to: args.to,
+      masked: true,
+      body: `Anowa test message: your ${row.channel.toUpperCase()} channel works.`,
+      error: args.ok ? undefined : args.result,
     })
     await logAudit(ctx, {
       actionType: 'messaging_channel_test',

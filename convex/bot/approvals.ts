@@ -35,7 +35,7 @@ import { approveFishTransferAs, rejectFishTransferAs } from '../fishTransfers'
 import { botCtx, checkBinding, inScope } from './scope'
 import { APPROVAL_TEMPLATES, t, type BotLocale } from './i18n'
 import { chatMessage, targetValidator, type ChatMessageValue } from './validators'
-import { deliver } from './outbound'
+import { deliver, logProactive } from './outbound'
 
 export const PROMPT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** A text message counts as the rejection reason for this long after tapping Reject. */
@@ -231,6 +231,7 @@ export const send = internalAction({
     const r = await ctx.runMutation(internal.bot.approvals.prepare, { promptId })
     if (!r) return null
     const out = await deliver(ctx, r.target, r.messages)
+    await logProactive(ctx, r.target, r.messages, out, 'bot_approval')
     if (out.error) await ctx.runMutation(internal.bot.approvals.markPrompt, { promptId, status: 'failed', note: out.error })
     return null
   },

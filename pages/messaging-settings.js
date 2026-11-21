@@ -9,9 +9,13 @@ import { errorMessage } from '../lib/errorMessage'
 import Link from 'next/link'
 import { CloudOff, Send } from 'lucide-react'
 import { CardNote, FIELD, Notice, RouteGate, SettingsCard, SettingsField, SettingsFrame, SettingsRow, useSettingsEyebrow } from '../components/settings'
-import { LIME_BUTTON, SKY_TEXT, SkyToggle, TonePill } from '../components/paperTones'
-import { useT } from '../lib/i18n/context'
+import { LIME_BUTTON, SKY_TEXT, SkyToggle } from '../components/paperTones'
+import { useLocale, useT } from '../lib/i18n/context'
+import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import { useOutbox } from '../hooks/useOutbox'
+import ChannelTiles from '../components/messaging/ChannelTiles'
+import OutboxTable from '../components/messaging/OutboxTable'
 
 const CHANNELS = [
   { id: 'sms', title: 'SMS', testPlaceholder: '024 412 3456' },
@@ -388,7 +392,7 @@ function SecurityCard() {
   )
 }
 
-function PreferencesCard({ data }) {
+function PreferencesCard({ data, usage }) {
   const t = useT()
   const { showToast } = useToast()
   const toast = {
@@ -434,6 +438,7 @@ function PreferencesCard({ data }) {
           ))}
         </select>
       </SettingsField>
+      {usage && <BudgetFields usage={usage} saving={saving} save={save} />}
       {toggles.map(([channel, key]) => {
         const p = data.platform[channel]
         const label = t(`settingsUi.msg.def.usePlatform.${channel}`)
@@ -451,42 +456,95 @@ function PreferencesCard({ data }) {
   )
 }
 
-/** Summary tile per channel (Paper 57): provider · sender and status. */
-function ChannelSummary({ spec, row, providers, platform }) {
+/** Monthly budgets behind the usage meters (Paper 57b); alert only, never enforced. */
+function BudgetFields({ usage, saving, save }) {
   const t = useT()
-  const name = spec.id === 'email' ? t('settingsUi.msg.channelName.email') : spec.title
-  const provider = providers.find((p) => p.id === row?.provider)
-  const platformOn = !row && platform?.[spec.id]?.available && platform[spec.id].enabled
+  const [draft, setDraft] = useState({})
+  const fields = [
+    ['sms', 'SMS'],
+    ['whatsapp', 'WhatsApp'],
+    ['email', t('settingsUi.msg.channelName.email')],
+  ]
   return (
-    <a
-      href={`#${spec.id}`}
-      className="flex min-w-0 flex-col gap-[14px] rounded-card border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-card)] hover:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-semibold leading-[18px] text-text">{name}</span>
-        {row ? (
-          <StatusPill status={row.status} />
-        ) : (
-          <TonePill tone={platformOn ? 'sky' : 'neutral'} size="sm">
-            {platformOn ? t('settingsUi.msg.platformChannel') : t('settingsUi.msg.notConfigured')}
-          </TonePill>
-        )}
+    <fieldset className="mb-2">
+      <legend className="text-[13px] font-medium leading-4 text-text">{t('settingsUi.msg.def.budget')}</legend>
+      <p className="mt-1 text-[12px] leading-4 text-muted">{t('settingsUi.msg.def.budgetHint')}</p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+        {fields.map(([key, label]) => {
+          const id = `budget-${key}`
+          const current = usage[key].budget
+          const value = draft[key] ?? String(current)
+          return (
+            <SettingsField key={key} label={label} htmlFor={id}>
+              <input
+                id={id}
+                className={FIELD}
+                inputMode="numeric"
+                value={value}
+                disabled={saving}
+                onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value.replace(/[^0-9]/g, '') }))}
+                onBlur={() => {
+                  const n = Number(value)
+                  setDraft((d) => ({ ...d, [key]: undefined }))
+                  if (Number.isInteger(n) && n > 0 && n !== current) save({ monthlyBudget: { [key]: n } })
+                }}
+              />
+            </SettingsField>
+          )
+        })}
       </div>
-      <div className="flex min-w-0 flex-col gap-[2px]">
-        <span className="text-[13px] leading-4 text-muted">
-          {provider ? `${provider.label} · ${provider.senderLabel || ''}`.replace(/ · $/, '') : t(`settingsUi.msg.channel.${spec.id}`)}
-        </span>
-        {row?.senderId && <span className="truncate font-geist text-[14px] leading-[18px] text-text">{row.senderId}</span>}
-      </div>
-    </a>
+    </fieldset>
   )
 }
 
-/** Banner for entries saved on this phone and waiting to send (MOBILE-002). */
+/** "Android", "iPhone", ... for the banner's device line; null when unknown. */
+function deviceKind() {
+  if (typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent || ''
+  if (/android/i.test(ua)) return 'Android'
+  if (/iphone/i.test(ua)) return 'iPhone'
+  if (/ipad/i.test(ua)) return 'iPad'
+  if (/windows/i.test(ua)) return 'Windows'
+  if (/mac os|macintosh/i.test(ua)) return 'Mac'
+  if (/linux/i.test(ua)) return 'Linux'
+  return null
+}
+
+function timeAgo(ms, locale, justNow) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000))
+  if (minutes < 1) return justNow
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'always', style: 'short' })
+  if (minutes < 60) return rtf.format(-minutes, 'minute')
+  if (minutes < 48 * 60) return rtf.format(-Math.round(minutes / 60), 'hour')
+  return rtf.format(-Math.round(minutes / 1440), 'day')
+}
+
+/**
+ * Banner for entries saved on this phone and waiting to send (MOBILE-002,
+ * Paper 57b): count, last sync of this device, whose device and which site.
+ */
 function PhoneOutboxBanner() {
   const t = useT()
-  const { items, sending, send } = useOutbox()
+  const { formatLocale, locale } = useLocale()
+  const { user } = useAuth()
+  const { activeLocation } = useLocation()
+  const { items, sending, send, lastSyncAt } = useOutbox()
   if (!items.length) return null
+  const device = deviceKind()
+  const owner = (user?.name || user?.full_name || '').trim().split(/\s+/)[0] || null
+  const deviceLine = device
+    ? owner
+      ? t('settingsUi.msg.outbox.deviceOf', { name: owner, device })
+      : device
+    : t('settingsUi.msg.outbox.thisDevice')
+  const detail = [
+    lastSyncAt
+      ? t('settingsUi.msg.outbox.lastSync', {
+          ago: timeAgo(lastSyncAt, formatLocale || locale || 'en', t('settingsUi.msg.outbox.justNow')),
+        })
+      : t('settingsUi.msg.outbox.neverSynced'),
+    activeLocation?.name ? `${deviceLine}, ${activeLocation.name}` : deviceLine,
+  ].join(' · ')
   return (
     <Notice
       tone="warn"
@@ -504,11 +562,10 @@ function PhoneOutboxBanner() {
         </button>
       }
     >
-      <span className="text-text">{t('settingsUi.msg.outbox.waiting', { count: items.length })}</span>
-      {' · '}
-      <Link href="/outbox" className="text-muted underline-offset-2 hover:underline [html[data-theme=light]_&]:text-text">
-        {t('settingsUi.msg.outbox.open')}
+      <Link href="/outbox" className="text-text underline-offset-2 hover:underline">
+        {t('settingsUi.msg.outbox.waiting', { count: items.length })}
       </Link>
+      <span className="text-muted [html[data-theme=light]_&]:text-text"> · {detail}</span>
     </Notice>
   )
 }
@@ -525,6 +582,9 @@ function MessagingSettings() {
   const t = useT()
   const eyebrow = useSettingsEyebrow(t('settingsUi.msg.crumb'))
   const data = useQuery(api.messaging.channels.overview)
+  // Usage meters are for the current UTC month; the query never reads the clock.
+  const [period] = useState(() => new Date().toISOString().slice(0, 7))
+  const usage = useQuery(api.messaging.outbox.usage, { period })
   const byChannel = useMemo(() => {
     const map = {}
     for (const row of data?.channels || []) map[row.channel] = row
@@ -549,14 +609,6 @@ function MessagingSettings() {
     >
       <SettingsFrame active="messaging">
         <div className="flex flex-col gap-5">
-          <p className="text-[14px] leading-[18px] text-muted">
-            {t('settingsUi.msg.description')}{' '}
-            <RouteGate href="/users">
-              <Link href="/users" className={`${SKY_TEXT} underline-offset-2 hover:underline`}>
-                {t('settingsUi.nav.members')}
-              </Link>
-            </RouteGate>
-          </p>
           {!data ? (
             <div className="flex flex-col gap-4">
               <Skeleton className="h-32" />
@@ -564,18 +616,17 @@ function MessagingSettings() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                {CHANNELS.map((spec) => (
-                  <ChannelSummary
-                    key={spec.id}
-                    spec={spec}
-                    row={byChannel[spec.id]}
-                    providers={data.providers}
-                    platform={data.platform}
-                  />
-                ))}
-              </div>
+              <ChannelTiles data={data} usage={usage} byChannel={byChannel} />
               <PhoneOutboxBanner />
+              <OutboxTable />
+              <p className="mt-3 text-[14px] leading-[18px] text-muted">
+                {t('settingsUi.msg.description')}{' '}
+                <RouteGate href="/users">
+                  <Link href="/users" className={`${SKY_TEXT} underline-offset-2 hover:underline`}>
+                    {t('settingsUi.nav.members')}
+                  </Link>
+                </RouteGate>
+              </p>
               {!data.encryptionReady && (
                 <Notice tone="alert" role="status">
                   {t('settingsUi.msg.noKey')}
@@ -592,7 +643,7 @@ function MessagingSettings() {
                 />
               ))}
               <SecurityCard />
-              <PreferencesCard data={data} />
+              <PreferencesCard data={data} usage={usage} />
             </>
           )}
         </div>
