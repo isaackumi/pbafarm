@@ -73,7 +73,7 @@ const DAILY = [
 describe('bulkImport.check', () => {
   test('marks rows OK, warning and error against real data', async () => {
     const s = await setup()
-    const rows = await s.as(s.adminA).query(api.bulkImport.check, {
+    const { results: rows } = await s.as(s.adminA).query(api.bulkImport.check, {
       kind: 'daily', locationId: s.siteA, today: '2026-11-15', rows: DAILY,
     })
     const byLine = Object.fromEntries(rows.map((r) => [r.line, r]))
@@ -90,7 +90,7 @@ describe('bulkImport.check', () => {
 
   test('future dates and feed beyond the store stock are errors', async () => {
     const s = await setup()
-    const rows = await s.as(s.adminA).query(api.bulkImport.check, {
+    const { results: rows } = await s.as(s.adminA).query(api.bulkImport.check, {
       kind: 'daily', locationId: s.siteA, today: '2026-11-15',
       rows: [
         { line: 2, date: '2026-11-20', cage: 'C-01', feed: '1', feedType: 'Grower 4mm' },
@@ -99,6 +99,37 @@ describe('bulkImport.check', () => {
       ],
     })
     expect(rows.map((r) => r.reason?.code ?? r.status)).toEqual(['futureDate', 'ok', 'notEnoughStock'])
+  })
+
+  test('a file is checked in chunks: the carry keeps duplicates and stock across them', async () => {
+    const s = await setup()
+    const check = (rows: typeof DAILY, carry?: any) =>
+      s.as(s.adminA).query(api.bulkImport.check, { kind: 'daily', locationId: s.siteA, today: '2026-11-15', rows, ...(carry ? { carry } : {}) })
+    const first = await check([
+      { line: 2, date: '2026-11-05', cage: 'C-01', feed: '900', feedType: 'Grower 4mm', mortality: '0' },
+    ])
+    expect(first.results.map((r) => r.status)).toEqual(['ok'])
+    expect(first.carry.seen).toHaveLength(1)
+    const second = await check(
+      [
+        { line: 3, date: '2026-11-05', cage: 'c-01', feed: '1', feedType: 'Grower 4mm', mortality: '0' },
+        { line: 4, date: '2026-11-06', cage: 'C-01', feed: '200', feedType: 'Grower 4mm', mortality: '0' },
+        { line: 5, date: '2026-11-07', cage: 'C-01', feed: '100', feedType: 'Grower 4mm', mortality: '0' },
+      ],
+      first.carry,
+    )
+    // 1000 kg in store: 900 went to line 2, so 200 is too much and 100 fits.
+    expect(second.results.map((r) => r.reason?.code ?? r.status)).toEqual(['duplicateRow', 'notEnoughStock', 'ok'])
+    // Without the carry the same chunk only sees its own rows.
+    expect((await check([DAILY[0], DAILY[0]])).results.map((r) => r.reason?.code ?? r.status)).toEqual(['ok', 'duplicateRow'])
+  })
+
+  test('one call checks at most CHECK_CHUNK rows', async () => {
+    const s = await setup()
+    const rows = Array.from({ length: 101 }, (_, i) => ({ line: i + 2, date: '2026-11-01', cage: 'C-01' }))
+    expect(await messageOf(s.as(s.adminA).query(api.bulkImport.check, {
+      kind: 'daily', locationId: s.siteA, today: '2026-11-15', rows,
+    }))).toBe('Check at most 100 rows per call')
   })
 
   test('needs production.import', async () => {
@@ -117,7 +148,7 @@ describe('bulkImport.check', () => {
 
   test('stocking rows follow the stocking rules', async () => {
     const s = await setup()
-    const rows = await s.as(s.adminA).query(api.bulkImport.check, {
+    const { results: rows } = await s.as(s.adminA).query(api.bulkImport.check, {
       kind: 'stocking', locationId: s.siteA, today: '2026-11-15',
       rows: [
         { line: 2, date: '2026-11-10', cage: 'S-01', fishCount: '5000', abw: '5' },

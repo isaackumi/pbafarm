@@ -14,6 +14,12 @@ export type ImportKind = 'daily' | 'biweekly' | 'stocking'
 export const MAX_IMPORT_ROWS = 1000
 /** Rows per import mutation call. */
 export const IMPORT_CHUNK = 50
+/**
+ * Rows per check call. The page checks a file in chunks so one call reads at
+ * most CHECK_CHUNK rows' cages and history, whatever the file or farm size;
+ * a {@link CheckCarry} links the chunks.
+ */
+export const CHECK_CHUNK = 100
 /** Days of cage history the mortality average looks back over. */
 export const MORTALITY_LOOKBACK_DAYS = 30
 /** Mortality this many times the cage's daily average is a warning. */
@@ -139,11 +145,80 @@ export function rowSpan(rows: ImportRowInput[], cages: CageLite[]) {
   return { cageIds: [...cageIds], from, to }
 }
 
+/**
+ * The date ranges of cage history the daily rules need for these row dates:
+ * each date with the lookback before it, overlapping ranges merged. Reading
+ * per window (not one range from the earliest to the latest date) keeps the
+ * read at about lookback + 1 days per row however far apart the dates are.
+ */
+export function historyWindows(dates: string[], lookbackDays = MORTALITY_LOOKBACK_DAYS): { from: string; to: string }[] {
+  const sorted = [...new Set(dates.filter((d) => isIsoDate(d)))].sort()
+  const out: { from: string; to: string }[] = []
+  for (const d of sorted) {
+    const from = addDaysIso(d, -lookbackDays)
+    const last = out[out.length - 1]
+    if (last && from <= addDaysIso(last.to, 1)) last.to = d
+    else out.push({ from, to: d })
+  }
+  return out
+}
+
+/** Row dates per cage id, for the rows whose cage is known. */
+export function datesByCage(rows: ImportRowInput[], cages: CageLite[]): Map<string, string[]> {
+  const cageByName = byName(cages)
+  const out = new Map<string, string[]>()
+  for (const r of rows) {
+    const cage = cageByName.get(norm(r.cage))
+    const d = String(r.date ?? '').trim()
+    if (!cage || !isIsoDate(d)) continue
+    const list = out.get(cage.id) ?? []
+    list.push(d)
+    out.set(cage.id, list)
+  }
+  return out
+}
+
+/**
+ * What the rows checked so far leave behind, passed from one check chunk to
+ * the next: the keys already taken in the file (cage and date, batch code or
+ * cage, per kind) and the feed they draw from the store and the cage bins.
+ */
+export type CheckCarry = {
+  seen: string[]
+  feedUsed: { id: string; kg: number }[]
+  binUsed: { id: string; kg: number }[]
+}
+
+/** The mutable form of a {@link CheckCarry} the rules update as they go. */
+export type CheckState = {
+  seen: Set<string>
+  feedUsed: Map<string, number>
+  binUsed: Map<string, number>
+}
+
+export function newCheckState(carry?: CheckCarry | null): CheckState {
+  return {
+    seen: new Set(carry?.seen ?? []),
+    feedUsed: new Map((carry?.feedUsed ?? []).map((f) => [f.id, f.kg])),
+    binUsed: new Map((carry?.binUsed ?? []).map((b) => [b.id, b.kg])),
+  }
+}
+
+export function toCarry(state: CheckState): CheckCarry {
+  return {
+    seen: [...state.seen],
+    feedUsed: [...state.feedUsed].map(([id, kg]) => ({ id, kg })),
+    binUsed: [...state.binUsed].map(([id, kg]) => ({ id, kg })),
+  }
+}
+
 type Ctx = {
   cages: CageLite[]
   today: string
   /** The site name for "Cage X not found at {site}"; null when importing across sites. */
   siteName: string | null
+  /** Rows checked in earlier chunks of the same file; updated in place. */
+  state?: CheckState
 }
 
 const err = <R>(line: number, field: ImportField | undefined, code: string, params?: RowReason['params']): RowResult<R> => ({
@@ -202,8 +277,9 @@ export function mortalityAverage(history: { date: string; mortality: number }[] 
 export function checkDailyRows(rows: ImportRowInput[], ctx: DailyCtx): RowResult<DailyRecordOut>[] {
   const cageByName = byName(ctx.cages)
   const feedByName = byName(ctx.feedTypes)
-  const seen = new Set<string>()
-  const stockLeft = new Map(ctx.feedTypes.map((f) => [f.id, Number(f.currentStock ?? 0)]))
+  const state = ctx.state ?? newCheckState()
+  const seen = state.seen
+  const stockLeft = new Map(ctx.feedTypes.map((f) => [f.id, Number(f.currentStock ?? 0) - (state.feedUsed.get(f.id) ?? 0)]))
   const binLeft = new Map<string, number>()
   return rows.map((row) => {
     const base = cageAndDate<DailyRecordOut>(row, ctx, cageByName)
@@ -237,7 +313,9 @@ export function checkDailyRows(rows: ImportRowInput[], ctx: DailyCtx): RowResult
     }
     if (feedType && feedAmount > 0 && !ctx.allowNegativeStock) {
       const binKey = `${cage.id}|${feedType.id}`
-      const bin = binLeft.has(binKey) ? binLeft.get(binKey)! : (ctx.binKg?.(cage.id, feedType.id) ?? 0)
+      const bin = binLeft.has(binKey)
+        ? binLeft.get(binKey)!
+        : Math.max(0, (ctx.binKg?.(cage.id, feedType.id) ?? 0) - (state.binUsed.get(binKey) ?? 0))
       const fromBin = Math.min(bin, feedAmount)
       const fromStore = feedAmount - fromBin
       const store = stockLeft.get(feedType.id) ?? 0
@@ -246,6 +324,8 @@ export function checkDailyRows(rows: ImportRowInput[], ctx: DailyCtx): RowResult
       }
       binLeft.set(binKey, bin - fromBin)
       stockLeft.set(feedType.id, store - fromStore)
+      state.binUsed.set(binKey, (state.binUsed.get(binKey) ?? 0) + fromBin)
+      state.feedUsed.set(feedType.id, (state.feedUsed.get(feedType.id) ?? 0) + fromStore)
     }
     seen.add(key)
     const record: DailyRecordOut = {
@@ -285,7 +365,7 @@ export type BiweeklyCtx = Ctx & {
  */
 export function checkBiweeklyRows(rows: ImportRowInput[], ctx: BiweeklyCtx): RowResult<BiweeklyRecordOut>[] {
   const cageByName = byName(ctx.cages)
-  const seen = new Set<string>()
+  const seen = (ctx.state ?? newCheckState()).seen
   return rows.map((row) => {
     const base = cageAndDate<BiweeklyRecordOut>(row, ctx, cageByName)
     if ('fail' in base) return base.fail!
@@ -324,7 +404,7 @@ export type StockingCtx = Ctx & {
  */
 export function checkStockingRows(rows: ImportRowInput[], ctx: StockingCtx): RowResult<StockingRecordOut>[] {
   const cageByName = byName(ctx.cages)
-  const seen = new Set<string>()
+  const seen = (ctx.state ?? newCheckState()).seen
   return rows.map((row) => {
     const base = cageAndDate<StockingRecordOut>(row, ctx, cageByName)
     if ('fail' in base) return base.fail!

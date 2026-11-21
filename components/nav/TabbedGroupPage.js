@@ -10,7 +10,7 @@ import { HeaderAction } from '../ui/HeaderAction'
 import { usePermissions } from '../../hooks/usePermission'
 import { useT } from '../../lib/i18n/context'
 import { MENU_SECTIONS } from '../../lib/navigation'
-import { TAB_GROUPS, resolveTab, tabHref, visibleTabs } from '../../lib/tabGroups'
+import { TAB_GROUPS, importHrefFor, resolveTab, tabHref, visibleTabs } from '../../lib/tabGroups'
 import { TabbedPageContext } from './tabbedContext'
 
 // The existing page bodies, one per tab (lib/tabGroups `legacy`).
@@ -94,9 +94,9 @@ export default function TabbedGroupPage({ group: groupKey }) {
         actions={
           <>
             <span ref={setSlot} className="contents" />
-            {/* Paper 71b: Bulk upload is the Import button on Records. */}
+            {/* Paper 71b: Bulk upload is the Import button on Records, opened on the matching tab (Paper 53). */}
             {group.importHref && (
-              <HeaderAction href={group.importHref} ring="sky" icon={Upload}>
+              <HeaderAction href={importHrefFor(groupKey, tab?.key)} ring="sky" icon={Upload}>
                 {t('navSearch.import')}
               </HeaderAction>
             )}

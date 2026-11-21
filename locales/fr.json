@@ -1960,7 +1960,9 @@
         "one": "{count} cage",
         "other": "{count} cages"
       }
-    }
+    },
+    "checkingProgress": "Vérification des lignes {done} sur {total}…",
+    "checkFailed": "Les lignes n’ont pas pu être vérifiées"
   },
   "scan": {
     "openingCode": "Ouverture de la cage {code}…",
