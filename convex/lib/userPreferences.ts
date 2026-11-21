@@ -12,12 +12,13 @@ export const HOME_HEADERS = ['plain', 'sky'] as const
 export type HomeHeader = (typeof HOME_HEADERS)[number]
 
 /**
- * The Home header to show: the user's choice, else "Sky & lake" in both
- * themes (it has a day and a night version). `theme` is kept for callers.
+ * The Home header to show: the user's choice, else the artboards' default,
+ * "Sky & lake" in the light theme (Paper 6E2-0) and the plain title in the
+ * dark theme (Paper 01).
  */
-export function effectiveHomeHeader(choice: unknown, _theme?: string): HomeHeader {
+export function effectiveHomeHeader(choice: unknown, theme?: string): HomeHeader {
   if (choice === 'plain' || choice === 'sky') return choice
-  return 'sky'
+  return theme === 'light' ? 'sky' : 'plain'
 }
 /** The phone bottom bar holds at most this many shortcuts plus "More" (UX-004). */
 export const MAX_MOBILE_SHORTCUTS = 5

@@ -48,7 +48,7 @@
       "jsxHash": "43a0c8229729e1b33c1564c067bd65f14a54b8676c1e41fee356f0c1a65012e0",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Greeting (date eyebrow, Log daily entry, Issue feed) and KPI strip present. Hero row differs: 'Feed logged' + 'Daily mortality' charts instead of Standing biomass card (30d/90d/Cycle) and Needs attention card (per-cage actions). Farm activity is stocking-only, no All/Stocking/Transfers/Harvest/Feed tabs."
+      "notes": "PR #48, browser-checked 2026-11-21 (local Convex, dark, 1440): page body matches Paper value-for-value: date line with 'Day N of cycle', 30/36 greeting, Log daily entry / Issue feed (45px), Standing biomass card (340px, 48/56 value, 30d/90d/Cycle), Needs attention rows (132x32 actions, 14px radius), KPI strip, Farm activity tabs/search with columns at Paper's x-positions (fixed in #48). Still partial: the sidebar now follows 71 (grouped Production, Ask Anowa/Calendar/Hatchery rows) rather than 01's flat list, and the top bar adds Ask Anowa and help; extra widgets sit below in 'More on your farm'; Needs-attention title shows species only when the cage has one."
     },
     {
       "id": "7Z-0",
@@ -669,7 +669,7 @@
       "jsxHash": "f1e9838f4559f657f80dba8c5e66a7cf041504ee9c7f16e56d22f7ebc67abc4e",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Visual side (lake scene, floating cards, testimonial) and form (language, heading, Email/Phone/SSO tabs, email+password, Forgot?, Sign in, create workspace, footer) built. Missing: tenant/workspace card with Switch, 'Keep me signed in' checkbox, Google/Microsoft/Passkey buttons."
+      "notes": "PR #48, browser-checked 2026-11-21 (dark): type values match Paper (40/44 hero, 36/44 Welcome back, 15/18 subtitle, 13/16 labels, Keep me signed in). Not shown in the check: workspace card (only after a farm was used on this device), SSO tab, Google/Microsoft (hidden until AUTH_GOOGLE_*/AUTH_MICROSOFT_ENTRA_ID_* set). Passkey not built (Convex Auth has no WebAuthn). Hero headline wraps one word earlier than Paper (Inter renders wider in the browser)."
     },
     {
       "id": "54F-0",
@@ -897,7 +897,7 @@
       "jsxHash": "30884a0001c18b4643415be26f33f98ce0a73cac0fe70fe72626879ce4980f7a",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Split layout w/ lake scene + cards/quote, language switch, name/email/password, human check, terms, footer all present. Missing: 'Phone (for field codes)' field (code has Confirm password + strength bar instead)."
+      "notes": "PR #48 adds 'Phone (for field codes)' +233 beside Full name (browser-checked 2026-11-21). Still differs from Paper: app has a 'Confirm password' field Paper lacks; no password-strength bar ('Strong · 12+ characters…'); no 'You're human · Turnstile' row in the check; Create account dimmed until terms are ticked."
     },
     {
       "id": "H44-0",
@@ -1150,7 +1150,7 @@
       "jsxHash": "2d1b6a5a2ad0c1c74683f75f9934519bf1ad24b32972f30e2213b506be4fc0f7",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Light tokens + sky panel (default header) exist. Greeting, Log daily entry/Issue feed, KPI strip, FarmAlerts present. Chart is cumulative Feed (30d/90d), not 'Standing biomass' (no Cycle/est. value); 'Feed today' KPI differs; Farm activity is stockings only, no All/Stocking/Transfers/Harvest/Feed tabs."
+      "notes": "Same build as 01 Home (PR #48) under [data-theme=light]; light theme not browser-checked in this pass. Sidebar follows 71 (PR #47)."
     },
     {
       "id": "INK-0",
@@ -1290,7 +1290,7 @@
       "jsxHash": "3a00cc0f4f0239ec2a7143d77596226a0cf7d71ebd870dc2cc759824e5c70315",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Language switcher, Welcome back, Email/Phone code/SSO tabs, email+password+Forgot, Sign in, create workspace link, footer, sky scene + cards present. Missing: workspace chip (PF · Switch), 'Keep me signed in', Google/Microsoft/Passkey buttons, 2-step verification note."
+      "notes": "Light twin of 15 Sign in (PR #48); same gaps as 50X-0 (workspace card device-only, SSO/Google/Microsoft config-gated, no Passkey). Light not browser-checked in this pass."
     },
     {
       "id": "JYF-0",
@@ -1392,7 +1392,7 @@
       "jsxHash": "5428e82344f04aa66482bef00b4e551a18e648b06391bb48b3c06e02d791fc48",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Light variant of GXI-0; same route, light via [data-theme=light]. Same gaps as GXI-0: Split layout w/ lake scene + cards/quote, language switch, name/email/password, human check, terms, footer all present. Missing: 'Phone (for field codes)' field (code has Confirm password + strength bar instead)."
+      "notes": "Light variant of GXI-0; same gaps (confirm password extra, no strength bar, no Turnstile row). Light not browser-checked."
     },
     {
       "id": "KOY-0",
@@ -1973,7 +1973,7 @@
       "jsxHash": "be194acaf0be8e80f53a13b4496e1e115bf18392bd84768a3b7cb967e440edff",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "Approved; being built in PR #47. On main: collapsible sections incl. Production, top-level Ask Anowa + Calendar, My tasks count. Missing: Record/Watch/Review & plan sub-labels, Alerts/Approvals counts, merged 'Records' tabbed page (Daily/Bi-weekly/Stocking/Transfers still separate links)."
+      "notes": "PR #47 (merged), browser-checked 2026-11-21 (local Convex, dark, 1440): Production groups Record/Watch/Review & plan with Paper's pages; group labels 11/14 +0.06em faint, pt4/pb2; rows 26px 13/16 muted; active row surface-2 pill (-10px inset, w500 text); 4px between groups; top-bar 'Search cages, batches, lots'. Still differs: sidebar top uses 01 Home's spacing (pt 28, 28px gaps) where 71 draws pt 24 / 14px gaps (brand to tenant to nav). 01 and 71 disagree: owner to pick one. Alerts (red) / Approvals (grey) counts not seen: no open alerts or approvals in test data."
     },
     {
       "id": "TTA-1",
@@ -1986,11 +1986,11 @@
         "lib/navigation.js",
         "components/Sidebar.js"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "ee08b8fef637da917d48ff7cd2496819de7d9dc97ed0f71fda7dfe821b42d0ae",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Approved; being built in PR #47. Main has the top-level order (Home…Settings) but none of the per-section labelled groups or '+' merged tabbed pages; Bulk Upload, Create Cage, Cages Settings still nav links."
+      "verifiedAt": "2026-11-21",
+      "notes": "PR #47 (merged). Browser-checked 2026-11-21: every section expands one at a time with Paper's labels and rows exactly: Cages (Units, Equipment), Feed & inventory (Feed, Buying, Stock), Finance (no label), Hatchery (no label), Reports (Read, Build), Settings (Organization, People, Farm setup, Connections)."
     },
     {
       "id": "TVA-1",
@@ -2003,11 +2003,11 @@
         "components/Header.js",
         "components/ui/SearchField.js"
       ],
-      "status": "partial",
+      "status": "built",
       "jsxHash": "30a631154d46d0cdaab6a8fe59f33f3ab7fc68214f20a68a6a01b219b73835c4",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Approved; being built in PR #47. Main: ⌘K focuses a top-bar 'Search pages' field listing pages only. Missing: modal palette, Quick actions (Log daily entry, Issue feed…), Recent records (cages/batches), Ask Anowa Tab hand-off, key-hint footer."
+      "verifiedAt": "2026-11-21",
+      "notes": "PR #47 (merged). Browser-checked 2026-11-21 (dark, 1440): panel 680 at y=96, 20px radius, 1px border, 60px input row with Esc key, Quick actions (44px rows, 28px icon boxes, lime icon on the active row, live counts), Recent (40px rows, dot + kind), 44px footer hints; section label and row positions match Paper to the pixel."
     },
     {
       "id": "TXA-1",
@@ -2019,11 +2019,11 @@
       "implementation": [
         "components/Header.js"
       ],
-      "status": "not-built",
+      "status": "built",
       "jsxHash": "4dedce0500ec74f55dc4614399e756a7cbeadb9c1c7be7082c461a3401e95a3a",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Approved; being built in PR #47. Main search matches page names only: no cage/batch/lot record results, per-record actions (Log water, Transfer…), 'Do it for C-07' section or Ask Anowa ⌘↵."
+      "verifiedAt": "2026-11-21",
+      "notes": "PR #47 (merged). Browser-checked 2026-11-21 with 'a1': result count, Cage card (ring icon, title · Day · site, ↵ open, Log water / Log daily entry / Record sampling / Transfer pills, Tab), Batches & lots rows (mono code, 'Batch in <cage>'), 'Do it for <cage>' actions, Ask Anowa row in coral tint with ⌘↵. Alert line and the lime 'Log water' pill show only when the cage has a water alert (none in test data)."
     },
     {
       "id": "SQH-0",

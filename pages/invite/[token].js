@@ -79,7 +79,16 @@ export default function AcceptInvite() {
 
   // Paper 61 company tile: 52px, 14px radius, 3px surface border, lime
   // (#A8C93A on light), initials 16/20 bold in the page colour (white on light).
-  const companyTile = info ? (
+  // Paper 61: the inviter's 52px initials disc beside the company tile, 8px apart.
+  const inviterDisc = info?.inviterName ? (
+    <span
+      className="flex size-[52px] shrink-0 items-center justify-center rounded-pill border border-line-strong bg-surface-2 text-[16px] font-semibold leading-5 text-text"
+      aria-hidden
+    >
+      {initials(info.inviterName)}
+    </span>
+  ) : null
+  const companyTileOnly = info ? (
     <span
       className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border-[3px] border-surface bg-lime text-[16px] font-bold leading-5 text-bg [html[data-theme=light]_&]:bg-[#A8C93A] [html[data-theme=light]_&]:text-white"
       aria-hidden
@@ -87,6 +96,15 @@ export default function AcceptInvite() {
       {initials(info.companyName)}
     </span>
   ) : null
+  const companyTile = inviterDisc ? (
+    <div className="flex items-center gap-2">
+      {inviterDisc}
+      {companyTileOnly}
+    </div>
+  ) : (
+    companyTileOnly
+  )
+  const inviterFirst = info?.inviterName ? info.inviterName.trim().split(/\s+/)[0] : null
 
   const expiresLabel = (at) => {
     const days = Math.ceil((at - Date.now()) / DAY_MS)
@@ -99,8 +117,8 @@ export default function AcceptInvite() {
   const details = info ? (
     <dl className="flex flex-col border-t border-line text-[13px] leading-4">
       <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
-        <dt className="text-muted">{t('authUi.invite.email')}</dt>
-        <dd className="truncate text-text">{info.email}</dd>
+        <dt className="text-muted">{t('authUi.invite.sites')}</dt>
+        <dd className="truncate text-text">{info.sites ? info.sites.join(' · ') : t('authUi.invite.allSites')}</dd>
       </div>
       {typeof info.expiresAt === 'number' && (
         <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
@@ -115,13 +133,21 @@ export default function AcceptInvite() {
           </dd>
         </div>
       )}
+      <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
+        <dt className="text-muted">{t('authUi.invite.email')}</dt>
+        <dd className="truncate text-text">{info.email}</dd>
+      </div>
     </dl>
   ) : null
 
   const invited = (children) => (
     <AuthStateCard
       media={companyTile}
-      title={t('authUi.invite.title', { company: info.companyName })}
+      title={
+        inviterFirst
+          ? t('authUi.invite.titleFrom', { name: inviterFirst, company: info.companyName })
+          : t('authUi.invite.title', { company: info.companyName })
+      }
       body={
         <>
           {t('authUi.invite.joinAsBefore')} <DarkEmphasis>{roleLabel(info.roleKey)}</DarkEmphasis>.

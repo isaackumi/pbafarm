@@ -9,7 +9,7 @@ import { randomDigits } from './lib/tokens'
 import { ConvexCredentials } from '@convex-dev/auth/providers/ConvexCredentials'
 import { authorizePhoneOtp } from './phoneAuth'
 import { internal } from './_generated/api'
-import { oidcProviderFromEnv } from './lib/sso'
+import { oidcProviderFromEnv, socialProvidersFromEnv } from './lib/sso'
 import { canonicalEmail } from './authGuard'
 
 /**
@@ -114,5 +114,5 @@ const PhoneOtpProvider = ConvexCredentials<DataModel>({
 })
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [PasswordProvider, PhoneOtpProvider, ...oidcProviderFromEnv()],
+  providers: [PasswordProvider, PhoneOtpProvider, ...oidcProviderFromEnv(), ...socialProvidersFromEnv()],
 })

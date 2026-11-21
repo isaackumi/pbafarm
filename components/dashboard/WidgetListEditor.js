@@ -10,10 +10,14 @@ export const widgetLabel = (t, key) => t.or(`dashboardLayout.widget.${key.replac
  * Controlled list editor for dashboard widgets (CUSTOM-005): add, remove,
  * reorder and resize. `can(permission)` hides widgets the member cannot see.
  */
-export default function WidgetListEditor({ widgets, onChange, can }) {
+export default function WidgetListEditor({ widgets, onChange, can, exclude = [] }) {
   const t = useT()
+  // `exclude`: widgets the page shows in fixed places (Home: HOME_FIXED_WIDGETS).
   const available = WIDGET_KEYS.filter(
-    (k) => !widgets.some((w) => w.widget === k) && (!WIDGET_CATALOG[k].permission || can(WIDGET_CATALOG[k].permission)),
+    (k) =>
+      !exclude.includes(k) &&
+      !widgets.some((w) => w.widget === k) &&
+      (!WIDGET_CATALOG[k].permission || can(WIDGET_CATALOG[k].permission)),
   )
   const [adding, setAdding] = useState('')
   const pick = adding && available.includes(adding) ? adding : available[0] ?? ''

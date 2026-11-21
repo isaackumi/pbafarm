@@ -718,6 +718,8 @@ const schema = defineSchema({
     requestedAt: v.optional(v.number()),
     decidedBy: v.optional(v.id('users')),
     decidedAt: v.optional(v.number()),
+    /** Sites the new membership covers (Paper 61 "Sites"); unset = every site. */
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
   })
     .index('by_email', ['email'])
     .index('by_company', ['companyId'])
@@ -1116,6 +1118,7 @@ const schema = defineSchema({
     .index('by_feed_type', ['feedTypeId'])
     .index('by_cage', ['cageId'])
     .index('by_company', ['companyId'])
+    .index('by_companyId_and_source_and_usageDate', ['companyId', 'source', 'usageDate'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
 
@@ -1371,6 +1374,7 @@ const schema = defineSchema({
     .index('by_company', ['companyId'])
     .index('by_company_and_status', ['companyId', 'status'])
     .index('by_company_and_batchNumber', ['companyId', 'batchNumber'])
+    .index('by_companyId_and_stockingDate', ['companyId', 'stockingDate'])
     .index('by_location', ['locationId'])
     .index('by_company_location', ['companyId', 'locationId']),
 
@@ -1441,6 +1445,7 @@ const schema = defineSchema({
     .index('by_status', ['status'])
     .index('by_company_and_status', ['companyId', 'status'])
     .index('by_companyId_and_transferGroupId', ['companyId', 'transferGroupId'])
+    .index('by_companyId_and_transferDate', ['companyId', 'transferDate'])
     .index('by_source_cage', ['sourceCageId'])
     .index('by_destination_cage', ['destinationCageId'])
     .index('by_company_location', ['companyId', 'sourceLocationId'])

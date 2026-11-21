@@ -103,6 +103,46 @@ export const listMine = query({
   },
 })
 
+/** Sites and cages read per organization for farmCounts. */
+const COUNT_SITE_CAP = 500
+const COUNT_CAGE_CAP = 5000
+
+/**
+ * Choose your farm (Paper 70 "Farm manager · 4 sites · 38 cages"): per
+ * organization I belong to, the active sites I can see and the cages in
+ * them (archived ones left out). Only approved organizations; my own
+ * memberships only, so nothing of an organization I am not in is counted.
+ */
+export const farmCounts = query({
+  args: {},
+  returns: v.array(v.object({ companyId: v.id('companies'), sites: v.number(), cages: v.number() })),
+  handler: async (ctx) => {
+    const me = await requireAccount(ctx)
+    const out = []
+    for (const m of await myMemberships(ctx, me)) {
+      if (m.status !== 'active') continue
+      const company = await ctx.db.get(m.companyId)
+      if (!company || company.status !== 'approved') continue
+      const sites = (
+        await ctx.db
+          .query('farmLocations')
+          .withIndex('by_company', (q) => q.eq('companyId', m.companyId))
+          .take(COUNT_SITE_CAP)
+      ).filter((l) => l.active)
+      const scoped = m.allLocations ? null : new Set((m.locationIds ?? []).map(String))
+      const mySites = scoped ? sites.filter((l) => scoped.has(String(l._id))) : sites
+      const cages = (
+        await ctx.db
+          .query('cages')
+          .withIndex('by_company', (q) => q.eq('companyId', m.companyId))
+          .take(COUNT_CAGE_CAP)
+      ).filter((c) => !c.archivedAt && (!scoped || (!!c.locationId && scoped.has(String(c.locationId)))))
+      out.push({ companyId: m.companyId, sites: mySites.length, cages: cages.length })
+    }
+    return out
+  },
+})
+
 /** Make another organization (where I have an active membership) my active one. */
 export const switchActive = mutation({
   args: { companyId: v.id('companies') },
@@ -493,6 +533,10 @@ export const inviteInfo = query({
       roleKey: v.string(),
       state: stateValues,
       expiresAt: v.union(v.number(), v.null()),
+      /** Who sent it (Paper 61 "Kwame invited you"); null when unknown. */
+      inviterName: v.union(v.string(), v.null()),
+      /** Names of the sites it covers; null = every site. */
+      sites: v.union(v.array(v.string()), v.null()),
     }),
     v.null(),
   ),
@@ -500,12 +544,23 @@ export const inviteInfo = query({
     const invite = await inviteByToken(ctx, token)
     if (!invite) return null
     const company = await ctx.db.get(invite.companyId)
+    const inviter = invite.invitedBy ? await ctx.db.get(invite.invitedBy) : null
+    let sites: string[] | null = null
+    if (invite.locationIds && invite.locationIds.length > 0) {
+      sites = []
+      for (const id of invite.locationIds.slice(0, 100)) {
+        const site = await ctx.db.get(id)
+        if (site && site.companyId === invite.companyId) sites.push(site.name)
+      }
+    }
     return {
       companyName: company?.name ?? 'Unknown organization',
       email: invite.email,
       roleKey: invite.roleKey ?? roleKeyFromLegacy(invite.role),
       state: inviteState(invite, Date.now()),
       expiresAt: invite.expiresAt ?? null,
+      inviterName: inviter ? inviter.name || inviter.email || null : null,
+      sites,
     }
   },
 })
@@ -542,6 +597,12 @@ export const acceptInvite = mutation({
       userId: me._id,
       companyId: invite.companyId,
       roleKey: existing?.status === 'active' ? undefined : roleKey,
+      // The invite's sites (Paper 61) apply to a new membership, not an active one.
+      ...(existing?.status === 'active'
+        ? {}
+        : invite.locationIds && invite.locationIds.length > 0
+          ? { allLocations: false, locationIds: invite.locationIds }
+          : { allLocations: true, locationIds: undefined }),
       status: 'active',
       actorId: invite.invitedBy,
     })

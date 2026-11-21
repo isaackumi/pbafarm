@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
 import { GhostButton, GradientButton, Pill, Table } from './ui'
 import { errorMessage } from '../lib/errorMessage'
@@ -82,7 +83,9 @@ const UserManagement = () => {
   const approveJoin = useMutation(api.users.approveJoinRequest)
   const declineJoin = useMutation(api.users.declineJoinRequest)
   const inviteByEmail = useMutation(api.users.invite)
-  const [invite, setInvite] = useState({ email: '', roleKey: 'manager' })
+  const [invite, setInvite] = useState({ email: '', roleKey: 'manager', site: '' })
+  // Paper 61 "Sites": the invite can cover one site; empty = every site.
+  const { locations: siteOptions } = useLocation()
   const [inviteLink, setInviteLink] = useState('')
   const [inviting, setInviting] = useState(false)
   const [decidingId, setDecidingId] = useState(null)
@@ -93,8 +96,12 @@ const UserManagement = () => {
     setError('')
     setSuccess('')
     try {
-      const data = await inviteByEmail({ email: invite.email, roleKey: invite.roleKey })
-      setInvite({ email: '', roleKey: 'manager' })
+      const data = await inviteByEmail({
+        email: invite.email,
+        roleKey: invite.roleKey,
+        ...(invite.site ? { locationIds: [invite.site] } : {}),
+      })
+      setInvite({ email: '', roleKey: 'manager', site: '' })
       setInviteLink(data?.inviteUrl || '')
       setSuccess(data?.message || t('settingsUi.users.inviteSent'))
     } catch (err) {
@@ -255,7 +262,7 @@ const UserManagement = () => {
   return (
     <div className="flex flex-col gap-5">
       <SettingsCard id="invite" title={t('settingsUi.users.inviteTitle')} meta={t('settingsUi.users.inviteMeta')}>
-        <form onSubmit={handleInvite} className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-[minmax(0,1fr)_200px_auto]">
+        <form onSubmit={handleInvite} className="grid grid-cols-1 items-end gap-3 border-t border-line pt-4 sm:grid-cols-[minmax(0,1fr)_200px_200px_auto]">
           <div>
             <label htmlFor="invite-email" className={FIELD_LABEL}>{t('settingsUi.users.email')}</label>
             <input
@@ -278,6 +285,20 @@ const UserManagement = () => {
             >
               {['manager', 'field_staff', 'viewer', 'admin'].map((r) => (
                 <option key={r} value={r}>{t(`settingsUi.team.role.${r}`)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="invite-site" className={FIELD_LABEL}>{t('authUi.invite.sites')}</label>
+            <select
+              id="invite-site"
+              value={invite.site}
+              onChange={(e) => setInvite({ ...invite, site: e.target.value })}
+              className={FIELD}
+            >
+              <option value="">{t('authUi.invite.allSites')}</option>
+              {(siteOptions || []).map((l) => (
+                <option key={l.id || l._id} value={l.id || l._id}>{l.name}</option>
               ))}
             </select>
           </div>

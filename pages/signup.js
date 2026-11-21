@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import { useMutation } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { COUNTRY_CALLING_CODES, DEFAULT_COUNTRY, normalizePhone } from '../convex/lib/phone'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
 import { safeNextPath } from '../lib/safeRedirect'
@@ -11,6 +14,7 @@ import {
   AuthField,
   AuthHeading,
   AuthInput,
+  AUTH_INPUT,
   AuthLayout,
   AuthSubmit,
   PasswordInput,
@@ -22,6 +26,9 @@ const KEEP_TICKET_MS = 4.5 * 60 * 1000
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
+  // Paper 60 "Phone (for field codes)": optional, saved unverified after sign-up.
+  const [phone, setPhone] = useState('')
+  const setMyPhone = useMutation(api.users.setMyPhone)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -52,6 +59,13 @@ export default function SignUp() {
 
     if (password.length < 6) {
       setError(t('authUi.signup.tooShort'))
+      setLoading(false)
+      return
+    }
+
+    const phoneE164 = phone.trim() ? normalizePhone(phone, DEFAULT_COUNTRY) : null
+    if (phone.trim() && !phoneE164) {
+      setError(t('authUi.signup.phoneInvalid'))
       setLoading(false)
       return
     }
@@ -87,6 +101,16 @@ export default function SignUp() {
       return
     }
 
+    // The number is saved unverified; phone sign-in needs it confirmed by a
+    // code later. A number already on another account does not block sign-up.
+    if (phoneE164) {
+      try {
+        await setMyPhone({ phone: phoneE164 })
+      } catch {
+        // Kept out of the way: it can be added from the profile.
+      }
+    }
+
     // A new account has no company yet: register one, or ask to join an invite.
     router.push(safeNextPath(router.query.next, '/register-company'))
   }
@@ -99,17 +123,41 @@ export default function SignUp() {
 
       {/* Paper 60: one 18px rhythm from the heading to "Already have an account?" */}
       <form className="flex flex-col gap-[18px]" onSubmit={handleSignUp}>
-        <AuthField label={t('authUi.signup.fullName')} htmlFor="fullName">
-          <AuthInput
-            id="fullName"
-            name="name"
-            type="text"
-            autoComplete="name"
-            required
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </AuthField>
+        {/* Paper 60 "Name + phone": two fields side by side, 12px apart. */}
+        <div className="flex flex-col gap-[18px] sm:flex-row sm:gap-3">
+          <div className="min-w-0 sm:grow sm:basis-0">
+            <AuthField label={t('authUi.signup.fullName')} htmlFor="fullName">
+              <AuthInput
+                id="fullName"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </AuthField>
+          </div>
+          <div className="min-w-0 sm:grow sm:basis-0">
+            <AuthField label={t('authUi.signup.phone')} htmlFor="phone">
+              <div className={`flex items-center gap-[10px] focus-within:border-sky-ink ${AUTH_INPUT}`}>
+                <span className="shrink-0 text-muted" aria-hidden>
+                  +{COUNTRY_CALLING_CODES[DEFAULT_COUNTRY]}
+                </span>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="min-w-0 grow border-0 bg-transparent p-0 text-[15px] leading-[18px] text-text placeholder:text-faint focus:outline-none focus:ring-0"
+                />
+              </div>
+            </AuthField>
+          </div>
+        </div>
 
         <AuthField label={t('authUi.login.workEmail')} htmlFor="email">
           <AuthInput

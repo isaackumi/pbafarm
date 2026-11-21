@@ -48,6 +48,44 @@ export function FeedTrendChart({ feedTrend, dataKey = 'cumulative', name = 'Cumu
   )
 }
 
+/**
+ * Paper 01 "Standing biomass": the area on a time axis (snapshots are weekly
+ * plus today, so spacing follows the dates). The date labels are drawn by
+ * the card as seven evenly spaced dates, so both axes are hidden here.
+ */
+export function BiomassTrendChart({ points, name = 'Biomass kg' }) {
+  // Paper 01 keeps the line off the floor: the lowest point sits ~20% up.
+  const values = points.map((p) => p.kg)
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+  const span = hi - lo || hi || 1
+  const domain = [Math.max(0, lo - span * 0.3), hi + span * 0.08]
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+        <BrandGradients id="biomassTrend" />
+        <XAxis dataKey="ts" type="number" scale="time" domain={['dataMin', 'dataMax']} hide />
+        <YAxis hide domain={domain} />
+        <Tooltip
+          {...TOOLTIP}
+          labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
+          formatter={(v) => [`${Math.round(Number(v)).toLocaleString()} kg`, name]}
+        />
+        <Area
+          type="monotone"
+          dataKey="kg"
+          name={name}
+          stroke="url(#biomassTrend-stroke)"
+          strokeWidth={2}
+          fill="url(#biomassTrend-fill)"
+          dot={(props) => <LastPointDot {...props} points={points} />}
+          activeDot={{ r: 4, fill: 'var(--chart-point)', stroke: 'var(--surface)' }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
 export function MortalityBarsChart({ mortalityBars }) {
   return (
     <ResponsiveContainer width="100%" height="100%">

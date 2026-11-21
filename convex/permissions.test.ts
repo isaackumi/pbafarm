@@ -50,6 +50,7 @@ const ALLOWLIST: Record<string, string> = {
   'navSearch.recents': 'own recent visits; optionalMember, each entry re-checked with can(production.view) and site scope',
   'navSearch.recordRecent': 'own recent visits; requireUser + memberContext (active member), ids checked against the caller company',
   'memberships.inviteInfo': 'public by design: the 64-hex invite token is the credential',
+  'authOptions.available': 'public by design: on/off flags of the sign-in methods (Paper 15), read before sign-in; no data',
   'userAccounts.changePassword': 'own password; replaces a temporary password before requireUser passes',
   'mfa.startChallenge': 'own two-step code; guarded by requireUser({ allowPendingMfa }) in internal.mfa',
   'mfa.startEnrolment': 'own two-step enrolment; guarded in internal.mfa',

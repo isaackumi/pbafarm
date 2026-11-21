@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { setKeepSignedIn } from '../lib/sessionPersistence'
+import { forgetWorkspace, lastWorkspace } from '../lib/lastWorkspace'
+import { STATUS_PAGE_URL, maintenanceUntil } from '../lib/maintenance'
+import { MaintenanceCard } from '../components/states/MaintenanceState'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../contexts/AuthContext'
@@ -12,6 +18,7 @@ import { useT } from '../lib/i18n/context'
 import {
   AUTH_LINK,
   AuthAlert,
+  AuthCheckbox,
   AuthDivider,
   AuthField,
   AuthHeading,
@@ -22,6 +29,8 @@ import {
   clock,
   OtpInput,
   PasswordInput,
+  SocialSignIn,
+  WorkspaceCard,
 } from '../components/auth/AuthUi'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useHumanCheck } from '../components/HumanCheck'
@@ -43,7 +52,7 @@ function errorData(err) {
 const SSO_NAME = process.env.NEXT_PUBLIC_AUTH_OIDC_NAME || ''
 
 /** Passwordless sign-in with a code sent to a registered phone (SEC-006, Paper 15b). */
-function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail }) {
+function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail, whatsapp, keep, onChannel }) {
   const { sendPhoneCode, verifyPhoneCode } = useAuth()
   const t = useT()
   const [code, setCode] = useState('')
@@ -57,16 +66,18 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
     return () => clearTimeout(timer)
   }, [cooldown])
 
-  const send = async (e) => {
+  // channel 'whatsapp': "Send via WhatsApp instead" (Paper 15b).
+  const send = async (e, channel) => {
     e?.preventDefault()
     setBusy(true)
     setError('')
-    const { error: sendError } = await sendPhoneCode(phone)
+    const { error: sendError } = await sendPhoneCode(phone, channel)
     setBusy(false)
     if (sendError) {
       setError(t('auth.login.serverUnreachable'))
       return
     }
+    onChannel?.(channel === 'whatsapp' ? 'whatsapp' : 'sms')
     setStep('code')
     setCooldown(30)
   }
@@ -75,6 +86,7 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
     e.preventDefault()
     setBusy(true)
     setError('')
+    setKeepSignedIn(keep)
     const { signedIn } = await verifyPhoneCode(phone, code)
     setBusy(false)
     if (!signedIn) {
@@ -83,6 +95,20 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
     }
     onSignedIn()
   }
+
+  const changeNumber = (
+    <button
+      type="button"
+      className={AUTH_LINK}
+      onClick={() => {
+        setStep('phone')
+        setCode('')
+        setError('')
+      }}
+    >
+      {t('common.changeNumber')}
+    </button>
+  )
 
   if (step === 'code') {
     // Paper 15b: code boxes, "Resend in 0:24" (muted while counting) and a
@@ -97,21 +123,18 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
               {t('authUi.login.resendIn', { time: clock(cooldown) })}
             </span>
           ) : (
-            <button type="button" className={AUTH_LINK} disabled={busy} onClick={send}>
+            <button type="button" className={AUTH_LINK} disabled={busy} onClick={(e) => send(e)}>
               {t('common.sendNewCode')}
             </button>
           )}
-          <button
-            type="button"
-            className={AUTH_LINK}
-            onClick={() => {
-              setStep('phone')
-              setCode('')
-              setError('')
-            }}
-          >
-            {t('common.changeNumber')}
-          </button>
+          {/* Paper 15b: "Send via WhatsApp instead" on the right when the platform sends WhatsApp. */}
+          {whatsapp ? (
+            <button type="button" className={AUTH_LINK} disabled={busy} onClick={(e) => send(e, 'whatsapp')}>
+              {t('authUi.login.viaWhatsapp')}
+            </button>
+          ) : (
+            changeNumber
+          )}
         </div>
         <AuthSubmit disabled={busy || code.length !== 6}>
           {busy ? t('common.checking') : t('authUi.login.verifyAndSignIn')}
@@ -125,13 +148,16 @@ function PhoneSignIn({ phone, setPhone, step, setStep, onSignedIn, onUseEmail })
             <p className="text-xs leading-[150%] text-muted">{t('authUi.login.sharedPhoneBody')}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onUseEmail}
-          className="self-start rounded-sm text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
-        >
-          ← {t('authUi.login.useEmail')}
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onUseEmail}
+            className="self-start rounded-sm text-[13px] leading-4 text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink"
+          >
+            ← {t('authUi.login.useEmail')}
+          </button>
+          {whatsapp && <span className="text-[13px] leading-4">{changeNumber}</span>}
+        </div>
       </form>
     )
   }
@@ -166,6 +192,18 @@ export default function Login() {
   const [method, setMethod] = useState('email')
   const [phone, setPhone] = useState('')
   const [phoneStep, setPhoneStep] = useState('phone')
+  const [codeChannel, setCodeChannel] = useState('sms')
+  // Paper 15: "Keep me signed in for 30 days", ticked by default.
+  const [keep, setKeep] = useState(true)
+  const options = useQuery(api.authOptions.available, {})
+  const [workspace, setWorkspace] = useState(null)
+  const [host, setHost] = useState('')
+  const [maintenance, setMaintenance] = useState(null)
+  useEffect(() => {
+    setMaintenance(maintenanceUntil())
+    setWorkspace(lastWorkspace())
+    setHost(window.location.host)
+  }, [])
   // CF-003: after repeated failures the server asks for the human check.
   const [needsHuman, setNeedsHuman] = useState(false)
   const human = useHumanCheck('signin')
@@ -201,6 +239,7 @@ export default function Login() {
       }
     }
 
+    setKeepSignedIn(keep)
     const { error: signInError } = await signInWithEmail(email, password, humanTicket)
 
     if (signInError) {
@@ -226,6 +265,14 @@ export default function Login() {
     router.push(postSignInPath(router.query.next))
   }
 
+  /** OAuth / OIDC sign-in: redirects to the provider and back to `next`. */
+  const social = (provider) => {
+    setKeepSignedIn(keep)
+    signIn(provider, { redirectTo: postSignInPath(router.query.next) }).catch((err) => {
+      setError(errorData(err)?.message || err?.message || t('auth.login.failed'))
+    })
+  }
+
   const codeStep = method === 'phone' && phoneStep === 'code'
   const tabs = [
     { id: 'email', label: t('auth.login.tabEmail') },
@@ -233,12 +280,37 @@ export default function Login() {
     ...(SSO_NAME ? [{ id: 'sso', label: t('authUi.login.tabSso') }] : []),
   ]
 
+  // Paper 62 maintenance: during a declared window the backend is down, so
+  // the card replaces the form until NEXT_PUBLIC_MAINTENANCE_UNTIL passes.
+  if (maintenance) {
+    return (
+      <AuthLayout title={t('system.maintenance.eyebrow')}>
+        <MaintenanceCard endsAt={maintenance.getTime()} statusPageUrl={STATUS_PAGE_URL} />
+      </AuthLayout>
+    )
+  }
+
   return (
     <AuthLayout title={t('auth.login.title')}>
       <AuthHeading
         title={codeStep ? t('authUi.login.codeTitle') : t('authUi.login.title')}
-        subtitle={codeStep ? t('auth.login.codeOnItsWay', { phone }) : t('authUi.login.subtitle')}
+        subtitle={
+          codeStep
+            ? t(codeChannel === 'whatsapp' ? 'authUi.login.codeOnItsWayWhatsapp' : 'auth.login.codeOnItsWay', { phone })
+            : t('authUi.login.subtitle')
+        }
       />
+
+      {workspace && (
+        <WorkspaceCard
+          name={workspace.name}
+          host={host}
+          onSwitch={() => {
+            forgetWorkspace()
+            setWorkspace(null)
+          }}
+        />
+      )}
 
       {reason && !error && (
         <AuthAlert>
@@ -269,11 +341,14 @@ export default function Login() {
             setMethod('email')
             setPhoneStep('phone')
           }}
+          whatsapp={options?.whatsapp === true}
+          keep={keep}
+          onChannel={setCodeChannel}
         />
       ) : method === 'sso' && SSO_NAME ? (
         <div className="flex flex-col gap-[22px]">
           <p className="text-[13px] leading-5 text-muted">{t('authUi.login.ssoHint', { name: SSO_NAME })}</p>
-          <AuthSubmit type="button" onClick={() => signIn('oidc', { redirectTo: postSignInPath(router.query.next) })}>
+          <AuthSubmit type="button" onClick={() => social('oidc')}>
             {t('auth.login.sso', { name: SSO_NAME })}
           </AuthSubmit>
         </div>
@@ -312,13 +387,26 @@ export default function Login() {
 
           {needsHuman && human.widget}
 
+          <AuthCheckbox id="keep" checked={keep} onChange={setKeep}>
+            {t('authUi.login.keepSignedIn')}
+          </AuthCheckbox>
+
           <AuthSubmit disabled={loading || (needsHuman && !human.ready)}>
             {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
           </AuthSubmit>
 
+          {(SSO_NAME || options?.google || options?.microsoft) && <AuthDivider label={t('authUi.or')} />}
+
+          {/* Paper 15: Google / Microsoft, each only when configured on the deployment. */}
+          <SocialSignIn
+            google={options?.google === true}
+            microsoft={options?.microsoft === true}
+            disabled={loading}
+            onSignIn={social}
+          />
+
           {SSO_NAME && (
             <>
-              <AuthDivider label={t('authUi.or')} />
               <button
                 type="button"
                 onClick={() => setMethod('sso')}

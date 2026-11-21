@@ -776,3 +776,84 @@ export function clock(seconds) {
   const s = Math.max(0, Math.ceil(seconds))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
+
+/**
+ * Paper 15 workspace card: the farm last used on this device, the address
+ * being signed in to, and "Switch" (forget it). 12/14 padding, 14px radius,
+ * surface on line; 32px tile with 9px corners; name 14/18, host 12/16 muted.
+ */
+export function WorkspaceCard({ name, host, onSwitch }) {
+  const t = useT()
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  const tile = (words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2)).toUpperCase()
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-[14px] border border-line bg-surface px-[14px] py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          aria-hidden
+          className="flex size-8 shrink-0 items-center justify-center rounded-[9px] border border-line-strong bg-surface-2 text-[11px] font-semibold leading-[14px] text-text"
+        >
+          {tile}
+        </span>
+        <span className="flex min-w-0 flex-col gap-[2px]">
+          <span className="truncate text-[14px] leading-[18px] text-text">{name}</span>
+          {host && <span className="truncate text-xs leading-4 text-muted">{host}</span>}
+        </span>
+      </div>
+      <button type="button" onClick={onSwitch} className={`shrink-0 text-[13px] leading-4 ${AUTH_LINK}`}>
+        {t('authUi.login.switchWorkspace')}
+      </button>
+    </div>
+  )
+}
+
+/** Paper 15 provider marks (brand colours as drawn). */
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+      <path d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 01-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z" fill="#4285F4" />
+      <path d="M12 22c2.7 0 5-.9 6.6-2.5l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0012 22z" fill="#34A853" />
+      <path d="M6.4 13.9a6 6 0 010-3.8V7.5H3.1a10 10 0 000 9z" fill="#FBBC05" />
+      <path d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 003.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z" fill="#EA4335" />
+    </svg>
+  )
+}
+
+function MicrosoftMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+      <path d="M2 2h9.5v9.5H2z" fill="#F25022" />
+      <path d="M12.5 2H22v9.5h-9.5z" fill="#7FBA00" />
+      <path d="M2 12.5h9.5V22H2z" fill="#00A4EF" />
+      <path d="M12.5 12.5H22V22h-9.5z" fill="#FFB900" />
+    </svg>
+  )
+}
+
+const SOCIAL_BTN =
+  'flex grow basis-0 items-center justify-center gap-2.5 rounded-pill border border-line-strong py-[13px] text-[14px] leading-[18px] text-text hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-ink disabled:opacity-50'
+
+/**
+ * Paper 15 "Google · Microsoft" row (12px apart, 13px vertical padding,
+ * line-strong outline). Each button shows only when its provider is set up
+ * on the deployment (convex/authOptions.available); none → nothing.
+ */
+export function SocialSignIn({ google, microsoft, disabled, onSignIn }) {
+  if (!google && !microsoft) return null
+  return (
+    <div className="flex gap-3">
+      {google && (
+        <button type="button" disabled={disabled} onClick={() => onSignIn('google')} className={SOCIAL_BTN}>
+          <GoogleMark />
+          Google
+        </button>
+      )}
+      {microsoft && (
+        <button type="button" disabled={disabled} onClick={() => onSignIn('microsoft-entra-id')} className={SOCIAL_BTN}>
+          <MicrosoftMark />
+          Microsoft
+        </button>
+      )}
+    </div>
+  )
+}

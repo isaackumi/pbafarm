@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { LayoutGrid, RotateCcw, Save } from 'lucide-react'
 import { DownloadIcon, PencilIcon } from '../lib/navIcons'
@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { api } from '../convex/_generated/api'
 import QueryBoundary from './QueryBoundary'
-import { useOptionalQuery } from '../hooks/useOptionalQuery'
 import {
   Button,
   Card,
@@ -17,13 +16,10 @@ import {
   GradientButton,
   KpiStrip,
   PageTitle,
-  Pill,
   Segmented,
-  StatusDot,
-  Table,
 } from './ui'
 import { errorMessage } from '../lib/errorMessage'
-import { formatDate, localToday } from '../lib/format'
+import { localToday } from '../lib/format'
 import { useMutation, useQuery } from 'convex/react'
 import DashboardInsights from './DashboardInsights'
 import FarmAlerts from './FarmAlerts'
@@ -40,6 +36,15 @@ import WidgetListEditor from './dashboard/WidgetListEditor'
 import FeedingPlanWidget from './FeedingPlanWidget'
 import { DEFAULT_DASHBOARD } from '../convex/lib/dashboardLayout'
 import { routePermission } from '../lib/routePermissions'
+import { ActivityCard, AttentionCard, BiomassCard, HomeKpis } from './dashboard/HomeOverview'
+import { useActiveOrganization } from '../lib/useActiveOrganization'
+import { rememberWorkspace } from '../lib/lastWorkspace'
+
+/**
+ * Widgets the fixed Paper 01 sections now show (biomass card, KPI strip,
+ * farm activity): left out of the customizable area below them.
+ */
+export const HOME_FIXED_WIDGETS = ['stat.activeUnits', 'stat.biomass', 'stat.fcr', 'stat.mortality', 'recentActivity']
 
 const chartPlaceholder = () => <div className="h-full w-full rounded-lg bg-foam animate-pulse" />
 const FeedTrendChart = dynamic(
@@ -92,7 +97,17 @@ function DashboardView() {
   // A saved layout (mine or the organization's) wins; otherwise the client's
   // default, so a new default ships with the page, not with a backend deploy.
   const savedLayout = layout?.source === 'me' || layout?.source === 'org' ? layout.widgets : null
-  const shownWidgets = visibleWidgets(savedLayout ?? DEFAULT_DASHBOARD, can)
+  const shownWidgets = visibleWidgets(savedLayout ?? DEFAULT_DASHBOARD, can).filter(
+    (w) => !HOME_FIXED_WIDGETS.includes(w.widget),
+  )
+  const canProduction = can('production.view')
+  // Paper 15 workspace card: the sign-in page shows the farm last used here.
+  const { active: activeOrg } = useActiveOrganization()
+  const activeOrgName = activeOrg?.name
+  useEffect(() => {
+    if (activeOrgName) rememberWorkspace({ name: activeOrgName })
+  }, [activeOrgName])
+  const [biomassRange, setBiomassRange] = useState('90d')
   const [feedRange, setFeedRange] = useState('30')
   const { settings } = useSettings()
   const { theme } = useTheme()
@@ -101,6 +116,16 @@ function DashboardView() {
   // asOf: the period ends on the client's today (queries should not
   // read the server clock: their cache does not expire at midnight).
   const asOf = useMemo(() => localToday(), [])
+  // Paper 01 sections (convex/home.ts). A range switch keeps the last numbers
+  // on screen until the new ones arrive, instead of flashing the skeleton.
+  const homeOverview = useQuery(
+    api.home.overview,
+    user && canReports ? { ...locationArgs, asOf, range: biomassRange } : 'skip',
+  )
+  const lastOverview = useRef(null)
+  if (homeOverview !== undefined) lastOverview.current = homeOverview
+  const homeData = homeOverview ?? lastOverview.current
+  const attention = useQuery(api.home.attention, user && canProduction ? { ...locationArgs } : 'skip')
   // The charts show the last 30 logged days, so load ~90 days of
   // records, not the company's whole daily history.
   const trendFrom = useMemo(
@@ -112,7 +137,6 @@ function DashboardView() {
   // Trend and biomass come from the rollups (PLAT-002): one row per
   // unit-day and per occupancy instead of every record and event.
   const cagesData = useQuery(api.cages.list, locationArgs)
-  const stockingsData = useOptionalQuery(api.stocking.listStockingHistory, locationArgs, [])
   const kpis = useQuery(api.reports.dashboardKpis, { ...locationArgs, dateRange: 30, asOf })
   const summary = useQuery(api.reports.dashboardSummary, { ...locationArgs, dateRange: 30, asOf })
   const series = useQuery(api.reports.dailySeries, { ...locationArgs, from: trendFrom, to: asOf })
@@ -130,18 +154,10 @@ function DashboardView() {
   const rawGrowth = useQuery(api.cages.growthAll, rollupsEmpty ? { ...locationArgs, asOf } : 'skip')
 
   const loading =
-    [cagesData, stockingsData, kpis, summary, series, overview].some((r) => r === undefined) ||
-    (rollupsEmpty && (rawDaily === undefined || rawGrowth === undefined))
-
-  const recentStockings = useMemo(
-    () =>
-      [...(stockingsData || [])].sort(
-        (a, b) =>
-          new Date(b.stocking_date || b.stockingDate || 0) -
-          new Date(a.stocking_date || a.stockingDate || 0),
-      ),
-    [stockingsData],
-  )
+    [cagesData, kpis, summary, series, overview].some((r) => r === undefined) ||
+    (rollupsEmpty && (rawDaily === undefined || rawGrowth === undefined)) ||
+    (canReports && homeData === undefined) ||
+    (canProduction && attention === undefined)
 
   const dailyRecords = useMemo(() => {
     if (rollupsEmpty) return rawDaily || []
@@ -261,69 +277,11 @@ function DashboardView() {
     } else gridWidgets.push(w)
   }
 
-  const statusTone = { approved: 'good', pending_approval: 'warn', rejected: 'alert' }
-  const activityColumns = [
-    {
-      key: 'date',
-      header: t('home.activity.date'),
-      width: 110,
-      render: (r) => <span className="text-muted tabular-nums">{formatDate(r.stocking_date || r.stockingDate)}</span>,
-    },
-    { key: 'type', header: t('home.activity.type'), width: 130, render: () => <Pill tone="cyan">{t('home.activity.stocking')}</Pill> },
-    { key: 'unit', header: t('home.activity.unit'), render: (r) => r.cage?.name || '—' },
-    {
-      key: 'batch',
-      header: t('home.activity.batch'),
-      width: 150,
-      render: (r) => <span className="text-muted">{r.batch_number || r.batchNumber || '—'}</span>,
-    },
-    {
-      key: 'fish',
-      header: t('home.activity.fish'),
-      width: 130,
-      align: 'right',
-      render: (r) => (r.fish_count != null ? Number(r.fish_count).toLocaleString() : '—'),
-    },
-    {
-      // Paper 01 "Biomass": stocked fish × ABW, "0.36 t" / "620 kg"
-      key: 'biomass',
-      header: t('home.activity.biomass'),
-      width: 130,
-      align: 'right',
-      render: (r) => {
-        if (r.fish_count == null || r.initial_abw == null) return '—'
-        const kg = (Number(r.fish_count) * Number(r.initial_abw)) / 1000
-        return kg >= 1000 ? `${(kg / 1000).toFixed(2)} t` : `${Math.round(kg).toLocaleString()} kg`
-      },
-    },
-    {
-      key: 'status',
-      // Paper 01: status column inset 28px (12px cell padding + 16px)
-      header: <span className="pl-4">{t('home.activity.status')}</span>,
-      width: 180,
-      render: (r) =>
-        r.status ? (
-          <span className="inline-flex items-center gap-2 pl-4">
-            <StatusDot tone={statusTone[r.status] || 'neutral'} />
-            <span className="text-[13px] leading-4 text-muted">{t.or(`home.stockingStatus.${r.status}`, r.status)}</span>
-          </span>
-        ) : (
-          '—'
-        ),
-    },
-  ]
-
   const cardTitle = 'text-[15px] font-semibold leading-[18px] text-text'
 
   const widgetNodes = {
     // Over the sky panel (strip placed first) it needs its own surface to stay readable.
-    __kpis: sky && gridWidgets[0]?.widget === '__kpis' ? (
-      <div className="rounded-card border border-line bg-surface px-[22px] py-5 shadow-[var(--shadow-card)]">
-        <KpiStrip items={kpiCells} className="py-1" />
-      </div>
-    ) : (
-      <KpiStrip items={kpiCells} className="py-1" />
-    ),
+    __kpis: <KpiStrip items={kpiCells} className="py-1" />,
     insights: (
       <div className="flex flex-col gap-7">
         <FarmAlerts locationId={locationArgs?.locationId} />
@@ -396,19 +354,6 @@ function DashboardView() {
     siteConditions: (
       <SiteConditions locationId={activeLocationId || undefined} isAdmin={canManageSites} />
     ),
-    recentActivity: (
-      <Table
-        title={t('home.activity.title')}
-        columns={activityColumns}
-        rows={recentStockings.slice(0, 8)}
-        empty={t('home.activity.empty')}
-        actions={
-          <Button href="/stocking-management" variant="ghost" size="sm" className="!min-h-0 text-[13px] text-muted">
-            {t('home.activity.open')}
-          </Button>
-        }
-      />
-    ),
     feedingPlan: <FeedingPlanWidget locationId={locationArgs?.locationId} />,
   }
 
@@ -424,76 +369,99 @@ function DashboardView() {
 
   // Paper 01: "Wednesday, 18 Nov"
   const now = new Date()
-  const eyebrow = `${now.toLocaleDateString(undefined, { weekday: 'long' })}, ${now.getDate()} ${now.toLocaleDateString(undefined, { month: 'short' })}`
+  const dateLine = `${now.toLocaleDateString(undefined, { weekday: 'long' })}, ${now.getDate()} ${now.toLocaleDateString(undefined, { month: 'short' })}`
+  // "· Day 62 of cycle": days since the oldest open stocking (home.overview).
+  const eyebrow =
+    homeData?.cycleDay != null ? `${dateLine} · ${t('home.cycleDay', { day: homeData.cycleDay })}` : dateLine
   const canCustomize = canReports && !customizing
+  const canApprove =
+    can('production.stocking.approve') || can('production.transfer.approve')
   const canLogDaily = can(routePermission('/daily-entry'))
   const canIssueFeed = can(routePermission('/feed-issue'))
+
+  const headerActions =
+    canLogDaily || canIssueFeed ? (
+      sky ? (
+        <>
+          {canLogDaily && (
+            <SkyButton href="/daily-entry" tone="lime" icon={PencilIcon}>
+              {t('home.logDaily')}
+            </SkyButton>
+          )}
+          {canIssueFeed && (
+            <SkyButton href="/feed-issue" icon={DownloadIcon}>
+              {t('home.issueFeed')}
+            </SkyButton>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Paper 01: lime primary, sky-ring secondary */}
+          {canLogDaily && (
+            <GradientButton href="/daily-entry" variant="lime" icon={PencilIcon}>
+              {t('home.logDaily')}
+            </GradientButton>
+          )}
+          {canIssueFeed && (
+            <GradientButton href="/feed-issue" icon={DownloadIcon}>
+              {t('home.issueFeed')}
+            </GradientButton>
+          )}
+        </>
+      )
+    ) : null
 
   return (
     <div className={`flex max-w-[1400px] flex-col gap-7 ${sky ? 'relative isolate' : ''}`}>
       {sky ? (
-        <HomeSkyTitle
-          eyebrow={eyebrow}
-          title={greeting}
-          actions={
-            canCustomize || canLogDaily || canIssueFeed ? (
-              <>
-                {canCustomize && (
-                  <SkyButton size="sm" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
-                    {t('dashboardLayout.customize')}
-                  </SkyButton>
-                )}
-                {canLogDaily && (
-                  <SkyButton href="/daily-entry" tone="lime" icon={PencilIcon}>
-                    {t('home.logDaily')}
-                  </SkyButton>
-                )}
-                {canIssueFeed && (
-                  <SkyButton href="/feed-issue" icon={DownloadIcon}>
-                    {t('home.issueFeed')}
-                  </SkyButton>
-                )}
-              </>
-            ) : null
-          }
-        />
+        <HomeSkyTitle eyebrow={eyebrow} title={greeting} actions={headerActions} />
       ) : (
-        <PageTitle
-          eyebrow={eyebrow}
-          title={greeting}
-          actions={
-            <>
-              {canCustomize && (
-                <GhostButton size="lg" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
-                  {t('dashboardLayout.customize')}
-                </GhostButton>
-              )}
-              {/* Paper 01: lime primary, sky-ring secondary */}
-              {canLogDaily && (
-                <GradientButton href="/daily-entry" variant="lime" icon={PencilIcon}>
-                  {t('home.logDaily')}
-                </GradientButton>
-              )}
-              {canIssueFeed && (
-                <GradientButton href="/feed-issue" icon={DownloadIcon}>
-                  {t('home.issueFeed')}
-                </GradientButton>
-              )}
-            </>
-          }
-        />
+        <PageTitle eyebrow={eyebrow} title={greeting} actions={headerActions} />
       )}
 
-      {customizing && (
-        <DashboardCustomizer
-          layout={layout}
-          canManageOrg={canManageOrg}
-          can={can}
-          onClose={() => setCustomizing(false)}
-        />
+      {/* Paper 01 hero row: biomass (1.15) and needs attention (1), 340px tall, 20px apart. */}
+      {(canReports || canProduction) && (
+        <div className="flex flex-col gap-5 lg:h-[340px] lg:shrink-0 lg:flex-row">
+          {canReports && (
+            <BiomassCard
+              data={homeData}
+              range={biomassRange}
+              onRange={setBiomassRange}
+              className="lg:min-h-0 lg:grow-[1.15] lg:basis-0"
+            />
+          )}
+          {canProduction && <AttentionCard data={attention} className="lg:grow lg:basis-0" />}
+        </div>
       )}
 
-      <WidgetGrid widgets={gridWidgets} nodes={widgetNodes} />
+      {canReports && <HomeKpis data={homeData} />}
+
+      {canProduction && <ActivityCard locationId={locationArgs?.locationId} canApprove={canApprove} />}
+
+      {/* Not in Paper 01: the customizable widgets and "Customize" sit below the artboard's content. */}
+      {(gridWidgets.length > 0 || canCustomize || customizing) && (
+        <section aria-labelledby="home-more-title" className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="home-more-title" className="text-[17px] font-semibold leading-[22px] text-text">
+              {t('home.more.title')}
+            </h2>
+            {canCustomize && (
+              <GhostButton size="lg" icon={LayoutGrid} onClick={() => setCustomizing(true)}>
+                {t('dashboardLayout.customize')}
+              </GhostButton>
+            )}
+          </div>
+          {customizing && (
+            <DashboardCustomizer
+              layout={layout}
+              canManageOrg={canManageOrg}
+              can={can}
+              onClose={() => setCustomizing(false)}
+            />
+          )}
+          <WidgetGrid widgets={gridWidgets} nodes={widgetNodes} />
+        </section>
+      )}
     </div>
   )
 }
@@ -504,7 +472,9 @@ function DashboardCustomizer({ layout, canManageOrg, can, onClose }) {
   const { showToast } = useToast()
   const save = useMutation(api.dashboardLayouts.save)
   const reset = useMutation(api.dashboardLayouts.reset)
-  const [draft, setDraft] = useState(() => visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can))
+  const [draft, setDraft] = useState(() =>
+    visibleWidgets(layout?.widgets ?? DEFAULT_DASHBOARD, can).filter((w) => !HOME_FIXED_WIDGETS.includes(w.widget)),
+  )
   const [busy, setBusy] = useState(false)
   const run = async (fn, done) => {
     setBusy(true)
@@ -527,7 +497,7 @@ function DashboardCustomizer({ layout, canManageOrg, can, onClose }) {
   return (
     <Card className="space-y-4">
       <CardHeader title={t('dashboardLayout.customizeTitle')} subtitle={sourceText} />
-      <WidgetListEditor widgets={draft} onChange={setDraft} can={can} />
+      <WidgetListEditor widgets={draft} onChange={setDraft} can={can} exclude={HOME_FIXED_WIDGETS} />
       <div className="flex flex-wrap gap-2">
         <Button disabled={busy} onClick={() => run(() => save({ key: 'home', scope: 'me', widgets: draft }), t('dashboardLayout.savedMine'))}>
           <Save className="h-4 w-4" aria-hidden />

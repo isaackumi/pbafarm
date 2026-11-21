@@ -118,10 +118,11 @@ describe('preference helpers', () => {
     expect(DEFAULT_PREFERENCES.dashboard.homeHeader).toBeUndefined()
     expect(resolvePreferences(null).dashboard.homeHeader).toBeUndefined()
     expect(effectiveHomeHeader(undefined, 'light')).toBe('sky')
-    expect(effectiveHomeHeader(undefined, 'dark')).toBe('sky')
+    expect(effectiveHomeHeader(undefined, 'dark')).toBe('plain')
     expect(effectiveHomeHeader('plain', 'light')).toBe('plain')
     expect(effectiveHomeHeader('sky', 'dark')).toBe('sky')
     expect(effectiveHomeHeader('neon', 'light')).toBe('sky')
+    expect(effectiveHomeHeader('neon', 'dark')).toBe('plain')
     const old = { defaultTimeRange: '7d', showCharts: false, showMetrics: true, showStockings: true }
     expect(resolvePreferences({ dashboard: old }).dashboard).toEqual(old)
     expect(resolvePreferences({ dashboard: { ...old, homeHeader: 'sky' } }).dashboard.homeHeader).toBe('sky')

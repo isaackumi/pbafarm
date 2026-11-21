@@ -62,9 +62,15 @@ async function userByPhone(ctx: MutationCtx, phone: string) {
  * to an eligible user. Returns nothing the caller could tell apart.
  */
 export const issueLoginCode = internalMutation({
-  args: { phone: v.string(), code: v.string(), codeHash: v.string() },
+  args: {
+    phone: v.string(),
+    code: v.string(),
+    codeHash: v.string(),
+    /** "Send via WhatsApp instead" (Paper 15b): used when the company can send on WhatsApp. */
+    preferChannel: v.optional(v.literal('whatsapp')),
+  },
   returns: v.null(),
-  handler: async (ctx, { phone, code, codeHash }) => {
+  handler: async (ctx, { phone, code, codeHash, preferChannel }) => {
     // Limits are consumed for every number, known or not.
     for (const name of ['loginCodePerPhone', 'loginCodePerPhoneDaily'] as const) {
       const r = await rateLimiter.limit(ctx, name, { key: phone })
@@ -77,7 +83,10 @@ export const issueLoginCode = internalMutation({
     const eligible = await eligibleCompany(ctx, user)
     if (!eligible) return null
     const companyId = eligible.company._id
-    const channel = eligible.policy.phoneLoginChannel
+    const channel =
+      preferChannel && (await channelAvailable(ctx, companyId, preferChannel))
+        ? preferChannel
+        : eligible.policy.phoneLoginChannel
     if (!(await channelAvailable(ctx, companyId, channel))) return null
     if (!(await rateLimiter.limit(ctx, 'loginCodePerCompany', { key: companyId })).ok) return null
 
@@ -210,6 +219,7 @@ export async function authorizePhoneOtp(
         phone,
         code,
         codeHash: await loginCodeHash(phone, code),
+        ...(params.channel === 'whatsapp' ? { preferChannel: 'whatsapp' as const } : {}),
       })
     }
     return null

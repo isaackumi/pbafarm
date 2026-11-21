@@ -2449,7 +2449,9 @@
       "mortality": "Mortalité · 30 j",
       "adg": "Croissance journalière",
       "feed30d": "Aliment · 30 j",
-      "health": "Santé de la ferme"
+      "health": "Santé de la ferme",
+      "feedToday": "Aliment du jour",
+      "feedTodaySuffix": "kg · {logged} sur {total} saisies"
     },
     "feed": {
       "title": "Aliment saisi",
@@ -2477,12 +2479,90 @@
       "stocking": "Empoissonnement",
       "empty": "Aucun empoissonnement. Créez un lot pour suivre les jours d’élevage et la biomasse.",
       "newStocking": "Nouvel empoissonnement",
-      "open": "Ouvrir la gestion des empoissonnements"
+      "open": "Ouvrir la gestion des empoissonnements",
+      "filter": "Type d'activité",
+      "search": "Rechercher une unité ou un lot",
+      "menu": "Actions de la ligne",
+      "review": "Examiner l'approbation",
+      "loading": "Chargement de l'activité…",
+      "noMatch": "Aucune activité ne correspond à cette recherche.",
+      "emptyAll": "Aucune activité pour l'instant. Les empoissonnements, transferts, récoltes et sorties d'aliment s'affichent ici.",
+      "tabs": {
+        "all": "Tout",
+        "stocking": "Empoissonnement",
+        "transfer": "Transferts",
+        "harvest": "Récolte",
+        "feed": "Aliment"
+      },
+      "types": {
+        "stocking": "Empoissonnement",
+        "transfer": "Transfert",
+        "harvest": "Récolte",
+        "feed": "Sortie d'aliment"
+      },
+      "statuses": {
+        "pending_approval": "En attente d'approbation",
+        "approved": "Approuvé",
+        "rejected": "Rejeté",
+        "completed": "Terminé",
+        "in_progress": "En cours",
+        "reversed": "Annulé"
+      },
+      "openRecord": {
+        "stocking": "Ouvrir la gestion des empoissonnements",
+        "transfer": "Ouvrir les transferts de poissons",
+        "harvest": "Ouvrir les récoltes",
+        "feed": "Ouvrir les sorties d'aliment"
+      }
     },
     "stockingStatus": {
       "approved": "Approuvé",
       "pending_approval": "En attente d’approbation",
       "rejected": "Rejeté"
+    },
+    "cycleDay": "Jour {day} du cycle",
+    "biomass": {
+      "title": "Biomasse en place · toutes les cages",
+      "range": "Période de biomasse",
+      "cycle": "Cycle",
+      "change": "{pct} % depuis le mois dernier",
+      "estValue": "valeur est. {value}",
+      "series": "Biomasse kg",
+      "empty": "Aucune cage empoissonnée sur cette période."
+    },
+    "attention": {
+      "title": "À surveiller",
+      "count": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "viewBoard": "Voir le tableau des unités",
+      "none": "Rien à surveiller pour le moment.",
+      "action": {
+        "water": "Saisir l'eau",
+        "density": "Planifier un transfert",
+        "entry": "Saisir"
+      },
+      "reason": {
+        "low_oxygen": "O₂ dissous {value} mg/L · sous l'objectif de {min}",
+        "temperature_out_of_range": "Eau {value} °C · hors de {min}–{max} °C",
+        "missing_entries": {
+          "one": "Aucune saisie depuis {count} jour",
+          "other": "Aucune saisie depuis {count} jours"
+        },
+        "mortality_spike": {
+          "one": "{count} mort en un jour · {rate} %",
+          "other": "{count} morts en un jour · {rate} %"
+        },
+        "feed_drop": "Prise d'aliment en baisse de {pct} %",
+        "fcr_deterioration": "IC {from} → {to} sur {weeks} semaines",
+        "growth_stall": "Croissance ralentie · TCS {sgr} %/jour",
+        "density": "Densité {value} {unit} · trier ou dédoubler bientôt",
+        "densityOver": "Densité {value} {unit} · au-dessus de la limite de {max}"
+      }
+    },
+    "more": {
+      "title": "Plus sur votre ferme"
     }
   },
   "siteConditions": {
@@ -5430,7 +5510,11 @@
       "createWorkspace": "Créer un espace pour votre ferme",
       "workEmail": "E-mail professionnel",
       "forgot": "Oublié ?",
-      "resendIn": "Renvoyer dans {time}"
+      "resendIn": "Renvoyer dans {time}",
+      "switchWorkspace": "Changer",
+      "keepSignedIn": "Rester connecté pendant 30 jours",
+      "viaWhatsapp": "Envoyer par WhatsApp",
+      "codeOnItsWayWhatsapp": "Si {phone} est enregistré pour la connexion par téléphone, un code à 6 chiffres arrive sur WhatsApp. Il expire dans 10 minutes."
     },
     "signup": {
       "title": "Créez votre compte",
@@ -5446,7 +5530,9 @@
       "agreeBefore": "J'accepte les",
       "agreeTerms": "Conditions",
       "agreeAnd": "et la",
-      "agreePrivacy": "Politique de confidentialité"
+      "agreePrivacy": "Politique de confidentialité",
+      "phone": "Téléphone (pour les codes terrain)",
+      "phoneInvalid": "Saisissez un numéro valide, par exemple 024 412 3456"
     },
     "reset": {
       "title": "Réinitialiser votre mot de passe",
@@ -5502,7 +5588,9 @@
       "expiresIn": "dans {count} jours",
       "expiresTomorrow": "dans 1 jour",
       "expiresToday": "aujourd'hui",
-      "joinAsBefore": "Vous rejoindrez en tant que"
+      "joinAsBefore": "Vous rejoindrez en tant que",
+      "titleFrom": "{name} vous invite à rejoindre {company}",
+      "allSites": "Tous les sites"
     },
     "humanFirst": "Veuillez d'abord terminer la vérification humaine.",
     "footerPrivacy": "Confidentialité",
@@ -5671,7 +5759,8 @@
       "title": "Cette cage a dérivé",
       "body": "La page que vous cherchez a été déplacée ou n’a jamais existé.",
       "home": "Retour à l’accueil",
-      "search": "Rechercher {shortcut}"
+      "search": "Rechercher {shortcut}",
+      "pageTitle": "Page introuvable"
     },
     "error": {
       "title": "Une erreur s’est produite",
@@ -5683,7 +5772,14 @@
       "home": "Aller au tableau de bord"
     },
     "redirectApprovals": "Redirection vers les approbations…",
-    "create": "Créer"
+    "create": "Créer",
+    "maintenance": {
+      "eyebrow": "Maintenance",
+      "title": "De retour vers {time}",
+      "titleSoon": "De retour bientôt",
+      "body": "Mise à jour programmée. Continuez à saisir : les saisies attendent hors ligne et se synchronisent ensuite.",
+      "status": "Page d'état"
+    }
   },
   "cageAnalytics": {
     "title": "Analyse des cages",
@@ -6589,7 +6685,15 @@
     "signOut": "Se déconnecter",
     "pending": "En attente d’approbation · généralement moins d’un jour",
     "panelEyebrow": "Une connexion · toutes vos fermes",
-    "panelHeadline": "Chaque ferme garde ses propres cages, équipes et comptes."
+    "panelHeadline": "Chaque ferme garde ses propres cages, équipes et comptes.",
+    "sites": {
+      "one": "{count} site",
+      "other": "{count} sites"
+    },
+    "cages": {
+      "one": "{count} cage",
+      "other": "{count} cages"
+    }
   },
   "forecast": {
     "title": "Prévision de croissance",

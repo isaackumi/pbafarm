@@ -32,6 +32,7 @@ import {
   userIdFromToken,
   writeCachedUser,
 } from '../lib/offlineSession'
+import { clearSessionPersistence, sessionExpiredWithBrowser } from '../lib/sessionPersistence'
 
 const AuthContext = createContext()
 
@@ -50,6 +51,14 @@ export function AuthProvider({ children }) {
     bindConvexReactClient(convex)
     return () => bindConvexReactClient(null)
   }, [convex])
+
+  // "Keep me signed in" unticked (Paper 15): a session started for this
+  // browser session only ends when the browser was closed in between.
+  useEffect(() => {
+    if (!isAuthenticated || !sessionExpiredWithBrowser()) return
+    clearSessionPersistence()
+    convexSignOut().catch(() => {})
+  }, [isAuthenticated, convexSignOut])
 
   // Invites are no longer claimed automatically (SEC-003): a company-less user
   // asks to join from /register-company and a company admin approves.
@@ -212,9 +221,11 @@ export function AuthProvider({ children }) {
    * Phone sign-in (SEC-006). `send` always resolves the same way whether or
    * not the number is registered; `verify` resolves { signedIn }.
    */
-  const sendPhoneCode = async (phone) => {
+  const sendPhoneCode = async (phone, channel) => {
     try {
-      await signIn('phone-otp', { flow: 'send', phone })
+      // channel 'whatsapp': "Send via WhatsApp instead" (Paper 15b); the server
+      // falls back to the organization's channel when WhatsApp is not set up.
+      await signIn('phone-otp', channel === 'whatsapp' ? { flow: 'send', phone, channel } : { flow: 'send', phone })
       return { error: null }
     } catch (error) {
       return { error }

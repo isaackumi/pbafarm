@@ -364,3 +364,60 @@ describe('registering a second organization', () => {
     expect(p).toMatchObject({ timezone: 'Africa/Nairobi', country: 'KE' })
   })
 })
+
+describe('Paper 61 invite card and Paper 70 farm counts', () => {
+  test('the invite shows who sent it and the sites it covers; accepting limits the membership to them', async () => {
+    const { t, as, adminA, loner, siteA, companyA } = await setup()
+    await t.run((ctx) => ctx.db.patch(adminA, { name: 'Kwame Agyei' }))
+    const inv = await as(adminA).mutation(api.users.invite, { email: 'loner@x.com', roleKey: 'viewer', locationIds: [siteA] })
+    const token = tokenOf(inv.inviteUrl)
+    expect(await t.query(api.memberships.inviteInfo, { token })).toMatchObject({
+      inviterName: 'Kwame Agyei', sites: ['Lake site'],
+    })
+    await verifyEmail(t, as, loner, 'loner@x.com')
+    await as(loner).mutation(api.memberships.acceptInvite, { token })
+    const m = await t.run((ctx) =>
+      ctx.db.query('memberships').withIndex('by_companyId_and_userId', (q) => q.eq('companyId', companyA).eq('userId', loner)).unique(),
+    )
+    expect(m).toMatchObject({ allLocations: false, locationIds: [siteA] })
+  })
+
+  test('an invite with no sites covers every site, and sites of another company are refused', async () => {
+    const { t, as, adminA, siteB } = await setup()
+    const inv = await as(adminA).mutation(api.users.invite, { email: 'loner@x.com' })
+    expect(await t.query(api.memberships.inviteInfo, { token: tokenOf(inv.inviteUrl) })).toMatchObject({ sites: null })
+    expect(await codeOf(as(adminA).mutation(api.users.invite, { email: 'x@x.com', locationIds: [siteB] }))).toMatch(/Site not found/)
+  })
+
+  test('farm counts: my organizations only, sites and cages in my scope, archived cages left out', async () => {
+    const { t, as, adminA, adminB, staffA, companyA, siteA } = await setup()
+    await t.run(async (ctx) => {
+      const now = Date.now()
+      const south = await ctx.db.insert('farmLocations', { companyId: companyA, name: 'South', active: true, updatedAt: now })
+      await ctx.db.insert('farmLocations', { companyId: companyA, name: 'Closed', active: false, updatedAt: now })
+      await ctx.db.insert('cages', { name: 'S1', status: 'active', companyId: companyA, locationId: south, updatedAt: now })
+      await ctx.db.insert('cages', { name: 'Old', status: 'active', companyId: companyA, locationId: siteA, archivedAt: now, updatedAt: now })
+      await ctx.db.insert('memberships', {
+        userId: staffA, companyId: companyA, roleKey: 'viewer', allLocations: false, locationIds: [siteA], status: 'active', updatedAt: now,
+      })
+    })
+    expect(await as(adminA).query(api.memberships.farmCounts, {})).toEqual([{ companyId: companyA, sites: 2, cages: 2 }])
+    expect(await as(staffA).query(api.memberships.farmCounts, {})).toEqual([{ companyId: companyA, sites: 1, cages: 1 }])
+    const b = await as(adminB).query(api.memberships.farmCounts, {})
+    expect(b.map((r: any) => r.cages)).toEqual([1])
+    await expect(t.query(api.memberships.farmCounts, {})).rejects.toThrow()
+  })
+
+  test('sign-up phone: saved once, unverified, unique, and only for the caller', async () => {
+    const { t, as, loner, staffA } = await setup()
+    const r = await as(loner).mutation(api.users.setMyPhone, { phone: '024 455 0198' })
+    expect(r.phone).toBe('+233244550198')
+    const saved = await t.run((ctx) => ctx.db.get(loner))
+    expect(saved?.phone).toBe('+233244550198')
+    expect(saved?.phoneVerificationTime).toBeUndefined()
+    expect(await codeOf(as(loner).mutation(api.users.setMyPhone, { phone: '0200000002' }))).toMatch(/already has a phone/)
+    expect(await codeOf(as(staffA).mutation(api.users.setMyPhone, { phone: '0244550198' }))).toMatch(/already registered/)
+    expect(await codeOf(as(staffA).mutation(api.users.setMyPhone, { phone: '12' }))).toMatch(/valid phone/)
+    await expect(t.mutation(api.users.setMyPhone, { phone: '0244550199' })).rejects.toThrow()
+  })
+})

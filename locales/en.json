@@ -2449,7 +2449,9 @@
       "mortality": "Mortality · 30d",
       "adg": "Avg daily growth",
       "feed30d": "Feed · 30d",
-      "health": "Farm health"
+      "health": "Farm health",
+      "feedToday": "Feed today",
+      "feedTodaySuffix": "kg · {logged} of {total} logged"
     },
     "feed": {
       "title": "Feed logged",
@@ -2477,12 +2479,90 @@
       "stocking": "Stocking",
       "empty": "No stockings yet. Create a stocking batch to track days of culture and biomass.",
       "newStocking": "New stocking",
-      "open": "Open stocking management"
+      "open": "Open stocking management",
+      "filter": "Activity type",
+      "search": "Search unit or batch",
+      "menu": "Row actions",
+      "review": "Review approval",
+      "loading": "Loading activity…",
+      "noMatch": "No activity matches this search.",
+      "emptyAll": "No farm activity yet. Stockings, transfers, harvests and feed issued show here.",
+      "tabs": {
+        "all": "All",
+        "stocking": "Stocking",
+        "transfer": "Transfers",
+        "harvest": "Harvest",
+        "feed": "Feed"
+      },
+      "types": {
+        "stocking": "Stocking",
+        "transfer": "Transfer",
+        "harvest": "Harvest",
+        "feed": "Feed issue"
+      },
+      "statuses": {
+        "pending_approval": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "reversed": "Reversed"
+      },
+      "openRecord": {
+        "stocking": "Open stocking management",
+        "transfer": "Open fish transfers",
+        "harvest": "Open harvests",
+        "feed": "Open feed issues"
+      }
     },
     "stockingStatus": {
       "approved": "Approved",
       "pending_approval": "Pending approval",
       "rejected": "Rejected"
+    },
+    "cycleDay": "Day {day} of cycle",
+    "biomass": {
+      "title": "Standing biomass · all cages",
+      "range": "Biomass range",
+      "cycle": "Cycle",
+      "change": "{pct}% from last month",
+      "estValue": "est. value {value}",
+      "series": "Biomass kg",
+      "empty": "No stocked cages in this period yet."
+    },
+    "attention": {
+      "title": "Needs attention",
+      "count": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      },
+      "viewBoard": "View unit board",
+      "none": "Nothing needs attention right now.",
+      "action": {
+        "water": "Log water",
+        "density": "Plan transfer",
+        "entry": "Log entry"
+      },
+      "reason": {
+        "low_oxygen": "Dissolved O₂ {value} mg/L · below {min} target",
+        "temperature_out_of_range": "Water {value} °C · outside {min}–{max} °C",
+        "missing_entries": {
+          "one": "No daily entry for {count} day",
+          "other": "No daily entry for {count} days"
+        },
+        "mortality_spike": {
+          "one": "{count} death in a day · {rate}%",
+          "other": "{count} deaths in a day · {rate}%"
+        },
+        "feed_drop": "Feed intake down {pct}%",
+        "fcr_deterioration": "FCR {from} → {to} over {weeks} weeks",
+        "growth_stall": "Growth slowed · SGR {sgr}%/day",
+        "density": "Density {value} {unit} · grade or split soon",
+        "densityOver": "Density {value} {unit} · over the {max} limit"
+      }
+    },
+    "more": {
+      "title": "More on your farm"
     }
   },
   "siteConditions": {
@@ -5430,7 +5510,11 @@
       "createWorkspace": "Create a farm workspace",
       "workEmail": "Work email",
       "forgot": "Forgot?",
-      "resendIn": "Resend in {time}"
+      "resendIn": "Resend in {time}",
+      "switchWorkspace": "Switch",
+      "keepSignedIn": "Keep me signed in for 30 days",
+      "viaWhatsapp": "Send via WhatsApp instead",
+      "codeOnItsWayWhatsapp": "If {phone} is registered for phone sign-in, a 6-digit code is on its way on WhatsApp. It expires in 10 minutes."
     },
     "signup": {
       "title": "Create your account",
@@ -5446,7 +5530,9 @@
       "agreeBefore": "I agree to the",
       "agreeTerms": "Terms",
       "agreeAnd": "and",
-      "agreePrivacy": "Privacy policy"
+      "agreePrivacy": "Privacy policy",
+      "phone": "Phone (for field codes)",
+      "phoneInvalid": "Enter a valid phone number, for example 024 412 3456"
     },
     "reset": {
       "title": "Reset your password",
@@ -5502,7 +5588,9 @@
       "expiresIn": "in {count} days",
       "expiresTomorrow": "in 1 day",
       "expiresToday": "today",
-      "joinAsBefore": "You'll join as"
+      "joinAsBefore": "You'll join as",
+      "titleFrom": "{name} invited you to {company}",
+      "allSites": "All sites"
     },
     "humanFirst": "Please complete the human check first.",
     "footerPrivacy": "Privacy",
@@ -5671,7 +5759,8 @@
       "title": "This cage drifted off",
       "body": "The page you're after moved or never existed.",
       "home": "Go home",
-      "search": "Search {shortcut}"
+      "search": "Search {shortcut}",
+      "pageTitle": "Page not found"
     },
     "error": {
       "title": "Something went wrong",
@@ -5683,7 +5772,14 @@
       "home": "Go to dashboard"
     },
     "redirectApprovals": "Redirecting to approvals…",
-    "create": "Create"
+    "create": "Create",
+    "maintenance": {
+      "eyebrow": "Maintenance",
+      "title": "Back by {time}",
+      "titleSoon": "Back soon",
+      "body": "Scheduled upgrade. Keep logging: entries queue offline and sync after.",
+      "status": "Status page"
+    }
   },
   "cageAnalytics": {
     "title": "Cage analytics",
@@ -6589,7 +6685,15 @@
     "signOut": "Sign out",
     "pending": "Waiting for approval · usually under a day",
     "panelEyebrow": "One sign-in · every farm you run",
-    "panelHeadline": "Each farm keeps its own cages, people and books."
+    "panelHeadline": "Each farm keeps its own cages, people and books.",
+    "sites": {
+      "one": "{count} site",
+      "other": "{count} sites"
+    },
+    "cages": {
+      "one": "{count} cage",
+      "other": "{count} cages"
+    }
   },
   "forecast": {
     "title": "Growth forecast",

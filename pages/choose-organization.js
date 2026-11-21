@@ -6,6 +6,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useQuery } from 'convex/react'
+import { api } from '../convex/_generated/api'
+import { rememberWorkspace } from '../lib/lastWorkspace'
 import { useAuth } from '../contexts/AuthContext'
 import { useT } from '../lib/i18n/context'
 import { safeNextPath } from '../lib/safeRedirect'
@@ -29,7 +32,7 @@ function Tick() {
  * Others: #0E1012 fill (dark), 1.5px line border, empty radio ring.
  * Pending: dashed border, 70% opacity, muted initials, warn status, no radio.
  */
-function OrgCard({ org, selected, lastUsed, pending, disabled, onSelect, onKeyDown, cardRef, t }) {
+function OrgCard({ org, counts, selected, lastUsed, pending, disabled, onSelect, onKeyDown, cardRef, t }) {
   return (
     <button
       ref={cardRef}
@@ -63,7 +66,13 @@ function OrgCard({ org, selected, lastUsed, pending, disabled, onSelect, onKeyDo
             ? org.companyStatus === 'pending'
               ? t('chooseOrg.pending')
               : t(`farmSwitcher.status.${org.companyStatus}`)
-            : org.roleName || org.roleKey}
+            : [
+                org.roleName || org.roleKey,
+                // Paper 70: "Farm manager · 4 sites · 38 cages" (memberships.farmCounts).
+                ...(counts
+                  ? [t('chooseOrg.sites', { count: counts.sites }), t('chooseOrg.cages', { count: counts.cages })]
+                  : []),
+              ].join(' · ')}
         </span>
       </span>
       {pending ? (
@@ -93,6 +102,8 @@ export default function ChooseOrganizationPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const cardRefs = useRef({})
+  const counts = useQuery(api.memberships.farmCounts, show ? {} : 'skip')
+  const countsById = useMemo(() => new Map((counts || []).map((c) => [c.companyId, c])), [counts])
 
   const usable = useMemo(() => (orgs || []).filter((o) => o.companyStatus === 'approved'), [orgs])
 
@@ -132,6 +143,7 @@ export default function ChooseOrganizationPage() {
     setError('')
     setBusy(true)
     markOrgChosen(window.sessionStorage)
+    if (selectedOrg) rememberWorkspace(selectedOrg)
     if (active && selected === active.companyId) {
       router.replace(next)
       return
@@ -179,6 +191,7 @@ export default function ChooseOrganizationPage() {
             <OrgCard
               key={org.companyId}
               org={org}
+              counts={countsById.get(org.companyId)}
               t={t}
               selected={selected === org.companyId}
               lastUsed={org.isActive}

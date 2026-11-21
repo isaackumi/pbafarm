@@ -559,6 +559,33 @@ export const setPhone = mutation({
 })
 
 /**
+ * Sign-up "Phone (for field codes)" (Paper 60): the new account saves its own
+ * number once, unverified. Phone sign-in and codes ignore it until the owner
+ * confirms it with a code (mfa.startPhoneConfirmation), so typing someone
+ * else's number gains nothing. Only while the account has no number: changing
+ * a number goes through the confirmation flow.
+ */
+export const setMyPhone = mutation({
+  args: { phone: v.string() },
+  returns: v.object({ phone: v.string() }),
+  handler: async (ctx, { phone }) => {
+    const me = await requireAccount(ctx)
+    if (me.phone) throw userError('CONFLICT', 'This account already has a phone number. Change it from your profile.')
+    const next = await normalizeForCompany(ctx, phone, me.companyId)
+    await assertPhoneFree(ctx, next, me._id)
+    await ctx.db.patch(me._id, { phone: next, phoneVerificationTime: undefined })
+    await logAudit(ctx, {
+      actionType: 'set_phone',
+      tableName: 'users',
+      recordId: me._id,
+      previousValues: { phone: null },
+      newValues: { phone: maskPhone(next) },
+    })
+    return { phone: next }
+  },
+})
+
+/**
  * Invite by email into the caller's company (ORG-003). Never changes an
  * existing account: it records a pending invite with a single-use link that
  * expires in 7 days, emails the link, and returns it so the admin can share it
@@ -574,6 +601,8 @@ export const invite = mutation({
     role: v.optional(v.union(v.literal('user'), v.literal('admin'))),
     /** Role template (admin | manager | field_staff | viewer); overrides `role`. */
     roleKey: v.optional(v.string()),
+    /** Sites the membership will cover (Paper 61); omitted or empty = every site. */
+    locationIds: v.optional(v.array(v.id('farmLocations'))),
   },
   returns: v.object({ status: v.union(v.literal('invited'), v.literal('pending_signup')), inviteUrl: v.string(), expiresAt: v.number(), message: v.string() }),
   handler: async (ctx, args) => {
@@ -590,6 +619,12 @@ export const invite = mutation({
     if (args.roleKey === 'owner') throw new Error('Invite as admin, then make them an owner')
     const roleKey = args.roleKey ?? roleKeyFromLegacy(args.role || 'user')
     const role = legacyRoleFromKey(roleKey)
+    const locationIds = [...new Set(args.locationIds ?? [])]
+    if (locationIds.length > 100) throw userError('VALIDATION', 'Choose at most 100 sites')
+    for (const id of locationIds) {
+      const site = await ctx.db.get(id)
+      if (!site || site.companyId !== companyId) throw userError('NOT_FOUND', 'Site not found')
+    }
 
     const existing = await ctx.db
       .query('users')
@@ -627,6 +662,7 @@ export const invite = mutation({
       status: 'pending' as const,
       tokenHash,
       expiresAt,
+      locationIds: locationIds.length > 0 ? locationIds : undefined,
     }
     let inviteId: Id<'userInvites'>
     if (prior) {

@@ -83,6 +83,9 @@ beforeEach(() => {
   )
   // Fake Date too: the workflow's workpool loop schedules by the clock.
   vi.useFakeTimers()
+  // Midday UTC: draining the workpool advances the fake clock by minutes, and a
+  // run started near midnight would cross into tomorrow ("Saving for today" flake).
+  vi.setSystemTime(new Date('2026-11-18T12:00:00Z'))
   // runAllTimers would fire every AI deadline at once (D-023).
   deadlineTestHooks.disabled = true
 })

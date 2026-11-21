@@ -55,6 +55,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `audit.list` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.listPage` | `org.audit.view` | yes | yes | no | no | no |
 | `audit.verifyChain` | `org.audit.view` | yes | yes | no | no | no |
+| `authOptions.available` | `allowlisted` | see test | see test | see test | see test | see test |
 | `automation/rules.checkDraft` | `ai.use` | yes | yes | yes | no | no |
 | `automation/rules.createFromTemplate` | `automation.manage` | yes | yes | no | no | no |
 | `automation/rules.draftCatalog` | `ai.use` | yes | yes | yes | no | no |
@@ -273,6 +274,9 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `health.create` | `production.health.record` | yes | yes | yes | yes | no |
 | `health.list` | `production.view` | yes | yes | yes | yes | yes |
 | `health.remove` | `production.records.delete` | yes | yes | no | no | no |
+| `home.activity` | `production.view` | yes | yes | yes | yes | yes |
+| `home.attention` | `production.view` | yes | yes | yes | yes | yes |
+| `home.overview` | `reports.view` | yes | yes | yes | yes | yes |
 | `humanVerification.verify` | `allowlisted` | see test | see test | see test | see test | see test |
 | `inboundWebhooks.create` | `allowlisted` | see test | see test | see test | see test | see test |
 | `inboundWebhooks.events` | `integrations.manage` | yes | yes | no | no | no |
@@ -330,6 +334,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `llmQuota.consumeServerKeyQuota` | `ai.use` | yes | yes | yes | no | no |
 | `memberships.acceptInvite` | `account` | self | self | self | self | self |
 | `memberships.declineInvite` | `account` | self | self | self | self | self |
+| `memberships.farmCounts` | `account` | self | self | self | self | self |
 | `memberships.inviteInfo` | `allowlisted` | see test | see test | see test | see test | see test |
 | `memberships.listInvites` | `org.members.manage` | yes | yes | no | no | no |
 | `memberships.listMembers` | `org.members.manage` | yes | yes | no | no | no |
@@ -553,6 +558,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `users.myInvites` | `account` | self | self | self | self | self |
 | `users.reactivate` | `org.members.manage` | yes | yes | no | no | no |
 | `users.setLocale` | `account` | self | self | self | self | self |
+| `users.setMyPhone` | `account` | self | self | self | self | self |
 | `users.setPhone` | `org.members.manage` | yes | yes | no | no | no |
 | `users.update` | `org.members.manage` | yes | yes | no | no | no |
 | `waterQuality.latestByUnit` | `production.view` | yes | yes | yes | yes | yes |

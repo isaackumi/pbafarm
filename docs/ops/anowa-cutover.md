@@ -145,6 +145,22 @@ enabled for (Paystack: GHS, NGN, KES, ZAR, USD; XOF is not offered) stay manual.
 
 **Monitoring**: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`.
 
+**Social sign-in (Paper 15 "Google" / "Microsoft")**: each button shows only when
+its pair is set; unset = hidden (`convex/authOptions.ts`, `convex/lib/sso.ts`).
+
+| Name | Purpose |
+|---|---|
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google OAuth client. Redirect URI `<CONVEX_SITE_URL>/api/auth/callback/google` |
+| `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET` | Microsoft Entra ID app. Redirect URI `<CONVEX_SITE_URL>/api/auth/callback/microsoft-entra-id` |
+| `AUTH_MICROSOFT_ENTRA_ID_ISSUER` | Optional tenant issuer (`https://login.microsoftonline.com/<tenant>/v2.0`); default the multi-tenant `common` endpoint |
+
+A social account links to an existing Anowa account only when the provider says the
+email is verified; it never carries a role. Company access still comes from memberships.
+
+**"Send via WhatsApp instead" (Paper 15b)** shows when the platform WhatsApp channel is
+configured (`PLATFORM_WHATSAPP_*` above). The code goes by WhatsApp when the member's
+organization can send WhatsApp, else by its usual channel.
+
 **Status page** (optional): `STATUS_PAGE_URL`, an `https://` link to the public
 status page. The maintenance screen's **Status page** button opens it; when it is
 unset (or not an http(s) URL) the button is hidden. See *Maintenance mode* below.
@@ -173,6 +189,8 @@ unset (or not an http(s) URL) the button is hidden. See *Maintenance mode* below
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | `hello@getanowa.com` (code default when unset) |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile site key (pair of `TURNSTILE_SECRET_KEY`) |
 | `NEXT_PUBLIC_AUTH_OIDC_NAME` | SSO button label, if SSO is on |
+| `NEXT_PUBLIC_STATUS_URL` | Optional status page: the auth footer "Status" link and the maintenance card's "Status page" button (hidden when unset) |
+| `NEXT_PUBLIC_MAINTENANCE_UNTIL` | Optional scheduled maintenance end, ISO time (e.g. `2026-11-21T02:30:00Z`). While ahead, `/login` shows the Paper 62 maintenance card ("Back by 02:30 GMT") instead of the form; `/system/maintenance` shows the same card for a Vercel rewrite during the window. Unset or past = off |
 | `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_APP_ENV` | Optional browser monitoring |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `CUSTOM_LLM_API_KEY`, `CUSTOM_LLM_BASE_URL`, `LLM_DEFAULT_PROVIDER`, `LLM_EXTRA_MODELS` | Server-side keys for `pages/api/llm/*` (in-app assistant) |
 | `LLM_DEFAULT_MODEL_<PROVIDER>`, `LLM_DEFAULT_MODEL` | Optional default model (see the LLM models table in (a)); the assistant lists models live from `/api/llm/models` |
