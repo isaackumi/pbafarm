@@ -45,14 +45,17 @@ function ErrorCode({ code }) {
  */
 export function ErrorCard({ title, description, errorId, onRetry, className = '' }) {
   const t = useT()
+  // null drops the line (a refusal with its own title); undefined uses Paper's copy.
   const body =
-    description || (monitoringEnabled() ? `${t('system.error.body')} ${t('system.error.notified')}` : t('system.error.body'))
+    description === null
+      ? null
+      : description || (monitoringEnabled() ? `${t('system.error.body')} ${t('system.error.notified')}` : t('system.error.body'))
   return (
     <SystemCard className={`min-h-[400px] ${className}`}>
       <ErrorGlyph />
       <div role="alert" className="flex flex-col items-center gap-2">
         <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.02em] text-text">{title || t('system.error.title')}</h1>
-        <p className="max-w-sm text-[14px] leading-5 text-muted">{body}</p>
+        {body && <p className="max-w-sm text-[14px] leading-5 text-muted">{body}</p>}
       </div>
       {errorId && <ErrorCode code={errorId} />}
       <GradientButton ring="sky" size="cta" onClick={onRetry || (() => window.location.reload())}>

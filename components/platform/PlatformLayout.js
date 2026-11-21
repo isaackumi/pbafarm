@@ -115,7 +115,7 @@ export default function PlatformLayout({ title, eyebrow, children, actions, hide
       </aside>
       <main className="flex min-w-0 grow flex-col gap-8 px-4 py-6 sm:px-6 md:px-[44px] md:py-9">
         {hideHeader ? null : <ConsoleHeader eyebrow={eyebrow ?? t('platform.eyebrow')} title={title} actions={actions} />}
-        <QueryBoundary title={t('platform.loadError')} resetKey={router.asPath}>
+        <QueryBoundary resetKey={router.asPath}>
           {children}
         </QueryBoundary>
         <button
