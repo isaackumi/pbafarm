@@ -924,13 +924,17 @@
       "width": 390,
       "route": "/daily-entry",
       "implementation": [
-        "pages/daily-entry.js"
+        "pages/daily-entry.js",
+        "components/DailyEntryMobile.js",
+        "hooks/useMediaQuery.js",
+        "components/Layout.js",
+        "styles/theme.css"
       ],
-      "status": "not-built",
+      "status": "partial",
       "jsxHash": "038f0ff4f37ff688682ce290651f48caae1b3a6271099685891736f5a34b4fc5",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner: not built yet (55 Mobile Daily entry). Older desktop /daily-entry exists."
+      "verifiedAt": "2026-11-21",
+      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields."
     },
     {
       "id": "H82-0",
@@ -1612,13 +1616,17 @@
       "width": 390,
       "route": "/daily-entry",
       "implementation": [
-        "pages/daily-entry.js"
+        "pages/daily-entry.js",
+        "components/DailyEntryMobile.js",
+        "hooks/useMediaQuery.js",
+        "components/Layout.js",
+        "styles/theme.css"
       ],
-      "status": "not-built",
+      "status": "partial",
       "jsxHash": "7b73303da3aef8d1f54eb55560a3a2baaf257f514aa89c28092540de4a93b51b",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Owner fact: 55 Mobile Daily entry not built. Older /daily-entry page exists (not the mobile design)."
+      "verifiedAt": "2026-11-21",
+      "notes": "Browser-checked 2026-11-21 at 390x844 (local backend, headless Chromium), compared with the artboard screenshot and get_jsx/computed styles: header (44px back and history circles, 17/22 title, 12/16 date and member), sync pill (#1A1608/#FFF7E6, warn border and glyph, Offline), cage chips (current inverse with chevron opening a searchable picker, done muted with check), Feed given card (24px radius, 18px padding, Plan kg and feed type, 56px steppers, 52/56 semibold value, sky-gradient plus ring, 32px quick chips with 44px hit areas), Mortality card (7-day avg, 48px steppers, 32/36 value), DO/Temp/pH tiles (18px radius, dashed while empty, DO amber within 1 mg/L of its floor) and the 54px lime Save · next button all match position for position (y offsets equal the artboard minus its 62px status bar). Saving end to end verified online (daily record plus pH water reading) and offline (queued, synced on reconnect). Differences: (1) bottom tab bar is the shared components/MobileTabBar.js (member shortcuts Home, Daily entry, Cages, Feed, More, 64px tall), not Paper's Home, Tasks, Scan, Cages, More at 86px; that file belongs to the Paper 54 build. (2) the date follows the org format locale (\"Sat, 21 Nov\" under en-GB). (3) the empty-tile placeholder is an en dash (project rule: no em dashes). (4) \"add photo\" reads \"add details\" when the org has no photo custom field on daily records; the sheet holds cause of death, note and custom fields."
     },
     {
       "id": "S2H-2",
