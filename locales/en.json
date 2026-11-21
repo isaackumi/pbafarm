@@ -407,6 +407,71 @@
     },
     "speciesBiomass": "{species} · {biomass}"
   },
+  "dailyMobile": {
+    "title": "Daily entry",
+    "dateBy": "{date} · {name}",
+    "back": "Back",
+    "history": "Entry history",
+    "unknownCage": "Unknown cage",
+    "waiting": {
+      "one": "{count} entry waiting to sync",
+      "other": "{count} entries waiting to sync"
+    },
+    "savedOnDevice": "Entries save on this device",
+    "offline": "Offline",
+    "sendNow": "Send now",
+    "sending": "Sending",
+    "sent": {
+      "one": "Sent {count} saved entry",
+      "other": "Sent {count} saved entries"
+    },
+    "sendFailed": {
+      "one": "{count} saved entry needs attention",
+      "other": "{count} saved entries need attention"
+    },
+    "noSignal": "Could not reach the server. Try again when you have signal",
+    "changeCage": "Change cage, now {name}",
+    "pickCage": "Choose a cage",
+    "searchCages": "Search cages",
+    "openOfTotal": "{open} of {total} cages still open",
+    "inDraft": "Draft",
+    "keepTyping": {
+      "one": "{count} more. Keep typing to narrow",
+      "other": "{count} more. Keep typing to narrow"
+    },
+    "noMatch": "No cage matches",
+    "close": "Close",
+    "feedGiven": "Feed given",
+    "plan": "Plan {kg} kg",
+    "chooseFeed": "Choose feed",
+    "lessFeed": "Less feed, 1 kg",
+    "moreFeed": "More feed, 1 kg",
+    "bags": {
+      "one": "{count} bag",
+      "other": "{count} bags"
+    },
+    "bagsAria": {
+      "one": "Set feed to {count} bag, {kg} kg",
+      "other": "Set feed to {count} bags, {kg} kg"
+    },
+    "asPlan": "= plan",
+    "asPlanAria": "Set feed to the plan",
+    "poorAppetite": "Poor appetite",
+    "avg7": "7-day avg {count}",
+    "addPhoto": "add photo",
+    "addDetails": "add details",
+    "detailsTitle": "Mortality details, {name}",
+    "done": "Done",
+    "fewerDead": "One fewer dead",
+    "moreDead": "One more dead",
+    "doMgL": "DO mg/L",
+    "tempC": "Temp °C",
+    "ph": "pH",
+    "save": "Save {name}",
+    "saveNext": "Save {name} · next {next}",
+    "saved": "Saved {name}",
+    "savedNext": "Saved {name}. Next: {next}"
+  },
   "biweekly": {
     "pageTitle": "Bi-weekly entry",
     "crumbRecords": "Bi-weekly records",

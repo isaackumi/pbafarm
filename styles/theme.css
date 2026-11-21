@@ -76,6 +76,10 @@
   /* Paper 62 maintenance ring */
   --warn-tint-border: #5e4a1e;
   --banner-pink-bg: color-mix(in srgb, var(--pink-fill) 7%, var(--bg));
+  /* Paper 55 mobile daily entry: sync pill, "+" stepper glyph, Save label */
+  --entry-sync-bg: #1a1608;
+  --entry-plus-ink: var(--text);
+  --entry-save-ink: #0a0b0c;
   --backdrop: rgb(0 0 0 / 0.66);
   /* Auth lake scene (Paper 15 visual side) */
   --scene-bg: #0d0f11;
@@ -196,6 +200,9 @@ html[data-theme='light'] {
   --alert-tint-bg: #fef2f2;
   --alert-tint-border: #f5c2c2;
   --warn-tint-border: #f3d9a4;
+  --entry-sync-bg: #fff7e6;
+  --entry-plus-ink: #1562d6;
+  --entry-save-ink: #0b0d10;
   --scene-bg: #eef3f5;
   --scene-sky-1: #eaf3fd;
   --scene-sky-2: #cfe5fb;

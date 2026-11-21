@@ -22,7 +22,7 @@ export default function ScanPage() {
   const t = useT()
   return (
     <ProtectedRoute>
-      <Layout title={t('scan.title')} hideTitle phoneBare>
+      <Layout title={t('scan.title')} hideTitle bareOnPhone>
         <Scan />
       </Layout>
     </ProtectedRoute>
@@ -109,7 +109,8 @@ function Scan() {
 
   return (
     // Paper sets proportional figures here (the app body uses tabular ones).
-    <div className="mx-auto w-full max-w-[420px] [font-variant-numeric:normal] lg:max-w-[390px]">
+    // On phones the screen runs edge to edge; it pads itself.
+    <div className="mx-auto w-full max-w-[420px] [font-variant-numeric:normal] max-sm:-mx-4 max-sm:w-auto lg:max-w-[390px]">
       {/* Paper 54 header: 44px round back and torch, 17/22 title over the site. */}
       <div className="flex items-center justify-between px-4 pb-3 pt-[max(4px,env(safe-area-inset-top))]">
         <button type="button" onClick={back} aria-label={t('scan.back')} className={iconBtn}>
