@@ -1777,13 +1777,16 @@
         "pages/account.js",
         "components/ChatChannelsCard.js",
         "pages/billing.js",
-        "components/billing/TenantBilling.js"
+        "components/billing/TenantBilling.js",
+        "convex/bot/bindings.ts",
+        "convex/bot/inbound.ts",
+        "convex/lib/tokens.ts"
       ],
       "status": "partial",
       "jsxHash": "a63b58b76945849b070256b28769e532b7ea07cbc76783f868b4763a384ab88c",
       "hashedAt": "2026-11-20",
       "verifiedAt": null,
-      "notes": "No single 'Messaging & billing' page: Channels (WhatsApp/Telegram connect code+timer, default site, reminder, Preferences, Disconnect) on /account; Plan & billing (current plan, usage limits, invoices) on /billing. Missing: header actions Invite team/Download invoices, 'Change plan' button, pay-link renewal note."
+      "notes": "No single 'Messaging & billing' page: Channels (WhatsApp/Telegram connect code+timer, default site, reminder, Preferences, Disconnect) on /account; Plan & billing (current plan, usage limits, invoices) on /billing. Missing: header actions Invite team/Download invoices, 'Change plan' button, pay-link renewal note. 2026-11-21 (fix/telegram-code): Telegram card matches the artboard in the browser at 1440 and 390, dark and light: short one-time code K7Q-42P style (24/30 mono 700, 0.2em, sky) with mm:ss left in the dashed box, Paper body copy 13/19, no note under the box. Before, it showed the 64-character deep-link token, which overflowed the card."
     },
     {
       "id": "D4N-0",

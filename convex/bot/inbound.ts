@@ -19,7 +19,8 @@ import { botProvider } from './tables'
 import { routePlan, type RoutePlan, type ChatMessageValue, type Target } from './validators'
 import { botLocale, t, type BotLocale } from './i18n'
 import { checkBinding, type BoundMember } from './scope'
-import { codeHash, revokeBindingsForUser } from './bindings'
+import { codeHash, revokeBindingsForUser, shortCodeHash } from './bindings'
+import { parseShortCode } from '../lib/tokens'
 import { closeDraft } from './pending'
 import { logbookButton, logbookPlan } from './logbook'
 import { voiceButton, voiceCommand, voicePlan } from './voice'
@@ -96,6 +97,29 @@ export const ingest = internalMutation({
 const LINK_RE = /^\s*(?:link|code|lier)\s*:?\s*(\d{6})\s*$/i
 const START_RE = /^\s*\/start\s+([0-9a-f]{64})\s*$/i
 const START_BARE_RE = /^\s*\/start\s*$/i
+/** "/start K7Q-42P", "link K7Q42P", "code: k7q 42p": the part after the keyword. */
+const TG_PREFIXED_RE = /^\s*(?:\/start|link|code|lier)\s*:?\s+(.+?)\s*$/i
+
+/** A link attempt: WhatsApp code, Telegram deep-link token, or Telegram short code. */
+type LinkAttempt = { kind: 'code' | 'token' | 'short'; value: string }
+
+/**
+ * Reads a link attempt from a text message. A bare Telegram short code counts
+ * only from a chat that is not linked yet, so a linked user's ordinary
+ * message is never taken for one; a linked chat re-links with the deep link
+ * or "link K7Q-42P".
+ */
+export function linkAttempt(provider: 'whatsapp' | 'telegram', msgText: string, bound: boolean): LinkAttempt | null {
+  if (provider === 'whatsapp') {
+    const code = LINK_RE.exec(msgText)?.[1]
+    return code ? { kind: 'code', value: code } : null
+  }
+  const token = START_RE.exec(msgText)?.[1]
+  if (token) return { kind: 'token', value: token }
+  const prefixed = TG_PREFIXED_RE.exec(msgText)?.[1]
+  const short = prefixed ? parseShortCode(prefixed) : bound ? null : parseShortCode(msgText)
+  return short ? { kind: 'short', value: short } : null
+}
 
 function text(msg: string): ChatMessageValue {
   return { kind: 'text', text: msg }
@@ -158,21 +182,33 @@ async function maybeSitePicker(ctx: MutationCtx, bound: BoundMember): Promise<Ch
   return [sitePicker(bound.locale, sites, bound.member.siteScope === 'all')]
 }
 
-/** LINK <code> (WhatsApp) or /start <token> (Telegram): bind this chat to the code's user and org. */
+/**
+ * LINK <code> (WhatsApp), /start <token> or a typed short code (Telegram):
+ * bind this chat to the code's user and org.
+ */
 async function link(
   ctx: MutationCtx,
   inbound: Doc<'channelInbound'>,
-  code: string,
+  attempt: LinkAttempt,
   base: Omit<Target, 'locale'>,
 ): Promise<RoutePlan> {
-  const hash = await codeHash(inbound.provider, code)
   const now = Date.now()
-  const rows = await ctx.db
-    .query('channelConnectCodes')
-    .withIndex('by_provider_and_codeHash', (q) => q.eq('provider', inbound.provider).eq('codeHash', hash))
-    .take(5)
-  let candidates = rows.filter((c) => !c.usedAt && c.expiresAt > now)
   let locale: BotLocale = 'en'
+  const isShort = attempt.kind === 'short'
+  if (isShort && !(await rateLimiter.check(ctx, 'botLinkCodeFailGlobal', { key: 'all' })).ok) {
+    return { type: 'reply', ...base, locale, messages: [text(t(locale).linkBadCode)] }
+  }
+  const hash = isShort ? await shortCodeHash(attempt.value) : await codeHash(inbound.provider, attempt.value)
+  const rows = isShort
+    ? await ctx.db
+        .query('channelConnectCodes')
+        .withIndex('by_provider_and_shortCodeHash', (q) => q.eq('provider', 'telegram').eq('shortCodeHash', hash))
+        .take(5)
+    : await ctx.db
+        .query('channelConnectCodes')
+        .withIndex('by_provider_and_codeHash', (q) => q.eq('provider', inbound.provider).eq('codeHash', hash))
+        .take(5)
+  let candidates = rows.filter((c) => !c.usedAt && c.expiresAt > now)
   if (inbound.provider === 'whatsapp') {
     // The code must belong to a user whose verified phone is this sender.
     const users = await ctx.db
@@ -185,7 +221,10 @@ async function link(
     candidates = candidates.filter((c) => verified.some((u) => u._id === c.userId))
   }
   const code0 = candidates.length === 1 ? candidates[0] : null
-  if (!code0) return { type: 'reply', ...base, locale, messages: [text(t(locale).linkBadCode)] }
+  if (!code0) {
+    if (isShort) await rateLimiter.limit(ctx, 'botLinkCodeFailGlobal', { key: 'all' })
+    return { type: 'reply', ...base, locale, messages: [text(t(locale).linkBadCode)] }
+  }
   await ctx.db.patch(code0._id, { usedAt: now })
   const user = await ctx.db.get(code0.userId)
   locale = botLocale(user?.locale)
@@ -258,15 +297,9 @@ export const route = internalMutation({
     const base = { provider: inbound.provider, address: inbound.address, callbackQueryId: inbound.callbackQueryId }
     const msgText = (inbound.text ?? '').trim()
 
-    // Link attempts come first: they replace any older binding of this chat.
-    const linkCode =
-      inbound.kind === 'text'
-        ? inbound.provider === 'whatsapp'
-          ? LINK_RE.exec(msgText)?.[1]
-          : START_RE.exec(msgText)?.[1]
-        : undefined
-
     const binding = await liveBinding(ctx, inbound.provider, inbound.address)
+    // Link attempts come first: they replace any older binding of this chat.
+    const linkCode = inbound.kind === 'text' ? linkAttempt(inbound.provider, msgText, !!binding) : null
     if (!binding || linkCode) {
       // Unbound (or linking): strict limits, onboarding text only, no LLM.
       if (

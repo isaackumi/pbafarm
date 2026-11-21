@@ -341,11 +341,14 @@ export const botTables = {
     companyId: v.id('companies'),
     provider: botProvider,
     codeHash: v.string(),
+    /** Telegram: hash of the short code shown on screen ("K7Q-42P"), which can also be typed to the bot. */
+    shortCodeHash: v.optional(v.string()),
     expiresAt: v.number(),
     usedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index('by_provider_and_codeHash', ['provider', 'codeHash'])
+    .index('by_provider_and_shortCodeHash', ['provider', 'shortCodeHash'])
     .index('by_userId', ['userId'])
     .index('by_companyId', ['companyId']),
 
