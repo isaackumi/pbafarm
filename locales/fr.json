@@ -4553,6 +4553,40 @@
           "customer": "Client",
           "supplier": "Fournisseur"
         }
+      },
+      "groups": {
+        "title": "Groupes Telegram",
+        "sub": "Discussions de groupe liées à {bot}. Un admin ajoute le bot à un groupe Telegram et y envoie /connect. Le bot ne répond que s'il est mentionné, si on lui répond ou par commande.",
+        "theBot": "le bot de la ferme",
+        "empty": "Aucun groupe lié. Ajoutez le bot à un groupe Telegram, puis envoyez /connect dans le groupe.",
+        "linkedBy": "Lié par {name} · {scope}",
+        "revoked": "Délié ({reason})",
+        "active": "Lié",
+        "unlinked": "Délié",
+        "edit": "Modifier l'accès",
+        "close": "Terminé",
+        "unlink": "Délier",
+        "confirmUnlink": "Délier {title} ? Le bot ne répondra plus jusqu'à un nouveau /connect.",
+        "unlinkedToast": "Groupe délié",
+        "allLocations": "Tous les sites de la ferme",
+        "allNeedsAll": "Seuls les membres qui voient tous les sites peuvent ouvrir un groupe à tous les sites.",
+        "otherSite": "Autre site",
+        "pickOne": "Gardez au moins un site.",
+        "cap": {
+          "ask": "Questions",
+          "log": "Saisies",
+          "alerts": "Alertes dans le groupe",
+          "money": "Argent",
+          "buyers": "Acheteurs et ventes"
+        },
+        "capHelp": {
+          "ask": "Les membres peuvent demander des résumés et le stock dans le groupe.",
+          "log": "Les membres peuvent saisir ; les brouillons vont dans leur discussion privée.",
+          "alerts": "Les saisies manquantes et les alertes sont publiées ici, en mentionnant le responsable.",
+          "money": "Les coûts, prix et revenus peuvent être affichés dans le groupe.",
+          "buyers": "Les ventes et actions acheteurs sont permises depuis le groupe."
+        },
+        "roleNote": "Un groupe ne donne jamais plus que le rôle de chacun : chaque personne reçoit l'accès et les sites du groupe, limités aux siens."
       }
     },
     "outbox": {

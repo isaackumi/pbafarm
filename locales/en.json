@@ -4553,6 +4553,40 @@
           "customer": "Customer",
           "supplier": "Supplier"
         }
+      },
+      "groups": {
+        "title": "Telegram groups",
+        "sub": "Site group chats linked to {bot}. An admin adds the bot to a Telegram group and sends /connect there. The bot answers only when tagged, replied to or given a command.",
+        "theBot": "the farm bot",
+        "empty": "No group is linked yet. Add the bot to a Telegram group, then send /connect in the group.",
+        "linkedBy": "Linked by {name} · {scope}",
+        "revoked": "Unlinked ({reason})",
+        "active": "Linked",
+        "unlinked": "Unlinked",
+        "edit": "Edit access",
+        "close": "Done",
+        "unlink": "Unlink",
+        "confirmUnlink": "Unlink {title}? The bot will stop answering there until someone sends /connect again.",
+        "unlinkedToast": "Group unlinked",
+        "allLocations": "All farm locations",
+        "allNeedsAll": "Only members who see all farm locations can open a group to all of them.",
+        "otherSite": "Another site",
+        "pickOne": "Keep at least one site.",
+        "cap": {
+          "ask": "Questions",
+          "log": "Log entries",
+          "alerts": "Alerts in the group",
+          "money": "Money",
+          "buyers": "Buyers and sales"
+        },
+        "capHelp": {
+          "ask": "Members can ask for summaries and stock in the group.",
+          "log": "Members can log entries; drafts go to their private chat.",
+          "alerts": "Missing logs and farm alerts are posted here, tagging the keeper.",
+          "money": "Costs, prices and revenue may be shown in the group.",
+          "buyers": "Sales and buyer actions are allowed from the group."
+        },
+        "roleNote": "A group never gives anyone more than their own role: each person gets the group's access and sites, narrowed to their own."
       }
     },
     "outbox": {

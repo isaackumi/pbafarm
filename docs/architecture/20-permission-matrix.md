@@ -87,6 +87,15 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `bot/bindings.myChannels` | `account` | self | self | self | self | self |
 | `bot/bindings.revokeChannel` | `account` | self | self | self | self | self |
 | `bot/bindings.setReminder` | `account` | self | self | self | self | self |
+| `bot/chatGroups.list` | `integrations.manage` | yes | yes | no | no | no |
+| `bot/chatGroups.unlink` | `integrations.manage` | yes | yes | no | no | no |
+| `bot/chatGroups.update` | `integrations.manage` | yes | yes | no | no | no |
+| `bot/rounds.setSiteRound` | `production.keepers.manage` | yes | yes | yes | no | no |
+| `bot/rounds.siteRounds` | `production.view` | yes | yes | yes | yes | yes |
+| `bot/templates.list` | `production.daily.record` | yes | yes | yes | yes | no |
+| `bot/templates.remove` | `production.daily.record` | yes | yes | yes | yes | no |
+| `bot/templates.save` | `production.daily.record` | yes | yes | yes | yes | no |
+| `bot/templates.share` | `production.keepers.manage` | yes | yes | yes | no | no |
 | `bulkImport.check` | `production.import` | yes | yes | no | no | no |
 | `bulkImport.importRows` | `production.import` | yes | yes | no | no | no |
 | `businessUnits.assignSites` | `org.structure.manage` | yes | yes | no | no | no |
@@ -358,6 +367,10 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `messaging/channels.saveCredentials` | `allowlisted` | see test | see test | see test | see test | see test |
 | `messaging/channels.sendTest` | `allowlisted` | see test | see test | see test | see test | see test |
 | `messaging/channels.updatePreferences` | `integrations.manage` | yes | yes | no | no | no |
+| `messaging/outbox.list` | `integrations.manage` | yes | yes | no | no | no |
+| `messaging/outbox.retry` | `integrations.manage` | yes | yes | no | no | no |
+| `messaging/outbox.search` | `integrations.manage` | yes | yes | no | no | no |
+| `messaging/outbox.usage` | `integrations.manage` | yes | yes | no | no | no |
 | `mfa.confirmPhone` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startChallenge` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfa.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
@@ -487,6 +500,7 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `sales.removeSale` | `finance.sales.correct` | yes | yes | no | no | no |
 | `sales.updateCustomer` | `finance.sales.correct` | yes | yes | no | no | no |
 | `sales.updateSale` | `finance.sales.record` | yes | yes | yes | no | no |
+| `scan.cageCard` | `production.view` | yes | yes | yes | yes | yes |
 | `security.getPolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `security.updatePolicy` | `org.settings.manage` | yes | yes | no | no | no |
 | `sensorAnalytics.series` | `production.view` | yes | yes | yes | yes | yes |

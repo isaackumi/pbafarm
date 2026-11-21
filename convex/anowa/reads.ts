@@ -21,8 +21,9 @@ import { effectiveThresholds } from '../lib/waterQuality'
 import { overridesFor } from '../waterQuality'
 import { amountPaidOf } from '../invoices'
 import { plannerRows, unitForecast } from '../forecasts'
-import { checkBinding, farmDate, inScope, matchUnit, unitsInScope, type MemberScope } from '../bot/scope'
+import { farmDate, inScope, matchUnit, unitsInScope, type MemberScope } from '../bot/scope'
 import { webMember } from './scope'
+import { boundFor } from '../bot/groupScope'
 import { abwChart, answerChartValidator, feedChart, forecastChart, moneyChart, waterChart, type AnswerChart } from '../lib/answerCharts'
 
 export const farmReadTool = v.union(
@@ -859,13 +860,19 @@ export const read = internalQuery({
 
 /** A farm read for a chat binding (the farm bot). */
 export const botRead = internalQuery({
-  args: { bindingId: v.id('channelBindings'), tool: farmReadTool, args: farmReadArgs, now: v.number() },
+  args: {
+    bindingId: v.id('channelBindings'),
+    tool: farmReadTool,
+    args: farmReadArgs,
+    now: v.number(),
+    /** A Telegram group turn: narrowed to the group (convex/bot/groupScope.ts). */
+    chatGroupId: v.optional(v.id('botChatGroups')),
+    siteId: v.optional(v.id('farmLocations')),
+  },
   returns: readResult,
-  handler: async (ctx, { bindingId, tool, args, now }) => {
-    const binding = await ctx.db.get(bindingId)
-    if (!binding) return { ok: false as const, error: 'not connected' }
-    const checked = await checkBinding(ctx, binding)
-    if (!checked.ok) return { ok: false as const, error: 'not connected' }
-    return await farmReadFor(ctx, checked.bound, tool, args, now)
+  handler: async (ctx, { bindingId, tool, args, now, chatGroupId, siteId }) => {
+    const b = await boundFor(ctx, bindingId, { chatGroupId, siteId })
+    if (!b.ok) return { ok: false as const, error: b.error }
+    return await farmReadFor(ctx, b.bound, tool, args, now)
   },
 })

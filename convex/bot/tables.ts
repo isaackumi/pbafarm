@@ -309,6 +309,46 @@ export const templateKind = v.union(
   v.literal('feed_issue'),
 )
 
+/** Optional Telegram group fields of an inbound message (InboundEvent in verify.ts). */
+export const inboundGroupFields = {
+  chatType: v.optional(v.literal('group')),
+  senderId: v.optional(v.string()),
+  senderUsername: v.optional(v.string()),
+  chatTitle: v.optional(v.string()),
+  messageId: v.optional(v.number()),
+  member: v.optional(v.union(v.literal('added'), v.literal('removed'), v.literal('migrated'))),
+  migrateTo: v.optional(v.string()),
+}
+
+/** What a linked Telegram group may do (VFQ-1). Money and buyers start off. */
+export const groupCaps = v.object({
+  /** Questions and summaries. */
+  ask: v.boolean(),
+  /** Data entry: drafts go to the sender's private chat. */
+  log: v.boolean(),
+  /** Farm alerts and keeper reminders posted in the group. */
+  alerts: v.boolean(),
+  /** Costs, prices, revenue and profit. */
+  money: v.boolean(),
+  /** Customers, sales and buyer messages. */
+  buyers: v.boolean(),
+})
+
+/** A summary scope: every site in reach, one site, or one unit. */
+export const summaryScope = v.union(
+  v.object({ kind: v.literal('all') }),
+  v.object({ kind: v.literal('site'), siteId: v.id('farmLocations') }),
+  v.object({ kind: v.literal('unit'), unitId: v.id('cages') }),
+)
+
+export const summaryRange = v.union(
+  v.literal('today'),
+  v.literal('yesterday'),
+  v.literal('this_week'),
+  v.literal('last_7_days'),
+  v.literal('this_month'),
+)
+
 export const botTables = {
   /**
    * Every inbound webhook message, stored before any processing (BOT-001).
@@ -320,7 +360,14 @@ export const botTables = {
     externalId: v.string(),
     /** E.164 phone (WhatsApp) or Telegram chat id. */
     address: v.string(),
-    kind: v.union(v.literal('text'), v.literal('button'), v.literal('image'), v.literal('audio'), v.literal('unsupported')),
+    kind: v.union(
+      v.literal('text'),
+      v.literal('button'),
+      v.literal('image'),
+      v.literal('audio'),
+      v.literal('member'),
+      v.literal('unsupported'),
+    ),
     /** Untrusted user text, capped (an image's caption). */
     text: v.optional(v.string()),
     /** Button / list / callback payload we generated (still untrusted). */
@@ -333,6 +380,8 @@ export const botTables = {
     mediaId: v.optional(v.string()),
     mediaMime: v.optional(v.string()),
     mediaSize: v.optional(v.number()),
+    /** Telegram groups (chatGroups.ts): see InboundEvent in verify.ts. */
+    ...inboundGroupFields,
     /** Provider timestamp of the message (ms). */
     sentAt: v.number(),
     receivedAt: v.number(),
@@ -357,6 +406,8 @@ export const botTables = {
     threadId: v.optional(v.string()),
     /** Telegram / WhatsApp profile name, for the /account card. */
     displayName: v.optional(v.string()),
+    /** Telegram @username (no @), to tag the person in a group. */
+    username: v.optional(v.string()),
     /** Last inbound message: WhatsApp free-form replies only within 24 h. */
     lastInboundAt: v.optional(v.number()),
     /** Daily reminder (BOT-004), opt-in. "HH:MM" in `reminderTimezone`. */
@@ -707,4 +758,55 @@ export const botTables = {
   })
     .index('by_providerMessageId', ['providerMessageId'])
     .index('by_companyId_and_sentAt', ['companyId', 'sentAt']),
+
+  /**
+   * A Telegram group linked to one organization (VFQ-1, chatGroups.ts).
+   * Anyone in the group acts as themselves (their own private-chat binding)
+   * and gets the intersection of this row's scope and their own role.
+   */
+  botChatGroups: defineTable({
+    companyId: v.id('companies'),
+    provider: v.literal('telegram'),
+    /** Telegram chat id (negative for groups). */
+    chatId: v.string(),
+    title: v.string(),
+    /** pending: /connect started, pickers open; active: linked; revoked: unlinked or the bot was removed. */
+    status: v.union(v.literal('pending'), v.literal('active'), v.literal('revoked')),
+    siteScope: v.union(v.literal('all'), v.array(v.id('farmLocations'))),
+    caps: groupCaps,
+    linkedBy: v.id('users'),
+    /** While pending: the Telegram user who sent /connect; only they finish it. */
+    pendingBy: v.optional(v.string()),
+    /** The group's own agent thread, per organization. */
+    threadId: v.optional(v.string()),
+    linkedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+    revokedReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_provider_and_chatId', ['provider', 'chatId'])
+    .index('by_companyId', ['companyId'])
+    .index('by_companyId_and_status', ['companyId', 'status']),
+
+  /**
+   * The last summary scope per chat and person (about 15 minutes), so "and
+   * yesterday?" follows on; also a scope or cage question waiting for an answer.
+   */
+  botChatScopes: defineTable({
+    provider: botProvider,
+    chatAddress: v.string(),
+    /** Telegram user id, or the WhatsApp number. */
+    senderKey: v.string(),
+    senderName: v.optional(v.string()),
+    companyId: v.id('companies'),
+    scope: v.optional(summaryScope),
+    range: summaryRange,
+    awaiting: v.optional(v.union(v.literal('scope'), v.literal('cage'))),
+    expiresAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_provider_and_chatAddress_and_senderKey', ['provider', 'chatAddress', 'senderKey'])
+    .index('by_expiresAt', ['expiresAt'])
+    .index('by_companyId', ['companyId']),
 }

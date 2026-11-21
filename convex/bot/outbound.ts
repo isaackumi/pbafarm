@@ -7,7 +7,7 @@
 import type { ActionCtx } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { sendWhatsAppChat } from '../messaging/providers/whatsappCloud'
-import { answerTelegramCallback, sendTelegramChat } from '../messaging/providers/telegramBot'
+import { answerTelegramCallback, editTelegramChat, sendTelegramChat } from '../messaging/providers/telegramBot'
 import type { ChatMessageValue, Target } from './validators'
 
 export function whatsappBotConfig() {
@@ -20,20 +20,38 @@ export function telegramBotToken() {
   return process.env.TELEGRAM_BOT_TOKEN || null
 }
 
-/** Send messages in order; stops at the first failure. Returns sent count and the first error. */
+/**
+ * Send messages in order; stops at the first failure. Returns sent count and
+ * the first error. Telegram: `editMessageId` edits that message with the
+ * first one (sent anew when Telegram refuses), `replyTo` quotes a group
+ * message with the first one sent.
+ */
 export async function deliver(
   ctx: ActionCtx,
-  target: Pick<Target, 'provider' | 'address' | 'callbackQueryId' | 'companyId' | 'bindingId'>,
+  target: Pick<Target, 'provider' | 'address' | 'callbackQueryId' | 'companyId' | 'bindingId'> &
+    Partial<Pick<Target, 'replyTo' | 'editMessageId' | 'toast' | 'toastAlert'>>,
   messages: ChatMessageValue[],
 ): Promise<{ sent: number; error: string | null }> {
   let sent = 0
   if (target.provider === 'telegram') {
     const token = telegramBotToken()
     if (!token) return { sent, error: 'TELEGRAM_BOT_TOKEN is not set' }
-    if (target.callbackQueryId) await answerTelegramCallback(token, target.callbackQueryId)
-    for (const m of messages) {
-      const r = await sendTelegramChat(token, target.address, m)
+    if (target.callbackQueryId) {
+      await answerTelegramCallback(token, target.callbackQueryId, undefined, target.toast ? { text: target.toast, alert: target.toastAlert } : undefined)
+    }
+    let replyTo = target.replyTo
+    for (const [i, m] of messages.entries()) {
+      if (i === 0 && target.editMessageId && m.kind !== 'template') {
+        const e = await editTelegramChat(token, target.address, target.editMessageId, m)
+        if (e.ok) {
+          sent++
+          continue
+        }
+        if (!e.gone) return { sent, error: e.error }
+      }
+      const r = await sendTelegramChat(token, target.address, m, undefined, { replyTo })
       if (!r.ok) return { sent, error: r.error }
+      replyTo = undefined
       sent++
     }
     return { sent, error: null }

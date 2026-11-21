@@ -75,6 +75,12 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   botUnboundPerAddress: { kind: 'fixed window', rate: 10, period: HOUR },
   /** Unbound replies across the platform (no key): bounds what spam can cost. */
   botUnboundGlobal: { kind: 'fixed window', rate: 500, period: HOUR },
+  /** Telegram groups (VFQ-1): the one "message me privately to link" reply, key = chatId:senderId. */
+  botGroupUnlinked: { kind: 'fixed window', rate: 1, period: 12 * HOUR },
+  /** The welcome when the bot is added to a group, key = chatId. */
+  botGroupWelcome: { kind: 'fixed window', rate: 2, period: 24 * HOUR },
+  /** Any group's messages, key = chatId (on top of the sender's own limits). */
+  botPerGroup: { kind: 'token bucket', rate: 60, period: MINUTE, capacity: 20 },
   /** Connect codes from /account, key = userId. */
   botConnectCodePerUser: { kind: 'fixed window', rate: 10, period: HOUR },
   /**

@@ -16,6 +16,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { useOutbox } from '../hooks/useOutbox'
 import ChannelTiles from '../components/messaging/ChannelTiles'
 import OutboxTable from '../components/messaging/OutboxTable'
+import TelegramGroups from '../components/messaging/TelegramGroups'
 
 const CHANNELS = [
   { id: 'sms', title: 'SMS', testPlaceholder: '024 412 3456' },
@@ -642,6 +643,7 @@ function MessagingSettings() {
                   encryptionReady={data.encryptionReady}
                 />
               ))}
+              <TelegramGroups />
               <SecurityCard />
               <PreferencesCard data={data} usage={usage} />
             </>

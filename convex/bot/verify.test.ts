@@ -46,11 +46,48 @@ describe('parsing', () => {
     expect(parseWhatsApp(body('PNID'), undefined)).toEqual({ events: [], statuses: [] })
   })
 
-  test('Telegram private chats only; callback queries become buttons', () => {
+  test('Telegram: unaddressed group text is dropped; callback queries become buttons', () => {
     expect(parseTelegram({ update_id: 1, message: { date: 1, chat: { id: 5, type: 'group' }, text: 'hi' } })).toBeNull()
     expect(
       parseTelegram({ update_id: 2, callback_query: { id: 'cb', data: 'ok:abc', from: { id: 5 }, message: { chat: { id: 5, type: 'private' } } } }),
     ).toMatchObject({ kind: 'button', buttonId: 'ok:abc', callbackQueryId: 'cb', address: '5' })
+  })
+
+  test('Telegram groups: only mentions, replies to the bot and commands for it get through', () => {
+    const bot = { id: '123', username: 'askAnowa_bot' }
+    const now = Math.floor(Date.now() / 1000)
+    const msg = (text: string, extra: Record<string, unknown> = {}) => ({
+      update_id: 9,
+      message: { message_id: 4, date: now, text, chat: { id: -100, type: 'supergroup', title: 'Crew' }, from: { id: 77, first_name: 'Kofi', username: 'kofi_a' }, ...extra },
+    })
+    expect(parseTelegram(msg('summary from offshore'), bot)).toBeNull()
+    expect(parseTelegram(msg('/today@otherBot'), bot)).toBeNull()
+    expect(parseTelegram(msg('@askAnowa_bot get me summary from offshore'), bot)).toMatchObject({
+      kind: 'text', text: 'get me summary from offshore', chatType: 'group', address: '-100', senderId: '77', senderUsername: 'kofi_a', messageId: 4,
+    })
+    expect(parseTelegram(msg('/summary@askAnowa_bot offshore'), bot)).toMatchObject({ text: '/summary offshore' })
+    expect(parseTelegram(msg('/today'), bot)).toMatchObject({ text: '/today' })
+    expect(parseTelegram(msg('and yesterday?', { reply_to_message: { message_id: 3, from: { id: 123, is_bot: true } } }), bot)).toMatchObject({
+      text: 'and yesterday?',
+    })
+    // Entities are authoritative when present: a mention of someone else is not for the bot.
+    expect(parseTelegram(msg('@kofi_a summary', { entities: [{ type: 'mention', offset: 0, length: 7 }] }), bot)).toBeNull()
+    // Channels never.
+    expect(parseTelegram({ update_id: 9, message: { date: now, text: '/today', chat: { id: -5, type: 'channel' } } }, bot)).toBeNull()
+  })
+
+  test('Telegram my_chat_member: the bot added to or removed from a group', () => {
+    const update = (status: string) => ({
+      update_id: 10,
+      my_chat_member: {
+        date: Math.floor(Date.now() / 1000), chat: { id: -100, type: 'group', title: 'Crew' }, from: { id: 77, first_name: 'Ama' },
+        new_chat_member: { status, user: { id: 123, is_bot: true } },
+      },
+    })
+    expect(parseTelegram(update('kicked'))).toMatchObject({ kind: 'member', member: 'removed', address: '-100', senderId: '77' })
+    expect(parseTelegram(update('left'))).toMatchObject({ kind: 'member', member: 'removed' })
+    expect(parseTelegram(update('member'))).toMatchObject({ kind: 'member', member: 'added', chatTitle: 'Crew' })
+    expect(parseTelegram(update('restricted'))).toBeNull()
   })
 })
 

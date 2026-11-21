@@ -8,6 +8,7 @@ import { addDays, todayIn, zoneFor } from './lib/dates'
 import { assertSiteInScope, can, memberContextIn, requireMember, type MemberContext } from './lib/permissions'
 import { userError } from './lib/errors'
 import { notifyUsers } from './lib/notify'
+import { postGroupAlert } from './bot/chatGroups'
 import { membersWithPermission } from './approvalAlerts'
 import { overridesFor } from './waterQuality'
 import { effectiveThresholds } from './lib/waterQuality'
@@ -371,6 +372,20 @@ async function notifyAlert(ctx: MutationCtx, alert: Doc<'farmAlerts'>) {
     })
     notified += res.notified
   }
+  // Linked Telegram site groups with alerts on: tag the unit's keeper (VFQ-1).
+  const keeper = await ctx.db
+    .query('cageKeepers')
+    .withIndex('by_unitId_and_active', (q) => q.eq('unitId', alert.unitId).eq('active', true))
+    .first()
+  await postGroupAlert(ctx, {
+    companyId: alert.companyId,
+    locationId: alert.locationId,
+    mentionUserId: keeper && keeper.companyId === alert.companyId ? keeper.keeperId : undefined,
+    text: (l) => {
+      const x = alertText(alert, l)
+      return `${x.title}. ${x.detail} ${x.actions[0] ?? ''}`.trim()
+    },
+  })
   return notified
 }
 

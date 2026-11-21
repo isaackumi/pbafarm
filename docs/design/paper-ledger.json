@@ -2495,13 +2495,21 @@
       "page": "p-G-0",
       "theme": "dark",
       "width": 390,
-      "route": "telegram bot: group chats",
-      "implementation": [],
-      "status": "not-built",
+      "route": "telegram bot: group chats (convex/bot/chatGroups.ts); web: /messaging-settings#telegram-groups",
+      "implementation": [
+        "convex/bot/chatGroups.ts",
+        "convex/bot/groupScope.ts",
+        "convex/bot/scopeResolver.ts",
+        "convex/bot/summary.ts",
+        "convex/bot/chatGroupI18n.ts",
+        "convex/bot/verify.ts",
+        "components/messaging/TelegramGroups.js"
+      ],
+      "status": "partial",
       "jsxHash": "32beea0d773dddf5bf71c7beb3fa66e2ce197f1f03d652ce7ee5e584a02d3769",
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. Bot in a site group: alert with I'm on it state, @mention entries answered privately, approval buttons only usable by the named approver (toast for others), pinned who-can-act rules, day summary without money. Groups are rejected today (bot/verify.ts private chats only)."
+      "notes": "Built (BOT-009), not yet checked in a real Telegram group. Present: /connect with site scope and capabilities, the mention/reply/command gate, @mention entries answered privately (\"Sent you the draft in our private chat\"), buttons only for the named person (toast \"Only Kofi can save this.\" / \"Only Ama can approve this.\"), who-can-act rules in /help, day summary without money unless the group allows it, missing-log and farm alerts tagging the keeper. Missing or different: the alert's \"I'm on it\" button and state, a pinned rules message (rules are in /help instead). The Settings › Messaging › Telegram groups card has no artboard; it follows the other messaging cards."
     },
     {
       "id": "VJG-1",

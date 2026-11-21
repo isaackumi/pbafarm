@@ -20,6 +20,7 @@ import { commitVoice, startVoice, undoVoice } from './voice'
 import { pushCard } from './rounds'
 import { commitGroup, undoGroup } from './groups'
 import type { ChatMessageValue, RoutePlan } from './validators'
+import { gt } from './chatGroupI18n'
 
 function errorText(err: unknown): string {
   if (isUserError(err)) return err.data.message
@@ -62,6 +63,7 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
         text: plan.text,
         sourceMessageId: plan.sourceMessageId,
         sentAt: plan.sentAt,
+        siteId: plan.siteId,
       })
     case 'commit': {
       let r
@@ -142,6 +144,31 @@ async function messagesFor(ctx: ActionCtx, plan: Exclude<RoutePlan, { type: 'non
   }
 }
 
+/**
+ * An agent turn from a Telegram group (VFQ-1): the answer goes to the group,
+ * quoting the question; drafts go to the sender's private chat, and the
+ * group is told so. Entries are never saved from the group.
+ */
+async function groupAgent(ctx: ActionCtx, plan: Extract<RoutePlan, { type: 'agent' }>): Promise<string | null> {
+  const messages = await runAgent(ctx, {
+    bindingId: plan.bindingId,
+    text: plan.text,
+    sourceMessageId: plan.sourceMessageId,
+    sentAt: plan.sentAt,
+    chatGroupId: plan.chatGroupId,
+    siteId: plan.siteId,
+  })
+  const drafts = messages.filter((m) => m.kind === 'buttons')
+  const answer = messages.filter((m) => m.kind !== 'buttons')
+  if (drafts.length) {
+    const r = await deliver(ctx, { provider: plan.provider, address: plan.privateAddress!, companyId: plan.companyId, bindingId: plan.bindingId }, drafts)
+    if (r.error) return r.error
+    answer.push({ kind: 'text', text: gt(plan.locale).sentPrivately(plan.senderName ?? '') })
+  }
+  const r = await deliver(ctx, { provider: plan.provider, address: plan.address, companyId: plan.companyId, replyTo: plan.replyTo }, answer)
+  return r.error
+}
+
 export const handle = internalAction({
   args: { inboundId: v.id('channelInbound') },
   returns: v.null(),
@@ -152,10 +179,23 @@ export const handle = internalAction({
     try {
       // Stop the Telegram button spinner first: the work below can edit a card or save several entries.
       const token = plan.provider === 'telegram' && plan.callbackQueryId ? telegramBotToken() : null
-      if (token && plan.callbackQueryId) await answerTelegramCallback(token, plan.callbackQueryId)
-      const messages = await messagesFor(ctx, plan)
-      const r = await deliver(ctx, token ? { ...plan, callbackQueryId: undefined } : plan, messages)
-      if (r.error) error = r.error
+      if (token && plan.callbackQueryId) {
+        await answerTelegramCallback(token, plan.callbackQueryId, undefined, plan.toast ? { text: plan.toast, alert: plan.toastAlert } : undefined)
+      }
+      const direct = token ? { ...plan, callbackQueryId: undefined } : plan
+      if (plan.type === 'agent' && plan.chatGroupId && plan.privateAddress) {
+        error = (await groupAgent(ctx, plan)) ?? undefined
+      } else {
+        const messages = await messagesFor(ctx, plan)
+        const r = await deliver(ctx, direct, messages)
+        if (r.error) error = r.error
+      }
+      if (!error && plan.notice) {
+        const n = await deliver(ctx, { provider: plan.provider, address: plan.notice.address, companyId: plan.companyId, replyTo: plan.notice.replyTo }, [
+          { kind: 'text', text: plan.notice.text },
+        ])
+        if (n.error) error = n.error
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'processing failed'
     }
