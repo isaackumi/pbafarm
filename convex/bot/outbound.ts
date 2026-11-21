@@ -57,3 +57,33 @@ export async function deliver(
   }
   return { sent, error: null }
 }
+
+/** First readable text of a chat message, for the Outbox preview. */
+function previewOf(m: ChatMessageValue): string {
+  const x = m as { text?: string; fallbackText?: string; caption?: string }
+  return x.text ?? x.fallbackText ?? x.caption ?? ''
+}
+
+/**
+ * Outbox row for a proactive bot message (reminder, approval prompt; Paper
+ * 57b). Chat replies are conversation, not outbox, and are not logged.
+ */
+export async function logProactive(
+  ctx: ActionCtx,
+  target: Pick<Target, 'provider' | 'address' | 'companyId' | 'bindingId'>,
+  messages: ChatMessageValue[],
+  out: { sent: number; error: string | null },
+  source: 'bot_reminder' | 'bot_approval',
+) {
+  if (!target.companyId || !messages.length) return
+  await ctx.runMutation(internal.messaging.outbox.record, {
+    companyId: target.companyId,
+    channel: target.provider,
+    ok: !out.error,
+    source,
+    to: target.address,
+    bindingId: target.bindingId,
+    body: previewOf(messages[0]),
+    error: out.error ?? undefined,
+  })
+}

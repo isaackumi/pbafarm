@@ -4464,7 +4464,9 @@
           "sms": "Utiliser le canal SMS de la plateforme si nous n'en avons pas",
           "whatsapp": "Utiliser le canal WhatsApp de la plateforme si nous n'en avons pas",
           "email": "Utiliser le canal e-mail de la plateforme si nous n'en avons pas"
-        }
+        },
+        "budget": "Budgets mensuels",
+        "budgetHint": "Messages par mois pour les jauges d'usage ci-dessus. L'envoi n'est jamais bloqué."
       },
       "platformChannel": "Canal de la plateforme",
       "notConfigured": "Non configuré",
@@ -4472,13 +4474,68 @@
         "syncing": "Synchronisation…",
         "sync": "Synchroniser",
         "waiting": "Boîte d'envoi du téléphone : {count} saisies en attente",
-        "open": "Ouvrir la boîte d'envoi"
+        "open": "Ouvrir la boîte d'envoi",
+        "lastSync": "dernière synchro {ago}",
+        "neverSynced": "pas encore synchronisé",
+        "deviceOf": "{device} de {name}",
+        "thisDevice": "cet appareil",
+        "justNow": "à l'instant"
       },
-      "crumb": "SMS, WhatsApp, e-mail",
+      "crumb": "SMS, WhatsApp, Telegram, e-mail",
       "title": "Messagerie et boîte d'envoi",
       "sendTestAction": "Envoyer un message de test",
       "description": "Choisissez les fournisseurs SMS, WhatsApp et e-mail de votre entreprise. Un canal ne sert aux codes de connexion qu'après un message de test réussi.",
-      "noKey": "Les identifiants des fournisseurs ne peuvent pas encore être enregistrés : la clé de chiffrement de la plateforme n'est pas définie sur le serveur. Vous pouvez quand même configurer les canaux ; demandez à l'opérateur de la plateforme de définir la clé."
+      "noKey": "Les identifiants des fournisseurs ne peuvent pas encore être enregistrés : la clé de chiffrement de la plateforme n'est pas définie sur le serveur. Vous pouvez quand même configurer les canaux ; demandez à l'opérateur de la plateforme de définir la clé.",
+      "tile": {
+        "connected": "Connecté",
+        "verifyDomain": "Vérifier le domaine",
+        "monthUsage": "Usage {month}",
+        "conversations": "Conversations",
+        "telegramLine": "Bot Anowa · aucune configuration",
+        "peopleLinked": "Personnes liées",
+        "members": "membres",
+        "fromAddress": "Adresse d'expédition",
+        "businessNumber": "Numéro professionnel · {via}",
+        "anowaBot": "Bot Anowa",
+        "senderId": "{provider} · ID d'expéditeur"
+      },
+      "outboxTable": {
+        "title": "Boîte d'envoi",
+        "filters": "Afficher les messages",
+        "filter": {
+          "all": "Tous",
+          "queued": "En attente",
+          "failed": "Échecs"
+        },
+        "recipient": "Destinataire",
+        "channel": "Canal",
+        "message": "Message",
+        "status": "Statut",
+        "delivered": "Remis",
+        "deliveredHint": "Accepté par le fournisseur",
+        "queued": "En attente",
+        "queuedAt": "En attente · envoi {time}",
+        "failed": "Échec",
+        "retry": "Réessayer",
+        "retryLabel": "Renvoyer le message en échec à {name}",
+        "retried": "Message remis en file pour un nouvel envoi.",
+        "code": "Code de connexion",
+        "search": "Rechercher dans la boîte d'envoi",
+        "closeSearch": "Fermer la recherche",
+        "searchPlaceholder": "Nom ou message",
+        "loading": "Chargement des messages…",
+        "noMatch": "Aucun message ne correspond.",
+        "empty": {
+          "all": "Aucun message envoyé pour l'instant.",
+          "queued": "Rien n'attend d'être envoyé.",
+          "failed": "Aucun message en échec."
+        },
+        "more": "Afficher plus",
+        "recipientRole": {
+          "customer": "Client",
+          "supplier": "Fournisseur"
+        }
+      }
     },
     "outbox": {
       "title": "Boîte d'envoi",

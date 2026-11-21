@@ -236,6 +236,8 @@ import type * as llmQuota from "../llmQuota.js";
 import type * as memberships from "../memberships.js";
 import type * as messaging_channels from "../messaging/channels.js";
 import type * as messaging_deliver from "../messaging/deliver.js";
+import type * as messaging_outbox from "../messaging/outbox.js";
+import type * as messaging_outboxTables from "../messaging/outboxTables.js";
 import type * as messaging_policy from "../messaging/policy.js";
 import type * as messaging_providers_africastalking from "../messaging/providers/africastalking.js";
 import type * as messaging_providers_hubtel from "../messaging/providers/hubtel.js";
@@ -533,6 +535,8 @@ declare const fullApi: ApiFromModules<{
   memberships: typeof memberships;
   "messaging/channels": typeof messaging_channels;
   "messaging/deliver": typeof messaging_deliver;
+  "messaging/outbox": typeof messaging_outbox;
+  "messaging/outboxTables": typeof messaging_outboxTables;
   "messaging/policy": typeof messaging_policy;
   "messaging/providers/africastalking": typeof messaging_providers_africastalking;
   "messaging/providers/hubtel": typeof messaging_providers_hubtel;

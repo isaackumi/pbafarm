@@ -844,14 +844,18 @@
       "route": "/messaging-settings",
       "implementation": [
         "pages/messaging-settings.js",
-        "pages/outbox.js",
-        "components/OutboxPanel.js"
+        "components/messaging/ChannelTiles.js",
+        "components/messaging/OutboxTable.js",
+        "convex/messaging/outbox.ts",
+        "convex/messaging/outboxTables.ts",
+        "hooks/useOutbox.js",
+        "lib/offlineOutbox.js"
       ],
-      "status": "partial",
+      "status": "built",
       "jsxHash": "ff3c3525ac54f6fa89270b593fd22207b312d0f5bbf8584e7901d5acc362f2e4",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Has Send test message, settings nav, channel tiles (SMS/WhatsApp/Email), phone outbox banner w/ Sync now. Missing: Telegram tile (CHANNELS has no telegram), per-channel usage meters, Outbox table (Recipient/Channel/Message/Status; All/Queued/Failed) — /outbox is only the offline phone queue."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built. Browser-checked 2026-11-21 at 1440 against the artboard screenshot and JSX (dark), on a seeded local backend: 2x2 channel tiles SMS / WhatsApp / Telegram / Email with Connected / Verify domain pills, mono sender line and a 4px usage meter (SMS and email: sent this UTC month vs the company's monthly budget; WhatsApp: 24 h conversations; amber from 75%, as drawn at 81%; Telegram: active members with a live Telegram link / active members, bot @username and Connected from the bot env, tile links to /account to connect); Phone outbox banner with last sync time, the owner's device and site, Sync now; Outbox card (All / Queued / Failed tabs, search, Recipient / Channel / Message / Status, Delivered, Queued · send HH:MM, Failed · Retry through the owning dispatch or run) backed by the outboundMessages log, paginated 10 at a time with Show more. Tile, banner and table positions match the artboard to the pixel. Data-driven or shared differences: shell (sidebar, topbar) follows its own artboards; the settings eyebrow includes the org name (shared helper); sender lines show the real provider (e.g. 'Business number · WhatsApp Cloud API (Meta)'); the long invoice message truncates with an ellipsis because the app's Inter renders a little wider than Paper's."
     },
     {
       "id": "FUF-0",
@@ -1344,14 +1348,18 @@
       "route": "/messaging-settings",
       "implementation": [
         "pages/messaging-settings.js",
-        "pages/outbox.js",
-        "components/ChatChannelsCard.js"
+        "components/messaging/ChannelTiles.js",
+        "components/messaging/OutboxTable.js",
+        "convex/messaging/outbox.ts",
+        "convex/messaging/outboxTables.ts",
+        "hooks/useOutbox.js",
+        "lib/offlineOutbox.js"
       ],
-      "status": "partial",
+      "status": "built",
       "jsxHash": "6a067185297103f31a4000710fefe7b9a7f0cd53694e3f093e61c47b3f0eaad6",
       "hashedAt": "2026-11-20",
-      "verifiedAt": null,
-      "notes": "Send test message, settings frame, channel tiles (SMS/WhatsApp/Email only), Phone outbox banner + Sync now present. Missing: Telegram tile on this page (Telegram linking only in /account ChatChannelsCard); Outbox delivery table (All/Queued/Failed, recipient/channel/message/status). Usage meters not verified."
+      "verifiedAt": "2026-11-21",
+      "notes": "Built. Browser-checked 2026-11-21 at 1440 against the artboard screenshot and JSX (light), on a seeded local backend: 2x2 channel tiles SMS / WhatsApp / Telegram / Email with Connected / Verify domain pills, mono sender line and a 4px usage meter (SMS and email: sent this UTC month vs the company's monthly budget; WhatsApp: 24 h conversations; amber from 75%, as drawn at 81%; Telegram: active members with a live Telegram link / active members, bot @username and Connected from the bot env, tile links to /account to connect); Phone outbox banner with last sync time, the owner's device and site, Sync now; Outbox card (All / Queued / Failed tabs, search, Recipient / Channel / Message / Status, Delivered, Queued · send HH:MM, Failed · Retry through the owning dispatch or run) backed by the outboundMessages log, paginated 10 at a time with Show more. Tile, banner and table positions match the artboard to the pixel. Data-driven or shared differences: shell (sidebar, topbar) follows its own artboards; the settings eyebrow includes the org name (shared helper); sender lines show the real provider (e.g. 'Business number · WhatsApp Cloud API (Meta)'); the long invoice message truncates with an ellipsis because the app's Inter renders a little wider than Paper's."
     },
     {
       "id": "KAJ-0",

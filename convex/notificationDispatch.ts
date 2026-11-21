@@ -9,6 +9,7 @@ import { sendAll } from './automation/deliver'
 import { EVENT_RETENTION_DAYS, RETRY_BACKOFF_MIN } from './automation/engine'
 import type { RunDelivery } from './automation/validators'
 import { notificationEmailReader, renderNotificationEmail } from './lib/notificationEmail'
+import { syncDeliveries } from './messaging/outbox'
 
 /**
  * Sends the SMS/WhatsApp/email of a system notification (AUTO-003), queued
@@ -75,6 +76,7 @@ export const start = internalMutation({
       return null
     }
     await ctx.db.patch(dispatchId, { status: 'running', attempts: d.attempts + 1, nextAttemptAt: undefined })
+    await syncDeliveries(ctx, { companyId: d.companyId, source: 'notification', parent: { dispatchId }, deliveries: d.deliveries })
     return { companyId: d.companyId, pending }
   },
 })
@@ -125,16 +127,19 @@ export const finish = internalMutation({
     if (retry && d.attempts < d.maxAttempts) {
       const delayMin = RETRY_BACKOFF_MIN[Math.min(d.attempts - 1, RETRY_BACKOFF_MIN.length - 1)] ?? 1
       const at = Date.now() + delayMin * 60_000
+      const next = deliveries.map((x) => (x.status === 'failed' && x.retryable ? { ...x, status: 'pending' as const } : x))
       await ctx.db.patch(dispatchId, {
-        deliveries: deliveries.map((x) => (x.status === 'failed' && x.retryable ? { ...x, status: 'pending' as const } : x)),
+        deliveries: next,
         status: 'retrying',
         nextAttemptAt: at,
         error: summarize(deliveries.filter((x) => x.status === 'failed')),
       })
+      await syncDeliveries(ctx, { companyId: d.companyId, source: 'notification', parent: { dispatchId }, deliveries: next, nextAttemptAt: at })
       await ctx.scheduler.runAt(at, internal.notificationDispatch.send, { dispatchId })
       return null
     }
     await ctx.db.patch(dispatchId, { deliveries })
+    await syncDeliveries(ctx, { companyId: d.companyId, source: 'notification', parent: { dispatchId }, deliveries })
     await settle(ctx, { ...d, deliveries })
     return null
   },

@@ -4464,7 +4464,9 @@
           "sms": "Use the platform SMS channel when we have none of our own",
           "whatsapp": "Use the platform WhatsApp channel when we have none of our own",
           "email": "Use the platform email channel when we have none of our own"
-        }
+        },
+        "budget": "Monthly budgets",
+        "budgetHint": "Messages per month behind the usage meters above. Sending is never blocked."
       },
       "platformChannel": "Platform channel",
       "notConfigured": "Not set up",
@@ -4472,13 +4474,68 @@
         "syncing": "Syncing…",
         "sync": "Sync now",
         "waiting": "Phone outbox: {count} entries waiting",
-        "open": "Open outbox"
+        "open": "Open outbox",
+        "lastSync": "last sync {ago}",
+        "neverSynced": "not synced yet",
+        "deviceOf": "{name}’s {device}",
+        "thisDevice": "this device",
+        "justNow": "just now"
       },
-      "crumb": "SMS, WhatsApp, email",
+      "crumb": "SMS, WhatsApp, Telegram, email",
       "title": "Messaging & outbox",
       "sendTestAction": "Send test message",
       "description": "Choose the SMS, WhatsApp and email providers your company sends with. A channel is used for sign-in codes only after a successful test message.",
-      "noKey": "Provider credentials cannot be saved yet: the platform encryption key is not set on the server. You can still set up channels; ask the platform operator to set the key."
+      "noKey": "Provider credentials cannot be saved yet: the platform encryption key is not set on the server. You can still set up channels; ask the platform operator to set the key.",
+      "tile": {
+        "connected": "Connected",
+        "verifyDomain": "Verify domain",
+        "monthUsage": "{month} usage",
+        "conversations": "Conversations",
+        "telegramLine": "Anowa bot · no setup needed",
+        "peopleLinked": "People linked",
+        "members": "members",
+        "fromAddress": "From address",
+        "businessNumber": "Business number · {via}",
+        "anowaBot": "Anowa bot",
+        "senderId": "{provider} · sender ID"
+      },
+      "outboxTable": {
+        "title": "Outbox",
+        "filters": "Show messages",
+        "filter": {
+          "all": "All",
+          "queued": "Queued",
+          "failed": "Failed"
+        },
+        "recipient": "Recipient",
+        "channel": "Channel",
+        "message": "Message",
+        "status": "Status",
+        "delivered": "Delivered",
+        "deliveredHint": "Accepted by the provider",
+        "queued": "Queued",
+        "queuedAt": "Queued · send {time}",
+        "failed": "Failed",
+        "retry": "Retry",
+        "retryLabel": "Retry the failed message to {name}",
+        "retried": "Message queued to send again.",
+        "code": "Sign-in code",
+        "search": "Search the outbox",
+        "closeSearch": "Close search",
+        "searchPlaceholder": "Name or message",
+        "loading": "Loading messages…",
+        "noMatch": "No messages match.",
+        "empty": {
+          "all": "No messages sent yet.",
+          "queued": "Nothing is waiting to send.",
+          "failed": "No failed messages."
+        },
+        "more": "Show more",
+        "recipientRole": {
+          "customer": "Customer",
+          "supplier": "Supplier"
+        }
+      }
     },
     "outbox": {
       "title": "Outbox",

@@ -9,6 +9,7 @@ import { can, memberContextIn, requireMember, requirePermission, type MemberCont
 import { logAudit } from './lib/tenancy'
 import { runEffect } from './lib/effect'
 import { deliverMessage } from './messaging/deliver'
+import { logOutbound } from './messaging/outbox'
 import { sendAll } from './automation/deliver'
 import { MAX_ATTEMPTS, RETRY_BACKOFF_MIN, companyZone, prefsFor } from './automation/engine'
 import { inQuietHours, isValidTimeZone, localParts } from './automation/schedule'
@@ -650,6 +651,30 @@ async function finalize(
   }
 }
 
+/** Mirror report recipients into the Outbox log (Paper 57b). */
+async function logReportRecipients(
+  ctx: MutationCtx,
+  d: Doc<'reportDeliveries'>,
+  recipients: Doc<'reportDeliveries'>['recipients'],
+  nextAttemptAt?: number,
+) {
+  for (const [index, x] of recipients.entries()) {
+    if (x.status === 'skipped') continue
+    await logOutbound(ctx, {
+      companyId: d.companyId,
+      channel: 'email',
+      status: x.status === 'pending' ? 'queued' : x.status,
+      source: 'report',
+      to: x.to,
+      key: `rd:${d._id}:${index}`,
+      recipientUserId: x.userId,
+      body: d.reportName,
+      error: x.error,
+      nextAttemptAt: x.status === 'pending' ? nextAttemptAt : undefined,
+    })
+  }
+}
+
 export const finish = internalMutation({
   args: {
     deliveryId: v.id('reportDeliveries'),
@@ -683,16 +708,19 @@ export const finish = internalMutation({
     if (retry && d.attempts < d.maxAttempts) {
       const delayMin = RETRY_BACKOFF_MIN[Math.min(d.attempts - 1, RETRY_BACKOFF_MIN.length - 1)] ?? 1
       const at = Date.now() + delayMin * 60_000
+      const next = recipients.map((x) => (x.status === 'failed' && x.retryable ? { ...x, status: 'pending' as const } : x))
       await ctx.db.patch(deliveryId, {
         ...summary,
-        recipients: recipients.map((x) => (x.status === 'failed' && x.retryable ? { ...x, status: 'pending' as const } : x)),
+        recipients: next,
         status: 'retrying',
         nextAttemptAt: at,
         error: summarize(recipients.filter((x) => x.status === 'failed')),
       })
+      await logReportRecipients(ctx, d, next, at)
       await ctx.scheduler.runAt(at, internal.reportSchedules.send, { deliveryId })
       return null
     }
+    await logReportRecipients(ctx, d, recipients)
     await finalize(ctx, { ...d, recipients }, summary)
     return null
   },

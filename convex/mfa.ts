@@ -1,6 +1,6 @@
 import { insertAuditLog } from './lib/auditChain'
 import { v } from 'convex/values'
-import { getAuthSessionId } from '@convex-dev/auth/server'
+import { getAuthSessionId, getAuthUserId } from '@convex-dev/auth/server'
 import { action, internalMutation } from './_generated/server'
 import type { ActionCtx, MutationCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -123,6 +123,26 @@ export const issueChallenge = internalMutation({
   },
 })
 
+/** Outbox row for a code send (Paper 57b): who and when, never the code. */
+async function recordCode(
+  ctx: ActionCtx,
+  target: { to: string; companyId: Id<'companies'> },
+  channel: 'sms' | 'whatsapp',
+  result: { ok: boolean; error?: string; route: string },
+) {
+  if (result.route === 'none') return
+  const userId = await getAuthUserId(ctx)
+  await ctx.runMutation(internal.messaging.outbox.record, {
+    companyId: target.companyId,
+    channel,
+    ok: result.ok,
+    source: 'code',
+    to: target.to,
+    recipientUserId: userId ?? undefined,
+    error: result.ok ? undefined : result.error,
+  })
+}
+
 async function sendChallenge(
   ctx: ActionCtx,
   args: { purpose: 'verify' | 'enrol'; channel: 'sms' | 'whatsapp'; phone?: string },
@@ -140,6 +160,7 @@ async function sendChallenge(
     body: `Your Anowa verification code is ${code}. It expires in 10 minutes. Do not share it.`,
     otpCode: code,
   })
+  await recordCode(ctx, target, args.channel, result)
   if (!result.ok) {
     console.warn(`Verification code not sent (${args.channel}, ${result.route}): ${result.error}`)
     return {
@@ -356,6 +377,7 @@ export const startPhoneConfirmation = action({
       body: `Your Anowa code to confirm this number is ${code}. It expires in 10 minutes. Do not share it.`,
       otpCode: code,
     })
+    await recordCode(ctx, target, channel, result)
     if (!result.ok) {
       console.warn(`Phone confirmation code not sent (${channel}, ${result.route}): ${result.error}`)
       return { ok: false, sentTo: maskPhone(target.to), error: 'Could not send the code. Try the other option, or ask your admin.' }

@@ -122,6 +122,9 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'automationRules', index: 'by_company' },
   { table: 'automationRuns', index: 'by_company_and_createdAt' },
   { table: 'notificationDispatches', index: 'by_company_and_createdAt' },
+  // Outbox log and usage meters (Paper 57b); recipientKey is a user id or an address hash.
+  { table: 'outboundMessages', index: 'by_companyId_and_createdAt', redact: ['recipientKey', 'searchText'] },
+  { table: 'messageUsage', index: 'by_companyId_and_period_and_channel' },
   { table: 'savedReports', index: 'by_companyId_and_visibility' },
   { table: 'reportSchedules', index: 'by_companyId' },
   { table: 'reportDeliveries', index: 'by_companyId_and_createdAt' },
