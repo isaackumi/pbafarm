@@ -1783,17 +1783,30 @@
     },
     "lineReason": "Ligne {line} : {reason}",
     "reason": {
-      "missingCage": "aucun nom de cage",
-      "unknownCage": "aucune cage nommée « {value} »",
-      "missingDate": "aucune date",
+      "missingCage": "Pas de nom de cage",
+      "unknownCage": "Aucune cage nommée « {value} »",
+      "missingDate": "Pas de date",
       "badDate": "« {value} » n'est pas une date (utilisez AAAA-MM-JJ)",
       "futureDate": "{value} est dans le futur",
       "badNumber": "{column} doit être un nombre supérieur ou égal à 0",
-      "badWholeNumber": "{column} doit être un nombre entier supérieur ou égal à 0",
+      "badWholeNumber": "{column} doit être un entier supérieur ou égal à 0",
       "badPositive": "{column} doit être supérieur à 0",
-      "unknownFeedType": "aucun aliment nommé « {value} »",
-      "feedTypeRequired": "feed_type est obligatoire quand feed_amount est supérieur à 0",
-      "duplicateRow": "répète une ligne précédente ({value})"
+      "unknownFeedType": "Aucun aliment nommé « {value} »",
+      "feedTypeRequired": "feed_type est obligatoire quand feed_kg est supérieur à 0",
+      "duplicateRow": "Répète une ligne précédente ({value})",
+      "cageNotAtSite": "Cage {value} introuvable sur {site}",
+      "invalidDate": "Date invalide · utilisez AAAA-MM-JJ",
+      "badPositiveWhole": "{column} doit être un entier supérieur à 0",
+      "badRange": "{column} doit être entre {min} et {max}",
+      "alreadyRecorded": "{cage} a déjà un relevé le {date}",
+      "notEnoughStock": "Stock de {feed} insuffisant ({have} kg restants)",
+      "mortalityOutlier": "Mortalité {times}× la moyenne de la cage",
+      "lowDo": "OD sous {min} mg/L · déclenchera une alerte",
+      "batchTaken": "Le lot {value} est déjà utilisé",
+      "stockStatus": "La cage est {status} ; l’empoissonnement exige {allowed}",
+      "stockAbwRange": "PMI {abw} g hors de {min}–{max} g",
+      "stockCapacity": "{fish} poissons dépassent la capacité de {capacity}",
+      "stockDensity": "Densité {density} {unit} au-dessus de la limite de {max}"
     },
     "columnsLine": "Colonnes : {columns}",
     "dropTitle": "Déposez un fichier CSV ici",
@@ -1817,7 +1830,7 @@
       "tabAll": "Toutes {count}",
       "tabOk": "OK {count}",
       "tabErrors": "Erreurs {count}",
-      "note": "Les lignes en erreur sont ignorées ; corrigez-les dans la feuille puis réimportez",
+      "note": "Les erreurs sont ignorées · corrigez le fichier et réimportez",
       "empty": "Aucune ligne dans cette vue",
       "ok": "OK",
       "error": "Erreur",
@@ -1829,7 +1842,16 @@
       "colBatch": "Lot",
       "colAbw": "PMI",
       "colFish": "Poissons",
-      "colStatus": "Statut"
+      "colStatus": "Statut",
+      "tabWarnings": "Avertissements {count}",
+      "warning": "Avertissement",
+      "colDo": "OD",
+      "colWeight": "Poids",
+      "colBiomass": "Biomasse",
+      "filter": "Filtrer les lignes",
+      "range": "{from}–{to} sur {total}",
+      "prev": "Précédent",
+      "next": "Suivant"
     },
     "page": {
       "title": "Import en masse",
@@ -1837,7 +1859,42 @@
       "template": "Télécharger le modèle",
       "kindLabel": "Type d’import",
       "kindDaily": "Relevés quotidiens",
-      "kindBiweekly": "Échantillonnage bimensuel"
+      "kindBiweekly": "Échantillonnage bimensuel",
+      "kindStocking": "Empoissonnement"
+    },
+    "dropHint": "Glissez un CSV ici ou choisissez un fichier · jusqu’à {max} lignes",
+    "fileMetaFull": {
+      "one": "{count} ligne · {size} · importé {when} · déposez un autre fichier pour le remplacer",
+      "other": "{count} lignes · {size} · importé {when} · déposez un autre fichier pour le remplacer"
+    },
+    "justNow": "à l’instant",
+    "unreadable": "Le fichier n’a pas pu être lu.",
+    "missingColumns": "Colonnes manquantes : {columns}",
+    "tooMany": "{count} lignes dépassent la limite de {max}. Découpez le fichier et importez chaque partie.",
+    "checking": "Vérification…",
+    "importing": "Import en cours…",
+    "done": {
+      "one": "{count} ligne importée",
+      "other": "{count} lignes importées"
+    },
+    "doneSkipped": {
+      "one": "{count} ligne ignorée",
+      "other": "{count} lignes ignorées"
+    },
+    "bar": {
+      "ok": "{count} OK",
+      "warnings": {
+        "one": "{count} avec avertissement",
+        "other": "{count} avec avertissements"
+      },
+      "errors": {
+        "one": "{count} erreur sera ignorée",
+        "other": "{count} erreurs seront ignorées"
+      },
+      "cages": {
+        "one": "{count} cage",
+        "other": "{count} cages"
+      }
     }
   },
   "scan": {
@@ -4977,7 +5034,8 @@
       "usage": "Utilisation IA",
       "audit": "Journal d'audit",
       "staff": "Équipe",
-      "ai": "Santé IA"
+      "ai": "Santé IA",
+      "maintenance": "Maintenance"
     },
     "status": {
       "active": "Actif",
@@ -5274,6 +5332,27 @@
       "actAsStarted": "Accès support démarré ; ouvrez l'application du client connecté avec votre compte",
       "actAsReason": "Motif (ticket ou demande)",
       "minutes": "Minutes"
+    },
+    "maintenance": {
+      "formTitle": "Fenêtre de maintenance",
+      "statusNone": "Rien de prévu. Les membres utilisent l’application normalement.",
+      "statusScheduled": "Prévue du {start} au {end} GMT. Les membres verront alors l’écran de maintenance.",
+      "statusActive": "En cours jusqu’à {end} GMT (début {start}). Les membres voient l’écran de maintenance ; les administrateurs de la plateforme continuent de travailler.",
+      "startsAt": "Début (votre heure)",
+      "endsAt": "Fin (votre heure)",
+      "message": "Message (facultatif)",
+      "messageHint": "{count}/{max}. Remplace le texte par défaut de l’écran de maintenance.",
+      "statusPageSet": "« Page d’état » renvoie vers {url} (STATUS_PAGE_URL).",
+      "statusPageUnset": "STATUS_PAGE_URL n’est pas défini : le bouton « Page d’état » est masqué.",
+      "schedule": "Planifier la maintenance",
+      "update": "Mettre à jour",
+      "clear": "Terminer la maintenance",
+      "clearConfirm": "Terminer ou annuler cette fenêtre de maintenance maintenant ?",
+      "saved": "Fenêtre de maintenance enregistrée",
+      "cleared": "Fenêtre de maintenance supprimée",
+      "saveFailed": "Impossible d’enregistrer la fenêtre de maintenance",
+      "preview": "Aperçu",
+      "previewHint": "Ce que voient les membres pendant la fenêtre."
     }
   },
   "suspended": {
@@ -8436,6 +8515,18 @@
       "waiting": "en attente d'envoi",
       "invalid": "L'aliment et les morts doivent être 0 ou plus.",
       "needFeedType": "Choisissez le type d'aliment dans la saisie complète la première fois."
+    }
+  },
+  "systemStates": {
+    "emptyCages": {
+      "title": "Aucune cage pour l’instant",
+      "body": "Empoissonnez votre première cage pour suivre l’alimentation, la croissance et les coûts.",
+      "action": "Empoissonner une nouvelle cage"
+    },
+    "maintenance": {
+      "backBy": "De retour à {time} GMT",
+      "body": "Mise à niveau planifiée. Continuez à saisir : les entrées attendent hors ligne et se synchronisent ensuite.",
+      "statusPage": "Page d’état"
     }
   }
 }

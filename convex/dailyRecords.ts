@@ -947,6 +947,20 @@ export async function removeDailyRecordAs(
     return { warnings }
 }
 
+export type DailyImportRecord = {
+  cageId: Id<'cages'>
+  date: string
+  feedAmount: number
+  feedTypeId?: Id<'feedTypes'>
+  feedType?: string
+  feedPrice: number
+  feedCost: number
+  mortality: number
+  dissolvedOxygen?: number
+  temperatureC?: number
+  notes?: string
+}
+
 export const createMany = mutation({
   args: {
     records: v.array(
@@ -959,6 +973,8 @@ export const createMany = mutation({
         feedPrice: v.number(),
         feedCost: v.number(),
         mortality: v.number(),
+        dissolvedOxygen: v.optional(v.number()),
+        temperatureC: v.optional(v.number()),
         notes: v.optional(v.string()),
       }),
     ),
@@ -971,7 +987,23 @@ export const createMany = mutation({
   handler: async (ctx, { records, allowNegative, overrideReason }) => {
     const { user } = await requireMember(ctx, { permission: 'production.import' })
     // Bulk import takes caller-supplied price and cost (doc 07 V9): production.import.
-    const ids = []
+    return await insertDailyMany(ctx, user, records, { allowNegative, overrideReason })
+  },
+})
+
+/**
+ * Bulk daily insert shared by createMany and the bulk import (Paper 53). The
+ * caller has checked 'production.import'. A cage + date already on file is
+ * skipped, so a repeated upload adds nothing.
+ */
+export async function insertDailyMany(
+  ctx: MutationCtx,
+  user: Doc<'users'>,
+  records: DailyImportRecord[],
+  opts: { allowNegative?: boolean; overrideReason?: string } = {},
+): Promise<Id<'dailyRecords'>[]> {
+    const { allowNegative, overrideReason } = opts
+    const ids: Id<'dailyRecords'>[] = []
     for (const record of records) {
       if (record.feedAmount > 0 && !record.feedTypeId) {
         throw userError(
@@ -1031,5 +1063,4 @@ export const createMany = mutation({
       })
     }
     return ids
-  },
-})
+}

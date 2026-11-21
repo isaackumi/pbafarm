@@ -223,13 +223,31 @@ export function ErrorState({ title, message, onRetry, retryLabel, className = ''
   )
 }
 
-/** Inline loading message that screen readers announce (UX-001). */
+/**
+ * Loading skeleton (Paper 62 "Loading · skeleton", HMM-0 / KRK-0): a 46% title
+ * bar, three 64px tiles, lines at 100/82/64% and a shimmer block; radius 14,
+ * surface-2, 14px apart. The label is for screen readers (UX-001).
+ */
 export function LoadingState({ label, className = '' }) {
   const t = useT()
   return (
-    <div role="status" aria-live="polite" className={`flex items-center justify-center gap-3 py-8 text-sm text-muted ${className}`}>
-      <span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan border-t-transparent" aria-hidden />
-      <span>{label || t('ui.loading')}</span>
+    <div role="status" aria-live="polite" className={`flex w-full flex-col gap-[14px] py-2 ${className}`}>
+      <span className="sr-only">{label || t('ui.loading')}</span>
+      <div className="flex animate-pulse flex-col gap-[14px]" aria-hidden>
+        <div className="h-[22px] w-[46%] rounded-[14px] bg-surface-2" />
+        <div className="flex gap-3">
+          <div className="h-16 grow basis-0 rounded-[14px] bg-surface-2" />
+          <div className="h-16 grow basis-0 rounded-[14px] bg-surface-2" />
+          <div className="h-16 grow basis-0 rounded-[14px] bg-surface-2" />
+        </div>
+        <div className="h-[14px] rounded-[14px] bg-surface-2" />
+        <div className="h-[14px] w-[82%] rounded-[14px] bg-surface-2" />
+        <div className="h-[14px] w-[64%] rounded-[14px] bg-surface-2" />
+        <div
+          className="h-[86px] rounded-[14px]"
+          style={{ backgroundImage: 'linear-gradient(in oklab 90deg, var(--surface-2) 0%, var(--line) 50%, var(--surface-2) 100%)' }}
+        />
+      </div>
     </div>
   )
 }

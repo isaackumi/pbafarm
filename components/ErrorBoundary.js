@@ -1,6 +1,7 @@
 import { Component } from 'react'
-import { ErrorCard, SystemPage } from './system/SystemState'
+import ErrorState from './states/ErrorState'
 import { captureException } from '../lib/monitoring'
+import { newErrorId } from '../lib/errorId'
 
 /**
  * Catches render errors below it so a crash shows a message and a way out
@@ -8,14 +9,6 @@ import { captureException } from '../lib/monitoring'
  * it changes, so navigating away recovers without a full reload.
  * Pass `silent` to render nothing instead of the fallback.
  */
-/** Short reference shown on the error card and sent with the report, e.g. "err_7f2c9a41". */
-function newErrorId() {
-  const bytes = new Uint8Array(4)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(bytes)
-  else for (let i = 0; i < 4; i += 1) bytes[i] = Math.floor(Math.random() * 256)
-  return `err_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
-}
-
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -49,17 +42,13 @@ export default class ErrorBoundary extends Component {
     // The root boundary sits outside every provider, so its fallback cannot
     // rely on theme, i18n or UI components that may be what crashed.
     if (this.props.root) return <RootErrorFallback />
-    return <ErrorFallback errorId={this.state.errorId} />
+    return <ErrorFallback errorId={this.state.errorId} onRetry={() => this.setState({ error: null, errorId: null })} />
   }
 }
 
-/** In-app crash screen (Paper 62 _error card). */
-export function ErrorFallback({ title, description, errorId }) {
-  return (
-    <SystemPage className="min-h-[60vh]">
-      <ErrorCard title={title} description={description} errorId={errorId} />
-    </SystemPage>
-  )
+/** In-app crash screen (Paper 62 _error card). "Try again" re-renders the crashed tree. */
+export function ErrorFallback({ title, description, errorId, onRetry }) {
+  return <ErrorState title={title} description={description} errorId={errorId} onRetry={onRetry} />
 }
 
 /**
